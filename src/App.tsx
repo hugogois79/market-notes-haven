@@ -8,9 +8,11 @@ import Index from "./pages/Index";
 import Editor from "./pages/Editor";
 import Settings from "./pages/Settings";
 import Notes from "./pages/Notes";
+import Categories from "./pages/Categories";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import MainLayout from "./layouts/MainLayout";
+import CryptoDashboard from "./pages/crypto/Dashboard";
 import { useState, useEffect } from "react";
 import { Note } from "./types";
 import { fetchNotes, updateNote, createNote, deleteNote } from "./services/supabaseService";
@@ -18,7 +20,15 @@ import { toast } from "sonner";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // 1 minute
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -129,6 +139,14 @@ const App = () => {
                 </ProtectedRoute>
               } />
               
+              <Route path="/categories" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Categories notes={notes} loading={loading} />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              
               <Route path="/editor/:noteId" element={
                 <ProtectedRoute>
                   <MainLayout>
@@ -145,6 +163,14 @@ const App = () => {
                 <ProtectedRoute>
                   <MainLayout>
                     <Settings />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/crypto" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <CryptoDashboard />
                   </MainLayout>
                 </ProtectedRoute>
               } />
