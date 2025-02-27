@@ -130,7 +130,7 @@ const Auth = () => {
                       <Label htmlFor="login-password">Password</Label>
                       <a 
                         href="#" 
-                        className="text-sm text-primary hover:underline"
+                        className="text-sm text-[#1EAEDB] hover:underline"
                         onClick={(e) => {
                           e.preventDefault();
                           toast.info("Password reset not implemented in this demo");
@@ -150,7 +150,7 @@ const Auth = () => {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button type="submit" className="w-full" variant="brand" disabled={loading}>
                     {loading ? (
                       <>
                         <Loader className="mr-2 h-4 w-4 animate-spin" />
@@ -205,7 +205,7 @@ const Auth = () => {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button type="submit" className="w-full" variant="brand" disabled={loading}>
                     {loading ? (
                       <>
                         <Loader className="mr-2 h-4 w-4 animate-spin" />
@@ -222,11 +222,11 @@ const Auth = () => {
           
           <div className="px-8 pb-6 text-center text-sm text-muted-foreground">
             By continuing, you agree to our{" "}
-            <a href="#" className="underline underline-offset-4 hover:text-primary">
+            <a href="#" className="underline underline-offset-4 hover:text-[#1EAEDB]">
               Terms of Service
             </a>{" "}
             and{" "}
-            <a href="#" className="underline underline-offset-4 hover:text-primary">
+            <a href="#" className="underline underline-offset-4 hover:text-[#1EAEDB]">
               Privacy Policy
             </a>
             .
