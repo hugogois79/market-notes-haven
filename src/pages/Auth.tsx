@@ -99,7 +99,7 @@ const Auth = () => {
         
         <Card className="w-full">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">MarketNotes</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center text-[#1EAEDB]">MarketNotes</CardTitle>
             <CardDescription className="text-center">
               Your market research and analysis hub
             </CardDescription>
