@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Editor from "./pages/Editor";
 import Settings from "./pages/Settings";
+import Notes from "./pages/Notes";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import MainLayout from "./layouts/MainLayout";
@@ -116,6 +117,14 @@ const App = () => {
                 <ProtectedRoute>
                   <MainLayout>
                     <Index notes={notes} loading={loading} />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/notes" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Notes notes={notes} loading={loading} />
                   </MainLayout>
                 </ProtectedRoute>
               } />

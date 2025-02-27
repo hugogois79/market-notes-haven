@@ -1,7 +1,6 @@
 
 import Sidebar from "@/components/Sidebar";
 import { useState, ReactNode } from "react";
-import { useMediaQuery } from "@/hooks/use-mobile";
 import UserProfileButton from "@/components/UserProfileButton";
 
 interface MainLayoutProps {
@@ -9,8 +8,7 @@ interface MainLayoutProps {
 }
 
 const MainLayout = ({ children }: MainLayoutProps) => {
-  const isMobile = useMediaQuery("(max-width: 768px)");
-  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -18,7 +16,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
   return (
     <div className="flex min-h-screen bg-background overflow-hidden">
-      <Sidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
+      <Sidebar />
       
       <div className="flex-1 flex flex-col">
         <header className="h-14 px-4 border-b flex items-center justify-between">
