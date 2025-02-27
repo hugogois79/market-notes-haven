@@ -1,0 +1,203 @@
+
+import { supabase } from "@/integrations/supabase/client";
+import { Note } from "@/types";
+
+// Type for our database notes with proper date fields
+export interface DbNote {
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  category: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Convert database note to app note format
+export const dbNoteToNote = (dbNote: DbNote): Note => ({
+  id: dbNote.id,
+  title: dbNote.title,
+  content: dbNote.content,
+  tags: dbNote.tags,
+  category: dbNote.category,
+  createdAt: new Date(dbNote.created_at),
+  updatedAt: new Date(dbNote.updated_at),
+});
+
+// Convert app note to database format
+export const noteToDbNote = (note: Note): Omit<DbNote, 'created_at' | 'updated_at'> => ({
+  id: note.id,
+  title: note.title,
+  content: note.content,
+  tags: note.tags,
+  category: note.category,
+});
+
+// Fetch all notes from Supabase
+export const fetchNotes = async (): Promise<Note[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching notes:', error);
+      return [];
+    }
+
+    return (data || []).map(dbNoteToNote);
+  } catch (error) {
+    console.error('Error fetching notes:', error);
+    return [];
+  }
+};
+
+// Create a new note in Supabase
+export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>): Promise<Note | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('notes')
+      .insert([{
+        title: note.title,
+        content: note.content,
+        tags: note.tags,
+        category: note.category,
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating note:', error);
+      return null;
+    }
+
+    return dbNoteToNote(data as DbNote);
+  } catch (error) {
+    console.error('Error creating note:', error);
+    return null;
+  }
+};
+
+// Update an existing note in Supabase
+export const updateNote = async (note: Note): Promise<Note | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('notes')
+      .update({
+        title: note.title,
+        content: note.content,
+        tags: note.tags,
+        category: note.category,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', note.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating note:', error);
+      return null;
+    }
+
+    return dbNoteToNote(data as DbNote);
+  } catch (error) {
+    console.error('Error updating note:', error);
+    return null;
+  }
+};
+
+// Delete a note from Supabase
+export const deleteNote = async (noteId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('notes')
+      .delete()
+      .eq('id', noteId);
+
+    if (error) {
+      console.error('Error deleting note:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error deleting note:', error);
+    return false;
+  }
+};
+
+// Get app settings from Supabase
+export const getSettings = async (): Promise<any | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('*')
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching settings:', error);
+      return null;
+    }
+
+    // If no settings exist, create default settings
+    if (!data) {
+      return createDefaultSettings();
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching settings:', error);
+    return null;
+  }
+};
+
+// Create default settings
+export const createDefaultSettings = async (): Promise<any | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('settings')
+      .insert([{}]) // Will use all the defaults defined in the database
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating default settings:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error creating default settings:', error);
+    return null;
+  }
+};
+
+// Update settings
+export const updateSettings = async (settings: any): Promise<any | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('settings')
+      .update({
+        theme: settings.theme,
+        editor_settings: settings.editor_settings,
+        layout_settings: settings.layout_settings,
+        notification_settings: settings.notification_settings,
+        privacy_settings: settings.privacy_settings,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', settings.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating settings:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error updating settings:', error);
+    return null;
+  }
+};

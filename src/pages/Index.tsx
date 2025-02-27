@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { FileText, Plus, Bookmark, FolderOpen, Clock, Rocket } from "lucide-react";
+import { FileText, Plus, Bookmark, FolderOpen, Clock, Rocket, Loader } from "lucide-react";
 import { Link } from "react-router-dom";
 import NoteCard from "@/components/NoteCard";
 import MarketTrends from "@/components/MarketTrends";
@@ -9,9 +9,10 @@ import { toast } from "sonner";
 
 interface IndexProps {
   notes: Note[];
+  loading?: boolean;
 }
 
-const Index = ({ notes }: IndexProps) => {
+const Index = ({ notes, loading = false }: IndexProps) => {
   // Get recent notes (last 6)
   const recentNotes = [...notes]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
@@ -60,7 +61,12 @@ const Index = ({ notes }: IndexProps) => {
           </Link>
         </div>
         
-        {recentNotes.length > 0 ? (
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <Loader className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2 text-lg">Loading notes...</span>
+          </div>
+        ) : recentNotes.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recentNotes.map((note) => (
               <NoteCard key={note.id} note={note} />

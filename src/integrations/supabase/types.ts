@@ -75,6 +75,69 @@ export type Database = {
         }
         Relationships: []
       }
+      notes: {
+        Row: {
+          category: string | null
+          content: string | null
+          created_at: string | null
+          id: string
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          created_at: string | null
+          editor_settings: Json | null
+          id: string
+          layout_settings: Json | null
+          notification_settings: Json | null
+          privacy_settings: Json | null
+          theme: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          editor_settings?: Json | null
+          id?: string
+          layout_settings?: Json | null
+          notification_settings?: Json | null
+          privacy_settings?: Json | null
+          theme?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          editor_settings?: Json | null
+          id?: string
+          layout_settings?: Json | null
+          notification_settings?: Json | null
+          privacy_settings?: Json | null
+          theme?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       summaries: {
         Row: {
           date_created: string

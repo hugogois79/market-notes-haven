@@ -11,37 +11,92 @@ import NotFound from "./pages/NotFound";
 import MainLayout from "./layouts/MainLayout";
 import { useState, useEffect } from "react";
 import { Note } from "./types";
-import { loadNotes, saveNotes } from "./utils/noteUtils";
+import { fetchNotes, updateNote, createNote, deleteNote } from "./services/supabaseService";
+import { toast } from "sonner";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const [notes, setNotes] = useState<Note[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load notes from localStorage on mount
+  // Load notes from Supabase on mount
   useEffect(() => {
-    setNotes(loadNotes());
+    const loadNotes = async () => {
+      try {
+        setLoading(true);
+        const fetchedNotes = await fetchNotes();
+        setNotes(fetchedNotes);
+      } catch (error) {
+        console.error("Error loading notes:", error);
+        toast.error("Failed to load notes");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadNotes();
   }, []);
 
-  // Save notes to localStorage when they change
-  useEffect(() => {
-    saveNotes(notes);
-  }, [notes]);
-
   // Handle saving a note
-  const handleSaveNote = (note: Note) => {
-    setNotes((prevNotes) => {
-      const noteIndex = prevNotes.findIndex((n) => n.id === note.id);
-      if (noteIndex >= 0) {
+  const handleSaveNote = async (note: Note) => {
+    try {
+      let savedNote: Note | null;
+      
+      if (notes.some((n) => n.id === note.id)) {
         // Update existing note
-        const updatedNotes = [...prevNotes];
-        updatedNotes[noteIndex] = note;
-        return updatedNotes;
+        savedNote = await updateNote(note);
+        if (savedNote) {
+          setNotes((prevNotes) => 
+            prevNotes.map((n) => (n.id === savedNote?.id ? savedNote : n))
+          );
+          toast.success("Note updated successfully");
+        }
       } else {
-        // Add new note
-        return [...prevNotes, note];
+        // Create new note
+        savedNote = await createNote({
+          title: note.title,
+          content: note.content,
+          tags: note.tags,
+          category: note.category,
+        });
+        
+        if (savedNote) {
+          setNotes((prevNotes) => [...prevNotes, savedNote as Note]);
+          toast.success("Note created successfully");
+        }
       }
-    });
+      
+      if (!savedNote) {
+        toast.error("Failed to save note");
+      }
+      
+      return savedNote;
+    } catch (error) {
+      console.error("Error saving note:", error);
+      toast.error("Failed to save note");
+      return null;
+    }
+  };
+
+  // Handle deleting a note
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      const success = await deleteNote(noteId);
+      
+      if (success) {
+        setNotes((prevNotes) => prevNotes.filter((n) => n.id !== noteId));
+        toast.success("Note deleted successfully");
+      } else {
+        toast.error("Failed to delete note");
+      }
+      
+      return success;
+    } catch (error) {
+      console.error("Error deleting note:", error);
+      toast.error("Failed to delete note");
+      return false;
+    }
   };
 
   return (
@@ -52,8 +107,22 @@ const App = () => {
         <BrowserRouter>
           <MainLayout>
             <Routes>
-              <Route path="/" element={<Index notes={notes} />} />
-              <Route path="/editor/:noteId" element={<Editor notes={notes} onSaveNote={handleSaveNote} />} />
+              <Route path="/" element={
+                <Index 
+                  notes={notes} 
+                  loading={loading}
+                />
+              } />
+              <Route 
+                path="/editor/:noteId" 
+                element={
+                  <Editor 
+                    notes={notes} 
+                    onSaveNote={handleSaveNote}
+                    onDeleteNote={handleDeleteNote}
+                  />
+                } 
+              />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

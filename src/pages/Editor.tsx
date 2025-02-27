@@ -20,14 +20,16 @@ import {
 
 interface EditorProps {
   notes: Note[];
-  onSaveNote: (note: Note) => void;
+  onSaveNote: (note: Note) => Promise<Note | null>;
+  onDeleteNote: (noteId: string) => Promise<boolean>;
 }
 
-const Editor = ({ notes, onSaveNote }: EditorProps) => {
+const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
   const { noteId } = useParams<{ noteId: string }>();
   const navigate = useNavigate();
   const [currentNote, setCurrentNote] = useState<Note | undefined>(undefined);
   const [isNewNote, setIsNewNote] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Effect to load the note or set up a new one
   useEffect(() => {
@@ -47,30 +49,35 @@ const Editor = ({ notes, onSaveNote }: EditorProps) => {
   }, [noteId, notes, navigate]);
 
   // Handle saving the note
-  const handleSave = (note: Note) => {
-    onSaveNote(note);
+  const handleSave = async (note: Note) => {
+    const savedNote = await onSaveNote(note);
     
-    if (isNewNote) {
-      // Redirect to the new note's edit page
-      navigate(`/editor/${note.id}`, { replace: true });
-      setIsNewNote(false);
+    if (savedNote) {
+      if (isNewNote) {
+        // Redirect to the new note's edit page
+        navigate(`/editor/${savedNote.id}`, { replace: true });
+        setIsNewNote(false);
+      }
+      
+      setCurrentNote(savedNote);
     }
-    
-    setCurrentNote(note);
   };
 
   // Handle deleting the note
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!currentNote) return;
     
-    // Filter out the note to be deleted
-    const updatedNotes = notes.filter(note => note.id !== currentNote.id);
+    setIsDeleting(true);
     
-    // Save the updated notes to localStorage
-    localStorage.setItem("notes", JSON.stringify(updatedNotes));
-    
-    toast.success("Note deleted");
-    navigate("/");
+    try {
+      const success = await onDeleteNote(currentNote.id);
+      
+      if (success) {
+        navigate("/");
+      }
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -90,9 +97,14 @@ const Editor = ({ notes, onSaveNote }: EditorProps) => {
         {!isNewNote && currentNote && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm" className="gap-2">
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                className="gap-2"
+                disabled={isDeleting}
+              >
                 <Trash2 size={16} />
-                Delete
+                {isDeleting ? "Deleting..." : "Delete"}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -100,7 +112,7 @@ const Editor = ({ notes, onSaveNote }: EditorProps) => {
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
                   This action cannot be undone. This will permanently delete your
-                  note and remove it from the server.
+                  note from the database.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
