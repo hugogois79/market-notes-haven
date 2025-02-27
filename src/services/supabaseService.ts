@@ -11,6 +11,7 @@ export interface DbNote {
   category: string;
   created_at: string;
   updated_at: string;
+  user_id: string | null;
 }
 
 // Convert database note to app note format
@@ -31,11 +32,15 @@ export const noteToDbNote = (note: Note): Omit<DbNote, 'created_at' | 'updated_a
   content: note.content,
   tags: note.tags,
   category: note.category,
+  user_id: null, // Will be set by the service
 });
 
 // Fetch all notes from Supabase
 export const fetchNotes = async (): Promise<Note[]> => {
   try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
     const { data, error } = await supabase
       .from('notes')
       .select('*')
@@ -56,6 +61,9 @@ export const fetchNotes = async (): Promise<Note[]> => {
 // Create a new note in Supabase
 export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>): Promise<Note | null> => {
   try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
     const { data, error } = await supabase
       .from('notes')
       .insert([{
@@ -63,6 +71,7 @@ export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedA
         content: note.content,
         tags: note.tags,
         category: note.category,
+        user_id: userId,
       }])
       .select()
       .single();
@@ -82,6 +91,9 @@ export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedA
 // Update an existing note in Supabase
 export const updateNote = async (note: Note): Promise<Note | null> => {
   try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
     const { data, error } = await supabase
       .from('notes')
       .update({
@@ -90,6 +102,7 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
         tags: note.tags,
         category: note.category,
         updated_at: new Date().toISOString(),
+        user_id: userId,
       })
       .eq('id', note.id)
       .select()
@@ -130,9 +143,13 @@ export const deleteNote = async (noteId: string): Promise<boolean> => {
 // Get app settings from Supabase
 export const getSettings = async (): Promise<any | null> => {
   try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
     const { data, error } = await supabase
       .from('settings')
       .select('*')
+      .eq('user_id', userId)
       .maybeSingle();
 
     if (error) {
@@ -155,9 +172,14 @@ export const getSettings = async (): Promise<any | null> => {
 // Create default settings
 export const createDefaultSettings = async (): Promise<any | null> => {
   try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
     const { data, error } = await supabase
       .from('settings')
-      .insert([{}]) // Will use all the defaults defined in the database
+      .insert([{
+        user_id: userId,
+      }]) // Will use all the defaults defined in the database
       .select()
       .single();
 
@@ -176,6 +198,9 @@ export const createDefaultSettings = async (): Promise<any | null> => {
 // Update settings
 export const updateSettings = async (settings: any): Promise<any | null> => {
   try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
     const { data, error } = await supabase
       .from('settings')
       .update({
@@ -185,6 +210,7 @@ export const updateSettings = async (settings: any): Promise<any | null> => {
         notification_settings: settings.notification_settings,
         privacy_settings: settings.privacy_settings,
         updated_at: new Date().toISOString(),
+        user_id: userId,
       })
       .eq('id', settings.id)
       .select()
@@ -198,6 +224,65 @@ export const updateSettings = async (settings: any): Promise<any | null> => {
     return data;
   } catch (error) {
     console.error('Error updating settings:', error);
+    return null;
+  }
+};
+
+// Get current user profile
+export const getUserProfile = async () => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
+    if (!userId) return null;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching profile:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    return null;
+  }
+};
+
+// Update user profile
+export const updateUserProfile = async (profile: any) => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
+    if (!userId) return null;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        username: profile.username,
+        full_name: profile.full_name,
+        avatar_url: profile.avatar_url,
+        bio: profile.bio,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating profile:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error updating profile:', error);
     return null;
   }
 };

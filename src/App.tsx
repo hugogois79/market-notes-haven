@@ -8,11 +8,14 @@ import Index from "./pages/Index";
 import Editor from "./pages/Editor";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import Auth from "./pages/Auth";
 import MainLayout from "./layouts/MainLayout";
 import { useState, useEffect } from "react";
 import { Note } from "./types";
 import { fetchNotes, updateNote, createNote, deleteNote } from "./services/supabaseService";
 import { toast } from "sonner";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -101,34 +104,47 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner position="top-right" expand={false} closeButton theme="light" />
-        <BrowserRouter>
-          <MainLayout>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner position="top-right" expand={false} closeButton theme="light" />
+          <BrowserRouter>
             <Routes>
+              <Route path="/auth" element={<Auth />} />
+              
               <Route path="/" element={
-                <Index 
-                  notes={notes} 
-                  loading={loading}
-                />
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Index notes={notes} loading={loading} />
+                  </MainLayout>
+                </ProtectedRoute>
               } />
-              <Route 
-                path="/editor/:noteId" 
-                element={
-                  <Editor 
-                    notes={notes} 
-                    onSaveNote={handleSaveNote}
-                    onDeleteNote={handleDeleteNote}
-                  />
-                } 
-              />
-              <Route path="/settings" element={<Settings />} />
+              
+              <Route path="/editor/:noteId" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Editor 
+                      notes={notes} 
+                      onSaveNote={handleSaveNote}
+                      onDeleteNote={handleDeleteNote}
+                    />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Settings />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </MainLayout>
-        </BrowserRouter>
-      </TooltipProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };
