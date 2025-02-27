@@ -89,10 +89,18 @@ const Auth = () => {
   return (
     <div className="flex justify-center items-center min-h-screen bg-background">
       <div className="w-full max-w-md p-4">
+        <div className="flex justify-center mb-6">
+          <img 
+            src="/lovable-uploads/975730be-0cc6-45cc-95c5-6f382241b98c.png" 
+            alt="Grand Victoria Ventures Capital" 
+            className="h-32 object-contain"
+          />
+        </div>
+        
         <Card className="w-full">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">MarketNotes</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-2xl font-bold text-center">MarketNotes</CardTitle>
+            <CardDescription className="text-center">
               Your market research and analysis hub
             </CardDescription>
           </CardHeader>
