@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Note } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +31,22 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
   const [currentNote, setCurrentNote] = useState<Note | undefined>(undefined);
   const [isNewNote, setIsNewNote] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
+
+  // Effect to fetch all unique categories from notes
+  useEffect(() => {
+    if (notes.length > 0) {
+      const uniqueCategories = Array.from(
+        new Set(
+          notes
+            .map(note => note.category)
+            .filter(category => category) // Filter out null/undefined
+        )
+      );
+      
+      setCategories(uniqueCategories as string[]);
+    }
+  }, [notes]);
 
   // Effect to load the note or set up a new one
   useEffect(() => {
@@ -130,7 +147,8 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
       <div className="flex-1">
         <RichTextEditor 
           note={currentNote} 
-          onSave={handleSave} 
+          onSave={handleSave}
+          categories={categories} 
         />
       </div>
     </div>

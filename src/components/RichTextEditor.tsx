@@ -22,15 +22,23 @@ import {
   Clock,
   Tags as TagsIcon,
   X,
+  ChevronDown,
 } from "lucide-react";
 import { Note } from "@/types";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface RichTextEditorProps {
   note?: Note;
   onSave?: (note: Note) => void;
+  categories?: string[];
 }
 
-const RichTextEditor = ({ note, onSave }: RichTextEditorProps) => {
+const RichTextEditor = ({ note, onSave, categories = [] }: RichTextEditorProps) => {
   const [title, setTitle] = useState(note?.title || "");
   const [content, setContent] = useState(note?.content || "");
   const [tags, setTags] = useState<string[]>(note?.tags || []);
@@ -41,6 +49,9 @@ const RichTextEditor = ({ note, onSave }: RichTextEditorProps) => {
   
   const editorRef = useRef<HTMLDivElement>(null);
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Ensure we have at least the General category
+  const allCategories = ["General", ...categories.filter(c => c !== "General")];
 
   // Initialize editor content
   useEffect(() => {
@@ -92,6 +103,11 @@ const RichTextEditor = ({ note, onSave }: RichTextEditorProps) => {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
+  // Handle category selection
+  const handleCategorySelect = (selectedCategory: string) => {
+    setCategory(selectedCategory);
+  };
+
   // Handle save
   const handleSave = () => {
     if (!title.trim()) {
@@ -137,10 +153,28 @@ const RichTextEditor = ({ note, onSave }: RichTextEditorProps) => {
             {isAutosaving && <span className="ml-1 text-primary">(Saving...)</span>}
           </div>
           
-          <div className="flex items-center gap-2 bg-secondary px-3 py-1.5 rounded-full text-sm text-muted-foreground">
-            <TagsIcon size={14} />
-            <span>{category}</span>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1 h-8">
+                <TagsIcon size={14} />
+                <span>{category}</span>
+                <ChevronDown size={14} className="opacity-70" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {allCategories.map((cat) => (
+                <DropdownMenuItem
+                  key={cat}
+                  onClick={() => handleCategorySelect(cat)}
+                  className={cn("cursor-pointer", {
+                    "font-medium": cat === category,
+                  })}
+                >
+                  {cat}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         
         {/* Tag Input */}
