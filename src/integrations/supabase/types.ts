@@ -9,6 +9,117 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      crypto_assets: {
+        Row: {
+          created_at: string | null
+          icon_url: string | null
+          id: string
+          name: string
+          symbol: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          icon_url?: string | null
+          id?: string
+          name: string
+          symbol: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          icon_url?: string | null
+          id?: string
+          name?: string
+          symbol?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      crypto_portfolios: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      crypto_transactions: {
+        Row: {
+          asset_id: string
+          created_at: string | null
+          fee: number | null
+          id: string
+          notes: string | null
+          portfolio_id: string
+          price_per_coin: number
+          quantity: number
+          transaction_date: string
+          transaction_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string | null
+          fee?: number | null
+          id?: string
+          notes?: string | null
+          portfolio_id: string
+          price_per_coin: number
+          quantity: number
+          transaction_date: string
+          transaction_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string | null
+          fee?: number | null
+          id?: string
+          notes?: string | null
+          portfolio_id?: string
+          price_per_coin?: number
+          quantity?: number
+          transaction_date?: string
+          transaction_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crypto_transactions_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "crypto_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crypto_transactions_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "crypto_portfolios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       diana: {
         Row: {
           content: string | null
