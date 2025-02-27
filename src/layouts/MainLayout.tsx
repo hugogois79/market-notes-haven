@@ -11,6 +11,7 @@ interface MainLayoutProps {
 const MainLayout = ({ children }: MainLayoutProps) => {
   const location = useLocation();
   const isEditorPage = location.pathname.startsWith("/editor");
+  const isSettingsPage = location.pathname === "/settings";
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">
@@ -18,7 +19,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       <main 
         className={cn(
           "flex-1 overflow-y-auto transition-all duration-300 animate-fade-in",
-          isEditorPage ? "p-2 md:p-4" : "p-4 md:p-6"
+          isEditorPage ? "p-2 md:p-4" : isSettingsPage ? "p-0" : "p-4 md:p-6"
         )}
       >
         <div className="mx-auto max-w-7xl h-full">

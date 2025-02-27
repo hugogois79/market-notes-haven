@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Editor from "./pages/Editor";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import MainLayout from "./layouts/MainLayout";
 import { useState, useEffect } from "react";
@@ -53,6 +54,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Index notes={notes} />} />
               <Route path="/editor/:noteId" element={<Editor notes={notes} onSaveNote={handleSaveNote} />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </MainLayout>
