@@ -88,14 +88,9 @@ const Sidebar = () => {
             : "w-72"
         )}
       >
-        {/* Logo area */}
+        {/* Navigation header - without logo */}
         <div className="p-6 border-b border-sidebar-border/50">
-          <Link to="/" className="flex items-center gap-2" onClick={() => isMobile && setIsOpen(false)}>
-            <div className="bg-sidebar-primary text-sidebar-primary-foreground p-1.5 rounded">
-              <FileText size={24} />
-            </div>
-            <span className="font-semibold text-xl">MarketNotes</span>
-          </Link>
+          <div className="font-semibold text-xl">Navigation</div>
         </div>
 
         {/* New note button */}
@@ -131,8 +126,16 @@ const Sidebar = () => {
           </ul>
         </nav>
 
-        {/* Bottom links */}
-        <div className="p-4 border-t border-sidebar-border/50">
+        {/* Bottom area with logo and settings */}
+        <div className="p-4 border-t border-sidebar-border/50 space-y-4">
+          {/* Logo near settings */}
+          <Link to="/" className="flex items-center gap-2 px-3 py-2.5" onClick={() => isMobile && setIsOpen(false)}>
+            <div className="bg-sidebar-primary text-sidebar-primary-foreground p-1.5 rounded">
+              <FileText size={24} />
+            </div>
+            <span className="font-semibold">MarketNotes</span>
+          </Link>
+          
           <Link
             to="/settings"
             onClick={() => isMobile && setIsOpen(false)}
