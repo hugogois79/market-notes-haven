@@ -325,27 +325,39 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          contact_info: string | null
           created_at: string | null
           full_name: string | null
           id: string
+          role: string | null
+          status: string | null
+          type: string | null
           updated_at: string | null
           username: string | null
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          contact_info?: string | null
           created_at?: string | null
           full_name?: string | null
           id: string
+          role?: string | null
+          status?: string | null
+          type?: string | null
           updated_at?: string | null
           username?: string | null
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          contact_info?: string | null
           created_at?: string | null
           full_name?: string | null
           id?: string
+          role?: string | null
+          status?: string | null
+          type?: string | null
           updated_at?: string | null
           username?: string | null
         }
@@ -509,6 +521,42 @@ export type Database = {
             columns: ["trader_id"]
             isOneToOne: false
             referencedRelation: "traders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_tokens: {
+        Row: {
+          created_at: string | null
+          id: string
+          token_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          token_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          token_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_tokens_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "tokens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

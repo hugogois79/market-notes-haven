@@ -14,6 +14,21 @@ export interface DbNote {
   user_id: string | null;
 }
 
+// Type for our user profile
+export interface UserProfile {
+  id: string;
+  username: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  type: string | null;
+  role: string | null;
+  status: string | null;
+  contact_info: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
 // Convert database note to app note format
 export const dbNoteToNote = (dbNote: DbNote): Note => ({
   id: dbNote.id,
@@ -235,7 +250,7 @@ export const updateSettings = async (settings: any): Promise<any | null> => {
 };
 
 // Get current user profile
-export const getUserProfile = async () => {
+export const getUserProfile = async (): Promise<UserProfile | null> => {
   try {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
@@ -261,7 +276,7 @@ export const getUserProfile = async () => {
 };
 
 // Update user profile
-export const updateUserProfile = async (profile: any) => {
+export const updateUserProfile = async (profile: Partial<UserProfile>): Promise<UserProfile | null> => {
   try {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
@@ -275,6 +290,10 @@ export const updateUserProfile = async (profile: any) => {
         full_name: profile.full_name,
         avatar_url: profile.avatar_url,
         bio: profile.bio,
+        type: profile.type,
+        role: profile.role,
+        status: profile.status,
+        contact_info: profile.contact_info,
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
@@ -290,5 +309,86 @@ export const updateUserProfile = async (profile: any) => {
   } catch (error) {
     console.error('Error updating profile:', error);
     return null;
+  }
+};
+
+// Get user linked tokens
+export const getUserLinkedTokens = async (): Promise<any[]> => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
+    if (!userId) return [];
+
+    const { data, error } = await supabase
+      .from('user_tokens')
+      .select(`
+        token_id,
+        tokens:token_id (*)
+      `)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error fetching user tokens:', error);
+      return [];
+    }
+
+    // Transform the data to get token objects
+    return data.map(item => item.tokens);
+  } catch (error) {
+    console.error('Error fetching user tokens:', error);
+    return [];
+  }
+};
+
+// Link a token to a user
+export const linkTokenToUser = async (tokenId: string): Promise<boolean> => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
+    if (!userId) return false;
+
+    const { error } = await supabase
+      .from('user_tokens')
+      .insert({
+        user_id: userId,
+        token_id: tokenId
+      });
+
+    if (error) {
+      console.error('Error linking token to user:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error linking token to user:', error);
+    return false;
+  }
+};
+
+// Unlink a token from a user
+export const unlinkTokenFromUser = async (tokenId: string): Promise<boolean> => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
+    if (!userId) return false;
+
+    const { error } = await supabase
+      .from('user_tokens')
+      .delete()
+      .match({ user_id: userId, token_id: tokenId });
+
+    if (error) {
+      console.error('Error unlinking token from user:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error unlinking token from user:', error);
+    return false;
   }
 };
