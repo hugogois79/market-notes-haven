@@ -92,12 +92,12 @@ const Sidebar = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          "h-screen bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border transition-all duration-300 ease-in-out z-40",
+          "h-screen bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border transition-all duration-300 ease-in-out z-40 w-72",
           isMobile
             ? isOpen
-              ? "fixed inset-y-0 left-0 w-72 animate-slide-in-left"
-              : "fixed inset-y-0 -left-80 w-72"
-            : "w-72"
+              ? "fixed inset-y-0 left-0 animate-slide-in-left"
+              : "fixed inset-y-0 -left-80"
+            : ""
         )}
       >
         {/* Navigation header - without logo */}
