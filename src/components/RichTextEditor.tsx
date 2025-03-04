@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -396,6 +395,7 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
             </TooltipTrigger>
             <TooltipContent>Bold</TooltipContent>
           </Tooltip>
+          
           
           <Tooltip>
             <TooltipTrigger asChild>

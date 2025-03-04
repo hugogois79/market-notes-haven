@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
@@ -5,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Trash2, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Note, Token } from "@/types";
-import { supabase } from "@/integrations/supabase/client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,6 +54,7 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
   // Effect to load the note or set up a new one
   useEffect(() => {
     console.log("Editor: noteId =", noteId);
+    console.log("Notes available:", notes.length);
     
     if (noteId === "new") {
       console.log("Setting up new note");
@@ -72,6 +73,8 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
       setLinkedTokens([]);
     } else {
       const foundNote = notes.find(note => note.id === noteId);
+      console.log("Found note:", foundNote);
+      
       if (foundNote) {
         console.log('Loaded note content:', foundNote.content);
         setCurrentNote(foundNote);
@@ -89,8 +92,11 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
         
         fetchLinkedTokens();
       } else {
-        toast.error("Note not found");
-        navigate("/notes");
+        // Check if we have notes but the requested one wasn't found
+        if (notes.length > 0) {
+          toast.error("Note not found");
+          navigate("/notes");
+        }
       }
     }
   }, [noteId, notes, navigate]);
