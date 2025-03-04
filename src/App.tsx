@@ -120,7 +120,7 @@ function AppContent() {
           path="/categories"
           element={
             <ProtectedRoute>
-              {withLayout(<Categories />)}
+              {withLayout(<Categories notes={notes} loading={loading || isLoading} />)}
             </ProtectedRoute>
           }
         />
