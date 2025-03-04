@@ -100,9 +100,16 @@ const Sidebar = () => {
             : "fixed left-0 top-0"
         )}
       >
-        {/* Navigation header - without logo */}
+        {/* Navigation header with logo */}
         <div className="p-6 border-b border-sidebar-border/50">
-          <div className="font-semibold text-xl">Navigation</div>
+          <div className="flex items-center gap-3">
+            <img 
+              src="/lovable-uploads/975730be-0cc6-45cc-95c5-6f382241b98c.png" 
+              alt="Grand Victoria Ventures Capital" 
+              className="h-10 w-auto object-contain"
+            />
+            <div className="font-semibold text-xl">Navigation</div>
+          </div>
         </div>
 
         {/* New note button */}
@@ -138,16 +145,9 @@ const Sidebar = () => {
           </ul>
         </nav>
 
-        {/* Bottom area with logo and settings */}
+        {/* Bottom area with settings */}
         <div className="p-4 border-t border-sidebar-border/50 space-y-4">
-          {/* Logo near settings */}
-          <Link to="/" className="flex items-center gap-2 px-3 py-2.5" onClick={() => isMobile && setIsOpen(false)}>
-            <div className="bg-sidebar-primary text-sidebar-primary-foreground p-1.5 rounded">
-              <FileText size={24} />
-            </div>
-            <span className="font-semibold">MarketNotes</span>
-          </Link>
-          
+          {/* Logo removed from here and moved to top */}
           <Link
             to="/settings"
             onClick={() => isMobile && setIsOpen(false)}

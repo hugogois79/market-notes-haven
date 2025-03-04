@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { FileText, Plus, Bookmark, FolderOpen, Clock, Rocket, Loader } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -39,20 +38,13 @@ const Index = ({ notes, loading = false }: IndexProps) => {
 
   return (
     <div className="space-y-6 px-6 py-4 animate-fade-in">
-      {/* Header with Logo */}
+      {/* Header without Logo */}
       <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <img 
-            src="/lovable-uploads/975730be-0cc6-45cc-95c5-6f382241b98c.png" 
-            alt="Grand Victoria Ventures Capital" 
-            className="h-12 w-auto object-contain"
-          />
-          <div>
-            <h1 className="text-3xl font-semibold text-[#1EAEDB]">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">
-              Your market research and analysis hub
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-semibold text-[#1EAEDB]">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Your market research and analysis hub
+          </p>
         </div>
         <Button className="gap-2" size="sm" variant="brand" onClick={handleNewNote}>
           <Plus size={16} />
