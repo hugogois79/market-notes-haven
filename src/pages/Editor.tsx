@@ -54,9 +54,22 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
 
   // Effect to load the note or set up a new one
   useEffect(() => {
+    console.log("Editor: noteId =", noteId);
+    
     if (noteId === "new") {
+      console.log("Setting up new note");
       setIsNewNote(true);
-      setCurrentNote(undefined);
+      // Create a placeholder new note object with default values
+      const newNoteTemplate: Note = {
+        id: "temp-" + Date.now().toString(),
+        title: "Untitled Note",
+        content: "",
+        tags: [],
+        category: "General",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      setCurrentNote(newNoteTemplate);
       setLinkedTokens([]);
     } else {
       const foundNote = notes.find(note => note.id === noteId);
@@ -152,7 +165,7 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
           Back
         </Button>
         
-        {!isNewNote && currentNote && (
+        {!isNewNote && currentNote && !currentNote.id.toString().startsWith("temp-") && (
           <div className="flex items-center gap-2">
             <Button
               variant="outline"

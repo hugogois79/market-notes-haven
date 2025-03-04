@@ -65,6 +65,18 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
   // Ensure we have at least the General category
   const allCategories = ["General", ...categories.filter(c => c !== "General")];
 
+  // Update state when note prop changes
+  useEffect(() => {
+    console.log("RichTextEditor: note changed", note);
+    if (note) {
+      setTitle(note.title || "");
+      setContent(note.content || "");
+      setTags(note.tags || []);
+      setCategory(note.category || "General");
+      setLastSaved(note.updatedAt || null);
+    }
+  }, [note]);
+
   // Load tokens
   useEffect(() => {
     const loadTokens = async () => {
@@ -84,17 +96,25 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
 
   // Initialize editor content
   useEffect(() => {
-    if (editorRef.current && note?.content) {
-      console.log('Setting editor content from note:', note.content);
-      editorRef.current.innerHTML = note.content;
-      setContent(note.content);
-    } else {
-      console.log('No content to set or editor ref not available');
-      if (editorRef.current) {
+    if (editorRef.current) {
+      if (note?.content) {
+        console.log('Setting editor content from note:', note.content);
+        editorRef.current.innerHTML = note.content;
+        setContent(note.content);
+      } else {
+        console.log('Setting empty editor content for new note');
         editorRef.current.innerHTML = "";
+        setContent("");
       }
+    } else {
+      console.log('Editor ref not available');
     }
   }, [note]);
+
+  // Update linked tokens when prop changes
+  useEffect(() => {
+    setSelectedTokens(linkedTokens || []);
+  }, [linkedTokens]);
 
   // Handle content changes and autosave
   const handleContentChange = () => {
