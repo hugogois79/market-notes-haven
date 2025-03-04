@@ -26,7 +26,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
   ];
 
   return (
-    <div className="space-y-6 py-2 animate-fade-in">
+    <div className="space-y-6 py-0 pl-0 animate-fade-in">
       {/* Header with Logo */}
       <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
         <div className="flex items-center gap-3">
