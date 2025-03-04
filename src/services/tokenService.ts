@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Token, Note } from "@/types";
 import { dbNoteToNote } from "@/services/supabaseService";
@@ -164,6 +163,7 @@ export const getNotesForToken = async (tokenId: string): Promise<Note[]> => {
 // Fetch tokens linked to a specific note
 export const getTokensForNote = async (noteId: string): Promise<Token[]> => {
   try {
+    console.log(`Fetching tokens for note: ${noteId}`);
     const { data, error } = await supabase
       .from('notes_tokens')
       .select(`
@@ -176,6 +176,8 @@ export const getTokensForNote = async (noteId: string): Promise<Token[]> => {
       console.error("Error fetching tokens for note:", error);
       return [];
     }
+
+    console.log("Fetched notes_tokens data:", data);
 
     // Transform the data to get token objects
     return data
@@ -190,6 +192,8 @@ export const getTokensForNote = async (noteId: string): Promise<Token[]> => {
 // Link a token to a note
 export const linkTokenToNote = async (noteId: string, tokenId: string): Promise<boolean> => {
   try {
+    console.log(`Attempting to link token ${tokenId} to note ${noteId}`);
+    
     // First check if the link already exists
     const { data: existingLink, error: checkError } = await supabase
       .from('notes_tokens')
@@ -205,6 +209,7 @@ export const linkTokenToNote = async (noteId: string, tokenId: string): Promise<
     
     // If the link already exists, return true
     if (existingLink) {
+      console.log('Link already exists');
       return true;
     }
     
@@ -221,6 +226,7 @@ export const linkTokenToNote = async (noteId: string, tokenId: string): Promise<
       return false;
     }
 
+    console.log('Link created successfully');
     return true;
   } catch (error) {
     console.error('Error linking token to note:', error);
@@ -231,6 +237,7 @@ export const linkTokenToNote = async (noteId: string, tokenId: string): Promise<
 // Unlink a token from a note
 export const unlinkTokenFromNote = async (noteId: string, tokenId: string): Promise<boolean> => {
   try {
+    console.log(`Attempting to unlink token ${tokenId} from note ${noteId}`);
     const { error } = await supabase
       .from('notes_tokens')
       .delete()
@@ -241,6 +248,7 @@ export const unlinkTokenFromNote = async (noteId: string, tokenId: string): Prom
       return false;
     }
 
+    console.log('Unlink successful');
     return true;
   } catch (error) {
     console.error('Error unlinking token from note:', error);

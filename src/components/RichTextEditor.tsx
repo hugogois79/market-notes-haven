@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -209,29 +208,52 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     const savedNote = await onSave?.(updatedNote);
     
     if (savedNote) {
+      console.log("Note saved successfully:", savedNote.id);
+      
       // Update token associations
-      // First, identify previous and current token ids
-      const previousTokenIds = linkedTokens.map(t => t.id);
-      const currentTokenIds = selectedTokens.map(t => t.id);
-      
-      // Find tokens to remove (in previous but not in current)
-      const tokensToRemove = previousTokenIds.filter(id => !currentTokenIds.includes(id));
-      
-      // Find tokens to add (in current but not in previous)
-      const tokensToAdd = currentTokenIds.filter(id => !previousTokenIds.includes(id));
-      
-      // Process removals
-      const removalPromises = tokensToRemove.map(tokenId => 
-        unlinkTokenFromNote(savedNote.id, tokenId)
-      );
-      
-      // Process additions
-      const addPromises = tokensToAdd.map(tokenId => 
-        linkTokenToNote(savedNote.id, tokenId)
-      );
-      
-      // Wait for all operations to complete
-      await Promise.all([...removalPromises, ...addPromises]);
+      try {
+        // First, identify previous and current token ids
+        const previousTokenIds = linkedTokens.map(t => t.id);
+        const currentTokenIds = selectedTokens.map(t => t.id);
+        
+        console.log("Previous token IDs:", previousTokenIds);
+        console.log("Current token IDs:", currentTokenIds);
+        
+        // Find tokens to remove (in previous but not in current)
+        const tokensToRemove = previousTokenIds.filter(id => !currentTokenIds.includes(id));
+        
+        // Find tokens to add (in current but not in previous)
+        const tokensToAdd = currentTokenIds.filter(id => !previousTokenIds.includes(id));
+        
+        console.log("Tokens to remove:", tokensToRemove);
+        console.log("Tokens to add:", tokensToAdd);
+        
+        // Process removals
+        for (const tokenId of tokensToRemove) {
+          console.log(`Unlinking token ${tokenId} from note ${savedNote.id}`);
+          const success = await unlinkTokenFromNote(savedNote.id, tokenId);
+          if (!success) {
+            console.error(`Failed to unlink token ${tokenId}`);
+          }
+        }
+        
+        // Process additions
+        for (const tokenId of tokensToAdd) {
+          console.log(`Linking token ${tokenId} to note ${savedNote.id}`);
+          const success = await linkTokenToNote(savedNote.id, tokenId);
+          if (!success) {
+            console.error(`Failed to link token ${tokenId}`);
+          }
+        }
+        
+        // Only show a success toast if we had tokens to link/unlink
+        if (tokensToAdd.length > 0 || tokensToRemove.length > 0) {
+          toast.success("Token associations updated");
+        }
+      } catch (error) {
+        console.error("Error updating token associations:", error);
+        toast.error("Failed to update token associations");
+      }
       
       setLastSaved(new Date());
     }
