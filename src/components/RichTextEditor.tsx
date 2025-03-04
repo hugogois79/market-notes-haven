@@ -55,13 +55,11 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
   const [tagInput, setTagInput] = useState("");
   const [category, setCategory] = useState(note?.category || "General");
   const [lastSaved, setLastSaved] = useState<Date | null>(note?.updatedAt || null);
-  const [isAutosaving, setIsAutosaving] = useState(false);
   const [tokens, setTokens] = useState<Token[]>([]);
   const [selectedTokens, setSelectedTokens] = useState<Token[]>(linkedTokens || []);
   const [isLoadingTokens, setIsLoadingTokens] = useState(false);
   
   const editorRef = useRef<HTMLDivElement>(null);
-  const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initialContentRef = useRef<string>("");
 
   // Ensure we have at least the General category
@@ -120,7 +118,7 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     setSelectedTokens(linkedTokens || []);
   }, [linkedTokens]);
 
-  // Handle content changes and autosave
+  // Handle content changes
   const handleContentChange = () => {
     if (!editorRef.current) return;
     
@@ -130,20 +128,6 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     if (newContent !== content) {
       console.log('Content changed:', newContent);
       setContent(newContent);
-      
-      // Setup autosave only if content changed from last saved state
-      if (newContent !== initialContentRef.current) {
-        setIsAutosaving(true);
-        
-        if (autosaveTimeoutRef.current) {
-          clearTimeout(autosaveTimeoutRef.current);
-        }
-        
-        autosaveTimeoutRef.current = setTimeout(() => {
-          handleSave();
-          setIsAutosaving(false);
-        }, 3000); // Increased timeout for better user experience
-      }
     }
   };
 
@@ -278,16 +262,6 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     }
   };
 
-  // Manual save button click handler
-  const handleManualSave = () => {
-    // Clear any pending autosave
-    if (autosaveTimeoutRef.current) {
-      clearTimeout(autosaveTimeoutRef.current);
-    }
-    setIsAutosaving(false);
-    handleSave();
-  };
-
   return (
     <div className="h-full flex flex-col animate-fade-in">
       {/* Editor Header */}
@@ -308,7 +282,6 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
                 ? `Last saved: ${lastSaved.toLocaleTimeString()}`
                 : "Not saved yet"}
             </span>
-            {isAutosaving && <span className="ml-1 text-primary">(Saving...)</span>}
           </div>
           
           <DropdownMenu>
@@ -536,7 +509,7 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
             <Button 
               variant="default" 
               size="sm" 
-              onClick={handleManualSave}
+              onClick={handleSave}
               className="gap-2"
             >
               <Save size={16} />
