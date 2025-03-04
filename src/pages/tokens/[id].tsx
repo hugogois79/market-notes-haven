@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { fetchTokenById, createToken, updateToken, deleteToken, getNotesForToken
 import { Note, Token } from "@/types";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Trash, ArrowLeft, Save, Plus, X, Image, FileText } from "lucide-react";
+import { Trash, ArrowLeft, Save, Plus, X, Image, FileText, Filter } from "lucide-react";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import NoteCard from "@/components/NoteCard";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const TokenDetail = () => {
   const { id } = useParams();
@@ -43,6 +45,8 @@ const TokenDetail = () => {
   const [newTag, setNewTag] = useState("");
   const [relatedNotes, setRelatedNotes] = useState<Note[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   
   useEffect(() => {
     const loadToken = async () => {
@@ -76,12 +80,21 @@ const TokenDetail = () => {
       setLoadingNotes(true);
       const notes = await getNotesForToken(tokenId);
       setRelatedNotes(notes);
+      
+      // Extract unique categories from notes
+      const categories = Array.from(new Set(notes.map(note => note.category)));
+      setAvailableCategories(categories);
     } catch (error) {
       console.error("Error loading related notes:", error);
     } finally {
       setLoadingNotes(false);
     }
   };
+  
+  // Filter notes by category
+  const filteredNotes = selectedCategory === "all" 
+    ? relatedNotes 
+    : relatedNotes.filter(note => note.category === selectedCategory);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -392,22 +405,58 @@ const TokenDetail = () => {
         
         <TabsContent value="notes" className="mt-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center gap-4">
               <CardTitle className="flex items-center gap-2">
                 <FileText size={20} className="text-primary" />
                 Related Notes
               </CardTitle>
+              
+              {availableCategories.length > 0 && (
+                <div className="flex items-center gap-2 ml-auto">
+                  <Filter size={16} className="text-muted-foreground" />
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filter by category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {availableCategories.map(category => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               {loadingNotes ? (
                 <div className="py-8 flex justify-center">
                   <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
                 </div>
-              ) : relatedNotes.length > 0 ? (
+              ) : filteredNotes.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {relatedNotes.map(note => (
+                  {filteredNotes.map(note => (
                     <NoteCard key={note.id} note={note} />
                   ))}
+                </div>
+              ) : relatedNotes.length > 0 ? (
+                <div className="text-center py-8">
+                  <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <Filter className="text-primary" size={24} />
+                  </div>
+                  <h3 className="text-lg font-medium mb-2">No Notes in This Category</h3>
+                  <p className="text-muted-foreground mb-4">
+                    There are no notes in the selected category. Try selecting a different category.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setSelectedCategory("all")}
+                    className="gap-2"
+                  >
+                    Show All Notes
+                  </Button>
                 </div>
               ) : (
                 <div className="text-center py-8">
