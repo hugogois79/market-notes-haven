@@ -1,9 +1,12 @@
+
 import { Button } from "@/components/ui/button";
-import { FileText, Plus, Bookmark, FolderOpen, Clock, Rocket, Loader } from "lucide-react";
+import { FileText, Plus, Bookmark, FolderOpen, Clock, Rocket, Loader, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import NoteCard from "@/components/NoteCard";
 import { Note } from "@/types";
 import { toast } from "sonner";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
 
 interface IndexProps {
   notes: Note[];
@@ -12,9 +15,17 @@ interface IndexProps {
 
 const Index = ({ notes, loading = false }: IndexProps) => {
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
   
-  // Get recent notes (last 6)
-  const recentNotes = [...notes]
+  // Filter notes based on search query
+  const filteredNotes = notes.filter(note => 
+    searchQuery === "" || 
+    note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    note.content.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  // Get recent notes (last 6) from filtered notes
+  const recentNotes = [...filteredNotes]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 6);
 
@@ -52,6 +63,17 @@ const Index = ({ notes, loading = false }: IndexProps) => {
         </Button>
       </div>
 
+      {/* Search field */}
+      <div className="relative">
+        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search notes..."
+          className="pl-9 w-full max-w-md"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
       {/* Recent Notes Section */}
       <div>
         <div className="flex items-center justify-between mb-4">
@@ -80,9 +102,13 @@ const Index = ({ notes, loading = false }: IndexProps) => {
             <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#1EAEDB]/10 text-[#1EAEDB] mb-4">
               <Rocket size={24} />
             </div>
-            <h3 className="text-lg font-medium mb-2">No Notes Yet</h3>
+            <h3 className="text-lg font-medium mb-2">
+              {searchQuery ? "No Notes Found" : "No Notes Yet"}
+            </h3>
             <p className="text-muted-foreground mb-6 max-w-md">
-              Start creating market research notes to track your insights and analysis.
+              {searchQuery 
+                ? "Try adjusting your search query or create a new note." 
+                : "Start creating market research notes to track your insights and analysis."}
             </p>
             <Button variant="brand" onClick={handleNewNote}>
               Create Your First Note
