@@ -97,7 +97,7 @@ const Sidebar = () => {
             ? isOpen
               ? "fixed inset-y-0 left-0 animate-slide-in-left"
               : "fixed inset-y-0 -left-80"
-            : ""
+            : "fixed left-0 top-0"
         )}
       >
         {/* Navigation header - without logo */}
