@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { FileText, Plus, Bookmark, FolderOpen, Clock, Rocket, Loader } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import NoteCard from "@/components/NoteCard";
 import { Note } from "@/types";
 import { toast } from "sonner";
@@ -12,6 +12,8 @@ interface IndexProps {
 }
 
 const Index = ({ notes, loading = false }: IndexProps) => {
+  const navigate = useNavigate();
+  
   // Get recent notes (last 6)
   const recentNotes = [...notes]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
@@ -24,6 +26,14 @@ const Index = ({ notes, loading = false }: IndexProps) => {
     { name: "Forex", count: 5, icon: <FolderOpen size={16} /> },
     { name: "Commodities", count: 3, icon: <Clock size={16} /> },
   ];
+
+  const handleNewNote = () => {
+    navigate("/editor/new");
+  };
+  
+  const handleViewAllNotes = () => {
+    navigate("/notes");
+  };
 
   return (
     <div className="space-y-6 px-6 py-4 animate-fade-in">
@@ -42,12 +52,10 @@ const Index = ({ notes, loading = false }: IndexProps) => {
             </p>
           </div>
         </div>
-        <Link to="/editor/new">
-          <Button className="gap-2" size="sm" variant="brand">
-            <Plus size={16} />
-            New Note
-          </Button>
-        </Link>
+        <Button className="gap-2" size="sm" variant="brand" onClick={handleNewNote}>
+          <Plus size={16} />
+          New Note
+        </Button>
       </div>
 
       {/* Recent Notes Section */}
@@ -57,11 +65,9 @@ const Index = ({ notes, loading = false }: IndexProps) => {
             <Clock size={20} className="text-[#1EAEDB]" />
             Recent Notes
           </h2>
-          <Link to="/notes">
-            <Button variant="ghost" size="sm">
-              View All
-            </Button>
-          </Link>
+          <Button variant="ghost" size="sm" onClick={handleViewAllNotes}>
+            View All
+          </Button>
         </div>
         
         {loading ? (
@@ -72,9 +78,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
         ) : recentNotes.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recentNotes.map((note) => (
-              <div key={note.id}>
-                <NoteCard note={note} />
-              </div>
+              <NoteCard key={note.id} note={note} />
             ))}
           </div>
         ) : (
@@ -86,11 +90,9 @@ const Index = ({ notes, loading = false }: IndexProps) => {
             <p className="text-muted-foreground mb-6 max-w-md">
               Start creating market research notes to track your insights and analysis.
             </p>
-            <Link to="/editor/new">
-              <Button variant="brand">
-                Create Your First Note
-              </Button>
-            </Link>
+            <Button variant="brand" onClick={handleNewNote}>
+              Create Your First Note
+            </Button>
           </div>
         )}
       </div>
