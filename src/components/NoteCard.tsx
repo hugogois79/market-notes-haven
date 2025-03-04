@@ -5,6 +5,7 @@ import { Calendar, Tag } from "lucide-react";
 import { Note } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useEffect } from "react";
 
 interface NoteCardProps {
   note: Note;
@@ -33,7 +34,10 @@ const NoteCard = ({ note, className }: NoteCardProps) => {
 
   const handleNoteClick = () => {
     console.log("Navigating to note:", note.id);
-    navigate(`/editor/${note.id}`);
+    // Force the route change by using a timeout to ensure the event completes
+    setTimeout(() => {
+      navigate(`/editor/${note.id}`);
+    }, 10);
   };
 
   return (
@@ -43,6 +47,7 @@ const NoteCard = ({ note, className }: NoteCardProps) => {
         className
       )}
       onClick={handleNoteClick}
+      data-note-id={note.id}
     >
       <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-start gap-2">

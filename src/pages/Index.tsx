@@ -28,10 +28,12 @@ const Index = ({ notes, loading = false }: IndexProps) => {
   ];
 
   const handleNewNote = () => {
+    console.log("Creating new note");
     navigate("/editor/new");
   };
   
   const handleViewAllNotes = () => {
+    console.log("Viewing all notes");
     navigate("/notes");
   };
 
