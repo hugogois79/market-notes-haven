@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -166,10 +165,11 @@ const Profile = () => {
                   <Avatar className="h-16 w-16">
                     {profile.avatar_url ? (
                       <AvatarImage src={profile.avatar_url} alt={profile.username || ""} />
-                    ) : null}
-                    <AvatarFallback className="text-lg">
-                      {getInitials(profile.full_name || profile.username)}
-                    </AvatarFallback>
+                    ) : (
+                      <AvatarFallback className="text-lg">
+                        {getInitials(profile.full_name || profile.username)}
+                      </AvatarFallback>
+                    )}
                   </Avatar>
                   <div>
                     <CardTitle className="text-xl">{profile.full_name || profile.username || "User Profile"}</CardTitle>
