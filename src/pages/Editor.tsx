@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
@@ -97,7 +96,7 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
   }, [noteId, notes, navigate]);
 
   // Handle saving the note
-  const handleSave = async (note: Note) => {
+  const handleSave = async (note: Note): Promise<Note | null> => {
     console.log('Attempting to save note with content:', note.content);
     
     const savedNote = await onSaveNote(note);
@@ -117,9 +116,12 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
       // Refresh linked tokens
       const tokens = await getTokensForNote(savedNote.id);
       setLinkedTokens(tokens);
+      
+      return savedNote;
     } else {
       console.error('Failed to save note');
       toast.error("Failed to save note");
+      return null;
     }
   };
 
