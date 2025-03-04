@@ -66,8 +66,9 @@ const UserProfileButton = () => {
           <Avatar className="h-8 w-8">
             {avatarUrl ? (
               <AvatarImage src={avatarUrl} alt={username || "User"} />
-            ) : null}
-            <AvatarFallback>{getInitials()}</AvatarFallback>
+            ) : (
+              <AvatarFallback>{getInitials()}</AvatarFallback>
+            )}
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
