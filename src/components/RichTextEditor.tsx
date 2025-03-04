@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +62,7 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
   
   const editorRef = useRef<HTMLDivElement>(null);
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initialContentRef = useRef<string>("");
 
   // Ensure we have at least the General category
   const allCategories = ["General", ...categories.filter(c => c !== "General")];
@@ -100,10 +102,12 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
       if (note?.content) {
         console.log('Setting editor content from note:', note.content);
         editorRef.current.innerHTML = note.content;
+        initialContentRef.current = note.content;
         setContent(note.content);
       } else {
         console.log('Setting empty editor content for new note');
         editorRef.current.innerHTML = "";
+        initialContentRef.current = "";
         setContent("");
       }
     } else {
@@ -121,27 +125,39 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     if (!editorRef.current) return;
     
     const newContent = editorRef.current.innerHTML;
-    console.log('Content changed:', newContent);
-    setContent(newContent);
     
-    // Setup autosave
-    setIsAutosaving(true);
-    
-    if (autosaveTimeoutRef.current) {
-      clearTimeout(autosaveTimeoutRef.current);
+    // Only update if content has actually changed
+    if (newContent !== content) {
+      console.log('Content changed:', newContent);
+      setContent(newContent);
+      
+      // Setup autosave only if content changed from last saved state
+      if (newContent !== initialContentRef.current) {
+        setIsAutosaving(true);
+        
+        if (autosaveTimeoutRef.current) {
+          clearTimeout(autosaveTimeoutRef.current);
+        }
+        
+        autosaveTimeoutRef.current = setTimeout(() => {
+          handleSave();
+          setIsAutosaving(false);
+        }, 3000); // Increased timeout for better user experience
+      }
     }
-    
-    autosaveTimeoutRef.current = setTimeout(() => {
-      handleSave();
-      setIsAutosaving(false);
-    }, 2000);
   };
 
   // Format commands
   const execCommand = (command: string, value: string = "") => {
     document.execCommand(command, false, value);
-    handleContentChange();
-    if (editorRef.current) editorRef.current.focus();
+    if (editorRef.current) {
+      // Focus back on the editor after applying format
+      editorRef.current.focus();
+      // Trigger content change after a brief delay to ensure command is applied
+      setTimeout(() => {
+        handleContentChange();
+      }, 10);
+    }
   };
 
   // Handle adding tags
@@ -192,7 +208,9 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
       return;
     }
     
-    const currentContent = editorRef.current?.innerHTML || "";
+    if (!editorRef.current) return;
+    
+    const currentContent = editorRef.current.innerHTML;
     console.log('Saving content:', currentContent);
     
     const updatedNote: Note = {
@@ -209,6 +227,7 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     
     if (savedNote) {
       console.log("Note saved successfully:", savedNote.id);
+      initialContentRef.current = currentContent; // Update reference content after successful save
       
       // Update token associations
       try {
@@ -257,6 +276,16 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
       
       setLastSaved(new Date());
     }
+  };
+
+  // Manual save button click handler
+  const handleManualSave = () => {
+    // Clear any pending autosave
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+    }
+    setIsAutosaving(false);
+    handleSave();
   };
 
   return (
@@ -507,7 +536,7 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
             <Button 
               variant="default" 
               size="sm" 
-              onClick={handleSave}
+              onClick={handleManualSave}
               className="gap-2"
             >
               <Save size={16} />
@@ -527,7 +556,7 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
         contentEditable
         onInput={handleContentChange}
         onBlur={handleContentChange}
-        dangerouslySetInnerHTML={{ __html: content }}
+        suppressContentEditableWarning={true}
       />
     </div>
   );
