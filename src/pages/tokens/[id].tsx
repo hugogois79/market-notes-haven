@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchToken, createToken, updateToken, deleteToken } from "@/services/tokenService";
+import { fetchTokenById, createToken, updateToken, deleteToken } from "@/services/tokenService";
 import { Token } from "@/types";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -48,7 +48,7 @@ const TokenDetail = () => {
       
       try {
         setLoading(true);
-        const fetchedToken = await fetchToken(id!);
+        const fetchedToken = await fetchTokenById(id!);
         if (fetchedToken) {
           setToken(fetchedToken);
         } else {

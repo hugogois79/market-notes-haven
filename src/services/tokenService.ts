@@ -1,4 +1,3 @@
-
 import { Token, TokenPortfolio, TokenTrader, TokenNote } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -248,3 +247,6 @@ export const unlinkTokenFromNote = async (noteId: string, tokenId: string): Prom
     return false;
   }
 };
+
+// Alias for fetchTokenById to maintain compatibility with the token detail page
+export const fetchToken = fetchTokenById;
