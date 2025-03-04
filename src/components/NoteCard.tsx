@@ -32,6 +32,7 @@ const NoteCard = ({ note, className }: NoteCardProps) => {
   };
 
   const handleNoteClick = () => {
+    console.log("Navigating to note:", note.id);
     navigate(`/editor/${note.id}`);
   };
 

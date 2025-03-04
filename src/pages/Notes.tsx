@@ -1,6 +1,6 @@
 
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   Search, 
   Plus, 
@@ -24,7 +24,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Note } from "@/types";
 import NoteCard from "@/components/NoteCard";
@@ -38,6 +37,7 @@ type SortOption = "date-desc" | "date-asc" | "title-asc" | "title-desc";
 type ViewMode = "grid" | "list";
 
 const Notes = ({ notes, loading = false }: NotesProps) => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -87,6 +87,10 @@ const Notes = ({ notes, loading = false }: NotesProps) => {
     );
   };
 
+  const handleNewNote = () => {
+    navigate("/editor/new");
+  };
+
   return (
     <div className="space-y-6 py-2 animate-fade-in">
       {/* Header */}
@@ -97,12 +101,10 @@ const Notes = ({ notes, loading = false }: NotesProps) => {
             Browse and search all your market research notes
           </p>
         </div>
-        <Link to="/editor/new">
-          <Button className="gap-2" size="sm">
-            <Plus size={16} />
-            New Note
-          </Button>
-        </Link>
+        <Button className="gap-2" size="sm" onClick={handleNewNote}>
+          <Plus size={16} />
+          New Note
+        </Button>
       </div>
       
       {/* Search and Filters */}
@@ -269,11 +271,9 @@ const Notes = ({ notes, loading = false }: NotesProps) => {
               ? "Try adjusting your filters or search query"
               : "Start creating notes to see them here"}
           </p>
-          <Link to="/editor/new">
-            <Button>
-              Create Your First Note
-            </Button>
-          </Link>
+          <Button onClick={handleNewNote}>
+            Create Your First Note
+          </Button>
         </div>
       )}
     </div>
