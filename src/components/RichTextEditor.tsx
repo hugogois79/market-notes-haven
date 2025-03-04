@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,11 +39,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { fetchTokens } from "@/services/tokenService";
+import { fetchTokens, linkTokenToNote, unlinkTokenFromNote } from "@/services/tokenService";
 
 interface RichTextEditorProps {
   note?: Note;
-  onSave?: (note: Note) => void;
+  onSave?: (note: Note) => Promise<Note | null>;
   categories?: string[];
   linkedTokens?: Token[];
 }
@@ -186,7 +187,7 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
   };
 
   // Handle save
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title.trim()) {
       toast.error("Please add a title");
       return;
@@ -205,8 +206,35 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
       updatedAt: new Date(),
     };
     
-    onSave?.(updatedNote);
-    setLastSaved(new Date());
+    const savedNote = await onSave?.(updatedNote);
+    
+    if (savedNote) {
+      // Update token associations
+      // First, identify previous and current token ids
+      const previousTokenIds = linkedTokens.map(t => t.id);
+      const currentTokenIds = selectedTokens.map(t => t.id);
+      
+      // Find tokens to remove (in previous but not in current)
+      const tokensToRemove = previousTokenIds.filter(id => !currentTokenIds.includes(id));
+      
+      // Find tokens to add (in current but not in previous)
+      const tokensToAdd = currentTokenIds.filter(id => !previousTokenIds.includes(id));
+      
+      // Process removals
+      const removalPromises = tokensToRemove.map(tokenId => 
+        unlinkTokenFromNote(savedNote.id, tokenId)
+      );
+      
+      // Process additions
+      const addPromises = tokensToAdd.map(tokenId => 
+        linkTokenToNote(savedNote.id, tokenId)
+      );
+      
+      // Wait for all operations to complete
+      await Promise.all([...removalPromises, ...addPromises]);
+      
+      setLastSaved(new Date());
+    }
   };
 
   return (

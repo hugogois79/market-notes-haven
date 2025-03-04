@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,11 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchTokenById, createToken, updateToken, deleteToken } from "@/services/tokenService";
-import { Token } from "@/types";
+import { fetchTokenById, createToken, updateToken, deleteToken, getNotesForToken } from "@/services/tokenService";
+import { Note, Token } from "@/types";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Trash, ArrowLeft, Save, Plus, X, Image } from "lucide-react";
+import { Trash, ArrowLeft, Save, Plus, X, Image, FileText } from "lucide-react";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import NoteCard from "@/components/NoteCard";
 
 const TokenDetail = () => {
   const { id } = useParams();
@@ -41,6 +41,8 @@ const TokenDetail = () => {
   const [saving, setSaving] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [newTag, setNewTag] = useState("");
+  const [relatedNotes, setRelatedNotes] = useState<Note[]>([]);
+  const [loadingNotes, setLoadingNotes] = useState(false);
   
   useEffect(() => {
     const loadToken = async () => {
@@ -51,6 +53,9 @@ const TokenDetail = () => {
         const fetchedToken = await fetchTokenById(id!);
         if (fetchedToken) {
           setToken(fetchedToken);
+          
+          // Load related notes
+          loadRelatedNotes(fetchedToken.id);
         } else {
           toast.error("Token not found");
           navigate("/tokens");
@@ -65,6 +70,18 @@ const TokenDetail = () => {
     
     loadToken();
   }, [id, isNew, navigate]);
+  
+  const loadRelatedNotes = async (tokenId: string) => {
+    try {
+      setLoadingNotes(true);
+      const notes = await getNotesForToken(tokenId);
+      setRelatedNotes(notes);
+    } catch (error) {
+      console.error("Error loading related notes:", error);
+    } finally {
+      setLoadingNotes(false);
+    }
+  };
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -374,16 +391,44 @@ const TokenDetail = () => {
         </TabsContent>
         
         <TabsContent value="notes" className="mt-4">
-          <Card className="p-6">
-            <div className="text-center py-8">
-              <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <Image className="text-primary" size={24} />
-              </div>
-              <h3 className="text-lg font-medium mb-2">Notes Integration Coming Soon</h3>
-              <p className="text-muted-foreground">
-                The ability to associate notes with tokens will be available in a future update.
-              </p>
-            </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText size={20} className="text-primary" />
+                Related Notes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingNotes ? (
+                <div className="py-8 flex justify-center">
+                  <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+                </div>
+              ) : relatedNotes.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {relatedNotes.map(note => (
+                    <NoteCard key={note.id} note={note} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <FileText className="text-primary" size={24} />
+                  </div>
+                  <h3 className="text-lg font-medium mb-2">No Related Notes Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    There are no notes associated with this token yet.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate("/editor/new")}
+                    className="gap-2"
+                  >
+                    <Plus size={16} />
+                    Create Note
+                  </Button>
+                </div>
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>

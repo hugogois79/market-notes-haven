@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Token } from "@/types";
+import { Token, Note } from "@/types";
+import { dbNoteToNote } from "@/services/supabaseService";
 
 // Convert database token to app token format
 const dbTokenToToken = (dbToken: any): Token => ({
@@ -134,6 +135,32 @@ export const deleteToken = async (tokenId: string): Promise<boolean> => {
   }
 };
 
+// Fetch notes linked to a specific token
+export const getNotesForToken = async (tokenId: string): Promise<Note[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('notes_tokens')
+      .select(`
+        note_id,
+        notes:note_id (*)
+      `)
+      .eq('token_id', tokenId);
+
+    if (error) {
+      console.error("Error fetching notes for token:", error);
+      return [];
+    }
+
+    // Transform the data to get note objects
+    return data
+      .filter(item => item.notes) // Filter out any null notes
+      .map(item => dbNoteToNote(item.notes));
+  } catch (error) {
+    console.error("Error fetching notes for token:", error);
+    return [];
+  }
+};
+
 // Fetch tokens linked to a specific note
 export const getTokensForNote = async (noteId: string): Promise<Token[]> => {
   try {
@@ -151,7 +178,9 @@ export const getTokensForNote = async (noteId: string): Promise<Token[]> => {
     }
 
     // Transform the data to get token objects
-    return data.map(item => dbTokenToToken(item.tokens));
+    return data
+      .filter(item => item.tokens) // Filter out any null tokens
+      .map(item => dbTokenToToken(item.tokens));
   } catch (error) {
     console.error("Error fetching tokens for note:", error);
     return [];
@@ -161,6 +190,25 @@ export const getTokensForNote = async (noteId: string): Promise<Token[]> => {
 // Link a token to a note
 export const linkTokenToNote = async (noteId: string, tokenId: string): Promise<boolean> => {
   try {
+    // First check if the link already exists
+    const { data: existingLink, error: checkError } = await supabase
+      .from('notes_tokens')
+      .select('*')
+      .eq('note_id', noteId)
+      .eq('token_id', tokenId)
+      .maybeSingle();
+    
+    if (checkError) {
+      console.error('Error checking existing link:', checkError);
+      return false;
+    }
+    
+    // If the link already exists, return true
+    if (existingLink) {
+      return true;
+    }
+    
+    // Create the link
     const { error } = await supabase
       .from('notes_tokens')
       .insert({

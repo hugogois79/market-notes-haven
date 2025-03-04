@@ -19,7 +19,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { printNote } from "@/utils/printUtils";
-import { getTokensForNote, linkTokenToNote, unlinkTokenFromNote } from "@/services/tokenService";
+import { getTokensForNote } from "@/services/tokenService";
 
 interface EditorProps {
   notes: Note[];
@@ -113,6 +113,10 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
       
       setCurrentNote(savedNote);
       toast.success("Note saved successfully");
+      
+      // Refresh linked tokens
+      const tokens = await getTokensForNote(savedNote.id);
+      setLinkedTokens(tokens);
     } else {
       console.error('Failed to save note');
       toast.error("Failed to save note");
