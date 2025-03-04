@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Plus, Search, Filter, ArrowUpDown } from "lucide-react";
+import { Plus, Search, Filter, ArrowUpDown, Banknote } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchTokens } from "@/services/tokenService";
