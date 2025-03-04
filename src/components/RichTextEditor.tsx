@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,10 +70,21 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     console.log("RichTextEditor: note changed", note);
     if (note) {
       setTitle(note.title || "");
-      setContent(note.content || "");
       setTags(note.tags || []);
       setCategory(note.category || "General");
       setLastSaved(note.updatedAt || null);
+      
+      // Handle content separately to avoid potential issues
+      const noteContent = note.content || "";
+      setContent(noteContent);
+      console.log("Setting content from note:", noteContent);
+      
+      // Set the editor content directly if the ref is available
+      if (editorRef.current) {
+        console.log("Setting editor innerHTML directly");
+        editorRef.current.innerHTML = noteContent;
+        initialContentRef.current = noteContent;
+      }
     }
   }, [note]);
 
@@ -96,21 +108,19 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
   // Initialize editor content
   useEffect(() => {
     if (editorRef.current) {
-      if (note?.content) {
-        console.log('Setting editor content from note:', note.content);
-        editorRef.current.innerHTML = note.content;
-        initialContentRef.current = note.content;
-        setContent(note.content);
-      } else {
-        console.log('Setting empty editor content for new note');
-        editorRef.current.innerHTML = "";
-        initialContentRef.current = "";
-        setContent("");
-      }
+      const noteContent = note?.content || "";
+      
+      console.log('Setting editor content, content value:', noteContent);
+      // Always set the innerHTML directly for most reliable update
+      editorRef.current.innerHTML = noteContent;
+      initialContentRef.current = noteContent;
+      
+      // Also ensure our state is in sync
+      setContent(noteContent);
     } else {
       console.log('Editor ref not available');
     }
-  }, [note]);
+  }, [note, editorRef.current]);
 
   // Update linked tokens when prop changes
   useEffect(() => {
@@ -193,6 +203,7 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     
     if (!editorRef.current) return;
     
+    // Get content directly from the editor element
     const currentContent = editorRef.current.innerHTML;
     console.log('Saving content:', currentContent);
     
@@ -210,7 +221,10 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     
     if (savedNote) {
       console.log("Note saved successfully:", savedNote.id);
-      initialContentRef.current = currentContent; // Update reference content after successful save
+      console.log("Saved note content:", savedNote.content);
+      
+      // Update the initial content reference after successful save
+      initialContentRef.current = currentContent;
       
       // Update token associations
       try {
@@ -395,7 +409,6 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
             </TooltipTrigger>
             <TooltipContent>Bold</TooltipContent>
           </Tooltip>
-          
           
           <Tooltip>
             <TooltipTrigger asChild>

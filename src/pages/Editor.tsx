@@ -71,7 +71,7 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
       };
       setCurrentNote(newNoteTemplate);
       setLinkedTokens([]);
-    } else {
+    } else if (notes.length > 0) {
       const foundNote = notes.find(note => note.id === noteId);
       console.log("Found note:", foundNote);
       
@@ -92,13 +92,12 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
         
         fetchLinkedTokens();
       } else {
-        // Check if we have notes but the requested one wasn't found
-        if (notes.length > 0) {
-          toast.error("Note not found");
-          navigate("/notes");
-        }
+        // Note not found, redirect to notes list
+        toast.error("Note not found");
+        navigate("/notes");
       }
     }
+    // If notes hasn't loaded yet, we'll wait for the next render when notes are available
   }, [noteId, notes, navigate]);
 
   // Handle saving the note
@@ -167,6 +166,17 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
       setIsPrinting(false);
     }
   };
+
+  // Show a loading state if we're still waiting for notes to load
+  if (!currentNote && notes.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading note...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col">

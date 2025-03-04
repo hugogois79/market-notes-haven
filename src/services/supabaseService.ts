@@ -33,9 +33,9 @@ export interface UserProfile {
 export const dbNoteToNote = (dbNote: DbNote): Note => ({
   id: dbNote.id,
   title: dbNote.title,
-  content: dbNote.content,
-  tags: dbNote.tags,
-  category: dbNote.category,
+  content: dbNote.content || "", // Ensure content is never null/undefined
+  tags: dbNote.tags || [],
+  category: dbNote.category || "General",
   createdAt: new Date(dbNote.created_at),
   updatedAt: new Date(dbNote.updated_at),
 });
@@ -85,9 +85,9 @@ export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedA
       .from('notes')
       .insert([{
         title: note.title,
-        content: note.content, // Ensure content is included here
-        tags: note.tags,
-        category: note.category,
+        content: note.content || "", // Ensure content is never null
+        tags: note.tags || [],
+        category: note.category || "General",
         user_id: userId,
       }])
       .select()
@@ -118,9 +118,9 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
       .from('notes')
       .update({
         title: note.title,
-        content: note.content, // Ensure content is included here
-        tags: note.tags,
-        category: note.category,
+        content: note.content || "", // Ensure content is never null
+        tags: note.tags || [],
+        category: note.category || "General",
         updated_at: new Date().toISOString(),
         user_id: userId,
       })
