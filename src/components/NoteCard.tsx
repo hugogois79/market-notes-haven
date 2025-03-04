@@ -2,9 +2,12 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Tag } from "lucide-react";
-import { Note } from "@/types";
+import { Note, Token } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { getTokensForNote } from "@/services/tokenService";
+import TokenBadge from "./TokenBadge";
 
 interface NoteCardProps {
   note: Note;
@@ -13,6 +16,16 @@ interface NoteCardProps {
 
 const NoteCard = ({ note, className }: NoteCardProps) => {
   const navigate = useNavigate();
+  const [tokens, setTokens] = useState<Token[]>([]);
+  
+  useEffect(() => {
+    const fetchTokens = async () => {
+      const noteTokens = await getTokensForNote(note.id);
+      setTokens(noteTokens);
+    };
+    
+    fetchTokens();
+  }, [note.id]);
   
   // Format date to be more readable
   const formatDate = (date: Date) => {
@@ -60,6 +73,14 @@ const NoteCard = ({ note, className }: NoteCardProps) => {
         <p className="text-muted-foreground text-sm line-clamp-3">
           {getTextPreview(note.content)}
         </p>
+        
+        {tokens.length > 0 && (
+          <div className="flex gap-1 mt-2 flex-wrap">
+            {tokens.map(token => (
+              <TokenBadge key={token.id} token={token} />
+            ))}
+          </div>
+        )}
       </CardContent>
       <CardFooter className="p-4 pt-2 flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
