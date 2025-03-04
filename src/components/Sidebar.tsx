@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -142,11 +141,7 @@ const Sidebar = () => {
         <div className="p-4 border-t border-sidebar-border/50 space-y-4">
           {/* Logo near settings */}
           <div className="flex items-center gap-3 px-3 py-2.5">
-            <img 
-              src="/lovable-uploads/975730be-0cc6-45cc-95c5-6f382241b98c.png" 
-              alt="Grand Victoria Ventures Capital" 
-              className="h-10 w-auto object-contain"
-            />
+            <span className="font-bold text-xl tracking-tight text-primary">GVVC</span>
             <span className="font-semibold">MarketNotes</span>
           </div>
           
