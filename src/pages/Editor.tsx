@@ -91,7 +91,7 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
         fetchLinkedTokens();
       } else {
         toast.error("Note not found");
-        navigate("/");
+        navigate("/notes");
       }
     }
   }, [noteId, notes, navigate]);
@@ -130,7 +130,7 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
       
       if (success) {
         toast.success("Note deleted successfully");
-        navigate("/");
+        navigate("/notes");
       } else {
         toast.error("Failed to delete note");
       }

@@ -33,7 +33,10 @@ const NoteCard = ({ note, className }: NoteCardProps) => {
 
   const handleNoteClick = () => {
     console.log("Navigating to note:", note.id);
-    navigate(`/editor/${note.id}`);
+    // Use timeout to ensure the navigation happens after the event is processed
+    setTimeout(() => {
+      navigate(`/editor/${note.id}`);
+    }, 10);
   };
 
   return (
