@@ -1,9 +1,9 @@
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { AuthProvider } from "./contexts/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
 import { useState, useEffect } from "react";
+import MainLayout from "./layouts/MainLayout";
 
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -83,16 +83,21 @@ function AppContent() {
     return success;
   };
 
+  // Function to wrap content with layout for authenticated pages
+  const withLayout = (component: React.ReactNode) => (
+    <MainLayout>{component}</MainLayout>
+  );
+
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Index notes={notes} loading={loading || isLoading} />} />
+        <Route path="/" element={withLayout(<Index notes={notes} loading={loading || isLoading} />)} />
         <Route path="/auth" element={<Auth />} />
         <Route
           path="/notes"
           element={
             <ProtectedRoute>
-              <Notes notes={notes} loading={loading || isLoading} />
+              {withLayout(<Notes notes={notes} loading={loading || isLoading} />)}
             </ProtectedRoute>
           }
         />
@@ -100,11 +105,13 @@ function AppContent() {
           path="/editor/:id?"
           element={
             <ProtectedRoute>
-              <Editor 
-                notes={notes} 
-                onSaveNote={handleSaveNote} 
-                onDeleteNote={handleDeleteNote} 
-              />
+              {withLayout(
+                <Editor 
+                  notes={notes} 
+                  onSaveNote={handleSaveNote} 
+                  onDeleteNote={handleDeleteNote} 
+                />
+              )}
             </ProtectedRoute>
           }
         />
@@ -112,7 +119,7 @@ function AppContent() {
           path="/categories"
           element={
             <ProtectedRoute>
-              <Categories />
+              {withLayout(<Categories />)}
             </ProtectedRoute>
           }
         />
@@ -120,7 +127,7 @@ function AppContent() {
           path="/settings"
           element={
             <ProtectedRoute>
-              <Settings />
+              {withLayout(<Settings />)}
             </ProtectedRoute>
           }
         />
@@ -128,7 +135,7 @@ function AppContent() {
           path="/tokens"
           element={
             <ProtectedRoute>
-              <TokensPage />
+              {withLayout(<TokensPage />)}
             </ProtectedRoute>
           }
         />
@@ -136,7 +143,7 @@ function AppContent() {
           path="/tokens/:id"
           element={
             <ProtectedRoute>
-              <TokenDetail />
+              {withLayout(<TokenDetail />)}
             </ProtectedRoute>
           }
         />
@@ -144,7 +151,7 @@ function AppContent() {
           path="/crypto/dashboard"
           element={
             <ProtectedRoute>
-              <CryptoDashboard />
+              {withLayout(<CryptoDashboard />)}
             </ProtectedRoute>
           }
         />
@@ -152,7 +159,7 @@ function AppContent() {
           path="/profile"
           element={
             <ProtectedRoute>
-              <Profile />
+              {withLayout(<Profile />)}
             </ProtectedRoute>
           }
         />
