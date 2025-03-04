@@ -16,7 +16,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         <Sidebar />
       </div>
       
-      <div className={`flex-1 flex flex-col w-full ${sidebarOpen ? 'md:ml-72' : 'ml-0'}`}>
+      <div className={`flex-1 flex flex-col w-full ${sidebarOpen ? 'md:ml-80' : 'ml-0'}`}>
         <header className="h-14 px-4 border-b flex items-center justify-end">
           <div className="flex items-center">
             <UserProfileButton />
