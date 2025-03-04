@@ -112,8 +112,10 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
       }
       
       setCurrentNote(savedNote);
+      toast.success("Note saved successfully");
     } else {
       console.error('Failed to save note');
+      toast.error("Failed to save note");
     }
   };
 
@@ -127,7 +129,10 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
       const success = await onDeleteNote(currentNote.id);
       
       if (success) {
+        toast.success("Note deleted successfully");
         navigate("/");
+      } else {
+        toast.error("Failed to delete note");
       }
     } finally {
       setIsDeleting(false);
@@ -212,12 +217,14 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
       
       {/* Editor */}
       <div className="flex-1">
-        <RichTextEditor 
-          note={currentNote} 
-          onSave={handleSave}
-          categories={categories}
-          linkedTokens={linkedTokens}
-        />
+        {currentNote && (
+          <RichTextEditor 
+            note={currentNote} 
+            onSave={handleSave}
+            categories={categories}
+            linkedTokens={linkedTokens}
+          />
+        )}
       </div>
     </div>
   );

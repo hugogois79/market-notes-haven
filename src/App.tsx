@@ -31,7 +31,7 @@ function AppContent() {
   const [loading, setLoading] = useState(true);
 
   // Fetch notes using react-query
-  const { data: notesData, isLoading } = useQuery({
+  const { data: notesData, isLoading, refetch } = useQuery({
     queryKey: ['notes'],
     queryFn: fetchNotes,
   });
@@ -39,6 +39,7 @@ function AppContent() {
   // Update local state when query data changes
   useEffect(() => {
     if (notesData) {
+      console.log("Fetched notes:", notesData.length);
       setNotes(notesData);
       setLoading(false);
     }
@@ -46,42 +47,60 @@ function AppContent() {
 
   // Handle save note (create or update)
   const handleSaveNote = async (note: Note) => {
-    if (!note.id || note.id === "new") {
-      // Create new note
-      const newNote = await createNote({
-        title: note.title,
-        content: note.content,
-        tags: note.tags,
-        category: note.category,
-      });
-      
-      if (newNote) {
-        setNotes(prev => [newNote, ...prev]);
-        return newNote;
+    try {
+      if (note.id.toString().startsWith('temp-')) {
+        // Create new note
+        console.log("Creating new note with content:", note.content);
+        const newNote = await createNote({
+          title: note.title,
+          content: note.content,
+          tags: note.tags,
+          category: note.category,
+        });
+        
+        if (newNote) {
+          console.log("New note created:", newNote.id);
+          setNotes(prev => [newNote, ...prev]);
+          refetch(); // Refresh all notes
+          return newNote;
+        }
+      } else {
+        // Update existing note
+        console.log("Updating note:", note.id);
+        const updatedNote = await updateNote(note);
+        
+        if (updatedNote) {
+          console.log("Note updated:", updatedNote.id);
+          setNotes(prev => 
+            prev.map(n => n.id === updatedNote.id ? updatedNote : n)
+          );
+          refetch(); // Refresh all notes
+          return updatedNote;
+        }
       }
-    } else {
-      // Update existing note
-      const updatedNote = await updateNote(note);
-      
-      if (updatedNote) {
-        setNotes(prev => 
-          prev.map(n => n.id === updatedNote.id ? updatedNote : n)
-        );
-        return updatedNote;
-      }
+    } catch (error) {
+      console.error("Error saving note:", error);
     }
     return null;
   };
 
   // Handle delete note
   const handleDeleteNote = async (noteId: string) => {
-    const success = await deleteNote(noteId);
-    
-    if (success) {
-      setNotes(prev => prev.filter(note => note.id !== noteId));
+    try {
+      console.log("Deleting note:", noteId);
+      const success = await deleteNote(noteId);
+      
+      if (success) {
+        console.log("Note deleted successfully");
+        setNotes(prev => prev.filter(note => note.id !== noteId));
+        refetch(); // Refresh all notes
+      }
+      
+      return success;
+    } catch (error) {
+      console.error("Error deleting note:", error);
+      return false;
     }
-    
-    return success;
   };
 
   // Function to wrap content with layout for authenticated pages
@@ -103,7 +122,7 @@ function AppContent() {
           }
         />
         <Route
-          path="/editor/:id?"
+          path="/editor/:noteId"
           element={
             <ProtectedRoute>
               {withLayout(

@@ -5,7 +5,6 @@ import { Calendar, Tag } from "lucide-react";
 import { Note } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { useEffect } from "react";
 
 interface NoteCardProps {
   note: Note;
@@ -34,10 +33,7 @@ const NoteCard = ({ note, className }: NoteCardProps) => {
 
   const handleNoteClick = () => {
     console.log("Navigating to note:", note.id);
-    // Force the route change by using a timeout to ensure the event completes
-    setTimeout(() => {
-      navigate(`/editor/${note.id}`);
-    }, 10);
+    navigate(`/editor/${note.id}`);
   };
 
   return (
