@@ -5,7 +5,7 @@ import RichTextEditor from "@/components/RichTextEditor";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Trash2, Printer } from "lucide-react";
 import { toast } from "sonner";
-import { Note } from "@/types";
+import { Note, Token } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AlertDialog,
@@ -19,6 +19,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { printNote } from "@/utils/printUtils";
+import { getTokensForNote, linkTokenToNote, unlinkTokenFromNote } from "@/services/tokenService";
 
 interface EditorProps {
   notes: Note[];
@@ -34,7 +35,8 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [isPrinting, setIsPrinting] = useState(false);
-
+  const [linkedTokens, setLinkedTokens] = useState<Token[]>([]);
+  
   // Effect to fetch all unique categories from notes
   useEffect(() => {
     if (notes.length > 0) {
@@ -55,12 +57,25 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
     if (noteId === "new") {
       setIsNewNote(true);
       setCurrentNote(undefined);
+      setLinkedTokens([]);
     } else {
       const foundNote = notes.find(note => note.id === noteId);
       if (foundNote) {
         console.log('Loaded note content:', foundNote.content);
         setCurrentNote(foundNote);
         setIsNewNote(false);
+        
+        // Fetch linked tokens for this note
+        const fetchLinkedTokens = async () => {
+          try {
+            const tokens = await getTokensForNote(foundNote.id);
+            setLinkedTokens(tokens);
+          } catch (error) {
+            console.error("Error fetching linked tokens:", error);
+          }
+        };
+        
+        fetchLinkedTokens();
       } else {
         toast.error("Note not found");
         navigate("/");
@@ -187,7 +202,8 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
         <RichTextEditor 
           note={currentNote} 
           onSave={handleSave}
-          categories={categories} 
+          categories={categories}
+          linkedTokens={linkedTokens}
         />
       </div>
     </div>

@@ -22,22 +22,32 @@ import {
   Tags as TagsIcon,
   X,
   ChevronDown,
+  Coins,
 } from "lucide-react";
-import { Note } from "@/types";
+import { Note, Token } from "@/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { fetchTokens } from "@/services/tokenService";
 
 interface RichTextEditorProps {
   note?: Note;
   onSave?: (note: Note) => void;
   categories?: string[];
+  linkedTokens?: Token[];
 }
 
-const RichTextEditor = ({ note, onSave, categories = [] }: RichTextEditorProps) => {
+const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: RichTextEditorProps) => {
   const [title, setTitle] = useState(note?.title || "");
   const [content, setContent] = useState(note?.content || "");
   const [tags, setTags] = useState<string[]>(note?.tags || []);
@@ -45,12 +55,32 @@ const RichTextEditor = ({ note, onSave, categories = [] }: RichTextEditorProps) 
   const [category, setCategory] = useState(note?.category || "General");
   const [lastSaved, setLastSaved] = useState<Date | null>(note?.updatedAt || null);
   const [isAutosaving, setIsAutosaving] = useState(false);
+  const [tokens, setTokens] = useState<Token[]>([]);
+  const [selectedTokens, setSelectedTokens] = useState<Token[]>(linkedTokens || []);
+  const [isLoadingTokens, setIsLoadingTokens] = useState(false);
   
   const editorRef = useRef<HTMLDivElement>(null);
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Ensure we have at least the General category
   const allCategories = ["General", ...categories.filter(c => c !== "General")];
+
+  // Load tokens
+  useEffect(() => {
+    const loadTokens = async () => {
+      setIsLoadingTokens(true);
+      try {
+        const fetchedTokens = await fetchTokens();
+        setTokens(fetchedTokens);
+      } catch (error) {
+        console.error("Error loading tokens:", error);
+      } finally {
+        setIsLoadingTokens(false);
+      }
+    };
+
+    loadTokens();
+  }, []);
 
   // Initialize editor content
   useEffect(() => {
@@ -114,6 +144,25 @@ const RichTextEditor = ({ note, onSave, categories = [] }: RichTextEditorProps) 
   // Handle category selection
   const handleCategorySelect = (selectedCategory: string) => {
     setCategory(selectedCategory);
+  };
+
+  // Handle token selection
+  const handleTokenSelect = (tokenId: string) => {
+    const token = tokens.find(t => t.id === tokenId);
+    if (!token) return;
+    
+    if (selectedTokens.some(t => t.id === tokenId)) {
+      // Token already selected, remove it
+      setSelectedTokens(selectedTokens.filter(t => t.id !== tokenId));
+    } else {
+      // Add token to selected tokens
+      setSelectedTokens([...selectedTokens, token]);
+    }
+  };
+
+  // Handle token removal
+  const handleRemoveToken = (tokenId: string) => {
+    setSelectedTokens(selectedTokens.filter(t => t.id !== tokenId));
   };
 
   // Handle save
@@ -185,6 +234,46 @@ const RichTextEditor = ({ note, onSave, categories = [] }: RichTextEditorProps) 
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+        </div>
+        
+        {/* Token Selection */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <Coins size={14} className="text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Linked Tokens</span>
+          </div>
+          
+          <div className="flex flex-wrap gap-2 items-center">
+            {selectedTokens.map(token => (
+              <Badge key={token.id} variant="secondary" className="px-3 py-1 text-sm gap-2">
+                {token.symbol} - {token.name}
+                <button onClick={() => handleRemoveToken(token.id)} className="opacity-70 hover:opacity-100">
+                  <X size={12} />
+                </button>
+              </Badge>
+            ))}
+            
+            <Select onValueChange={handleTokenSelect}>
+              <SelectTrigger className="w-[180px] h-8">
+                <SelectValue placeholder="Link token..." />
+              </SelectTrigger>
+              <SelectContent>
+                {isLoadingTokens ? (
+                  <SelectItem value="loading" disabled>Loading tokens...</SelectItem>
+                ) : tokens.length === 0 ? (
+                  <SelectItem value="none" disabled>No tokens available</SelectItem>
+                ) : (
+                  tokens
+                    .filter(token => !selectedTokens.some(t => t.id === token.id))
+                    .map(token => (
+                      <SelectItem key={token.id} value={token.id}>
+                        {token.symbol} - {token.name}
+                      </SelectItem>
+                    ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         
         {/* Tag Input */}

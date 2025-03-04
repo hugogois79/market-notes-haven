@@ -1,30 +1,6 @@
 
+import { Token, TokenPortfolio, TokenTrader, TokenNote } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
-import { Token, Trader, TokenPortfolio, TokenTrader, TokenNote } from "@/types";
-
-// Convert database token to app token format
-export const dbTokenToToken = (dbToken: any): Token => ({
-  id: dbToken.id,
-  name: dbToken.name,
-  symbol: dbToken.symbol,
-  logo_url: dbToken.logo_url,
-  description: dbToken.description,
-  industry: dbToken.industry,
-  tags: dbToken.tags || [],
-  createdAt: new Date(dbToken.created_at),
-  updatedAt: new Date(dbToken.updated_at),
-});
-
-// Convert database trader to app trader format
-export const dbTraderToTrader = (dbTrader: any): Trader => ({
-  id: dbTrader.id,
-  name: dbTrader.name,
-  avatar_url: dbTrader.avatar_url,
-  bio: dbTrader.bio,
-  contact_info: dbTrader.contact_info,
-  createdAt: new Date(dbTrader.created_at),
-  updatedAt: new Date(dbTrader.updated_at),
-});
 
 // Fetch all tokens
 export const fetchTokens = async (): Promise<Token[]> => {
@@ -39,7 +15,17 @@ export const fetchTokens = async (): Promise<Token[]> => {
       return [];
     }
 
-    return (data || []).map(dbTokenToToken);
+    return data.map(token => ({
+      id: token.id,
+      name: token.name,
+      symbol: token.symbol,
+      logo_url: token.logo_url,
+      description: token.description,
+      industry: token.industry,
+      tags: token.tags,
+      createdAt: new Date(token.created_at),
+      updatedAt: new Date(token.updated_at)
+    }));
   } catch (error) {
     console.error('Error fetching tokens:', error);
     return [];
@@ -47,20 +33,30 @@ export const fetchTokens = async (): Promise<Token[]> => {
 };
 
 // Fetch a single token by ID
-export const fetchToken = async (id: string): Promise<Token | null> => {
+export const fetchTokenById = async (id: string): Promise<Token | null> => {
   try {
     const { data, error } = await supabase
       .from('tokens')
       .select('*')
       .eq('id', id)
-      .maybeSingle();
+      .single();
 
-    if (error || !data) {
+    if (error) {
       console.error('Error fetching token:', error);
       return null;
     }
 
-    return dbTokenToToken(data);
+    return {
+      id: data.id,
+      name: data.name,
+      symbol: data.symbol,
+      logo_url: data.logo_url,
+      description: data.description,
+      industry: data.industry,
+      tags: data.tags,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    };
   } catch (error) {
     console.error('Error fetching token:', error);
     return null;
@@ -78,7 +74,7 @@ export const createToken = async (token: Omit<Token, 'id' | 'createdAt' | 'updat
         logo_url: token.logo_url,
         description: token.description,
         industry: token.industry,
-        tags: token.tags || [],
+        tags: token.tags
       }])
       .select()
       .single();
@@ -88,7 +84,17 @@ export const createToken = async (token: Omit<Token, 'id' | 'createdAt' | 'updat
       return null;
     }
 
-    return dbTokenToToken(data);
+    return {
+      id: data.id,
+      name: data.name,
+      symbol: data.symbol,
+      logo_url: data.logo_url,
+      description: data.description,
+      industry: data.industry,
+      tags: data.tags,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    };
   } catch (error) {
     console.error('Error creating token:', error);
     return null;
@@ -107,6 +113,7 @@ export const updateToken = async (token: Token): Promise<Token | null> => {
         description: token.description,
         industry: token.industry,
         tags: token.tags,
+        updated_at: new Date().toISOString()
       })
       .eq('id', token.id)
       .select()
@@ -117,7 +124,17 @@ export const updateToken = async (token: Token): Promise<Token | null> => {
       return null;
     }
 
-    return dbTokenToToken(data);
+    return {
+      id: data.id,
+      name: data.name,
+      symbol: data.symbol,
+      logo_url: data.logo_url,
+      description: data.description,
+      industry: data.industry,
+      tags: data.tags,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    };
   } catch (error) {
     console.error('Error updating token:', error);
     return null;
@@ -144,36 +161,16 @@ export const deleteToken = async (id: string): Promise<boolean> => {
   }
 };
 
-// Fetch all traders
-export const fetchTraders = async (): Promise<Trader[]> => {
+// Get tokens for a note
+export const getTokensForNote = async (noteId: string): Promise<Token[]> => {
   try {
     const { data, error } = await supabase
-      .from('traders')
-      .select('*')
-      .order('name');
+      .from('notes_tokens')
+      .select('token_id')
+      .eq('note_id', noteId);
 
     if (error) {
-      console.error('Error fetching traders:', error);
-      return [];
-    }
-
-    return (data || []).map(dbTraderToTrader);
-  } catch (error) {
-    console.error('Error fetching traders:', error);
-    return [];
-  }
-};
-
-// Fetch traders for a token
-export const fetchTradersForToken = async (tokenId: string): Promise<Trader[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('traders_tokens')
-      .select('trader_id')
-      .eq('token_id', tokenId);
-
-    if (error) {
-      console.error('Error fetching traders for token:', error);
+      console.error('Error fetching tokens for note:', error);
       return [];
     }
 
@@ -181,106 +178,73 @@ export const fetchTradersForToken = async (tokenId: string): Promise<Trader[]> =
       return [];
     }
 
-    const traderIds = data.map(item => item.trader_id);
-
-    const { data: tradersData, error: tradersError } = await supabase
-      .from('traders')
+    const tokenIds = data.map(item => item.token_id);
+    
+    const { data: tokensData, error: tokensError } = await supabase
+      .from('tokens')
       .select('*')
-      .in('id', traderIds)
-      .order('name');
+      .in('id', tokenIds);
 
-    if (tradersError) {
-      console.error('Error fetching traders details:', tradersError);
+    if (tokensError) {
+      console.error('Error fetching tokens details:', tokensError);
       return [];
     }
 
-    return (tradersData || []).map(dbTraderToTrader);
+    return tokensData.map(token => ({
+      id: token.id,
+      name: token.name,
+      symbol: token.symbol,
+      logo_url: token.logo_url,
+      description: token.description,
+      industry: token.industry,
+      tags: token.tags,
+      createdAt: new Date(token.created_at),
+      updatedAt: new Date(token.updated_at)
+    }));
   } catch (error) {
-    console.error('Error fetching traders for token:', error);
+    console.error('Error fetching tokens for note:', error);
     return [];
   }
 };
 
-// Link a trader to a token
-export const linkTraderToToken = async (traderId: string, tokenId: string): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('traders_tokens')
-      .insert([{
-        trader_id: traderId,
-        token_id: tokenId,
-      }]);
-
-    if (error) {
-      console.error('Error linking trader to token:', error);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error linking trader to token:', error);
-    return false;
-  }
-};
-
-// Unlink a trader from a token
-export const unlinkTraderFromToken = async (traderId: string, tokenId: string): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('traders_tokens')
-      .delete()
-      .match({ trader_id: traderId, token_id: tokenId });
-
-    if (error) {
-      console.error('Error unlinking trader from token:', error);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error unlinking trader from token:', error);
-    return false;
-  }
-};
-
-// Link a note to a token
-export const linkNoteToToken = async (noteId: string, tokenId: string): Promise<boolean> => {
+// Link a token to a note
+export const linkTokenToNote = async (noteId: string, tokenId: string): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from('notes_tokens')
       .insert([{
         note_id: noteId,
-        token_id: tokenId,
+        token_id: tokenId
       }]);
 
     if (error) {
-      console.error('Error linking note to token:', error);
+      console.error('Error linking token to note:', error);
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error('Error linking note to token:', error);
+    console.error('Error linking token to note:', error);
     return false;
   }
 };
 
-// Get notes linked to a token
-export const getNotesForToken = async (tokenId: string): Promise<string[]> => {
+// Unlink a token from a note
+export const unlinkTokenFromNote = async (noteId: string, tokenId: string): Promise<boolean> => {
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('notes_tokens')
-      .select('note_id')
-      .eq('token_id', tokenId);
+      .delete()
+      .match({ note_id: noteId, token_id: tokenId });
 
     if (error) {
-      console.error('Error fetching notes for token:', error);
-      return [];
+      console.error('Error unlinking token from note:', error);
+      return false;
     }
 
-    return (data || []).map(item => item.note_id);
+    return true;
   } catch (error) {
-    console.error('Error fetching notes for token:', error);
-    return [];
+    console.error('Error unlinking token from note:', error);
+    return false;
   }
 };
