@@ -56,6 +56,7 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
     } else {
       const foundNote = notes.find(note => note.id === noteId);
       if (foundNote) {
+        console.log('Loaded note content:', foundNote.content);
         setCurrentNote(foundNote);
         setIsNewNote(false);
       } else {
@@ -67,9 +68,13 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
 
   // Handle saving the note
   const handleSave = async (note: Note) => {
+    console.log('Attempting to save note with content:', note.content);
+    
     const savedNote = await onSaveNote(note);
     
     if (savedNote) {
+      console.log('Note saved successfully with content:', savedNote.content);
+      
       if (isNewNote) {
         // Redirect to the new note's edit page
         navigate(`/editor/${savedNote.id}`, { replace: true });
@@ -77,6 +82,8 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
       }
       
       setCurrentNote(savedNote);
+    } else {
+      console.error('Failed to save note');
     }
   };
 

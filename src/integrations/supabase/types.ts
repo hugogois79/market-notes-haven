@@ -186,6 +186,36 @@ export type Database = {
         }
         Relationships: []
       }
+      news_articles: {
+        Row: {
+          content: string
+          created_at: string | null
+          embedding: string | null
+          id: number
+          metadata: Json | null
+          narrative: string
+          news_date: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: number
+          metadata?: Json | null
+          narrative: string
+          news_date: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: number
+          metadata?: Json | null
+          narrative?: string
+          news_date?: string
+        }
+        Relationships: []
+      }
       notes: {
         Row: {
           category: string | null

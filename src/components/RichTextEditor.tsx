@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,16 +54,25 @@ const RichTextEditor = ({ note, onSave, categories = [] }: RichTextEditorProps) 
 
   // Initialize editor content
   useEffect(() => {
-    if (editorRef.current && content) {
-      editorRef.current.innerHTML = content;
+    if (editorRef.current && note?.content) {
+      console.log('Setting editor content from note:', note.content);
+      editorRef.current.innerHTML = note.content;
+      setContent(note.content);
+    } else {
+      console.log('No content to set or editor ref not available');
+      if (editorRef.current) {
+        editorRef.current.innerHTML = "";
+      }
     }
-  }, []);
+  }, [note]);
 
   // Handle content changes and autosave
   const handleContentChange = () => {
     if (!editorRef.current) return;
     
-    setContent(editorRef.current.innerHTML);
+    const newContent = editorRef.current.innerHTML;
+    console.log('Content changed:', newContent);
+    setContent(newContent);
     
     // Setup autosave
     setIsAutosaving(true);
@@ -115,10 +123,13 @@ const RichTextEditor = ({ note, onSave, categories = [] }: RichTextEditorProps) 
       return;
     }
     
+    const currentContent = editorRef.current?.innerHTML || "";
+    console.log('Saving content:', currentContent);
+    
     const updatedNote: Note = {
       id: note?.id || Date.now().toString(),
       title,
-      content: editorRef.current?.innerHTML || "",
+      content: currentContent,
       tags,
       category,
       createdAt: note?.createdAt || new Date(),
@@ -127,7 +138,6 @@ const RichTextEditor = ({ note, onSave, categories = [] }: RichTextEditorProps) 
     
     onSave?.(updatedNote);
     setLastSaved(new Date());
-    toast.success("Note saved successfully");
   };
 
   return (

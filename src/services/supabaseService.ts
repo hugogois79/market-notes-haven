@@ -64,11 +64,13 @@ export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedA
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
 
+    console.log('Creating note with content:', note.content);
+
     const { data, error } = await supabase
       .from('notes')
       .insert([{
         title: note.title,
-        content: note.content,
+        content: note.content, // Ensure content is included here
         tags: note.tags,
         category: note.category,
         user_id: userId,
@@ -81,6 +83,7 @@ export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedA
       return null;
     }
 
+    console.log('Created note data:', data);
     return dbNoteToNote(data as DbNote);
   } catch (error) {
     console.error('Error creating note:', error);
@@ -94,11 +97,13 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
 
+    console.log('Updating note with content:', note.content);
+
     const { data, error } = await supabase
       .from('notes')
       .update({
         title: note.title,
-        content: note.content,
+        content: note.content, // Ensure content is included here
         tags: note.tags,
         category: note.category,
         updated_at: new Date().toISOString(),
@@ -113,6 +118,7 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
       return null;
     }
 
+    console.log('Updated note data:', data);
     return dbNoteToNote(data as DbNote);
   } catch (error) {
     console.error('Error updating note:', error);
