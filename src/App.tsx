@@ -13,6 +13,8 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import MainLayout from "./layouts/MainLayout";
 import CryptoDashboard from "./pages/crypto/Dashboard";
+import TokensList from "./pages/tokens/index";
+import TokenDetail from "./pages/tokens/[id]";
 import { useState, useEffect } from "react";
 import { Note } from "./types";
 import { fetchNotes, updateNote, createNote, deleteNote } from "./services/supabaseService";
@@ -143,6 +145,22 @@ const App = () => {
                 <ProtectedRoute>
                   <MainLayout>
                     <Categories notes={notes} loading={loading} />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/tokens" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <TokensList />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/tokens/:id" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <TokenDetail />
                   </MainLayout>
                 </ProtectedRoute>
               } />

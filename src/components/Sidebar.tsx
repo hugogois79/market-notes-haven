@@ -13,7 +13,8 @@ import {
   X,
   Coins,
   LineChart,
-  Folder
+  Folder,
+  Banknote
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -45,6 +46,11 @@ const Sidebar = () => {
       title: "Tags",
       icon: <Tags size={20} />,
       path: "/tags",
+    },
+    {
+      title: "Tokens",
+      icon: <Banknote size={20} />,
+      path: "/tokens",
     },
     {
       title: "Market Data",

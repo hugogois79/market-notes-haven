@@ -249,6 +249,78 @@ export type Database = {
         }
         Relationships: []
       }
+      notes_tokens: {
+        Row: {
+          created_at: string | null
+          id: string
+          note_id: string | null
+          token_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          note_id?: string | null
+          token_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          note_id?: string | null
+          token_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_tokens_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notes_tokens_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolios_tokens: {
+        Row: {
+          created_at: string | null
+          id: string
+          portfolio_id: string | null
+          token_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          portfolio_id?: string | null
+          token_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          portfolio_id?: string | null
+          token_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolios_tokens_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "crypto_portfolios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolios_tokens_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -338,6 +410,108 @@ export type Database = {
           summary?: string | null
         }
         Relationships: []
+      }
+      tokens: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          industry: string | null
+          logo_url: string | null
+          name: string
+          symbol: string
+          tags: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          industry?: string | null
+          logo_url?: string | null
+          name: string
+          symbol: string
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          industry?: string | null
+          logo_url?: string | null
+          name?: string
+          symbol?: string
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      traders: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          contact_info: string | null
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          contact_info?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          contact_info?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      traders_tokens: {
+        Row: {
+          created_at: string | null
+          id: string
+          token_id: string | null
+          trader_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          token_id?: string | null
+          trader_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          token_id?: string | null
+          trader_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traders_tokens_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "tokens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traders_tokens_trader_id_fkey"
+            columns: ["trader_id"]
+            isOneToOne: false
+            referencedRelation: "traders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
