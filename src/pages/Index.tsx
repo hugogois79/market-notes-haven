@@ -28,7 +28,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
   return (
     <div className="space-y-6 py-2 animate-fade-in">
       {/* Header with Logo */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           <img 
             src="/lovable-uploads/975730be-0cc6-45cc-95c5-6f382241b98c.png" 
@@ -65,7 +65,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
         </div>
         
         {loading ? (
-          <div className="flex justify-center items-center py-12">
+          <div className="flex justify-start items-center py-12">
             <Loader className="h-8 w-8 animate-spin text-[#1EAEDB]" />
             <span className="ml-2 text-lg">Loading notes...</span>
           </div>
@@ -76,7 +76,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
             ))}
           </div>
         ) : (
-          <div className="bg-card rounded-lg p-8 text-center border border-border animate-fade-in">
+          <div className="bg-card rounded-lg p-8 text-left border border-border animate-fade-in">
             <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#1EAEDB]/10 text-[#1EAEDB] mb-4">
               <Rocket size={24} />
             </div>
