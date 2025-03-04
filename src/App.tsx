@@ -86,13 +86,13 @@ function AppContent() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Index notes={notes} loading={loading} />} />
+        <Route path="/" element={<Index notes={notes} loading={loading || isLoading} />} />
         <Route path="/auth" element={<Auth />} />
         <Route
           path="/notes"
           element={
             <ProtectedRoute>
-              <Notes notes={notes} loading={loading} />
+              <Notes notes={notes} loading={loading || isLoading} />
             </ProtectedRoute>
           }
         />

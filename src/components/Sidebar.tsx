@@ -14,7 +14,8 @@ import {
   Coins,
   LineChart,
   Folder,
-  Banknote
+  Banknote,
+  User
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -60,12 +61,17 @@ const Sidebar = () => {
     {
       title: "Crypto Assets",
       icon: <Coins size={20} />,
-      path: "/crypto",
+      path: "/crypto/dashboard",
     },
     {
       title: "Analytics",
       icon: <LineChart size={20} />,
       path: "/analytics",
+    },
+    {
+      title: "Profile",
+      icon: <User size={20} />,
+      path: "/profile",
     },
   ];
 
