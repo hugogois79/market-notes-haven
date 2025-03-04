@@ -23,7 +23,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           </div>
         </header>
         
-        <main className="flex-1 p-0 overflow-auto">
+        <main className="flex-1 overflow-auto">
           {children}
         </main>
       </div>
