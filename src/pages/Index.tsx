@@ -72,7 +72,9 @@ const Index = ({ notes, loading = false }: IndexProps) => {
         ) : recentNotes.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recentNotes.map((note) => (
-              <NoteCard key={note.id} note={note} />
+              <div key={note.id}>
+                <NoteCard note={note} />
+              </div>
             ))}
           </div>
         ) : (
@@ -105,7 +107,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
           {categories.map((category) => (
             <div 
               key={category.name}
-              className="bg-card glass-card rounded-lg p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1"
+              className="bg-card glass-card rounded-lg p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer"
               onClick={() => toast.info(`${category.name} category selected`)}
             >
               <div className="flex justify-between items-start">
