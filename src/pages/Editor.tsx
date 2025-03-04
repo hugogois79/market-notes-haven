@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Note } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { printNote } from "@/utils/printUtils";
 
 interface EditorProps {
   notes: Note[];
@@ -32,6 +33,7 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
   const [isNewNote, setIsNewNote] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   // Effect to fetch all unique categories from notes
   useEffect(() => {
@@ -104,6 +106,23 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
     }
   };
 
+  // Handle printing the note
+  const handlePrint = () => {
+    if (!currentNote) return;
+    
+    setIsPrinting(true);
+    
+    try {
+      printNote(currentNote);
+      toast.success("Preparing note for printing...");
+    } catch (error) {
+      toast.error("Failed to print note");
+      console.error("Print error:", error);
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -119,34 +138,47 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
         </Button>
         
         {!isNewNote && currentNote && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button 
-                variant="destructive" 
-                size="sm" 
-                className="gap-2"
-                disabled={isDeleting}
-              >
-                <Trash2 size={16} />
-                {isDeleting ? "Deleting..." : "Delete"}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete your
-                  note from the database.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete}>
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={handlePrint}
+              disabled={isPrinting}
+            >
+              <Printer size={16} />
+              {isPrinting ? "Printing..." : "Print"}
+            </Button>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  className="gap-2"
+                  disabled={isDeleting}
+                >
+                  <Trash2 size={16} />
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete your
+                    note from the database.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         )}
       </div>
       
