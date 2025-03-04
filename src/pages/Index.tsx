@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { FileText, Plus, Bookmark, FolderOpen, Clock, Rocket, Loader } from "lucide-react";
 import { Link } from "react-router-dom";
 import NoteCard from "@/components/NoteCard";
-import MarketTrends from "@/components/MarketTrends";
 import { Note } from "@/types";
 import { toast } from "sonner";
 
@@ -51,9 +50,6 @@ const Index = ({ notes, loading = false }: IndexProps) => {
         </Link>
       </div>
 
-      {/* Market Trends Section */}
-      <MarketTrends />
-
       {/* Recent Notes Section */}
       <div>
         <div className="flex items-center justify-between mb-4">
@@ -85,7 +81,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
               <Rocket size={24} />
             </div>
             <h3 className="text-lg font-medium mb-2">No Notes Yet</h3>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-muted-foreground mb-6 max-w-md">
               Start creating market research notes to track your insights and analysis.
             </p>
             <Link to="/editor/new">
