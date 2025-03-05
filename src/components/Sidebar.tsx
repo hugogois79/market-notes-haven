@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -14,7 +14,9 @@ import {
   LineChart,
   Folder,
   Banknote,
-  User
+  User,
+  ChevronRight,
+  ChevronLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -23,8 +25,39 @@ const Sidebar = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [isHovering, setIsHovering] = useState(false);
 
   const toggleSidebar = () => setIsOpen(!isOpen);
+  const toggleExpand = () => setIsExpanded(!isExpanded);
+
+  // Effect to handle hover state changes
+  useEffect(() => {
+    if (isHovering && !isExpanded && !isMobile) {
+      const timer = setTimeout(() => {
+        setIsExpanded(true);
+      }, 300); // Delay expansion to prevent flicker
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isHovering, isExpanded, isMobile]);
+
+  // Handle mouse enter/leave for desktop
+  const handleMouseEnter = () => {
+    if (!isMobile) {
+      setIsHovering(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!isMobile) {
+      setIsHovering(false);
+      if (!isExpanded) {
+        // Keep collapsed if it was collapsed manually
+        setIsExpanded(false);
+      }
+    }
+  };
 
   const navItems = [
     {
@@ -91,25 +124,53 @@ const Sidebar = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          "h-screen bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border transition-all duration-300 ease-in-out z-40 w-72",
+          "h-screen bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border transition-all duration-300 ease-in-out z-40",
           isMobile
             ? isOpen
-              ? "fixed inset-y-0 left-0 animate-slide-in-left"
-              : "fixed inset-y-0 -left-80"
-            : "fixed left-0 top-0"
+              ? "fixed inset-y-0 left-0 animate-slide-in-left w-72"
+              : "fixed inset-y-0 -left-80 w-72"
+            : isExpanded
+              ? "fixed left-0 top-0 w-72"
+              : "fixed left-0 top-0 w-20"
         )}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
-        {/* Navigation header without logo */}
-        <div className="p-6 border-b border-sidebar-border/50">
-          <div className="font-semibold text-xl">Navigation</div>
+        {/* Navigation header */}
+        <div className={cn(
+          "p-4 border-b border-sidebar-border/50 flex items-center justify-between",
+          isExpanded ? "px-6" : "px-4"
+        )}>
+          {isExpanded && (
+            <div className="font-semibold text-xl">Navigation</div>
+          )}
+          
+          {!isMobile && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={toggleExpand}
+              className="text-sidebar-foreground hover:bg-sidebar-accent/50"
+            >
+              {isExpanded ? 
+                <ChevronLeft size={20} /> : 
+                <ChevronRight size={20} />
+              }
+            </Button>
+          )}
         </div>
 
         {/* New note button */}
-        <div className="p-4">
+        <div className={cn("p-4", isExpanded ? "px-4" : "px-3")}>
           <Link to="/editor/new" onClick={() => isMobile && setIsOpen(false)}>
-            <Button className="w-full bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 flex items-center gap-2">
+            <Button 
+              className={cn(
+                "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 flex items-center gap-2 w-full",
+                !isExpanded && "justify-center px-0"
+              )}
+            >
               <Plus size={18} />
-              <span>New Note</span>
+              {isExpanded && <span>New Note</span>}
             </Button>
           </Link>
         </div>
@@ -124,13 +185,15 @@ const Sidebar = () => {
                   onClick={() => isMobile && setIsOpen(false)}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors",
+                    !isExpanded && "justify-center px-2",
                     location.pathname === item.path
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
                       : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                   )}
+                  title={!isExpanded ? item.title : ""}
                 >
                   {item.icon}
-                  <span>{item.title}</span>
+                  {isExpanded && <span>{item.title}</span>}
                 </Link>
               </li>
             ))}
@@ -138,20 +201,33 @@ const Sidebar = () => {
         </nav>
 
         {/* Bottom area with logo and settings */}
-        <div className="p-4 border-t border-sidebar-border/50 space-y-4">
+        <div className={cn(
+          "p-4 border-t border-sidebar-border/50 space-y-4",
+          !isExpanded && "px-3"
+        )}>
           {/* Logo near settings */}
-          <div className="flex items-center gap-3 px-3 py-2.5">
-            <span className="font-bold text-xl tracking-tight text-primary">GVVC</span>
-            <span className="font-semibold">MarketNotes</span>
-          </div>
+          {isExpanded ? (
+            <div className="flex items-center gap-3 px-3 py-2.5">
+              <span className="font-bold text-xl tracking-tight text-primary">GVVC</span>
+              <span className="font-semibold">MarketNotes</span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-2.5">
+              <span className="font-bold text-xl tracking-tight text-primary">GV</span>
+            </div>
+          )}
           
           <Link
             to="/settings"
             onClick={() => isMobile && setIsOpen(false)}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+              !isExpanded && "justify-center px-2"
+            )}
+            title={!isExpanded ? "Settings" : ""}
           >
             <Settings size={20} />
-            <span>Settings</span>
+            {isExpanded && <span>Settings</span>}
           </Link>
         </div>
       </aside>
