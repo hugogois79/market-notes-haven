@@ -1,13 +1,23 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Tag as TagIcon, FileText, Search, X } from "lucide-react";
+import { Tag as TagIcon, FileText, Search, X, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import NoteCard from "@/components/NoteCard";
 import { Note } from "@/types";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TagsPageProps {
   notes: Note[];
@@ -19,6 +29,9 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [tags, setTags] = useState<{name: string, count: number}[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newTag, setNewTag] = useState("");
+  const [isAddingTag, setIsAddingTag] = useState(false);
   
   // Extract all unique tags from notes
   useEffect(() => {
@@ -73,6 +86,74 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
     toast.info("Filters cleared");
   };
 
+  const handleAddTag = async () => {
+    if (!newTag.trim()) {
+      toast.error("Tag name cannot be empty");
+      return;
+    }
+
+    // Check if tag already exists
+    if (tags.some(tag => tag.name.toLowerCase() === newTag.trim().toLowerCase())) {
+      toast.error("This tag already exists");
+      return;
+    }
+
+    setIsAddingTag(true);
+    
+    try {
+      // Create a new note with this tag if there are no notes yet
+      // or add the tag to an existing note
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      
+      if (notes.length === 0) {
+        // Create a new note with this tag
+        const { error } = await supabase
+          .from('notes')
+          .insert([{
+            title: 'Tag Note',
+            content: `Note created for tag: ${newTag}`,
+            tags: [newTag],
+            user_id: userId
+          }]);
+          
+        if (error) throw error;
+        
+        toast.success(`Created new note with tag: ${newTag}`);
+      } else {
+        // Find the first note to update with the new tag
+        const noteToUpdate = notes[0];
+        const updatedTags = [...noteToUpdate.tags, newTag];
+        
+        const { error } = await supabase
+          .from('notes')
+          .update({ 
+            tags: updatedTags,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', noteToUpdate.id);
+          
+        if (error) throw error;
+        
+        toast.success(`Added tag "${newTag}" to note: ${noteToUpdate.title}`);
+      }
+      
+      // Update local state with the new tag
+      setTags(prev => [...prev, { name: newTag, count: 1 }].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewTag("");
+      setIsDialogOpen(false);
+      
+      // Refetch notes to update the UI
+      // (assuming there's a refetch function in the parent component)
+      
+    } catch (error) {
+      console.error("Error adding tag:", error);
+      toast.error("Failed to add tag");
+    } finally {
+      setIsAddingTag(false);
+    }
+  };
+
   return (
     <div className="space-y-6 px-6 py-4 animate-fade-in">
       {/* Header */}
@@ -86,6 +167,50 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
             Organize and filter your notes by tags
           </p>
         </div>
+        
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="brand" className="gap-2">
+              <Plus size={16} />
+              Add Tag
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Tag</DialogTitle>
+              <DialogDescription>
+                Create a new tag to organize your notes
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Input
+                placeholder="Enter tag name"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddTag();
+                  }
+                }}
+              />
+            </div>
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="brand" 
+                onClick={handleAddTag}
+                disabled={isAddingTag}
+              >
+                {isAddingTag ? "Adding..." : "Add Tag"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Search and filter info */}
