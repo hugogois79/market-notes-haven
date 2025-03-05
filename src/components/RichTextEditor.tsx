@@ -24,6 +24,10 @@ import {
   ChevronDown,
   Coins,
   Plus,
+  Paperclip,
+  File as FileIcon,
+  ExternalLink,
+  Trash2,
 } from "lucide-react";
 import { Note, Token, Tag as TagType } from "@/types";
 import {
@@ -47,6 +51,18 @@ import {
 } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchTags, createTag, getTagsForNote, linkTagToNote, unlinkTagFromNote } from "@/services/tagService";
+import { uploadNoteAttachment, deleteNoteAttachment } from "@/services/supabaseService";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface RichTextEditorProps {
   note?: Note;
@@ -68,8 +84,12 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
   const [availableTags, setAvailableTags] = useState<TagType[]>([]);
   const [isLoadingTags, setIsLoadingTags] = useState(false);
   const [linkedTags, setLinkedTags] = useState<TagType[]>([]);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentUrl, setAttachmentUrl] = useState<string | undefined>(note?.attachment_url);
+  const [isUploading, setIsUploading] = useState(false);
   
   const editorRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const initialContentRef = useRef<string>("");
 
   // Ensure we have at least the General category
@@ -155,6 +175,15 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
   useEffect(() => {
     setSelectedTokens(linkedTokens || []);
   }, [linkedTokens]);
+
+  // Update attachment when note changes
+  useEffect(() => {
+    if (note?.attachment_url) {
+      setAttachmentUrl(note.attachment_url);
+    } else {
+      setAttachmentUrl(undefined);
+    }
+  }, [note?.attachment_url]);
 
   // Handle content changes
   const handleContentChange = () => {
@@ -276,6 +305,67 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     setSelectedTokens(selectedTokens.filter(t => t.id !== tokenId));
   };
 
+  // Handle file input change
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check file size (limit to 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("File size exceeds 10MB limit");
+        return;
+      }
+      
+      setAttachmentFile(file);
+      toast.info(`File "${file.name}" selected`);
+    }
+  };
+
+  // Trigger file input click
+  const handleAttachFileClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  // Remove attachment
+  const handleRemoveAttachment = async () => {
+    if (attachmentUrl && note?.id && !note.id.toString().startsWith("temp-")) {
+      try {
+        await deleteNoteAttachment(attachmentUrl);
+      } catch (error) {
+        console.error("Error deleting attachment:", error);
+      }
+    }
+    
+    setAttachmentFile(null);
+    setAttachmentUrl(undefined);
+    toast.success("Attachment removed");
+  };
+
+  // Upload attachment
+  const uploadAttachment = async (noteId: string): Promise<string | undefined> => {
+    if (!attachmentFile) {
+      return attachmentUrl;
+    }
+    
+    setIsUploading(true);
+    
+    try {
+      const url = await uploadNoteAttachment(attachmentFile, noteId);
+      if (url) {
+        toast.success("File uploaded successfully");
+        return url;
+      } else {
+        toast.error("Failed to upload file");
+        return attachmentUrl;
+      }
+    } catch (error) {
+      console.error("Error uploading attachment:", error);
+      toast.error("Failed to upload file");
+      return attachmentUrl;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   // Handle save
   const handleSave = async () => {
     if (!title.trim()) {
@@ -289,14 +379,24 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     const currentContent = editorRef.current.innerHTML;
     console.log('Saving content:', currentContent);
     
+    let noteId = note?.id || Date.now().toString();
+    // First upload attachment if there's a new file and the note has a real ID
+    let newAttachmentUrl = attachmentUrl;
+    
+    // For existing notes, we can upload files directly
+    if (!noteId.toString().startsWith("temp-") && attachmentFile) {
+      newAttachmentUrl = await uploadAttachment(noteId);
+    }
+    
     const updatedNote: Note = {
-      id: note?.id || Date.now().toString(),
+      id: noteId,
       title,
       content: currentContent,
       tags,
       category,
       createdAt: note?.createdAt || new Date(),
       updatedAt: new Date(),
+      attachment_url: newAttachmentUrl,
     };
     
     const savedNote = await onSave?.(updatedNote);
@@ -304,6 +404,30 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     if (savedNote) {
       console.log("Note saved successfully:", savedNote.id);
       console.log("Saved note content:", savedNote.content);
+      
+      // If this was a new note and we have an attachment to upload
+      if ((noteId.toString().startsWith("temp-") || noteId !== savedNote.id) && attachmentFile) {
+        // Upload the attachment with the new note ID
+        const attachmentUrl = await uploadAttachment(savedNote.id);
+        
+        if (attachmentUrl) {
+          // Update the note with the attachment URL
+          const noteWithAttachment: Note = {
+            ...savedNote,
+            attachment_url: attachmentUrl,
+          };
+          
+          // Save again with the attachment URL
+          const finalSavedNote = await onSave?.(noteWithAttachment);
+          if (finalSavedNote) {
+            setAttachmentUrl(attachmentUrl);
+            setAttachmentFile(null);
+          }
+        }
+      } else {
+        // For existing notes, the attachment URL is already set
+        setAttachmentFile(null);
+      }
       
       // Update the initial content reference after successful save
       initialContentRef.current = currentContent;
@@ -396,6 +520,20 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     return availableTags.filter(tag => !linkedTags.some(t => t.id === tag.id));
   };
 
+  // Function to get file name from URL
+  const getFilenameFromUrl = (url: string): string => {
+    try {
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/');
+      const filename = pathParts[pathParts.length - 1];
+      
+      // Decode URI components to handle special characters
+      return decodeURIComponent(filename);
+    } catch (error) {
+      return "Attachment";
+    }
+  };
+
   return (
     <div className="h-full flex flex-col animate-fade-in">
       {/* Editor Header */}
@@ -440,6 +578,91 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+        </div>
+        
+        {/* File Attachment Section */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <Paperclip size={14} className="text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Attachment</span>
+          </div>
+          
+          <div className="flex flex-wrap gap-2 items-center">
+            {attachmentFile ? (
+              <Badge variant="secondary" className="px-3 py-1 text-sm gap-2">
+                <FileIcon size={14} />
+                {attachmentFile.name}
+                <button 
+                  onClick={() => setAttachmentFile(null)} 
+                  className="opacity-70 hover:opacity-100"
+                >
+                  <X size={12} />
+                </button>
+              </Badge>
+            ) : attachmentUrl ? (
+              <div className="flex gap-2 items-center">
+                <Badge variant="secondary" className="px-3 py-1 text-sm gap-2">
+                  <FileIcon size={14} />
+                  {getFilenameFromUrl(attachmentUrl)}
+                  <a 
+                    href={attachmentUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="opacity-70 hover:opacity-100 ml-1"
+                  >
+                    <ExternalLink size={12} />
+                  </a>
+                </Badge>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-7 px-2"
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Remove attachment?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will remove the file attachment from this note. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleRemoveAttachment}>
+                        Remove
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            ) : (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleAttachFileClick}
+                className="gap-2 h-8"
+              >
+                <Paperclip size={14} />
+                Attach File
+              </Button>
+            )}
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={handleFileChange}
+              accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
+            />
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG, GIF (max 10MB)
+          </div>
         </div>
         
         {/* Token Selection */}

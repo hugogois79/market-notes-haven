@@ -6,6 +6,7 @@ export interface Note {
   category: string;
   createdAt: Date;
   updatedAt: Date;
+  attachment_url?: string; // New field for storing attachment URL
 }
 
 export interface Token {

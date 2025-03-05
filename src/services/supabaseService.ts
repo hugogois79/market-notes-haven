@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Note } from "@/types";
 
@@ -12,6 +11,7 @@ export interface DbNote {
   created_at: string;
   updated_at: string;
   user_id: string | null;
+  attachment_url: string | null; // Added field for attachment URL
 }
 
 // Type for our user profile
@@ -38,6 +38,7 @@ export const dbNoteToNote = (dbNote: DbNote): Note => ({
   category: dbNote.category || "General",
   createdAt: new Date(dbNote.created_at),
   updatedAt: new Date(dbNote.updated_at),
+  attachment_url: dbNote.attachment_url || undefined,
 });
 
 // Convert app note to database format
@@ -48,6 +49,7 @@ export const noteToDbNote = (note: Note): Omit<DbNote, 'created_at' | 'updated_a
   tags: note.tags,
   category: note.category,
   user_id: null, // Will be set by the service
+  attachment_url: note.attachment_url || null,
 });
 
 // Fetch all notes from Supabase
@@ -89,6 +91,7 @@ export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedA
         tags: note.tags || [],
         category: note.category || "General",
         user_id: userId,
+        attachment_url: note.attachment_url || null,
       }])
       .select()
       .single();
@@ -123,6 +126,7 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
         category: note.category || "General",
         updated_at: new Date().toISOString(),
         user_id: userId,
+        attachment_url: note.attachment_url || null,
       })
       .eq('id', note.id)
       .select()
@@ -389,6 +393,279 @@ export const unlinkTokenFromUser = async (tokenId: string): Promise<boolean> => 
     return true;
   } catch (error) {
     console.error('Error unlinking token from user:', error);
+    return false;
+  }
+};
+
+// Upload a file to Supabase Storage and get the URL
+export const uploadNoteAttachment = async (file: File, noteId: string): Promise<string | null> => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+    
+    if (!userId) {
+      console.error('User not authenticated');
+      return null;
+    }
+    
+    // Create a unique file path using the noteId and original filename
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${userId}/${noteId}/${Date.now()}.${fileExt}`;
+    
+    const { data, error } = await supabase.storage
+      .from('note_attachments')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true
+      });
+    
+    if (error) {
+      console.error('Error uploading file:', error);
+      return null;
+    }
+    
+    // Get the public URL for the file
+    const { data: { publicUrl } } = supabase.storage
+      .from('note_attachments')
+      .getPublicUrl(data.path);
+    
+    return publicUrl;
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    return null;
+  }
+};
+
+// Delete a file from Supabase Storage
+export const deleteNoteAttachment = async (attachmentUrl: string): Promise<boolean> => {
+  try {
+    // Extract the file path from the URL
+    const url = new URL(attachmentUrl);
+    const pathParts = url.pathname.split('/');
+    const bucketName = pathParts[1]; // e.g., "note_attachments"
+    
+    // Remove the bucket name from the path
+    const filePath = pathParts.slice(2).join('/');
+    
+    if (!filePath) {
+      console.error('Invalid attachment URL');
+      return false;
+    }
+    
+    const { error } = await supabase.storage
+      .from(bucketName)
+      .remove([filePath]);
+    
+    if (error) {
+      console.error('Error deleting file:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting file:', error);
+    return false;
+  }
+};
+
+// Get tags for a specific note
+export const getTagsForNote = async (noteId: string): Promise<any[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('notes_tags')
+      .select(`
+        tag_id,
+        tags:tag_id (*)
+      `)
+      .eq('note_id', noteId);
+
+    if (error) {
+      console.error('Error fetching tags for note:', error);
+      return [];
+    }
+
+    // Transform the data to get tag objects
+    return data.map(item => item.tags);
+  } catch (error) {
+    console.error('Error fetching tags for note:', error);
+    return [];
+  }
+};
+
+// Fetch all tags from Supabase
+export const fetchTags = async (): Promise<any[]> => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
+    const { data, error } = await supabase
+      .from('tags')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching tags:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching tags:', error);
+    return [];
+  }
+};
+
+// Create a new tag in Supabase
+export const createTag = async (tagName: string): Promise<any | null> => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
+    const { data, error } = await supabase
+      .from('tags')
+      .insert([{
+        name: tagName,
+        user_id: userId,
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating tag:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error creating tag:', error);
+    return null;
+  }
+};
+
+// Link a tag to a note
+export const linkTagToNote = async (noteId: string, tagId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('notes_tags')
+      .insert({
+        note_id: noteId,
+        tag_id: tagId
+      });
+
+    if (error) {
+      console.error('Error linking tag to note:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error linking tag to note:', error);
+    return false;
+  }
+};
+
+// Unlink a tag from a note
+export const unlinkTagFromNote = async (noteId: string, tagId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('notes_tags')
+      .delete()
+      .match({ note_id: noteId, tag_id: tagId });
+
+    if (error) {
+      console.error('Error unlinking tag from note:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error unlinking tag from note:', error);
+    return false;
+  }
+};
+
+// Get tokens for a specific note
+export const getTokensForNote = async (noteId: string): Promise<any[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('notes_tokens')
+      .select(`
+        token_id,
+        tokens:token_id (*)
+      `)
+      .eq('note_id', noteId);
+
+    if (error) {
+      console.error('Error fetching tokens for note:', error);
+      return [];
+    }
+
+    // Transform the data to get token objects
+    return data.map(item => item.tokens);
+  } catch (error) {
+    console.error('Error fetching tokens for note:', error);
+    return [];
+  }
+};
+
+// Fetch all tokens from Supabase
+export const fetchTokens = async (): Promise<any[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('tokens')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching tokens:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching tokens:', error);
+    return [];
+  }
+};
+
+// Link a token to a note
+export const linkTokenToNote = async (noteId: string, tokenId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('notes_tokens')
+      .insert({
+        note_id: noteId,
+        token_id: tokenId
+      });
+
+    if (error) {
+      console.error('Error linking token to note:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error linking token to note:', error);
+    return false;
+  }
+};
+
+// Unlink a token from a note
+export const unlinkTokenFromNote = async (noteId: string, tokenId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('notes_tokens')
+      .delete()
+      .match({ note_id: noteId, token_id: tokenId });
+
+    if (error) {
+      console.error('Error unlinking token from note:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error unlinking token from note:', error);
     return false;
   }
 };

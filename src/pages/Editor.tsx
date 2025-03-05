@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Trash2, Printer } from "lucide-react";
+import { ArrowLeft, Trash2, Printer, FileIcon, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Note, Token } from "@/types";
 import {
@@ -167,6 +167,17 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
     }
   };
 
+  // Function to get file name from attachment URL
+  const getFilenameFromUrl = (url: string): string => {
+    try {
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/');
+      return pathParts[pathParts.length - 1] || "attachment";
+    } catch (error) {
+      return "attachment";
+    }
+  };
+
   // Show a loading state if we're still waiting for notes to load
   if (!currentNote && notes.length === 0) {
     return (
@@ -194,6 +205,19 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
         
         {!isNewNote && currentNote && !currentNote.id.toString().startsWith("temp-") && (
           <div className="flex items-center gap-2">
+            {currentNote.attachment_url && (
+              <a 
+                href={currentNote.attachment_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <FileIcon size={14} />
+                <span className="hidden sm:inline">{getFilenameFromUrl(currentNote.attachment_url)}</span>
+                <ExternalLink size={14} />
+              </a>
+            )}
+            
             <Button
               variant="outline"
               size="sm"
