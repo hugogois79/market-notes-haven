@@ -269,7 +269,10 @@ export const migrateExistingTags = async (): Promise<boolean> => {
 
       // Link this tag to all notes that have it
       for (const note of notesData) {
-        if (Array.isArray(note.tags) && note.tags.includes(tagName)) {
+        // Fix for the string vs string[] type error - ensure we're checking correctly if tagName is in note.tags
+        const noteTags = Array.isArray(note.tags) ? note.tags : [];
+        
+        if (noteTags.includes(tagName)) {
           const { error: linkError } = await supabase
             .from('notes_tags')
             .insert([{
