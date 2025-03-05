@@ -219,11 +219,11 @@ export const migrateExistingTags = async (): Promise<boolean> => {
     // Extract all unique tags from notes
     const allTags = new Set<string>();
     notesData.forEach(note => {
-      if (Array.isArray(note.tags)) {
-        note.tags.forEach(tag => {
-          if (tag) allTags.add(tag);
-        });
-      }
+      // Ensure note.tags is treated as an array
+      const noteTags = Array.isArray(note.tags) ? note.tags : [];
+      noteTags.forEach(tag => {
+        if (tag) allTags.add(tag);
+      });
     });
 
     const uniqueTags = Array.from(allTags);
