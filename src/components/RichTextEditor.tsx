@@ -25,7 +25,7 @@ import {
   Coins,
   Plus,
 } from "lucide-react";
-import { Note, Token } from "@/types";
+import { Note, Token, Tag as TagType } from "@/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,7 +46,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchTags, createTag, getTagsForNote, linkTagToNote, unlinkTagFromNote, Tag as TagType } from "@/services/tagService";
+import { fetchTags, createTag, getTagsForNote, linkTagToNote, unlinkTagFromNote } from "@/services/tagService";
 
 interface RichTextEditorProps {
   note?: Note;
