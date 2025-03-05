@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +23,7 @@ import {
   X,
   ChevronDown,
   Coins,
+  Plus,
 } from "lucide-react";
 import { Note, Token } from "@/types";
 import {
@@ -40,6 +40,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { fetchTokens, linkTokenToNote, unlinkTokenFromNote } from "@/services/tokenService";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { supabase } from "@/integrations/supabase/client";
 
 interface RichTextEditorProps {
   note?: Note;
@@ -58,6 +64,8 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
   const [tokens, setTokens] = useState<Token[]>([]);
   const [selectedTokens, setSelectedTokens] = useState<Token[]>(linkedTokens || []);
   const [isLoadingTokens, setIsLoadingTokens] = useState(false);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [isLoadingTags, setIsLoadingTags] = useState(false);
   
   const editorRef = useRef<HTMLDivElement>(null);
   const initialContentRef = useRef<string>("");
@@ -103,6 +111,35 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     };
 
     loadTokens();
+  }, []);
+
+  // Load available tags
+  useEffect(() => {
+    const fetchAvailableTags = async () => {
+      setIsLoadingTags(true);
+      try {
+        const { data: notesData, error } = await supabase
+          .from('notes')
+          .select('tags');
+        
+        if (error) throw error;
+        
+        // Extract unique tags
+        const allTags = notesData
+          .flatMap(note => note.tags || [])
+          .filter(tag => tag); // Filter out null/undefined/empty
+          
+        // De-duplicate and sort
+        const uniqueTags = Array.from(new Set(allTags)).sort();
+        setAvailableTags(uniqueTags);
+      } catch (error) {
+        console.error("Error fetching tags:", error);
+      } finally {
+        setIsLoadingTags(false);
+      }
+    };
+    
+    fetchAvailableTags();
   }, []);
 
   // Initialize editor content
@@ -163,6 +200,17 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     
     setTags([...tags, tagInput.trim()]);
     setTagInput("");
+  };
+
+  // Handle selecting existing tag
+  const handleSelectTag = (selectedTag: string) => {
+    if (tags.includes(selectedTag)) {
+      toast.error("Tag already added to this note");
+      return;
+    }
+    
+    setTags([...tags, selectedTag]);
+    toast.success(`Added tag: ${selectedTag}`);
   };
 
   // Handle removing tags
@@ -275,6 +323,11 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     }
   };
 
+  // Get tags not already selected
+  const getAvailableTagsForSelection = () => {
+    return availableTags.filter(tag => !tags.includes(tag));
+  };
+
   return (
     <div className="h-full flex flex-col animate-fade-in">
       {/* Editor Header */}
@@ -362,38 +415,80 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
         </div>
         
         {/* Tag Input */}
-        <div className="flex flex-wrap gap-2 items-center">
-          {tags.map(tag => (
-            <Badge key={tag} variant="secondary" className="px-3 py-1 text-sm gap-2">
-              {tag}
-              <button onClick={() => handleRemoveTag(tag)} className="opacity-70 hover:opacity-100">
-                <X size={12} />
-              </button>
-            </Badge>
-          ))}
-          
+        <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <Input
-              type="text"
-              placeholder="Add tag..."
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAddTag();
-                }
-              }}
-              className="h-8 w-28 text-sm"
-            />
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleAddTag} 
-              className="h-8"
-            >
-              Add
-            </Button>
+            <TagsIcon size={14} className="text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Tags</span>
+          </div>
+          
+          <div className="flex flex-wrap gap-2 items-center">
+            {tags.map(tag => (
+              <Badge key={tag} variant="secondary" className="px-3 py-1 text-sm gap-2">
+                {tag}
+                <button onClick={() => handleRemoveTag(tag)} className="opacity-70 hover:opacity-100">
+                  <X size={12} />
+                </button>
+              </Badge>
+            ))}
+            
+            <div className="flex items-center gap-2">
+              <Input
+                type="text"
+                placeholder="Add tag..."
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddTag();
+                  }
+                }}
+                className="h-8 w-28 text-sm"
+              />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleAddTag} 
+                className="h-8"
+              >
+                Add
+              </Button>
+              
+              {/* Tag Selector */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8">
+                    <TagsIcon size={14} className="mr-1" />
+                    Choose Tags
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-60 p-2">
+                  <div className="flex flex-col gap-2">
+                    <div className="text-sm font-medium">Available Tags</div>
+                    
+                    {isLoadingTags ? (
+                      <div className="text-sm text-muted-foreground py-2">Loading tags...</div>
+                    ) : getAvailableTagsForSelection().length === 0 ? (
+                      <div className="text-sm text-muted-foreground py-2">No additional tags available</div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+                        {getAvailableTagsForSelection().map(tag => (
+                          <Badge 
+                            key={tag} 
+                            variant="outline" 
+                            className="cursor-pointer hover:bg-secondary transition-colors px-3 py-1 flex items-center gap-1"
+                            onClick={() => handleSelectTag(tag)}
+                          >
+                            <Plus size={10} />
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
         </div>
       </div>
