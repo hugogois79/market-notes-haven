@@ -21,6 +21,14 @@ export interface Token {
   updatedAt: Date;
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string | null;
+}
+
 export interface Trader {
   id: string;
   name: string;
@@ -49,5 +57,12 @@ export interface TokenNote {
   id: string;
   note_id: string;
   token_id: string;
+  created_at: Date;
+}
+
+export interface TagNote {
+  id: string;
+  note_id: string;
+  tag_id: string;
   created_at: Date;
 }

@@ -46,6 +46,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchTags, createTag, getTagsForNote, linkTagToNote, unlinkTagFromNote, Tag as TagType } from "@/services/tagService";
 
 interface RichTextEditorProps {
   note?: Note;
@@ -64,8 +65,9 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
   const [tokens, setTokens] = useState<Token[]>([]);
   const [selectedTokens, setSelectedTokens] = useState<Token[]>(linkedTokens || []);
   const [isLoadingTokens, setIsLoadingTokens] = useState(false);
-  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<TagType[]>([]);
   const [isLoadingTags, setIsLoadingTags] = useState(false);
+  const [linkedTags, setLinkedTags] = useState<TagType[]>([]);
   
   const editorRef = useRef<HTMLDivElement>(null);
   const initialContentRef = useRef<string>("");
@@ -115,23 +117,11 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
 
   // Load available tags
   useEffect(() => {
-    const fetchAvailableTags = async () => {
+    const fetchAllTags = async () => {
       setIsLoadingTags(true);
       try {
-        const { data: notesData, error } = await supabase
-          .from('notes')
-          .select('tags');
-        
-        if (error) throw error;
-        
-        // Extract unique tags
-        const allTags = notesData
-          .flatMap(note => note.tags || [])
-          .filter(tag => tag); // Filter out null/undefined/empty
-          
-        // De-duplicate and sort
-        const uniqueTags = Array.from(new Set(allTags)).sort();
-        setAvailableTags(uniqueTags);
+        const allTags = await fetchTags();
+        setAvailableTags(allTags);
       } catch (error) {
         console.error("Error fetching tags:", error);
       } finally {
@@ -139,25 +129,27 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
       }
     };
     
-    fetchAvailableTags();
+    fetchAllTags();
   }, []);
-
-  // Initialize editor content
+  
+  // Load tags for this note
   useEffect(() => {
-    if (editorRef.current) {
-      const noteContent = note?.content || "";
+    const fetchNoteTagsData = async () => {
+      if (!note || !note.id || note.id.toString().startsWith("temp-")) return;
       
-      console.log('Setting editor content, content value:', noteContent);
-      // Always set the innerHTML directly for most reliable update
-      editorRef.current.innerHTML = noteContent;
-      initialContentRef.current = noteContent;
-      
-      // Also ensure our state is in sync
-      setContent(noteContent);
-    } else {
-      console.log('Editor ref not available');
-    }
-  }, [note, editorRef.current]);
+      try {
+        const noteTags = await getTagsForNote(note.id);
+        setLinkedTags(noteTags);
+        
+        // Update our tags string array for backward compatibility
+        setTags(noteTags.map(tag => tag.name));
+      } catch (error) {
+        console.error("Error fetching tags for note:", error);
+      }
+    };
+    
+    fetchNoteTagsData();
+  }, [note]);
 
   // Update linked tokens when prop changes
   useEffect(() => {
@@ -191,31 +183,73 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
   };
 
   // Handle adding tags
-  const handleAddTag = () => {
+  const handleAddTag = async () => {
     if (!tagInput.trim()) return;
-    if (tags.includes(tagInput.trim())) {
-      toast.error("Tag already exists");
-      return;
-    }
     
-    setTags([...tags, tagInput.trim()]);
-    setTagInput("");
+    // Check if tag with this name already exists
+    const existingTagIndex = availableTags.findIndex(
+      tag => tag.name.toLowerCase() === tagInput.trim().toLowerCase()
+    );
+    
+    if (existingTagIndex !== -1) {
+      // Tag exists, check if it's already linked to this note
+      const existingTag = availableTags[existingTagIndex];
+      const isTagAlreadyLinked = linkedTags.some(tag => tag.id === existingTag.id);
+      
+      if (isTagAlreadyLinked) {
+        toast.error(`Tag "${existingTag.name}" is already added to this note`);
+        setTagInput("");
+        return;
+      }
+      
+      // Add existing tag
+      setLinkedTags(prev => [...prev, existingTag]);
+      setTags(prev => [...prev, existingTag.name]);
+      setTagInput("");
+      toast.success(`Added tag: ${existingTag.name}`);
+    } else {
+      // Create new tag
+      const newTag = await createTag(tagInput.trim());
+      if (newTag) {
+        setLinkedTags(prev => [...prev, newTag]);
+        setTags(prev => [...prev, newTag.name]);
+        setTagInput("");
+        toast.success(`Created and added new tag: ${newTag.name}`);
+        
+        // Add to available tags
+        setAvailableTags(prev => [...prev, newTag]);
+      }
+    }
   };
 
   // Handle selecting existing tag
-  const handleSelectTag = (selectedTag: string) => {
-    if (tags.includes(selectedTag)) {
-      toast.error("Tag already added to this note");
+  const handleSelectTag = (tag: TagType) => {
+    const isTagAlreadyLinked = linkedTags.some(t => t.id === tag.id);
+    
+    if (isTagAlreadyLinked) {
+      toast.error(`Tag "${tag.name}" is already added to this note`);
       return;
     }
     
-    setTags([...tags, selectedTag]);
-    toast.success(`Added tag: ${selectedTag}`);
+    setLinkedTags(prev => [...prev, tag]);
+    setTags(prev => [...prev, tag.name]);
+    toast.success(`Added tag: ${tag.name}`);
   };
 
   // Handle removing tags
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
+  const handleRemoveTag = (tagToRemove: TagType | string) => {
+    if (typeof tagToRemove === 'string') {
+      // Find the tag object by name
+      const tagObj = linkedTags.find(t => t.name === tagToRemove);
+      if (tagObj) {
+        setLinkedTags(prev => prev.filter(tag => tag.id !== tagObj.id));
+      }
+      setTags(prev => prev.filter(tag => tag !== tagToRemove));
+    } else {
+      // We have the tag object directly
+      setLinkedTags(prev => prev.filter(tag => tag.id !== tagToRemove.id));
+      setTags(prev => prev.filter(tag => tag !== tagToRemove.name));
+    }
   };
 
   // Handle category selection
@@ -274,6 +308,40 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
       // Update the initial content reference after successful save
       initialContentRef.current = currentContent;
       
+      // Update tag associations
+      try {
+        // First, identify previous and current tag ids
+        const previousTagIds = linkedTags.map(t => t.id);
+        
+        // Get fresh tags data
+        const currentTags = await getTagsForNote(savedNote.id);
+        const currentTagIds = currentTags.map(t => t.id);
+        
+        // Find all tags that have been added to the note
+        const tagsToAdd = linkedTags.filter(tag => !currentTagIds.includes(tag.id));
+        
+        // Find all tags that have been removed from the note
+        const tagsToRemove = currentTags.filter(tag => !linkedTags.some(t => t.id === tag.id));
+        
+        console.log("Tags to add:", tagsToAdd);
+        console.log("Tags to remove:", tagsToRemove);
+        
+        // Process removals
+        for (const tag of tagsToRemove) {
+          console.log(`Unlinking tag ${tag.name} from note ${savedNote.id}`);
+          await unlinkTagFromNote(savedNote.id, tag.id);
+        }
+        
+        // Process additions
+        for (const tag of tagsToAdd) {
+          console.log(`Linking tag ${tag.name} to note ${savedNote.id}`);
+          await linkTagToNote(savedNote.id, tag.id);
+        }
+      } catch (error) {
+        console.error("Error updating tag associations:", error);
+        toast.error("Failed to update tag associations");
+      }
+      
       // Update token associations
       try {
         // First, identify previous and current token ids
@@ -325,7 +393,7 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
 
   // Get tags not already selected
   const getAvailableTagsForSelection = () => {
-    return availableTags.filter(tag => !tags.includes(tag));
+    return availableTags.filter(tag => !linkedTags.some(t => t.id === tag.id));
   };
 
   return (
@@ -422,9 +490,9 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
           </div>
           
           <div className="flex flex-wrap gap-2 items-center">
-            {tags.map(tag => (
-              <Badge key={tag} variant="secondary" className="px-3 py-1 text-sm gap-2">
-                {tag}
+            {linkedTags.map(tag => (
+              <Badge key={tag.id} variant="secondary" className="px-3 py-1 text-sm gap-2">
+                {tag.name}
                 <button onClick={() => handleRemoveTag(tag)} className="opacity-70 hover:opacity-100">
                   <X size={12} />
                 </button>
@@ -474,13 +542,13 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
                       <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
                         {getAvailableTagsForSelection().map(tag => (
                           <Badge 
-                            key={tag} 
+                            key={tag.id} 
                             variant="outline" 
                             className="cursor-pointer hover:bg-secondary transition-colors px-3 py-1 flex items-center gap-1"
                             onClick={() => handleSelectTag(tag)}
                           >
                             <Plus size={10} />
-                            {tag}
+                            {tag.name}
                           </Badge>
                         ))}
                       </div>
