@@ -13,6 +13,7 @@ import Notes from "./pages/Notes";
 import Auth from "./pages/Auth";
 import Editor from "./pages/Editor";
 import Categories from "./pages/Categories";
+import Tags from "./pages/Tags";
 import TokensPage from "./pages/tokens";
 import TokenDetail from "./pages/tokens/[id]";
 import CryptoDashboard from "./pages/crypto/Dashboard";
@@ -140,6 +141,14 @@ function AppContent() {
           element={
             <ProtectedRoute>
               {withLayout(<Categories notes={notes} loading={loading || isLoading} />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tags"
+          element={
+            <ProtectedRoute>
+              {withLayout(<Tags notes={notes} loading={loading || isLoading} />)}
             </ProtectedRoute>
           }
         />
