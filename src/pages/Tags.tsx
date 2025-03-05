@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Tag as TagIcon, FileText, Search, X, Plus } from "lucide-react";
+import { Tag as TagIcon, FileText, Search, X, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,21 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface TagsPageProps {
   notes: Note[];
@@ -32,6 +47,9 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newTag, setNewTag] = useState("");
   const [isAddingTag, setIsAddingTag] = useState(false);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [tagToDelete, setTagToDelete] = useState<string | null>(null);
+  const [isDeletingTag, setIsDeletingTag] = useState(false);
   
   // Extract all unique tags from notes
   useEffect(() => {
@@ -154,6 +172,72 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
     }
   };
 
+  const handleDeleteTagClick = (tagName: string) => {
+    setTagToDelete(tagName);
+    setShowDeleteAlert(true);
+  };
+
+  const handleDeleteTag = async () => {
+    if (!tagToDelete) return;
+    
+    setIsDeletingTag(true);
+    
+    try {
+      // Find all notes that have this tag
+      const notesWithTag = notes.filter(note => note.tags.includes(tagToDelete));
+      
+      if (notesWithTag.length === 0) {
+        toast.error("No notes found with this tag");
+        setIsDeletingTag(false);
+        setShowDeleteAlert(false);
+        return;
+      }
+      
+      // Update each note to remove the tag
+      let successCount = 0;
+      
+      for (const note of notesWithTag) {
+        const updatedTags = note.tags.filter(tag => tag !== tagToDelete);
+        
+        const { error } = await supabase
+          .from('notes')
+          .update({ 
+            tags: updatedTags,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', note.id);
+          
+        if (error) {
+          console.error(`Error updating note ${note.id}:`, error);
+        } else {
+          successCount++;
+        }
+      }
+      
+      if (successCount > 0) {
+        // Update local state to remove the tag
+        setTags(prev => prev.filter(tag => tag.name !== tagToDelete));
+        
+        // If the deleted tag was selected, clear the selection
+        if (selectedTag === tagToDelete) {
+          setSelectedTag(null);
+        }
+        
+        toast.success(`Removed tag "${tagToDelete}" from ${successCount} ${successCount === 1 ? 'note' : 'notes'}`);
+      } else {
+        toast.error("Failed to remove tag from any notes");
+      }
+      
+    } catch (error) {
+      console.error("Error deleting tag:", error);
+      toast.error("Failed to delete tag");
+    } finally {
+      setIsDeletingTag(false);
+      setShowDeleteAlert(false);
+      setTagToDelete(null);
+    }
+  };
+
   return (
     <div className="space-y-6 px-6 py-4 animate-fade-in">
       {/* Header */}
@@ -259,19 +343,46 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
         ) : tags.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {tags.map((tag) => (
-              <Badge 
-                key={tag.name}
-                variant={selectedTag === tag.name ? "default" : "secondary"}
-                className={`text-sm py-1 px-3 cursor-pointer hover:bg-opacity-90 transition-all ${
-                  selectedTag === tag.name ? 'bg-[#1EAEDB]' : ''
-                }`}
-                onClick={() => handleTagClick(tag.name)}
-              >
-                {tag.name}
-                <span className="ml-1 bg-primary-foreground text-primary rounded-full px-1.5 py-0.5 text-xs">
-                  {tag.count}
-                </span>
-              </Badge>
+              <div key={tag.name} className="flex items-center">
+                <Badge 
+                  variant={selectedTag === tag.name ? "default" : "secondary"}
+                  className={`text-sm py-1 px-3 cursor-pointer hover:bg-opacity-90 transition-all ${
+                    selectedTag === tag.name ? 'bg-[#1EAEDB]' : ''
+                  }`}
+                  onClick={() => handleTagClick(tag.name)}
+                >
+                  {tag.name}
+                  <span className="ml-1 bg-primary-foreground text-primary rounded-full px-1.5 py-0.5 text-xs">
+                    {tag.count}
+                  </span>
+                </Badge>
+                
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 w-7 p-0 ml-1"
+                    >
+                      <Trash2 size={14} className="text-muted-foreground hover:text-destructive" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-2">
+                    <div className="flex flex-col gap-2">
+                      <p className="text-sm font-medium">Delete tag "{tag.name}"?</p>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => handleDeleteTagClick(tag.name)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
             ))}
           </div>
         ) : (
@@ -327,6 +438,28 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
           )}
         </div>
       )}
+
+      {/* Delete Tag Alert Dialog */}
+      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tag</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the tag "{tagToDelete}" from all notes that have it. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTag}
+              className="bg-destructive text-destructive-foreground"
+              disabled={isDeletingTag}
+            >
+              {isDeletingTag ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
