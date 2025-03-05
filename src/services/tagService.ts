@@ -1,14 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-export interface Tag {
-  id: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-  user_id: string | null;
-}
+import { Tag } from "@/types";
 
 // Fetch all tags
 export const fetchTags = async (): Promise<Tag[]> => {
@@ -282,11 +275,13 @@ export const migrateExistingTags = async (): Promise<boolean> => {
             .insert([{
               note_id: note.id,
               tag_id: tagId,
-            }])
-            .on_conflict('note_id, tag_id') // In case it already exists
-            .do_nothing();
-
-          if (linkError && linkError.code !== '23505') {
+            }]);
+            
+          // Handle potential duplicate entries
+          if (linkError && linkError.code === '23505') {
+            // Duplicate entry, already exists which is fine
+            continue;
+          } else if (linkError) {
             console.error(`Error linking tag "${tagName}" to note ${note.id}:`, linkError);
           }
         }

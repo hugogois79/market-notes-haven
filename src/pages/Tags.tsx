@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tag as TagIcon, FileText, Search, X, Plus, Trash2 } from "lucide-react";
@@ -6,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import NoteCard from "@/components/NoteCard";
-import { Note } from "@/types";
+import { Note, Tag } from "@/types";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -32,7 +31,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { fetchTags, createTag, deleteTag, getNotesForTag, migrateExistingTags, Tag } from "@/services/tagService";
+import { fetchTags, createTag, deleteTag, getNotesForTag, migrateExistingTags } from "@/services/tagService";
 import { fetchNotes } from "@/services/supabaseService";
 
 interface TagsPageProps {
@@ -40,11 +39,15 @@ interface TagsPageProps {
   loading?: boolean;
 }
 
+interface TagWithCount extends Tag {
+  count: number;
+}
+
 const Tags = ({ notes, loading = false }: TagsPageProps) => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [tags, setTags] = useState<Tag[]>([]);
+  const [tags, setTags] = useState<TagWithCount[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newTag, setNewTag] = useState("");
   const [isAddingTag, setIsAddingTag] = useState(false);

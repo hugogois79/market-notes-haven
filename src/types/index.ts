@@ -1,4 +1,3 @@
-
 export interface Note {
   id: string;
   title: string;
@@ -27,6 +26,7 @@ export interface Tag {
   created_at: string;
   updated_at: string;
   user_id: string | null;
+  count?: number; // Add optional count property for UI display
 }
 
 export interface Trader {
