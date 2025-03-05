@@ -5,8 +5,9 @@ import { useNavigate } from "react-router-dom";
 import NoteCard from "@/components/NoteCard";
 import { Note } from "@/types";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 interface IndexProps {
   notes: Note[];
@@ -16,26 +17,60 @@ interface IndexProps {
 const Index = ({ notes, loading = false }: IndexProps) => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [categories, setCategories] = useState<{name: string, count: number}[]>([]);
   
-  // Filter notes based on search query
-  const filteredNotes = notes.filter(note => 
-    searchQuery === "" || 
-    note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    note.content.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Extract categories from notes
+  useEffect(() => {
+    if (notes.length > 0) {
+      const categoryCounts: Record<string, number> = {};
+      
+      notes.forEach(note => {
+        const category = note.category || "General";
+        categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+      });
+      
+      const categoryList = Object.entries(categoryCounts).map(([name, count]) => ({
+        name,
+        count
+      }));
+      
+      setCategories(categoryList);
+    }
+  }, [notes]);
+  
+  // Filter notes based on search query and selected category
+  const filteredNotes = notes.filter(note => {
+    const matchesSearch = searchQuery === "" || 
+      note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      note.content.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesCategory = selectedCategory === null || 
+      note.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
   
   // Get recent notes (last 6) from filtered notes
   const recentNotes = [...filteredNotes]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 6);
 
-  // Mock categories with counts
-  const categories = [
-    { name: "Stocks", count: 12, icon: <FileText size={16} /> },
-    { name: "Crypto", count: 8, icon: <Bookmark size={16} /> },
-    { name: "Forex", count: 5, icon: <FolderOpen size={16} /> },
-    { name: "Commodities", count: 3, icon: <Clock size={16} /> },
-  ];
+  // Icons for common categories
+  const getCategoryIcon = (categoryName: string) => {
+    switch(categoryName.toLowerCase()) {
+      case 'stocks':
+        return <FileText size={16} />;
+      case 'crypto':
+        return <Bookmark size={16} />;
+      case 'forex':
+        return <FolderOpen size={16} />;
+      case 'commodities':
+        return <Clock size={16} />;
+      default:
+        return <FileText size={16} />;
+    }
+  };
 
   const handleNewNote = () => {
     console.log("Creating new note");
@@ -45,6 +80,18 @@ const Index = ({ notes, loading = false }: IndexProps) => {
   const handleViewAllNotes = () => {
     console.log("Viewing all notes");
     navigate("/notes");
+  };
+  
+  const handleCategoryClick = (category: string) => {
+    console.log("Selected category:", category);
+    if (selectedCategory === category) {
+      // If clicking the same category, clear the filter
+      setSelectedCategory(null);
+      toast.info("Showing all notes");
+    } else {
+      setSelectedCategory(category);
+      toast.info(`Showing notes in ${category} category`);
+    }
   };
 
   return (
@@ -72,6 +119,19 @@ const Index = ({ notes, loading = false }: IndexProps) => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
+        
+        {selectedCategory && (
+          <div className="mt-2 flex items-center">
+            <span className="text-sm text-muted-foreground mr-2">Filtered by:</span>
+            <Badge 
+              variant="secondary" 
+              className="cursor-pointer"
+              onClick={() => setSelectedCategory(null)}
+            >
+              {selectedCategory} ×
+            </Badge>
+          </div>
+        )}
       </div>
 
       {/* Recent Notes Section */}
@@ -103,11 +163,11 @@ const Index = ({ notes, loading = false }: IndexProps) => {
               <Rocket size={24} />
             </div>
             <h3 className="text-lg font-medium mb-2">
-              {searchQuery ? "No Notes Found" : "No Notes Yet"}
+              {searchQuery || selectedCategory ? "No Notes Found" : "No Notes Yet"}
             </h3>
             <p className="text-muted-foreground mb-6 max-w-md">
-              {searchQuery 
-                ? "Try adjusting your search query or create a new note." 
+              {searchQuery || selectedCategory
+                ? "Try adjusting your filters or create a new note." 
                 : "Start creating market research notes to track your insights and analysis."}
             </p>
             <Button variant="brand" onClick={handleNewNote}>
@@ -125,25 +185,32 @@ const Index = ({ notes, loading = false }: IndexProps) => {
             Categories
           </h2>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {categories.map((category) => (
-            <div 
-              key={category.name}
-              className="bg-card glass-card rounded-lg p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer"
-              onClick={() => toast.info(`${category.name} category selected`)}
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-2 font-medium">
-                  {category.icon}
-                  {category.name}
-                </div>
-                <div className="bg-[#1EAEDB]/10 text-[#1EAEDB] text-xs rounded-full px-2 py-0.5">
-                  {category.count}
+        {categories.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {categories.map((category) => (
+              <div 
+                key={category.name}
+                className={`bg-card glass-card rounded-lg p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer
+                  ${selectedCategory === category.name ? 'ring-2 ring-[#1EAEDB]' : ''}`}
+                onClick={() => handleCategoryClick(category.name)}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-2 font-medium">
+                    {getCategoryIcon(category.name)}
+                    {category.name}
+                  </div>
+                  <div className="bg-[#1EAEDB]/10 text-[#1EAEDB] text-xs rounded-full px-2 py-0.5">
+                    {category.count}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center text-muted-foreground p-4">
+            No categories found. Create notes with categories to see them here.
+          </div>
+        )}
       </div>
     </div>
   );
