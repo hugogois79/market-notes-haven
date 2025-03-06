@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -426,7 +427,7 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     let newAttachmentUrl = attachmentUrl;
     
     // For existing notes, we can upload files directly
-    if (!noteId.toString().startsWith("temp-\") && attachmentFile) {
+    if (!noteId.toString().startsWith("temp-") && attachmentFile) {
       newAttachmentUrl = await uploadAttachment(noteId);
     }
     
@@ -449,7 +450,7 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
       console.log("Saved note content:", savedNote.content);
       
       // If this was a new note and we have an attachment to upload
-      if ((noteId.toString().startsWith("temp-\") || noteId !== savedNote.id) && attachmentFile) {
+      if ((noteId.toString().startsWith("temp-") || noteId !== savedNote.id) && attachmentFile) {
         // Upload the attachment with the new note ID
         const attachmentUrl = await uploadAttachment(savedNote.id);
         
@@ -944,4 +945,74 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
                 size="icon" 
                 onClick={() => {
                   const url = prompt("Enter link URL");
-                  if (
+                  if (url) {
+                    execCommand("createLink", url);
+                  }
+                }}
+              >
+                <LinkIcon size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Add Link</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => {
+                  const url = prompt("Enter image URL");
+                  if (url) {
+                    execCommand("insertImage", url);
+                  }
+                }}
+              >
+                <ImageIcon size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Insert Image</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => execCommand("formatBlock", "<pre>")}
+              >
+                <Code size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Code Block</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      
+      {/* Editable Content Area */}
+      <div
+        ref={editorRef}
+        contentEditable
+        className="flex-1 p-4 overflow-auto prose dark:prose-invert max-w-none focus:outline-none rounded-md border border-border bg-muted/30"
+        onInput={handleContentChange}
+        suppressContentEditableWarning
+      />
+      
+      {/* Save Button */}
+      <div className="mt-4">
+        <Button 
+          variant="brand" 
+          size="sm" 
+          className="gap-2" 
+          onClick={handleSave}
+          disabled={isUploading}
+        >
+          <Save size={16} />
+          {isUploading ? "Uploading..." : "Save Note"}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export default RichTextEditor;
