@@ -123,16 +123,21 @@
 }
 
 @layer components {
+  .note-content {
+    font-size: 0.95rem; /* Slightly smaller base font size for notes */
+    line-height: 1.6;
+  }
+  
   .note-content h1 {
-    @apply text-2xl font-bold mb-4 mt-6;
+    @apply text-xl font-bold mb-4 mt-6; /* Reduced from text-2xl */
   }
 
   .note-content h2 {
-    @apply text-xl font-bold mb-3 mt-5;
+    @apply text-lg font-bold mb-3 mt-5; /* Reduced from text-xl */
   }
 
   .note-content h3 {
-    @apply text-lg font-bold mb-2 mt-4;
+    @apply text-base font-bold mb-2 mt-4; /* Reduced from text-lg */
   }
 
   .note-content p {
@@ -145,7 +150,7 @@
   }
 
   .note-content ul li {
-    @apply pl-2 my-2;
+    @apply pl-2 my-1.5; /* Reduced spacing between list items */
     display: list-item;
   }
   
@@ -160,7 +165,7 @@
   }
 
   .note-content ol li {
-    @apply pl-2 my-2;
+    @apply pl-2 my-1.5; /* Reduced spacing between list items */
     display: list-item;
   }
 
@@ -175,15 +180,15 @@
   }
 
   .note-content blockquote {
-    @apply border-l-4 border-primary/30 pl-4 italic my-4;
+    @apply border-l-4 border-primary/30 pl-4 italic my-4 text-sm; /* Added text-sm */
   }
 
   .note-content pre {
-    @apply bg-secondary p-4 rounded-md my-4 overflow-x-auto;
+    @apply bg-secondary p-3 rounded-md my-3 overflow-x-auto text-sm; /* Adjusted padding and added text-sm */
   }
 
   .note-content code {
-    @apply bg-secondary px-1.5 py-0.5 rounded-md text-sm;
+    @apply bg-secondary px-1.5 py-0.5 rounded-md text-xs; /* Reduced from text-sm to text-xs */
   }
 
   .note-content a {
@@ -191,11 +196,11 @@
   }
 
   .note-content table {
-    @apply w-full border-collapse my-4;
+    @apply w-full border-collapse my-4 text-sm; /* Added text-sm */
   }
 
   .note-content th, .note-content td {
-    @apply border border-border p-2;
+    @apply border border-border p-1.5; /* Reduced padding from p-2 */
   }
 
   .note-content th {
