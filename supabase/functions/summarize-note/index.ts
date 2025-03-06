@@ -28,6 +28,12 @@ serve(async (req) => {
     // Clean HTML content
     const cleanContent = content.replace(/<[^>]*>/g, ' ').trim();
     
+    // Check if OpenAI API key is available
+    if (!openAIApiKey) {
+      console.error('OpenAI API key is not set in environment variables');
+      throw new Error('OpenAI API key is missing. Please set the OPENAI_API_KEY environment variable.');
+    }
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
