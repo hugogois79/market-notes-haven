@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   email: string;
@@ -12,6 +13,11 @@ export interface Token {
   cmc_id?: number;
   coingecko_id?: string;
   logo_url?: string;
+  description?: string;
+  industry?: string;
+  tags: string[];
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface Tag {
