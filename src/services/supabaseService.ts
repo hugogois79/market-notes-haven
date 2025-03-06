@@ -6,6 +6,7 @@ export interface DbNote {
   id: string;
   title: string;
   content: string;
+  summary: string | null;
   tags: string[];
   category: string;
   created_at: string;
@@ -34,6 +35,7 @@ export const dbNoteToNote = (dbNote: DbNote): Note => ({
   id: dbNote.id,
   title: dbNote.title,
   content: dbNote.content || "", // Ensure content is never null/undefined
+  summary: dbNote.summary || undefined, // Convert null to undefined
   tags: dbNote.tags || [],
   category: dbNote.category || "General",
   createdAt: new Date(dbNote.created_at),
@@ -46,6 +48,7 @@ export const noteToDbNote = (note: Note): Omit<DbNote, 'created_at' | 'updated_a
   id: note.id,
   title: note.title,
   content: note.content,
+  summary: note.summary || null,
   tags: note.tags,
   category: note.category,
   user_id: null, // Will be set by the service
@@ -75,6 +78,32 @@ export const fetchNotes = async (): Promise<Note[]> => {
   }
 };
 
+// Generate AI summary for note content
+export const generateNoteSummary = async (content: string): Promise<string | null> => {
+  try {
+    if (!content.trim()) {
+      return null;
+    }
+
+    const response = await supabase.functions.invoke('summarize-note', {
+      body: {
+        content: content,
+        maxLength: 150
+      }
+    });
+
+    if (response.error) {
+      console.error("Error generating summary:", response.error);
+      return null;
+    }
+
+    return response.data?.summary || null;
+  } catch (error) {
+    console.error("Error generating summary:", error);
+    return null;
+  }
+};
+
 // Create a new note in Supabase
 export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>): Promise<Note | null> => {
   try {
@@ -83,11 +112,16 @@ export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedA
 
     console.log('Creating note with content:', note.content);
 
+    // Generate summary first
+    const summary = await generateNoteSummary(note.content);
+    console.log('Generated summary:', summary);
+
     const { data, error } = await supabase
       .from('notes')
       .insert([{
         title: note.title,
         content: note.content || "", // Ensure content is never null
+        summary: summary, // Add the generated summary
         tags: note.tags || [],
         category: note.category || "General",
         user_id: userId,
@@ -117,11 +151,16 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
 
     console.log('Updating note with content:', note.content);
 
+    // Generate new summary if content has changed
+    const summary = await generateNoteSummary(note.content);
+    console.log('Generated summary:', summary);
+
     const { data, error } = await supabase
       .from('notes')
       .update({
         title: note.title,
         content: note.content || "", // Ensure content is never null
+        summary: summary, // Update the summary
         tags: note.tags || [],
         category: note.category || "General",
         updated_at: new Date().toISOString(),

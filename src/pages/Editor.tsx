@@ -108,6 +108,7 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
     
     if (savedNote) {
       console.log('Note saved successfully with content:', savedNote.content);
+      console.log('Note summary:', savedNote.summary);
       
       if (isNewNote) {
         // Redirect to the new note's edit page
