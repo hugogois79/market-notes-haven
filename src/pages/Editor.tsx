@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
@@ -64,6 +63,7 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
         id: "temp-" + Date.now().toString(),
         title: "Untitled Note",
         content: "",
+        summary: "",
         tags: [],
         category: "General",
         createdAt: new Date(),

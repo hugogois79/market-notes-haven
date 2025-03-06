@@ -28,6 +28,8 @@ import {
   File as FileIcon,
   ExternalLink,
   Trash2,
+  RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { Note, Token, Tag as TagType } from "@/types";
 import {
@@ -74,6 +76,8 @@ interface RichTextEditorProps {
 const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: RichTextEditorProps) => {
   const [title, setTitle] = useState(note?.title || "");
   const [content, setContent] = useState(note?.content || "");
+  const [summary, setSummary] = useState(note?.summary || "");
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [tags, setTags] = useState<string[]>(note?.tags || []);
   const [tagInput, setTagInput] = useState("");
   const [category, setCategory] = useState(note?.category || "General");
@@ -103,6 +107,7 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
       setTags(note.tags || []);
       setCategory(note.category || "General");
       setLastSaved(note.updatedAt || null);
+      setSummary(note.summary || "");
       
       // Handle content separately to avoid potential issues
       const noteContent = note.content || "";
@@ -195,6 +200,43 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     if (newContent !== content) {
       console.log('Content changed:', newContent);
       setContent(newContent);
+    }
+  };
+
+  // Generate AI summary for the note content
+  const generateSummary = async () => {
+    if (!editorRef.current || !editorRef.current.innerHTML.trim()) {
+      toast.error("Add some content to your note first");
+      return;
+    }
+
+    try {
+      setIsGeneratingSummary(true);
+      
+      const response = await supabase.functions.invoke('summarize-note', {
+        body: {
+          content: editorRef.current.innerHTML,
+          maxLength: 150
+        }
+      });
+
+      if (response.error) {
+        console.error("Error generating summary:", response.error);
+        toast.error("Failed to generate summary");
+        return;
+      }
+
+      if (response.data?.summary) {
+        setSummary(response.data.summary);
+        toast.success("Summary generated");
+      } else {
+        toast.info("Couldn't generate a meaningful summary. Try adding more content.");
+      }
+    } catch (error) {
+      console.error("Error generating summary:", error);
+      toast.error("Failed to generate summary");
+    } finally {
+      setIsGeneratingSummary(false);
     }
   };
 
@@ -392,6 +434,7 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
       id: noteId,
       title,
       content: currentContent,
+      summary, // Include the summary
       tags,
       category,
       createdAt: note?.createdAt || new Date(),
@@ -545,6 +588,41 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
           onChange={(e) => setTitle(e.target.value)}
           className="text-2xl font-bold border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-0 h-auto"
         />
+        
+        {/* AI Summary Section */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles size={14} className="text-primary" />
+              <span className="text-sm text-muted-foreground">AI Summary</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={generateSummary}
+              disabled={isGeneratingSummary}
+              className="h-7 px-2 flex items-center gap-1"
+            >
+              {isGeneratingSummary ? (
+                <>
+                  <RefreshCw size={14} className="animate-spin" />
+                  <span className="text-xs">Generating...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={14} />
+                  <span className="text-xs">Generate</span>
+                </>
+              )}
+            </Button>
+          </div>
+          <div className={cn(
+            "text-sm p-3 rounded-md border border-border/50 bg-secondary/30 min-h-[50px]",
+            !summary && "italic text-muted-foreground"
+          )}>
+            {summary || "No summary yet. Click 'Generate' to create an AI summary of your note."}
+          </div>
+        </div>
         
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 bg-secondary px-3 py-1.5 rounded-full text-sm text-muted-foreground">
@@ -866,72 +944,4 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
                 size="icon" 
                 onClick={() => {
                   const url = prompt("Enter link URL");
-                  if (url) execCommand("createLink", url);
-                }}
-              >
-                <LinkIcon size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Add Link</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => {
-                  const url = prompt("Enter image URL");
-                  if (url) execCommand("insertImage", url);
-                }}
-              >
-                <ImageIcon size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Add Image</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => execCommand("formatBlock", "<pre>")}
-              >
-                <Code size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Code Block</TooltipContent>
-          </Tooltip>
-          
-          <div className="ml-auto">
-            <Button 
-              variant="default" 
-              size="sm" 
-              onClick={handleSave}
-              className="gap-2"
-            >
-              <Save size={16} />
-              Save
-            </Button>
-          </div>
-        </TooltipProvider>
-      </div>
-      
-      {/* Editor Content */}
-      <div 
-        ref={editorRef}
-        className={cn(
-          "flex-1 overflow-y-auto p-4 rounded-lg border border-border/50 focus:outline-none note-content editable min-h-[300px] animate-fade-in",
-          "prose prose-sm md:prose-base dark:prose-invert max-w-none"
-        )}
-        contentEditable
-        onInput={handleContentChange}
-        onBlur={handleContentChange}
-        suppressContentEditableWarning={true}
-      />
-    </div>
-  );
-};
-
-export default RichTextEditor;
+                  if (
