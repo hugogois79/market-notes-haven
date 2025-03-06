@@ -1,6 +1,5 @@
-
 import { Button } from "@/components/ui/button";
-import { FileText, Plus, Bookmark, FolderOpen, Clock, Rocket, Loader, Search, Table } from "lucide-react";
+import { FileText, Plus, Bookmark, FolderOpen, Clock, Rocket, Loader, Search, Table, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Note } from "@/types";
 import { toast } from "sonner";
@@ -25,6 +24,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [categories, setCategories] = useState<{name: string, count: number}[]>([]);
   
   // Extract categories from notes
@@ -46,7 +46,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
     }
   }, [notes]);
   
-  // Filter notes based on search query and selected category
+  // Filter notes based on search query, selected category, and selected tag
   const filteredNotes = notes.filter(note => {
     const matchesSearch = searchQuery === "" || 
       note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -55,7 +55,10 @@ const Index = ({ notes, loading = false }: IndexProps) => {
     const matchesCategory = selectedCategory === null || 
       note.category === selectedCategory;
     
-    return matchesSearch && matchesCategory;
+    const matchesTag = selectedTag === null || 
+      note.tags.includes(selectedTag);
+    
+    return matchesSearch && matchesCategory && matchesTag;
   });
   
   // Get recent notes (last 6) from filtered notes
@@ -99,6 +102,28 @@ const Index = ({ notes, loading = false }: IndexProps) => {
       setSelectedCategory(category);
       toast.info(`Showing notes in ${category} category`);
     }
+  };
+
+  // Handle tag click to filter by tag
+  const handleTagClick = (tag: string, event: React.MouseEvent) => {
+    // Stop propagation to prevent note click handler from firing
+    event.stopPropagation();
+    
+    console.log("Selected tag:", tag);
+    if (selectedTag === tag) {
+      // If clicking the same tag, clear the filter
+      setSelectedTag(null);
+      toast.info("Cleared tag filter");
+    } else {
+      setSelectedTag(tag);
+      toast.info(`Filtering notes with tag: ${tag}`);
+    }
+  };
+
+  // Clear tag filter
+  const clearTagFilter = () => {
+    setSelectedTag(null);
+    toast.info("Cleared tag filter");
   };
 
   // Format date to be more readable
@@ -149,18 +174,33 @@ const Index = ({ notes, loading = false }: IndexProps) => {
           onChange={(e) => setSearchQuery(e.target.value)}
         />
         
-        {selectedCategory && (
-          <div className="mt-2 flex items-center">
-            <span className="text-sm text-muted-foreground mr-2">Filtered by:</span>
-            <Badge 
-              variant="secondary" 
-              className="cursor-pointer"
-              onClick={() => setSelectedCategory(null)}
-            >
-              {selectedCategory} ×
-            </Badge>
-          </div>
-        )}
+        <div className="mt-2 flex items-center gap-2 flex-wrap">
+          {selectedCategory && (
+            <div className="flex items-center">
+              <span className="text-sm text-muted-foreground mr-2">Category:</span>
+              <Badge 
+                variant="secondary" 
+                className="cursor-pointer"
+                onClick={() => setSelectedCategory(null)}
+              >
+                {selectedCategory} <X size={14} className="ml-1" />
+              </Badge>
+            </div>
+          )}
+          
+          {selectedTag && (
+            <div className="flex items-center">
+              <span className="text-sm text-muted-foreground mr-2">Tag:</span>
+              <Badge 
+                variant="secondary"
+                className="cursor-pointer bg-[#1EAEDB]/10 text-[#1EAEDB] hover:bg-[#1EAEDB]/20"
+                onClick={clearTagFilter}
+              >
+                {selectedTag} <X size={14} className="ml-1" />
+              </Badge>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Categories Section - Moved to the top */}
@@ -246,7 +286,12 @@ const Index = ({ notes, loading = false }: IndexProps) => {
                       {note.tags.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {note.tags.slice(0, 2).map((tag) => (
-                            <Badge key={tag} variant="secondary" className="text-xs py-0 px-1.5">
+                            <Badge 
+                              key={tag} 
+                              variant="secondary" 
+                              className="text-xs py-0 px-1.5 cursor-pointer hover:bg-secondary/80"
+                              onClick={(e) => handleTagClick(tag, e)}
+                            >
                               {tag}
                             </Badge>
                           ))}
@@ -274,10 +319,10 @@ const Index = ({ notes, loading = false }: IndexProps) => {
               <Rocket size={24} />
             </div>
             <h3 className="text-lg font-medium mb-2">
-              {searchQuery || selectedCategory ? "No Notes Found" : "No Notes Yet"}
+              {searchQuery || selectedCategory || selectedTag ? "No Notes Found" : "No Notes Yet"}
             </h3>
             <p className="text-muted-foreground mb-6 max-w-md">
-              {searchQuery || selectedCategory
+              {searchQuery || selectedCategory || selectedTag
                 ? "Try adjusting your filters or create a new note." 
                 : "Start creating market research notes to track your insights and analysis."}
             </p>
