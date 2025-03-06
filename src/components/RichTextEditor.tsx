@@ -426,7 +426,7 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     let newAttachmentUrl = attachmentUrl;
     
     // For existing notes, we can upload files directly
-    if (!noteId.toString().startsWith("temp-") && attachmentFile) {
+    if (!noteId.toString().startsWith("temp-\") && attachmentFile) {
       newAttachmentUrl = await uploadAttachment(noteId);
     }
     
@@ -449,7 +449,7 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
       console.log("Saved note content:", savedNote.content);
       
       // If this was a new note and we have an attachment to upload
-      if ((noteId.toString().startsWith("temp-") || noteId !== savedNote.id) && attachmentFile) {
+      if ((noteId.toString().startsWith("temp-\") || noteId !== savedNote.id) && attachmentFile) {
         // Upload the attachment with the new note ID
         const attachmentUrl = await uploadAttachment(savedNote.id);
         
