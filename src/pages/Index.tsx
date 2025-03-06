@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { FileText, Plus, Bookmark, FolderOpen, Clock, Rocket, Loader, Search, Table } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -162,7 +163,43 @@ const Index = ({ notes, loading = false }: IndexProps) => {
         )}
       </div>
 
-      {/* Recent Notes Section */}
+      {/* Categories Section - Moved to the top */}
+      <div>
+        <div className="flex items-center mb-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <FolderOpen size={20} className="text-[#1EAEDB]" />
+            Categories
+          </h2>
+        </div>
+        {categories.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {categories.map((category) => (
+              <div 
+                key={category.name}
+                className={`bg-card glass-card rounded-lg p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer
+                  ${selectedCategory === category.name ? 'ring-2 ring-[#1EAEDB]' : ''}`}
+                onClick={() => handleCategoryClick(category.name)}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-2 font-medium">
+                    {getCategoryIcon(category.name)}
+                    {category.name}
+                  </div>
+                  <div className="bg-[#1EAEDB]/10 text-[#1EAEDB] text-xs rounded-full px-2 py-0.5">
+                    {category.count}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center text-muted-foreground p-4">
+            No categories found. Create notes with categories to see them here.
+          </div>
+        )}
+      </div>
+
+      {/* Recent Notes Section - Now below Categories */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -247,42 +284,6 @@ const Index = ({ notes, loading = false }: IndexProps) => {
             <Button variant="brand" onClick={handleNewNote}>
               Create Your First Note
             </Button>
-          </div>
-        )}
-      </div>
-
-      {/* Categories Section */}
-      <div>
-        <div className="flex items-center mb-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <FolderOpen size={20} className="text-[#1EAEDB]" />
-            Categories
-          </h2>
-        </div>
-        {categories.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {categories.map((category) => (
-              <div 
-                key={category.name}
-                className={`bg-card glass-card rounded-lg p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer
-                  ${selectedCategory === category.name ? 'ring-2 ring-[#1EAEDB]' : ''}`}
-                onClick={() => handleCategoryClick(category.name)}
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-2 font-medium">
-                    {getCategoryIcon(category.name)}
-                    {category.name}
-                  </div>
-                  <div className="bg-[#1EAEDB]/10 text-[#1EAEDB] text-xs rounded-full px-2 py-0.5">
-                    {category.count}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-muted-foreground p-4">
-            No categories found. Create notes with categories to see them here.
           </div>
         )}
       </div>
