@@ -1,13 +1,19 @@
-
 import { Button } from "@/components/ui/button";
-import { FileText, Plus, Bookmark, FolderOpen, Clock, Rocket, Loader, Search } from "lucide-react";
+import { FileText, Plus, Bookmark, FolderOpen, Clock, Rocket, Loader, Search, Table } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import NoteCard from "@/components/NoteCard";
 import { Note } from "@/types";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table as TableComponent,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface IndexProps {
   notes: Note[];
@@ -94,6 +100,28 @@ const Index = ({ notes, loading = false }: IndexProps) => {
     }
   };
 
+  // Format date to be more readable
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  // Handle note click to navigate to editor
+  const handleNoteClick = (noteId: string) => {
+    navigate(`/editor/${noteId}`);
+  };
+
+  // Extract plain text from HTML content for preview
+  const getTextPreview = (htmlContent: string) => {
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = htmlContent;
+    const textContent = tempDiv.textContent || tempDiv.innerText || "";
+    return textContent.substring(0, 100) + (textContent.length > 100 ? "..." : "");
+  };
+
   return (
     <div className="space-y-6 px-6 py-4 animate-fade-in">
       {/* Header without Logo */}
@@ -152,10 +180,56 @@ const Index = ({ notes, loading = false }: IndexProps) => {
             <span className="ml-2 text-lg">Loading notes...</span>
           </div>
         ) : recentNotes.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recentNotes.map((note) => (
-              <NoteCard key={note.id} note={note} />
-            ))}
+          <div className="border rounded-lg overflow-hidden">
+            <TableComponent>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Preview</TableHead>
+                  <TableHead>Tags</TableHead>
+                  <TableHead>Updated</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentNotes.map((note) => (
+                  <TableRow 
+                    key={note.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleNoteClick(note.id)}
+                  >
+                    <TableCell className="font-medium">{note.title}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{note.category}</Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm max-w-[300px] truncate">
+                      {getTextPreview(note.content)}
+                    </TableCell>
+                    <TableCell>
+                      {note.tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {note.tags.slice(0, 2).map((tag) => (
+                            <Badge key={tag} variant="secondary" className="text-xs py-0 px-1.5">
+                              {tag}
+                            </Badge>
+                          ))}
+                          {note.tags.length > 2 && (
+                            <Badge variant="secondary" className="text-xs py-0 px-1.5">
+                              +{note.tags.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">No tags</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {formatDate(note.updatedAt)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </TableComponent>
           </div>
         ) : (
           <div className="bg-card rounded-lg p-8 text-left border border-border animate-fade-in">
