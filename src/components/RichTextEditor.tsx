@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -944,4 +945,81 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
                 size="icon" 
                 onClick={() => {
                   const url = prompt("Enter link URL");
-                  if (
+                  if (url) {
+                    execCommand("createLink", url);
+                  }
+                }}
+              >
+                <LinkIcon size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Add Link</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => {
+                  const url = prompt("Enter image URL");
+                  if (url) {
+                    execCommand("insertImage", url);
+                  }
+                }}
+              >
+                <ImageIcon size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Add Image</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => execCommand("formatBlock", "<pre>")}
+              >
+                <Code size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Code Block</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="brand" 
+                size="sm" 
+                onClick={handleSave}
+                className="ml-auto gap-2"
+              >
+                <Save size={16} />
+                Save
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Save Note (Ctrl+S)</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      
+      {/* Content Editor */}
+      <div 
+        ref={editorRef}
+        className="flex-1 p-4 rounded-md border border-input focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 min-h-[300px] overflow-auto"
+        contentEditable
+        onInput={handleContentChange}
+        onBlur={handleContentChange}
+        suppressContentEditableWarning={true}
+      />
+      
+      {/* Add keyboard shortcut for save */}
+      <div className="sr-only">
+        Press Ctrl+S to save your note.
+      </div>
+    </div>
+  );
+};
+
+export default RichTextEditor;
