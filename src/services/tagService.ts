@@ -1,77 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Note, Tag, TagNote } from "./tagService";
 import { toast } from "sonner";
-
-export interface Note {
-  id: string;
-  title: string;
-  content: string;
-  tags: string[];
-  category: string;
-  createdAt: Date;
-  updatedAt: Date;
-  attachment_url?: string; // New field for storing attachment URL
-}
-
-export interface Token {
-  id: string;
-  name: string;
-  symbol: string;
-  logo_url?: string;
-  description?: string;
-  industry?: string;
-  tags: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface Tag {
-  id: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-  user_id: string | null;
-  count?: number; // Add optional count property for UI display
-}
-
-export interface Trader {
-  id: string;
-  name: string;
-  avatar_url?: string;
-  bio?: string;
-  contact_info?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface TokenPortfolio {
-  id: string;
-  portfolio_id: string;
-  token_id: string;
-  created_at: Date;
-}
-
-export interface TokenTrader {
-  id: string;
-  trader_id: string;
-  token_id: string;
-  created_at: Date;
-}
-
-export interface TokenNote {
-  id: string;
-  note_id: string;
-  token_id: string;
-  created_at: Date;
-}
-
-export interface TagNote {
-  id: string;
-  note_id: string;
-  tag_id: string;
-  created_at: Date;
-}
+import { Note, Tag, TagNote } from "@/types";
 
 /**
  * Fetch all tags from the database
@@ -143,7 +73,7 @@ export const deleteTag = async (tagId: string): Promise<boolean> => {
   try {
     // First delete all tag_notes associations
     const { error: unlinkError } = await supabase
-      .from('tag_notes')
+      .from('notes_tags')
       .delete()
       .eq('tag_id', tagId);
     
@@ -176,7 +106,7 @@ export const deleteTag = async (tagId: string): Promise<boolean> => {
 export const getTagsForNote = async (noteId: string): Promise<Tag[]> => {
   try {
     const { data, error } = await supabase
-      .from('tag_notes')
+      .from('notes_tags')
       .select('tags(*)')
       .eq('note_id', noteId);
     
@@ -200,7 +130,7 @@ export const getTagsForNote = async (noteId: string): Promise<Tag[]> => {
 export const getNotesForTag = async (tagId: string): Promise<string[]> => {
   try {
     const { data, error } = await supabase
-      .from('tag_notes')
+      .from('notes_tags')
       .select('note_id')
       .eq('tag_id', tagId);
     
@@ -210,8 +140,7 @@ export const getNotesForTag = async (tagId: string): Promise<string[]> => {
     }
     
     // Extract note_ids from the results
-    const noteIds = data.map(item => item.note_id);
-    return noteIds;
+    return data.map(item => item.note_id as string);
   } catch (error) {
     console.error('Error fetching notes for tag:', error);
     return [];
@@ -225,7 +154,7 @@ export const linkTagToNote = async (noteId: string, tagId: string): Promise<bool
   try {
     // Check if the link already exists
     const { data: existingLinks, error: checkError } = await supabase
-      .from('tag_notes')
+      .from('notes_tags')
       .select('*')
       .eq('note_id', noteId)
       .eq('tag_id', tagId)
@@ -243,7 +172,7 @@ export const linkTagToNote = async (noteId: string, tagId: string): Promise<bool
     
     // Create the link
     const { error } = await supabase
-      .from('tag_notes')
+      .from('notes_tags')
       .insert([{ note_id: noteId, tag_id: tagId }]);
     
     if (error) {
@@ -264,7 +193,7 @@ export const linkTagToNote = async (noteId: string, tagId: string): Promise<bool
 export const unlinkTagFromNote = async (noteId: string, tagId: string): Promise<boolean> => {
   try {
     const { error } = await supabase
-      .from('tag_notes')
+      .from('notes_tags')
       .delete()
       .eq('note_id', noteId)
       .eq('tag_id', tagId);

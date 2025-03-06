@@ -139,12 +139,39 @@
     @apply my-2;
   }
 
+  /* Improved bullet points styling */
   .note-content ul {
-    @apply list-disc list-inside my-2 ml-4;
+    @apply my-3 ml-6 list-disc;
   }
 
+  .note-content ul li {
+    @apply pl-2 my-2;
+    display: list-item;
+  }
+  
+  /* Ensure proper indentation for nested lists */
+  .note-content ul ul {
+    @apply ml-6;
+  }
+
+  /* Improved numbered list styling */
   .note-content ol {
-    @apply list-decimal list-inside my-2 ml-4;
+    @apply my-3 ml-6 list-decimal;
+  }
+
+  .note-content ol li {
+    @apply pl-2 my-2;
+    display: list-item;
+  }
+
+  /* Ensure proper indentation for nested numbered lists */
+  .note-content ol ol {
+    @apply ml-6;
+  }
+
+  /* Fix for mixed list types */
+  .note-content ul ol, .note-content ol ul {
+    @apply ml-6;
   }
 
   .note-content blockquote {
