@@ -35,12 +35,12 @@ const TagsSection: React.FC<TagsSectionProps> = ({
         {linkedTags.map((tag) => (
           <div
             key={typeof tag === "string" ? tag : tag.id}
-            className="bg-secondary hover:bg-secondary/80 text-secondary-foreground text-xs px-2 py-1 rounded-full flex items-center gap-1"
+            className="bg-[#0A3A5C] hover:bg-[#0A3A5C]/80 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1"
           >
             <span>{typeof tag === "string" ? tag : tag.name}</span>
             <button
               onClick={() => handleRemoveTag(tag)}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-white/70 hover:text-white"
             >
               <X size={12} />
             </button>
@@ -79,7 +79,7 @@ const TagsSection: React.FC<TagsSectionProps> = ({
               <button
                 key={tag.id}
                 onClick={() => handleSelectTag(tag)}
-                className="text-xs px-2 py-0.5 rounded-full bg-[#1EAEDB]/10 text-[#1EAEDB] hover:bg-[#1EAEDB]/20"
+                className="text-xs px-2 py-0.5 rounded-full bg-[#0A3A5C]/90 text-white hover:bg-[#0A3A5C]"
               >
                 {tag.name}
               </button>

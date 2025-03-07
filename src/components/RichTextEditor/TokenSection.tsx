@@ -35,9 +35,9 @@ const TokenSection: React.FC<TokenSectionProps> = ({
       
       <div className="flex flex-wrap gap-2 items-center">
         {selectedTokens.map(token => (
-          <Badge key={token.id} variant="secondary" className="px-3 py-1 text-sm gap-2">
+          <Badge key={token.id} variant="secondary" className="px-3 py-1 text-sm gap-2 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/80">
             {token.symbol} - {token.name}
-            <button onClick={() => handleRemoveToken(token.id)} className="opacity-70 hover:opacity-100">
+            <button onClick={() => handleRemoveToken(token.id)} className="text-white/70 hover:text-white">
               <X size={12} />
             </button>
           </Badge>
