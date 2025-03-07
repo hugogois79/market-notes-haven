@@ -60,14 +60,13 @@ const RichTextEditor = ({
     
     const tagName = tagInput.trim();
     const tagExists = linkedTags.some(tag => {
-      // Fix the type issue by handling both string and Tag types properly
-      const tagNameToCompare = typeof tag === 'string' 
-        ? tag 
-        : (tag && typeof tag === 'object' && 'name' in tag) 
-          ? tag.name 
-          : '';
-      
-      return tagNameToCompare.toLowerCase() === tagName.toLowerCase();
+      // Fix the type issue by explicitly checking the type of tag
+      if (typeof tag === 'string') {
+        return tag.toLowerCase() === tagName.toLowerCase();
+      } else if (tag && typeof tag === 'object' && 'name' in tag) {
+        return tag.name.toLowerCase() === tagName.toLowerCase();
+      }
+      return false;
     });
     
     if (!tagExists) {
