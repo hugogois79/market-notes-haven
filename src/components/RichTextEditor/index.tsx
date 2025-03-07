@@ -8,7 +8,7 @@ import FormattingToolbar from "./FormattingToolbar";
 import TableDialog from "./TableDialog";
 import EditorContent from "./EditorContent";
 import { useEditor } from "./hooks/useEditor";
-import { Note, Tag, Token, TokenType } from "@/types";
+import { Note, Tag, Token } from "@/types";
 
 interface RichTextEditorProps {
   note: Note;
@@ -156,7 +156,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       if (!tokenExists) {
         const updatedTokens = [...linkedTokens, token];
         setLinkedTokens(updatedTokens);
-        onSave({ tokens: updatedTokens });
       }
     }
     
@@ -166,7 +165,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const handleRemoveToken = (tokenId: string) => {
     const updatedTokens = linkedTokens.filter(token => token.id !== tokenId);
     setLinkedTokens(updatedTokens);
-    onSave({ tokens: updatedTokens });
+  };
+
+  const handleTokenSelect = (tokenId: string) => {
+    const token = tokens.find(t => t.id === tokenId);
+    if (!token) return;
+    
+    const tokenExists = linkedTokens.some(t => t.id === tokenId);
+    if (!tokenExists) {
+      setLinkedTokens([...linkedTokens, token]);
+    }
   };
 
   const handleCreateTable = () => {
@@ -223,10 +231,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           <div className="w-full md:w-56 lg:w-72 flex flex-col gap-4">
             <TokenSection
               tokens={tokens}
-              linkedTokens={linkedTokens}
-              tokenInput={tokenInput}
-              setTokenInput={setTokenInput}
-              handleAddToken={handleAddToken}
+              selectedTokens={linkedTokens}
+              handleTokenSelect={handleTokenSelect}
               handleRemoveToken={handleRemoveToken}
               isLoadingTokens={isLoadingTokens}
             />

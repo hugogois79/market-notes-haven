@@ -1,130 +1,112 @@
 
-import React, { RefObject } from "react";
+import React, { useRef, useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Paperclip, 
-  FileIcon, 
-  X, 
-  ExternalLink, 
-  Trash2 
-} from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Paperclip, X, File, Upload, Loader } from "lucide-react";
 
 interface AttachmentSectionProps {
-  attachmentFile: File | null;
-  attachmentUrl: string | undefined;
-  handleAttachFileClick: () => void;
-  handleRemoveAttachment: () => Promise<void>;
-  setAttachmentFile: React.Dispatch<React.SetStateAction<File | null>>;
-  fileInputRef: RefObject<HTMLInputElement>;
-  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  getFilenameFromUrl: (url: string) => string;
+  noteId: string;
 }
 
-const AttachmentSection: React.FC<AttachmentSectionProps> = ({
-  attachmentFile,
-  attachmentUrl,
-  handleAttachFileClick,
-  handleRemoveAttachment,
-  setAttachmentFile,
-  fileInputRef,
-  handleFileChange,
-  getFilenameFromUrl
-}) => {
+const AttachmentSection: React.FC<AttachmentSectionProps> = ({ noteId }) => {
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+  
+  const handleChooseFile = () => {
+    fileInputRef.current?.click();
+  };
+  
+  const handleRemoveFile = () => {
+    setFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <Paperclip size={14} className="text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">Attachment</span>
-      </div>
+    <div className="space-y-2">
+      <div className="text-sm font-medium">Attachments</div>
       
-      <div className="flex flex-wrap gap-2 items-center">
-        {attachmentFile ? (
-          <Badge variant="secondary" className="px-3 py-1 text-sm gap-2">
-            <FileIcon size={14} />
-            {attachmentFile.name}
-            <button 
-              onClick={() => setAttachmentFile(null)} 
-              className="opacity-70 hover:opacity-100"
-            >
-              <X size={12} />
-            </button>
-          </Badge>
-        ) : attachmentUrl ? (
-          <div className="flex gap-2 items-center">
-            <Badge variant="secondary" className="px-3 py-1 text-sm gap-2">
-              <FileIcon size={14} />
-              {getFilenameFromUrl(attachmentUrl)}
-              <a 
-                href={attachmentUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="opacity-70 hover:opacity-100 ml-1"
-              >
-                <ExternalLink size={12} />
-              </a>
-            </Badge>
-            
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="h-7 px-2"
-                >
-                  <Trash2 size={14} />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Remove attachment?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will remove the file attachment from this note. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleRemoveAttachment}>
-                    Remove
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+      <input 
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+      
+      {!file && !attachmentUrl && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full flex items-center gap-2"
+          onClick={handleChooseFile}
+        >
+          <Paperclip size={14} />
+          Attach file
+        </Button>
+      )}
+      
+      {file && (
+        <div className="flex items-center gap-2 p-2 border rounded bg-secondary/20">
+          <File size={16} className="shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm truncate">{file.name}</p>
+            <p className="text-xs text-muted-foreground">
+              {(file.size / 1024).toFixed(1)} KB
+            </p>
           </div>
-        ) : (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleAttachFileClick}
-            className="gap-2 h-8"
+          <div className="flex items-center gap-1">
+            {isUploading ? (
+              <Loader size={16} className="animate-spin" />
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={handleRemoveFile}
+                >
+                  <X size={14} />
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {attachmentUrl && (
+        <div className="flex items-center gap-2 p-2 border rounded bg-secondary/20">
+          <File size={16} className="shrink-0" />
+          <div className="flex-1 min-w-0">
+            <a 
+              href={attachmentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm truncate hover:underline block"
+            >
+              Attachment
+            </a>
+          </div>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={() => setAttachmentUrl(null)}
           >
-            <Paperclip size={14} />
-            Attach File
+            <X size={14} />
           </Button>
-        )}
-        
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="hidden"
-          onChange={handleFileChange}
-          accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
-        />
-      </div>
-      <div className="text-xs text-muted-foreground">
-        Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG, GIF (max 10MB)
-      </div>
+        </div>
+      )}
     </div>
   );
 };

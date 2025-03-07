@@ -1,10 +1,11 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Trash2, Printer, FileIcon, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import { Note, Token } from "@/types";
+import { Note, Token, Tag } from "@/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { printNote } from "@/utils/printUtils";
 import { getTokensForNote } from "@/services/tokenService";
+import { fetchTags } from "@/services/tagService";
 
 interface EditorProps {
   notes: Note[];
@@ -34,6 +36,10 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
   const [categories, setCategories] = useState<string[]>([]);
   const [isPrinting, setIsPrinting] = useState(false);
   const [linkedTokens, setLinkedTokens] = useState<Token[]>([]);
+  const [allTokens, setAllTokens] = useState<Token[]>([]);
+  const [isLoadingTokens, setIsLoadingTokens] = useState(false);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [isLoadingTags, setIsLoadingTags] = useState(false);
   
   // Effect to fetch all unique categories from notes
   useEffect(() => {
@@ -49,6 +55,31 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
       setCategories(uniqueCategories as string[]);
     }
   }, [notes]);
+
+  // Effect to load tokens and tags
+  useEffect(() => {
+    const loadTokensAndTags = async () => {
+      setIsLoadingTokens(true);
+      setIsLoadingTags(true);
+      
+      try {
+        // Fetch tokens (assuming there's a fetchTokens function in tokenService)
+        const tokens = await getTokensForNote('all');
+        setAllTokens(tokens);
+        
+        // Fetch tags
+        const tags = await fetchTags();
+        setAllTags(tags);
+      } catch (error) {
+        console.error("Error loading tokens and tags:", error);
+      } finally {
+        setIsLoadingTokens(false);
+        setIsLoadingTags(false);
+      }
+    };
+    
+    loadTokensAndTags();
+  }, []);
 
   // Effect to load the note or set up a new one
   useEffect(() => {
@@ -83,10 +114,13 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
         // Fetch linked tokens for this note
         const fetchLinkedTokens = async () => {
           try {
+            setIsLoadingTokens(true);
             const tokens = await getTokensForNote(foundNote.id);
             setLinkedTokens(tokens);
           } catch (error) {
             console.error("Error fetching linked tokens:", error);
+          } finally {
+            setIsLoadingTokens(false);
           }
         };
         
@@ -101,31 +135,27 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
   }, [noteId, notes, navigate]);
 
   // Handle saving the note
-  const handleSave = async (note: Note): Promise<Note | null> => {
-    console.log('Attempting to save note with content:', note.content);
+  const handleSave = async (updatedFields: Partial<Note>): Promise<void> => {
+    if (!currentNote) return;
     
-    // Preserve table formatting by ensuring table attributes are properly kept
-    if (note.content) {
-      // This will only parse the content, not modify it
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(note.content, 'text/html');
-      
-      // Ensure tables have proper attributes preserved
-      const tables = doc.querySelectorAll('table');
-      tables.forEach(table => {
-        if (!table.hasAttribute('class')) {
-          table.setAttribute('class', 'border-collapse border border-border w-full');
-        }
-      });
-      
-      // No need to modify the content if we're just ensuring attributes exist
+    console.log('Updating note with fields:', updatedFields);
+    
+    // Merge the updated fields with the current note
+    const updatedNote: Note = {
+      ...currentNote,
+      ...updatedFields,
+      updatedAt: new Date()
+    };
+    
+    // Only update tokens if they were changed
+    if (updatedFields.tokens) {
+      setLinkedTokens(updatedFields.tokens);
     }
     
-    const savedNote = await onSaveNote(note);
+    const savedNote = await onSaveNote(updatedNote);
     
     if (savedNote) {
-      console.log('Note saved successfully with content:', savedNote.content);
-      console.log('Note summary:', savedNote.summary);
+      console.log('Note saved successfully');
       
       if (isNewNote) {
         // Redirect to the new note's edit page
@@ -135,16 +165,9 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
       
       setCurrentNote(savedNote);
       toast.success("Note saved successfully");
-      
-      // Refresh linked tokens
-      const tokens = await getTokensForNote(savedNote.id);
-      setLinkedTokens(tokens);
-      
-      return savedNote;
     } else {
       console.error('Failed to save note');
       toast.error("Failed to save note");
-      return null;
     }
   };
 
@@ -194,6 +217,18 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
     } catch (error) {
       return "attachment";
     }
+  };
+
+  // Handle title change
+  const handleTitleChange = (title: string) => {
+    if (!currentNote) return;
+    handleSave({ title });
+  };
+
+  // Handle category change
+  const handleCategoryChange = (category: string) => {
+    if (!currentNote) return;
+    handleSave({ category });
   };
 
   // Show a loading state if we're still waiting for notes to load
@@ -285,8 +320,12 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
           <RichTextEditor 
             note={currentNote} 
             onSave={handleSave}
-            categories={categories}
-            linkedTokens={linkedTokens}
+            onTitleChange={handleTitleChange}
+            onCategoryChange={handleCategoryChange}
+            tokens={allTokens}
+            tags={allTags}
+            isLoadingTokens={isLoadingTokens}
+            isLoadingTags={isLoadingTags}
           />
         )}
       </div>
