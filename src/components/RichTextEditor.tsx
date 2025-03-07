@@ -1,3 +1,4 @@
+<lov-code>
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -636,38 +637,53 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
           </div>
         </div>
         
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 bg-secondary px-3 py-1.5 rounded-full text-sm text-muted-foreground">
-            <Clock size={14} />
-            <span>
-              {lastSaved 
-                ? `Last saved: ${lastSaved.toLocaleTimeString()}`
-                : "Not saved yet"}
-            </span>
+        {/* Last saved info and Save button */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-secondary px-3 py-1.5 rounded-full text-sm text-muted-foreground">
+              <Clock size={14} />
+              <span>
+                {lastSaved 
+                  ? `Last saved: ${lastSaved.toLocaleTimeString()}`
+                  : "Not saved yet"}
+              </span>
+            </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1 h-8">
+                  <TagsIcon size={14} />
+                  <span>{category}</span>
+                  <ChevronDown size={14} className="opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {allCategories.map((cat) => (
+                  <DropdownMenuItem
+                    key={cat}
+                    onClick={() => handleCategorySelect(cat)}
+                    className={cn("cursor-pointer", {
+                      "font-medium": cat === category,
+                    })}
+                  >
+                    {cat}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1 h-8">
-                <TagsIcon size={14} />
-                <span>{category}</span>
-                <ChevronDown size={14} className="opacity-70" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {allCategories.map((cat) => (
-                <DropdownMenuItem
-                  key={cat}
-                  onClick={() => handleCategorySelect(cat)}
-                  className={cn("cursor-pointer", {
-                    "font-medium": cat === category,
-                  })}
-                >
-                  {cat}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Save Button - Now positioned at the top */}
+          <Button 
+            variant="brand" 
+            size="sm" 
+            className="gap-2 ml-auto" 
+            onClick={handleSave}
+            disabled={isUploading}
+          >
+            <Save size={16} />
+            {isUploading ? "Uploading..." : "Save Note"}
+          </Button>
         </div>
         
         {/* File Attachment Section */}
@@ -926,104 +942,3 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" onClick={() => execCommand("insertUnorderedList")}>
                 <List size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Bullet List</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => execCommand("insertOrderedList")}>
-                <ListOrdered size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Numbered List</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => execCommand("formatBlock", "<blockquote>")}>
-                <Quote size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Quote</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => {
-                  const url = prompt("Enter link URL");
-                  if (url) {
-                    execCommand("createLink", url);
-                  }
-                }}
-              >
-                <LinkIcon size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Add Link</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => {
-                  const url = prompt("Enter image URL");
-                  if (url) {
-                    execCommand("insertImage", url);
-                  }
-                }}
-              >
-                <ImageIcon size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Insert Image</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => execCommand("formatBlock", "<pre>")}
-              >
-                <Code size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Code Block</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-      
-      {/* Editable Content Area */}
-      <div
-        ref={editorRef}
-        contentEditable
-        className="flex-1 p-4 overflow-auto prose dark:prose-invert max-w-none focus:outline-none rounded-md border border-border bg-muted/30"
-        onInput={handleContentChange}
-        suppressContentEditableWarning
-      />
-      
-      {/* Save Button */}
-      <div className="mt-4">
-        <Button 
-          variant="brand" 
-          size="sm" 
-          className="gap-2" 
-          onClick={handleSave}
-          disabled={isUploading}
-        >
-          <Save size={16} />
-          {isUploading ? "Uploading..." : "Save Note"}
-        </Button>
-      </div>
-    </div>
-  );
-};
-
-export default RichTextEditor;
