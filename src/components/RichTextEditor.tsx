@@ -1,4 +1,4 @@
-<lov-code>
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -962,4 +962,438 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
                 ) : (
                   tokens
                     .filter(token => !selectedTokens.some(t => t.id === token.id))
-                    
+                    .map(token => (
+                      <SelectItem key={token.id} value={token.id}>
+                        {token.symbol} - {token.name}
+                      </SelectItem>
+                    ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        {/* Tag Input */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <TagsIcon size={14} className="text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Tags</span>
+          </div>
+          
+          <div className="flex flex-wrap gap-2 items-center">
+            {linkedTags.map(tag => (
+              <Badge key={tag.id} variant="secondary" className="px-3 py-1 text-sm gap-2">
+                {tag.name}
+                <button onClick={() => handleRemoveTag(tag)} className="opacity-70 hover:opacity-100">
+                  <X size={12} />
+                </button>
+              </Badge>
+            ))}
+            
+            <div className="flex gap-2">
+              <div className="flex items-center gap-1 border rounded px-2 h-8 bg-background">
+                <Input
+                  type="text"
+                  placeholder="Add tag..."
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddTag();
+                    }
+                  }}
+                  className="border-0 h-7 px-0 focus-visible:ring-0 focus-visible:ring-offset-0 min-w-[80px] w-full text-sm"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 rounded-full"
+                  onClick={handleAddTag}
+                >
+                  <Plus size={14} />
+                </Button>
+              </div>
+              
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 px-2 gap-1">
+                    <TagsIcon size={14} />
+                    <span className="text-xs">Browse</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-60 p-0" align="start">
+                  <div className="p-2 border-b">
+                    <p className="text-sm font-medium">Available Tags</p>
+                  </div>
+                  <div className="max-h-60 overflow-auto p-2">
+                    {isLoadingTags ? (
+                      <div className="text-center py-2 text-sm text-muted-foreground">
+                        Loading tags...
+                      </div>
+                    ) : getAvailableTagsForSelection().length === 0 ? (
+                      <div className="text-center py-2 text-sm text-muted-foreground">
+                        No additional tags available
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {getAvailableTagsForSelection().map(tag => (
+                          <Badge
+                            key={tag.id}
+                            variant="outline"
+                            className="cursor-pointer hover:bg-accent"
+                            onClick={() => handleSelectTag(tag)}
+                          >
+                            {tag.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Formatting Toolbar */}
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-1 bg-background p-2 mb-2 border rounded-md overflow-x-auto">
+        {/* Text formatting */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => execCommand("bold")}
+              >
+                <Bold size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Bold</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => execCommand("italic")}
+              >
+                <Italic size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Italic</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Headings */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => execCommand("formatBlock", "<h1>")}
+              >
+                <Heading1 size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Heading 1</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => execCommand("formatBlock", "<h2>")}
+              >
+                <Heading2 size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Heading 2</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => execCommand("formatBlock", "<h3>")}
+              >
+                <Heading3 size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Heading 3</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Lists */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => execCommand("insertUnorderedList")}
+              >
+                <List size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Bullet List</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => execCommand("insertOrderedList")}
+              >
+                <ListOrdered size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Numbered List</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Blockquote */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => execCommand("formatBlock", "<blockquote>")}
+              >
+                <Quote size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Quote</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Code */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => execCommand("formatBlock", "<pre>")}
+              >
+                <Code size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Code Block</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Link */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => {
+                  const url = prompt("Enter URL:");
+                  if (url) execCommand("createLink", url);
+                }}
+              >
+                <LinkIcon size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Insert Link</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Image */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => {
+                  const url = prompt("Enter image URL:");
+                  if (url) execCommand("insertImage", url);
+                }}
+              >
+                <ImageIcon size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Insert Image</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        {/* Separator */}
+        <div className="h-6 border-r mx-1 my-1" />
+        
+        {/* Table */}
+        <Dialog open={isTableDialogOpen} onOpenChange={setIsTableDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <TableIcon size={16} />
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Insert Table</DialogTitle>
+              <DialogDescription>
+                Configure your table properties
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="rows" className="text-sm font-medium">
+                    Rows
+                  </label>
+                  <Input
+                    id="rows"
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={tableRows}
+                    onChange={(e) => setTableRows(parseInt(e.target.value) || 1)}
+                  />
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="columns" className="text-sm font-medium">
+                    Columns
+                  </label>
+                  <Input
+                    id="columns"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={tableColumns}
+                    onChange={(e) => setTableColumns(parseInt(e.target.value) || 1)}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex flex-col gap-2">
+                <label htmlFor="caption" className="text-sm font-medium">
+                  Caption (optional)
+                </label>
+                <Input
+                  id="caption"
+                  placeholder="Table caption"
+                  value={tableCaption}
+                  onChange={(e) => setTableCaption(e.target.value)}
+                />
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="header"
+                  checked={tableHeaderEnabled}
+                  onChange={(e) => setTableHeaderEnabled(e.target.checked)}
+                  className="rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <label htmlFor="header" className="text-sm font-medium">
+                  Include header row
+                </label>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsTableDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleInsertTable}>Insert Table</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Table Formatting */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => formatTableCells('left')}
+              >
+                <AlignLeft size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Align Left</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => formatTableCells('center')}
+              >
+                <AlignCenter size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Align Center</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => formatTableCells('right')}
+              >
+                <AlignRight size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Align Right</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+
+      {/* Editable Content Area */}
+      <div
+        ref={editorRef}
+        contentEditable
+        className="flex-1 p-4 focus:outline-none rich-text-editor overflow-auto bg-background border rounded-md"
+        onInput={handleContentChange}
+        onBlur={handleContentChange}
+        suppressContentEditableWarning
+      />
+    </div>
+  );
+};
+
+export default RichTextEditor;
