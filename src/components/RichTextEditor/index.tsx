@@ -60,11 +60,13 @@ const RichTextEditor = ({
     
     const tagName = tagInput.trim();
     const tagExists = linkedTags.some(tag => {
+      // Fix the type issue by handling both string and Tag types properly
       if (typeof tag === 'string') {
         return tag.toLowerCase() === tagName.toLowerCase();
-      } else {
+      } else if (tag && typeof tag.name === 'string') {
         return tag.name.toLowerCase() === tagName.toLowerCase();
       }
+      return false;
     });
     
     if (!tagExists) {
