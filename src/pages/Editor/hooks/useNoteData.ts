@@ -1,10 +1,10 @@
 
-import { useState, useEffect } from 'react';
-import { Note, Token, Tag } from '@/types';
-import { useParams, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { getTokensForNote } from '@/services/tokenService';
-import { fetchTags } from '@/services/tagService';
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { Note, Token, Tag } from "@/types";
+import { getTokensForNote } from "@/services/tokenService";
+import { fetchTags } from "@/services/tagService";
+import { useParams, useNavigate } from "react-router-dom";
 
 interface UseNoteDataProps {
   notes: Note[];
@@ -16,27 +16,10 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
   const navigate = useNavigate();
   const [currentNote, setCurrentNote] = useState<Note | undefined>(undefined);
   const [isNewNote, setIsNewNote] = useState(false);
-  const [categories, setCategories] = useState<string[]>([]);
   const [linkedTokens, setLinkedTokens] = useState<Token[]>([]);
-  const [allTokens, setAllTokens] = useState<Token[]>([]);
-  const [isLoadingTokens, setIsLoadingTokens] = useState(false);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [isLoadingTags, setIsLoadingTags] = useState(false);
-  
-  // Effect to fetch all unique categories from notes
-  useEffect(() => {
-    if (notes.length > 0) {
-      const uniqueCategories = Array.from(
-        new Set(
-          notes
-            .map(note => note.category)
-            .filter(category => category) // Filter out null/undefined
-        )
-      );
-      
-      setCategories(uniqueCategories as string[]);
-    }
-  }, [notes]);
+  const [isLoadingTokens, setIsLoadingTokens] = useState(false);
 
   // Effect to load tokens and tags
   useEffect(() => {
@@ -45,18 +28,14 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
       setIsLoadingTags(true);
       
       try {
-        // Fetch tokens
-        const tokens = await getTokensForNote('all');
-        setAllTokens(tokens);
-        
         // Fetch tags
         const tags = await fetchTags();
         setAllTags(tags);
       } catch (error) {
-        console.error("Error loading tokens and tags:", error);
+        console.error("Error loading tags:", error);
       } finally {
-        setIsLoadingTokens(false);
         setIsLoadingTags(false);
+        setIsLoadingTokens(false);
       }
     };
     
@@ -113,6 +92,7 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
         navigate("/notes");
       }
     }
+    // If notes hasn't loaded yet, we'll wait for the next render when notes are available
   }, [noteId, notes, navigate]);
 
   // Handle saving the note
@@ -155,12 +135,10 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
   return {
     currentNote,
     isNewNote,
-    categories,
     linkedTokens,
-    allTokens,
     allTags,
-    isLoadingTokens,
     isLoadingTags,
+    isLoadingTokens,
     handleSave
   };
 };
