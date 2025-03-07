@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tag as TagIcon, FileText, Search, X, Plus, Trash2 } from "lucide-react";
@@ -61,28 +62,33 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
   // Load tags on component mount
   useEffect(() => {
     const loadTags = async () => {
-      const tagsData = await fetchTags();
-      
-      // Transform the data to include count
-      const tagsWithCount = await Promise.all(tagsData.map(async (tag) => {
-        const noteIds = await getNotesForTag(tag.id);
-        return {
-          ...tag,
-          count: noteIds.length,
-        };
-      }));
-      
-      // Sort tags alphabetically
-      tagsWithCount.sort((a, b) => a.name.localeCompare(b.name));
-      
-      setTags(tagsWithCount);
-      
-      // If this is the first load and no tags were found, try to migrate existing tags
-      if (isFirstLoad && tagsWithCount.length === 0 && !notesMigrated) {
-        setIsFirstLoad(false);
-        handleMigrateTags();
-      } else {
-        setIsFirstLoad(false);
+      try {
+        const tagsData = await fetchTags();
+        
+        // Transform the data to include count
+        const tagsWithCount = await Promise.all(tagsData.map(async (tag) => {
+          const noteIds = await getNotesForTag(tag.id);
+          return {
+            ...tag,
+            count: noteIds.length,
+          };
+        }));
+        
+        // Sort tags alphabetically
+        tagsWithCount.sort((a, b) => a.name.localeCompare(b.name));
+        
+        setTags(tagsWithCount);
+        
+        // If this is the first load and no tags were found, try to migrate existing tags
+        if (isFirstLoad && tagsWithCount.length === 0 && !notesMigrated) {
+          setIsFirstLoad(false);
+          handleMigrateTags();
+        } else {
+          setIsFirstLoad(false);
+        }
+      } catch (error) {
+        console.error("Error loading tags:", error);
+        toast.error("Failed to load tags");
       }
     };
     
