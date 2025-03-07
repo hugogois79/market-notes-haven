@@ -274,17 +274,6 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-          
-          {!notesMigrated && notes.some(note => note.tags && note.tags.length > 0) && (
-            <Button 
-              variant="outline" 
-              onClick={handleMigrateTags}
-              className="gap-2"
-            >
-              <TagIcon size={16} />
-              Migrate Legacy Tags
-            </Button>
-          )}
         </div>
       </div>
 
