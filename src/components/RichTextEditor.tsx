@@ -1,4 +1,4 @@
-
+<lov-code>
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,10 @@ import {
   Trash2,
   RefreshCw,
   Sparkles,
+  Table as TableIcon,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
 } from "lucide-react";
 import { Note, Token, Tag as TagType } from "@/types";
 import {
@@ -66,6 +70,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface RichTextEditorProps {
   note?: Note;
@@ -75,6 +97,7 @@ interface RichTextEditorProps {
 }
 
 const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: RichTextEditorProps) => {
+  
   const [title, setTitle] = useState(note?.title || "");
   const [content, setContent] = useState(note?.content || "");
   const [summary, setSummary] = useState(note?.summary || "");
@@ -92,6 +115,13 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [attachmentUrl, setAttachmentUrl] = useState<string | undefined>(note?.attachment_url);
   const [isUploading, setIsUploading] = useState(false);
+  
+  // Table dialog state
+  const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
+  const [tableRows, setTableRows] = useState(3);
+  const [tableColumns, setTableColumns] = useState(3);
+  const [tableCaption, setTableCaption] = useState("");
+  const [tableHeaderEnabled, setTableHeaderEnabled] = useState(true);
   
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -251,6 +281,138 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
       setTimeout(() => {
         handleContentChange();
       }, 10);
+    }
+  };
+
+  // New table insertion functions
+  const handleInsertTable = () => {
+    if (!editorRef.current) return;
+    
+    // Create table element
+    const table = document.createElement('table');
+    table.className = 'border-collapse border border-border w-full my-4';
+    
+    // Add caption if provided
+    if (tableCaption) {
+      const caption = document.createElement('caption');
+      caption.textContent = tableCaption;
+      caption.className = 'text-sm text-muted-foreground p-2';
+      table.appendChild(caption);
+    }
+    
+    // Create table header if enabled
+    if (tableHeaderEnabled) {
+      const thead = document.createElement('thead');
+      thead.className = 'bg-muted/50';
+      const headerRow = document.createElement('tr');
+      
+      for (let i = 0; i < tableColumns; i++) {
+        const th = document.createElement('th');
+        th.className = 'border border-border p-2 text-left font-medium';
+        th.textContent = `Header ${i + 1}`;
+        headerRow.appendChild(th);
+      }
+      
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+    }
+    
+    // Create table body
+    const tbody = document.createElement('tbody');
+    
+    // Calculate row count based on whether header is included
+    const bodyRowCount = tableHeaderEnabled ? tableRows - 1 : tableRows;
+    
+    // Create rows
+    for (let i = 0; i < bodyRowCount; i++) {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b border-border';
+      
+      // Create cells
+      for (let j = 0; j < tableColumns; j++) {
+        const td = document.createElement('td');
+        td.className = 'border border-border p-2';
+        td.textContent = `Cell ${i + 1},${j + 1}`;
+        tr.appendChild(td);
+      }
+      
+      tbody.appendChild(tr);
+    }
+    
+    table.appendChild(tbody);
+    
+    // Insert the table at cursor position
+    document.execCommand('insertHTML', false, table.outerHTML);
+    
+    // Close dialog
+    setIsTableDialogOpen(false);
+    
+    // Reset form values
+    setTableRows(3);
+    setTableColumns(3);
+    setTableCaption("");
+    setTableHeaderEnabled(true);
+    
+    // Update content
+    handleContentChange();
+    
+    // Focus back on editor
+    editorRef.current.focus();
+  };
+
+  // Handle formatting table cells
+  const formatTableCells = (align: 'left' | 'center' | 'right') => {
+    if (!editorRef.current) return;
+    
+    const selection = window.getSelection();
+    if (!selection) return;
+    
+    // Get the selected cells
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    
+    // Find closest table cell elements
+    const findTableCells = (node: Node): HTMLTableCellElement[] => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as HTMLElement;
+        if (element.tagName === 'TH' || element.tagName === 'TD') {
+          return [element as HTMLTableCellElement];
+        }
+        
+        // Check if we're inside a table
+        if (element.tagName === 'TABLE') {
+          const cells = Array.from(element.querySelectorAll('th, td'));
+          return cells as HTMLTableCellElement[];
+        }
+      }
+      
+      // Check parent nodes
+      let parent = node.parentElement;
+      while (parent) {
+        if (parent.tagName === 'TH' || parent.tagName === 'TD') {
+          return [parent as HTMLTableCellElement];
+        }
+        if (parent.tagName === 'TABLE') {
+          const cells = Array.from(parent.querySelectorAll('th, td'));
+          return cells as HTMLTableCellElement[];
+        }
+        parent = parent.parentElement;
+      }
+      
+      return [];
+    };
+    
+    const cells = findTableCells(container);
+    
+    if (cells.length > 0) {
+      cells.forEach(cell => {
+        cell.style.textAlign = align;
+      });
+      
+      // Update content
+      handleContentChange();
+    } else {
+      toast.info("Please select a table cell first");
     }
   };
 
@@ -800,211 +962,4 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
                 ) : (
                   tokens
                     .filter(token => !selectedTokens.some(t => t.id === token.id))
-                    .map(token => (
-                      <SelectItem key={token.id} value={token.id}>
-                        {token.symbol} - {token.name}
-                      </SelectItem>
-                    ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        
-        {/* Tag Input */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <TagsIcon size={14} className="text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Tags</span>
-          </div>
-          
-          <div className="flex flex-wrap gap-2 items-center">
-            {linkedTags.map(tag => (
-              <Badge key={tag.id} variant="secondary" className="px-3 py-1 text-sm gap-2">
-                {tag.name}
-                <button onClick={() => handleRemoveTag(tag)} className="opacity-70 hover:opacity-100">
-                  <X size={12} />
-                </button>
-              </Badge>
-            ))}
-            
-            <div className="flex items-center gap-2">
-              <Input
-                type="text"
-                placeholder="Add tag..."
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddTag();
-                  }
-                }}
-                className="h-8 w-28 text-sm"
-              />
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleAddTag} 
-                className="h-8"
-              >
-                Add
-              </Button>
-              
-              {/* Tag Selector */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8">
-                    <TagsIcon size={14} className="mr-1" />
-                    Choose Tags
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-60 p-2">
-                  <div className="flex flex-col gap-2">
-                    <div className="text-sm font-medium">Available Tags</div>
                     
-                    {isLoadingTags ? (
-                      <div className="text-sm text-muted-foreground py-2">Loading tags...</div>
-                    ) : getAvailableTagsForSelection().length === 0 ? (
-                      <div className="text-sm text-muted-foreground py-2">No additional tags available</div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
-                        {getAvailableTagsForSelection().map(tag => (
-                          <Badge 
-                            key={tag.id} 
-                            variant="outline" 
-                            className="cursor-pointer hover:bg-secondary transition-colors px-3 py-1 flex items-center gap-1"
-                            onClick={() => handleSelectTag(tag)}
-                          >
-                            <Plus size={10} />
-                            {tag.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Formatting Toolbar */}
-      <div className="bg-card glass-card rounded-md mb-4 p-1 flex flex-wrap items-center gap-1 sticky top-0 z-10">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => execCommand("bold")}>
-                <Bold size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Bold</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => execCommand("italic")}>
-                <Italic size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Italic</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => execCommand("formatBlock", "<h1>")}>
-                <Heading1 size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Heading 1</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => execCommand("formatBlock", "<h2>")}>
-                <Heading2 size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Heading 2</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => execCommand("formatBlock", "<h3>")}>
-                <Heading3 size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Heading 3</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => execCommand("insertUnorderedList")}>
-                <List size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Bullet List</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => execCommand("insertOrderedList")}>
-                <ListOrdered size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Numbered List</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => execCommand("formatBlock", "<blockquote>")}>
-                <Quote size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Quote</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => {
-                  const url = prompt("Enter link URL");
-                  if (url) {
-                    execCommand("createLink", url);
-                  }
-                }}
-              >
-                <LinkIcon size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Link</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => execCommand("formatBlock", "<pre>")}>
-                <Code size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Code Block</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-      
-      {/* Editable Content Area */}
-      <div
-        ref={editorRef}
-        className="flex-grow p-4 rounded-md border border-border/50 bg-background/50 overflow-y-auto"
-        contentEditable
-        onInput={handleContentChange}
-        onBlur={handleContentChange}
-        dangerouslySetInnerHTML={{ __html: content }}
-      />
-    </div>
-  );
-};
-
-export default RichTextEditor;

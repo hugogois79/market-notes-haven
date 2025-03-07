@@ -1,217 +1,158 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 220 20% 98%;
-    --foreground: 220 20% 12%;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 12%;
-
+    --card-foreground: 222.2 84% 4.9%;
+ 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 12%;
+    --popover-foreground: 222.2 84% 4.9%;
+ 
+    --primary: 222.1 83.2% 9.8%;
+    --primary-foreground: 210 40% 98%;
+ 
+    --secondary: 210 22% 8%;
+    --secondary-foreground: 210 40% 98%;
+ 
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+ 
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+ 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
 
-    --primary: 250 20% 60%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 220 14% 94%;
-    --secondary-foreground: 220 20% 14%;
-
-    --muted: 220 14% 94%;
-    --muted-foreground: 220 10% 48%;
-
-    --accent: 250 20% 94%;
-    --accent-foreground: 250 20% 20%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 20% 92%;
-    --input: 220 20% 90%;
-    --ring: 250 20% 60%;
-
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+ 
+    --ring: 222.2 84% 4.9%;
+ 
     --radius: 0.5rem;
-
-    --sidebar-background: 215 50% 23%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 210 40% 98%;
-    --sidebar-primary-foreground: 215 50% 23%;
-    --sidebar-accent: 215 60% 35%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 40% 30%;
-    --sidebar-ring: 210 40% 98%;
   }
-
+ 
   .dark {
-    --background: 220 30% 10%;
-    --foreground: 220 20% 94%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
 
-    --card: 220 30% 13%;
-    --card-foreground: 220 20% 94%;
-
-    --popover: 220 30% 13%;
-    --popover-foreground: 220 20% 94%;
-
-    --primary: 250 60% 70%;
-    --primary-foreground: 250 20% 12%;
-
-    --secondary: 220 25% 18%;
-    --secondary-foreground: 220 20% 94%;
-
-    --muted: 220 25% 18%;
-    --muted-foreground: 220 10% 70%;
-
-    --accent: 250 25% 25%;
-    --accent-foreground: 250 10% 90%;
-
-    --destructive: 0 62% 50%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 220 30% 20%;
-    --input: 220 30% 22%;
-    --ring: 250 60% 70%;
-
-    --sidebar-background: 215 60% 17%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 210 40% 98%;
-    --sidebar-primary-foreground: 215 60% 17%;
-    --sidebar-accent: 215 70% 25%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 50% 20%;
-    --sidebar-ring: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+ 
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+ 
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.1 83.2% 9.8%;
+ 
+    --secondary: 210 3.7% 15.9%;
+    --secondary-foreground: 210 40% 98%;
+ 
+    --muted: 216 34% 17%;
+    --muted-foreground: 215 20.2% 65.1%;
+ 
+    --accent: 216 34% 17%;
+    --accent-foreground: 210 40% 98%;
+ 
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+ 
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+ 
+    --ring: 212.7 26.8% 8.8%;
+ 
+    --radius: 0.5rem;
   }
 }
-
+ 
 @layer base {
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
-
-  /* Custom Scrollbars */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    @apply bg-secondary/50;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    @apply bg-muted-foreground/30 rounded-full transition-colors;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/50;
-  }
-
-  .glass-effect {
-    @apply bg-background/80 backdrop-blur-md border border-border/50;
-  }
-
-  .glass-card {
-    @apply bg-card/80 backdrop-blur-sm border border-border/50 shadow-sm;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
   }
 }
 
-@layer components {
-  .note-content {
-    font-size: 0.95rem; /* Slightly smaller base font size for notes */
-    line-height: 1.6;
-  }
-  
-  .note-content h1 {
-    @apply text-xl font-bold mb-4 mt-6; /* Reduced from text-2xl */
-  }
+/* ===== Scrollbar CSS ===== */
+/* Firefox */
+* {
+  scrollbar-width: auto;
+  scrollbar-color: #8f54a0 #ffffff;
+}
 
-  .note-content h2 {
-    @apply text-lg font-bold mb-3 mt-5; /* Reduced from text-xl */
-  }
+/* Chrome, Edge, and Safari */
+*::-webkit-scrollbar {
+  width: 6px;
+}
 
-  .note-content h3 {
-    @apply text-base font-bold mb-2 mt-4; /* Reduced from text-lg */
-  }
+*::-webkit-scrollbar-track {
+  background: none;
+}
 
-  .note-content p {
-    @apply my-2;
-  }
+*::-webkit-scrollbar-thumb {
+  background-color: #a8a29e;
+  border-radius: 10px;
+  border: 0px none #ffffff;
+}
 
-  /* Improved bullet points styling */
-  .note-content ul {
-    @apply my-3 ml-6 list-disc;
-  }
+.glass-card {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(7.7px);
+  -webkit-backdrop-filter: blur(7.7px);
+}
 
-  .note-content ul li {
-    @apply pl-2 my-1.5; /* Reduced spacing between list items */
-    display: list-item;
-  }
-  
-  /* Ensure proper indentation for nested lists */
-  .note-content ul ul {
-    @apply ml-6;
-  }
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-in-out forwards;
+}
 
-  /* Improved numbered list styling */
-  .note-content ol {
-    @apply my-3 ml-6 list-decimal;
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-5px);
   }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
-  .note-content ol li {
-    @apply pl-2 my-1.5; /* Reduced spacing between list items */
-    display: list-item;
-  }
+/* Rich Text Editor Styles */
+.rich-text-editor table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+}
 
-  /* Ensure proper indentation for nested numbered lists */
-  .note-content ol ol {
-    @apply ml-6;
-  }
+.rich-text-editor table th,
+.rich-text-editor table td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.5rem;
+}
 
-  /* Fix for mixed list types */
-  .note-content ul ol, .note-content ol ul {
-    @apply ml-6;
-  }
+.rich-text-editor table th {
+  background-color: hsl(var(--muted) / 50%);
+  font-weight: 500;
+  text-align: left;
+}
 
-  .note-content blockquote {
-    @apply border-l-4 border-primary/30 pl-4 italic my-4 text-sm; /* Added text-sm */
-  }
+.rich-text-editor table tr:nth-child(even) {
+  background-color: hsl(var(--muted) / 20%);
+}
 
-  .note-content pre {
-    @apply bg-secondary p-3 rounded-md my-3 overflow-x-auto text-sm; /* Adjusted padding and added text-sm */
-  }
-
-  .note-content code {
-    @apply bg-secondary px-1.5 py-0.5 rounded-md text-xs; /* Reduced from text-sm to text-xs */
-  }
-
-  .note-content a {
-    @apply text-primary underline underline-offset-2 hover:text-primary/80 transition-colors;
-  }
-
-  .note-content table {
-    @apply w-full border-collapse my-4 text-sm; /* Added text-sm */
-  }
-
-  .note-content th, .note-content td {
-    @apply border border-border p-1.5; /* Reduced padding from p-2 */
-  }
-
-  .note-content th {
-    @apply bg-secondary;
-  }
-
-  .note-content img {
-    @apply max-w-full h-auto rounded-md my-4;
-  }
-
-  .editable:focus {
-    @apply outline-none;
-  }
+.rich-text-editor table caption {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  padding: 0.5rem;
+  caption-side: bottom;
 }

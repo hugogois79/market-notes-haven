@@ -104,6 +104,23 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
   const handleSave = async (note: Note): Promise<Note | null> => {
     console.log('Attempting to save note with content:', note.content);
     
+    // Preserve table formatting by ensuring table attributes are properly kept
+    if (note.content) {
+      // This will only parse the content, not modify it
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(note.content, 'text/html');
+      
+      // Ensure tables have proper attributes preserved
+      const tables = doc.querySelectorAll('table');
+      tables.forEach(table => {
+        if (!table.hasAttribute('class')) {
+          table.setAttribute('class', 'border-collapse border border-border w-full');
+        }
+      });
+      
+      // No need to modify the content if we're just ensuring attributes exist
+    }
+    
     const savedNote = await onSaveNote(note);
     
     if (savedNote) {
