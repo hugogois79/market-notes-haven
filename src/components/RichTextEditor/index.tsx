@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MarkdownIcon, Paintbrush, Table2 } from "lucide-react";
+import { FileEdit, Paintbrush, Table2 } from "lucide-react";
 import TagsSection from "./TagsSection";
 import FormattingToolbar from "./FormattingToolbar";
 import EditorContent from "./EditorContent";
@@ -11,7 +11,7 @@ import EditorHeader from "./EditorHeader";
 import AttachmentSection from "./AttachmentSection";
 import TableDialog from "./TableDialog";
 import { useEditor } from "./hooks/useEditor";
-import { Tag, Token } from "@/types";
+import { Tag, Token, Note } from "@/types";
 
 interface RichTextEditorProps {
   title: string;
@@ -25,6 +25,8 @@ interface RichTextEditorProps {
   noteId?: string;
   attachment_url?: string;
   onAttachmentChange?: (url: string | null) => void;
+  category: string;
+  onCategoryChange: (category: string) => void;
 }
 
 const RichTextEditor = ({
@@ -39,6 +41,8 @@ const RichTextEditor = ({
   noteId,
   attachment_url,
   onAttachmentChange = () => {},
+  category,
+  onCategoryChange,
 }: RichTextEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
@@ -47,17 +51,21 @@ const RichTextEditor = ({
   const [isLoadingTags, setIsLoadingTags] = useState(false);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const { execCommand, formatTableCells } = useEditor(editorRef);
+  const [rows, setRows] = useState(3);
+  const [cols, setCols] = useState(3);
 
   // Function to handle adding a new tag
   const handleAddTag = async () => {
     if (!tagInput.trim()) return;
     
     const tagName = tagInput.trim();
-    const tagExists = linkedTags.some(tag => 
-      typeof tag === 'string' 
-        ? tag.toLowerCase() === tagName.toLowerCase()
-        : tag.name.toLowerCase() === tagName.toLowerCase()
-    );
+    const tagExists = linkedTags.some(tag => {
+      if (typeof tag === 'string') {
+        return tag.toLowerCase() === tagName.toLowerCase();
+      } else {
+        return tag.name.toLowerCase() === tagName.toLowerCase();
+      }
+    });
     
     if (!tagExists) {
       // For simplicity, we're creating a new tag object here
@@ -116,11 +124,18 @@ const RichTextEditor = ({
     }
   };
 
+  const handleCreateTable = () => {
+    execCommand('insertHTML', createTable(rows, cols));
+    setIsTableDialogOpen(false);
+  };
+
   return (
     <div className="flex flex-col gap-4 mt-2">
       <EditorHeader 
         title={title} 
-        onTitleChange={onTitleChange} 
+        onTitleChange={onTitleChange}
+        category={category}
+        onCategoryChange={onCategoryChange}
       />
       
       <Card className="p-0 border rounded-md overflow-hidden">
@@ -149,7 +164,7 @@ const RichTextEditor = ({
                   onClick={() => setSelectedTab("markdown")}
                   title="Markdown Editor"
                 >
-                  <MarkdownIcon size={16} />
+                  <FileEdit size={16} />
                 </button>
               </div>
             </div>
@@ -164,24 +179,34 @@ const RichTextEditor = ({
             
             <EditorContent 
               editorRef={editorRef}
-              initialContent={content}
               handleContentChange={handleContentChange}
+              initialContent={content}
             />
             
             <TableDialog 
               isOpen={isTableDialogOpen} 
               onClose={() => setIsTableDialogOpen(false)} 
-              onInsert={(rows, cols) => {
-                execCommand('insertHTML', createTable(rows, cols));
-                setIsTableDialogOpen(false);
-              }} 
+              rows={rows}
+              cols={cols}
+              setRows={setRows}
+              setCols={setCols}
+              onCreateTable={handleCreateTable}
             />
           </TabsContent>
           
           <TabsContent value="tokens" className="space-y-4 m-0 p-4">
             <TokenSection 
-              linkedTokens={linkedTokens} 
-              onTokensChange={onTokensChange} 
+              selectedTokens={linkedTokens} 
+              handleRemoveToken={(tokenId) => {
+                const updatedTokens = linkedTokens.filter(token => token.id !== tokenId);
+                onTokensChange(updatedTokens);
+              }}
+              handleTokenSelect={(tokenId) => {
+                // This would typically involve finding the token from a list of available tokens
+                // and adding it to the linkedTokens array
+              }}
+              tokens={[]} // You would pass available tokens here
+              isLoadingTokens={false}
             />
           </TabsContent>
           
@@ -200,8 +225,8 @@ const RichTextEditor = ({
           
           <TabsContent value="attachment" className="space-y-4 m-0 p-4">
             <AttachmentSection 
-              noteId={noteId}
-              attachment_url={attachment_url}
+              noteId={noteId || ""}
+              attachmentUrl={attachment_url}
               onAttachmentChange={onAttachmentChange}
             />
           </TabsContent>

@@ -1,16 +1,21 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Paperclip, X, File, Upload, Loader } from "lucide-react";
 
 interface AttachmentSectionProps {
   noteId: string;
+  attachmentUrl?: string | null;
+  onAttachmentChange?: (url: string | null) => void;
 }
 
-const AttachmentSection: React.FC<AttachmentSectionProps> = ({ noteId }) => {
+const AttachmentSection: React.FC<AttachmentSectionProps> = ({ 
+  noteId,
+  attachmentUrl,
+  onAttachmentChange = () => {}
+}) => {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,6 +33,10 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({ noteId }) => {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const handleRemoveAttachment = () => {
+    onAttachmentChange(null);
   };
   
   return (
@@ -101,7 +110,7 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({ noteId }) => {
             size="icon"
             variant="ghost"
             className="h-7 w-7"
-            onClick={() => setAttachmentUrl(null)}
+            onClick={handleRemoveAttachment}
           >
             <X size={14} />
           </Button>

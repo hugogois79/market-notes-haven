@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
@@ -318,14 +317,23 @@ const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
       <div className="flex-1">
         {currentNote && (
           <RichTextEditor 
-            note={currentNote} 
-            onSave={handleSave}
+            title={currentNote.title}
+            content={currentNote.content}
+            category={currentNote.category || "General"}
             onTitleChange={handleTitleChange}
+            onContentChange={(content) => handleSave({ content })}
             onCategoryChange={handleCategoryChange}
-            tokens={allTokens}
-            tags={allTags}
-            isLoadingTokens={isLoadingTokens}
-            isLoadingTags={isLoadingTags}
+            linkedTags={currentNote.tags.map(tagId => {
+              // If allTags is loaded, find the tag object
+              const foundTag = allTags.find(t => t.id === tagId);
+              return foundTag || { id: tagId, name: tagId };
+            })}
+            onTagsChange={(tags) => handleSave({ tags: tags.map(t => typeof t === 'string' ? t : t.id) })}
+            linkedTokens={linkedTokens}
+            onTokensChange={(tokens) => handleSave({ tokens })}
+            noteId={currentNote.id}
+            attachment_url={currentNote.attachment_url}
+            onAttachmentChange={(url) => handleSave({ attachment_url: url || undefined })}
           />
         )}
       </div>
