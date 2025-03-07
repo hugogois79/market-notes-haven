@@ -88,8 +88,8 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
                 "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors",
                 !isExpanded && "justify-center px-2",
                 location.pathname === item.path
-                  ? "bg-brand/10 text-brand"
-                  : "text-secondary-foreground hover:bg-secondary-foreground/10 hover:text-brand"
+                  ? "bg-brand/20 text-brand font-medium"
+                  : "text-white hover:bg-white/10 hover:text-brand"
               )}
               title={!isExpanded ? item.title : ""}
             >

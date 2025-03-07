@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -56,7 +57,7 @@ const Sidebar = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          "h-screen bg-brand-dark text-secondary-foreground flex flex-col border-r border-border transition-all duration-300 ease-in-out z-40",
+          "h-screen bg-[#0A3A5C] text-white flex flex-col border-r border-border transition-all duration-300 ease-in-out z-40",
           isMobile
             ? isOpen
               ? "fixed inset-y-0 left-0 animate-slide-in-left w-72"
