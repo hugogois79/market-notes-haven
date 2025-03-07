@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -431,11 +430,14 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
       newAttachmentUrl = await uploadAttachment(noteId);
     }
     
+    // Store the current summary value before saving
+    const currentSummary = summary;
+    
     const updatedNote: Note = {
       id: noteId,
       title,
       content: currentContent,
-      summary, // Include the summary
+      summary: currentSummary, // Use the stored summary value
       tags,
       category,
       createdAt: note?.createdAt || new Date(),
@@ -448,6 +450,15 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
     if (savedNote) {
       console.log("Note saved successfully:", savedNote.id);
       console.log("Saved note content:", savedNote.content);
+      console.log("Saved note summary:", savedNote.summary);
+      
+      // Make sure we keep the summary after saving
+      if (savedNote.summary) {
+        setSummary(savedNote.summary);
+      } else {
+        // If for some reason the saved note doesn't have a summary, keep our current one
+        setSummary(currentSummary);
+      }
       
       // If this was a new note and we have an attachment to upload
       if ((noteId.toString().startsWith("temp-") || noteId !== savedNote.id) && attachmentFile) {
