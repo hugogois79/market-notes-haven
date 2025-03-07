@@ -12,6 +12,7 @@ import AttachmentSection from "./AttachmentSection";
 import TableDialog from "./TableDialog";
 import { useEditor } from "./hooks/useEditor";
 import { Tag, Token, Note } from "@/types";
+import AiResume from "./AiResume";
 
 interface RichTextEditorProps {
   title: string;
@@ -143,14 +144,45 @@ const RichTextEditor = ({
         onCategoryChange={onCategoryChange}
       />
       
+      {/* Tags and Tokens Section */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <Card className="p-4 border rounded-md flex-1">
+          <TagsSection 
+            linkedTags={linkedTags}
+            tagInput={tagInput}
+            setTagInput={setTagInput}
+            handleAddTag={handleAddTag}
+            handleRemoveTag={handleRemoveTag}
+            handleSelectTag={handleSelectTag}
+            isLoadingTags={isLoadingTags}
+            getAvailableTagsForSelection={getAvailableTagsForSelection}
+          />
+        </Card>
+        
+        <Card className="p-4 border rounded-md flex-1">
+          <TokenSection 
+            selectedTokens={linkedTokens} 
+            handleRemoveToken={(tokenId) => {
+              const updatedTokens = linkedTokens.filter(token => token.id !== tokenId);
+              onTokensChange(updatedTokens);
+            }}
+            handleTokenSelect={(tokenId) => {
+              // This would typically involve finding the token from a list of available tokens
+              // and adding it to the linkedTokens array
+            }}
+            tokens={[]} // You would pass available tokens here
+            isLoadingTokens={false}
+          />
+        </Card>
+      </div>
+      
       <Card className="p-0 border rounded-md overflow-hidden">
         <Tabs defaultValue="edit" className="w-full">
           <div className="border-b px-3">
             <div className="flex items-center justify-between">
               <TabsList className="w-auto h-14">
                 <TabsTrigger value="edit" className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand">Editor</TabsTrigger>
-                <TabsTrigger value="tokens" className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand">Tokens</TabsTrigger>
-                <TabsTrigger value="tags" className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand">Tags</TabsTrigger>
+                <TabsTrigger value="ai-resume" className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand">AI Resume</TabsTrigger>
                 <TabsTrigger value="attachment" className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand">Attachment</TabsTrigger>
               </TabsList>
               
@@ -199,32 +231,10 @@ const RichTextEditor = ({
             />
           </TabsContent>
           
-          <TabsContent value="tokens" className="space-y-4 m-0 p-4">
-            <TokenSection 
-              selectedTokens={linkedTokens} 
-              handleRemoveToken={(tokenId) => {
-                const updatedTokens = linkedTokens.filter(token => token.id !== tokenId);
-                onTokensChange(updatedTokens);
-              }}
-              handleTokenSelect={(tokenId) => {
-                // This would typically involve finding the token from a list of available tokens
-                // and adding it to the linkedTokens array
-              }}
-              tokens={[]} // You would pass available tokens here
-              isLoadingTokens={false}
-            />
-          </TabsContent>
-          
-          <TabsContent value="tags" className="space-y-4 m-0 p-4">
-            <TagsSection 
-              linkedTags={linkedTags}
-              tagInput={tagInput}
-              setTagInput={setTagInput}
-              handleAddTag={handleAddTag}
-              handleRemoveTag={handleRemoveTag}
-              handleSelectTag={handleSelectTag}
-              isLoadingTags={isLoadingTags}
-              getAvailableTagsForSelection={getAvailableTagsForSelection}
+          <TabsContent value="ai-resume" className="space-y-4 m-0 p-4">
+            <AiResume 
+              noteId={noteId || ""}
+              content={content}
             />
           </TabsContent>
           
