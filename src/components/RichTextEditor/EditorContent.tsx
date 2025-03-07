@@ -1,31 +1,30 @@
 
-import React, { RefObject, useEffect } from "react";
+import { useEffect, RefObject } from "react";
 
-export interface EditorContentProps {
+interface EditorContentProps {
   editorRef: RefObject<HTMLDivElement>;
   handleContentChange: () => void;
-  initialContent?: string;
+  initialContent: string;
 }
 
-const EditorContent: React.FC<EditorContentProps> = ({
-  editorRef,
-  handleContentChange,
-  initialContent = ""
-}) => {
+const EditorContent = ({ editorRef, handleContentChange, initialContent }: EditorContentProps) => {
+  // Set initial content when the component mounts
   useEffect(() => {
-    if (editorRef.current && initialContent) {
-      editorRef.current.innerHTML = initialContent;
+    if (editorRef.current) {
+      editorRef.current.innerHTML = initialContent || '';
+      editorRef.current.focus();
     }
-  }, [initialContent, editorRef]);
+  }, [editorRef, initialContent]);
 
   return (
-    <div
+    <div 
+      className="p-4 min-h-[300px] focus:outline-none overflow-auto"
       ref={editorRef}
       contentEditable
-      className="flex-1 p-4 focus:outline-none rich-text-editor overflow-auto bg-background border rounded-md min-h-[200px]"
       onInput={handleContentChange}
       onBlur={handleContentChange}
-      suppressContentEditableWarning
+      style={{ lineHeight: '1.5' }}
+      data-placeholder="Start writing..."
     />
   );
 };

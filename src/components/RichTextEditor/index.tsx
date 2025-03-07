@@ -13,6 +13,9 @@ import TableDialog from "./TableDialog";
 import { useEditor } from "./hooks/useEditor";
 import { Tag, Token, Note } from "@/types";
 import AiResume from "./AiResume";
+import { useQuery } from "@tanstack/react-query";
+import { fetchTags } from "@/services/tagService";
+import { fetchTokens } from "@/services/tokenService";
 
 interface RichTextEditorProps {
   title: string;
@@ -49,11 +52,21 @@ const RichTextEditor = ({
   const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<"visual" | "markdown">("visual");
   const [tagInput, setTagInput] = useState("");
-  const [isLoadingTags, setIsLoadingTags] = useState(false);
-  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
-  const { execCommand, formatTableCells } = useEditor(editorRef);
   const [rows, setRows] = useState(3);
   const [cols, setCols] = useState(3);
+  const { execCommand, formatTableCells } = useEditor(editorRef);
+
+  // Fetch available tags
+  const { data: availableTags = [], isLoading: isLoadingTags } = useQuery({
+    queryKey: ['tags'],
+    queryFn: fetchTags,
+  });
+
+  // Fetch available tokens
+  const { isLoading: isLoadingTokens } = useQuery({
+    queryKey: ['tokens'],
+    queryFn: fetchTokens,
+  });
 
   // Function to handle adding a new tag
   const handleAddTag = async () => {
@@ -108,6 +121,19 @@ const RichTextEditor = ({
     }
     
     setTagInput("");
+  };
+
+  // Function to handle selecting a token
+  const handleTokenSelect = (tokenId: string) => {
+    // Find the token in the available tokens
+    if (tokenId) {
+      fetchTokens().then(allTokens => {
+        const token = allTokens.find(t => t.id === tokenId);
+        if (token) {
+          onTokensChange([...linkedTokens, token]);
+        }
+      });
+    }
   };
 
   const getAvailableTagsForSelection = () => {
@@ -166,12 +192,8 @@ const RichTextEditor = ({
               const updatedTokens = linkedTokens.filter(token => token.id !== tokenId);
               onTokensChange(updatedTokens);
             }}
-            handleTokenSelect={(tokenId) => {
-              // This would typically involve finding the token from a list of available tokens
-              // and adding it to the linkedTokens array
-            }}
-            tokens={[]} // You would pass available tokens here
-            isLoadingTokens={false}
+            handleTokenSelect={handleTokenSelect}
+            isLoadingTokens={isLoadingTokens}
           />
         </Card>
       </div>

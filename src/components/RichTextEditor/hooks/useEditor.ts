@@ -1,16 +1,36 @@
 
-import { RefObject } from "react";
+import { RefObject, useEffect } from "react";
 
 export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
-  const execCommand = (command: string, value: string = "") => {
-    document.execCommand(command, false, value);
+  // Ensure the editor content is editable when loaded
+  useEffect(() => {
     if (editorRef.current) {
-      // Focus back on the editor after applying format
+      editorRef.current.setAttribute('contenteditable', 'true');
+      editorRef.current.focus();
+    }
+  }, [editorRef]);
+
+  const execCommand = (command: string, value: string = "") => {
+    // Ensure focus is on the editor before executing command
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
+    
+    // Execute the command
+    document.execCommand(command, false, value);
+    
+    // Focus back on the editor after applying format
+    if (editorRef.current) {
       editorRef.current.focus();
     }
   };
 
   const formatTableCells = (alignment: string) => {
+    if (!editorRef.current) return;
+    
+    // Focus on the editor first
+    editorRef.current.focus();
+    
     const selection = window.getSelection();
     if (!selection || !selection.rangeCount) return;
 

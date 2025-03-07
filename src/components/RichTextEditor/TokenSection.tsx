@@ -10,12 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { fetchTokens } from "@/services/tokenService";
+import { useQuery } from "@tanstack/react-query";
 
 interface TokenSectionProps {
   selectedTokens: Token[];
   handleRemoveToken: (tokenId: string) => void;
   handleTokenSelect: (tokenId: string) => void;
-  tokens: Token[];
   isLoadingTokens: boolean;
 }
 
@@ -23,9 +24,14 @@ const TokenSection: React.FC<TokenSectionProps> = ({
   selectedTokens,
   handleRemoveToken,
   handleTokenSelect,
-  tokens,
   isLoadingTokens
 }) => {
+  // Fetch all available tokens
+  const { data: tokens = [] } = useQuery({
+    queryKey: ['tokens'],
+    queryFn: fetchTokens,
+  });
+  
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
@@ -43,7 +49,7 @@ const TokenSection: React.FC<TokenSectionProps> = ({
           </Badge>
         ))}
         
-        <Select onValueChange={handleTokenSelect}>
+        <Select onValueChange={handleTokenSelect} disabled={isLoadingTokens}>
           <SelectTrigger className="w-[180px] h-8">
             <SelectValue placeholder="Link token..." />
           </SelectTrigger>
