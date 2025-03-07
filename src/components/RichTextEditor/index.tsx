@@ -1,8 +1,8 @@
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileEdit, Paintbrush, Table2 } from "lucide-react";
+import { FileEdit, Paintbrush, Table2, Save } from "lucide-react";
 import TagsSection from "./TagsSection";
 import FormattingToolbar from "./FormattingToolbar";
 import EditorContent from "./EditorContent";
@@ -16,6 +16,8 @@ import AiResume from "./AiResume";
 import { useQuery } from "@tanstack/react-query";
 import { fetchTags } from "@/services/tagService";
 import { fetchTokens } from "@/services/tokenService";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 interface RichTextEditorProps {
   title: string;
@@ -31,6 +33,8 @@ interface RichTextEditorProps {
   onAttachmentChange?: (url: string | null) => void;
   category: string;
   onCategoryChange: (category: string) => void;
+  onSave?: () => void; // New prop for manual save
+  autoSave?: boolean; // Whether to enable auto-save
 }
 
 const RichTextEditor = ({
@@ -47,6 +51,8 @@ const RichTextEditor = ({
   onAttachmentChange = () => {},
   category,
   onCategoryChange,
+  onSave,
+  autoSave = true,
 }: RichTextEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
@@ -54,6 +60,8 @@ const RichTextEditor = ({
   const [tagInput, setTagInput] = useState("");
   const [rows, setRows] = useState(3);
   const [cols, setCols] = useState(3);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const { execCommand, formatTableCells } = useEditor(editorRef);
 
   // Fetch available tags
@@ -63,10 +71,31 @@ const RichTextEditor = ({
   });
 
   // Fetch available tokens
-  const { isLoading: isLoadingTokens } = useQuery({
+  const { data: availableTokens = [], isLoading: isLoadingTokens } = useQuery({
     queryKey: ['tokens'],
     queryFn: fetchTokens,
   });
+
+  // Handle autosave
+  const handleAutoSave = useCallback(() => {
+    if (autoSave && onSave) {
+      setIsSaving(true);
+      onSave();
+      setLastSaved(new Date());
+      setTimeout(() => setIsSaving(false), 1000); // Show saving indicator for 1 second
+    }
+  }, [autoSave, onSave]);
+
+  // Manual save function
+  const handleManualSave = () => {
+    if (onSave) {
+      setIsSaving(true);
+      onSave();
+      toast.success("Note saved successfully");
+      setLastSaved(new Date());
+      setTimeout(() => setIsSaving(false), 1000);
+    }
+  };
 
   // Function to handle adding a new tag
   const handleAddTag = async () => {
@@ -126,13 +155,11 @@ const RichTextEditor = ({
   // Function to handle selecting a token
   const handleTokenSelect = (tokenId: string) => {
     // Find the token in the available tokens
-    if (tokenId) {
-      fetchTokens().then(allTokens => {
-        const token = allTokens.find(t => t.id === tokenId);
-        if (token) {
-          onTokensChange([...linkedTokens, token]);
-        }
-      });
+    if (tokenId && availableTokens.length > 0) {
+      const token = availableTokens.find(t => t.id === tokenId);
+      if (token) {
+        onTokensChange([...linkedTokens, token]);
+      }
     }
   };
 
@@ -169,6 +196,28 @@ const RichTextEditor = ({
         category={category}
         onCategoryChange={onCategoryChange}
       />
+      
+      {/* Status and Save Button */}
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          {isSaving ? (
+            <span className="text-brand">Saving...</span>
+          ) : lastSaved ? (
+            <span>Last saved: {lastSaved.toLocaleTimeString()}</span>
+          ) : null}
+        </div>
+        
+        <Button
+          onClick={handleManualSave}
+          disabled={isSaving}
+          variant="outline"
+          className="gap-2"
+          size="sm"
+        >
+          <Save size={16} />
+          {isSaving ? "Saving..." : "Save"}
+        </Button>
+      </div>
       
       {/* Tags and Tokens Section */}
       <div className="flex flex-col md:flex-row gap-4">
@@ -240,6 +289,8 @@ const RichTextEditor = ({
               editorRef={editorRef}
               handleContentChange={handleContentChange}
               initialContent={content}
+              onAutoSave={handleAutoSave}
+              autoSaveDelay={2000}
             />
             
             <TableDialog 

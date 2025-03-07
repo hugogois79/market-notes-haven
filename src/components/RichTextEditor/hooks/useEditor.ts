@@ -1,4 +1,3 @@
-
 import { RefObject, useEffect } from "react";
 
 export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
@@ -36,6 +35,10 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
     // Focus back on the editor after applying format
     if (editorRef.current) {
       editorRef.current.focus();
+      
+      // Trigger input event to ensure content changes are detected for auto-save
+      const inputEvent = new Event('input', { bubbles: true });
+      editorRef.current.dispatchEvent(inputEvent);
     }
   };
 
@@ -74,6 +77,12 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
       cells.forEach(cell => {
         (cell as HTMLElement).style.textAlign = alignment;
       });
+    }
+
+    // After formatting, trigger input event for auto-save
+    if (editorRef.current) {
+      const inputEvent = new Event('input', { bubbles: true });
+      editorRef.current.dispatchEvent(inputEvent);
     }
   };
 

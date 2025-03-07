@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
 import { Note, Token, Tag } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
 }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<Partial<Note>>({});
+  const [autoSave, setAutoSave] = useState(true);
 
   // Handle title change
   const handleTitleChange = (title: string) => {
@@ -52,19 +53,36 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     setPendingChanges({ ...pendingChanges, attachment_url: url || undefined });
   };
 
-  // Handle save button click
+  // Handle save button click (manual save)
   const handleSaveClick = async () => {
     if (Object.keys(pendingChanges).length === 0) {
       toast.info("No changes to save");
       return;
     }
     
+    await saveChanges();
+  };
+
+  // Auto-save function that can be called automatically 
+  const handleAutoSave = useCallback(async () => {
+    if (Object.keys(pendingChanges).length === 0) {
+      return; // No changes to save
+    }
+    
+    await saveChanges(true);
+  }, [pendingChanges]);
+
+  // Common save function for both manual and auto save
+  const saveChanges = async (isAutoSave = false) => {
     setIsSaving(true);
     
     try {
       await onSave(pendingChanges);
       setPendingChanges({});
-      toast.success("Note saved successfully");
+      
+      if (!isAutoSave) {
+        toast.success("Note saved successfully");
+      }
     } catch (error) {
       toast.error("Failed to save note");
       console.error("Error saving note:", error);
@@ -109,6 +127,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         noteId={currentNote.id}
         attachment_url={currentNote.attachment_url}
         onAttachmentChange={handleAttachmentChange}
+        onSave={handleAutoSave}
+        autoSave={autoSave}
       />
     </div>
   );

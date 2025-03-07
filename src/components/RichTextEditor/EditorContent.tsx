@@ -1,12 +1,21 @@
-import { useEffect, RefObject } from "react";
+
+import { useEffect, RefObject, useCallback } from "react";
 
 interface EditorContentProps {
   editorRef: RefObject<HTMLDivElement>;
   handleContentChange: () => void;
   initialContent: string;
+  onAutoSave?: () => void; // New prop for auto-save functionality
+  autoSaveDelay?: number; // Delay in milliseconds before triggering auto-save
 }
 
-const EditorContent = ({ editorRef, handleContentChange, initialContent }: EditorContentProps) => {
+const EditorContent = ({ 
+  editorRef, 
+  handleContentChange, 
+  initialContent,
+  onAutoSave,
+  autoSaveDelay = 3000 // Default to 3 seconds
+}: EditorContentProps) => {
   // Set initial content when the component mounts
   useEffect(() => {
     if (editorRef.current) {
@@ -29,12 +38,29 @@ const EditorContent = ({ editorRef, handleContentChange, initialContent }: Edito
     }
   }, [editorRef, initialContent]);
 
+  // Create a debounced auto-save function
+  const debouncedAutoSave = useCallback(() => {
+    if (onAutoSave) {
+      const timer = setTimeout(() => {
+        onAutoSave();
+      }, autoSaveDelay);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [onAutoSave, autoSaveDelay]);
+
+  // Setup auto-save on content changes
+  const handleInput = () => {
+    handleContentChange();
+    debouncedAutoSave();
+  };
+
   return (
     <div 
       className="p-4 min-h-[300px] focus:outline-none overflow-auto"
       ref={editorRef}
       contentEditable
-      onInput={handleContentChange}
+      onInput={handleInput}
       onBlur={handleContentChange}
       style={{ lineHeight: '1.5' }}
       data-placeholder="Start writing..."
