@@ -11,7 +11,7 @@ const CryptoDashboard = () => {
     <div className="container mx-auto py-6 px-4 max-w-7xl">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#1EAEDB]">Crypto Portfolio</h1>
+          <h1 className="text-3xl font-bold text-brand">Crypto Portfolio</h1>
           <p className="text-muted-foreground">
             Track and manage your cryptocurrency investments
           </p>
@@ -20,15 +20,15 @@ const CryptoDashboard = () => {
 
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="grid grid-cols-3 max-w-md mx-auto bg-secondary">
-          <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-[#1EAEDB]/10 data-[state=active]:text-[#1EAEDB]">
+          <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-brand/10 data-[state=active]:text-brand">
             <Wallet className="h-4 w-4" />
             <span className="hidden sm:inline">Overview</span>
           </TabsTrigger>
-          <TabsTrigger value="transactions" className="flex items-center gap-2 data-[state=active]:bg-[#1EAEDB]/10 data-[state=active]:text-[#1EAEDB]">
+          <TabsTrigger value="transactions" className="flex items-center gap-2 data-[state=active]:bg-brand/10 data-[state=active]:text-brand">
             <ArrowRightLeft className="h-4 w-4" />
             <span className="hidden sm:inline">Transactions</span>
           </TabsTrigger>
-          <TabsTrigger value="add" className="flex items-center gap-2 data-[state=active]:bg-[#1EAEDB]/10 data-[state=active]:text-[#1EAEDB]">
+          <TabsTrigger value="add" className="flex items-center gap-2 data-[state=active]:bg-brand/10 data-[state=active]:text-brand">
             <PlusCircle className="h-4 w-4" />
             <span className="hidden sm:inline">Add Trade</span>
           </TabsTrigger>
@@ -49,7 +49,7 @@ const CryptoDashboard = () => {
                   <p className="text-muted-foreground mb-6 max-w-md">
                     We're working on implementing the full crypto portfolio feature.
                   </p>
-                  <Button size="sm" className="bg-[#1EAEDB] hover:bg-[#1EAEDB]/90 text-white">
+                  <Button size="sm" variant="brand">
                     <span>Get notified when it's ready</span>
                   </Button>
                 </div>

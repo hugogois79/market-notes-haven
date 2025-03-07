@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { FileText, Plus, Bookmark, FolderOpen, Clock, Rocket, Loader, Search, Table, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -153,7 +154,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
       {/* Header without Logo */}
       <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold text-[#1EAEDB]">Dashboard</h1>
+          <h1 className="text-3xl font-semibold text-brand">Dashboard</h1>
           <p className="text-muted-foreground mt-1">
             Your market research and analysis hub
           </p>
@@ -193,7 +194,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
               <span className="text-sm text-muted-foreground mr-2">Tag:</span>
               <Badge 
                 variant="secondary"
-                className="cursor-pointer bg-[#1EAEDB]/10 text-[#1EAEDB] hover:bg-[#1EAEDB]/20"
+                className="cursor-pointer bg-brand/10 text-brand hover:bg-brand/20"
                 onClick={clearTagFilter}
               >
                 {selectedTag} <X size={14} className="ml-1" />
@@ -207,7 +208,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
       <div>
         <div className="flex items-center mb-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
-            <FolderOpen size={20} className="text-[#1EAEDB]" />
+            <FolderOpen size={20} className="text-brand" />
             Categories
           </h2>
         </div>
@@ -217,7 +218,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
               <div 
                 key={category.name}
                 className={`bg-card glass-card rounded-lg p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer
-                  ${selectedCategory === category.name ? 'ring-2 ring-[#1EAEDB]' : ''}`}
+                  ${selectedCategory === category.name ? 'ring-2 ring-brand' : ''}`}
                 onClick={() => handleCategoryClick(category.name)}
               >
                 <div className="flex justify-between items-start">
@@ -225,7 +226,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
                     {getCategoryIcon(category.name)}
                     {category.name}
                   </div>
-                  <div className="bg-[#1EAEDB]/10 text-[#1EAEDB] text-xs rounded-full px-2 py-0.5">
+                  <div className="bg-brand/10 text-brand text-xs rounded-full px-2 py-0.5">
                     {category.count}
                   </div>
                 </div>
@@ -243,7 +244,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Clock size={20} className="text-[#1EAEDB]" />
+            <Clock size={20} className="text-brand" />
             Recent Notes
           </h2>
           <Button variant="ghost" size="sm" onClick={handleViewAllNotes}>
@@ -253,7 +254,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
         
         {loading ? (
           <div className="flex justify-start items-center py-12">
-            <Loader className="h-8 w-8 animate-spin text-[#1EAEDB]" />
+            <Loader className="h-8 w-8 animate-spin text-brand" />
             <span className="ml-2 text-lg">Loading notes...</span>
           </div>
         ) : recentNotes.length > 0 ? (
@@ -315,7 +316,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
           </div>
         ) : (
           <div className="bg-card rounded-lg p-8 text-left border border-border animate-fade-in">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#1EAEDB]/10 text-[#1EAEDB] mb-4">
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 text-brand mb-4">
               <Rocket size={24} />
             </div>
             <h3 className="text-lg font-medium mb-2">

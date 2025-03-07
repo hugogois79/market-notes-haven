@@ -15,17 +15,24 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
     if (!selection || !selection.rangeCount) return;
 
     const range = selection.getRangeAt(0);
-    const cells = Array.from(range.commonAncestorContainer.querySelectorAll('td, th'));
+    // Fix: Check if commonAncestorContainer is an Element before calling querySelectorAll
+    let cells: Element[] = [];
+    
+    if (range.commonAncestorContainer instanceof Element) {
+      cells = Array.from(range.commonAncestorContainer.querySelectorAll('td, th'));
+    } else if (range.commonAncestorContainer.parentElement) {
+      cells = Array.from(range.commonAncestorContainer.parentElement.querySelectorAll('td, th'));
+    }
     
     if (cells.length === 0) {
       // Try to find if cursor is inside a td/th
-      let node = range.startContainer;
+      let node: Node | null = range.startContainer;
       while (node && node.nodeName !== 'TD' && node.nodeName !== 'TH' && node !== document.body) {
-        node = node.parentNode as Node;
+        node = node.parentNode;
       }
       
       if (node && (node.nodeName === 'TD' || node.nodeName === 'TH')) {
-        cells.push(node as HTMLElement);
+        cells.push(node as Element);
       }
     }
     

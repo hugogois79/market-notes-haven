@@ -166,7 +166,7 @@ const Sidebar = () => {
           <Link to="/editor/new" onClick={() => isMobile && setIsOpen(false)}>
             <Button 
               className={cn(
-                "bg-[#1EAEDB] text-white hover:bg-[#1EAEDB]/90 flex items-center gap-2 w-full",
+                "bg-brand text-white hover:bg-brand-dark flex items-center gap-2 w-full",
                 !isExpanded && "justify-center px-0"
               )}
             >
@@ -188,8 +188,8 @@ const Sidebar = () => {
                     "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors",
                     !isExpanded && "justify-center px-2",
                     location.pathname === item.path
-                      ? "bg-[#1EAEDB]/10 text-[#1EAEDB]"
-                      : "text-secondary-foreground hover:bg-secondary-foreground/10 hover:text-[#1EAEDB]"
+                      ? "bg-brand/10 text-brand"
+                      : "text-secondary-foreground hover:bg-secondary-foreground/10 hover:text-brand"
                   )}
                   title={!isExpanded ? item.title : ""}
                 >
@@ -209,12 +209,12 @@ const Sidebar = () => {
           {/* Logo near settings */}
           {isExpanded ? (
             <div className="flex items-center gap-3 px-3 py-2.5">
-              <span className="font-bold text-xl tracking-tight text-[#1EAEDB]">GVVC</span>
+              <span className="font-bold text-xl tracking-tight text-brand">GVVC</span>
               <span className="font-semibold">MarketNotes</span>
             </div>
           ) : (
             <div className="flex items-center justify-center py-2.5">
-              <span className="font-bold text-xl tracking-tight text-[#1EAEDB]">GV</span>
+              <span className="font-bold text-xl tracking-tight text-brand">GV</span>
             </div>
           )}
           
@@ -222,7 +222,7 @@ const Sidebar = () => {
             to="/settings"
             onClick={() => isMobile && setIsOpen(false)}
             className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-secondary-foreground hover:bg-secondary-foreground/10 hover:text-[#1EAEDB]",
+              "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-secondary-foreground hover:bg-secondary-foreground/10 hover:text-brand",
               !isExpanded && "justify-center px-2"
             )}
             title={!isExpanded ? "Settings" : ""}

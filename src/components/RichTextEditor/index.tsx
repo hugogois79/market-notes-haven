@@ -1,221 +1,161 @@
 
-import React, { useState, useRef, useEffect } from "react";
-import EditorHeader from "./EditorHeader";
-import AttachmentSection from "./AttachmentSection";
-import TokenSection from "./TokenSection";
+import { useState, useRef, useEffect } from "react";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MarkdownIcon, Paintbrush, Table2 } from "lucide-react";
 import TagsSection from "./TagsSection";
 import FormattingToolbar from "./FormattingToolbar";
-import TableDialog from "./TableDialog";
 import EditorContent from "./EditorContent";
+import TokenSection from "./TokenSection";
+import EditorHeader from "./EditorHeader";
+import AttachmentSection from "./AttachmentSection";
+import TableDialog from "./TableDialog";
 import { useEditor } from "./hooks/useEditor";
-import { Note, Tag, Token } from "@/types";
+import { Tag, Token } from "@/types";
 
 interface RichTextEditorProps {
-  note: Note;
-  onSave: (updatedNote: Partial<Note>) => void;
+  title: string;
+  content: string;
   onTitleChange: (title: string) => void;
-  onCategoryChange: (category: string) => void;
-  tokens: Token[];
-  tags: Tag[];
-  isLoadingTokens?: boolean;
-  isLoadingTags?: boolean;
-  isPrintMode?: boolean;
+  onContentChange: (content: string) => void;
+  linkedTags: Tag[];
+  onTagsChange: (tags: Tag[]) => void;
+  linkedTokens?: Token[];
+  onTokensChange?: (tokens: Token[]) => void;
+  noteId?: string;
+  attachment_url?: string;
+  onAttachmentChange?: (url: string | null) => void;
 }
 
-const RichTextEditor: React.FC<RichTextEditorProps> = ({
-  note,
-  onSave,
+const RichTextEditor = ({
+  title,
+  content,
   onTitleChange,
-  onCategoryChange,
-  tokens = [],
-  tags = [],
-  isLoadingTokens = false,
-  isLoadingTags = false,
-  isPrintMode = false,
-}) => {
-  const [title, setTitle] = useState(note.title);
-  const [content, setContent] = useState(note.content);
-  const [category, setCategory] = useState(note.category || "");
-  const [linkedTokens, setLinkedTokens] = useState<Token[]>(note.tokens || []);
-  const [linkedTags, setLinkedTags] = useState<Tag[]>(note.tags?.map((tagName) => ({ id: tagName, name: tagName })) || []);
-  const [tagInput, setTagInput] = useState("");
-  const [tokenInput, setTokenInput] = useState("");
-  const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
-  const [rows, setRows] = useState(3);
-  const [cols, setCols] = useState(3);
-  
+  onContentChange,
+  linkedTags,
+  onTagsChange,
+  linkedTokens = [],
+  onTokensChange = () => {},
+  noteId,
+  attachment_url,
+  onAttachmentChange = () => {},
+}: RichTextEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
-
+  const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<"visual" | "markdown">("visual");
+  const [tagInput, setTagInput] = useState("");
+  const [isLoadingTags, setIsLoadingTags] = useState(false);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const { execCommand, formatTableCells } = useEditor(editorRef);
 
-  useEffect(() => {
-    if (editorRef.current) {
-      editorRef.current.innerHTML = content;
-    }
-  }, [content]);
-
-  const handleContentChange = () => {
-    if (editorRef.current) {
-      const newContent = editorRef.current.innerHTML;
-      setContent(newContent);
-      onSave({ content: newContent });
-    }
-  };
-
-  const handleTitleChange = (newTitle: string) => {
-    setTitle(newTitle);
-    onTitleChange(newTitle);
-  };
-
-  const handleCategoryChange = (newCategory: string) => {
-    setCategory(newCategory);
-    onCategoryChange(newCategory);
-  };
-
+  // Function to handle adding a new tag
   const handleAddTag = async () => {
     if (!tagInput.trim()) return;
-
-    // Check if tag already exists in linked tags
-    const tagExists = linkedTags.some(
-      (tag) => typeof tag === "string" 
-        ? tag.toLowerCase() === tagInput.toLowerCase() 
-        : tag.name.toLowerCase() === tagInput.toLowerCase()
+    
+    const tagName = tagInput.trim();
+    const tagExists = linkedTags.some(tag => 
+      typeof tag === 'string' 
+        ? tag.toLowerCase() === tagName.toLowerCase()
+        : tag.name.toLowerCase() === tagName.toLowerCase()
     );
-
+    
     if (!tagExists) {
-      // Find if tag exists in the database
-      const existingTag = tags.find(
-        (tag) => tag.name.toLowerCase() === tagInput.toLowerCase()
-      );
-
-      if (existingTag) {
-        setLinkedTags([...linkedTags, existingTag]);
-      } else {
-        // Create a new tag
-        const newTag = { id: tagInput, name: tagInput };
-        setLinkedTags([...linkedTags, newTag]);
-      }
-
-      // Update note with new tags
-      const updatedTags = [...linkedTags, existingTag || { id: tagInput, name: tagInput }];
-      onSave({ 
-        tags: updatedTags.map(tag => typeof tag === "string" ? tag : tag.name) 
-      });
+      // For simplicity, we're creating a new tag object here
+      // In a real application, you might want to save this to a database
+      const newTag: Tag = {
+        id: Date.now().toString(),
+        name: tagName
+      };
+      
+      onTagsChange([...linkedTags, newTag]);
     }
-
+    
     setTagInput("");
   };
 
+  // Function to handle removing a tag
   const handleRemoveTag = (tagToRemove: string | Tag) => {
-    const tagId = typeof tagToRemove === "string" ? tagToRemove : tagToRemove.id;
+    const tagId = typeof tagToRemove === 'string' ? tagToRemove : tagToRemove.id;
     const updatedTags = linkedTags.filter(tag => 
-      typeof tag === "string" ? tag !== tagId : tag.id !== tagId
+      typeof tag === 'string' ? tag !== tagId : tag.id !== tagId
     );
-    setLinkedTags(updatedTags);
-    onSave({ 
-      tags: updatedTags.map(tag => typeof tag === "string" ? tag : tag.name) 
-    });
+    
+    onTagsChange(updatedTags);
   };
-  
+
+  // Function to handle selecting an existing tag
   const handleSelectTag = (tag: Tag) => {
-    const tagExists = linkedTags.some(
-      (t) => typeof t === "string" ? t === tag.id : t.id === tag.id
+    const tagExists = linkedTags.some(t => 
+      typeof t === 'string' ? t === tag.id : t.id === tag.id
     );
     
     if (!tagExists) {
-      const updatedTags = [...linkedTags, tag];
-      setLinkedTags(updatedTags);
-      onSave({ 
-        tags: updatedTags.map(t => typeof t === "string" ? t : t.name) 
-      });
+      onTagsChange([...linkedTags, tag]);
     }
+    
+    setTagInput("");
   };
 
   const getAvailableTagsForSelection = () => {
-    return tags.filter(tag => 
+    if (!tagInput.trim()) return [];
+    
+    const searchTerm = tagInput.toLowerCase();
+    return availableTags.filter(tag => 
+      tag.name.toLowerCase().includes(searchTerm) &&
       !linkedTags.some(linkedTag => 
-        typeof linkedTag === "string" 
+        typeof linkedTag === 'string' 
           ? linkedTag === tag.id 
           : linkedTag.id === tag.id
       )
-    ).slice(0, 10); // Limit to 10 suggestions
-  };
-
-  const handleAddToken = () => {
-    if (!tokenInput.trim()) return;
-
-    // Check if token exists
-    const token = tokens.find(
-      t => t.symbol.toLowerCase() === tokenInput.toLowerCase() || 
-           t.name.toLowerCase() === tokenInput.toLowerCase()
     );
-
-    if (token) {
-      const tokenExists = linkedTokens.some(t => t.id === token.id);
-      
-      if (!tokenExists) {
-        const updatedTokens = [...linkedTokens, token];
-        setLinkedTokens(updatedTokens);
-      }
-    }
-    
-    setTokenInput("");
   };
 
-  const handleRemoveToken = (tokenId: string) => {
-    const updatedTokens = linkedTokens.filter(token => token.id !== tokenId);
-    setLinkedTokens(updatedTokens);
-  };
-
-  const handleTokenSelect = (tokenId: string) => {
-    const token = tokens.find(t => t.id === tokenId);
-    if (!token) return;
-    
-    const tokenExists = linkedTokens.some(t => t.id === tokenId);
-    if (!tokenExists) {
-      setLinkedTokens([...linkedTokens, token]);
+  const handleContentChange = () => {
+    if (editorRef.current) {
+      onContentChange(editorRef.current.innerHTML);
     }
   };
 
-  const handleCreateTable = () => {
-    let tableHTML = '<table class="border-collapse w-full my-4">';
-    tableHTML += '<thead><tr>';
-    
-    // Create header row
-    for (let j = 0; j < cols; j++) {
-      tableHTML += '<th class="border border-border p-2 text-left">Header ' + (j + 1) + '</th>';
-    }
-    
-    tableHTML += '</tr></thead><tbody>';
-    
-    // Create data rows
-    for (let i = 0; i < rows; i++) {
-      tableHTML += '<tr>';
-      for (let j = 0; j < cols; j++) {
-        tableHTML += '<td class="border border-border p-2">Cell ' + (i + 1) + '-' + (j + 1) + '</td>';
-      }
-      tableHTML += '</tr>';
-    }
-    
-    tableHTML += '</tbody></table>';
-    
-    execCommand('insertHTML', tableHTML);
-    setIsTableDialogOpen(false);
-  };
-  
   return (
-    <div className={`flex flex-col ${isPrintMode ? '' : 'h-full'}`}>
+    <div className="flex flex-col gap-4 mt-2">
       <EditorHeader 
-        title={title}
-        category={category}
-        onTitleChange={handleTitleChange}
-        onCategoryChange={handleCategoryChange}
-        isPrintMode={isPrintMode}
+        title={title} 
+        onTitleChange={onTitleChange} 
       />
       
-      {!isPrintMode && (
-        <div className="flex-1 flex flex-col md:flex-row gap-4 mt-4">
-          <div className="flex-1 flex flex-col">
+      <Card className="p-0 border rounded-md overflow-hidden">
+        <Tabs defaultValue="edit" className="w-full">
+          <div className="border-b px-3">
+            <div className="flex items-center justify-between">
+              <TabsList className="w-auto h-14">
+                <TabsTrigger value="edit" className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand">Editor</TabsTrigger>
+                <TabsTrigger value="tokens" className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand">Tokens</TabsTrigger>
+                <TabsTrigger value="tags" className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand">Tags</TabsTrigger>
+                <TabsTrigger value="attachment" className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand">Attachment</TabsTrigger>
+              </TabsList>
+              
+              <div className="flex items-center gap-1 mr-2">
+                <button
+                  type="button"
+                  className={`p-1 rounded ${selectedTab === "visual" ? "bg-brand/10 text-brand" : "hover:bg-muted"}`}
+                  onClick={() => setSelectedTab("visual")}
+                  title="Visual Editor"
+                >
+                  <Paintbrush size={16} />
+                </button>
+                <button
+                  type="button"
+                  className={`p-1 rounded ${selectedTab === "markdown" ? "bg-brand/10 text-brand" : "hover:bg-muted"}`}
+                  onClick={() => setSelectedTab("markdown")}
+                  title="Markdown Editor"
+                >
+                  <MarkdownIcon size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <TabsContent value="edit" className="space-y-0 m-0">
             <FormattingToolbar 
               execCommand={execCommand} 
               setIsTableDialogOpen={setIsTableDialogOpen}
@@ -223,21 +163,30 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             />
             
             <EditorContent 
-              editorRef={editorRef} 
-              handleContentChange={handleContentChange} 
-            />
-          </div>
-          
-          <div className="w-full md:w-56 lg:w-72 flex flex-col gap-4">
-            <TokenSection
-              tokens={tokens}
-              selectedTokens={linkedTokens}
-              handleTokenSelect={handleTokenSelect}
-              handleRemoveToken={handleRemoveToken}
-              isLoadingTokens={isLoadingTokens}
+              editorRef={editorRef}
+              initialContent={content}
+              handleContentChange={handleContentChange}
             />
             
-            <TagsSection
+            <TableDialog 
+              isOpen={isTableDialogOpen} 
+              onClose={() => setIsTableDialogOpen(false)} 
+              onInsert={(rows, cols) => {
+                execCommand('insertHTML', createTable(rows, cols));
+                setIsTableDialogOpen(false);
+              }} 
+            />
+          </TabsContent>
+          
+          <TabsContent value="tokens" className="space-y-4 m-0 p-4">
+            <TokenSection 
+              linkedTokens={linkedTokens} 
+              onTokensChange={onTokensChange} 
+            />
+          </TabsContent>
+          
+          <TabsContent value="tags" className="space-y-4 m-0 p-4">
+            <TagsSection 
               linkedTags={linkedTags}
               tagInput={tagInput}
               setTagInput={setTagInput}
@@ -247,30 +196,47 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
               isLoadingTags={isLoadingTags}
               getAvailableTagsForSelection={getAvailableTagsForSelection}
             />
-            
-            <AttachmentSection noteId={note.id} />
-          </div>
-        </div>
-      )}
-      
-      {isPrintMode && (
-        <div 
-          className="rich-text-editor mt-4" 
-          dangerouslySetInnerHTML={{ __html: content }} 
-        />
-      )}
-      
-      <TableDialog 
-        isOpen={isTableDialogOpen}
-        onClose={() => setIsTableDialogOpen(false)}
-        rows={rows}
-        cols={cols}
-        setRows={setRows}
-        setCols={setCols}
-        onCreateTable={handleCreateTable}
-      />
+          </TabsContent>
+          
+          <TabsContent value="attachment" className="space-y-4 m-0 p-4">
+            <AttachmentSection 
+              noteId={noteId}
+              attachment_url={attachment_url}
+              onAttachmentChange={onAttachmentChange}
+            />
+          </TabsContent>
+        </Tabs>
+      </Card>
     </div>
   );
+};
+
+// Helper function to create an HTML table
+const createTable = (rows: number, cols: number) => {
+  let tableHTML = '<table class="border-collapse w-full my-4">';
+  
+  // Table header
+  tableHTML += '<thead>';
+  tableHTML += '<tr>';
+  for (let i = 0; i < cols; i++) {
+    tableHTML += '<th class="border border-gray-300 px-4 py-2 bg-gray-100">Header ' + (i + 1) + '</th>';
+  }
+  tableHTML += '</tr>';
+  tableHTML += '</thead>';
+  
+  // Table body
+  tableHTML += '<tbody>';
+  for (let i = 0; i < rows - 1; i++) {
+    tableHTML += '<tr>';
+    for (let j = 0; j < cols; j++) {
+      tableHTML += '<td class="border border-gray-300 px-4 py-2">Cell ' + (i + 1) + '-' + (j + 1) + '</td>';
+    }
+    tableHTML += '</tr>';
+  }
+  tableHTML += '</tbody>';
+  
+  tableHTML += '</table>';
+  return tableHTML;
 };
 
 export default RichTextEditor;
