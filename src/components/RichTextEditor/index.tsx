@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -58,7 +59,8 @@ const RichTextEditor = ({
     if (!tagInput.trim()) return;
     
     const tagName = tagInput.trim();
-    const tagExists = linkedTags.some((tag) => {
+    // Fix type checking to handle the never type issue
+    const tagExists = linkedTags.some((tag: any) => {
       if (typeof tag === 'string') {
         return tag.toLowerCase() === tagName.toLowerCase();
       } 
