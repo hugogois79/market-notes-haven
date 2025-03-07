@@ -1,16 +1,15 @@
 
 import React from "react";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  Save,
-  Clock,
-  Tags as TagsIcon,
-  ChevronDown,
-  Sparkles,
-  RefreshCw,
+import { 
+  Clock, 
+  Save, 
+  ChevronDown, 
+  TagsIcon, 
+  Sparkles, 
+  RefreshCw 
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -21,19 +20,19 @@ import {
 
 interface EditorHeaderProps {
   title: string;
-  setTitle: (title: string) => void;
+  setTitle: React.Dispatch<React.SetStateAction<string>>;
   summary: string;
   isGeneratingSummary: boolean;
-  generateSummary: () => void;
+  generateSummary: () => Promise<void>;
   category: string;
   handleCategorySelect: (category: string) => void;
   allCategories: string[];
   lastSaved: Date | null;
-  handleSave: () => void;
+  handleSave: () => Promise<void>;
   isUploading: boolean;
 }
 
-const EditorHeader = ({
+const EditorHeader: React.FC<EditorHeaderProps> = ({
   title,
   setTitle,
   summary,
@@ -44,10 +43,10 @@ const EditorHeader = ({
   allCategories,
   lastSaved,
   handleSave,
-  isUploading,
-}: EditorHeaderProps) => {
+  isUploading
+}) => {
   return (
-    <div className="space-y-4">
+    <>
       <Input
         type="text"
         placeholder="Note Title"
@@ -127,7 +126,7 @@ const EditorHeader = ({
           </DropdownMenu>
         </div>
         
-        {/* Save Button */}
+        {/* Save Button - Now positioned at the top */}
         <Button 
           variant="brand" 
           size="sm" 
@@ -139,7 +138,7 @@ const EditorHeader = ({
           {isUploading ? "Uploading..." : "Save Note"}
         </Button>
       </div>
-    </div>
+    </>
   );
 };
 

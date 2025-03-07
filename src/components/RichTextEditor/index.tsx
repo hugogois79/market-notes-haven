@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Note, Token } from "@/types";
 import { useEditor } from "./hooks/useEditor";

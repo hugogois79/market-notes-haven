@@ -1,21 +1,23 @@
 
-import React from "react";
+import React, { RefObject } from "react";
 
 interface EditorContentProps {
-  editorRef: React.RefObject<HTMLDivElement>;
-  content: string;
+  editorRef: RefObject<HTMLDivElement>;
   handleContentChange: () => void;
 }
 
-const EditorContent = ({ editorRef, content, handleContentChange }: EditorContentProps) => {
+const EditorContent: React.FC<EditorContentProps> = ({
+  editorRef,
+  handleContentChange
+}) => {
   return (
     <div
       ref={editorRef}
-      className="flex-grow p-4 rounded-md border border-border/50 bg-background/50 overflow-y-auto"
       contentEditable
+      className="flex-1 p-4 focus:outline-none rich-text-editor overflow-auto bg-background border rounded-md"
       onInput={handleContentChange}
       onBlur={handleContentChange}
-      dangerouslySetInnerHTML={{ __html: content }}
+      suppressContentEditableWarning
     />
   );
 };

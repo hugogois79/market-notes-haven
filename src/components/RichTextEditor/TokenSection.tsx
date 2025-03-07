@@ -13,19 +13,19 @@ import {
 
 interface TokenSectionProps {
   selectedTokens: Token[];
+  handleRemoveToken: (tokenId: string) => void;
+  handleTokenSelect: (tokenId: string) => void;
   tokens: Token[];
   isLoadingTokens: boolean;
-  handleTokenSelect: (tokenId: string) => void;
-  handleRemoveToken: (tokenId: string) => void;
 }
 
-const TokenSection = ({
+const TokenSection: React.FC<TokenSectionProps> = ({
   selectedTokens,
-  tokens,
-  isLoadingTokens,
-  handleTokenSelect,
   handleRemoveToken,
-}: TokenSectionProps) => {
+  handleTokenSelect,
+  tokens,
+  isLoadingTokens
+}) => {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">

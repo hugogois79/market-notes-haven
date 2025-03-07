@@ -1,9 +1,9 @@
 
 import React from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tags as TagsIcon, X, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { TagsIcon, X, Plus } from "lucide-react";
 import { Tag as TagType } from "@/types";
 import {
   Popover,
@@ -14,24 +14,24 @@ import {
 interface TagsSectionProps {
   linkedTags: TagType[];
   tagInput: string;
-  setTagInput: (input: string) => void;
-  handleAddTag: () => void;
-  handleRemoveTag: (tag: TagType | string) => void;
+  setTagInput: React.Dispatch<React.SetStateAction<string>>;
+  handleAddTag: () => Promise<void>;
+  handleRemoveTag: (tagToRemove: TagType | string) => void;
   handleSelectTag: (tag: TagType) => void;
+  availableTags: TagType[];
   isLoadingTags: boolean;
-  getAvailableTagsForSelection: () => TagType[];
 }
 
-const TagsSection = ({
+const TagsSection: React.FC<TagsSectionProps> = ({
   linkedTags,
   tagInput,
   setTagInput,
   handleAddTag,
   handleRemoveTag,
   handleSelectTag,
-  isLoadingTags,
-  getAvailableTagsForSelection,
-}: TagsSectionProps) => {
+  availableTags,
+  isLoadingTags
+}) => {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
@@ -49,55 +49,61 @@ const TagsSection = ({
           </Badge>
         ))}
         
-        <div className="flex items-center gap-2">
-          <Input
-            type="text"
-            placeholder="Add tag..."
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleAddTag();
-              }
-            }}
-            className="h-8 w-28 text-sm"
-          />
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleAddTag} 
-            className="h-8"
-          >
-            Add
-          </Button>
+        <div className="flex gap-2">
+          <div className="flex items-center gap-1 border rounded px-2 h-8 bg-background">
+            <Input
+              type="text"
+              placeholder="Add tag..."
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddTag();
+                }
+              }}
+              className="border-0 h-7 px-0 focus-visible:ring-0 focus-visible:ring-offset-0 min-w-[80px] w-full text-sm"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 rounded-full"
+              onClick={handleAddTag}
+            >
+              <Plus size={14} />
+            </Button>
+          </div>
           
-          {/* Tag Selector */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8">
-                <TagsIcon size={14} className="mr-1" />
-                Choose Tags
+              <Button variant="outline" size="sm" className="h-8 px-2 gap-1">
+                <TagsIcon size={14} />
+                <span className="text-xs">Browse</span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-60 p-2">
-              <div className="flex flex-col gap-2">
-                <div className="text-sm font-medium">Available Tags</div>
-                
+            <PopoverContent className="w-60 p-0" align="start">
+              <div className="p-2 border-b">
+                <p className="text-sm font-medium">Available Tags</p>
+              </div>
+              <div className="max-h-60 overflow-auto p-2">
                 {isLoadingTags ? (
-                  <div className="text-sm text-muted-foreground py-2">Loading tags...</div>
-                ) : getAvailableTagsForSelection().length === 0 ? (
-                  <div className="text-sm text-muted-foreground py-2">No additional tags available</div>
+                  <div className="text-center py-2 text-sm text-muted-foreground">
+                    Loading tags...
+                  </div>
+                ) : availableTags.length === 0 ? (
+                  <div className="text-center py-2 text-sm text-muted-foreground">
+                    No additional tags available
+                  </div>
                 ) : (
-                  <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
-                    {getAvailableTagsForSelection().map(tag => (
-                      <Badge 
-                        key={tag.id} 
-                        variant="outline" 
-                        className="cursor-pointer hover:bg-secondary transition-colors px-3 py-1 flex items-center gap-1"
+                  <div className="flex flex-wrap gap-1">
+                    {availableTags.map(tag => (
+                      <Badge
+                        key={tag.id}
+                        variant="outline"
+                        className="cursor-pointer hover:bg-accent"
                         onClick={() => handleSelectTag(tag)}
                       >
-                        <Plus size={10} />
                         {tag.name}
                       </Badge>
                     ))}

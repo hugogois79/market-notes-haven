@@ -1,8 +1,14 @@
 
-import React from "react";
-import { Badge } from "@/components/ui/badge";
+import React, { RefObject } from "react";
 import { Button } from "@/components/ui/button";
-import { Paperclip, FileIcon, ExternalLink, Trash2, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Paperclip, 
+  FileIcon, 
+  X, 
+  ExternalLink, 
+  Trash2 
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,14 +25,14 @@ interface AttachmentSectionProps {
   attachmentFile: File | null;
   attachmentUrl: string | undefined;
   handleAttachFileClick: () => void;
-  handleRemoveAttachment: () => void;
-  setAttachmentFile: (file: File | null) => void;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  handleRemoveAttachment: () => Promise<void>;
+  setAttachmentFile: React.Dispatch<React.SetStateAction<File | null>>;
+  fileInputRef: RefObject<HTMLInputElement>;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   getFilenameFromUrl: (url: string) => string;
 }
 
-const AttachmentSection = ({
+const AttachmentSection: React.FC<AttachmentSectionProps> = ({
   attachmentFile,
   attachmentUrl,
   handleAttachFileClick,
@@ -34,8 +40,8 @@ const AttachmentSection = ({
   setAttachmentFile,
   fileInputRef,
   handleFileChange,
-  getFilenameFromUrl,
-}: AttachmentSectionProps) => {
+  getFilenameFromUrl
+}) => {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
