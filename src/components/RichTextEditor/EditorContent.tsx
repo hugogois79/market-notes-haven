@@ -1,7 +1,7 @@
 
 import React, { RefObject } from "react";
 
-interface EditorContentProps {
+export interface EditorContentProps {
   editorRef: RefObject<HTMLDivElement>;
   handleContentChange: () => void;
 }

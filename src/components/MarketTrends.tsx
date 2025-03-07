@@ -21,10 +21,10 @@ const MarketTrends = () => {
     <Card className="glass-card">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-md font-medium flex items-center gap-2">
-          <TrendingUp size={18} className="text-primary" />
+          <TrendingUp size={18} className="text-[#1EAEDB]" />
           Market Trends
         </CardTitle>
-        <Badge variant="outline" className="bg-primary/10 border-primary/20 text-primary">Live</Badge>
+        <Badge variant="outline" className="bg-[#1EAEDB]/10 border-[#1EAEDB]/20 text-[#1EAEDB]">Live</Badge>
       </CardHeader>
       <CardContent className="px-0">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-0">

@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -155,4 +156,11 @@
   color: hsl(var(--muted-foreground));
   padding: 0.5rem;
   caption-side: bottom;
+}
+
+/* Custom button variant for brand color */
+@layer components {
+  .btn-brand {
+    @apply bg-[#1EAEDB] text-white hover:bg-[#1EAEDB]/90;
+  }
 }

@@ -19,16 +19,16 @@ const CryptoDashboard = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid grid-cols-3 max-w-md mx-auto">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
+        <TabsList className="grid grid-cols-3 max-w-md mx-auto bg-secondary">
+          <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-[#1EAEDB]/10 data-[state=active]:text-[#1EAEDB]">
             <Wallet className="h-4 w-4" />
             <span className="hidden sm:inline">Overview</span>
           </TabsTrigger>
-          <TabsTrigger value="transactions" className="flex items-center gap-2">
+          <TabsTrigger value="transactions" className="flex items-center gap-2 data-[state=active]:bg-[#1EAEDB]/10 data-[state=active]:text-[#1EAEDB]">
             <ArrowRightLeft className="h-4 w-4" />
             <span className="hidden sm:inline">Transactions</span>
           </TabsTrigger>
-          <TabsTrigger value="add" className="flex items-center gap-2">
+          <TabsTrigger value="add" className="flex items-center gap-2 data-[state=active]:bg-[#1EAEDB]/10 data-[state=active]:text-[#1EAEDB]">
             <PlusCircle className="h-4 w-4" />
             <span className="hidden sm:inline">Add Trade</span>
           </TabsTrigger>
@@ -49,7 +49,7 @@ const CryptoDashboard = () => {
                   <p className="text-muted-foreground mb-6 max-w-md">
                     We're working on implementing the full crypto portfolio feature.
                   </p>
-                  <Button size="sm">
+                  <Button size="sm" className="bg-[#1EAEDB] hover:bg-[#1EAEDB]/90 text-white">
                     <span>Get notified when it's ready</span>
                   </Button>
                 </div>

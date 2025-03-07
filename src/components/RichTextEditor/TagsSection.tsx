@@ -1,25 +1,19 @@
 
-import React from "react";
-import { Input } from "@/components/ui/input";
+import React, { Dispatch, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { TagsIcon, X, Plus } from "lucide-react";
-import { Tag as TagType } from "@/types";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Tag } from "@/types";
+import { Loader, Plus, X } from "lucide-react";
 
-interface TagsSectionProps {
-  linkedTags: TagType[];
+export interface TagsSectionProps {
+  linkedTags: Tag[];
   tagInput: string;
-  setTagInput: React.Dispatch<React.SetStateAction<string>>;
+  setTagInput: Dispatch<SetStateAction<string>>;
   handleAddTag: () => Promise<void>;
-  handleRemoveTag: (tagToRemove: TagType | string) => void;
-  handleSelectTag: (tag: TagType) => void;
-  availableTags: TagType[];
+  handleRemoveTag: (tagToRemove: string | Tag) => void;
+  handleSelectTag: (tag: Tag) => void;
   isLoadingTags: boolean;
+  getAvailableTagsForSelection: () => Tag[];
 }
 
 const TagsSection: React.FC<TagsSectionProps> = ({
@@ -29,91 +23,70 @@ const TagsSection: React.FC<TagsSectionProps> = ({
   handleAddTag,
   handleRemoveTag,
   handleSelectTag,
-  availableTags,
-  isLoadingTags
+  isLoadingTags,
+  getAvailableTagsForSelection
 }) => {
+  const availableTags = getAvailableTagsForSelection();
+
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <TagsIcon size={14} className="text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">Tags</span>
-      </div>
-      
-      <div className="flex flex-wrap gap-2 items-center">
-        {linkedTags.map(tag => (
-          <Badge key={tag.id} variant="secondary" className="px-3 py-1 text-sm gap-2">
-            {tag.name}
-            <button onClick={() => handleRemoveTag(tag)} className="opacity-70 hover:opacity-100">
+    <div className="space-y-2">
+      <div className="text-sm font-medium">Tags</div>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {linkedTags.map((tag) => (
+          <div
+            key={typeof tag === "string" ? tag : tag.id}
+            className="bg-secondary hover:bg-secondary/80 text-secondary-foreground text-xs px-2 py-1 rounded-full flex items-center gap-1"
+          >
+            <span>{typeof tag === "string" ? tag : tag.name}</span>
+            <button
+              onClick={() => handleRemoveTag(tag)}
+              className="text-muted-foreground hover:text-foreground"
+            >
               <X size={12} />
             </button>
-          </Badge>
-        ))}
-        
-        <div className="flex gap-2">
-          <div className="flex items-center gap-1 border rounded px-2 h-8 bg-background">
-            <Input
-              type="text"
-              placeholder="Add tag..."
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAddTag();
-                }
-              }}
-              className="border-0 h-7 px-0 focus-visible:ring-0 focus-visible:ring-offset-0 min-w-[80px] w-full text-sm"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 rounded-full"
-              onClick={handleAddTag}
-            >
-              <Plus size={14} />
-            </Button>
           </div>
-          
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 px-2 gap-1">
-                <TagsIcon size={14} />
-                <span className="text-xs">Browse</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-60 p-0" align="start">
-              <div className="p-2 border-b">
-                <p className="text-sm font-medium">Available Tags</p>
-              </div>
-              <div className="max-h-60 overflow-auto p-2">
-                {isLoadingTags ? (
-                  <div className="text-center py-2 text-sm text-muted-foreground">
-                    Loading tags...
-                  </div>
-                ) : availableTags.length === 0 ? (
-                  <div className="text-center py-2 text-sm text-muted-foreground">
-                    No additional tags available
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-1">
-                    {availableTags.map(tag => (
-                      <Badge
-                        key={tag.id}
-                        variant="outline"
-                        className="cursor-pointer hover:bg-accent"
-                        onClick={() => handleSelectTag(tag)}
-                      >
-                        {tag.name}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
+        ))}
       </div>
+      <div className="flex gap-2">
+        <Input
+          type="text"
+          value={tagInput}
+          onChange={(e) => setTagInput(e.target.value)}
+          placeholder="Add tags..."
+          className="flex-1"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && tagInput.trim()) {
+              e.preventDefault();
+              handleAddTag();
+            }
+          }}
+        />
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          onClick={() => handleAddTag()}
+          disabled={!tagInput.trim() || isLoadingTags}
+        >
+          {isLoadingTags ? <Loader size={16} className="animate-spin" /> : <Plus size={16} />}
+        </Button>
+      </div>
+      {availableTags.length > 0 && (
+        <div className="mt-2">
+          <div className="text-xs text-muted-foreground mb-1">Suggested tags:</div>
+          <div className="flex flex-wrap gap-1">
+            {availableTags.map((tag) => (
+              <button
+                key={tag.id}
+                onClick={() => handleSelectTag(tag)}
+                className="text-xs px-2 py-0.5 rounded-full bg-[#1EAEDB]/10 text-[#1EAEDB] hover:bg-[#1EAEDB]/20"
+              >
+                {tag.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -124,7 +125,7 @@ const Sidebar = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          "h-screen bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border transition-all duration-300 ease-in-out z-40",
+          "h-screen bg-secondary text-secondary-foreground flex flex-col border-r border-border transition-all duration-300 ease-in-out z-40",
           isMobile
             ? isOpen
               ? "fixed inset-y-0 left-0 animate-slide-in-left w-72"
@@ -138,7 +139,7 @@ const Sidebar = () => {
       >
         {/* Navigation header */}
         <div className={cn(
-          "p-4 border-b border-sidebar-border/50 flex items-center justify-between",
+          "p-4 border-b border-border/50 flex items-center justify-between",
           isExpanded ? "px-6" : "px-4"
         )}>
           {isExpanded && (
@@ -150,7 +151,7 @@ const Sidebar = () => {
               variant="ghost" 
               size="icon" 
               onClick={toggleExpand}
-              className="text-sidebar-foreground hover:bg-sidebar-accent/50"
+              className="text-secondary-foreground hover:bg-secondary/50"
             >
               {isExpanded ? 
                 <ChevronLeft size={20} /> : 
@@ -165,7 +166,7 @@ const Sidebar = () => {
           <Link to="/editor/new" onClick={() => isMobile && setIsOpen(false)}>
             <Button 
               className={cn(
-                "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 flex items-center gap-2 w-full",
+                "bg-[#1EAEDB] text-white hover:bg-[#1EAEDB]/90 flex items-center gap-2 w-full",
                 !isExpanded && "justify-center px-0"
               )}
             >
@@ -187,8 +188,8 @@ const Sidebar = () => {
                     "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors",
                     !isExpanded && "justify-center px-2",
                     location.pathname === item.path
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                      ? "bg-[#1EAEDB]/10 text-[#1EAEDB]"
+                      : "text-secondary-foreground hover:bg-secondary-foreground/10 hover:text-[#1EAEDB]"
                   )}
                   title={!isExpanded ? item.title : ""}
                 >
@@ -202,18 +203,18 @@ const Sidebar = () => {
 
         {/* Bottom area with logo and settings */}
         <div className={cn(
-          "p-4 border-t border-sidebar-border/50 space-y-4",
+          "p-4 border-t border-border/50 space-y-4",
           !isExpanded && "px-3"
         )}>
           {/* Logo near settings */}
           {isExpanded ? (
             <div className="flex items-center gap-3 px-3 py-2.5">
-              <span className="font-bold text-xl tracking-tight text-primary">GVVC</span>
+              <span className="font-bold text-xl tracking-tight text-[#1EAEDB]">GVVC</span>
               <span className="font-semibold">MarketNotes</span>
             </div>
           ) : (
             <div className="flex items-center justify-center py-2.5">
-              <span className="font-bold text-xl tracking-tight text-primary">GV</span>
+              <span className="font-bold text-xl tracking-tight text-[#1EAEDB]">GV</span>
             </div>
           )}
           
@@ -221,7 +222,7 @@ const Sidebar = () => {
             to="/settings"
             onClick={() => isMobile && setIsOpen(false)}
             className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+              "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-secondary-foreground hover:bg-secondary-foreground/10 hover:text-[#1EAEDB]",
               !isExpanded && "justify-center px-2"
             )}
             title={!isExpanded ? "Settings" : ""}
