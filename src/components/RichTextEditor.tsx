@@ -1,4 +1,4 @@
-<lov-code>
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -942,3 +942,69 @@ const RichTextEditor = ({ note, onSave, categories = [], linkedTokens = [] }: Ri
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" onClick={() => execCommand("insertUnorderedList")}>
                 <List size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Bullet List</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={() => execCommand("insertOrderedList")}>
+                <ListOrdered size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Numbered List</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={() => execCommand("formatBlock", "<blockquote>")}>
+                <Quote size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Quote</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => {
+                  const url = prompt("Enter link URL");
+                  if (url) {
+                    execCommand("createLink", url);
+                  }
+                }}
+              >
+                <LinkIcon size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Link</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={() => execCommand("formatBlock", "<pre>")}>
+                <Code size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Code Block</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      
+      {/* Editable Content Area */}
+      <div
+        ref={editorRef}
+        className="flex-grow p-4 rounded-md border border-border/50 bg-background/50 overflow-y-auto"
+        contentEditable
+        onInput={handleContentChange}
+        onBlur={handleContentChange}
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
+    </div>
+  );
+};
+
+export default RichTextEditor;
