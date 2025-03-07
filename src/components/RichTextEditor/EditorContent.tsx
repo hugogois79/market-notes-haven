@@ -1,4 +1,3 @@
-
 import { useEffect, RefObject } from "react";
 
 interface EditorContentProps {
@@ -12,7 +11,21 @@ const EditorContent = ({ editorRef, handleContentChange, initialContent }: Edito
   useEffect(() => {
     if (editorRef.current) {
       editorRef.current.innerHTML = initialContent || '';
-      editorRef.current.focus();
+      
+      // Keep focus in the editor after applying formatting
+      const handleSelectionChange = () => {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const isInEditor = editorRef.current?.contains(range.commonAncestorContainer);
+          if (isInEditor) {
+            editorRef.current?.focus();
+          }
+        }
+      };
+      
+      document.addEventListener('selectionchange', handleSelectionChange);
+      return () => document.removeEventListener('selectionchange', handleSelectionChange);
     }
   }, [editorRef, initialContent]);
 
