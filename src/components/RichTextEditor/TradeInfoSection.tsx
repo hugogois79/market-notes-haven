@@ -1,8 +1,8 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Token } from "@/types";
+import { Token, TradeInfo } from "@/types";
 import { TrendingUp } from "lucide-react";
 import {
   Select,
@@ -15,15 +15,65 @@ import {
 interface TradeInfoSectionProps {
   availableTokens: Token[];
   isLoadingTokens: boolean;
+  tradeInfo?: TradeInfo;
+  onTradeInfoChange?: (tradeInfo: TradeInfo) => void;
 }
 
 const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
   availableTokens,
   isLoadingTokens,
+  tradeInfo,
+  onTradeInfoChange = () => {},
 }) => {
-  const [selectedToken, setSelectedToken] = useState<string>("");
-  const [quantity, setQuantity] = useState<string>("");
-  const [entryPrice, setEntryPrice] = useState<string>("");
+  const [selectedToken, setSelectedToken] = useState<string>(tradeInfo?.tokenId || "");
+  const [quantity, setQuantity] = useState<string>(tradeInfo?.quantity?.toString() || "");
+  const [entryPrice, setEntryPrice] = useState<string>(tradeInfo?.entryPrice?.toString() || "");
+
+  // Update local state when tradeInfo prop changes
+  useEffect(() => {
+    if (tradeInfo) {
+      setSelectedToken(tradeInfo.tokenId || "");
+      setQuantity(tradeInfo.quantity?.toString() || "");
+      setEntryPrice(tradeInfo.entryPrice?.toString() || "");
+    }
+  }, [tradeInfo]);
+
+  // Handle token selection
+  const handleTokenChange = (tokenId: string) => {
+    setSelectedToken(tokenId);
+    updateTradeInfo({
+      tokenId,
+      quantity: quantity ? parseFloat(quantity) : undefined,
+      entryPrice: entryPrice ? parseFloat(entryPrice) : undefined,
+    });
+  };
+
+  // Handle quantity change
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newQuantity = e.target.value;
+    setQuantity(newQuantity);
+    updateTradeInfo({
+      tokenId: selectedToken,
+      quantity: newQuantity ? parseFloat(newQuantity) : undefined,
+      entryPrice: entryPrice ? parseFloat(entryPrice) : undefined,
+    });
+  };
+
+  // Handle entry price change
+  const handleEntryPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEntryPrice = e.target.value;
+    setEntryPrice(newEntryPrice);
+    updateTradeInfo({
+      tokenId: selectedToken,
+      quantity: quantity ? parseFloat(quantity) : undefined,
+      entryPrice: newEntryPrice ? parseFloat(newEntryPrice) : undefined,
+    });
+  };
+
+  // Update the parent component with changes
+  const updateTradeInfo = (newTradeInfo: TradeInfo) => {
+    onTradeInfoChange(newTradeInfo);
+  };
 
   return (
     <div className="space-y-3">
@@ -38,7 +88,7 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
           <Label htmlFor="token">Token</Label>
           <Select
             value={selectedToken}
-            onValueChange={setSelectedToken}
+            onValueChange={handleTokenChange}
             disabled={isLoadingTokens}
           >
             <SelectTrigger id="token" className="w-full">
@@ -71,7 +121,7 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
             type="number"
             placeholder="Enter quantity"
             value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
+            onChange={handleQuantityChange}
             min="0"
             step="any"
           />
@@ -85,7 +135,7 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
             type="number"
             placeholder="Enter entry price"
             value={entryPrice}
-            onChange={(e) => setEntryPrice(e.target.value)}
+            onChange={handleEntryPriceChange}
             min="0"
             step="any"
           />

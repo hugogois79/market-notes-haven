@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
-import { Note, Token, Tag } from "@/types";
+import { Note, Token, Tag, TradeInfo } from "@/types";
 import { toast } from "sonner";
 import { linkTagToNote, unlinkTagFromNote } from "@/services/tagService";
 import { linkTokenToNote, unlinkTokenFromNote } from "@/services/tokenService";
@@ -26,12 +26,14 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   const [localCategory, setLocalCategory] = useState(currentNote.category || "General");
   const [linkedTags, setLinkedTags] = useState<Tag[]>([]);
   const [localLinkedTokens, setLocalLinkedTokens] = useState<Token[]>(linkedTokens);
+  const [localTradeInfo, setLocalTradeInfo] = useState<TradeInfo | undefined>(currentNote.tradeInfo);
 
   // Update local state when currentNote changes
   useEffect(() => {
     setLocalTitle(currentNote.title);
     setLocalCategory(currentNote.category || "General");
     setLocalLinkedTokens(linkedTokens);
+    setLocalTradeInfo(currentNote.tradeInfo);
     
     // Convert tag IDs to tag objects
     setLinkedTags(getTagObjects());
@@ -70,6 +72,19 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     // Trigger immediate autosave when summary is generated
     if (autoSave) {
       const updatedChanges = { ...pendingChanges, summary };
+      handleSaveWithChanges(updatedChanges, true);
+    }
+  };
+
+  // Handle trade info changes
+  const handleTradeInfoChange = (tradeInfo: TradeInfo) => {
+    console.log("Trade info changed:", tradeInfo);
+    setLocalTradeInfo(tradeInfo);
+    setPendingChanges({ ...pendingChanges, tradeInfo });
+    
+    // Trigger immediate autosave when trade info changes
+    if (autoSave) {
+      const updatedChanges = { ...pendingChanges, tradeInfo };
       handleSaveWithChanges(updatedChanges, true);
     }
   };
@@ -228,6 +243,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         manualSave={() => saveChanges(false)}
         summary={currentNote.summary}
         onSummaryGenerated={handleSummaryGenerated}
+        tradeInfo={localTradeInfo}
+        onTradeInfoChange={handleTradeInfoChange}
       />
     </div>
   );

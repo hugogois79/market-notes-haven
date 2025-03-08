@@ -10,7 +10,7 @@ import EditorHeader from "./EditorHeader";
 import AttachmentSection from "./AttachmentSection";
 import TableDialog from "./TableDialog";
 import { useEditor } from "./hooks/useEditor";
-import { Tag, Token, Note } from "@/types";
+import { Tag, Token, Note, TradeInfo } from "@/types";
 import AiResume from "./AiResume";
 import { useQuery } from "@tanstack/react-query";
 import { fetchTags, createTag } from "@/services/tagService";
@@ -39,6 +39,8 @@ interface RichTextEditorProps {
   manualSave?: () => void;
   summary?: string;
   onSummaryGenerated?: (summary: string) => void;
+  tradeInfo?: TradeInfo;
+  onTradeInfoChange?: (tradeInfo: TradeInfo) => void;
 }
 
 const RichTextEditor = ({
@@ -56,11 +58,13 @@ const RichTextEditor = ({
   category,
   onCategoryChange,
   onSave,
-  autoSave = false, // Changed default to false to disable autosave
+  autoSave = false,
   isSaving = false,
   manualSave,
   summary = "",
   onSummaryGenerated,
+  tradeInfo,
+  onTradeInfoChange = () => {},
 }: RichTextEditorProps) => {
   
   const editorRef = useRef<HTMLDivElement>(null);
@@ -225,6 +229,19 @@ const RichTextEditor = ({
   // Check if the category is related to trading
   const isTradingCategory = category === "Trading" || category === "Pair Trading";
 
+  // Handle changes to trade information
+  const handleTradeInfoChange = (newTradeInfo: TradeInfo) => {
+    onTradeInfoChange(newTradeInfo);
+    
+    // Trigger auto-save after trade info change
+    if (autoSave && onSave) {
+      setTimeout(() => {
+        onSave();
+        setLastSaved(new Date());
+      }, 500);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4 mt-2">
       <EditorHeader 
@@ -272,6 +289,8 @@ const RichTextEditor = ({
           <TradeInfoSection 
             availableTokens={availableTokens}
             isLoadingTokens={isLoadingTokens}
+            tradeInfo={tradeInfo}
+            onTradeInfoChange={handleTradeInfoChange}
           />
         </Card>
       )}

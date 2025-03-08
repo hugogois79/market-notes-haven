@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Note } from "@/types";
+import { Note, TradeInfo } from "@/types";
 
 // Type for our database notes with proper date fields
 export interface DbNote {
@@ -12,7 +12,8 @@ export interface DbNote {
   created_at: string;
   updated_at: string;
   user_id: string | null;
-  attachment_url: string | null; // Added field for attachment URL
+  attachment_url: string | null;
+  trade_info: TradeInfo | null; // Added field for trade information
 }
 
 // Type for our user profile
@@ -41,6 +42,7 @@ export const dbNoteToNote = (dbNote: DbNote): Note => ({
   createdAt: new Date(dbNote.created_at),
   updatedAt: new Date(dbNote.updated_at),
   attachment_url: dbNote.attachment_url || undefined,
+  tradeInfo: dbNote.trade_info || undefined, // Convert trade_info to tradeInfo
 });
 
 // Convert app note to database format
@@ -53,6 +55,7 @@ export const noteToDbNote = (note: Note): Omit<DbNote, 'created_at' | 'updated_a
   category: note.category,
   user_id: null, // Will be set by the service
   attachment_url: note.attachment_url || null,
+  trade_info: note.tradeInfo || null, // Convert tradeInfo to trade_info
 });
 
 // Fetch all notes from Supabase
@@ -126,6 +129,7 @@ export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedA
         category: note.category || "General",
         user_id: userId,
         attachment_url: note.attachment_url || null,
+        trade_info: note.tradeInfo || null, // Add trade info
       }])
       .select()
       .single();
@@ -166,6 +170,7 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
         updated_at: new Date().toISOString(),
         user_id: userId,
         attachment_url: note.attachment_url || null,
+        trade_info: note.tradeInfo || null, // Update trade info
       })
       .eq('id', note.id)
       .select()
