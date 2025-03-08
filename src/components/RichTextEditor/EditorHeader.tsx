@@ -36,7 +36,7 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
           </Label>
           <Input
             id="title"
-            value={title}
+            value={title || ""}
             onChange={(e) => onTitleChange(e.target.value)}
             placeholder="Note title"
             className="text-lg font-medium"
