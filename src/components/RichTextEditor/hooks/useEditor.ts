@@ -1,4 +1,3 @@
-
 import { RefObject, useEffect } from "react";
 
 export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
@@ -30,26 +29,17 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
           if (tables.length > 0) {
             tables.forEach(table => {
               // Add default styling to ensure tables display correctly
-              if (!table.style.borderCollapse) {
-                table.style.borderCollapse = 'collapse';
-              }
-              if (!table.style.width && !table.getAttribute('width')) {
-                table.style.width = '100%';
-              }
+              table.setAttribute('style', 'border-collapse: collapse; width: auto; margin: 1rem 0;');
               
               // Add borders and padding to cells if they don't have any
               const cells = table.querySelectorAll('td, th');
               cells.forEach(cell => {
-                if (!cell.style.border) {
-                  cell.style.border = '1px solid #d1d5db';
-                }
-                if (!cell.style.padding) {
-                  cell.style.padding = '0.5rem 1rem';
-                }
+                // Use setAttribute for consistent styling
+                cell.setAttribute('style', 'border: 1px solid #d1d5db; padding: 0.5rem 1rem; text-align: left;');
                 
                 // Add background color to headers if they don't have any
-                if (cell.tagName === 'TH' && !cell.style.backgroundColor) {
-                  cell.style.backgroundColor = '#f3f4f6';
+                if (cell.tagName === 'TH') {
+                  cell.setAttribute('style', 'border: 1px solid #d1d5db; padding: 0.5rem 1rem; background-color: #f3f4f6; font-weight: bold; text-align: left;');
                 }
               });
             });
