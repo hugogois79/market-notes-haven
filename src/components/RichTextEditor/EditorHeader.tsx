@@ -27,10 +27,13 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
 }) => {
   // Create a separate handler for title changes to ensure events are processed correctly
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("Title changed to:", e.target.value);
+    console.log("EditorHeader: Title changed to:", e.target.value);
     // Ensure the value is passed directly to the parent component
     onTitleChange(e.target.value);
   };
+
+  // Debugging - log current title value
+  console.log("EditorHeader: Current title value:", title);
 
   return (
     <div className="space-y-4">

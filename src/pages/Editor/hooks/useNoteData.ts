@@ -113,6 +113,14 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
       setLinkedTokens(updatedFields.tokens);
     }
     
+    // If the title is included, update the current note immediately to reflect in UI
+    if (updatedFields.title !== undefined) {
+      setCurrentNote(prevNote => {
+        if (!prevNote) return updatedNote;
+        return { ...prevNote, title: updatedFields.title || "" };
+      });
+    }
+    
     const savedNote = await onSaveNote(updatedNote);
     
     if (savedNote) {

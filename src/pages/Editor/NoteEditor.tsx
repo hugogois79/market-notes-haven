@@ -31,7 +31,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
 
   // Handle title change
   const handleTitleChange = useCallback((title: string) => {
-    console.log("Setting title to:", title);
+    console.log("NoteEditor: Title changing to:", title);
     setLocalTitle(title);
     setPendingChanges(prev => ({ ...prev, title }));
   }, []);
