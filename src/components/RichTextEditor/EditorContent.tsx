@@ -67,8 +67,8 @@ const EditorContent = ({
         // Add these styles to better handle tables
         overflowX: 'auto',
         whiteSpace: 'normal',
-        // Reduced top padding to remove the empty space at the beginning
-        paddingTop: "52px"
+        // Removed the top padding completely to eliminate the empty space
+        paddingTop: "0"
       }}
       data-placeholder="Start writing..."
     >
