@@ -3,7 +3,20 @@ import React, { Dispatch, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tag } from "@/types";
-import { Loader, Plus, X, Tags } from "lucide-react";
+import { Loader, Plus, X, Tags, ChevronDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export interface TagsSectionProps {
   linkedTags: Tag[];
@@ -51,35 +64,70 @@ const TagsSection: React.FC<TagsSectionProps> = ({
           </div>
         ))}
       </div>
+      
       <div className="flex gap-2">
-        <Input
-          type="text"
-          value={tagInput}
-          onChange={(e) => setTagInput(e.target.value)}
-          placeholder="Add tags..."
-          className="flex-1"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && tagInput.trim()) {
-              e.preventDefault();
-              handleAddTag();
-            }
-          }}
-        />
-        <Button
-          type="button"
-          size="icon"
-          variant="outline"
-          onClick={() => handleAddTag()}
-          disabled={!tagInput.trim() || isLoadingTags}
-        >
-          {isLoadingTags ? <Loader size={16} className="animate-spin" /> : <Plus size={16} />}
-        </Button>
+        {/* Tag dropdown selection */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="outline" 
+              className="w-full justify-between font-normal text-left"
+              disabled={isLoadingTags || availableTags.length === 0}
+            >
+              <span className="truncate">
+                {isLoadingTags ? "Loading tags..." : (availableTags.length === 0 ? "No available tags" : "Select a tag")}
+              </span>
+              <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-[200px] max-h-[200px] overflow-auto">
+            {availableTags.map((tag) => (
+              <DropdownMenuItem
+                key={tag.id}
+                onClick={() => handleSelectTag(tag)}
+                className="cursor-pointer"
+              >
+                {tag.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        
+        {/* Divider for "Or" text */}
+        <div className="flex items-center px-2 text-xs text-muted-foreground">OR</div>
+        
+        {/* Add new tag input */}
+        <div className="flex gap-2 flex-1">
+          <Input
+            type="text"
+            value={tagInput}
+            onChange={(e) => setTagInput(e.target.value)}
+            placeholder="Create new tag..."
+            className="flex-1"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && tagInput.trim()) {
+                e.preventDefault();
+                handleAddTag();
+              }
+            }}
+          />
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            onClick={() => handleAddTag()}
+            disabled={!tagInput.trim() || isLoadingTags}
+          >
+            {isLoadingTags ? <Loader size={16} className="animate-spin" /> : <Plus size={16} />}
+          </Button>
+        </div>
       </div>
+      
       {availableTags.length > 0 && (
         <div className="mt-2">
           <div className="text-xs text-muted-foreground mb-1">Suggested tags:</div>
           <div className="flex flex-wrap gap-1">
-            {availableTags.map((tag) => (
+            {availableTags.slice(0, 5).map((tag) => (
               <button
                 key={tag.id}
                 onClick={() => handleSelectTag(tag)}

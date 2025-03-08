@@ -181,20 +181,14 @@ const RichTextEditor = ({
   };
 
   const getAvailableTagsForSelection = () => {
-    // If input is empty, show all available tags that aren't already linked
-    // Otherwise, filter by the search term
-    const searchTerm = tagInput.toLowerCase();
-    
+    // Filter out tags that are already linked to this note
     return availableTags.filter(tag => 
-      // If search term is present, filter by it
-      (searchTerm === '' || tag.name.toLowerCase().includes(searchTerm)) &&
-      // Don't show tags that are already linked to this note
       !linkedTags.some(linkedTag => 
         typeof linkedTag === 'string' 
           ? linkedTag === tag.id 
           : linkedTag.id === tag.id
       )
-    ).slice(0, 5); // Limit to 5 suggestions to avoid cluttering the UI
+    );
   };
 
   const handleContentChange = () => {
