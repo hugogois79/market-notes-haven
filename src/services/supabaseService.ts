@@ -1,5 +1,7 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Note, TradeInfo } from "@/types";
+import { Json } from "@/integrations/supabase/types";
 
 // Type for our database notes with proper date fields
 export interface DbNote {
@@ -13,7 +15,7 @@ export interface DbNote {
   updated_at: string;
   user_id: string | null;
   attachment_url: string | null;
-  trade_info: TradeInfo | null; // Added field for trade information
+  trade_info: Json | null; // Changed from TradeInfo to Json for Supabase compatibility
 }
 
 // Type for our user profile
@@ -31,6 +33,17 @@ export interface UserProfile {
   updated_at: string | null;
 }
 
+// Helper functions to convert between TradeInfo and Json
+const tradeInfoToJson = (tradeInfo: TradeInfo | undefined): Json | null => {
+  if (!tradeInfo) return null;
+  return tradeInfo as unknown as Json;
+};
+
+const jsonToTradeInfo = (json: Json | null): TradeInfo | undefined => {
+  if (!json) return undefined;
+  return json as unknown as TradeInfo;
+};
+
 // Convert database note to app note format
 export const dbNoteToNote = (dbNote: DbNote): Note => ({
   id: dbNote.id,
@@ -42,7 +55,7 @@ export const dbNoteToNote = (dbNote: DbNote): Note => ({
   createdAt: new Date(dbNote.created_at),
   updatedAt: new Date(dbNote.updated_at),
   attachment_url: dbNote.attachment_url || undefined,
-  tradeInfo: dbNote.trade_info || undefined, // Convert trade_info to tradeInfo
+  tradeInfo: jsonToTradeInfo(dbNote.trade_info), // Convert JSON to TradeInfo
 });
 
 // Convert app note to database format
@@ -55,7 +68,7 @@ export const noteToDbNote = (note: Note): Omit<DbNote, 'created_at' | 'updated_a
   category: note.category,
   user_id: null, // Will be set by the service
   attachment_url: note.attachment_url || null,
-  trade_info: note.tradeInfo || null, // Convert tradeInfo to trade_info
+  trade_info: tradeInfoToJson(note.tradeInfo), // Convert TradeInfo to JSON
 });
 
 // Fetch all notes from Supabase
@@ -74,7 +87,7 @@ export const fetchNotes = async (): Promise<Note[]> => {
       return [];
     }
 
-    return (data || []).map(dbNoteToNote);
+    return (data || []).map(dbNote => dbNoteToNote(dbNote as DbNote));
   } catch (error) {
     console.error('Error fetching notes:', error);
     return [];
@@ -119,18 +132,20 @@ export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedA
     const summary = await generateNoteSummary(note.content);
     console.log('Generated summary:', summary);
 
+    const dbNote = {
+      title: note.title,
+      content: note.content || "", // Ensure content is never null
+      summary: summary, // Add the generated summary
+      tags: note.tags || [],
+      category: note.category || "General",
+      user_id: userId,
+      attachment_url: note.attachment_url || null,
+      trade_info: tradeInfoToJson(note.tradeInfo), // Convert TradeInfo to JSON
+    };
+
     const { data, error } = await supabase
       .from('notes')
-      .insert([{
-        title: note.title,
-        content: note.content || "", // Ensure content is never null
-        summary: summary, // Add the generated summary
-        tags: note.tags || [],
-        category: note.category || "General",
-        user_id: userId,
-        attachment_url: note.attachment_url || null,
-        trade_info: note.tradeInfo || null, // Add trade info
-      }])
+      .insert([dbNote])
       .select()
       .single();
 
@@ -170,7 +185,7 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
         updated_at: new Date().toISOString(),
         user_id: userId,
         attachment_url: note.attachment_url || null,
-        trade_info: note.tradeInfo || null, // Update trade info
+        trade_info: tradeInfoToJson(note.tradeInfo), // Convert TradeInfo to JSON
       })
       .eq('id', note.id)
       .select()
