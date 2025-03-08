@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Token, TradeInfo } from "@/types";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Search } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -11,6 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { extractTradeInfo } from "@/utils/tradeInfoExtractor";
+import { toast } from "sonner";
 
 interface TradeInfoSectionProps {
   availableTokens: Token[];
@@ -72,6 +75,41 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
     });
   };
 
+  // Manually extract trade info from note content
+  const handleGenerateTradeInfo = () => {
+    if (!noteContent || !availableTokens.length) return;
+
+    const extractedInfo = extractTradeInfo(noteContent, availableTokens);
+    
+    let wasUpdated = false;
+    let updatedInfo = { ...tradeInfo } as TradeInfo;
+    
+    if (extractedInfo.tokenId) {
+      updatedInfo.tokenId = extractedInfo.tokenId;
+      wasUpdated = true;
+    }
+    
+    if (extractedInfo.quantity) {
+      updatedInfo.quantity = extractedInfo.quantity;
+      wasUpdated = true;
+    }
+    
+    if (extractedInfo.entryPrice) {
+      updatedInfo.entryPrice = extractedInfo.entryPrice;
+      wasUpdated = true;
+    }
+    
+    if (wasUpdated) {
+      onTradeInfoChange(updatedInfo);
+      setSelectedToken(updatedInfo.tokenId || "");
+      setQuantity(updatedInfo.quantity?.toString() || "");
+      setEntryPrice(updatedInfo.entryPrice?.toString() || "");
+      toast.success("Trade information extracted from note");
+    } else {
+      toast.info("No trade information found in note content");
+    }
+  };
+
   // Update the parent component with changes
   const updateTradeInfo = (newTradeInfo: TradeInfo) => {
     onTradeInfoChange(newTradeInfo);
@@ -79,9 +117,22 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
 
   return (
     <div className="space-y-3">
-      <div className="text-sm font-medium flex items-center gap-1 mb-2">
-        <TrendingUp size={16} className="text-[#1EAEDB]" />
-        <span>Trade Information</span>
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-sm font-medium flex items-center gap-1">
+          <TrendingUp size={16} className="text-[#1EAEDB]" />
+          <span>Trade Information</span>
+        </div>
+        
+        <Button 
+          onClick={handleGenerateTradeInfo} 
+          variant="outline" 
+          size="sm"
+          className="gap-2"
+          disabled={isLoadingTokens || !noteContent}
+        >
+          <Search size={14} />
+          Generate from Note
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
