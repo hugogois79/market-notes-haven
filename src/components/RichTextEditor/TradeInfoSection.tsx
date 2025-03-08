@@ -76,11 +76,15 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
   // Handle token selection
   const handleTokenChange = (tokenId: string) => {
     setSelectedToken(tokenId);
-    updateTradeInfo({
+    
+    // Immediately update parent with new trade info
+    const updatedTradeInfo: TradeInfo = {
       tokenId,
       quantity: quantity ? parseFloat(quantity) : undefined,
       entryPrice: entryPrice ? parseFloat(entryPrice) : undefined,
-    });
+    };
+    
+    onTradeInfoChange(updatedTradeInfo);
   };
 
   // Handle quantity change
@@ -88,24 +92,16 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
     const newQuantity = e.target.value;
     setQuantity(newQuantity);
     
-    if (newQuantity === "") {
-      // If field is cleared, update with undefined value
-      updateTradeInfo({
-        tokenId: selectedToken,
-        quantity: undefined,
-        entryPrice: entryPrice ? parseFloat(entryPrice) : undefined,
-      });
-    } else {
-      // Only update with numeric value if it's a valid number
-      const numericValue = parseFloat(newQuantity);
-      if (!isNaN(numericValue)) {
-        updateTradeInfo({
-          tokenId: selectedToken,
-          quantity: numericValue,
-          entryPrice: entryPrice ? parseFloat(entryPrice) : undefined,
-        });
-      }
-    }
+    // Immediately update parent with new trade info
+    const numericValue = newQuantity === "" ? undefined : parseFloat(newQuantity);
+    
+    const updatedTradeInfo: TradeInfo = {
+      tokenId: selectedToken,
+      quantity: !isNaN(Number(numericValue)) ? numericValue : undefined,
+      entryPrice: entryPrice ? parseFloat(entryPrice) : undefined,
+    };
+    
+    onTradeInfoChange(updatedTradeInfo);
   };
 
   // Handle entry price change
@@ -113,24 +109,16 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
     const newEntryPrice = e.target.value;
     setEntryPrice(newEntryPrice);
     
-    if (newEntryPrice === "") {
-      // If field is cleared, update with undefined value
-      updateTradeInfo({
-        tokenId: selectedToken,
-        quantity: quantity ? parseFloat(quantity) : undefined,
-        entryPrice: undefined,
-      });
-    } else {
-      // Only update with numeric value if it's a valid number
-      const numericValue = parseFloat(newEntryPrice);
-      if (!isNaN(numericValue)) {
-        updateTradeInfo({
-          tokenId: selectedToken,
-          quantity: quantity ? parseFloat(quantity) : undefined,
-          entryPrice: numericValue,
-        });
-      }
-    }
+    // Immediately update parent with new trade info
+    const numericValue = newEntryPrice === "" ? undefined : parseFloat(newEntryPrice);
+    
+    const updatedTradeInfo: TradeInfo = {
+      tokenId: selectedToken,
+      quantity: quantity ? parseFloat(quantity) : undefined,
+      entryPrice: !isNaN(Number(numericValue)) ? numericValue : undefined,
+    };
+    
+    onTradeInfoChange(updatedTradeInfo);
   };
 
   // Manually extract trade info from note content
@@ -166,11 +154,6 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
     } else {
       toast.info("No trade information found in note content");
     }
-  };
-
-  // Update the parent component with changes
-  const updateTradeInfo = (newTradeInfo: TradeInfo) => {
-    onTradeInfoChange(newTradeInfo);
   };
 
   // Format currency display
