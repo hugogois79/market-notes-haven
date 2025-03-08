@@ -34,6 +34,7 @@ serve(async (req) => {
       throw new Error('OpenAI API key is missing. Please set the OPENAI_API_KEY environment variable.');
     }
     
+    // Make the request to OpenAI API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -57,6 +58,8 @@ serve(async (req) => {
           },
           { role: 'user', content: `Summarize this financial note: ${cleanContent}` }
         ],
+        max_tokens: 300,
+        temperature: 0.5,
       }),
     });
 

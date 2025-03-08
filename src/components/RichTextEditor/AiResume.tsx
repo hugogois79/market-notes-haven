@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Wand2, RefreshCcw, Copy, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AiResumeProps {
   noteId: string;
@@ -25,23 +26,17 @@ const AiResume: React.FC<AiResumeProps> = ({ noteId, content }) => {
     
     try {
       // Call the Supabase Edge Function to summarize the content
-      const response = await fetch('/api/summarize-note', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
+      const { data, error } = await supabase.functions.invoke('summarize-note', {
+        body: { 
           content,
           maxLength: 250 // Allow for slightly longer summaries for financial analysis
-        }),
+        },
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate summary');
+      if (error) {
+        throw new Error(error.message || 'Failed to generate summary');
       }
       
-      const data = await response.json();
       setSummary(data.summary);
       toast.success("Financial summary generated successfully!");
     } catch (error) {
