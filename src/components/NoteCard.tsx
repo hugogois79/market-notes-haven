@@ -64,7 +64,7 @@ const NoteCard = ({ note, className }: NoteCardProps) => {
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = htmlContent;
     const textContent = tempDiv.textContent || tempDiv.innerText || "";
-    return textContent.substring(0, 150) + (textContent.length > 150 ? "..." : "");
+    return textContent.substring(0, 120) + (textContent.length > 120 ? "..." : "");
   };
 
   const handleNoteClick = () => {
@@ -99,9 +99,14 @@ const NoteCard = ({ note, className }: NoteCardProps) => {
         
         {tokens.length > 0 && (
           <div className="flex gap-1 mt-2 flex-wrap">
-            {tokens.map(token => (
+            {tokens.slice(0, 2).map(token => (
               <TokenBadge key={token.id} token={token} />
             ))}
+            {tokens.length > 2 && (
+              <Badge variant="secondary" className="text-xs py-0 px-1.5">
+                +{tokens.length - 2}
+              </Badge>
+            )}
           </div>
         )}
       </CardContent>
@@ -114,14 +119,14 @@ const NoteCard = ({ note, className }: NoteCardProps) => {
           <div className="flex items-center gap-1.5">
             <Tag size={14} className="text-muted-foreground" />
             <div className="flex gap-1.5">
-              {note.tags.slice(0, 2).map((tagId) => (
+              {note.tags.slice(0, 1).map((tagId) => (
                 <Badge key={tagId} variant="secondary" className="text-xs py-0 px-1.5 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90">
                   {getTagName(tagId)}
                 </Badge>
               ))}
-              {note.tags.length > 2 && (
+              {note.tags.length > 1 && (
                 <Badge variant="secondary" className="text-xs py-0 px-1.5 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90">
-                  +{note.tags.length - 2}
+                  +{note.tags.length - 1}
                 </Badge>
               )}
             </div>
