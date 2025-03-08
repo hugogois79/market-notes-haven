@@ -32,7 +32,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     
     // Convert tag IDs to tag objects
     setLinkedTags(getTagObjects());
-  }, [currentNote]);
+  }, [currentNote, allTags]);
 
   // Handle title change
   const handleTitleChange = useCallback((title: string) => {
@@ -143,7 +143,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
 
   // Convert tag IDs to tag objects
   const getTagObjects = () => {
-    return (currentNote.tags || []).map(tagId => {
+    if (!currentNote.tags || !Array.isArray(currentNote.tags)) {
+      return [];
+    }
+    
+    return currentNote.tags.map(tagId => {
       const foundTag = allTags.find(t => t.id === tagId);
       return foundTag || { id: tagId, name: tagId };
     });
