@@ -27,6 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Note } from "@/types";
 import NoteCard from "@/components/NoteCard";
+import { fetchTags } from "@/services/tagService";
 
 interface NotesProps {
   notes: Note[];
@@ -43,10 +44,32 @@ const Notes = ({ notes, loading = false }: NotesProps) => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [tagsList, setTagsList] = useState<{id: string, name: string}[]>([]);
+  const [tagIdToNameMap, setTagIdToNameMap] = useState<Record<string, string>>({});
 
-  // Get unique categories and tags from notes
+  // Fetch tags on component mount
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        const tags = await fetchTags();
+        setTagsList(tags);
+        
+        // Create a mapping of tag ID to tag name
+        const idToNameMap: Record<string, string> = {};
+        tags.forEach(tag => {
+          idToNameMap[tag.id] = tag.name;
+        });
+        setTagIdToNameMap(idToNameMap);
+      } catch (error) {
+        console.error("Error loading tags:", error);
+      }
+    };
+    
+    loadTags();
+  }, []);
+  
+  // Get unique categories from notes
   const categories = Array.from(new Set(notes.map(note => note.category)));
-  const allTags = Array.from(new Set(notes.flatMap(note => note.tags)));
   
   // Filter notes based on search, category, and tags
   const filteredNotes = notes.filter(note => {
@@ -57,7 +80,7 @@ const Notes = ({ notes, loading = false }: NotesProps) => {
     const matchesCategory = selectedCategory === null || note.category === selectedCategory;
     
     const matchesTags = selectedTags.length === 0 || 
-      selectedTags.every(tag => note.tags.includes(tag));
+      selectedTags.every(tagId => note.tags.includes(tagId));
     
     return matchesSearch && matchesCategory && matchesTags;
   });
@@ -79,12 +102,17 @@ const Notes = ({ notes, loading = false }: NotesProps) => {
   });
 
   // Handle toggling a tag selection
-  const toggleTag = (tag: string) => {
+  const toggleTag = (tagId: string) => {
     setSelectedTags(prev => 
-      prev.includes(tag) 
-        ? prev.filter(t => t !== tag) 
-        : [...prev, tag]
+      prev.includes(tagId) 
+        ? prev.filter(t => t !== tagId) 
+        : [...prev, tagId]
     );
+  };
+
+  // Get tag name from ID
+  const getTagName = (tagId: string) => {
+    return tagIdToNameMap[tagId] || tagId;
   };
 
   const handleNewNote = () => {
@@ -161,14 +189,14 @@ const Notes = ({ notes, loading = false }: NotesProps) => {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>Filter by Tags</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {allTags.length > 0 ? (
-                allTags.map((tag) => (
+              {tagsList.length > 0 ? (
+                tagsList.map((tag) => (
                   <DropdownMenuCheckboxItem
-                    key={tag}
-                    checked={selectedTags.includes(tag)}
-                    onCheckedChange={() => toggleTag(tag)}
+                    key={tag.id}
+                    checked={selectedTags.includes(tag.id)}
+                    onCheckedChange={() => toggleTag(tag.id)}
                   >
-                    {tag}
+                    {tag.name}
                   </DropdownMenuCheckboxItem>
                 ))
               ) : (
@@ -257,6 +285,7 @@ const Notes = ({ notes, loading = false }: NotesProps) => {
               key={note.id} 
               note={note} 
               className={viewMode === "list" ? "h-auto" : ""}
+              tagMapping={tagIdToNameMap}
             />
           ))}
         </div>

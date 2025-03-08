@@ -8,17 +8,16 @@ import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { getTokensForNote } from "@/services/tokenService";
 import TokenBadge from "./TokenBadge";
-import { fetchTags } from "@/services/tagService";
 
 interface NoteCardProps {
   note: Note;
   className?: string;
+  tagMapping?: Record<string, string>;
 }
 
-const NoteCard = ({ note, className }: NoteCardProps) => {
+const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
   const navigate = useNavigate();
   const [tokens, setTokens] = useState<Token[]>([]);
-  const [tagNameMap, setTagNameMap] = useState<Record<string, string>>({});
   
   useEffect(() => {
     const fetchTokens = async () => {
@@ -27,27 +26,11 @@ const NoteCard = ({ note, className }: NoteCardProps) => {
     };
     
     fetchTokens();
-    
-    // Fetch tags to map IDs to names
-    const loadTags = async () => {
-      try {
-        const tags = await fetchTags();
-        const tagMap: Record<string, string> = {};
-        tags.forEach(tag => {
-          tagMap[tag.id] = tag.name;
-        });
-        setTagNameMap(tagMap);
-      } catch (error) {
-        console.error("Error loading tag mapping:", error);
-      }
-    };
-    
-    loadTags();
   }, [note.id]);
   
   // Helper to get tag name from ID
   const getTagName = (tagId: string) => {
-    return tagNameMap[tagId] || tagId;
+    return tagMapping[tagId] || tagId;
   };
   
   // Format date to be more readable
