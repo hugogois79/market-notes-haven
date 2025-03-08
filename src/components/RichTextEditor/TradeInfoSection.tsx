@@ -75,6 +75,7 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
 
   // Handle token selection
   const handleTokenChange = (tokenId: string) => {
+    console.log("Token selected:", tokenId);
     setSelectedToken(tokenId);
     
     // Immediately update parent with new trade info
@@ -165,6 +166,13 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
     }).format(value);
   };
 
+  // Find the current token's name and symbol for display
+  const getTokenDisplay = () => {
+    if (!selectedToken) return "Select token";
+    const token = availableTokens.find(t => t.id === selectedToken);
+    return token ? `${token.name} (${token.symbol})` : "Select token";
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between mb-2">
@@ -195,7 +203,9 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
             disabled={isLoadingTokens}
           >
             <SelectTrigger id="token" className="w-full">
-              <SelectValue placeholder={isLoadingTokens ? "Loading tokens..." : "Select token"} />
+              <SelectValue placeholder={isLoadingTokens ? "Loading tokens..." : "Select token"}>
+                {getTokenDisplay()}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent className="max-h-[200px]">
               {availableTokens.map((token) => (

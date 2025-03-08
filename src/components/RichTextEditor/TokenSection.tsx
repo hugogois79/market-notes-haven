@@ -33,6 +33,7 @@ const TokenSection: React.FC<TokenSectionProps> = ({
   });
   
   const handleSelectToken = (tokenId: string) => {
+    console.log("TokenSection - Token selected:", tokenId);
     handleTokenSelect(tokenId);
     
     // Manually reset the select input by forcing a re-render with a key
