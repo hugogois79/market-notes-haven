@@ -10,7 +10,10 @@ import {
   AlignCenter, 
   AlignRight, 
   AlignJustify,
-  Table
+  Table,
+  Heading1,
+  Heading2,
+  Text
 } from "lucide-react";
 
 export interface FormattingToolbarProps {
@@ -26,6 +29,40 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
 }) => {
   return (
     <div className="flex items-center flex-wrap gap-1 p-2 bg-muted/30 rounded-md mx-2 my-2">
+      {/* Heading format options */}
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        onClick={() => execCommand("formatBlock", "<h1>")}
+        title="Title"
+        className="h-8 w-8"
+      >
+        <Heading1 size={16} />
+      </Button>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        onClick={() => execCommand("formatBlock", "<h2>")}
+        title="Subtitle"
+        className="h-8 w-8"
+      >
+        <Heading2 size={16} />
+      </Button>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        onClick={() => execCommand("formatBlock", "<p>")}
+        title="Normal Text"
+        className="h-8 w-8"
+      >
+        <Text size={16} />
+      </Button>
+      
+      <div className="border-l border-muted-foreground/20 mx-1 h-6"></div>
+      
       <Button
         type="button"
         size="icon"

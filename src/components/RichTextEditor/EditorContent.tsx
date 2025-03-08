@@ -57,7 +57,7 @@ const EditorContent = ({
 
   return (
     <div 
-      className="p-4 min-h-[300px] focus:outline-none overflow-auto"
+      className="p-4 min-h-[300px] focus:outline-none overflow-auto text-sm"
       ref={editorRef}
       contentEditable
       onInput={handleInput}
@@ -69,7 +69,27 @@ const EditorContent = ({
         whiteSpace: 'normal'
       }}
       data-placeholder="Start writing..."
-    />
+    >
+      {/* Style definitions for headings within the editor */}
+      <style>{`
+        [contenteditable="true"] h1 {
+          font-size: 1.5rem;
+          font-weight: 600;
+          margin-top: 1rem;
+          margin-bottom: 0.5rem;
+        }
+        [contenteditable="true"] h2 {
+          font-size: 1.25rem;
+          font-weight: 500;
+          margin-top: 0.75rem;
+          margin-bottom: 0.5rem;
+        }
+        [contenteditable="true"] p {
+          font-size: 0.875rem;
+          margin-bottom: 0.5rem;
+        }
+      `}</style>
+    </div>
   );
 };
 

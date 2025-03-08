@@ -86,14 +86,14 @@ const NoteCard = ({ note, className }: NoteCardProps) => {
     >
       <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-start gap-2">
-          <h3 className="font-medium text-lg line-clamp-2">{note.title}</h3>
-          <Badge variant="outline" className="shrink-0">
+          <h3 className="font-medium text-base line-clamp-2">{note.title}</h3>
+          <Badge variant="outline" className="shrink-0 text-xs">
             {note.category}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-2">
-        <p className="text-muted-foreground text-sm line-clamp-3">
+        <p className="text-muted-foreground text-xs line-clamp-3">
           {getTextPreview(note.content)}
         </p>
         

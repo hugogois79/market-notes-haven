@@ -1,3 +1,4 @@
+
 import { RefObject, useEffect } from "react";
 
 export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
@@ -86,8 +87,68 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
       }
     }
     
-    // Execute the command
-    document.execCommand(command, false, value);
+    // For heading formatting, ensure consistent styles
+    if (command === "formatBlock") {
+      if (value === "<h1>") {
+        // Apply H1 styling
+        document.execCommand(command, false, value);
+        
+        // Get the current selection and find the heading element
+        if (selection && selection.rangeCount > 0) {
+          const container = selection.getRangeAt(0).commonAncestorContainer;
+          let h1Element = container.nodeType === 1 
+            ? (container as Element).closest('h1') 
+            : (container.parentElement?.closest('h1'));
+          
+          if (h1Element && h1Element instanceof HTMLElement) {
+            h1Element.style.fontSize = '1.5rem';
+            h1Element.style.fontWeight = '600';
+            h1Element.style.marginTop = '1rem';
+            h1Element.style.marginBottom = '0.5rem';
+          }
+        }
+      } else if (value === "<h2>") {
+        // Apply H2 styling
+        document.execCommand(command, false, value);
+        
+        // Get the current selection and find the heading element
+        if (selection && selection.rangeCount > 0) {
+          const container = selection.getRangeAt(0).commonAncestorContainer;
+          let h2Element = container.nodeType === 1 
+            ? (container as Element).closest('h2') 
+            : (container.parentElement?.closest('h2'));
+          
+          if (h2Element && h2Element instanceof HTMLElement) {
+            h2Element.style.fontSize = '1.25rem';
+            h2Element.style.fontWeight = '500';
+            h2Element.style.marginTop = '0.75rem';
+            h2Element.style.marginBottom = '0.5rem';
+          }
+        }
+      } else if (value === "<p>") {
+        // Apply paragraph styling
+        document.execCommand(command, false, value);
+        
+        // Get the current selection and find the paragraph element
+        if (selection && selection.rangeCount > 0) {
+          const container = selection.getRangeAt(0).commonAncestorContainer;
+          let pElement = container.nodeType === 1 
+            ? (container as Element).closest('p') 
+            : (container.parentElement?.closest('p'));
+          
+          if (pElement && pElement instanceof HTMLElement) {
+            pElement.style.fontSize = '0.875rem';
+            pElement.style.marginBottom = '0.5rem';
+          }
+        }
+      } else {
+        // For other formatBlock commands
+        document.execCommand(command, false, value);
+      }
+    } else {
+      // Execute regular commands
+      document.execCommand(command, false, value);
+    }
     
     // Focus back on the editor after applying format
     if (editorRef.current) {

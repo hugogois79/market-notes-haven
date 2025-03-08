@@ -19,16 +19,22 @@ const AiResume: React.FC<AiResumeProps> = ({
   initialSummary = "", 
   onSummaryGenerated 
 }) => {
-  const [summary, setSummary] = useState<string>(initialSummary);
+  const [summary, setSummary] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   
-  // Initialize with the provided summary if available
+  // Initialize with the provided summary if available and not a new/temporary note
   useEffect(() => {
-    if (initialSummary) {
+    // Only set summary from initialSummary if:
+    // 1. initialSummary has content
+    // 2. The note is not a new/temporary note
+    if (initialSummary && !noteId.startsWith('temp-')) {
       setSummary(initialSummary);
+    } else {
+      // For new notes, ensure summary is empty
+      setSummary("");
     }
-  }, [initialSummary]);
+  }, [initialSummary, noteId]);
   
   const generateSummary = async () => {
     if (!content.trim()) {
