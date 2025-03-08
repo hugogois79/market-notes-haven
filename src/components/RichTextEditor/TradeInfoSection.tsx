@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Token, TradeInfo } from "@/types";
-import { TrendingUp, Search } from "lucide-react";
+import { TrendingUp, Search, DollarSign, BarChart2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -33,6 +33,8 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
   const [selectedToken, setSelectedToken] = useState<string>(tradeInfo?.tokenId || "");
   const [quantity, setQuantity] = useState<string>(tradeInfo?.quantity?.toString() || "");
   const [entryPrice, setEntryPrice] = useState<string>(tradeInfo?.entryPrice?.toString() || "");
+  const [currentPrice, setCurrentPrice] = useState<number | null>(null);
+  const [profit, setProfit] = useState<number | null>(null);
 
   // Update local state when tradeInfo prop changes
   useEffect(() => {
@@ -42,6 +44,28 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
       setEntryPrice(tradeInfo.entryPrice?.toString() || "");
     }
   }, [tradeInfo]);
+
+  // Calculate current price and profit when token is selected
+  useEffect(() => {
+    if (selectedToken && quantity && entryPrice) {
+      // This would be replaced with actual API call in production
+      // For demo purposes, we're just simulating a random current price
+      const parsedEntryPrice = parseFloat(entryPrice);
+      const randomFactor = 0.8 + Math.random() * 0.4; // Random factor between 0.8 and 1.2
+      const simulatedCurrentPrice = parsedEntryPrice * randomFactor;
+      setCurrentPrice(parseFloat(simulatedCurrentPrice.toFixed(2)));
+      
+      // Calculate profit
+      const parsedQuantity = parseFloat(quantity);
+      const investmentValue = parsedEntryPrice * parsedQuantity;
+      const currentValue = simulatedCurrentPrice * parsedQuantity;
+      const calculatedProfit = currentValue - investmentValue;
+      setProfit(parseFloat(calculatedProfit.toFixed(2)));
+    } else {
+      setCurrentPrice(null);
+      setProfit(null);
+    }
+  }, [selectedToken, quantity, entryPrice]);
 
   // Handle token selection
   const handleTokenChange = (tokenId: string) => {
@@ -115,6 +139,15 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
     onTradeInfoChange(newTradeInfo);
   };
 
+  // Format currency display
+  const formatCurrency = (value: number | null): string => {
+    if (value === null) return "-";
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(value);
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between mb-2">
@@ -135,9 +168,9 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {/* Token Selection */}
-        <div className="space-y-1">
+        <div className="space-y-1 col-span-2 md:col-span-1">
           <Label htmlFor="token">Token</Label>
           <Select
             value={selectedToken}
@@ -191,6 +224,38 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
             onChange={handleEntryPriceChange}
             min="0"
             step="any"
+          />
+        </div>
+
+        {/* Current Price (Non-editable) */}
+        <div className="space-y-1">
+          <Label htmlFor="currentPrice" className="flex items-center gap-1">
+            <DollarSign size={14} className="text-muted-foreground" />
+            Current Price
+          </Label>
+          <Input
+            id="currentPrice"
+            value={currentPrice !== null ? formatCurrency(currentPrice) : "-"}
+            readOnly
+            className="bg-muted/50 cursor-not-allowed"
+          />
+        </div>
+
+        {/* Profit/Loss (Non-editable) */}
+        <div className="space-y-1">
+          <Label htmlFor="profit" className="flex items-center gap-1">
+            <BarChart2 size={14} className="text-muted-foreground" />
+            Profit/Loss
+          </Label>
+          <Input
+            id="profit"
+            value={profit !== null ? formatCurrency(profit) : "-"}
+            readOnly
+            className={`cursor-not-allowed ${
+              profit === null ? "bg-muted/50" :
+              profit > 0 ? "bg-green-50 text-green-700" : 
+              profit < 0 ? "bg-red-50 text-red-700" : "bg-muted/50"
+            }`}
           />
         </div>
       </div>
