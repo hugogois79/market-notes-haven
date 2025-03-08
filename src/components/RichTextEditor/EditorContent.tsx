@@ -100,15 +100,6 @@ const EditorContent = ({
           border: none;
           border-top: 1px solid #d1d5db;
         }
-        [contenteditable="true"] .chapter-separator div {
-          position: absolute;
-          top: -5px;
-          left: 50%;
-          transform: translateX(-50%);
-          background-color: #fff;
-          padding: 0 10px;
-          font-size: 16px;
-        }
       `}</style>
     </div>
   );

@@ -1,3 +1,4 @@
+
 import { RefObject, useEffect } from "react";
 
 export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
@@ -225,7 +226,7 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
     // Focus on the editor first
     editorRef.current.focus();
     
-    // Create a horizontal separator styled to look like a chapter divider
+    // Create a horizontal separator with just a line (no section symbol)
     const separatorHTML = `
       <div class="chapter-separator" style="
         width: 100%;
@@ -240,15 +241,6 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
           border: none;
           border-top: 1px solid #d1d5db;
         "/>
-        <div style="
-          position: absolute;
-          top: -5px;
-          left: 50%;
-          transform: translateX(-50%);
-          background-color: #fff;
-          padding: 0 10px;
-          font-size: 16px;
-        ">§</div>
       </div>
     `;
     
