@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Wand2, RefreshCcw, Copy, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { Card } from "@/components/ui/card";
 
 interface AiResumeProps {
   noteId: string;
@@ -23,21 +24,29 @@ const AiResume: React.FC<AiResumeProps> = ({ noteId, content }) => {
     setIsGenerating(true);
     
     try {
-      // Simulate API call to summarize content
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call the Supabase Edge Function to summarize the content
+      const response = await fetch('/api/summarize-note', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          content,
+          maxLength: 250 // Allow for slightly longer summaries for financial analysis
+        }),
+      });
       
-      // This would be replaced with a real AI summary API call
-      const generatedSummary = `This is an AI-generated summary of your note about ${
-        content.length > 50 ? content.substring(0, 50) + "..." : content
-      }. 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate summary');
+      }
       
-      The note discusses key points about the topic and provides insights into the matter. It covers various aspects and considerations that might be relevant to your research or documentation.`;
-      
-      setSummary(generatedSummary);
-      toast.success("Summary generated successfully!");
+      const data = await response.json();
+      setSummary(data.summary);
+      toast.success("Financial summary generated successfully!");
     } catch (error) {
       console.error("Error generating summary:", error);
-      toast.error("Failed to generate summary. Please try again.");
+      toast.error("Failed to generate financial summary. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -70,19 +79,19 @@ const AiResume: React.FC<AiResumeProps> = ({ noteId, content }) => {
           {isGenerating ? (
             <>
               <RefreshCcw size={14} className="animate-spin" />
-              Generating...
+              Analyzing...
             </>
           ) : (
             <>
               <Wand2 size={14} />
-              Generate summary
+              Generate financial summary
             </>
           )}
         </Button>
       </div>
       
       {summary ? (
-        <div className="bg-muted p-4 rounded-md relative">
+        <Card className="bg-muted p-4 rounded-md relative">
           <p className="text-sm whitespace-pre-line">{summary}</p>
           <Button
             variant="ghost"
@@ -92,17 +101,17 @@ const AiResume: React.FC<AiResumeProps> = ({ noteId, content }) => {
           >
             {copied ? <CheckCircle size={16} className="text-green-500" /> : <Copy size={16} />}
           </Button>
-        </div>
+        </Card>
       ) : (
         <div className="bg-muted/50 p-4 rounded-md text-center">
           <p className="text-sm text-muted-foreground">
-            Click "Generate summary" to create an AI-powered summary of your note.
+            Click "Generate financial summary" to create an AI-powered analysis of your financial notes.
           </p>
         </div>
       )}
       
       <div className="text-xs text-muted-foreground">
-        <p>The AI summary is generated based on the content of your note and helps you quickly understand the main points.</p>
+        <p>The AI summary analyzes your financial notes to extract key insights, trade recommendations, and important values.</p>
       </div>
     </div>
   );

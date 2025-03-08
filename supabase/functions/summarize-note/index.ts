@@ -45,14 +45,17 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: `You are a helpful assistant that generates very concise summaries. 
+            content: `You are a financial analyst assistant that generates concise summaries. 
                       Keep summaries under ${maxLength} characters.
-                      Focus on the key points and main ideas only.
-                      Use simple language and be direct.
+                      Focus on extracting key financial insights, trade recommendations, asset values, and important conclusions.
+                      Highlight specific numbers, percentages, trends, and actionable trading information when present.
+                      Use professional financial terminology.
+                      Format important values or trades in bold if possible.
+                      Start with the most critical financial information.
                       Do not use introductory phrases like "This note discusses" or "This is about".
-                      If the content is too short or unclear, respond with a blank string.`
+                      If the content is too short, unclear, or contains no financial information, respond with a general summary.`
           },
-          { role: 'user', content: `Summarize this note content: ${cleanContent}` }
+          { role: 'user', content: `Summarize this financial note: ${cleanContent}` }
         ],
       }),
     });

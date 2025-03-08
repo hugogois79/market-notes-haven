@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -234,6 +235,14 @@ const RichTextEditor = ({
         </Button>
       </div>
       
+      {/* AI Resume Section - Placed at the top as requested */}
+      <Card className="p-4 border rounded-md">
+        <AiResume 
+          noteId={noteId || ""}
+          content={content}
+        />
+      </Card>
+      
       {/* Tags and Tokens Section */}
       <div className="flex flex-col md:flex-row gap-4">
         <Card className="p-4 border rounded-md flex-1">
@@ -268,7 +277,6 @@ const RichTextEditor = ({
             <div className="flex items-center justify-between">
               <TabsList className="w-auto h-14">
                 <TabsTrigger value="edit" className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand">Editor</TabsTrigger>
-                <TabsTrigger value="ai-resume" className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand">AI Resume</TabsTrigger>
                 <TabsTrigger value="attachment" className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand">Attachment</TabsTrigger>
               </TabsList>
               
@@ -316,13 +324,6 @@ const RichTextEditor = ({
               setRows={setRows}
               setCols={setCols}
               onCreateTable={handleCreateTable}
-            />
-          </TabsContent>
-          
-          <TabsContent value="ai-resume" className="space-y-4 m-0 p-4">
-            <AiResume 
-              noteId={noteId || ""}
-              content={content}
             />
           </TabsContent>
           
