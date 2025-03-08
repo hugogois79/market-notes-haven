@@ -48,19 +48,25 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
   // Calculate current price and profit when token is selected
   useEffect(() => {
     if (selectedToken && quantity && entryPrice) {
-      // This would be replaced with actual API call in production
-      // For demo purposes, we're just simulating a random current price
-      const parsedEntryPrice = parseFloat(entryPrice);
-      const randomFactor = 0.8 + Math.random() * 0.4; // Random factor between 0.8 and 1.2
-      const simulatedCurrentPrice = parsedEntryPrice * randomFactor;
-      setCurrentPrice(parseFloat(simulatedCurrentPrice.toFixed(2)));
-      
-      // Calculate profit
-      const parsedQuantity = parseFloat(quantity);
-      const investmentValue = parsedEntryPrice * parsedQuantity;
-      const currentValue = simulatedCurrentPrice * parsedQuantity;
-      const calculatedProfit = currentValue - investmentValue;
-      setProfit(parseFloat(calculatedProfit.toFixed(2)));
+      try {
+        // This would be replaced with actual API call in production
+        // For demo purposes, we're just simulating a random current price
+        const parsedEntryPrice = parseFloat(entryPrice);
+        const randomFactor = 0.8 + Math.random() * 0.4; // Random factor between 0.8 and 1.2
+        const simulatedCurrentPrice = parsedEntryPrice * randomFactor;
+        setCurrentPrice(parseFloat(simulatedCurrentPrice.toFixed(2)));
+        
+        // Calculate profit
+        const parsedQuantity = parseFloat(quantity);
+        const investmentValue = parsedEntryPrice * parsedQuantity;
+        const currentValue = simulatedCurrentPrice * parsedQuantity;
+        const calculatedProfit = currentValue - investmentValue;
+        setProfit(parseFloat(calculatedProfit.toFixed(2)));
+      } catch (error) {
+        // Handle parsing errors gracefully
+        setCurrentPrice(null);
+        setProfit(null);
+      }
     } else {
       setCurrentPrice(null);
       setProfit(null);
@@ -81,22 +87,50 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newQuantity = e.target.value;
     setQuantity(newQuantity);
-    updateTradeInfo({
-      tokenId: selectedToken,
-      quantity: newQuantity ? parseFloat(newQuantity) : undefined,
-      entryPrice: entryPrice ? parseFloat(entryPrice) : undefined,
-    });
+    
+    if (newQuantity === "") {
+      // If field is cleared, update with undefined value
+      updateTradeInfo({
+        tokenId: selectedToken,
+        quantity: undefined,
+        entryPrice: entryPrice ? parseFloat(entryPrice) : undefined,
+      });
+    } else {
+      // Only update with numeric value if it's a valid number
+      const numericValue = parseFloat(newQuantity);
+      if (!isNaN(numericValue)) {
+        updateTradeInfo({
+          tokenId: selectedToken,
+          quantity: numericValue,
+          entryPrice: entryPrice ? parseFloat(entryPrice) : undefined,
+        });
+      }
+    }
   };
 
   // Handle entry price change
   const handleEntryPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newEntryPrice = e.target.value;
     setEntryPrice(newEntryPrice);
-    updateTradeInfo({
-      tokenId: selectedToken,
-      quantity: quantity ? parseFloat(quantity) : undefined,
-      entryPrice: newEntryPrice ? parseFloat(newEntryPrice) : undefined,
-    });
+    
+    if (newEntryPrice === "") {
+      // If field is cleared, update with undefined value
+      updateTradeInfo({
+        tokenId: selectedToken,
+        quantity: quantity ? parseFloat(quantity) : undefined,
+        entryPrice: undefined,
+      });
+    } else {
+      // Only update with numeric value if it's a valid number
+      const numericValue = parseFloat(newEntryPrice);
+      if (!isNaN(numericValue)) {
+        updateTradeInfo({
+          tokenId: selectedToken,
+          quantity: quantity ? parseFloat(quantity) : undefined,
+          entryPrice: numericValue,
+        });
+      }
+    }
   };
 
   // Manually extract trade info from note content
