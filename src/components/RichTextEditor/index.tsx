@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -361,13 +360,13 @@ const RichTextEditor = ({
 
 // Helper function to create an HTML table
 const createTable = (rows: number, cols: number) => {
-  let tableHTML = '<table class="border-collapse w-full my-4">';
+  let tableHTML = '<table class="border-collapse w-full my-4" style="min-width: 100%;">';
   
   // Table header
   tableHTML += '<thead>';
   tableHTML += '<tr>';
   for (let i = 0; i < cols; i++) {
-    tableHTML += '<th class="border border-gray-300 px-4 py-2 bg-gray-100">Header ' + (i + 1) + '</th>';
+    tableHTML += '<th class="border border-gray-300 px-4 py-2 bg-gray-100" style="border: 1px solid #d1d5db; padding: 0.5rem 1rem; background-color: #f3f4f6;">Header ' + (i + 1) + '</th>';
   }
   tableHTML += '</tr>';
   tableHTML += '</thead>';
@@ -377,7 +376,7 @@ const createTable = (rows: number, cols: number) => {
   for (let i = 0; i < rows - 1; i++) {
     tableHTML += '<tr>';
     for (let j = 0; j < cols; j++) {
-      tableHTML += '<td class="border border-gray-300 px-4 py-2">Cell ' + (i + 1) + '-' + (j + 1) + '</td>';
+      tableHTML += '<td class="border border-gray-300 px-4 py-2" style="border: 1px solid #d1d5db; padding: 0.5rem 1rem;">Cell ' + (i + 1) + '-' + (j + 1) + '</td>';
     }
     tableHTML += '</tr>';
   }

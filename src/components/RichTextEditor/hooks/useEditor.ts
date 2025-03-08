@@ -63,15 +63,14 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
         cells = Array.from(range.commonAncestorContainer.querySelectorAll('td, th'));
       } else {
         // Check if we're inside a cell
-        let parent: Node | Element = range.commonAncestorContainer;
+        let parent: Node | Element | null = range.commonAncestorContainer;
         while (parent && parent !== editorRef.current) {
           if (parent instanceof Element && (parent.tagName === 'TD' || parent.tagName === 'TH')) {
             cells.push(parent);
             break;
           }
-          const parentElement = parent.parentElement;
-          if (!parentElement) break;
-          parent = parentElement;
+          parent = parent.parentElement;
+          if (!parent) break;
         }
       }
     } else if (range.commonAncestorContainer.parentElement) {
