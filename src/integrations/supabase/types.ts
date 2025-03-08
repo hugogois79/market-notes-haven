@@ -226,6 +226,7 @@ export type Database = {
           summary: string | null
           tags: string[] | null
           title: string
+          trade_info: Json | null
           updated_at: string | null
           user_id: string | null
         }
@@ -238,6 +239,7 @@ export type Database = {
           summary?: string | null
           tags?: string[] | null
           title?: string
+          trade_info?: Json | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -250,6 +252,7 @@ export type Database = {
           summary?: string | null
           tags?: string[] | null
           title?: string
+          trade_info?: Json | null
           updated_at?: string | null
           user_id?: string | null
         }
