@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
 import { Note, Token, Tag } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -22,12 +22,19 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<Partial<Note>>({});
   const [autoSave, setAutoSave] = useState(true);
+  const [localTitle, setLocalTitle] = useState(currentNote.title);
+
+  // Update local title when currentNote changes
+  useEffect(() => {
+    setLocalTitle(currentNote.title);
+  }, [currentNote.title]);
 
   // Handle title change
-  const handleTitleChange = (title: string) => {
+  const handleTitleChange = useCallback((title: string) => {
     console.log("Setting title to:", title);
-    setPendingChanges({ ...pendingChanges, title });
-  };
+    setLocalTitle(title);
+    setPendingChanges(prev => ({ ...prev, title }));
+  }, []);
 
   // Handle content change
   const handleContentChange = (content: string) => {
@@ -116,7 +123,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       </div>
       
       <RichTextEditor 
-        title={currentNote.title}
+        title={localTitle}
         content={currentNote.content}
         category={currentNote.category || "General"}
         onTitleChange={handleTitleChange}

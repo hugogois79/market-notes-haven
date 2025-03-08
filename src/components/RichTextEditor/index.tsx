@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -33,8 +32,8 @@ interface RichTextEditorProps {
   onAttachmentChange?: (url: string | null) => void;
   category: string;
   onCategoryChange: (category: string) => void;
-  onSave?: () => void; // New prop for manual save
-  autoSave?: boolean; // Whether to enable auto-save
+  onSave?: () => void; 
+  autoSave?: boolean;
 }
 
 const RichTextEditor = ({
@@ -188,11 +187,27 @@ const RichTextEditor = ({
     setIsTableDialogOpen(false);
   };
 
+  // Handle title change
+  const handleTitleChange = useCallback((newTitle: string) => {
+    console.log("RichTextEditor received title change:", newTitle);
+    onTitleChange(newTitle);
+    
+    // Trigger auto-save after title change
+    if (autoSave && onSave) {
+      setIsSaving(true);
+      setTimeout(() => {
+        onSave();
+        setLastSaved(new Date());
+        setIsSaving(false);
+      }, 500);
+    }
+  }, [autoSave, onSave, onTitleChange]);
+
   return (
     <div className="flex flex-col gap-4 mt-2">
       <EditorHeader 
         title={title} 
-        onTitleChange={onTitleChange}
+        onTitleChange={handleTitleChange}
         category={category}
         onCategoryChange={onCategoryChange}
       />

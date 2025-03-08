@@ -28,6 +28,7 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
   // Create a separate handler for title changes to ensure events are processed correctly
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log("Title changed to:", e.target.value);
+    // Ensure the value is passed directly to the parent component
     onTitleChange(e.target.value);
   };
 
@@ -46,6 +47,7 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
             onChange={handleTitleChange}
             placeholder="Note title"
             className="text-lg font-medium"
+            autoFocus
           />
         </div>
       )}
