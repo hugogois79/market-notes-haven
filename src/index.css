@@ -163,4 +163,24 @@
   .btn-brand {
     @apply bg-[#1EAEDB] text-white hover:bg-[#1EAEDB]/90;
   }
+  
+  /* Sticky toolbar */
+  .sticky-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(5px);
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+/* Editor content container with proper padding for fixed toolbar */
+.editor-content-container {
+  position: relative;
+}
+
+/* Make sure the toolbar sticks properly within the tab content */
+[role="tabpanel"] {
+  overflow: visible !important;
 }

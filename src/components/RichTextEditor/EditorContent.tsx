@@ -1,3 +1,4 @@
+
 import { useEffect, RefObject, useCallback } from "react";
 
 interface EditorContentProps {
@@ -65,7 +66,9 @@ const EditorContent = ({
         lineHeight: '1.5',
         // Add these styles to better handle tables
         overflowX: 'auto',
-        whiteSpace: 'normal'
+        whiteSpace: 'normal',
+        // Add top padding to compensate for the fixed toolbar
+        paddingTop: "calc(1rem + 38px)"
       }}
       data-placeholder="Start writing..."
     >

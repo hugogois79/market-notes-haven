@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -15,7 +16,6 @@ import {
   Text,
   SeparatorVertical
 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 
 export interface FormattingToolbarProps {
   execCommand: (command: string, value?: string) => void;
@@ -31,7 +31,7 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
   insertVerticalSeparator
 }) => {
   return (
-    <div className="flex items-center flex-wrap gap-1 p-2 bg-muted/30 rounded-md mx-2 my-2">
+    <div className="flex items-center flex-wrap gap-1 p-2 bg-muted/60 rounded-t-md mx-2 my-2 sticky top-0 z-10 backdrop-blur-sm shadow-sm border-b">
       {/* Heading format options */}
       <Button
         type="button"
