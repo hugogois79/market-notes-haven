@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.8.0';
@@ -19,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    const { content, noteId, maxLength = 150 } = await req.json();
+    const { content, noteId, maxLength = 150, generateTradeInfo = false } = await req.json();
     
     if (!content || content.trim() === '') {
       return new Response(
@@ -37,6 +36,38 @@ serve(async (req) => {
       throw new Error('OpenAI API key is missing. Please set the OPENAI_API_KEY environment variable.');
     }
     
+    // Build system prompt based on request
+    let systemPrompt = `You are a financial analyst assistant that generates concise summaries. 
+                  Keep summaries under ${maxLength} characters.
+                  Focus on extracting key financial insights, trade recommendations, asset values, and important conclusions.
+                  Highlight specific numbers, percentages, trends, and actionable trading information when present.
+                  Use professional financial terminology.
+                  Format important values, names, tokens, percentages, and trade recommendations by enclosing them in double asterisks, like **this**.
+                  Example: "**Token XYZ** price increased by **25%** with a recommendation to **buy** at **$100**."
+                  Start with the most critical financial information.
+                  Do not use introductory phrases like "This note discusses" or "This is about".
+                  If the content is too short, unclear, or contains no financial information, respond with a general summary.`;
+    
+    // Add trade info extraction if requested
+    if (generateTradeInfo) {
+      systemPrompt += `
+
+      Additionally, identify important trading information like:
+      1. The specific cryptocurrency token/coin being traded (e.g. Bitcoin, Ethereum, BNB)
+      2. The quantity or position size mentioned 
+      3. Entry price in USD
+      
+      Format your response as JSON with "summary" and "tradeInfo" fields:
+      {
+        "summary": "your summary here",
+        "tradeInfo": {
+          "token": "token name if found or null",
+          "quantity": number or null,
+          "entryPrice": number in USD or null
+        }
+      }`;
+    }
+    
     // Make the request to OpenAI API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -49,16 +80,7 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: `You are a financial analyst assistant that generates concise summaries. 
-                      Keep summaries under ${maxLength} characters.
-                      Focus on extracting key financial insights, trade recommendations, asset values, and important conclusions.
-                      Highlight specific numbers, percentages, trends, and actionable trading information when present.
-                      Use professional financial terminology.
-                      Format important values, names, tokens, percentages, and trade recommendations by enclosing them in double asterisks, like **this**.
-                      Example: "**Token XYZ** price increased by **25%** with a recommendation to **buy** at **$100**."
-                      Start with the most critical financial information.
-                      Do not use introductory phrases like "This note discusses" or "This is about".
-                      If the content is too short, unclear, or contains no financial information, respond with a general summary.`
+            content: systemPrompt
           },
           { role: 'user', content: `Summarize this financial note: ${cleanContent}` }
         ],
@@ -74,16 +96,36 @@ serve(async (req) => {
       throw new Error(data.error?.message || 'Failed to generate summary');
     }
     
-    const summary = data.choices[0].message.content.trim();
+    let summary = data.choices[0].message.content.trim();
+    let tradeInfo = null;
+
+    // Try to parse JSON if that's the response format (when generating trade info)
+    if (generateTradeInfo && summary.startsWith('{') && summary.endsWith('}')) {
+      try {
+        const parsedResponse = JSON.parse(summary);
+        summary = parsedResponse.summary;
+        tradeInfo = parsedResponse.tradeInfo;
+      } catch (e) {
+        console.error('Error parsing JSON from OpenAI:', e);
+        // Keep the summary as is if parsing fails
+      }
+    }
 
     // If noteId is provided, save the summary to the database
     if (noteId) {
       try {
         const supabase = createClient(supabaseUrl, supabaseAnonKey);
         
+        const updateData: any = { summary };
+        
+        // Add trade_info if we have it
+        if (tradeInfo) {
+          updateData.trade_info = tradeInfo;
+        }
+        
         const { error: updateError } = await supabase
           .from('notes')
-          .update({ summary })
+          .update(updateData)
           .eq('id', noteId);
           
         if (updateError) {
@@ -99,7 +141,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ summary }),
+      JSON.stringify({ summary, tradeInfo }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

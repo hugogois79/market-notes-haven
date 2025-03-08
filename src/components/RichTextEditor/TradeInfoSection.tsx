@@ -17,6 +17,7 @@ interface TradeInfoSectionProps {
   isLoadingTokens: boolean;
   tradeInfo?: TradeInfo;
   onTradeInfoChange?: (tradeInfo: TradeInfo) => void;
+  noteContent?: string;
 }
 
 const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
@@ -24,6 +25,7 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
   isLoadingTokens,
   tradeInfo,
   onTradeInfoChange = () => {},
+  noteContent,
 }) => {
   const [selectedToken, setSelectedToken] = useState<string>(tradeInfo?.tokenId || "");
   const [quantity, setQuantity] = useState<string>(tradeInfo?.quantity?.toString() || "");

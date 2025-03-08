@@ -7,6 +7,7 @@ interface EditorContentProps {
   initialContent: string;
   onAutoSave?: () => void; // Auto-save functionality still available but optional
   autoSaveDelay?: number; // Delay in milliseconds before triggering auto-save
+  onContentUpdate?: (content: string) => void; // Callback for content changes
 }
 
 const EditorContent = ({ 
@@ -14,7 +15,8 @@ const EditorContent = ({
   handleContentChange, 
   initialContent,
   onAutoSave,
-  autoSaveDelay = 3000 // Default to 3 seconds
+  autoSaveDelay = 3000, // Default to 3 seconds
+  onContentUpdate,
 }: EditorContentProps) => {
   // Set initial content when the component mounts
   useEffect(() => {
@@ -52,6 +54,12 @@ const EditorContent = ({
   // Setup input handler - still tracks changes but doesn't auto-save
   const handleInput = () => {
     handleContentChange();
+    
+    // Notify parent component about content change
+    if (onContentUpdate && editorRef.current) {
+      onContentUpdate(editorRef.current.innerHTML);
+    }
+    
     debouncedAutoSave(); // This will only trigger autosave if it's enabled
   };
 

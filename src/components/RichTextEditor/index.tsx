@@ -18,6 +18,7 @@ import { fetchTokens } from "@/services/tokenService";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import TradeInfoSection from "./TradeInfoSection";
+import { extractTradeInfo } from "@/utils/tradeInfoExtractor";
 
 interface RichTextEditorProps {
   title: string;
@@ -74,6 +75,7 @@ const RichTextEditor = ({
   const [rows, setRows] = useState(3);
   const [cols, setCols] = useState(3);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [currentContent, setCurrentContent] = useState(content);
   const { execCommand, formatTableCells, insertVerticalSeparator } = useEditor(editorRef);
 
   // Fetch available tags
@@ -87,6 +89,35 @@ const RichTextEditor = ({
     queryKey: ['tokens'],
     queryFn: fetchTokens,
   });
+
+  // Extract trade info when content changes
+  useEffect(() => {
+    // Only process for trading categories
+    if ((category === "Trading" || category === "Pair Trading") && availableTokens.length > 0) {
+      const extractedInfo = extractTradeInfo(currentContent, availableTokens);
+      
+      // Only update if we found something and it's different from current tradeInfo
+      if (
+        (extractedInfo.tokenId && extractedInfo.tokenId !== tradeInfo?.tokenId) ||
+        (extractedInfo.quantity && extractedInfo.quantity !== tradeInfo?.quantity) ||
+        (extractedInfo.entryPrice && extractedInfo.entryPrice !== tradeInfo?.entryPrice)
+      ) {
+        // Merge with existing trade info to avoid overwriting fields that weren't found
+        const mergedInfo: TradeInfo = {
+          tokenId: extractedInfo.tokenId || tradeInfo?.tokenId,
+          quantity: extractedInfo.quantity || tradeInfo?.quantity,
+          entryPrice: extractedInfo.entryPrice || tradeInfo?.entryPrice
+        };
+        
+        onTradeInfoChange(mergedInfo);
+      }
+    }
+  }, [currentContent, category, availableTokens, tradeInfo, onTradeInfoChange]);
+
+  // Handle content updates from editor
+  const handleContentUpdate = useCallback((newContent: string) => {
+    setCurrentContent(newContent);
+  }, []);
 
   // Handle autosave
   const handleAutoSave = useCallback(() => {
@@ -104,7 +135,15 @@ const RichTextEditor = ({
     }
   };
 
-  // Function to handle adding a new tag
+  // Handle content change
+  const handleContentChange = () => {
+    if (editorRef.current) {
+      const newContent = editorRef.current.innerHTML;
+      setCurrentContent(newContent);
+      onContentChange(newContent);
+    }
+  };
+
   const handleAddTag = async () => {
     if (!tagInput.trim()) return;
     
@@ -201,12 +240,6 @@ const RichTextEditor = ({
     );
   };
 
-  const handleContentChange = () => {
-    if (editorRef.current) {
-      onContentChange(editorRef.current.innerHTML);
-    }
-  };
-
   const handleCreateTable = () => {
     execCommand('insertHTML', createTable(rows, cols));
     setIsTableDialogOpen(false);
@@ -277,7 +310,7 @@ const RichTextEditor = ({
       <Card className="p-4 border rounded-md">
         <AiResume 
           noteId={noteId || ""}
-          content={content}
+          content={currentContent}
           initialSummary={summary}
           onSummaryGenerated={onSummaryGenerated}
         />
@@ -290,7 +323,8 @@ const RichTextEditor = ({
             availableTokens={availableTokens}
             isLoadingTokens={isLoadingTokens}
             tradeInfo={tradeInfo}
-            onTradeInfoChange={handleTradeInfoChange}
+            onTradeInfoChange={onTradeInfoChange}
+            noteContent={currentContent}
           />
         </Card>
       )}
@@ -367,6 +401,7 @@ const RichTextEditor = ({
               initialContent={content}
               onAutoSave={handleAutoSave}
               autoSaveDelay={2000}
+              onContentUpdate={handleContentUpdate}
             />
             
             <TableDialog 
