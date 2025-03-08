@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Note, Token, Tag } from "@/types";
 import { getTokensForNote } from "@/services/tokenService";
-import { fetchTags } from "@/services/tagService";
+import { fetchTags, getTagsForNote } from "@/services/tagService";
 import { useParams, useNavigate } from "react-router-dom";
 
 interface UseNoteDataProps {
@@ -24,7 +24,6 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
   // Effect to load tokens and tags
   useEffect(() => {
     const loadTokensAndTags = async () => {
-      setIsLoadingTokens(true);
       setIsLoadingTags(true);
       
       try {
@@ -35,7 +34,6 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
         console.error("Error loading tags:", error);
       } finally {
         setIsLoadingTags(false);
-        setIsLoadingTokens(false);
       }
     };
     
@@ -87,6 +85,28 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
         };
         
         fetchLinkedTokens();
+        
+        // Fetch linked tags if the ID is not a temp ID
+        if (!foundNote.id.startsWith('temp-')) {
+          const fetchTagsForNote = async () => {
+            try {
+              setIsLoadingTags(true);
+              const noteTags = await getTagsForNote(foundNote.id);
+              
+              // Update the foundNote.tags to match what's in the database
+              if (noteTags.length > 0) {
+                foundNote.tags = noteTags.map(tag => tag.id);
+                setCurrentNote({...foundNote});
+              }
+            } catch (error) {
+              console.error("Error fetching tags for note:", error);
+            } finally {
+              setIsLoadingTags(false);
+            }
+          };
+          
+          fetchTagsForNote();
+        }
       } else {
         // Note not found, redirect to notes list
         toast.error("Note not found");
@@ -130,6 +150,14 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
       });
     }
     
+    // If tags are included, update the current note immediately
+    if (updatedFields.tags !== undefined) {
+      setCurrentNote(prevNote => {
+        if (!prevNote) return updatedNote;
+        return { ...prevNote, tags: updatedFields.tags || [] };
+      });
+    }
+    
     const savedNote = await onSaveNote(updatedNote);
     
     if (savedNote) {
@@ -143,7 +171,8 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
       }
       
       setCurrentNote(savedNote);
-      toast.success("Note saved successfully");
+      
+      // No need to show toast here as it will be handled by the caller
     } else {
       console.error('Failed to save note');
       toast.error("Failed to save note");

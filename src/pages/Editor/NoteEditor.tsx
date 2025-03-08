@@ -3,6 +3,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
 import { Note, Token, Tag } from "@/types";
 import { toast } from "sonner";
+import { linkTagToNote, unlinkTagFromNote } from "@/services/tagService";
 
 interface NoteEditorProps {
   currentNote: Note;
@@ -22,12 +23,16 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   const [autoSave, setAutoSave] = useState(true);
   const [localTitle, setLocalTitle] = useState(currentNote.title);
   const [localCategory, setLocalCategory] = useState(currentNote.category || "General");
+  const [linkedTags, setLinkedTags] = useState<Tag[]>([]);
 
   // Update local state when currentNote changes
   useEffect(() => {
     setLocalTitle(currentNote.title);
     setLocalCategory(currentNote.category || "General");
-  }, [currentNote.title, currentNote.category]);
+    
+    // Convert tag IDs to tag objects
+    setLinkedTags(getTagObjects());
+  }, [currentNote]);
 
   // Handle title change
   const handleTitleChange = useCallback((title: string) => {
@@ -55,8 +60,41 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   };
 
   // Handle tag changes
-  const handleTagsChange = (tags: Tag[]) => {
-    setPendingChanges({ ...pendingChanges, tags: tags.map(t => typeof t === 'string' ? t : t.id) });
+  const handleTagsChange = async (tags: Tag[]) => {
+    console.log("Tag changed:", tags);
+    setLinkedTags(tags);
+    
+    if (currentNote.id && !currentNote.id.startsWith('temp-')) {
+      const currentTagIds = currentNote.tags || [];
+      const newTagIds = tags.map(tag => tag.id);
+      
+      // Find tags to add (in newTagIds but not in currentTagIds)
+      const tagsToAdd = newTagIds.filter(id => !currentTagIds.includes(id));
+      
+      // Find tags to remove (in currentTagIds but not in newTagIds)
+      const tagsToRemove = currentTagIds.filter(id => !newTagIds.includes(id));
+      
+      // Link new tags
+      for (const tagId of tagsToAdd) {
+        try {
+          await linkTagToNote(currentNote.id, tagId);
+        } catch (error) {
+          console.error(`Error linking tag ${tagId}:`, error);
+        }
+      }
+      
+      // Unlink removed tags
+      for (const tagId of tagsToRemove) {
+        try {
+          await unlinkTagFromNote(currentNote.id, tagId);
+        } catch (error) {
+          console.error(`Error unlinking tag ${tagId}:`, error);
+        }
+      }
+    }
+    
+    // Update pending changes with the new tag IDs
+    setPendingChanges({ ...pendingChanges, tags: tags.map(tag => tag.id) });
   };
 
   // Handle token changes
@@ -105,7 +143,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
 
   // Convert tag IDs to tag objects
   const getTagObjects = () => {
-    return currentNote.tags.map(tagId => {
+    return (currentNote.tags || []).map(tagId => {
       const foundTag = allTags.find(t => t.id === tagId);
       return foundTag || { id: tagId, name: tagId };
     });
@@ -120,7 +158,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         onTitleChange={handleTitleChange}
         onContentChange={handleContentChange}
         onCategoryChange={handleCategoryChange}
-        linkedTags={getTagObjects()}
+        linkedTags={linkedTags}
         onTagsChange={handleTagsChange}
         linkedTokens={linkedTokens}
         onTokensChange={handleTokensChange}

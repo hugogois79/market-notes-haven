@@ -14,7 +14,7 @@ import { useEditor } from "./hooks/useEditor";
 import { Tag, Token, Note } from "@/types";
 import AiResume from "./AiResume";
 import { useQuery } from "@tanstack/react-query";
-import { fetchTags } from "@/services/tagService";
+import { fetchTags, createTag } from "@/services/tagService";
 import { fetchTokens } from "@/services/tokenService";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -68,7 +68,7 @@ const RichTextEditor = ({
   const { execCommand, formatTableCells } = useEditor(editorRef);
 
   // Fetch available tags
-  const { data: availableTags = [], isLoading: isLoadingTags } = useQuery({
+  const { data: availableTags = [], isLoading: isLoadingTags, refetch: refetchTags } = useQuery({
     queryKey: ['tags'],
     queryFn: fetchTags,
   });
@@ -100,28 +100,41 @@ const RichTextEditor = ({
     if (!tagInput.trim()) return;
     
     const tagName = tagInput.trim();
-    // Fix type checking to handle the never type issue
-    const tagExists = linkedTags.some((tag: any) => {
-      if (typeof tag === 'string') {
-        return tag.toLowerCase() === tagName.toLowerCase();
-      } 
-      
-      if (tag && typeof tag === 'object' && 'name' in tag) {
-        return tag.name.toLowerCase() === tagName.toLowerCase();
-      }
-      
-      return false;
-    });
+    
+    // Check if the tag already exists in linkedTags
+    const tagExists = linkedTags.some((tag) => 
+      typeof tag === 'string' 
+        ? tag === tagName 
+        : tag.name.toLowerCase() === tagName.toLowerCase()
+    );
     
     if (!tagExists) {
-      // For simplicity, we're creating a new tag object here
-      // In a real application, you might want to save this to a database
-      const newTag: Tag = {
-        id: Date.now().toString(),
-        name: tagName
-      };
-      
-      onTagsChange([...linkedTags, newTag]);
+      try {
+        // First check if tag exists in available tags
+        const existingTag = availableTags.find(
+          tag => tag.name.toLowerCase() === tagName.toLowerCase()
+        );
+        
+        if (existingTag) {
+          // If tag exists, use it
+          onTagsChange([...linkedTags, existingTag]);
+        } else {
+          // If tag doesn't exist, create a new one in the database
+          const newTag = await createTag(tagName);
+          if (newTag) {
+            onTagsChange([...linkedTags, newTag]);
+            // Refresh the tags list
+            refetchTags();
+          } else {
+            toast.error("Failed to create tag");
+          }
+        }
+      } catch (error) {
+        console.error("Error adding tag:", error);
+        toast.error("Failed to add tag");
+      }
+    } else {
+      toast.info("Tag already added to this note");
     }
     
     setTagInput("");
@@ -145,6 +158,8 @@ const RichTextEditor = ({
     
     if (!tagExists) {
       onTagsChange([...linkedTags, tag]);
+    } else {
+      toast.info("Tag already added to this note");
     }
     
     setTagInput("");
@@ -156,7 +171,12 @@ const RichTextEditor = ({
     if (tokenId && availableTokens.length > 0) {
       const token = availableTokens.find(t => t.id === tokenId);
       if (token) {
-        onTokensChange([...linkedTokens, token]);
+        const tokenExists = linkedTokens.some(t => t.id === token.id);
+        if (!tokenExists) {
+          onTokensChange([...linkedTokens, token]);
+        } else {
+          toast.info("Token already linked to this note");
+        }
       }
     }
   };
