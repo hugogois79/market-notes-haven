@@ -2,8 +2,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
 import { Note, Token, Tag } from "@/types";
-import { Button } from "@/components/ui/button";
-import { Save } from "lucide-react";
 import { toast } from "sonner";
 
 interface NoteEditorProps {
@@ -61,16 +59,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     setPendingChanges({ ...pendingChanges, attachment_url: url || undefined });
   };
 
-  // Handle save button click (manual save)
-  const handleSaveClick = async () => {
-    if (Object.keys(pendingChanges).length === 0) {
-      toast.info("No changes to save");
-      return;
-    }
-    
-    await saveChanges();
-  };
-
   // Auto-save function that can be called automatically 
   const handleAutoSave = useCallback(async () => {
     if (Object.keys(pendingChanges).length === 0) {
@@ -110,18 +98,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
 
   return (
     <div className="flex-1">
-      <div className="flex justify-end mb-4">
-        <Button 
-          onClick={handleSaveClick} 
-          disabled={isSaving || Object.keys(pendingChanges).length === 0}
-          className="gap-2"
-          variant="brand"
-        >
-          <Save size={16} />
-          {isSaving ? "Saving..." : "Save Changes"}
-        </Button>
-      </div>
-      
       <RichTextEditor 
         title={localTitle}
         content={currentNote.content}
@@ -138,6 +114,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         onAttachmentChange={handleAttachmentChange}
         onSave={handleAutoSave}
         autoSave={autoSave}
+        isSaving={isSaving}
+        manualSave={() => saveChanges(false)}
       />
     </div>
   );

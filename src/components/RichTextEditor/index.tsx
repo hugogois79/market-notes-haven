@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,6 +34,8 @@ interface RichTextEditorProps {
   onCategoryChange: (category: string) => void;
   onSave?: () => void; 
   autoSave?: boolean;
+  isSaving?: boolean;
+  manualSave?: () => void;
 }
 
 const RichTextEditor = ({
@@ -53,6 +54,8 @@ const RichTextEditor = ({
   onCategoryChange,
   onSave,
   autoSave = true,
+  isSaving = false,
+  manualSave,
 }: RichTextEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
@@ -60,7 +63,6 @@ const RichTextEditor = ({
   const [tagInput, setTagInput] = useState("");
   const [rows, setRows] = useState(3);
   const [cols, setCols] = useState(3);
-  const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const { execCommand, formatTableCells } = useEditor(editorRef);
 
@@ -79,21 +81,16 @@ const RichTextEditor = ({
   // Handle autosave
   const handleAutoSave = useCallback(() => {
     if (autoSave && onSave) {
-      setIsSaving(true);
       onSave();
       setLastSaved(new Date());
-      setTimeout(() => setIsSaving(false), 1000); // Show saving indicator for 1 second
     }
   }, [autoSave, onSave]);
 
   // Manual save function
   const handleManualSave = () => {
-    if (onSave) {
-      setIsSaving(true);
-      onSave();
-      toast.success("Note saved successfully");
+    if (manualSave) {
+      manualSave();
       setLastSaved(new Date());
-      setTimeout(() => setIsSaving(false), 1000);
     }
   };
 
