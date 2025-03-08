@@ -4,6 +4,7 @@ import RichTextEditor from "@/components/RichTextEditor";
 import { Note, Token, Tag } from "@/types";
 import { toast } from "sonner";
 import { linkTagToNote, unlinkTagFromNote } from "@/services/tagService";
+import { linkTokenToNote, unlinkTokenFromNote } from "@/services/tokenService";
 
 interface NoteEditorProps {
   currentNote: Note;
@@ -24,15 +25,17 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   const [localTitle, setLocalTitle] = useState(currentNote.title);
   const [localCategory, setLocalCategory] = useState(currentNote.category || "General");
   const [linkedTags, setLinkedTags] = useState<Tag[]>([]);
+  const [localLinkedTokens, setLocalLinkedTokens] = useState<Token[]>(linkedTokens);
 
   // Update local state when currentNote changes
   useEffect(() => {
     setLocalTitle(currentNote.title);
     setLocalCategory(currentNote.category || "General");
+    setLocalLinkedTokens(linkedTokens);
     
     // Convert tag IDs to tag objects
     setLinkedTags(getTagObjects());
-  }, [currentNote, allTags]);
+  }, [currentNote, allTags, linkedTokens]);
 
   // Handle title change
   const handleTitleChange = useCallback((title: string) => {
@@ -98,7 +101,45 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   };
 
   // Handle token changes
-  const handleTokensChange = (tokens: Token[]) => {
+  const handleTokensChange = async (tokens: Token[]) => {
+    console.log("Tokens changed:", tokens);
+    setLocalLinkedTokens(tokens);
+    
+    if (currentNote.id && !currentNote.id.startsWith('temp-')) {
+      const currentTokenIds = linkedTokens.map(token => token.id);
+      const newTokenIds = tokens.map(token => token.id);
+      
+      // Find tokens to add (in newTokenIds but not in currentTokenIds)
+      const tokensToAdd = newTokenIds.filter(id => !currentTokenIds.includes(id));
+      
+      // Find tokens to remove (in currentTokenIds but not in newTokenIds)
+      const tokensToRemove = currentTokenIds.filter(id => !newTokenIds.includes(id));
+      
+      // Link new tokens
+      for (const tokenId of tokensToAdd) {
+        try {
+          const success = await linkTokenToNote(currentNote.id, tokenId);
+          if (!success) {
+            toast.error(`Failed to link token: ${tokenId}`);
+          }
+        } catch (error) {
+          console.error(`Error linking token ${tokenId}:`, error);
+        }
+      }
+      
+      // Unlink removed tokens
+      for (const tokenId of tokensToRemove) {
+        try {
+          const success = await unlinkTokenFromNote(currentNote.id, tokenId);
+          if (!success) {
+            toast.error(`Failed to unlink token: ${tokenId}`);
+          }
+        } catch (error) {
+          console.error(`Error unlinking token ${tokenId}:`, error);
+        }
+      }
+    }
+    
     setPendingChanges({ ...pendingChanges, tokens });
   };
 
@@ -164,7 +205,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         onCategoryChange={handleCategoryChange}
         linkedTags={linkedTags}
         onTagsChange={handleTagsChange}
-        linkedTokens={linkedTokens}
+        linkedTokens={localLinkedTokens}
         onTokensChange={handleTokensChange}
         noteId={currentNote.id}
         attachment_url={currentNote.attachment_url}

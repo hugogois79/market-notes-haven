@@ -32,6 +32,25 @@ const TokenSection: React.FC<TokenSectionProps> = ({
     queryFn: fetchTokens,
   });
   
+  const handleSelectToken = (tokenId: string) => {
+    handleTokenSelect(tokenId);
+    
+    // Manually reset the select input by forcing a re-render with a key
+    const selectElement = document.querySelector('.token-select') as HTMLElement;
+    if (selectElement) {
+      // Force blur to close the dropdown
+      const selectTrigger = selectElement.querySelector('[data-radix-select-trigger]') as HTMLElement;
+      if (selectTrigger) {
+        selectTrigger.blur();
+      }
+    }
+  };
+  
+  // Filter out tokens that are already selected
+  const availableTokens = tokens.filter(token => 
+    !selectedTokens.some(selectedToken => selectedToken.id === token.id)
+  );
+  
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
@@ -49,23 +68,26 @@ const TokenSection: React.FC<TokenSectionProps> = ({
           </Badge>
         ))}
         
-        <Select onValueChange={handleTokenSelect} disabled={isLoadingTokens}>
+        <Select 
+          onValueChange={handleSelectToken} 
+          disabled={isLoadingTokens || availableTokens.length === 0}
+          value=""
+          className="token-select"
+        >
           <SelectTrigger className="w-[180px] h-8">
             <SelectValue placeholder="Link token..." />
           </SelectTrigger>
           <SelectContent>
             {isLoadingTokens ? (
               <SelectItem value="loading" disabled>Loading tokens...</SelectItem>
-            ) : tokens.length === 0 ? (
-              <SelectItem value="none" disabled>No tokens available</SelectItem>
+            ) : availableTokens.length === 0 ? (
+              <SelectItem value="none" disabled>No more tokens available</SelectItem>
             ) : (
-              tokens
-                .filter(token => !selectedTokens.some(t => t.id === token.id))
-                .map(token => (
-                  <SelectItem key={token.id} value={token.id}>
-                    {token.symbol} - {token.name}
-                  </SelectItem>
-                ))
+              availableTokens.map(token => (
+                <SelectItem key={token.id} value={token.id}>
+                  {token.symbol} - {token.name}
+                </SelectItem>
+              ))
             )}
           </SelectContent>
         </Select>
