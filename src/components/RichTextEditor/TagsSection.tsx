@@ -3,7 +3,7 @@ import React, { Dispatch, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tag } from "@/types";
-import { Loader, Plus, X } from "lucide-react";
+import { Loader, Plus, X, Tags } from "lucide-react";
 
 export interface TagsSectionProps {
   linkedTags: Tag[];
@@ -30,17 +30,21 @@ const TagsSection: React.FC<TagsSectionProps> = ({
 
   return (
     <div className="space-y-2">
-      <div className="text-sm font-medium">Tags</div>
+      <div className="text-sm font-medium flex items-center gap-1">
+        <Tags size={16} className="text-[#1EAEDB]" />
+        Tags
+      </div>
       <div className="flex flex-wrap gap-2 mb-2">
         {linkedTags.map((tag) => (
           <div
-            key={typeof tag === "string" ? tag : tag.id}
+            key={tag.id}
             className="bg-[#0A3A5C] hover:bg-[#0A3A5C]/80 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1"
           >
-            <span>{typeof tag === "string" ? tag : tag.name}</span>
+            <span>{tag.name}</span>
             <button
               onClick={() => handleRemoveTag(tag)}
               className="text-white/70 hover:text-white"
+              aria-label={`Remove tag ${tag.name}`}
             >
               <X size={12} />
             </button>

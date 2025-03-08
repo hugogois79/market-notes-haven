@@ -29,6 +29,7 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
       try {
         // Fetch tags
         const tags = await fetchTags();
+        console.log("Loaded tags:", tags);
         setAllTags(tags);
       } catch (error) {
         console.error("Error loading tags:", error);
@@ -92,6 +93,7 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
             try {
               setIsLoadingTags(true);
               const noteTags = await getTagsForNote(foundNote.id);
+              console.log("Fetched tags for note:", noteTags);
               
               // Update the foundNote.tags to match what's in the database
               if (noteTags.length > 0) {
