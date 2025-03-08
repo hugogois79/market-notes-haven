@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { getTokensForNote } from "@/services/tokenService";
 import TokenBadge from "./TokenBadge";
+import { fetchTags } from "@/services/tagService";
 
 interface NoteCardProps {
   note: Note;
@@ -17,6 +18,7 @@ interface NoteCardProps {
 const NoteCard = ({ note, className }: NoteCardProps) => {
   const navigate = useNavigate();
   const [tokens, setTokens] = useState<Token[]>([]);
+  const [tagNameMap, setTagNameMap] = useState<Record<string, string>>({});
   
   useEffect(() => {
     const fetchTokens = async () => {
@@ -25,7 +27,28 @@ const NoteCard = ({ note, className }: NoteCardProps) => {
     };
     
     fetchTokens();
+    
+    // Fetch tags to map IDs to names
+    const loadTags = async () => {
+      try {
+        const tags = await fetchTags();
+        const tagMap: Record<string, string> = {};
+        tags.forEach(tag => {
+          tagMap[tag.id] = tag.name;
+        });
+        setTagNameMap(tagMap);
+      } catch (error) {
+        console.error("Error loading tag mapping:", error);
+      }
+    };
+    
+    loadTags();
   }, [note.id]);
+  
+  // Helper to get tag name from ID
+  const getTagName = (tagId: string) => {
+    return tagNameMap[tagId] || tagId;
+  };
   
   // Format date to be more readable
   const formatDate = (date: Date) => {
@@ -91,9 +114,9 @@ const NoteCard = ({ note, className }: NoteCardProps) => {
           <div className="flex items-center gap-1.5">
             <Tag size={14} className="text-muted-foreground" />
             <div className="flex gap-1.5">
-              {note.tags.slice(0, 2).map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-xs py-0 px-1.5">
-                  {tag}
+              {note.tags.slice(0, 2).map((tagId) => (
+                <Badge key={tagId} variant="secondary" className="text-xs py-0 px-1.5">
+                  {getTagName(tagId)}
                 </Badge>
               ))}
               {note.tags.length > 2 && (

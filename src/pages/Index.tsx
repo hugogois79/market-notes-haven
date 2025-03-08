@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { FileText, Plus, Bookmark, FolderOpen, Clock, Rocket, Loader, Search, Table, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { fetchTags } from "@/services/tagService";
 
 interface IndexProps {
   notes: Note[];
@@ -27,6 +27,25 @@ const Index = ({ notes, loading = false }: IndexProps) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [categories, setCategories] = useState<{name: string, count: number}[]>([]);
+  const [tagNameMap, setTagNameMap] = useState<Record<string, string>>({});
+  
+  // Load tags to map IDs to names
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        const tags = await fetchTags();
+        const tagMap: Record<string, string> = {};
+        tags.forEach(tag => {
+          tagMap[tag.id] = tag.name;
+        });
+        setTagNameMap(tagMap);
+      } catch (error) {
+        console.error("Error loading tag mapping:", error);
+      }
+    };
+    
+    loadTags();
+  }, []);
   
   // Extract categories from notes
   useEffect(() => {
@@ -57,7 +76,10 @@ const Index = ({ notes, loading = false }: IndexProps) => {
       note.category === selectedCategory;
     
     const matchesTag = selectedTag === null || 
-      note.tags.includes(selectedTag);
+      note.tags.some(tagId => 
+        // Either match the tag ID or the tag name
+        tagId === selectedTag || tagNameMap[tagId] === selectedTag
+      );
     
     return matchesSearch && matchesCategory && matchesTag;
   });
@@ -106,18 +128,18 @@ const Index = ({ notes, loading = false }: IndexProps) => {
   };
 
   // Handle tag click to filter by tag
-  const handleTagClick = (tag: string, event: React.MouseEvent) => {
+  const handleTagClick = (tagId: string, tagName: string, event: React.MouseEvent) => {
     // Stop propagation to prevent note click handler from firing
     event.stopPropagation();
     
-    console.log("Selected tag:", tag);
-    if (selectedTag === tag) {
+    console.log("Selected tag:", tagName);
+    if (selectedTag === tagId || selectedTag === tagName) {
       // If clicking the same tag, clear the filter
       setSelectedTag(null);
       toast.info("Cleared tag filter");
     } else {
-      setSelectedTag(tag);
-      toast.info(`Filtering notes with tag: ${tag}`);
+      setSelectedTag(tagName);
+      toast.info(`Filtering notes with tag: ${tagName}`);
     }
   };
 
@@ -147,6 +169,11 @@ const Index = ({ notes, loading = false }: IndexProps) => {
     tempDiv.innerHTML = htmlContent;
     const textContent = tempDiv.textContent || tempDiv.innerText || "";
     return textContent.substring(0, 100) + (textContent.length > 100 ? "..." : "");
+  };
+
+  // Helper to get tag name from ID
+  const getTagName = (tagId: string) => {
+    return tagNameMap[tagId] || tagId;
   };
 
   return (
@@ -286,14 +313,14 @@ const Index = ({ notes, loading = false }: IndexProps) => {
                     <TableCell>
                       {note.tags.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
-                          {note.tags.slice(0, 2).map((tag) => (
+                          {note.tags.slice(0, 2).map((tagId) => (
                             <Badge 
-                              key={tag} 
+                              key={tagId} 
                               variant="secondary" 
                               className="text-xs py-0 px-1.5 cursor-pointer hover:bg-secondary/80"
-                              onClick={(e) => handleTagClick(tag, e)}
+                              onClick={(e) => handleTagClick(tagId, getTagName(tagId), e)}
                             >
-                              {tag}
+                              {getTagName(tagId)}
                             </Badge>
                           ))}
                           {note.tags.length > 2 && (
