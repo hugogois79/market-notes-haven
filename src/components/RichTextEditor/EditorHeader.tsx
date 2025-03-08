@@ -25,6 +25,12 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
   onCategoryChange,
   isPrintMode = false,
 }) => {
+  // Create a separate handler for title changes to ensure events are processed correctly
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("Title changed to:", e.target.value);
+    onTitleChange(e.target.value);
+  };
+
   return (
     <div className="space-y-4">
       {isPrintMode ? (
@@ -37,7 +43,7 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
           <Input
             id="title"
             value={title || ""}
-            onChange={(e) => onTitleChange(e.target.value)}
+            onChange={handleTitleChange}
             placeholder="Note title"
             className="text-lg font-medium"
           />

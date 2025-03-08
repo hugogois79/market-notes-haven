@@ -25,6 +25,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
 
   // Handle title change
   const handleTitleChange = (title: string) => {
+    console.log("Setting title to:", title);
     setPendingChanges({ ...pendingChanges, title });
   };
 
@@ -77,6 +78,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     setIsSaving(true);
     
     try {
+      console.log("Saving changes:", pendingChanges);
       await onSave(pendingChanges);
       setPendingChanges({});
       
