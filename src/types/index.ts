@@ -32,7 +32,7 @@ export interface Note {
   summary?: string;
   tags: string[];
   tokens?: Token[];
-  category?: string;
+  category: string;
   createdAt: Date;
   updatedAt: Date;
   attachment_url?: string;

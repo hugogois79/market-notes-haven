@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -9,6 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface EditorHeaderProps {
   title: string;
@@ -25,6 +27,54 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
   onCategoryChange,
   isPrintMode = false,
 }) => {
+  const [availableCategories, setAvailableCategories] = useState<string[]>([
+    "General",
+    "Research",
+    "Ideas",
+    "Analysis",
+    "Project",
+    "Meeting",
+    "Personal",
+  ]);
+
+  // Fetch all unique categories from Supabase
+  const { data: fetchedCategories, isLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('notes')
+          .select('category')
+          .not('category', 'is', null);
+        
+        if (error) {
+          console.error('Error fetching categories:', error);
+          return [];
+        }
+        
+        // Extract unique categories
+        const categories = [...new Set(data.map(item => item.category).filter(Boolean))];
+        return categories;
+      } catch (error) {
+        console.error('Error in categories query:', error);
+        return [];
+      }
+    },
+  });
+
+  // Update available categories when fetched data changes
+  useEffect(() => {
+    if (fetchedCategories && fetchedCategories.length > 0) {
+      // Combine default categories with fetched ones and remove duplicates
+      const combinedCategories = [...new Set([
+        ...availableCategories,
+        ...fetchedCategories
+      ])].sort();
+      
+      setAvailableCategories(combinedCategories);
+    }
+  }, [fetchedCategories]);
+
   // Create a separate handler for title changes to ensure events are processed correctly
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log("EditorHeader: Title changed to:", e.target.value);
@@ -77,13 +127,11 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="General">General</SelectItem>
-              <SelectItem value="Research">Research</SelectItem>
-              <SelectItem value="Ideas">Ideas</SelectItem>
-              <SelectItem value="Analysis">Analysis</SelectItem>
-              <SelectItem value="Project">Project</SelectItem>
-              <SelectItem value="Meeting">Meeting</SelectItem>
-              <SelectItem value="Personal">Personal</SelectItem>
+              {availableCategories.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
