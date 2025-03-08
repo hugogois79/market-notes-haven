@@ -1,8 +1,11 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.8.0';
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +19,7 @@ serve(async (req) => {
   }
 
   try {
-    const { content, maxLength = 150 } = await req.json();
+    const { content, noteId, maxLength = 150 } = await req.json();
     
     if (!content || content.trim() === '') {
       return new Response(
@@ -72,6 +75,28 @@ serve(async (req) => {
     }
     
     const summary = data.choices[0].message.content.trim();
+
+    // If noteId is provided, save the summary to the database
+    if (noteId) {
+      try {
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+        
+        const { error: updateError } = await supabase
+          .from('notes')
+          .update({ summary })
+          .eq('id', noteId);
+          
+        if (updateError) {
+          console.error('Error saving summary to note:', updateError);
+          // Continue execution, don't throw an error since we have the summary
+        } else {
+          console.log('Summary successfully saved to note:', noteId);
+        }
+      } catch (dbError) {
+        console.error('Database error:', dbError);
+        // Continue execution, don't throw an error since we have the summary
+      }
+    }
 
     return new Response(
       JSON.stringify({ summary }),

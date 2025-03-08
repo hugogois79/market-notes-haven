@@ -1,21 +1,34 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Wand2, RefreshCcw, Copy, CheckCircle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
 
 interface AiResumeProps {
   noteId: string;
   content: string;
+  initialSummary?: string;
+  onSummaryGenerated?: (summary: string) => void;
 }
 
-const AiResume: React.FC<AiResumeProps> = ({ noteId, content }) => {
-  const [summary, setSummary] = useState<string>("");
+const AiResume: React.FC<AiResumeProps> = ({ 
+  noteId, 
+  content, 
+  initialSummary = "", 
+  onSummaryGenerated 
+}) => {
+  const [summary, setSummary] = useState<string>(initialSummary);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  // Initialize with the provided summary if available
+  useEffect(() => {
+    if (initialSummary) {
+      setSummary(initialSummary);
+    }
+  }, [initialSummary]);
   
   const generateSummary = async () => {
     if (!content.trim()) {
@@ -30,6 +43,7 @@ const AiResume: React.FC<AiResumeProps> = ({ noteId, content }) => {
       const { data, error } = await supabase.functions.invoke('summarize-note', {
         body: { 
           content,
+          noteId,
           maxLength: 250 // Allow for slightly longer summaries for financial analysis
         },
       });
@@ -39,7 +53,13 @@ const AiResume: React.FC<AiResumeProps> = ({ noteId, content }) => {
       }
       
       setSummary(data.summary);
-      toast.success("Financial summary generated successfully!");
+      
+      // Call the callback to update the parent component
+      if (onSummaryGenerated) {
+        onSummaryGenerated(data.summary);
+      }
+      
+      toast.success("Financial summary generated and saved successfully!");
     } catch (error) {
       console.error("Error generating summary:", error);
       toast.error("Failed to generate financial summary. Please try again.");
@@ -80,7 +100,7 @@ const AiResume: React.FC<AiResumeProps> = ({ noteId, content }) => {
           ) : (
             <>
               <Wand2 size={14} className="text-blue-500" />
-              Generate financial summary
+              {summary ? "Regenerate summary" : "Generate financial summary"}
             </>
           )}
         </Button>

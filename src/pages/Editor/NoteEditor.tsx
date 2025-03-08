@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
 import { Note, Token, Tag } from "@/types";
@@ -58,6 +57,18 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     // Trigger immediate autosave when category changes
     if (autoSave) {
       const updatedChanges = { ...pendingChanges, category };
+      handleSaveWithChanges(updatedChanges, true);
+    }
+  };
+
+  // Handle summary generation
+  const handleSummaryGenerated = (summary: string) => {
+    console.log("Summary generated:", summary);
+    setPendingChanges({ ...pendingChanges, summary });
+    
+    // Trigger immediate autosave when summary is generated
+    if (autoSave) {
+      const updatedChanges = { ...pendingChanges, summary };
       handleSaveWithChanges(updatedChanges, true);
     }
   };
@@ -214,6 +225,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         autoSave={autoSave}
         isSaving={isSaving}
         manualSave={() => saveChanges(false)}
+        summary={currentNote.summary}
+        onSummaryGenerated={handleSummaryGenerated}
       />
     </div>
   );

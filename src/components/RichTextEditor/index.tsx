@@ -36,6 +36,8 @@ interface RichTextEditorProps {
   autoSave?: boolean;
   isSaving?: boolean;
   manualSave?: () => void;
+  summary?: string;
+  onSummaryGenerated?: (summary: string) => void;
 }
 
 const RichTextEditor = ({
@@ -56,6 +58,8 @@ const RichTextEditor = ({
   autoSave = true,
   isSaving = false,
   manualSave,
+  summary = "",
+  onSummaryGenerated,
 }: RichTextEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
@@ -252,6 +256,8 @@ const RichTextEditor = ({
         <AiResume 
           noteId={noteId || ""}
           content={content}
+          initialSummary={summary}
+          onSummaryGenerated={onSummaryGenerated}
         />
       </Card>
       
