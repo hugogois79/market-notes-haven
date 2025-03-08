@@ -51,7 +51,8 @@ serve(async (req) => {
                       Focus on extracting key financial insights, trade recommendations, asset values, and important conclusions.
                       Highlight specific numbers, percentages, trends, and actionable trading information when present.
                       Use professional financial terminology.
-                      Format important values or trades in bold if possible.
+                      Format important values, names, tokens, percentages, and trade recommendations by enclosing them in double asterisks, like **this**.
+                      Example: "**Token XYZ** price increased by **25%** with a recommendation to **buy** at **$100**."
                       Start with the most critical financial information.
                       Do not use introductory phrases like "This note discusses" or "This is about".
                       If the content is too short, unclear, or contains no financial information, respond with a general summary.`
