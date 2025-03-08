@@ -69,6 +69,7 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
       
       if (foundNote) {
         console.log('Loaded note content:', foundNote.content);
+        console.log('Loaded note category:', foundNote.category);
         setCurrentNote(foundNote);
         setIsNewNote(false);
         
@@ -121,10 +122,19 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
       });
     }
     
+    // If the category is included, update the current note immediately
+    if (updatedFields.category !== undefined) {
+      setCurrentNote(prevNote => {
+        if (!prevNote) return updatedNote;
+        return { ...prevNote, category: updatedFields.category || "General" };
+      });
+    }
+    
     const savedNote = await onSaveNote(updatedNote);
     
     if (savedNote) {
       console.log('Note saved successfully');
+      console.log('Saved category:', savedNote.category);
       
       if (isNewNote) {
         // Redirect to the new note's edit page

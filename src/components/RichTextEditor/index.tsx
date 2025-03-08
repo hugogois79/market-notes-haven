@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -192,11 +193,9 @@ const RichTextEditor = ({
     
     // Trigger auto-save after title change
     if (autoSave && onSave) {
-      setIsSaving(true);
       setTimeout(() => {
         onSave();
         setLastSaved(new Date());
-        setIsSaving(false);
       }, 500);
     }
   }, [autoSave, onSave, onTitleChange]);

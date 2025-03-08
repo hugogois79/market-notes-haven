@@ -21,11 +21,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   const [pendingChanges, setPendingChanges] = useState<Partial<Note>>({});
   const [autoSave, setAutoSave] = useState(true);
   const [localTitle, setLocalTitle] = useState(currentNote.title);
+  const [localCategory, setLocalCategory] = useState(currentNote.category || "General");
 
-  // Update local title when currentNote changes
+  // Update local state when currentNote changes
   useEffect(() => {
     setLocalTitle(currentNote.title);
-  }, [currentNote.title]);
+    setLocalCategory(currentNote.category || "General");
+  }, [currentNote.title, currentNote.category]);
 
   // Handle title change
   const handleTitleChange = useCallback((title: string) => {
@@ -41,7 +43,15 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
 
   // Handle category change
   const handleCategoryChange = (category: string) => {
+    console.log("NoteEditor: Category changing to:", category);
+    setLocalCategory(category);
     setPendingChanges({ ...pendingChanges, category });
+    
+    // Trigger immediate autosave when category changes
+    if (autoSave) {
+      const updatedChanges = { ...pendingChanges, category };
+      handleSaveWithChanges(updatedChanges, true);
+    }
   };
 
   // Handle tag changes
@@ -65,16 +75,16 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       return; // No changes to save
     }
     
-    await saveChanges(true);
+    await handleSaveWithChanges(pendingChanges, true);
   }, [pendingChanges]);
 
-  // Common save function for both manual and auto save
-  const saveChanges = async (isAutoSave = false) => {
+  // Save function with specific changes
+  const handleSaveWithChanges = async (changes: Partial<Note>, isAutoSave = false) => {
     setIsSaving(true);
     
     try {
-      console.log("Saving changes:", pendingChanges);
-      await onSave(pendingChanges);
+      console.log("Saving changes:", changes);
+      await onSave(changes);
       setPendingChanges({});
       
       if (!isAutoSave) {
@@ -86,6 +96,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Common save function for both manual and auto save
+  const saveChanges = async (isAutoSave = false) => {
+    await handleSaveWithChanges(pendingChanges, isAutoSave);
   };
 
   // Convert tag IDs to tag objects
@@ -101,7 +116,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       <RichTextEditor 
         title={localTitle}
         content={currentNote.content}
-        category={currentNote.category || "General"}
+        category={localCategory}
         onTitleChange={handleTitleChange}
         onContentChange={handleContentChange}
         onCategoryChange={handleCategoryChange}

@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -32,8 +32,17 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
     onTitleChange(e.target.value);
   };
 
-  // Debugging - log current title value
-  console.log("EditorHeader: Current title value:", title);
+  // Handle category changes
+  const handleCategoryChange = (value: string) => {
+    console.log("EditorHeader: Category changed to:", value);
+    onCategoryChange(value);
+  };
+
+  // Debugging - log current values
+  useEffect(() => {
+    console.log("EditorHeader: Current title value:", title);
+    console.log("EditorHeader: Current category value:", category);
+  }, [title, category]);
 
   return (
     <div className="space-y-4">
@@ -61,8 +70,8 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
             Category
           </Label>
           <Select
-            value={category}
-            onValueChange={onCategoryChange}
+            value={category || "General"}
+            onValueChange={handleCategoryChange}
           >
             <SelectTrigger id="category" className="w-full md:w-60">
               <SelectValue placeholder="Select category" />
