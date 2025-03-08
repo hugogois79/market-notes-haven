@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Token, Note } from "@/types";
-import { dbNoteToNote } from "@/services/supabaseService";
+import { dbNoteToNote, DbNote } from "@/services/supabaseService";
 
 // Convert database token to app token format
 const dbTokenToToken = (dbToken: any): Token => ({
@@ -153,7 +153,14 @@ export const getNotesForToken = async (tokenId: string): Promise<Note[]> => {
     // Transform the data to get note objects
     return data
       .filter(item => item.notes) // Filter out any null notes
-      .map(item => dbNoteToNote(item.notes));
+      .map(item => {
+        // Add trade_info property if missing before passing to dbNoteToNote
+        const noteData = item.notes as any;
+        if (!('trade_info' in noteData)) {
+          noteData.trade_info = null;
+        }
+        return dbNoteToNote(noteData as DbNote);
+      });
   } catch (error) {
     console.error("Error fetching notes for token:", error);
     return [];
