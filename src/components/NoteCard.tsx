@@ -115,12 +115,12 @@ const NoteCard = ({ note, className }: NoteCardProps) => {
             <Tag size={14} className="text-muted-foreground" />
             <div className="flex gap-1.5">
               {note.tags.slice(0, 2).map((tagId) => (
-                <Badge key={tagId} variant="secondary" className="text-xs py-0 px-1.5">
+                <Badge key={tagId} variant="secondary" className="text-xs py-0 px-1.5 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90">
                   {getTagName(tagId)}
                 </Badge>
               ))}
               {note.tags.length > 2 && (
-                <Badge variant="secondary" className="text-xs py-0 px-1.5">
+                <Badge variant="secondary" className="text-xs py-0 px-1.5 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90">
                   +{note.tags.length - 2}
                 </Badge>
               )}

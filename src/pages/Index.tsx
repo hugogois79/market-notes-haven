@@ -221,7 +221,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
               <span className="text-sm text-muted-foreground mr-2">Tag:</span>
               <Badge 
                 variant="secondary"
-                className="cursor-pointer bg-brand/10 text-brand hover:bg-brand/20"
+                className="cursor-pointer bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90"
                 onClick={clearTagFilter}
               >
                 {selectedTag} <X size={14} className="ml-1" />
@@ -317,14 +317,14 @@ const Index = ({ notes, loading = false }: IndexProps) => {
                             <Badge 
                               key={tagId} 
                               variant="secondary" 
-                              className="text-xs py-0 px-1.5 cursor-pointer hover:bg-secondary/80"
+                              className="text-xs py-0 px-1.5 cursor-pointer bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90"
                               onClick={(e) => handleTagClick(tagId, getTagName(tagId), e)}
                             >
                               {getTagName(tagId)}
                             </Badge>
                           ))}
                           {note.tags.length > 2 && (
-                            <Badge variant="secondary" className="text-xs py-0 px-1.5">
+                            <Badge variant="secondary" className="text-xs py-0 px-1.5 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90">
                               +{note.tags.length - 2}
                             </Badge>
                           )}
