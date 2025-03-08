@@ -17,6 +17,7 @@ import { fetchTags, createTag } from "@/services/tagService";
 import { fetchTokens } from "@/services/tokenService";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import TradeInfoSection from "./TradeInfoSection";
 
 interface RichTextEditorProps {
   title: string;
@@ -221,6 +222,9 @@ const RichTextEditor = ({
     }
   }, [autoSave, onSave, onTitleChange]);
 
+  // Check if the category is related to trading
+  const isTradingCategory = category === "Trading" || category === "Pair Trading";
+
   return (
     <div className="flex flex-col gap-4 mt-2">
       <EditorHeader 
@@ -261,6 +265,16 @@ const RichTextEditor = ({
           onSummaryGenerated={onSummaryGenerated}
         />
       </Card>
+      
+      {/* Trade Info Section - Only displayed for trading categories */}
+      {isTradingCategory && (
+        <Card className="p-4 border rounded-md">
+          <TradeInfoSection 
+            availableTokens={availableTokens}
+            isLoadingTokens={isLoadingTokens}
+          />
+        </Card>
+      )}
       
       {/* Tags and Tokens Section */}
       <div className="flex flex-col md:flex-row gap-4">

@@ -25,6 +25,12 @@ export interface Tag {
   name: string;
 }
 
+export interface TradeInfo {
+  tokenId?: string;
+  quantity?: number;
+  entryPrice?: number;
+}
+
 export interface Note {
   id: string;
   title: string;
@@ -36,4 +42,5 @@ export interface Note {
   createdAt: Date;
   updatedAt: Date;
   attachment_url?: string;
+  tradeInfo?: TradeInfo;
 }
