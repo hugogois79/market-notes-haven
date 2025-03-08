@@ -5,13 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Tag } from "@/types";
 import { Loader, Plus, X, Tags, ChevronDown } from "lucide-react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -71,16 +64,16 @@ const TagsSection: React.FC<TagsSectionProps> = ({
           <DropdownMenuTrigger asChild>
             <Button 
               variant="outline" 
-              className="w-full justify-between font-normal text-left"
+              className="w-[150px] justify-between font-normal text-left"
               disabled={isLoadingTags || availableTags.length === 0}
             >
               <span className="truncate">
-                {isLoadingTags ? "Loading tags..." : (availableTags.length === 0 ? "No available tags" : "Select a tag")}
+                {isLoadingTags ? "Loading..." : (availableTags.length === 0 ? "No tags" : "Select tag")}
               </span>
-              <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              <ChevronDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-[200px] max-h-[200px] overflow-auto">
+          <DropdownMenuContent className="w-[150px] max-h-[180px] overflow-auto">
             {availableTags.map((tag) => (
               <DropdownMenuItem
                 key={tag.id}
@@ -122,23 +115,6 @@ const TagsSection: React.FC<TagsSectionProps> = ({
           </Button>
         </div>
       </div>
-      
-      {availableTags.length > 0 && (
-        <div className="mt-2">
-          <div className="text-xs text-muted-foreground mb-1">Suggested tags:</div>
-          <div className="flex flex-wrap gap-1">
-            {availableTags.slice(0, 5).map((tag) => (
-              <button
-                key={tag.id}
-                onClick={() => handleSelectTag(tag)}
-                className="text-xs px-2 py-0.5 rounded-full bg-[#0A3A5C]/90 text-white hover:bg-[#0A3A5C]"
-              >
-                {tag.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
