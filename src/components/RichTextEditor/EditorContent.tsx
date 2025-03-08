@@ -67,8 +67,8 @@ const EditorContent = ({
         // Add these styles to better handle tables
         overflowX: 'auto',
         whiteSpace: 'normal',
-        // Add top padding to compensate for the fixed toolbar
-        paddingTop: "calc(1rem + 38px)"
+        // Reduced top padding to remove the empty space at the beginning
+        paddingTop: "52px"
       }}
       data-placeholder="Start writing..."
     >
