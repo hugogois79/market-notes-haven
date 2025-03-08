@@ -61,6 +61,7 @@ const RichTextEditor = ({
   summary = "",
   onSummaryGenerated,
 }: RichTextEditorProps) => {
+  
   const editorRef = useRef<HTMLDivElement>(null);
   const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<"visual" | "markdown">("visual");
@@ -68,7 +69,7 @@ const RichTextEditor = ({
   const [rows, setRows] = useState(3);
   const [cols, setCols] = useState(3);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const { execCommand, formatTableCells } = useEditor(editorRef);
+  const { execCommand, formatTableCells, insertVerticalSeparator } = useEditor(editorRef);
 
   // Fetch available tags
   const { data: availableTags = [], isLoading: isLoadingTags, refetch: refetchTags } = useQuery({
@@ -324,6 +325,7 @@ const RichTextEditor = ({
               execCommand={execCommand} 
               setIsTableDialogOpen={setIsTableDialogOpen}
               formatTableCells={formatTableCells}
+              insertVerticalSeparator={insertVerticalSeparator}
             />
             
             <EditorContent 

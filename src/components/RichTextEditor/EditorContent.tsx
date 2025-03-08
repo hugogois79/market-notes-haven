@@ -1,4 +1,3 @@
-
 import { useEffect, RefObject, useCallback } from "react";
 
 interface EditorContentProps {
@@ -87,6 +86,28 @@ const EditorContent = ({
         [contenteditable="true"] p {
           font-size: 0.875rem;
           margin-bottom: 0.5rem;
+        }
+        [contenteditable="true"] .chapter-separator {
+          width: 100%;
+          margin: 1.5rem 0;
+          text-align: center;
+          position: relative;
+          overflow: hidden;
+          height: 20px;
+        }
+        [contenteditable="true"] .chapter-separator hr {
+          margin: 0;
+          border: none;
+          border-top: 1px solid #d1d5db;
+        }
+        [contenteditable="true"] .chapter-separator div {
+          position: absolute;
+          top: -5px;
+          left: 50%;
+          transform: translateX(-50%);
+          background-color: #fff;
+          padding: 0 10px;
+          font-size: 16px;
         }
       `}</style>
     </div>

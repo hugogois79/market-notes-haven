@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -13,19 +12,23 @@ import {
   Table,
   Heading1,
   Heading2,
-  Text
+  Text,
+  SeparatorVertical
 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 export interface FormattingToolbarProps {
   execCommand: (command: string, value?: string) => void;
   setIsTableDialogOpen: (isOpen: boolean) => void;
   formatTableCells: (alignment: string) => void;
+  insertVerticalSeparator: () => void;
 }
 
 const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ 
   execCommand, 
   setIsTableDialogOpen,
-  formatTableCells
+  formatTableCells,
+  insertVerticalSeparator
 }) => {
   return (
     <div className="flex items-center flex-wrap gap-1 p-2 bg-muted/30 rounded-md mx-2 my-2">
@@ -102,6 +105,16 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
         className="h-8 w-8"
       >
         <ListOrdered size={16} />
+      </Button>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        onClick={insertVerticalSeparator}
+        title="Chapter Separator"
+        className="h-8 w-8"
+      >
+        <SeparatorVertical size={16} />
       </Button>
       <Button
         type="button"

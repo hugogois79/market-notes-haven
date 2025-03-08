@@ -1,4 +1,3 @@
-
 import { RefObject, useEffect } from "react";
 
 export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
@@ -219,9 +218,53 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
       editorRef.current.dispatchEvent(inputEvent);
     }
   };
+  
+  const insertVerticalSeparator = () => {
+    if (!editorRef.current) return;
+    
+    // Focus on the editor first
+    editorRef.current.focus();
+    
+    // Create a horizontal separator styled to look like a chapter divider
+    const separatorHTML = `
+      <div class="chapter-separator" style="
+        width: 100%;
+        margin: 1.5rem 0;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        height: 20px;
+      ">
+        <hr style="
+          margin: 0;
+          border: none;
+          border-top: 1px solid #d1d5db;
+        "/>
+        <div style="
+          position: absolute;
+          top: -5px;
+          left: 50%;
+          transform: translateX(-50%);
+          background-color: #fff;
+          padding: 0 10px;
+          font-size: 16px;
+        ">§</div>
+      </div>
+    `;
+    
+    // Insert the separator HTML
+    document.execCommand('insertHTML', false, separatorHTML);
+    
+    // Trigger an input event to ensure changes are registered
+    if (editorRef.current) {
+      const inputEvent = new Event('input', { bubbles: true });
+      editorRef.current.dispatchEvent(inputEvent);
+    }
+  };
 
   return {
     execCommand,
-    formatTableCells
+    formatTableCells,
+    insertVerticalSeparator
   };
 };
