@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
 import { Note, Token, Tag } from "@/types";
@@ -20,7 +21,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
 }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<Partial<Note>>({});
-  const [autoSave, setAutoSave] = useState(true);
+  const [autoSave, setAutoSave] = useState(false); // Changed default to false to disable autosave
   const [localTitle, setLocalTitle] = useState(currentNote.title);
   const [localCategory, setLocalCategory] = useState(currentNote.category || "General");
   const [linkedTags, setLinkedTags] = useState<Tag[]>([]);

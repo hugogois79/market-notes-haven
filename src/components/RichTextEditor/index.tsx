@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -55,7 +56,7 @@ const RichTextEditor = ({
   category,
   onCategoryChange,
   onSave,
-  autoSave = true,
+  autoSave = false, // Changed default to false to disable autosave
   isSaving = false,
   manualSave,
   summary = "",

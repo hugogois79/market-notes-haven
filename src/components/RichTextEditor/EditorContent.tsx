@@ -5,7 +5,7 @@ interface EditorContentProps {
   editorRef: RefObject<HTMLDivElement>;
   handleContentChange: () => void;
   initialContent: string;
-  onAutoSave?: () => void; // New prop for auto-save functionality
+  onAutoSave?: () => void; // Auto-save functionality still available but optional
   autoSaveDelay?: number; // Delay in milliseconds before triggering auto-save
 }
 
@@ -38,7 +38,7 @@ const EditorContent = ({
     }
   }, [editorRef, initialContent]);
 
-  // Create a debounced auto-save function
+  // Create a debounced auto-save function (will only run if autoSave is enabled)
   const debouncedAutoSave = useCallback(() => {
     if (onAutoSave) {
       const timer = setTimeout(() => {
@@ -49,10 +49,10 @@ const EditorContent = ({
     }
   }, [onAutoSave, autoSaveDelay]);
 
-  // Setup auto-save on content changes
+  // Setup input handler - still tracks changes but doesn't auto-save
   const handleInput = () => {
     handleContentChange();
-    debouncedAutoSave();
+    debouncedAutoSave(); // This will only trigger autosave if it's enabled
   };
 
   return (
