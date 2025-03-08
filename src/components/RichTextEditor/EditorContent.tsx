@@ -62,7 +62,12 @@ const EditorContent = ({
       contentEditable
       onInput={handleInput}
       onBlur={handleContentChange}
-      style={{ lineHeight: '1.5' }}
+      style={{ 
+        lineHeight: '1.5',
+        // Add these styles to better handle tables
+        overflowX: 'auto',
+        whiteSpace: 'normal'
+      }}
       data-placeholder="Start writing..."
     />
   );

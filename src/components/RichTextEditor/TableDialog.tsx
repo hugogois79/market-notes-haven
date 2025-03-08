@@ -68,6 +68,7 @@ const TableDialog: React.FC<TableDialogProps> = ({
                   id="rows"
                   type="number"
                   min="1"
+                  max="20"
                   value={rows}
                   onChange={handleRowsChange}
                 />
@@ -78,6 +79,7 @@ const TableDialog: React.FC<TableDialogProps> = ({
                   id="cols"
                   type="number"
                   min="1"
+                  max="10"
                   value={cols}
                   onChange={handleColsChange}
                 />

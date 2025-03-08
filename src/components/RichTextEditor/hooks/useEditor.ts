@@ -53,27 +53,41 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
     if (!selection || !selection.rangeCount) return;
 
     const range = selection.getRangeAt(0);
-    // Fix: Check if commonAncestorContainer is an Element before calling querySelectorAll
+    // Find cells from selection
     let cells: Element[] = [];
     
     if (range.commonAncestorContainer instanceof Element) {
-      cells = Array.from(range.commonAncestorContainer.querySelectorAll('td, th'));
+      // If the common ancestor is a table or contains tables
+      if (range.commonAncestorContainer.tagName === 'TABLE' || 
+          range.commonAncestorContainer.querySelector('table')) {
+        cells = Array.from(range.commonAncestorContainer.querySelectorAll('td, th'));
+      } else {
+        // Check if we're inside a cell
+        let parent = range.commonAncestorContainer;
+        while (parent && parent !== editorRef.current) {
+          if (parent instanceof Element && (parent.tagName === 'TD' || parent.tagName === 'TH')) {
+            cells.push(parent);
+            break;
+          }
+          parent = parent.parentElement || parent.parentNode;
+        }
+      }
     } else if (range.commonAncestorContainer.parentElement) {
-      cells = Array.from(range.commonAncestorContainer.parentElement.querySelectorAll('td, th'));
+      // Navigate up to find if we're in a table
+      let parent = range.commonAncestorContainer.parentElement;
+      while (parent && parent !== editorRef.current) {
+        if (parent.tagName === 'TD' || parent.tagName === 'TH') {
+          cells.push(parent);
+          break;
+        } else if (parent.tagName === 'TABLE') {
+          cells = Array.from(parent.querySelectorAll('td, th'));
+          break;
+        }
+        parent = parent.parentElement;
+      }
     }
     
-    if (cells.length === 0) {
-      // Try to find if cursor is inside a td/th
-      let node: Node | null = range.startContainer;
-      while (node && node.nodeName !== 'TD' && node.nodeName !== 'TH' && node !== document.body) {
-        node = node.parentNode;
-      }
-      
-      if (node && (node.nodeName === 'TD' || node.nodeName === 'TH')) {
-        cells.push(node as Element);
-      }
-    }
-    
+    // Apply alignment to found cells
     if (cells.length > 0) {
       cells.forEach(cell => {
         (cell as HTMLElement).style.textAlign = alignment;
