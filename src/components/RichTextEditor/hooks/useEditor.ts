@@ -7,6 +7,72 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
     if (editorRef.current) {
       editorRef.current.setAttribute('contenteditable', 'true');
       editorRef.current.focus();
+      
+      // Add paste event handler to preserve tables when pasting
+      const handlePaste = (event: ClipboardEvent) => {
+        // Don't interfere with non-HTML content
+        if (!event.clipboardData?.types.includes('text/html')) {
+          return;
+        }
+        
+        const html = event.clipboardData.getData('text/html');
+        
+        // Check if content contains tables
+        if (html.includes('<table') || html.includes('<tbody') || html.includes('<tr') || html.includes('<td')) {
+          event.preventDefault();
+          
+          // Create a temporary div to sanitize the HTML
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = html;
+          
+          // Process tables to ensure they have appropriate styling
+          const tables = tempDiv.querySelectorAll('table');
+          if (tables.length > 0) {
+            tables.forEach(table => {
+              // Add default styling to ensure tables display correctly
+              if (!table.style.borderCollapse) {
+                table.style.borderCollapse = 'collapse';
+              }
+              if (!table.style.width && !table.getAttribute('width')) {
+                table.style.width = '100%';
+              }
+              
+              // Add borders and padding to cells if they don't have any
+              const cells = table.querySelectorAll('td, th');
+              cells.forEach(cell => {
+                if (!cell.style.border) {
+                  cell.style.border = '1px solid #d1d5db';
+                }
+                if (!cell.style.padding) {
+                  cell.style.padding = '0.5rem 1rem';
+                }
+                
+                // Add background color to headers if they don't have any
+                if (cell.tagName === 'TH' && !cell.style.backgroundColor) {
+                  cell.style.backgroundColor = '#f3f4f6';
+                }
+              });
+            });
+          }
+          
+          // Insert the processed HTML at the current selection
+          document.execCommand('insertHTML', false, tempDiv.innerHTML);
+          
+          // Trigger an input event to ensure changes are registered
+          if (editorRef.current) {
+            const inputEvent = new Event('input', { bubbles: true });
+            editorRef.current.dispatchEvent(inputEvent);
+          }
+        }
+      };
+      
+      // Add the paste event listener
+      editorRef.current.addEventListener('paste', handlePaste);
+      
+      // Clean up the event listener on unmount
+      return () => {
+        editorRef.current?.removeEventListener('paste', handlePaste);
+      };
     }
   }, [editorRef]);
 
