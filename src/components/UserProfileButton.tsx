@@ -48,15 +48,15 @@ const UserProfileButton = () => {
     }
   };
 
-  // Get user initials for avatar fallback
+  // Get user initials for avatar fallback - now showing 3 letters instead of 2
   const getInitials = () => {
     if (username) {
-      return username.substring(0, 2).toUpperCase();
+      return username.substring(0, 3).toUpperCase();
     }
     if (user?.email) {
-      return user.email.substring(0, 2).toUpperCase();
+      return user.email.substring(0, 3).toUpperCase();
     }
-    return "U";
+    return "USR";
   };
 
   return (
