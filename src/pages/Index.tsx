@@ -84,10 +84,10 @@ const Index = ({ notes, loading = false }: IndexProps) => {
     return matchesSearch && matchesCategory && matchesTag;
   });
   
-  // Get recent notes (last 6) from filtered notes
+  // Get recent notes (last 10) from filtered notes - changed from 6 to 10
   const recentNotes = [...filteredNotes]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 6);
+    .slice(0, 10);
 
   // Icons for common categories
   const getCategoryIcon = (categoryName: string) => {
