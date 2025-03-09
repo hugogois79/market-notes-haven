@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Token, Note } from "@/types";
 import { dbNoteToNote, DbNote } from "@/services/supabaseService";
@@ -11,6 +12,7 @@ const dbTokenToToken = (dbToken: any): Token => ({
   description: dbToken.description,
   industry: dbToken.industry,
   tags: dbToken.tags,
+  current_price: dbToken.current_price,
   createdAt: new Date(dbToken.created_at),
   updatedAt: new Date(dbToken.updated_at),
 });
@@ -67,7 +69,8 @@ export const createToken = async (token: Omit<Token, 'id' | 'createdAt' | 'updat
         logo_url: token.logo_url,
         description: token.description,
         industry: token.industry,
-        tags: token.tags
+        tags: token.tags,
+        current_price: token.current_price
       }])
       .select()
       .single();
@@ -96,6 +99,7 @@ export const updateToken = async (token: Token): Promise<Token | null> => {
         description: token.description,
         industry: token.industry,
         tags: token.tags,
+        current_price: token.current_price,
         updated_at: new Date().toISOString()
       })
       .eq('id', token.id)
@@ -110,6 +114,30 @@ export const updateToken = async (token: Token): Promise<Token | null> => {
     return dbTokenToToken(data);
   } catch (error) {
     console.error("Error updating token:", error);
+    return null;
+  }
+};
+
+// Update just the current price of a token
+export const updateTokenPrice = async (tokenId: string, currentPrice: number): Promise<Token | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('tokens')
+      .update({
+        current_price: currentPrice,
+      })
+      .eq('id', tokenId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating token price:", error);
+      return null;
+    }
+
+    return dbTokenToToken(data);
+  } catch (error) {
+    console.error("Error updating token price:", error);
     return null;
   }
 };

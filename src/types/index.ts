@@ -16,6 +16,7 @@ export interface Token {
   description?: string;
   industry?: string;
   tags: string[];
+  current_price?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }

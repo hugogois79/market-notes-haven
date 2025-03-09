@@ -495,6 +495,7 @@ export type Database = {
       tokens: {
         Row: {
           created_at: string | null
+          current_price: number | null
           description: string | null
           id: string
           industry: string | null
@@ -506,6 +507,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          current_price?: number | null
           description?: string | null
           id?: string
           industry?: string | null
@@ -517,6 +519,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          current_price?: number | null
           description?: string | null
           id?: string
           industry?: string | null
