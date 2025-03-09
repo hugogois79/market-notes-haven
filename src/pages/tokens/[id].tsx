@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,11 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchTokenById, createToken, updateToken, deleteToken, getNotesForToken } from "@/services/tokenService";
+import { fetchTokenById, createToken, updateToken, deleteToken, getNotesForToken, updateTokenPrice } from "@/services/tokenService";
 import { Note, Token } from "@/types";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Trash, ArrowLeft, Save, Plus, X, Image, FileText, Filter } from "lucide-react";
+import { Trash, ArrowLeft, Save, Plus, X, Image, FileText, Filter, DollarSign } from "lucide-react";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +36,7 @@ const TokenDetail = () => {
     description: "",
     industry: "",
     tags: [],
+    current_price: undefined,
   });
   
   const [loading, setLoading] = useState(!isNew);
@@ -101,6 +101,17 @@ const TokenDetail = () => {
     setToken(prev => ({ ...prev, [name]: value }));
   };
   
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow empty string or valid numbers
+    if (value === "" || !isNaN(parseFloat(value))) {
+      setToken(prev => ({ 
+        ...prev, 
+        current_price: value === "" ? undefined : parseFloat(value) 
+      }));
+    }
+  };
+  
   const handleAddTag = () => {
     if (!newTag.trim()) return;
     
@@ -144,6 +155,7 @@ const TokenDetail = () => {
           description: token.description,
           industry: token.industry,
           tags: token.tags || [],
+          current_price: token.current_price,
         });
         
         if (savedToken) {
@@ -169,27 +181,25 @@ const TokenDetail = () => {
       setSaving(false);
     }
   };
-  
-  const handleDelete = async () => {
+
+  const handleUpdatePrice = async () => {
+    if (!id || !token.current_price) return;
+    
     try {
       setSaving(true);
+      const updatedToken = await updateTokenPrice(id, token.current_price);
       
-      if (!isNew && id) {
-        const success = await deleteToken(id);
-        
-        if (success) {
-          toast.success("Token deleted successfully");
-          navigate("/tokens");
-        } else {
-          toast.error("Failed to delete token");
-        }
+      if (updatedToken) {
+        setToken(updatedToken);
+        toast.success("Price updated successfully");
+      } else {
+        toast.error("Failed to update price");
       }
     } catch (error) {
-      console.error("Error deleting token:", error);
-      toast.error("An error occurred while deleting");
+      console.error("Error updating price:", error);
+      toast.error("An error occurred while updating price");
     } finally {
       setSaving(false);
-      setShowDeleteAlert(false);
     }
   };
   
@@ -216,7 +226,14 @@ const TokenDetail = () => {
             <h1 className="text-3xl font-semibold text-[#1EAEDB]">
               {isNew ? "Add New Token" : token.name}
             </h1>
-            {!isNew && <p className="text-muted-foreground">{token.symbol}</p>}
+            <div className="flex items-center gap-2">
+              {!isNew && <p className="text-muted-foreground">{token.symbol}</p>}
+              {token.current_price && (
+                <p className="text-green-600 font-medium">
+                  ${token.current_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+                </p>
+              )}
+            </div>
           </div>
         </div>
         
@@ -281,6 +298,38 @@ const TokenDetail = () => {
                     required
                     className="uppercase"
                   />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="current_price">Current Price (USD)</Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-grow">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                      <DollarSign size={16} />
+                    </span>
+                    <Input
+                      id="current_price"
+                      name="current_price"
+                      type="number"
+                      step="0.000001"
+                      min="0"
+                      value={token.current_price === undefined ? "" : token.current_price}
+                      onChange={handlePriceChange}
+                      placeholder="0.00"
+                      className="pl-9"
+                    />
+                  </div>
+                  {!isNew && (
+                    <Button 
+                      variant="outline" 
+                      onClick={handleUpdatePrice}
+                      disabled={!token.current_price}
+                      className="whitespace-nowrap"
+                    >
+                      Update Price
+                    </Button>
+                  )}
                 </div>
               </div>
               
