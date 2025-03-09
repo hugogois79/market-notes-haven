@@ -23,13 +23,34 @@ const Sidebar = () => {
 
   // Effect to handle hover state changes
   useEffect(() => {
+    let timer: number | null = null;
+    
     if (isHovering && !isExpanded && !isMobile) {
-      const timer = setTimeout(() => {
+      // Expand when hovering over collapsed sidebar
+      timer = window.setTimeout(() => {
         setIsExpanded(true);
       }, 300); // Delay expansion to prevent flicker
-      
-      return () => clearTimeout(timer);
+    } else if (!isHovering && isExpanded && !isMobile) {
+      // Only collapse if it was expanded due to hover
+      if (isExpanded && !isMobile) {
+        timer = window.setTimeout(() => {
+          // Check if user is still not hovering before collapsing
+          if (!isHovering) {
+            setIsExpanded(false);
+          }
+        }, 300);
+      }
     }
+    
+    // Dispatch custom event for layout adjustments
+    const event = new CustomEvent('sidebar-resize', { 
+      detail: { expanded: isExpanded } 
+    });
+    window.dispatchEvent(event);
+    
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
   }, [isHovering, isExpanded, isMobile]);
 
   // Handle mouse enter/leave for desktop
@@ -42,11 +63,13 @@ const Sidebar = () => {
   const handleMouseLeave = () => {
     if (!isMobile) {
       setIsHovering(false);
-      if (!isExpanded) {
-        // Keep collapsed if it was collapsed manually
-        setIsExpanded(false);
-      }
     }
+  };
+
+  // Track manual expansions vs hover-triggered ones
+  const handleManualToggle = () => {
+    // This is called when user explicitly clicks the toggle button
+    setIsExpanded(!isExpanded);
   };
 
   return (
@@ -72,7 +95,7 @@ const Sidebar = () => {
         {/* Navigation header */}
         <SidebarHeader 
           isExpanded={isExpanded} 
-          toggleExpand={toggleExpand} 
+          toggleExpand={handleManualToggle} 
           isMobile={isMobile} 
         />
 

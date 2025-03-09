@@ -23,7 +23,11 @@ export const SidebarHeader = ({ isExpanded, toggleExpand, isMobile }: SidebarHea
         <Button 
           variant="ghost" 
           size="icon" 
-          onClick={toggleExpand}
+          onClick={(e) => {
+            // Prevent event bubbling
+            e.stopPropagation();
+            toggleExpand();
+          }}
           className="text-secondary-foreground hover:bg-blue-700/50"
         >
           {isExpanded ? 
