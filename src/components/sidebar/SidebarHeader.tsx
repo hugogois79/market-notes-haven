@@ -29,6 +29,7 @@ export const SidebarHeader = ({ isExpanded, toggleExpand, isMobile }: SidebarHea
             toggleExpand();
           }}
           className="text-secondary-foreground hover:bg-blue-700/50"
+          aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
         >
           {isExpanded ? 
             <ChevronLeft size={20} /> : 

@@ -17,9 +17,9 @@ const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
   const [isHovering, setIsHovering] = useState(false);
+  const [expandedByHover, setExpandedByHover] = useState(false);
 
   const toggleSidebar = () => setIsOpen(!isOpen);
-  const toggleExpand = () => setIsExpanded(!isExpanded);
 
   // Effect to handle hover state changes
   useEffect(() => {
@@ -29,17 +29,17 @@ const Sidebar = () => {
       // Expand when hovering over collapsed sidebar
       timer = window.setTimeout(() => {
         setIsExpanded(true);
+        setExpandedByHover(true); // Mark as expanded by hover
       }, 300); // Delay expansion to prevent flicker
-    } else if (!isHovering && isExpanded && !isMobile) {
+    } else if (!isHovering && expandedByHover && !isMobile) {
       // Only collapse if it was expanded due to hover
-      if (isExpanded && !isMobile) {
-        timer = window.setTimeout(() => {
-          // Check if user is still not hovering before collapsing
-          if (!isHovering) {
-            setIsExpanded(false);
-          }
-        }, 300);
-      }
+      timer = window.setTimeout(() => {
+        // Check if user is still not hovering before collapsing
+        if (!isHovering) {
+          setIsExpanded(false);
+          setExpandedByHover(false);
+        }
+      }, 300);
     }
     
     // Dispatch custom event for layout adjustments
@@ -51,7 +51,7 @@ const Sidebar = () => {
     return () => {
       if (timer) window.clearTimeout(timer);
     };
-  }, [isHovering, isExpanded, isMobile]);
+  }, [isHovering, isExpanded, expandedByHover, isMobile]);
 
   // Handle mouse enter/leave for desktop
   const handleMouseEnter = () => {
@@ -69,7 +69,8 @@ const Sidebar = () => {
   // Track manual expansions vs hover-triggered ones
   const handleManualToggle = () => {
     // This is called when user explicitly clicks the toggle button
-    setIsExpanded(!isExpanded);
+    setExpandedByHover(false); // Reset the hover state
+    setIsExpanded(!isExpanded); // Toggle the expanded state manually
   };
 
   return (
