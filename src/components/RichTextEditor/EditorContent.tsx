@@ -1,3 +1,4 @@
+
 import { useEffect, RefObject, useCallback } from "react";
 
 interface EditorContentProps {
@@ -64,6 +65,9 @@ const EditorContent = ({
       
       // Handle ALT key combinations
       if (e.altKey) {
+        // Log key press for debugging
+        console.log('ALT key combination:', e.key, 'KeyCode:', e.keyCode);
+        
         switch (e.key.toLowerCase()) { // Convert to lowercase to handle both upper and lowercase
           case '1': // Heading 1
             e.preventDefault();
