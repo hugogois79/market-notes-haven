@@ -8,6 +8,8 @@ interface EditorContentProps {
   onAutoSave?: () => void; // Auto-save functionality still available but optional
   autoSaveDelay?: number; // Delay in milliseconds before triggering auto-save
   onContentUpdate?: (content: string) => void; // Callback for content changes
+  execCommand?: (command: string, value?: string) => void; // Command executor
+  formatTableCells?: (alignment: string) => void; // Table cell formatter
 }
 
 const EditorContent = ({ 
@@ -17,6 +19,8 @@ const EditorContent = ({
   onAutoSave,
   autoSaveDelay = 3000, // Default to 3 seconds
   onContentUpdate,
+  execCommand,
+  formatTableCells,
 }: EditorContentProps) => {
   // Set initial content when the component mounts
   useEffect(() => {
@@ -50,6 +54,62 @@ const EditorContent = ({
       return () => clearTimeout(timer);
     }
   }, [onAutoSave, autoSaveDelay]);
+
+  // Setup keyboard shortcuts for text formatting
+  useEffect(() => {
+    if (!editorRef.current || !execCommand || !formatTableCells) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only apply shortcuts when editor is focused
+      if (!editorRef.current?.contains(document.activeElement)) return;
+      
+      // Handle ALT key combinations
+      if (e.altKey) {
+        switch (e.key) {
+          case '1': // Heading 1
+            e.preventDefault();
+            execCommand('formatBlock', '<h1>');
+            break;
+          case '2': // Heading 2
+            e.preventDefault();
+            execCommand('formatBlock', '<h2>');
+            break;
+          case '0': // Normal text
+            e.preventDefault();
+            execCommand('formatBlock', '<p>');
+            break;
+          case 'c': // Center align
+          case 'C':
+            e.preventDefault();
+            formatTableCells('center');
+            break;
+          case 'l': // Left align
+          case 'L':
+            e.preventDefault();
+            formatTableCells('left');
+            break;
+          case 'r': // Right align
+          case 'R':
+            e.preventDefault();
+            formatTableCells('right');
+            break;
+          case 'j': // Justify
+          case 'J':
+            e.preventDefault();
+            formatTableCells('justify');
+            break;
+        }
+      }
+    };
+    
+    // Add event listener for keyboard shortcuts
+    document.addEventListener('keydown', handleKeyDown);
+    
+    // Clean up
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [editorRef, execCommand, formatTableCells]);
 
   // Setup input handler - still tracks changes but doesn't auto-save
   const handleInput = () => {

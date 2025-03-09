@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -16,6 +15,7 @@ import {
   Text,
   SeparatorVertical
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface FormattingToolbarProps {
   execCommand: (command: string, value?: string) => void;
@@ -33,39 +33,69 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
   return (
     <div className="flex items-center flex-wrap gap-1 p-2 bg-muted/60 rounded-t-md mx-2 mb-0 sticky top-0 z-10 backdrop-blur-sm shadow-sm border-b">
       {/* Heading format options */}
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        onClick={() => execCommand("formatBlock", "<h1>")}
-        title="Title"
-        className="h-8 w-8"
-      >
-        <Heading1 size={16} />
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        onClick={() => execCommand("formatBlock", "<h2>")}
-        title="Subtitle"
-        className="h-8 w-8"
-      >
-        <Heading2 size={16} />
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        onClick={() => execCommand("formatBlock", "<p>")}
-        title="Normal Text"
-        className="h-8 w-8"
-      >
-        <Text size={16} />
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => execCommand("formatBlock", "<h1>")}
+              title="Title"
+              className="h-8 w-8"
+            >
+              <Heading1 size={16} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Heading 1 (Alt+1)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => execCommand("formatBlock", "<h2>")}
+              title="Subtitle"
+              className="h-8 w-8"
+            >
+              <Heading2 size={16} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Heading 2 (Alt+2)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => execCommand("formatBlock", "<p>")}
+              title="Normal Text"
+              className="h-8 w-8"
+            >
+              <Text size={16} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Normal Text (Alt+0)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       
       <div className="border-l border-muted-foreground/20 mx-1 h-6"></div>
       
+      {/* Bold, Italic, Lists, etc. */}
       <Button
         type="button"
         size="icon"
@@ -129,46 +159,86 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
 
       {/* Text alignment buttons */}
       <div className="border-l border-muted-foreground/20 mx-1 h-6"></div>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        onClick={() => formatTableCells("left")}
-        title="Align Left"
-        className="h-8 w-8"
-      >
-        <AlignLeft size={16} />
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        onClick={() => formatTableCells("center")}
-        title="Align Center"
-        className="h-8 w-8"
-      >
-        <AlignCenter size={16} />
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        onClick={() => formatTableCells("right")}
-        title="Align Right"
-        className="h-8 w-8"
-      >
-        <AlignRight size={16} />
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        onClick={() => formatTableCells("justify")}
-        title="Justify"
-        className="h-8 w-8"
-      >
-        <AlignJustify size={16} />
-      </Button>
+      
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => formatTableCells("left")}
+              title="Align Left"
+              className="h-8 w-8"
+            >
+              <AlignLeft size={16} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Align Left (Alt+L)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => formatTableCells("center")}
+              title="Align Center"
+              className="h-8 w-8"
+            >
+              <AlignCenter size={16} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Align Center (Alt+C)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => formatTableCells("right")}
+              title="Align Right"
+              className="h-8 w-8"
+            >
+              <AlignRight size={16} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Align Right (Alt+R)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => formatTableCells("justify")}
+              title="Justify"
+              className="h-8 w-8"
+            >
+              <AlignJustify size={16} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Justify (Alt+J)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 };

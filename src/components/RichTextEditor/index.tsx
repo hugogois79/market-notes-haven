@@ -402,6 +402,8 @@ const RichTextEditor = ({
               onAutoSave={handleAutoSave}
               autoSaveDelay={2000}
               onContentUpdate={handleContentUpdate}
+              execCommand={execCommand}
+              formatTableCells={formatTableCells}
             />
             
             <TableDialog 
