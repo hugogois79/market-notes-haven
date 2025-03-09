@@ -170,17 +170,20 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
     if (!selection || !selection.rangeCount) return;
 
     const range = selection.getRangeAt(0);
-    // Find cells from selection
+    const container = range.commonAncestorContainer;
+    
+    // First, try to align table cells if we're in a table
     let cells: Element[] = [];
     
-    if (range.commonAncestorContainer instanceof Element) {
+    // Check if we're in a table by looking for table-related elements
+    if (container instanceof Element) {
       // If the common ancestor is a table or contains tables
-      if (range.commonAncestorContainer.tagName === 'TABLE' || 
-          range.commonAncestorContainer.querySelector('table')) {
-        cells = Array.from(range.commonAncestorContainer.querySelectorAll('td, th'));
+      if (container.tagName === 'TABLE' || 
+          container.querySelector('table')) {
+        cells = Array.from(container.querySelectorAll('td, th'));
       } else {
         // Check if we're inside a cell
-        let parent: Node | Element | null = range.commonAncestorContainer;
+        let parent: Node | Element | null = container;
         while (parent && parent !== editorRef.current) {
           if (parent instanceof Element && (parent.tagName === 'TD' || parent.tagName === 'TH')) {
             cells.push(parent);
@@ -190,9 +193,9 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
           if (!parent) break;
         }
       }
-    } else if (range.commonAncestorContainer.parentElement) {
+    } else if (container.parentElement) {
       // Navigate up to find if we're in a table
-      let parent = range.commonAncestorContainer.parentElement;
+      let parent = container.parentElement;
       while (parent && parent !== editorRef.current) {
         if (parent.tagName === 'TD' || parent.tagName === 'TH') {
           cells.push(parent);
@@ -206,11 +209,31 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
       }
     }
     
-    // Apply alignment to found cells
+    // Apply alignment to found table cells
     if (cells.length > 0) {
       cells.forEach(cell => {
         (cell as HTMLElement).style.textAlign = alignment;
       });
+    } else {
+      // If we're not in a table, apply alignment to the current block
+      // This will handle p, h1, h2, div, etc.
+      document.execCommand('justifyLeft', false, ''); // Reset alignment first
+      
+      switch(alignment) {
+        case 'center':
+          document.execCommand('justifyCenter', false, '');
+          break;
+        case 'right':
+          document.execCommand('justifyRight', false, '');
+          break;
+        case 'justify':
+          document.execCommand('justifyFull', false, '');
+          break;
+        case 'left':
+        default:
+          document.execCommand('justifyLeft', false, '');
+          break;
+      }
     }
 
     // After formatting, trigger input event

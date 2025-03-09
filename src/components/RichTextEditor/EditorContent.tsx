@@ -1,4 +1,3 @@
-
 import { useEffect, RefObject, useCallback } from "react";
 
 interface EditorContentProps {
@@ -65,7 +64,7 @@ const EditorContent = ({
       
       // Handle ALT key combinations
       if (e.altKey) {
-        switch (e.key) {
+        switch (e.key.toLowerCase()) { // Convert to lowercase to handle both upper and lowercase
           case '1': // Heading 1
             e.preventDefault();
             execCommand('formatBlock', '<h1>');
@@ -79,22 +78,18 @@ const EditorContent = ({
             execCommand('formatBlock', '<p>');
             break;
           case 'c': // Center align
-          case 'C':
             e.preventDefault();
             formatTableCells('center');
             break;
           case 'l': // Left align
-          case 'L':
             e.preventDefault();
             formatTableCells('left');
             break;
           case 'r': // Right align
-          case 'R':
             e.preventDefault();
             formatTableCells('right');
             break;
           case 'j': // Justify
-          case 'J':
             e.preventDefault();
             formatTableCells('justify');
             break;
