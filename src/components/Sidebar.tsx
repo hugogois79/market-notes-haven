@@ -26,11 +26,11 @@ const Sidebar = () => {
     let timer: number | null = null;
     
     if (isHovering && !isExpanded && !isMobile) {
-      // Expand when hovering over collapsed sidebar
+      // Expand when hovering over collapsed sidebar - with 3 seconds delay
       timer = window.setTimeout(() => {
         setIsExpanded(true);
         setExpandedByHover(true); // Mark as expanded by hover
-      }, 300); // Delay expansion to prevent flicker
+      }, 3000); // 3 second delay before expansion
     } else if (!isHovering && expandedByHover && !isMobile) {
       // Only collapse if it was expanded due to hover
       timer = window.setTimeout(() => {

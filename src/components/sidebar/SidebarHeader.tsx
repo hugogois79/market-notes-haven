@@ -28,8 +28,9 @@ export const SidebarHeader = ({ isExpanded, toggleExpand, isMobile }: SidebarHea
             e.stopPropagation();
             toggleExpand();
           }}
-          className="text-secondary-foreground hover:bg-blue-700/50"
+          className="text-secondary-foreground hover:bg-blue-700/50 transition-all duration-300"
           aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+          title={isExpanded ? "Collapse sidebar" : "Hover for 3s to expand or click to expand immediately"}
         >
           {isExpanded ? 
             <ChevronLeft size={20} /> : 
