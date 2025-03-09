@@ -203,6 +203,24 @@ const TokenDetail = () => {
     }
   };
   
+  const handleDelete = async () => {
+    if (!id) return;
+    
+    try {
+      const success = await deleteToken(id);
+      
+      if (success) {
+        toast.success("Token deleted successfully");
+        navigate("/tokens");
+      } else {
+        toast.error("Failed to delete token");
+      }
+    } catch (error) {
+      console.error("Error deleting token:", error);
+      toast.error("An error occurred while deleting");
+    }
+  };
+  
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[60vh]">
