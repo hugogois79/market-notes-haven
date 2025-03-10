@@ -66,69 +66,41 @@ export const useTradeInfo = ({
   };
 
   const handleQuantityChange = (value: string) => {
-    // Remove any non-numeric characters except for decimal point
-    const sanitizedValue = value.replace(/[^\d.]/g, '');
+    setQuantity(value);
     
-    // Handle multiple decimal points (keep only the first one)
-    const parts = sanitizedValue.split('.');
-    const formattedValue = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
-    
-    setQuantity(formattedValue);
-    
-    // Only update trade info if the value is valid
-    const numericValue = formattedValue === "" ? undefined : parseFloat(formattedValue);
-    if (formattedValue === "" || !isNaN(numericValue)) {
+    // Only update trade info if the value is valid or empty
+    const numericValue = value === "" ? undefined : parseFloat(value);
+    if (value === "" || !isNaN(numericValue)) {
       updateTradeInfo({ quantity: numericValue });
     }
   };
 
   const handleEntryPriceChange = (value: string) => {
-    // Remove any non-numeric characters except for decimal point
-    const sanitizedValue = value.replace(/[^\d.]/g, '');
+    setEntryPrice(value);
     
-    // Handle multiple decimal points (keep only the first one)
-    const parts = sanitizedValue.split('.');
-    const formattedValue = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
-    
-    setEntryPrice(formattedValue);
-    
-    // Only update trade info if the value is valid
-    const numericValue = formattedValue === "" ? undefined : parseFloat(formattedValue);
-    if (formattedValue === "" || !isNaN(numericValue)) {
+    // Only update trade info if the value is valid or empty
+    const numericValue = value === "" ? undefined : parseFloat(value);
+    if (value === "" || !isNaN(numericValue)) {
       updateTradeInfo({ entryPrice: numericValue });
     }
   };
 
   const handleTargetPriceChange = (value: string) => {
-    // Remove any non-numeric characters except for decimal point
-    const sanitizedValue = value.replace(/[^\d.]/g, '');
+    setTargetPrice(value);
     
-    // Handle multiple decimal points (keep only the first one)
-    const parts = sanitizedValue.split('.');
-    const formattedValue = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
-    
-    setTargetPrice(formattedValue);
-    
-    // Only update trade info if the value is valid
-    const numericValue = formattedValue === "" ? undefined : parseFloat(formattedValue);
-    if (formattedValue === "" || !isNaN(numericValue)) {
+    // Only update trade info if the value is valid or empty
+    const numericValue = value === "" ? undefined : parseFloat(value);
+    if (value === "" || !isNaN(numericValue)) {
       updateTradeInfo({ targetPrice: numericValue });
     }
   };
 
   const handleStopPriceChange = (value: string) => {
-    // Remove any non-numeric characters except for decimal point
-    const sanitizedValue = value.replace(/[^\d.]/g, '');
+    setStopPrice(value);
     
-    // Handle multiple decimal points (keep only the first one)
-    const parts = sanitizedValue.split('.');
-    const formattedValue = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
-    
-    setStopPrice(formattedValue);
-    
-    // Only update trade info if the value is valid
-    const numericValue = formattedValue === "" ? undefined : parseFloat(formattedValue);
-    if (formattedValue === "" || !isNaN(numericValue)) {
+    // Only update trade info if the value is valid or empty
+    const numericValue = value === "" ? undefined : parseFloat(value);
+    if (value === "" || !isNaN(numericValue)) {
       updateTradeInfo({ stopPrice: numericValue });
     }
   };

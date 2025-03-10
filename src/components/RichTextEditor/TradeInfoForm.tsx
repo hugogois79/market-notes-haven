@@ -52,6 +52,15 @@ export const TradeInfoForm = ({
     }).format(value);
   };
 
+  const handleNumericInput = (value: string, onChange: (value: string) => void) => {
+    // Allow empty string, digits, and one decimal point
+    const numericRegex = /^(\d*\.?\d*)$/;
+    
+    if (value === '' || numericRegex.test(value)) {
+      onChange(value);
+    }
+  };
+
   return (
     <>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -93,8 +102,9 @@ export const TradeInfoForm = ({
             type="text"
             placeholder="Enter quantity"
             value={quantity}
-            onChange={(e) => onQuantityChange(e.target.value)}
+            onChange={(e) => handleNumericInput(e.target.value, onQuantityChange)}
             inputMode="decimal"
+            className="font-mono"
           />
         </div>
 
@@ -108,8 +118,9 @@ export const TradeInfoForm = ({
             type="text"
             placeholder="Enter entry price"
             value={entryPrice}
-            onChange={(e) => onEntryPriceChange(e.target.value)}
+            onChange={(e) => handleNumericInput(e.target.value, onEntryPriceChange)}
             inputMode="decimal"
+            className="font-mono"
           />
         </div>
 
@@ -123,8 +134,9 @@ export const TradeInfoForm = ({
             type="text"
             placeholder="Enter target price"
             value={targetPrice}
-            onChange={(e) => onTargetPriceChange(e.target.value)}
+            onChange={(e) => handleNumericInput(e.target.value, onTargetPriceChange)}
             inputMode="decimal"
+            className="font-mono"
           />
         </div>
 
@@ -138,8 +150,9 @@ export const TradeInfoForm = ({
             type="text"
             placeholder="Enter stop price"
             value={stopPrice}
-            onChange={(e) => onStopPriceChange(e.target.value)}
+            onChange={(e) => handleNumericInput(e.target.value, onStopPriceChange)}
             inputMode="decimal"
+            className="font-mono"
           />
         </div>
       </div>
