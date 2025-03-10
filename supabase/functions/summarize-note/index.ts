@@ -55,34 +55,41 @@ serve(async (req) => {
 
       Additionally, identify important trading information like:
       1. The specific cryptocurrency token/coin being traded (e.g. Bitcoin, Ethereum, BNB) 
-      2. The quantity or position size mentioned
-      3. Entry price in USD
-      4. Target price in USD (if mentioned)
-      5. Stop loss price in USD (if mentioned)
+      2. The quantity or position size mentioned (look for values like "5.0 BTC", "0.6 BTC", etc.)
+      3. Entry price in USD (look for "entry zone", "entry price", "$79,800-$80,200", etc.)
+      4. Target price in USD (look for "target", "target price", "tp", etc.)
+      5. Stop loss price in USD (look for "stop loss", "sl", etc.)
       
       Pay careful attention to tables with trade data - they often contain the most accurate information.
       Look for rows with trading pairs, prices, and quantities.
-      If multiple trades are mentioned, include ALL of them separately in the response.
+      If there are numeric values with commas (like $1,000), remove the commas before converting to numbers.
+      
+      If there are multiple trades mentioned (like "SHORT 1", "SHORT 2", "LONG 1"), include ALL of them separately.
+      When there's a range like "$75,800-$76,200", use the average value.
+      
+      Always return numbers as actual numbers (not strings).
       
       Format your response as JSON with "summary" and "tradeInfo" fields:
       {
         "summary": "your summary here",
-        "tradeInfo": [
-          {
-            "token": "token name if found or null",
-            "quantity": number or null,
-            "entryPrice": number in USD or null,
-            "targetPrice": number in USD or null,
-            "stopPrice": number in USD or null
-          },
-          {
-            "token": "another token if multiple are mentioned",
-            "quantity": number or null,
-            "entryPrice": number in USD or null,
-            "targetPrice": number in USD or null,
-            "stopPrice": number in USD or null
-          }
-        ]
+        "tradeInfo": {
+          "allTrades": [
+            {
+              "tokenName": "token name (like BTC, ETH, etc)",
+              "quantity": numeric value (not string),
+              "entryPrice": numeric value in USD (not string),
+              "targetPrice": numeric value in USD (not string),
+              "stopPrice": numeric value in USD (not string)
+            },
+            {
+              "tokenName": "another token if multiple are mentioned",
+              "quantity": numeric value (not string),
+              "entryPrice": numeric value in USD (not string),
+              "targetPrice": numeric value in USD (not string),
+              "stopPrice": numeric value in USD (not string)
+            }
+          ]
+        }
       }`;
     }
     
@@ -102,8 +109,8 @@ serve(async (req) => {
           },
           { role: 'user', content: `Analyze this financial note, paying special attention to trading information and tables with trade data: ${cleanContent}` }
         ],
-        max_tokens: 500,  // Increased to handle more detailed extraction
-        temperature: 0.3,  // Lowered to make responses more deterministic
+        max_tokens: 700,  // Increased to handle more detailed extraction
+        temperature: 0.2,  // Lowered to make responses more deterministic
       }),
     });
 
@@ -123,35 +130,32 @@ serve(async (req) => {
         const parsedResponse = JSON.parse(summary);
         summary = parsedResponse.summary;
         
-        // Convert the AI's tradeInfo to our expected structure
+        // Process the AI's tradeInfo to our expected structure
         if (parsedResponse.tradeInfo) {
-          // Handle both array and single object formats
-          const tradeInfoArray = Array.isArray(parsedResponse.tradeInfo) 
-            ? parsedResponse.tradeInfo 
-            : [parsedResponse.tradeInfo];
+          tradeInfo = parsedResponse.tradeInfo;
           
-          // Use the first trade info by default (for backward compatibility)
-          tradeInfo = {
-            tokenId: null, // We'll need to look up the token ID on the client side
-            quantity: tradeInfoArray[0]?.quantity || null,
-            entryPrice: tradeInfoArray[0]?.entryPrice || null,
-            targetPrice: tradeInfoArray[0]?.targetPrice || null,
-            stopPrice: tradeInfoArray[0]?.stopPrice || null
-          };
-          
-          // Also include the token name/symbol for client-side lookup
-          if (tradeInfoArray[0]?.token) {
-            tradeInfo.tokenName = tradeInfoArray[0].token;
+          // Make sure allTrades is an array
+          if (!Array.isArray(tradeInfo.allTrades)) {
+            tradeInfo.allTrades = [tradeInfo.allTrades];
           }
           
-          // Include the full array for multiple trade info
-          tradeInfo.allTrades = tradeInfoArray.map(trade => ({
-            tokenName: trade.token || null,
-            quantity: trade.quantity || null,
-            entryPrice: trade.entryPrice || null,
-            targetPrice: trade.targetPrice || null,
-            stopPrice: trade.stopPrice || null
-          }));
+          // Clean and normalize the data
+          tradeInfo.allTrades = tradeInfo.allTrades.map(trade => {
+            // Convert string numbers to actual numbers
+            const cleanTrade = {
+              tokenName: trade.tokenName || null,
+              quantity: typeof trade.quantity === 'string' ? 
+                parseFloat(trade.quantity.replace(/,/g, '')) : trade.quantity,
+              entryPrice: typeof trade.entryPrice === 'string' ? 
+                parseFloat(trade.entryPrice.replace(/[^0-9.]/g, '')) : trade.entryPrice,
+              targetPrice: typeof trade.targetPrice === 'string' ? 
+                parseFloat(trade.targetPrice.replace(/[^0-9.]/g, '')) : trade.targetPrice,
+              stopPrice: typeof trade.stopPrice === 'string' ? 
+                parseFloat(trade.stopPrice.replace(/[^0-9.]/g, '')) : trade.stopPrice
+            };
+            
+            return cleanTrade;
+          });
         }
       } catch (e) {
         console.error('Error parsing JSON from OpenAI:', e);

@@ -105,6 +105,7 @@ export const useTradeInfo = ({
   const handleGenerateTradeInfo = async () => {
     if (!noteContent || !availableTokens.length) return;
 
+    // First try local extraction
     const extractedInfo = extractTradeInfo(noteContent, availableTokens);
     let wasUpdated = false;
     let updatedInfo = { ...tradeInfo } as TradeInfo;
@@ -136,6 +137,7 @@ export const useTradeInfo = ({
     }
 
     try {
+      // Then try AI-powered extraction for more complex cases
       const { data, error } = await supabase.functions.invoke('summarize-note', {
         body: { 
           content: noteContent,
@@ -145,13 +147,12 @@ export const useTradeInfo = ({
 
       if (error) {
         console.error("Error extracting trade info:", error);
-        return;
-      }
-
-      if (data?.tradeInfo) {
+      } else if (data?.tradeInfo) {
         if (data.tradeInfo.allTrades && data.tradeInfo.allTrades.length > 0) {
+          // Use the first trade by default
           const firstTrade = data.tradeInfo.allTrades[0];
           
+          // Look up token ID based on name or symbol
           if (firstTrade.tokenName && !updatedInfo.tokenId) {
             const matchedToken = availableTokens.find(token => 
               token.name.toLowerCase() === firstTrade.tokenName.toLowerCase() ||
@@ -164,24 +165,40 @@ export const useTradeInfo = ({
             }
           }
           
-          if (firstTrade.quantity && !updatedInfo.quantity) {
-            updatedInfo.quantity = firstTrade.quantity;
-            wasUpdated = true;
+          // Update quantity if found and not already set
+          if (firstTrade.quantity !== null && firstTrade.quantity !== undefined && !updatedInfo.quantity) {
+            const qty = parseFloat(String(firstTrade.quantity));
+            if (!isNaN(qty)) {
+              updatedInfo.quantity = qty;
+              wasUpdated = true;
+            }
           }
           
-          if (firstTrade.entryPrice && !updatedInfo.entryPrice) {
-            updatedInfo.entryPrice = firstTrade.entryPrice;
-            wasUpdated = true;
+          // Update entry price if found and not already set
+          if (firstTrade.entryPrice !== null && firstTrade.entryPrice !== undefined && !updatedInfo.entryPrice) {
+            const price = parseFloat(String(firstTrade.entryPrice));
+            if (!isNaN(price)) {
+              updatedInfo.entryPrice = price;
+              wasUpdated = true;
+            }
           }
           
-          if (firstTrade.targetPrice && !updatedInfo.targetPrice) {
-            updatedInfo.targetPrice = firstTrade.targetPrice;
-            wasUpdated = true;
+          // Update target price if found and not already set
+          if (firstTrade.targetPrice !== null && firstTrade.targetPrice !== undefined && !updatedInfo.targetPrice) {
+            const price = parseFloat(String(firstTrade.targetPrice));
+            if (!isNaN(price)) {
+              updatedInfo.targetPrice = price;
+              wasUpdated = true;
+            }
           }
           
-          if (firstTrade.stopPrice && !updatedInfo.stopPrice) {
-            updatedInfo.stopPrice = firstTrade.stopPrice;
-            wasUpdated = true;
+          // Update stop price if found and not already set
+          if (firstTrade.stopPrice !== null && firstTrade.stopPrice !== undefined && !updatedInfo.stopPrice) {
+            const price = parseFloat(String(firstTrade.stopPrice));
+            if (!isNaN(price)) {
+              updatedInfo.stopPrice = price;
+              wasUpdated = true;
+            }
           }
         }
       }
@@ -190,6 +207,7 @@ export const useTradeInfo = ({
     }
 
     if (wasUpdated) {
+      // Update the UI state
       onTradeInfoChange(updatedInfo);
       setSelectedToken(updatedInfo.tokenId || "");
       setQuantity(updatedInfo.quantity?.toString() || "");
