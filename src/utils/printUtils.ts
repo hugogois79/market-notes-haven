@@ -96,6 +96,18 @@ export const printNote = (note: Note): void => {
         color: #666;
       }
       
+      /* Preserve formatting for highlighted and underlined text */
+      .print-content .highlight,
+      .print-content [style*="background-color: #FEF7CD"] {
+        background-color: #FEF7CD;
+        border-bottom: 2px solid #FEF7CD;
+      }
+      
+      .print-content u,
+      .print-content [style*="text-decoration: underline"] {
+        text-decoration: underline;
+      }
+      
       /* Hide elements that don't print well */
       .print-content iframe, 
       .print-content video {
@@ -131,6 +143,9 @@ export const printNote = (note: Note): void => {
       </div>
     ` 
     : '';
+
+  // Process content to ensure HTML is preserved exactly as it is
+  const processedContent = note.content;
   
   // Create the complete HTML document for printing
   const printContent = `
@@ -154,7 +169,7 @@ export const printNote = (note: Note): void => {
       </div>
       
       <div class="print-content">
-        ${note.content}
+        ${processedContent}
       </div>
       
       <div class="print-footer">
