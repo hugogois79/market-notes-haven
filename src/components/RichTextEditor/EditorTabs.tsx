@@ -39,6 +39,11 @@ const EditorTabs = ({
     setIsTableDialogOpen(false);
   };
 
+  // Create a wrapper function to handle auto-save that doesn't expect parameters
+  const handleAutoSave = () => {
+    onAutoSave();
+  };
+
   return (
     <Tabs defaultValue="edit" className="w-full">
       <div className="border-b px-3">
@@ -81,7 +86,7 @@ const EditorTabs = ({
           editorRef={editorRef}
           handleContentChange={onContentChange}
           initialContent={content}
-          onAutoSave={onAutoSave}
+          onAutoSave={handleAutoSave}
           autoSaveDelay={2000}
           onContentUpdate={onContentUpdate}
           execCommand={execCommand}

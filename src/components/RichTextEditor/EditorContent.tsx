@@ -5,11 +5,11 @@ interface EditorContentProps {
   editorRef: RefObject<HTMLDivElement>;
   handleContentChange: () => void;
   initialContent: string;
-  onAutoSave?: () => void; // Auto-save functionality still available but optional
-  autoSaveDelay?: number; // Delay in milliseconds before triggering auto-save
-  onContentUpdate?: (content: string) => void; // Callback for content changes
-  execCommand?: (command: string, value?: string) => void; // Command executor
-  formatTableCells?: (alignment: string) => void; // Table cell formatter
+  onAutoSave?: () => void; // Changed to match the expected function signature with no parameters
+  autoSaveDelay?: number;
+  onContentUpdate?: (content: string) => void;
+  execCommand?: (command: string, value?: string) => void;
+  formatTableCells?: (alignment: string) => void;
 }
 
 const EditorContent = ({ 
@@ -17,7 +17,7 @@ const EditorContent = ({
   handleContentChange, 
   initialContent,
   onAutoSave,
-  autoSaveDelay = 3000, // Default to 3 seconds
+  autoSaveDelay = 3000,
   onContentUpdate,
   execCommand,
   formatTableCells,
@@ -48,7 +48,7 @@ const EditorContent = ({
   const debouncedAutoSave = useCallback(() => {
     if (onAutoSave) {
       const timer = setTimeout(() => {
-        onAutoSave();
+        onAutoSave(); // Call without arguments
       }, autoSaveDelay);
       
       return () => clearTimeout(timer);
