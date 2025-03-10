@@ -28,13 +28,16 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
     targetPrice,
     stopPrice,
     currentPrice,
+    priceChange,
+    priceChangePercent,
     profit,
     handleTokenChange,
     handleQuantityChange,
     handleEntryPriceChange,
     handleTargetPriceChange,
     handleStopPriceChange,
-    handleGenerateTradeInfo
+    handleGenerateTradeInfo,
+    refreshCurrentPrice
   } = useTradeInfo({
     tradeInfo,
     noteContent,
@@ -71,12 +74,15 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
         targetPrice={targetPrice}
         stopPrice={stopPrice}
         currentPrice={currentPrice}
+        priceChange={priceChange}
+        priceChangePercent={priceChangePercent}
         profit={profit}
         onTokenChange={handleTokenChange}
         onQuantityChange={handleQuantityChange}
         onEntryPriceChange={handleEntryPriceChange}
         onTargetPriceChange={handleTargetPriceChange}
         onStopPriceChange={handleStopPriceChange}
+        onRefreshPrice={refreshCurrentPrice}
       />
     </div>
   );

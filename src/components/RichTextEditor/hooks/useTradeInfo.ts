@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { TradeInfo, Token } from "@/types";
 import { toast } from "sonner";
@@ -23,6 +24,8 @@ export const useTradeInfo = ({
   const [targetPrice, setTargetPrice] = useState<string>(tradeInfo?.targetPrice?.toString() || "");
   const [stopPrice, setStopPrice] = useState<string>(tradeInfo?.stopPrice?.toString() || "");
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
+  const [priceChange, setPriceChange] = useState<number | null>(null);
+  const [priceChangePercent, setPriceChangePercent] = useState<number | null>(null);
   const [profit, setProfit] = useState<number | null>(null);
 
   // Update local state when tradeInfo prop changes
@@ -41,21 +44,38 @@ export const useTradeInfo = ({
     if (selectedToken && quantity && entryPrice) {
       try {
         const parsedEntryPrice = parseFloat(entryPrice);
-        const randomFactor = 0.8 + Math.random() * 0.4;
-        const simulatedCurrentPrice = parsedEntryPrice * randomFactor;
-        setCurrentPrice(parseFloat(simulatedCurrentPrice.toFixed(2)));
         
+        // Simulate current price changes
+        // In a real app, this would be replaced with actual API calls
+        const randomFactor = 0.8 + Math.random() * 0.4; // Random factor between 0.8 and 1.2
+        const simulatedCurrentPrice = parsedEntryPrice * randomFactor;
+        const formattedCurrentPrice = parseFloat(simulatedCurrentPrice.toFixed(2));
+        setCurrentPrice(formattedCurrentPrice);
+        
+        // Calculate price change
+        const priceChangeValue = formattedCurrentPrice - parsedEntryPrice;
+        setPriceChange(parseFloat(priceChangeValue.toFixed(2)));
+        
+        // Calculate percentage change
+        const percentChange = (priceChangeValue / parsedEntryPrice) * 100;
+        setPriceChangePercent(parseFloat(percentChange.toFixed(2)));
+        
+        // Calculate profit/loss
         const parsedQuantity = parseFloat(quantity);
         const investmentValue = parsedEntryPrice * parsedQuantity;
-        const currentValue = simulatedCurrentPrice * parsedQuantity;
+        const currentValue = formattedCurrentPrice * parsedQuantity;
         const calculatedProfit = currentValue - investmentValue;
         setProfit(parseFloat(calculatedProfit.toFixed(2)));
       } catch (error) {
         setCurrentPrice(null);
+        setPriceChange(null);
+        setPriceChangePercent(null);
         setProfit(null);
       }
     } else {
       setCurrentPrice(null);
+      setPriceChange(null);
+      setPriceChangePercent(null);
       setProfit(null);
     }
   }, [selectedToken, quantity, entryPrice]);
@@ -235,6 +255,42 @@ export const useTradeInfo = ({
     }
   };
 
+  // Add function to refresh current price 
+  const refreshCurrentPrice = () => {
+    if (selectedToken && entryPrice) {
+      try {
+        const parsedEntryPrice = parseFloat(entryPrice);
+        const randomFactor = 0.8 + Math.random() * 0.4;
+        const simulatedCurrentPrice = parsedEntryPrice * randomFactor;
+        const formattedCurrentPrice = parseFloat(simulatedCurrentPrice.toFixed(2));
+        setCurrentPrice(formattedCurrentPrice);
+        
+        // Calculate price change
+        const priceChangeValue = formattedCurrentPrice - parsedEntryPrice;
+        setPriceChange(parseFloat(priceChangeValue.toFixed(2)));
+        
+        // Calculate percentage change
+        const percentChange = (priceChangeValue / parsedEntryPrice) * 100;
+        setPriceChangePercent(parseFloat(percentChange.toFixed(2)));
+        
+        // Recalculate profit if quantity exists
+        if (quantity) {
+          const parsedQuantity = parseFloat(quantity);
+          const investmentValue = parsedEntryPrice * parsedQuantity;
+          const currentValue = formattedCurrentPrice * parsedQuantity;
+          const calculatedProfit = currentValue - investmentValue;
+          setProfit(parseFloat(calculatedProfit.toFixed(2)));
+        }
+        
+        toast.success("Price updated");
+      } catch (error) {
+        toast.error("Failed to update price");
+      }
+    } else {
+      toast.info("Select a token and set entry price first");
+    }
+  };
+
   return {
     selectedToken,
     quantity,
@@ -242,12 +298,15 @@ export const useTradeInfo = ({
     targetPrice,
     stopPrice,
     currentPrice,
+    priceChange,
+    priceChangePercent,
     profit,
     handleTokenChange,
     handleQuantityChange,
     handleEntryPriceChange,
     handleTargetPriceChange,
     handleStopPriceChange,
-    handleGenerateTradeInfo
+    handleGenerateTradeInfo,
+    refreshCurrentPrice
   };
 };
