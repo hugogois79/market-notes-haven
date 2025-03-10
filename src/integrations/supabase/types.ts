@@ -165,6 +165,131 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      expense_reports: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string | null
+          status: Database["public"]["Enums"]["report_status"]
+          submitted_date: string | null
+          title: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+          submitted_date?: string | null
+          title: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+          submitted_date?: string | null
+          title?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          date: string
+          id: string
+          image_url: string | null
+          merchant: string | null
+          notes: string | null
+          project_id: string | null
+          status: Database["public"]["Enums"]["expense_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          date: string
+          id?: string
+          image_url?: string | null
+          merchant?: string | null
+          notes?: string | null
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["expense_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          image_url?: string | null
+          merchant?: string | null
+          notes?: string | null
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["expense_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       files: {
         Row: {
           date_created: string
@@ -407,6 +532,78 @@ export type Database = {
           username?: string | null
         }
         Relationships: []
+      }
+      projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          pending_expenses: number
+          start_date: string
+          total_expenses: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          pending_expenses?: number
+          start_date: string
+          total_expenses?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          pending_expenses?: number
+          start_date?: string
+          total_expenses?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      report_expenses: {
+        Row: {
+          created_at: string
+          expense_id: string
+          id: string
+          report_id: string
+        }
+        Insert: {
+          created_at?: string
+          expense_id: string
+          id?: string
+          report_id: string
+        }
+        Update: {
+          created_at?: string
+          expense_id?: string
+          id?: string
+          report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_expenses_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_expenses_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "expense_reports"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       settings: {
         Row: {
@@ -851,7 +1048,8 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      expense_status: "pending" | "approved" | "rejected"
+      report_status: "draft" | "submitted" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never

@@ -17,8 +17,9 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
         
         const html = event.clipboardData.getData('text/html');
         
-        // Check if content contains tables
-        if (html.includes('<table') || html.includes('<tbody') || html.includes('<tr') || html.includes('<td')) {
+        // Check if content contains tables or lists
+        if (html.includes('<table') || html.includes('<tbody') || html.includes('<tr') || html.includes('<td') ||
+            html.includes('<ul') || html.includes('<ol') || html.includes('<li')) {
           event.preventDefault();
           
           // Create a temporary div to sanitize the HTML
@@ -42,6 +43,25 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
                 if (cell.tagName === 'TH') {
                   cell.setAttribute('style', 'border: 1px solid #d1d5db; padding: 0.5rem 1rem; background-color: #f3f4f6; font-weight: bold; text-align: left;');
                 }
+              });
+            });
+          }
+          
+          // Process lists to ensure they have appropriate styling
+          const lists = tempDiv.querySelectorAll('ul, ol');
+          if (lists.length > 0) {
+            lists.forEach(list => {
+              // Apply correct list styling
+              if (list.tagName === 'UL') {
+                list.setAttribute('style', 'list-style-type: disc; padding-left: 2rem; margin: 0.5rem 0;');
+              } else if (list.tagName === 'OL') {
+                list.setAttribute('style', 'list-style-type: decimal; padding-left: 2rem; margin: 0.5rem 0;');
+              }
+              
+              // Style list items
+              const items = list.querySelectorAll('li');
+              items.forEach(item => {
+                item.setAttribute('style', 'margin-bottom: 0.25rem;');
               });
             });
           }
@@ -87,7 +107,7 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
       }
     }
     
-    // For heading formatting, ensure consistent styles
+    // For list and heading formatting, ensure consistent styles
     if (command === "formatBlock") {
       if (value === "<h1>") {
         // Apply H1 styling
@@ -145,6 +165,33 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
         // For other formatBlock commands
         document.execCommand(command, false, value);
       }
+    } else if (command === "insertUnorderedList" || command === "insertOrderedList") {
+      // Apply list formatting
+      document.execCommand(command, false, value);
+      
+      // Apply additional styling to the created list
+      if (selection && selection.rangeCount > 0) {
+        const container = selection.getRangeAt(0).commonAncestorContainer;
+        const listElement = container.nodeType === 1 
+          ? (container as Element).closest('ul, ol') 
+          : (container.parentElement?.closest('ul, ol'));
+        
+        if (listElement && listElement instanceof HTMLElement) {
+          if (listElement.tagName === 'UL') {
+            listElement.style.listStyleType = 'disc';
+          } else if (listElement.tagName === 'OL') {
+            listElement.style.listStyleType = 'decimal';
+          }
+          listElement.style.paddingLeft = '2rem';
+          listElement.style.margin = '0.5rem 0';
+          
+          // Style list items
+          const items = listElement.querySelectorAll('li');
+          items.forEach(item => {
+            (item as HTMLElement).style.marginBottom = '0.25rem';
+          });
+        }
+      }
     } else {
       // Execute regular commands
       document.execCommand(command, false, value);
@@ -174,6 +221,7 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
     
     // First, try to align table cells if we're in a table
     let cells: Element[] = [];
+    let inTable = false;
     
     // Check if we're in a table by looking for table-related elements
     if (container instanceof Element) {
@@ -181,12 +229,14 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
       if (container.tagName === 'TABLE' || 
           container.querySelector('table')) {
         cells = Array.from(container.querySelectorAll('td, th'));
+        inTable = true;
       } else {
         // Check if we're inside a cell
         let parent: Node | Element | null = container;
         while (parent && parent !== editorRef.current) {
           if (parent instanceof Element && (parent.tagName === 'TD' || parent.tagName === 'TH')) {
             cells.push(parent);
+            inTable = true;
             break;
           }
           parent = parent.parentElement;
@@ -199,9 +249,11 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
       while (parent && parent !== editorRef.current) {
         if (parent.tagName === 'TD' || parent.tagName === 'TH') {
           cells.push(parent);
+          inTable = true;
           break;
         } else if (parent.tagName === 'TABLE') {
           cells = Array.from(parent.querySelectorAll('td, th'));
+          inTable = true;
           break;
         }
         if (!parent.parentElement) break;
@@ -209,15 +261,30 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
       }
     }
     
+    // Check if we're in a list element
+    let inList = false;
+    let listElement: Element | null = null;
+    
+    if (container instanceof Element) {
+      listElement = container.closest('ul, ol, li');
+      if (listElement) inList = true;
+    } else if (container.parentElement) {
+      listElement = container.parentElement.closest('ul, ol, li');
+      if (listElement) inList = true;
+    }
+
     // Apply alignment to found table cells
-    if (cells.length > 0) {
+    if (cells.length > 0 && inTable) {
       cells.forEach(cell => {
         (cell as HTMLElement).style.textAlign = alignment;
       });
+    } else if (inList && listElement) {
+      // Apply alignment to list element
+      (listElement as HTMLElement).style.textAlign = alignment;
     } else {
-      // If we're not in a table, apply alignment to the current block
-      // This will handle p, h1, h2, div, etc.
-      document.execCommand('justifyLeft', false, ''); // Reset alignment first
+      // If we're not in a table or list, apply alignment to the current block
+      // Reset alignment first for consistency
+      document.execCommand('justifyLeft', false, '');
       
       switch(alignment) {
         case 'center':

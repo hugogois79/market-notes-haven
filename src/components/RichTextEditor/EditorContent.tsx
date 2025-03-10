@@ -139,7 +139,7 @@ const EditorContent = ({
       }}
       data-placeholder="Start writing..."
     >
-      {/* Style definitions for headings within the editor */}
+      {/* Style definitions for headings and lists within the editor */}
       <style>{`
         [contenteditable="true"] h1 {
           font-size: 1.5rem;
@@ -156,6 +156,19 @@ const EditorContent = ({
         [contenteditable="true"] p {
           font-size: 0.875rem;
           margin-bottom: 0.5rem;
+        }
+        [contenteditable="true"] ul {
+          list-style-type: disc;
+          padding-left: 2rem;
+          margin: 0.5rem 0;
+        }
+        [contenteditable="true"] ol {
+          list-style-type: decimal;
+          padding-left: 2rem;
+          margin: 0.5rem 0;
+        }
+        [contenteditable="true"] li {
+          margin-bottom: 0.25rem;
         }
         [contenteditable="true"] .chapter-separator {
           width: 100%;

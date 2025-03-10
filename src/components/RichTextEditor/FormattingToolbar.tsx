@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -116,26 +117,47 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
       >
         <Italic size={16} />
       </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        onClick={() => execCommand("insertUnorderedList")}
-        title="Bullet List"
-        className="h-8 w-8"
-      >
-        <List size={16} />
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        onClick={() => execCommand("insertOrderedList")}
-        title="Numbered List"
-        className="h-8 w-8"
-      >
-        <ListOrdered size={16} />
-      </Button>
+      
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => execCommand("insertUnorderedList")}
+              title="Bullet List"
+              className="h-8 w-8"
+            >
+              <List size={16} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Bullet List</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => execCommand("insertOrderedList")}
+              title="Numbered List"
+              className="h-8 w-8"
+            >
+              <ListOrdered size={16} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Numbered List</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      
       <Button
         type="button"
         size="icon"
