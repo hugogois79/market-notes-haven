@@ -30,6 +30,8 @@ export interface TradeInfo {
   tokenId?: string;
   quantity?: number;
   entryPrice?: number;
+  targetPrice?: number;
+  stopPrice?: number;
 }
 
 export interface Note {

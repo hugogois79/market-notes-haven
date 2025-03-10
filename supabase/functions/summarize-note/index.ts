@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.8.0';
@@ -53,9 +54,14 @@ serve(async (req) => {
       systemPrompt += `
 
       Additionally, identify important trading information like:
-      1. The specific cryptocurrency token/coin being traded (e.g. Bitcoin, Ethereum, BNB)
-      2. The quantity or position size mentioned 
+      1. The specific cryptocurrency token/coin being traded (e.g. Bitcoin, Ethereum, BNB) 
+      2. The quantity or position size mentioned
       3. Entry price in USD
+      4. Target price in USD (if mentioned)
+      5. Stop loss price in USD (if mentioned)
+      
+      Pay careful attention to tables with trade data - they often contain the most accurate information.
+      Look for rows with trading pairs, prices, and quantities.
       
       Format your response as JSON with "summary" and "tradeInfo" fields:
       {
@@ -63,7 +69,9 @@ serve(async (req) => {
         "tradeInfo": {
           "token": "token name if found or null",
           "quantity": number or null,
-          "entryPrice": number in USD or null
+          "entryPrice": number in USD or null,
+          "targetPrice": number in USD or null,
+          "stopPrice": number in USD or null
         }
       }`;
     }
@@ -82,10 +90,10 @@ serve(async (req) => {
             role: 'system', 
             content: systemPrompt
           },
-          { role: 'user', content: `Summarize this financial note: ${cleanContent}` }
+          { role: 'user', content: `Analyze this financial note, paying special attention to trading information and tables with trade data: ${cleanContent}` }
         ],
-        max_tokens: 300,
-        temperature: 0.5,
+        max_tokens: 500,  // Increased to handle more detailed extraction
+        temperature: 0.3,  // Lowered to make responses more deterministic
       }),
     });
 
@@ -104,7 +112,22 @@ serve(async (req) => {
       try {
         const parsedResponse = JSON.parse(summary);
         summary = parsedResponse.summary;
-        tradeInfo = parsedResponse.tradeInfo;
+        
+        // Convert the AI's tradeInfo to our expected structure
+        if (parsedResponse.tradeInfo) {
+          tradeInfo = {
+            tokenId: null, // We'll need to look up the token ID on the client side
+            quantity: parsedResponse.tradeInfo.quantity || null,
+            entryPrice: parsedResponse.tradeInfo.entryPrice || null,
+            targetPrice: parsedResponse.tradeInfo.targetPrice || null,
+            stopPrice: parsedResponse.tradeInfo.stopPrice || null
+          };
+          
+          // Also include the token name/symbol for client-side lookup
+          if (parsedResponse.tradeInfo.token) {
+            tradeInfo.tokenName = parsedResponse.tradeInfo.token;
+          }
+        }
       } catch (e) {
         console.error('Error parsing JSON from OpenAI:', e);
         // Keep the summary as is if parsing fails
@@ -132,7 +155,7 @@ serve(async (req) => {
           console.error('Error saving summary to note:', updateError);
           // Continue execution, don't throw an error since we have the summary
         } else {
-          console.log('Summary successfully saved to note:', noteId);
+          console.log('Summary and trade info successfully saved to note:', noteId);
         }
       } catch (dbError) {
         console.error('Database error:', dbError);

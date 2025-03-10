@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Token, TradeInfo } from "@/types";
-import { TrendingUp, Search, DollarSign, BarChart2 } from "lucide-react";
+import { TrendingUp, Search, DollarSign, BarChart2, Target, AlertTriangle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -33,6 +33,8 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
   const [selectedToken, setSelectedToken] = useState<string>(tradeInfo?.tokenId || "");
   const [quantity, setQuantity] = useState<string>(tradeInfo?.quantity?.toString() || "");
   const [entryPrice, setEntryPrice] = useState<string>(tradeInfo?.entryPrice?.toString() || "");
+  const [targetPrice, setTargetPrice] = useState<string>(tradeInfo?.targetPrice?.toString() || "");
+  const [stopPrice, setStopPrice] = useState<string>(tradeInfo?.stopPrice?.toString() || "");
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [profit, setProfit] = useState<number | null>(null);
 
@@ -42,6 +44,8 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
       setSelectedToken(tradeInfo.tokenId || "");
       setQuantity(tradeInfo.quantity?.toString() || "");
       setEntryPrice(tradeInfo.entryPrice?.toString() || "");
+      setTargetPrice(tradeInfo.targetPrice?.toString() || "");
+      setStopPrice(tradeInfo.stopPrice?.toString() || "");
     }
   }, [tradeInfo]);
 
@@ -83,6 +87,8 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
       tokenId,
       quantity: quantity ? parseFloat(quantity) : undefined,
       entryPrice: entryPrice ? parseFloat(entryPrice) : undefined,
+      targetPrice: targetPrice ? parseFloat(targetPrice) : undefined,
+      stopPrice: stopPrice ? parseFloat(stopPrice) : undefined,
     };
     
     onTradeInfoChange(updatedTradeInfo);
@@ -100,6 +106,8 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
       tokenId: selectedToken,
       quantity: !isNaN(Number(numericValue)) ? numericValue : undefined,
       entryPrice: entryPrice ? parseFloat(entryPrice) : undefined,
+      targetPrice: targetPrice ? parseFloat(targetPrice) : undefined,
+      stopPrice: stopPrice ? parseFloat(stopPrice) : undefined,
     };
     
     onTradeInfoChange(updatedTradeInfo);
@@ -117,6 +125,46 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
       tokenId: selectedToken,
       quantity: quantity ? parseFloat(quantity) : undefined,
       entryPrice: !isNaN(Number(numericValue)) ? numericValue : undefined,
+      targetPrice: targetPrice ? parseFloat(targetPrice) : undefined,
+      stopPrice: stopPrice ? parseFloat(stopPrice) : undefined,
+    };
+    
+    onTradeInfoChange(updatedTradeInfo);
+  };
+
+  // Handle target price change
+  const handleTargetPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTargetPrice = e.target.value;
+    setTargetPrice(newTargetPrice);
+    
+    // Immediately update parent with new trade info
+    const numericValue = newTargetPrice === "" ? undefined : parseFloat(newTargetPrice);
+    
+    const updatedTradeInfo: TradeInfo = {
+      tokenId: selectedToken,
+      quantity: quantity ? parseFloat(quantity) : undefined,
+      entryPrice: entryPrice ? parseFloat(entryPrice) : undefined,
+      targetPrice: !isNaN(Number(numericValue)) ? numericValue : undefined,
+      stopPrice: stopPrice ? parseFloat(stopPrice) : undefined,
+    };
+    
+    onTradeInfoChange(updatedTradeInfo);
+  };
+
+  // Handle stop price change
+  const handleStopPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newStopPrice = e.target.value;
+    setStopPrice(newStopPrice);
+    
+    // Immediately update parent with new trade info
+    const numericValue = newStopPrice === "" ? undefined : parseFloat(newStopPrice);
+    
+    const updatedTradeInfo: TradeInfo = {
+      tokenId: selectedToken,
+      quantity: quantity ? parseFloat(quantity) : undefined,
+      entryPrice: entryPrice ? parseFloat(entryPrice) : undefined,
+      targetPrice: targetPrice ? parseFloat(targetPrice) : undefined,
+      stopPrice: !isNaN(Number(numericValue)) ? numericValue : undefined,
     };
     
     onTradeInfoChange(updatedTradeInfo);
@@ -127,6 +175,7 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
     if (!noteContent || !availableTokens.length) return;
 
     const extractedInfo = extractTradeInfo(noteContent, availableTokens);
+    console.log("Extracted trade info:", extractedInfo);
     
     let wasUpdated = false;
     let updatedInfo = { ...tradeInfo } as TradeInfo;
@@ -146,11 +195,23 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
       wasUpdated = true;
     }
     
+    if (extractedInfo.targetPrice) {
+      updatedInfo.targetPrice = extractedInfo.targetPrice;
+      wasUpdated = true;
+    }
+    
+    if (extractedInfo.stopPrice) {
+      updatedInfo.stopPrice = extractedInfo.stopPrice;
+      wasUpdated = true;
+    }
+    
     if (wasUpdated) {
       onTradeInfoChange(updatedInfo);
       setSelectedToken(updatedInfo.tokenId || "");
       setQuantity(updatedInfo.quantity?.toString() || "");
       setEntryPrice(updatedInfo.entryPrice?.toString() || "");
+      setTargetPrice(updatedInfo.targetPrice?.toString() || "");
+      setStopPrice(updatedInfo.stopPrice?.toString() || "");
       toast.success("Trade information extracted from note");
     } else {
       toast.info("No trade information found in note content");
@@ -189,11 +250,11 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
           disabled={isLoadingTokens || !noteContent}
         >
           <Search size={14} />
-          Generate from Note
+          Extract from Note
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {/* Token Selection */}
         <div className="space-y-1 col-span-2 md:col-span-1">
           <Label htmlFor="token">Token</Label>
@@ -242,7 +303,10 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
 
         {/* Entry Price Input */}
         <div className="space-y-1">
-          <Label htmlFor="entryPrice">Entry Price ($)</Label>
+          <Label htmlFor="entryPrice" className="flex items-center gap-1">
+            <DollarSign size={14} />
+            Entry Price
+          </Label>
           <Input
             id="entryPrice"
             type="number"
@@ -254,6 +318,43 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
           />
         </div>
 
+        {/* Target Price Input - New */}
+        <div className="space-y-1">
+          <Label htmlFor="targetPrice" className="flex items-center gap-1">
+            <Target size={14} />
+            Target Price
+          </Label>
+          <Input
+            id="targetPrice"
+            type="number"
+            placeholder="Enter target price"
+            value={targetPrice}
+            onChange={handleTargetPriceChange}
+            min="0"
+            step="any"
+          />
+        </div>
+
+        {/* Stop Price Input - New */}
+        <div className="space-y-1">
+          <Label htmlFor="stopPrice" className="flex items-center gap-1">
+            <AlertTriangle size={14} />
+            Stop Price
+          </Label>
+          <Input
+            id="stopPrice"
+            type="number"
+            placeholder="Enter stop price"
+            value={stopPrice}
+            onChange={handleStopPriceChange}
+            min="0"
+            step="any"
+          />
+        </div>
+      </div>
+
+      {/* Second row - Current price and profit */}
+      <div className="grid grid-cols-2 gap-3 mt-3">
         {/* Current Price (Non-editable) */}
         <div className="space-y-1">
           <Label htmlFor="currentPrice" className="flex items-center gap-1">

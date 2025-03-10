@@ -170,6 +170,29 @@ const EditorContent = ({
         [contenteditable="true"] li {
           margin-bottom: 0.25rem;
         }
+        [contenteditable="true"] table {
+          border-collapse: collapse;
+          width: 100%;
+          margin: 1rem 0;
+        }
+        [contenteditable="true"] th, 
+        [contenteditable="true"] td {
+          border: 1px solid #d1d5db;
+          padding: 0.5rem;
+        }
+        [contenteditable="true"] th {
+          background-color: #f3f4f6;
+          font-weight: bold;
+        }
+        [contenteditable="true"] .text-left {
+          text-align: left;
+        }
+        [contenteditable="true"] .text-center {
+          text-align: center;
+        }
+        [contenteditable="true"] .text-right {
+          text-align: right;
+        }
         [contenteditable="true"] .chapter-separator {
           width: 100%;
           margin: 1.5rem 0;
