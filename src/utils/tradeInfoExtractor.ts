@@ -44,94 +44,127 @@ export const extractTradeInfo = (content: string, availableTokens: Token[]): Tra
  * Extract trading info from HTML tables in the content
  */
 const extractTradeInfoFromTable = (content: string, result: TradeInfo, availableTokens: Token[]) => {
-  // Create a temporary DOM element to parse the HTML
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = content;
-  
-  // Look for tables with trade information
-  const tables = tempDiv.querySelectorAll('table');
-  if (tables.length === 0) return;
-  
-  // Try to identify a table with trade data
-  for (const table of tables) {
-    const rows = table.querySelectorAll('tr');
-    if (rows.length <= 1) continue; // Skip tables with only header row
+  try {
+    // Create a temporary DOM element to parse the HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
     
-    // Check if this looks like a trade table
-    const headers = rows[0].querySelectorAll('th');
-    const headerText = Array.from(headers).map(h => h.textContent?.toLowerCase().trim());
+    // Look for tables with trade information
+    const tables = tempDiv.querySelectorAll('table');
+    if (tables.length === 0) return;
     
-    // If we find a table with price/qty columns, try to extract data
-    if (headerText.some(h => h && 
-        (h.includes('price') || h.includes('qty') || h.includes('entry') || 
-         h.includes('target') || h.includes('stop') || h.includes('btc')))) {
+    console.log(`Found ${tables.length} tables in content`);
+    
+    // Try to identify a table with trade data
+    for (const table of tables) {
+      const rows = table.querySelectorAll('tr');
+      if (rows.length <= 1) continue; // Skip tables with only header row
       
-      // Extract data from the first data row (assuming it's the most relevant trade)
-      const dataCells = rows[1].querySelectorAll('td');
-      const cellTexts = Array.from(dataCells).map(cell => cell.textContent?.trim() || '');
+      console.log(`Table has ${rows.length} rows`);
       
-      // Try to map columns to trade info
-      for (let i = 0; i < headerText.length; i++) {
-        const header = headerText[i];
-        const value = cellTexts[i];
-        if (!header || !value) continue;
+      // Check if this looks like a trade table
+      const headers = rows[0].querySelectorAll('th');
+      const headerText = Array.from(headers).map(h => h.textContent?.toLowerCase().trim() || "");
+      
+      console.log("Table headers:", headerText);
+      
+      // If we find a table with price/qty columns, try to extract data
+      if (headerText.some(h => h && 
+          (h.includes('price') || h.includes('qty') || h.includes('entry') || 
+           h.includes('target') || h.includes('stop') || h.includes('token') || 
+           h.includes('pair') || h.includes('coin')))) {
         
-        // Initial quantity
-        if (header.includes('initial') && header.includes('qty')) {
-          const qty = parseFloat(value.replace(/[^\d.]/g, ''));
-          if (!isNaN(qty) && (result.quantity === undefined || qty > 0)) {
-            result.quantity = qty;
-          }
-        }
-        
-        // Entry price/zone 
-        if (header.includes('entry') || 
-            (header.includes('zone') && !header.includes('target'))) {
-          // Parse entry price from range format like $79,800-$80,200
-          const priceMatch = value.match(/[\d,.]+/g);
-          if (priceMatch && priceMatch.length > 0) {
-            const price = parseFloat(priceMatch[0].replace(/[^\d.]/g, ''));
-            if (!isNaN(price) && price > 0) {
-              result.entryPrice = price;
+        // We'll process all data rows (not just the first one)
+        for (let rowIndex = 1; rowIndex < rows.length; rowIndex++) {
+          const dataCells = rows[rowIndex].querySelectorAll('td');
+          
+          // Skip rows without enough cells
+          if (dataCells.length < 2) continue;
+          
+          const cellTexts = Array.from(dataCells).map(cell => cell.textContent?.trim() || '');
+          console.log(`Row ${rowIndex} data:`, cellTexts);
+          
+          // Extract token information from this row
+          let rowTokenId: string | undefined = undefined;
+          let rowQuantity: number | undefined = undefined;
+          let rowEntryPrice: number | undefined = undefined;
+          let rowTargetPrice: number | undefined = undefined;
+          let rowStopPrice: number | undefined = undefined;
+          
+          // Try to map columns to trade info based on headers
+          for (let i = 0; i < headerText.length && i < cellTexts.length; i++) {
+            const header = headerText[i]?.toLowerCase() || "";
+            const value = cellTexts[i];
+            if (!value) continue;
+            
+            // Token/Pair/Coin column
+            if (header.includes('token') || header.includes('pair') || header.includes('coin') || 
+                header.includes('asset') || header.includes('symbol')) {
+              // Try to extract token ID
+              for (const token of availableTokens) {
+                if (value.includes(token.symbol) || value.toLowerCase().includes(token.name.toLowerCase())) {
+                  rowTokenId = token.id;
+                  break;
+                }
+              }
+            }
+            
+            // Quantity
+            if (header.includes('qty') || header.includes('amount') || header.includes('size') || 
+                header.includes('quantity') || header.includes('volume')) {
+              const qtyMatch = value.match(/[\d,.]+/);
+              if (qtyMatch) {
+                rowQuantity = parseFloat(qtyMatch[0].replace(/,/g, ''));
+              }
+            }
+            
+            // Entry price
+            if (header.includes('entry') || header.includes('buy') || 
+                (header.includes('price') && !header.includes('target') && !header.includes('stop'))) {
+              const priceMatch = value.match(/[\d,.]+/);
+              if (priceMatch) {
+                rowEntryPrice = parseFloat(priceMatch[0].replace(/,/g, ''));
+              }
+            }
+            
+            // Target price
+            if (header.includes('target') || header.includes('tp') || header.includes('take profit')) {
+              const priceMatch = value.match(/[\d,.]+/);
+              if (priceMatch) {
+                rowTargetPrice = parseFloat(priceMatch[0].replace(/,/g, ''));
+              }
+            }
+            
+            // Stop price
+            if (header.includes('stop') || header.includes('sl') || header.includes('stop loss')) {
+              const priceMatch = value.match(/[\d,.]+/);
+              if (priceMatch) {
+                rowStopPrice = parseFloat(priceMatch[0].replace(/,/g, ''));
+              }
             }
           }
-        }
-        
-        // Stop loss
-        if (header.includes('stop') || header.includes('loss')) {
-          const priceMatch = value.match(/[\d,.]+/g);
-          if (priceMatch && priceMatch.length > 0) {
-            const price = parseFloat(priceMatch[0].replace(/[^\d.]/g, ''));
-            if (!isNaN(price) && price > 0) {
-              result.stopPrice = price;
-            }
-          }
-        }
-        
-        // Target price
-        if (header.includes('target')) {
-          const priceMatch = value.match(/[\d,.]+/g);
-          if (priceMatch && priceMatch.length > 0) {
-            const price = parseFloat(priceMatch[0].replace(/[^\d.]/g, ''));
-            if (!isNaN(price) && price > 0) {
-              result.targetPrice = price;
-            }
-          }
-        }
-        
-        // Token detection from cell
-        if (value.includes('BTC') || value.includes('ETH') || 
-            value.includes('USDT') || value.includes('USD')) {
-          // Try to identify token
-          for (const token of availableTokens) {
-            if (value.includes(token.symbol)) {
-              result.tokenId = token.id;
-              break;
-            }
+          
+          // If we found meaningful data in this row and result is still empty, use this data
+          if (rowTokenId && (rowQuantity || rowEntryPrice) && !result.tokenId) {
+            result.tokenId = rowTokenId;
+            if (rowQuantity) result.quantity = rowQuantity;
+            if (rowEntryPrice) result.entryPrice = rowEntryPrice;
+            if (rowTargetPrice) result.targetPrice = rowTargetPrice;
+            if (rowStopPrice) result.stopPrice = rowStopPrice;
+            
+            console.log("Extracted trade info from table row:", {
+              tokenId: rowTokenId,
+              quantity: rowQuantity,
+              entryPrice: rowEntryPrice,
+              targetPrice: rowTargetPrice,
+              stopPrice: rowStopPrice
+            });
           }
         }
       }
     }
+  } catch (error) {
+    console.error("Error parsing HTML tables:", error);
   }
 };
 
@@ -205,7 +238,6 @@ const findEntryPrice = (text: string): number | undefined => {
     /price[:\s]+\$?\s*([\d,]+\.?\d*)/i,
     /entry[:\s]+\$?\s*([\d,]+\.?\d*)/i,
     /entry zone[:\s]+\$?\s*([\d,]+\.?\d*)/i,
-    /\$\s*([\d,]+\.?\d*)/i, // This is a more general pattern, use as last resort
     /at\s+\$\s*([\d,]+\.?\d*)/i,
     /(\d[\d,]*\.?\d*)\s*(?:USD|USDT|USDC)/i
   ];
@@ -215,6 +247,13 @@ const findEntryPrice = (text: string): number | undefined => {
     if (match && match[1]) {
       return parseFloat(match[1].replace(/,/g, ''));
     }
+  }
+  
+  // More general pattern, use as last resort
+  const dollarPattern = /\$\s*([\d,]+\.?\d*)/i;
+  const dollarMatch = text.match(dollarPattern);
+  if (dollarMatch && dollarMatch[1]) {
+    return parseFloat(dollarMatch[1].replace(/,/g, ''));
   }
   
   return undefined;
@@ -229,7 +268,8 @@ const findTargetPrice = (text: string): number | undefined => {
     /target price[:\s]+\$?\s*([\d,]+\.?\d*)/i,
     /target[:\s]+\$?\s*([\d,]+\.?\d*)/i,
     /price target[:\s]+\$?\s*([\d,]+\.?\d*)/i,
-    /tp[:\s]+\$?\s*([\d,]+\.?\d*)/i
+    /tp[:\s]+\$?\s*([\d,]+\.?\d*)/i,
+    /take profit[:\s]+\$?\s*([\d,]+\.?\d*)/i
   ];
   
   for (const pattern of patterns) {

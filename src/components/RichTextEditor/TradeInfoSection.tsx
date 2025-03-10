@@ -174,6 +174,7 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
   const handleGenerateTradeInfo = () => {
     if (!noteContent || !availableTokens.length) return;
 
+    // Use our custom extractor first
     const extractedInfo = extractTradeInfo(noteContent, availableTokens);
     console.log("Extracted trade info:", extractedInfo);
     
@@ -205,16 +206,121 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
       wasUpdated = true;
     }
     
-    if (wasUpdated) {
-      onTradeInfoChange(updatedInfo);
-      setSelectedToken(updatedInfo.tokenId || "");
-      setQuantity(updatedInfo.quantity?.toString() || "");
-      setEntryPrice(updatedInfo.entryPrice?.toString() || "");
-      setTargetPrice(updatedInfo.targetPrice?.toString() || "");
-      setStopPrice(updatedInfo.stopPrice?.toString() || "");
-      toast.success("Trade information extracted from note");
+    // If our extractor didn't find everything, try using the AI to extract more
+    if (!wasUpdated || !extractedInfo.tokenId || !extractedInfo.quantity) {
+      // For better extraction, use AI through Supabase function
+      supabase.functions.invoke('summarize-note', {
+        body: { 
+          content: noteContent,
+          generateTradeInfo: true
+        },
+      }).then(({ data, error }) => {
+        if (error) {
+          console.error("Error extracting trade info:", error);
+          return;
+        }
+        
+        if (data?.tradeInfo) {
+          console.log("AI extracted trade info:", data.tradeInfo);
+          
+          // Check if we got an array of trades
+          if (data.tradeInfo.allTrades && data.tradeInfo.allTrades.length > 0) {
+            const firstTrade = data.tradeInfo.allTrades[0];
+            
+            // If AI found a token by name, try to match it with our tokens
+            if (firstTrade.tokenName && !updatedInfo.tokenId) {
+              const matchedToken = availableTokens.find(token => 
+                token.name.toLowerCase() === firstTrade.tokenName.toLowerCase() ||
+                token.symbol.toLowerCase() === firstTrade.tokenName.toLowerCase()
+              );
+              
+              if (matchedToken) {
+                updatedInfo.tokenId = matchedToken.id;
+                wasUpdated = true;
+              }
+            }
+            
+            // Update other fields if needed
+            if (firstTrade.quantity && !updatedInfo.quantity) {
+              updatedInfo.quantity = firstTrade.quantity;
+              wasUpdated = true;
+            }
+            
+            if (firstTrade.entryPrice && !updatedInfo.entryPrice) {
+              updatedInfo.entryPrice = firstTrade.entryPrice;
+              wasUpdated = true;
+            }
+            
+            if (firstTrade.targetPrice && !updatedInfo.targetPrice) {
+              updatedInfo.targetPrice = firstTrade.targetPrice;
+              wasUpdated = true;
+            }
+            
+            if (firstTrade.stopPrice && !updatedInfo.stopPrice) {
+              updatedInfo.stopPrice = firstTrade.stopPrice;
+              wasUpdated = true;
+            }
+          } else {
+            // Handle legacy format
+            if (data.tradeInfo.tokenName && !updatedInfo.tokenId) {
+              const matchedToken = availableTokens.find(token => 
+                token.name.toLowerCase() === data.tradeInfo.tokenName.toLowerCase() ||
+                token.symbol.toLowerCase() === data.tradeInfo.tokenName.toLowerCase()
+              );
+              
+              if (matchedToken) {
+                updatedInfo.tokenId = matchedToken.id;
+                wasUpdated = true;
+              }
+            }
+            
+            // Update other fields from the base tradeInfo object
+            if (data.tradeInfo.quantity && !updatedInfo.quantity) {
+              updatedInfo.quantity = data.tradeInfo.quantity;
+              wasUpdated = true;
+            }
+            
+            if (data.tradeInfo.entryPrice && !updatedInfo.entryPrice) {
+              updatedInfo.entryPrice = data.tradeInfo.entryPrice;
+              wasUpdated = true;
+            }
+            
+            if (data.tradeInfo.targetPrice && !updatedInfo.targetPrice) {
+              updatedInfo.targetPrice = data.tradeInfo.targetPrice;
+              wasUpdated = true;
+            }
+            
+            if (data.tradeInfo.stopPrice && !updatedInfo.stopPrice) {
+              updatedInfo.stopPrice = data.tradeInfo.stopPrice;
+              wasUpdated = true;
+            }
+          }
+          
+          // Update the UI and parent component if we found something
+          if (wasUpdated) {
+            onTradeInfoChange(updatedInfo);
+            setSelectedToken(updatedInfo.tokenId || "");
+            setQuantity(updatedInfo.quantity?.toString() || "");
+            setEntryPrice(updatedInfo.entryPrice?.toString() || "");
+            setTargetPrice(updatedInfo.targetPrice?.toString() || "");
+            setStopPrice(updatedInfo.stopPrice?.toString() || "");
+            toast.success("Trade information extracted from note");
+          }
+        }
+      });
     } else {
-      toast.info("No trade information found in note content");
+      // Update the form with what we extracted locally
+      if (wasUpdated) {
+        onTradeInfoChange(updatedInfo);
+        setSelectedToken(updatedInfo.tokenId || "");
+        setQuantity(updatedInfo.quantity?.toString() || "");
+        setEntryPrice(updatedInfo.entryPrice?.toString() || "");
+        setTargetPrice(updatedInfo.targetPrice?.toString() || "");
+        setStopPrice(updatedInfo.stopPrice?.toString() || "");
+        toast.success("Trade information extracted from note");
+      } else {
+        toast.info("No trade information found in note content");
+      }
     }
   };
 
@@ -318,7 +424,7 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
           />
         </div>
 
-        {/* Target Price Input - New */}
+        {/* Target Price Input */}
         <div className="space-y-1">
           <Label htmlFor="targetPrice" className="flex items-center gap-1">
             <Target size={14} />
@@ -335,7 +441,7 @@ const TradeInfoSection: React.FC<TradeInfoSectionProps> = ({
           />
         </div>
 
-        {/* Stop Price Input - New */}
+        {/* Stop Price Input */}
         <div className="space-y-1">
           <Label htmlFor="stopPrice" className="flex items-center gap-1">
             <AlertTriangle size={14} />

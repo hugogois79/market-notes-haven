@@ -50,7 +50,8 @@ const AiResume: React.FC<AiResumeProps> = ({
         body: { 
           content,
           noteId,
-          maxLength: 250 // Allow for slightly longer summaries for financial analysis
+          maxLength: 250, // Allow for slightly longer summaries for financial analysis
+          generateTradeInfo: true // Always generate trade info
         },
       });
       
@@ -63,6 +64,18 @@ const AiResume: React.FC<AiResumeProps> = ({
       // Call the callback to update the parent component
       if (onSummaryGenerated) {
         onSummaryGenerated(data.summary);
+      }
+      
+      // Log the trade info to help with debugging
+      if (data.tradeInfo) {
+        console.log("AI generated trade info:", data.tradeInfo);
+        
+        if (data.tradeInfo.allTrades && data.tradeInfo.allTrades.length > 0) {
+          console.log(`Extracted ${data.tradeInfo.allTrades.length} trade entries`);
+          data.tradeInfo.allTrades.forEach((trade, index) => {
+            console.log(`Trade ${index + 1}:`, trade);
+          });
+        }
       }
       
       toast.success("Financial summary generated and saved successfully!");
@@ -142,7 +155,7 @@ const AiResume: React.FC<AiResumeProps> = ({
       )}
       
       <div className="text-xs text-gray-500">
-        <p>The AI summary highlights key metrics, trade recommendations, and financial insights from your notes.</p>
+        <p>The AI summary highlights key metrics, trade recommendations, and financial insights from your notes. It will also extract trade information like token, quantity, entry, target, and stop prices.</p>
       </div>
     </div>
   );

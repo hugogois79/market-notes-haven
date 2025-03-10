@@ -62,17 +62,27 @@ serve(async (req) => {
       
       Pay careful attention to tables with trade data - they often contain the most accurate information.
       Look for rows with trading pairs, prices, and quantities.
+      If multiple trades are mentioned, include ALL of them separately in the response.
       
       Format your response as JSON with "summary" and "tradeInfo" fields:
       {
         "summary": "your summary here",
-        "tradeInfo": {
-          "token": "token name if found or null",
-          "quantity": number or null,
-          "entryPrice": number in USD or null,
-          "targetPrice": number in USD or null,
-          "stopPrice": number in USD or null
-        }
+        "tradeInfo": [
+          {
+            "token": "token name if found or null",
+            "quantity": number or null,
+            "entryPrice": number in USD or null,
+            "targetPrice": number in USD or null,
+            "stopPrice": number in USD or null
+          },
+          {
+            "token": "another token if multiple are mentioned",
+            "quantity": number or null,
+            "entryPrice": number in USD or null,
+            "targetPrice": number in USD or null,
+            "stopPrice": number in USD or null
+          }
+        ]
       }`;
     }
     
@@ -115,18 +125,33 @@ serve(async (req) => {
         
         // Convert the AI's tradeInfo to our expected structure
         if (parsedResponse.tradeInfo) {
+          // Handle both array and single object formats
+          const tradeInfoArray = Array.isArray(parsedResponse.tradeInfo) 
+            ? parsedResponse.tradeInfo 
+            : [parsedResponse.tradeInfo];
+          
+          // Use the first trade info by default (for backward compatibility)
           tradeInfo = {
             tokenId: null, // We'll need to look up the token ID on the client side
-            quantity: parsedResponse.tradeInfo.quantity || null,
-            entryPrice: parsedResponse.tradeInfo.entryPrice || null,
-            targetPrice: parsedResponse.tradeInfo.targetPrice || null,
-            stopPrice: parsedResponse.tradeInfo.stopPrice || null
+            quantity: tradeInfoArray[0]?.quantity || null,
+            entryPrice: tradeInfoArray[0]?.entryPrice || null,
+            targetPrice: tradeInfoArray[0]?.targetPrice || null,
+            stopPrice: tradeInfoArray[0]?.stopPrice || null
           };
           
           // Also include the token name/symbol for client-side lookup
-          if (parsedResponse.tradeInfo.token) {
-            tradeInfo.tokenName = parsedResponse.tradeInfo.token;
+          if (tradeInfoArray[0]?.token) {
+            tradeInfo.tokenName = tradeInfoArray[0].token;
           }
+          
+          // Include the full array for multiple trade info
+          tradeInfo.allTrades = tradeInfoArray.map(trade => ({
+            tokenName: trade.token || null,
+            quantity: trade.quantity || null,
+            entryPrice: trade.entryPrice || null,
+            targetPrice: trade.targetPrice || null,
+            stopPrice: trade.stopPrice || null
+          }));
         }
       } catch (e) {
         console.error('Error parsing JSON from OpenAI:', e);
