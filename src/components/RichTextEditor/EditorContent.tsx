@@ -3,9 +3,9 @@ import { useEffect, RefObject, useCallback } from "react";
 
 interface EditorContentProps {
   editorRef: RefObject<HTMLDivElement>;
-  handleContentChange: () => void;
+  handleContentChange: () => void; // No parameters expected
   initialContent: string;
-  onAutoSave?: () => void; // Changed to match the expected function signature with no parameters
+  onAutoSave?: () => void; // No parameters expected
   autoSaveDelay?: number;
   onContentUpdate?: (content: string) => void;
   execCommand?: (command: string, value?: string) => void;
@@ -112,7 +112,7 @@ const EditorContent = ({
 
   // Setup input handler - still tracks changes but doesn't auto-save
   const handleInput = () => {
-    handleContentChange();
+    handleContentChange(); // Call without arguments
     
     // Notify parent component about content change
     if (onContentUpdate && editorRef.current) {

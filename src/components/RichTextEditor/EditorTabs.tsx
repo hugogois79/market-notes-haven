@@ -44,6 +44,13 @@ const EditorTabs = ({
     onAutoSave();
   };
 
+  // Create a wrapper for content change that doesn't expect a parameter
+  const handleContentChangeWrapper = () => {
+    if (editorRef.current) {
+      onContentChange(editorRef.current.innerHTML);
+    }
+  };
+
   return (
     <Tabs defaultValue="edit" className="w-full">
       <div className="border-b px-3">
@@ -84,7 +91,7 @@ const EditorTabs = ({
         
         <EditorContent 
           editorRef={editorRef}
-          handleContentChange={onContentChange}
+          handleContentChange={handleContentChangeWrapper}
           initialContent={content}
           onAutoSave={handleAutoSave}
           autoSaveDelay={2000}
