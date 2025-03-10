@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { TradeInfo } from "@/types";
+import { TradeInfo, Token } from "@/types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { extractTradeInfo } from "@/utils/tradeInfoExtractor";
