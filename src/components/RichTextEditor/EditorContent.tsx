@@ -105,6 +105,10 @@ const EditorContent = ({
               editor.__highlightText();
             }
             break;
+          case 'u': // Underline text
+            e.preventDefault();
+            execCommand('underline');
+            break;
         }
       }
     };
