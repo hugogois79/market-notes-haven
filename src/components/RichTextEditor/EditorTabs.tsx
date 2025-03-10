@@ -32,7 +32,7 @@ const EditorTabs = ({
   const [rows, setRows] = useState(3);
   const [cols, setCols] = useState(3);
   
-  const { execCommand, formatTableCells, insertVerticalSeparator } = useEditor(editorRef);
+  const { execCommand, formatTableCells, insertVerticalSeparator, highlightText } = useEditor(editorRef);
 
   const handleCreateTable = () => {
     execCommand('insertHTML', createTable(rows, cols));
@@ -87,6 +87,7 @@ const EditorTabs = ({
           setIsTableDialogOpen={setIsTableDialogOpen}
           formatTableCells={formatTableCells}
           insertVerticalSeparator={insertVerticalSeparator}
+          highlightText={highlightText}
         />
         
         <EditorContent 

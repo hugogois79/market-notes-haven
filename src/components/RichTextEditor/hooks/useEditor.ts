@@ -1,4 +1,3 @@
-
 import { RefObject, useEffect } from "react";
 
 export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
@@ -344,9 +343,53 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
     }
   };
 
+  const highlightText = () => {
+    if (!editorRef.current) return;
+    
+    // Focus on the editor first
+    editorRef.current.focus();
+    
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+
+    const range = selection.getRangeAt(0);
+    
+    // Check if there's actual text selected
+    if (range.collapsed) {
+      // No text selected, do nothing
+      return;
+    }
+    
+    // Create a span with yellow background highlight
+    const highlightedSpan = document.createElement('span');
+    highlightedSpan.style.borderBottom = '2px solid #FEF7CD';
+    highlightedSpan.style.backgroundColor = '#FEF7CD';
+    
+    try {
+      // Try to apply the highlight span to the selected text
+      range.surroundContents(highlightedSpan);
+      
+      // Trigger an input event to ensure changes are registered
+      if (editorRef.current) {
+        const inputEvent = new Event('input', { bubbles: true });
+        editorRef.current.dispatchEvent(inputEvent);
+      }
+    } catch (e) {
+      // Handle the case when selection crosses node boundaries
+      console.error("Could not highlight across node boundaries", e);
+      
+      // Alternative approach: Use execCommand to insert HTML
+      const selectedText = range.toString();
+      const highlightedHTML = `<span style="border-bottom: 2px solid #FEF7CD; background-color: #FEF7CD;">${selectedText}</span>`;
+      
+      document.execCommand('insertHTML', false, highlightedHTML);
+    }
+  };
+
   return {
     execCommand,
     formatTableCells,
-    insertVerticalSeparator
+    insertVerticalSeparator,
+    highlightText
   };
 };

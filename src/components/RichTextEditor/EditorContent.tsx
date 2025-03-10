@@ -97,6 +97,14 @@ const EditorContent = ({
             e.preventDefault();
             formatTableCells('justify');
             break;
+          case 'h': // Highlight text
+            e.preventDefault();
+            // Access the parent component's highlightText function via the editorRef
+            const editor = editorRef.current as any;
+            if (editor && editor.__highlightText) {
+              editor.__highlightText();
+            }
+            break;
         }
       }
     };
@@ -205,6 +213,10 @@ const EditorContent = ({
           margin: 0;
           border: none;
           border-top: 1px solid #d1d5db;
+        }
+        [contenteditable="true"] .highlight {
+          background-color: #FEF7CD;
+          border-bottom: 2px solid #FEF7CD;
         }
       `}</style>
     </div>
