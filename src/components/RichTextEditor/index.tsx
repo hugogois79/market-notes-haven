@@ -1,24 +1,18 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+
+import { useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileEdit, Paintbrush, Table2, Save } from "lucide-react";
-import TagsSection from "./TagsSection";
-import FormattingToolbar from "./FormattingToolbar";
-import EditorContent from "./EditorContent";
-import TokenSection from "./TokenSection";
-import EditorHeader from "./EditorHeader";
-import AttachmentSection from "./AttachmentSection";
-import TableDialog from "./TableDialog";
-import { useEditor } from "./hooks/useEditor";
 import { Tag, Token, Note, TradeInfo } from "@/types";
-import AiResume from "./AiResume";
 import { useQuery } from "@tanstack/react-query";
 import { fetchTags, createTag } from "@/services/tagService";
 import { fetchTokens } from "@/services/tokenService";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import TradeInfoSection from "./TradeInfoSection";
-import { extractTradeInfo } from "@/utils/tradeInfoExtractor";
+
+// Import refactored components
+import EditorHeader from "./EditorHeader";
+import EditorStatusBar from "./EditorStatusBar";
+import EditorTabs from "./EditorTabs";
+import MetadataSection from "./MetadataSection";
+import SpecialSections from "./SpecialSections";
 
 interface RichTextEditorProps {
   title: string;
@@ -53,7 +47,7 @@ const RichTextEditor = ({
   onTagsChange,
   linkedTokens = [],
   onTokensChange = () => {},
-  noteId,
+  noteId = "",
   attachment_url,
   onAttachmentChange = () => {},
   category,
@@ -68,16 +62,10 @@ const RichTextEditor = ({
   onTradeInfoChange = () => {},
 }: RichTextEditorProps) => {
   
-  const editorRef = useRef<HTMLDivElement>(null);
-  const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<"visual" | "markdown">("visual");
   const [tagInput, setTagInput] = useState("");
-  const [rows, setRows] = useState(3);
-  const [cols, setCols] = useState(3);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [currentContent, setCurrentContent] = useState(content);
-  const { execCommand, formatTableCells, insertVerticalSeparator } = useEditor(editorRef);
-
+  
   // Fetch available tags
   const { data: availableTags = [], isLoading: isLoadingTags, refetch: refetchTags } = useQuery({
     queryKey: ['tags'],
@@ -89,30 +77,6 @@ const RichTextEditor = ({
     queryKey: ['tokens'],
     queryFn: fetchTokens,
   });
-
-  // Extract trade info when content changes
-  useEffect(() => {
-    // Only process for trading categories
-    if ((category === "Trading" || category === "Pair Trading") && availableTokens.length > 0) {
-      const extractedInfo = extractTradeInfo(currentContent, availableTokens);
-      
-      // Only update if we found something and it's different from current tradeInfo
-      if (
-        (extractedInfo.tokenId && extractedInfo.tokenId !== tradeInfo?.tokenId) ||
-        (extractedInfo.quantity && extractedInfo.quantity !== tradeInfo?.quantity) ||
-        (extractedInfo.entryPrice && extractedInfo.entryPrice !== tradeInfo?.entryPrice)
-      ) {
-        // Merge with existing trade info to avoid overwriting fields that weren't found
-        const mergedInfo: TradeInfo = {
-          tokenId: extractedInfo.tokenId || tradeInfo?.tokenId,
-          quantity: extractedInfo.quantity || tradeInfo?.quantity,
-          entryPrice: extractedInfo.entryPrice || tradeInfo?.entryPrice
-        };
-        
-        onTradeInfoChange(mergedInfo);
-      }
-    }
-  }, [currentContent, category, availableTokens, tradeInfo, onTradeInfoChange]);
 
   // Handle content updates from editor
   const handleContentUpdate = useCallback((newContent: string) => {
@@ -137,11 +101,7 @@ const RichTextEditor = ({
 
   // Handle content change
   const handleContentChange = () => {
-    if (editorRef.current) {
-      const newContent = editorRef.current.innerHTML;
-      setCurrentContent(newContent);
-      onContentChange(newContent);
-    }
+    onContentChange(currentContent);
   };
 
   const handleAddTag = async () => {
@@ -240,10 +200,8 @@ const RichTextEditor = ({
     );
   };
 
-  const handleCreateTable = () => {
-    execCommand('insertHTML', createTable(rows, cols));
-    setIsTableDialogOpen(false);
-  };
+  // Check if the category is related to trading
+  const isTradingCategory = category === "Trading" || category === "Pair Trading";
 
   // Handle title change
   const handleTitleChange = useCallback((newTitle: string) => {
@@ -259,22 +217,6 @@ const RichTextEditor = ({
     }
   }, [autoSave, onSave, onTitleChange]);
 
-  // Check if the category is related to trading
-  const isTradingCategory = category === "Trading" || category === "Pair Trading";
-
-  // Handle changes to trade information
-  const handleTradeInfoChange = (newTradeInfo: TradeInfo) => {
-    onTradeInfoChange(newTradeInfo);
-    
-    // Trigger auto-save after trade info change
-    if (autoSave && onSave) {
-      setTimeout(() => {
-        onSave();
-        setLastSaved(new Date());
-      }, 500);
-    }
-  };
-
   return (
     <div className="flex flex-col gap-4 mt-2">
       <EditorHeader 
@@ -285,177 +227,58 @@ const RichTextEditor = ({
       />
       
       {/* Status and Save Button */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {isSaving ? (
-            <span className="text-brand">Saving...</span>
-          ) : lastSaved ? (
-            <span>Last saved: {lastSaved.toLocaleTimeString()}</span>
-          ) : null}
-        </div>
-        
-        <Button
-          onClick={handleManualSave}
-          disabled={isSaving}
-          variant="outline"
-          className="gap-2"
-          size="sm"
-        >
-          <Save size={16} />
-          {isSaving ? "Saving..." : "Save"}
-        </Button>
-      </div>
+      <EditorStatusBar 
+        isSaving={isSaving}
+        lastSaved={lastSaved}
+        onSave={handleManualSave}
+      />
       
-      {/* AI Resume Section - Placed at the top as requested */}
-      <Card className="p-4 border rounded-md">
-        <AiResume 
-          noteId={noteId || ""}
-          content={currentContent}
-          initialSummary={summary}
-          onSummaryGenerated={onSummaryGenerated}
-        />
-      </Card>
-      
-      {/* Trade Info Section - Only displayed for trading categories */}
-      {isTradingCategory && (
-        <Card className="p-4 border rounded-md">
-          <TradeInfoSection 
-            availableTokens={availableTokens}
-            isLoadingTokens={isLoadingTokens}
-            tradeInfo={tradeInfo}
-            onTradeInfoChange={onTradeInfoChange}
-            noteContent={currentContent}
-          />
-        </Card>
-      )}
+      {/* AI Resume and Trade Info Sections */}
+      <SpecialSections 
+        noteId={noteId}
+        content={currentContent}
+        initialSummary={summary}
+        onSummaryGenerated={onSummaryGenerated}
+        isTradingCategory={isTradingCategory}
+        availableTokens={availableTokens}
+        isLoadingTokens={isLoadingTokens}
+        tradeInfo={tradeInfo}
+        onTradeInfoChange={onTradeInfoChange}
+      />
       
       {/* Tags and Tokens Section */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <Card className="p-4 border rounded-md flex-1">
-          <TagsSection 
-            linkedTags={linkedTags}
-            tagInput={tagInput}
-            setTagInput={setTagInput}
-            handleAddTag={handleAddTag}
-            handleRemoveTag={handleRemoveTag}
-            handleSelectTag={handleSelectTag}
-            isLoadingTags={isLoadingTags}
-            getAvailableTagsForSelection={getAvailableTagsForSelection}
-          />
-        </Card>
-        
-        <Card className="p-4 border rounded-md flex-1">
-          <TokenSection 
-            selectedTokens={linkedTokens} 
-            handleRemoveToken={(tokenId) => {
-              const updatedTokens = linkedTokens.filter(token => token.id !== tokenId);
-              onTokensChange(updatedTokens);
-            }}
-            handleTokenSelect={handleTokenSelect}
-            isLoadingTokens={isLoadingTokens}
-          />
-        </Card>
-      </div>
+      <MetadataSection 
+        linkedTags={linkedTags}
+        tagInput={tagInput}
+        setTagInput={setTagInput}
+        handleAddTag={handleAddTag}
+        handleRemoveTag={handleRemoveTag}
+        handleSelectTag={handleSelectTag}
+        isLoadingTags={isLoadingTags}
+        getAvailableTagsForSelection={getAvailableTagsForSelection}
+        linkedTokens={linkedTokens}
+        handleRemoveToken={(tokenId) => {
+          const updatedTokens = linkedTokens.filter(token => token.id !== tokenId);
+          onTokensChange(updatedTokens);
+        }}
+        handleTokenSelect={handleTokenSelect}
+        isLoadingTokens={isLoadingTokens}
+      />
       
+      {/* Editor with Tabs */}
       <Card className="p-0 border rounded-md overflow-hidden">
-        <Tabs defaultValue="edit" className="w-full">
-          <div className="border-b px-3">
-            <div className="flex items-center justify-between">
-              <TabsList className="w-auto h-14">
-                <TabsTrigger value="edit" className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand">Editor</TabsTrigger>
-                <TabsTrigger value="attachment" className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand">Attachment</TabsTrigger>
-              </TabsList>
-              
-              <div className="flex items-center gap-1 mr-2">
-                <button
-                  type="button"
-                  className={`p-1 rounded ${selectedTab === "visual" ? "bg-brand/10 text-brand" : "hover:bg-muted"}`}
-                  onClick={() => setSelectedTab("visual")}
-                  title="Visual Editor"
-                >
-                  <Paintbrush size={16} />
-                </button>
-                <button
-                  type="button"
-                  className={`p-1 rounded ${selectedTab === "markdown" ? "bg-brand/10 text-brand" : "hover:bg-muted"}`}
-                  onClick={() => setSelectedTab("markdown")}
-                  title="Markdown Editor"
-                >
-                  <FileEdit size={16} />
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          <TabsContent value="edit" className="space-y-0 m-0">
-            <FormattingToolbar 
-              execCommand={execCommand} 
-              setIsTableDialogOpen={setIsTableDialogOpen}
-              formatTableCells={formatTableCells}
-              insertVerticalSeparator={insertVerticalSeparator}
-            />
-            
-            <EditorContent 
-              editorRef={editorRef}
-              handleContentChange={handleContentChange}
-              initialContent={content}
-              onAutoSave={handleAutoSave}
-              autoSaveDelay={2000}
-              onContentUpdate={handleContentUpdate}
-              execCommand={execCommand}
-              formatTableCells={formatTableCells}
-            />
-            
-            <TableDialog 
-              isOpen={isTableDialogOpen} 
-              onClose={() => setIsTableDialogOpen(false)} 
-              rows={rows}
-              cols={cols}
-              setRows={setRows}
-              setCols={setCols}
-              onCreateTable={handleCreateTable}
-            />
-          </TabsContent>
-          
-          <TabsContent value="attachment" className="space-y-4 m-0 p-4">
-            <AttachmentSection 
-              noteId={noteId || ""}
-              attachmentUrl={attachment_url}
-              onAttachmentChange={onAttachmentChange}
-            />
-          </TabsContent>
-        </Tabs>
+        <EditorTabs 
+          content={content}
+          onContentChange={handleContentChange}
+          onContentUpdate={handleContentUpdate}
+          onAutoSave={handleAutoSave}
+          noteId={noteId}
+          attachment_url={attachment_url}
+          onAttachmentChange={onAttachmentChange}
+        />
       </Card>
     </div>
   );
-};
-
-// Helper function to create an HTML table
-const createTable = (rows: number, cols: number) => {
-  let tableHTML = '<table style="border-collapse: collapse; width: auto; margin: 1rem 0;">';
-  
-  // Table header
-  tableHTML += '<thead>';
-  tableHTML += '<tr>';
-  for (let i = 0; i < cols; i++) {
-    tableHTML += '<th style="border: 1px solid #d1d5db; padding: 0.5rem 1rem; background-color: #f3f4f6; font-weight: bold; text-align: left;">Header ' + (i + 1) + '</th>';
-  }
-  tableHTML += '</tr>';
-  tableHTML += '</thead>';
-  
-  // Table body
-  tableHTML += '<tbody>';
-  for (let i = 0; i < rows - 1; i++) {
-    tableHTML += '<tr>';
-    for (let j = 0; j < cols; j++) {
-      tableHTML += '<td style="border: 1px solid #d1d5db; padding: 0.5rem 1rem; text-align: left;">Cell ' + (i + 1) + '-' + (j + 1) + '</td>';
-    }
-    tableHTML += '</tr>';
-  }
-  tableHTML += '</tbody>';
-  
-  tableHTML += '</table>';
-  return tableHTML;
 };
 
 export default RichTextEditor;
