@@ -90,12 +90,11 @@ export const TradeInfoForm = ({
           <Label htmlFor="quantity">Quantity</Label>
           <Input
             id="quantity"
-            type="number"
+            type="text"
             placeholder="Enter quantity"
             value={quantity}
             onChange={(e) => onQuantityChange(e.target.value)}
-            min="0"
-            step="any"
+            inputMode="decimal"
           />
         </div>
 
@@ -106,12 +105,11 @@ export const TradeInfoForm = ({
           </Label>
           <Input
             id="entryPrice"
-            type="number"
+            type="text"
             placeholder="Enter entry price"
             value={entryPrice}
             onChange={(e) => onEntryPriceChange(e.target.value)}
-            min="0"
-            step="any"
+            inputMode="decimal"
           />
         </div>
 
@@ -122,12 +120,11 @@ export const TradeInfoForm = ({
           </Label>
           <Input
             id="targetPrice"
-            type="number"
+            type="text"
             placeholder="Enter target price"
             value={targetPrice}
             onChange={(e) => onTargetPriceChange(e.target.value)}
-            min="0"
-            step="any"
+            inputMode="decimal"
           />
         </div>
 
@@ -138,12 +135,11 @@ export const TradeInfoForm = ({
           </Label>
           <Input
             id="stopPrice"
-            type="number"
+            type="text"
             placeholder="Enter stop price"
             value={stopPrice}
             onChange={(e) => onStopPriceChange(e.target.value)}
-            min="0"
-            step="any"
+            inputMode="decimal"
           />
         </div>
       </div>

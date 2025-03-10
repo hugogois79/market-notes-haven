@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { TradeInfo, Token } from "@/types";
 import { toast } from "sonner";
@@ -67,27 +66,71 @@ export const useTradeInfo = ({
   };
 
   const handleQuantityChange = (value: string) => {
-    setQuantity(value);
-    const numericValue = value === "" ? undefined : parseFloat(value);
-    updateTradeInfo({ quantity: !isNaN(Number(numericValue)) ? numericValue : undefined });
+    // Remove any non-numeric characters except for decimal point
+    const sanitizedValue = value.replace(/[^\d.]/g, '');
+    
+    // Handle multiple decimal points (keep only the first one)
+    const parts = sanitizedValue.split('.');
+    const formattedValue = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
+    
+    setQuantity(formattedValue);
+    
+    // Only update trade info if the value is valid
+    const numericValue = formattedValue === "" ? undefined : parseFloat(formattedValue);
+    if (formattedValue === "" || !isNaN(numericValue)) {
+      updateTradeInfo({ quantity: numericValue });
+    }
   };
 
   const handleEntryPriceChange = (value: string) => {
-    setEntryPrice(value);
-    const numericValue = value === "" ? undefined : parseFloat(value);
-    updateTradeInfo({ entryPrice: !isNaN(Number(numericValue)) ? numericValue : undefined });
+    // Remove any non-numeric characters except for decimal point
+    const sanitizedValue = value.replace(/[^\d.]/g, '');
+    
+    // Handle multiple decimal points (keep only the first one)
+    const parts = sanitizedValue.split('.');
+    const formattedValue = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
+    
+    setEntryPrice(formattedValue);
+    
+    // Only update trade info if the value is valid
+    const numericValue = formattedValue === "" ? undefined : parseFloat(formattedValue);
+    if (formattedValue === "" || !isNaN(numericValue)) {
+      updateTradeInfo({ entryPrice: numericValue });
+    }
   };
 
   const handleTargetPriceChange = (value: string) => {
-    setTargetPrice(value);
-    const numericValue = value === "" ? undefined : parseFloat(value);
-    updateTradeInfo({ targetPrice: !isNaN(Number(numericValue)) ? numericValue : undefined });
+    // Remove any non-numeric characters except for decimal point
+    const sanitizedValue = value.replace(/[^\d.]/g, '');
+    
+    // Handle multiple decimal points (keep only the first one)
+    const parts = sanitizedValue.split('.');
+    const formattedValue = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
+    
+    setTargetPrice(formattedValue);
+    
+    // Only update trade info if the value is valid
+    const numericValue = formattedValue === "" ? undefined : parseFloat(formattedValue);
+    if (formattedValue === "" || !isNaN(numericValue)) {
+      updateTradeInfo({ targetPrice: numericValue });
+    }
   };
 
   const handleStopPriceChange = (value: string) => {
-    setStopPrice(value);
-    const numericValue = value === "" ? undefined : parseFloat(value);
-    updateTradeInfo({ stopPrice: !isNaN(Number(numericValue)) ? numericValue : undefined });
+    // Remove any non-numeric characters except for decimal point
+    const sanitizedValue = value.replace(/[^\d.]/g, '');
+    
+    // Handle multiple decimal points (keep only the first one)
+    const parts = sanitizedValue.split('.');
+    const formattedValue = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
+    
+    setStopPrice(formattedValue);
+    
+    // Only update trade info if the value is valid
+    const numericValue = formattedValue === "" ? undefined : parseFloat(formattedValue);
+    if (formattedValue === "" || !isNaN(numericValue)) {
+      updateTradeInfo({ stopPrice: numericValue });
+    }
   };
 
   const updateTradeInfo = (updates: Partial<TradeInfo>) => {
