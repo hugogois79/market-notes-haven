@@ -1,4 +1,3 @@
-
 import { Token } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,6 +65,7 @@ export const TradeInfoForm = ({
 
   const handleNumericInput = (value: string, onChange: (value: string) => void) => {
     // Allow empty string, digits, and one decimal point
+    // Updated regex to properly handle decimal numbers
     const numericRegex = /^(\d*\.?\d*)$/;
     
     if (value === '' || numericRegex.test(value)) {
