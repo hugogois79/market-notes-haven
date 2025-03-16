@@ -171,23 +171,23 @@
     border: 1px solid #ccc;
     padding: 4px 6px;
     text-align: left;
-    font-size: 10pt;
+    font-size: 9pt;
   }
   
-  th {
+  th, tr:first-child td {
     background-color: #f3f4f6 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
   
   tr:nth-child(even) {
     background-color: #f9f9f9 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
   
   body {
-    font-size: 11pt;
+    font-size: 10pt;
   }
 }
 

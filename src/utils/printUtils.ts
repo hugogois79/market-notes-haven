@@ -36,7 +36,7 @@ export const printNote = (note: Note): void => {
         padding: 30px;
         max-width: 800px;
         margin: 0 auto;
-        font-size: 11pt;
+        font-size: 10pt;
       }
       
       .print-header {
@@ -46,20 +46,20 @@ export const printNote = (note: Note): void => {
       }
       
       .print-title {
-        font-size: 18pt;
+        font-size: 16pt;
         font-weight: bold;
         margin-bottom: 8px;
       }
       
       .print-meta {
-        font-size: 10pt;
+        font-size: 9pt;
         color: #666;
         margin-bottom: 10px;
       }
       
       .print-category {
         display: inline-block;
-        font-size: 9pt;
+        font-size: 8pt;
         background-color: #f0f0f0;
         padding: 3px 8px;
         border-radius: 12px;
@@ -72,7 +72,7 @@ export const printNote = (note: Note): void => {
       
       .print-tag {
         display: inline-block;
-        font-size: 9pt;
+        font-size: 8pt;
         background-color: #e8f0fe;
         color: #1967d2;
         padding: 2px 6px;
@@ -82,7 +82,7 @@ export const printNote = (note: Note): void => {
       }
       
       .print-content {
-        font-size: 11pt;
+        font-size: 10pt;
       }
       
       .print-content img {
@@ -115,7 +115,7 @@ export const printNote = (note: Note): void => {
         border-collapse: collapse;
         width: 100%;
         margin: 0.8rem 0;
-        font-size: 10pt;
+        font-size: 9pt;
         border: 1px solid #ccc;
       }
       
@@ -126,9 +126,12 @@ export const printNote = (note: Note): void => {
         text-align: left;
       }
       
-      .print-content th {
-        background-color: #f3f4f6;
+      .print-content th,
+      .print-content tr:first-child td {
+        background-color: #f3f4f6 !important;
         font-weight: 600;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
       
       .print-content tr:nth-child(even) {
@@ -143,7 +146,7 @@ export const printNote = (note: Note): void => {
       
       .print-footer {
         margin-top: 30px;
-        font-size: 9pt;
+        font-size: 8pt;
         color: #888;
         text-align: center;
         border-top: 1px solid #eee;
@@ -171,19 +174,26 @@ export const printNote = (note: Note): void => {
       @media print {
         body {
           padding: 0;
-          font-size: 11pt;
+          font-size: 10pt;
         }
         
         .print-title {
-          font-size: 16pt;
+          font-size: 14pt;
         }
         
         .print-content {
-          font-size: 10.5pt;
+          font-size: 9.5pt;
         }
         
         .print-content table {
           page-break-inside: avoid;
+        }
+        
+        .print-content th,
+        .print-content tr:first-child td {
+          background-color: #f3f4f6 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
       }
     </style>
