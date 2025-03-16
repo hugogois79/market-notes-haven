@@ -1,7 +1,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Token } from "@/types";
-import { DollarSign } from "lucide-react";
+import { CircleDollarSign } from "lucide-react";
 
 interface TokenBadgeProps {
   token: Token;
@@ -11,18 +11,18 @@ interface TokenBadgeProps {
 
 const TokenBadge = ({ token, className, showPrice = false }: TokenBadgeProps) => {
   return (
-    <div className="flex items-center gap-1">
+    <div className="inline-flex items-center gap-1">
       <Badge 
         variant="outline" 
-        className={`text-xs px-1.5 py-0 whitespace-nowrap bg-[#0A3A5C] text-white ${className || ''}`}
+        className={`text-xs px-2 py-0.5 whitespace-nowrap bg-[#1EAEDB] text-white hover:bg-[#1EAEDB]/90 flex items-center gap-1 ${className || ''}`}
       >
+        <CircleDollarSign size={10} />
         {token.symbol}
       </Badge>
       
       {showPrice && token.current_price !== undefined && (
         <span className="text-xs text-green-600 font-medium flex items-center">
-          <DollarSign size={10} className="mr-0.5" />
-          {token.current_price.toLocaleString(undefined, { 
+          ${token.current_price.toLocaleString(undefined, { 
             minimumFractionDigits: 2,
             maximumFractionDigits: 6
           })}

@@ -79,40 +79,31 @@ const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
         <p className="text-muted-foreground text-xs line-clamp-3">
           {getTextPreview(note.content)}
         </p>
-        
-        {tokens.length > 0 && (
-          <div className="flex gap-1 mt-2 flex-wrap">
-            {tokens.slice(0, 2).map(token => (
-              <TokenBadge key={token.id} token={token} />
-            ))}
-            {tokens.length > 2 && (
-              <Badge variant="secondary" className="text-xs py-0 px-1.5">
-                +{tokens.length - 2}
-              </Badge>
-            )}
-          </div>
-        )}
       </CardContent>
-      <CardFooter className="p-4 pt-2 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <CardFooter className="p-4 pt-2 flex flex-wrap gap-y-2">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground mr-auto">
           <Calendar size={14} />
           <span>{formatDate(note.updatedAt)}</span>
         </div>
+        
+        {/* Token badges - displayed at the bottom */}
+        {tokens.length > 0 && (
+          <div className="flex flex-wrap gap-1 w-full mt-2">
+            {tokens.map(token => (
+              <TokenBadge key={token.id} token={token} />
+            ))}
+          </div>
+        )}
+        
+        {/* Tags - displayed right after tokens */}
         {note.tags.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            <Tag size={14} className="text-muted-foreground" />
-            <div className="flex gap-1.5">
-              {note.tags.slice(0, 1).map((tagId) => (
-                <Badge key={tagId} variant="secondary" className="text-xs py-0 px-1.5 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90">
-                  {getTagName(tagId)}
-                </Badge>
-              ))}
-              {note.tags.length > 1 && (
-                <Badge variant="secondary" className="text-xs py-0 px-1.5 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90">
-                  +{note.tags.length - 1}
-                </Badge>
-              )}
-            </div>
+          <div className="flex flex-wrap items-center gap-1 w-full mt-1">
+            {note.tags.map((tagId) => (
+              <Badge key={tagId} className="text-xs py-0.5 px-2 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90 flex items-center gap-1">
+                <Tag size={10} />
+                {getTagName(tagId)}
+              </Badge>
+            ))}
           </div>
         )}
       </CardFooter>
