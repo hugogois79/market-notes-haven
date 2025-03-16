@@ -167,23 +167,32 @@ export type Database = {
       }
       expense_categories: {
         Row: {
+          color: string | null
           created_at: string
           description: string | null
+          icon_name: string | null
           id: string
+          is_active: boolean | null
           name: string
           updated_at: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
           description?: string | null
+          icon_name?: string | null
           id?: string
+          is_active?: boolean | null
           name: string
           updated_at?: string
         }
         Update: {
+          color?: string | null
           created_at?: string
           description?: string | null
+          icon_name?: string | null
           id?: string
+          is_active?: boolean | null
           name?: string
           updated_at?: string
         }
@@ -192,6 +201,8 @@ export type Database = {
       expense_reports: {
         Row: {
           created_at: string
+          date_info: Json | null
+          description: string | null
           id: string
           project_id: string | null
           status: Database["public"]["Enums"]["report_status"]
@@ -202,6 +213,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          date_info?: Json | null
+          description?: string | null
           id?: string
           project_id?: string | null
           status?: Database["public"]["Enums"]["report_status"]
@@ -212,6 +225,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          date_info?: Json | null
+          description?: string | null
           id?: string
           project_id?: string | null
           status?: Database["public"]["Enums"]["report_status"]
@@ -497,8 +512,11 @@ export type Database = {
           bio: string | null
           contact_info: string | null
           created_at: string | null
+          email: string | null
           full_name: string | null
           id: string
+          photo_url: string | null
+          profile_image_url: string | null
           role: string | null
           status: string | null
           type: string | null
@@ -510,8 +528,11 @@ export type Database = {
           bio?: string | null
           contact_info?: string | null
           created_at?: string | null
+          email?: string | null
           full_name?: string | null
           id: string
+          photo_url?: string | null
+          profile_image_url?: string | null
           role?: string | null
           status?: string | null
           type?: string | null
@@ -523,8 +544,11 @@ export type Database = {
           bio?: string | null
           contact_info?: string | null
           created_at?: string | null
+          email?: string | null
           full_name?: string | null
           id?: string
+          photo_url?: string | null
+          profile_image_url?: string | null
           role?: string | null
           status?: string | null
           type?: string | null
@@ -532,6 +556,42 @@ export type Database = {
           username?: string | null
         }
         Relationships: []
+      }
+      project_categories: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          project_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          project_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_categories_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       projects: {
         Row: {
@@ -544,6 +604,7 @@ export type Database = {
           start_date: string
           total_expenses: number
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -555,6 +616,7 @@ export type Database = {
           start_date: string
           total_expenses?: number
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -566,6 +628,7 @@ export type Database = {
           start_date?: string
           total_expenses?: number
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }

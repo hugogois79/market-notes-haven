@@ -133,18 +133,19 @@
   border-collapse: collapse;
   width: 100%;
   margin: 1rem 0;
+  font-size: 0.875rem;
 }
 
 .rich-text-editor table th,
 .rich-text-editor table td {
   border: 1px solid hsl(var(--border));
   padding: 0.5rem;
+  text-align: left;
 }
 
 .rich-text-editor table th {
   background-color: hsl(var(--muted) / 50%);
   font-weight: 500;
-  text-align: left;
 }
 
 .rich-text-editor table tr:nth-child(even) {
@@ -152,10 +153,42 @@
 }
 
 .rich-text-editor table caption {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: hsl(var(--muted-foreground));
   padding: 0.5rem;
   caption-side: bottom;
+}
+
+/* Make sure tables show grid lines and borders when printed */
+@media print {
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    border: 1px solid #ccc;
+  }
+  
+  th, td {
+    border: 1px solid #ccc;
+    padding: 4px 6px;
+    text-align: left;
+    font-size: 10pt;
+  }
+  
+  th {
+    background-color: #f3f4f6 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  tr:nth-child(even) {
+    background-color: #f9f9f9 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  body {
+    font-size: 11pt;
+  }
 }
 
 /* Custom button variant for brand color */

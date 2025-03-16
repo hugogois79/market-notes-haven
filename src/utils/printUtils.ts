@@ -31,57 +31,58 @@ export const printNote = (note: Note): void => {
     <style>
       body {
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        line-height: 1.5;
+        line-height: 1.4;
         color: #333;
-        padding: 40px;
+        padding: 30px;
         max-width: 800px;
         margin: 0 auto;
+        font-size: 11pt;
       }
       
       .print-header {
         border-bottom: 1px solid #eee;
-        padding-bottom: 20px;
-        margin-bottom: 20px;
+        padding-bottom: 15px;
+        margin-bottom: 15px;
       }
       
       .print-title {
-        font-size: 24px;
+        font-size: 18pt;
         font-weight: bold;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
       }
       
       .print-meta {
-        font-size: 14px;
+        font-size: 10pt;
         color: #666;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
       }
       
       .print-category {
         display: inline-block;
-        font-size: 12px;
+        font-size: 9pt;
         background-color: #f0f0f0;
-        padding: 4px 10px;
-        border-radius: 20px;
-        margin-right: 10px;
+        padding: 3px 8px;
+        border-radius: 12px;
+        margin-right: 8px;
       }
       
       .print-tags {
-        margin-bottom: 30px;
+        margin-bottom: 20px;
       }
       
       .print-tag {
         display: inline-block;
-        font-size: 12px;
+        font-size: 9pt;
         background-color: #e8f0fe;
         color: #1967d2;
-        padding: 3px 8px;
-        border-radius: 20px;
-        margin-right: 5px;
-        margin-bottom: 5px;
+        padding: 2px 6px;
+        border-radius: 12px;
+        margin-right: 4px;
+        margin-bottom: 4px;
       }
       
       .print-content {
-        font-size: 16px;
+        font-size: 11pt;
       }
       
       .print-content img {
@@ -90,22 +91,48 @@ export const printNote = (note: Note): void => {
       }
       
       .print-content blockquote {
-        border-left: 3px solid #ddd;
-        padding-left: 15px;
+        border-left: 2px solid #ddd;
+        padding-left: 10px;
         margin-left: 0;
         color: #666;
+        font-style: italic;
       }
       
       /* Preserve formatting for highlighted and underlined text */
       .print-content .highlight,
       .print-content [style*="background-color: #FEF7CD"] {
         background-color: #FEF7CD;
-        border-bottom: 2px solid #FEF7CD;
+        border-bottom: 1px solid #FEF7CD;
       }
       
       .print-content u,
       .print-content [style*="text-decoration: underline"] {
         text-decoration: underline;
+      }
+      
+      /* Improved table styling with distinct borders */
+      .print-content table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 0.8rem 0;
+        font-size: 10pt;
+        border: 1px solid #ccc;
+      }
+      
+      .print-content th, 
+      .print-content td {
+        border: 1px solid #ccc;
+        padding: 4px 6px;
+        text-align: left;
+      }
+      
+      .print-content th {
+        background-color: #f3f4f6;
+        font-weight: 600;
+      }
+      
+      .print-content tr:nth-child(even) {
+        background-color: #f9f9f9;
       }
       
       /* Hide elements that don't print well */
@@ -115,17 +142,48 @@ export const printNote = (note: Note): void => {
       }
       
       .print-footer {
-        margin-top: 40px;
-        font-size: 12px;
+        margin-top: 30px;
+        font-size: 9pt;
         color: #888;
         text-align: center;
         border-top: 1px solid #eee;
-        padding-top: 15px;
+        padding-top: 10px;
       }
       
+      /* Text alignment classes */
+      .print-content .text-left {
+        text-align: left;
+      }
+      
+      .print-content .text-center {
+        text-align: center;
+      }
+      
+      .print-content .text-right {
+        text-align: right;
+      }
+      
+      .print-content .text-justify {
+        text-align: justify;
+      }
+      
+      /* Print-specific adjustments */
       @media print {
         body {
           padding: 0;
+          font-size: 11pt;
+        }
+        
+        .print-title {
+          font-size: 16pt;
+        }
+        
+        .print-content {
+          font-size: 10.5pt;
+        }
+        
+        .print-content table {
+          page-break-inside: avoid;
         }
       }
     </style>

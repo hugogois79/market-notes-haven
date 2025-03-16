@@ -4,7 +4,7 @@ import { Token, TradeInfo } from "@/types";
 import { TrendingUp, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTradeInfo } from "./hooks/useTradeInfo";
-import { TradeInfoForm } from "./TradeInfoForm";
+import { TradeInfoForm } from "./TradeForm";
 
 interface TradeInfoSectionProps {
   availableTokens: Token[];
