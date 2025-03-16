@@ -1,3 +1,4 @@
+
 import { RefObject, useCallback } from "react";
 import { applyHeadingFormatting, applyListFormatting } from './textFormatters';
 
@@ -111,11 +112,42 @@ export const useTextFormatting = (editorRef: RefObject<HTMLDivElement>) => {
     // Apply alignment to found table cells
     if (cells.length > 0 && inTable) {
       cells.forEach(cell => {
+        // Use textAlign CSS style
         (cell as HTMLElement).style.textAlign = alignment;
+        
+        // Also add a CSS class for better print compatibility
+        if (alignment === 'justify') {
+          cell.classList.add('text-justify');
+          cell.classList.remove('text-left', 'text-center', 'text-right');
+        } else if (alignment === 'center') {
+          cell.classList.add('text-center');
+          cell.classList.remove('text-left', 'text-justify', 'text-right');
+        } else if (alignment === 'right') {
+          cell.classList.add('text-right');
+          cell.classList.remove('text-left', 'text-center', 'text-justify');
+        } else {
+          cell.classList.add('text-left');
+          cell.classList.remove('text-center', 'text-justify', 'text-right');
+        }
       });
     } else if (inList && listElement) {
       // Apply alignment to list element
       (listElement as HTMLElement).style.textAlign = alignment;
+      
+      // Also add a CSS class for better print compatibility
+      if (alignment === 'justify') {
+        listElement.classList.add('text-justify');
+        listElement.classList.remove('text-left', 'text-center', 'text-right');
+      } else if (alignment === 'center') {
+        listElement.classList.add('text-center');
+        listElement.classList.remove('text-left', 'text-justify', 'text-right');
+      } else if (alignment === 'right') {
+        listElement.classList.add('text-right');
+        listElement.classList.remove('text-left', 'text-center', 'text-justify');
+      } else {
+        listElement.classList.add('text-left');
+        listElement.classList.remove('text-center', 'text-justify', 'text-right');
+      }
     } else {
       // If we're not in a table or list, apply alignment to the current block
       // Reset alignment first for consistency
@@ -135,6 +167,27 @@ export const useTextFormatting = (editorRef: RefObject<HTMLDivElement>) => {
         default:
           document.execCommand('justifyLeft', false, '');
           break;
+      }
+      
+      // Apply the appropriate CSS class to the parent element for better print support
+      const currentParent = range.commonAncestorContainer instanceof Text 
+        ? range.commonAncestorContainer.parentElement 
+        : range.commonAncestorContainer as HTMLElement;
+      
+      if (currentParent) {
+        if (alignment === 'justify') {
+          currentParent.classList.add('text-justify');
+          currentParent.classList.remove('text-left', 'text-center', 'text-right');
+        } else if (alignment === 'center') {
+          currentParent.classList.add('text-center');
+          currentParent.classList.remove('text-left', 'text-justify', 'text-right');
+        } else if (alignment === 'right') {
+          currentParent.classList.add('text-right');
+          currentParent.classList.remove('text-left', 'text-center', 'text-justify');
+        } else {
+          currentParent.classList.add('text-left');
+          currentParent.classList.remove('text-center', 'text-justify', 'text-right');
+        }
       }
     }
 

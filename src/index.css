@@ -159,20 +159,28 @@
   caption-side: bottom;
 }
 
-/* Text alignment classes */
-.text-left {
+/* Text alignment classes with more specific selectors for better print support */
+.text-left, 
+*[class*="text-left"],
+[style*="text-align: left"] {
   text-align: left !important;
 }
 
-.text-center {
+.text-center, 
+*[class*="text-center"],
+[style*="text-align: center"] {
   text-align: center !important;
 }
 
-.text-right {
+.text-right, 
+*[class*="text-right"],
+[style*="text-align: right"] {
   text-align: right !important;
 }
 
-.text-justify {
+.text-justify, 
+*[class*="text-justify"],
+[style*="text-align: justify"] {
   text-align: justify !important;
 }
 
@@ -227,12 +235,6 @@
     z-index: 999;
   }
   
-  /* Remove page number counter */
-  /* .print-footer::after {
-    content: "Page " counter(page);
-    display: block;
-  } */
-  
   /* Add heading styles for print */
   h1 {
     font-size: 14pt;
@@ -259,27 +261,42 @@
     font-weight: 600;
   }
 
-  /* Ensure text alignment styles are preserved in print */
-  .text-justify, [style*="text-align: justify"] {
+  /* Enhanced text alignment styles for print */
+  .text-justify, 
+  *[class*="text-justify"],
+  [style*="text-align: justify"] {
     text-align: justify !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
   
-  .text-center, [style*="text-align: center"] {
+  .text-center, 
+  *[class*="text-center"],
+  [style*="text-align: center"] {
     text-align: center !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
   
-  .text-right, [style*="text-align: right"] {
+  .text-right, 
+  *[class*="text-right"],
+  [style*="text-align: right"] {
     text-align: right !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
   
-  .text-left, [style*="text-align: left"] {
+  .text-left, 
+  *[class*="text-left"],
+  [style*="text-align: left"] {
     text-align: left !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Force justification to work for specific elements */
+  p.text-justify, div.text-justify, li.text-justify, td.text-justify {
+    text-align: justify !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }

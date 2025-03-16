@@ -174,36 +174,23 @@ export const getPrintStyles = (): string => {
         margin: 1cm;
       }
       
-      /* Text alignment classes */
-      .print-content .text-left {
-        text-align: left !important;
-      }
-      
-      .print-content .text-center {
-        text-align: center !important;
-      }
-      
-      .print-content .text-right {
-        text-align: right !important;
-      }
-      
-      .print-content .text-justify {
-        text-align: justify !important;
-      }
-      
-      /* Ensure inline style text alignments are preserved */
+      /* Text alignment classes - enhanced for better print support */
+      .print-content .text-left,
       .print-content [style*="text-align: left"] {
         text-align: left !important;
       }
       
+      .print-content .text-center,
       .print-content [style*="text-align: center"] {
         text-align: center !important;
       }
       
+      .print-content .text-right,
       .print-content [style*="text-align: right"] {
         text-align: right !important;
       }
       
+      .print-content .text-justify,
       .print-content [style*="text-align: justify"] {
         text-align: justify !important;
       }
@@ -262,58 +249,46 @@ export const getPrintStyles = (): string => {
           text-overflow: ellipsis; /* Show ellipsis for overflow */
         }
         
-        /* Remove page number counter */
-        /* .print-footer::after {
-          content: "Page " counter(page);
-          display: inline;
-        } */
-        
-        /* Ensure text alignment styles are preserved in print */
+        /* Enhanced text alignment support for print */
+        .text-justify, 
+        .print-content .text-justify,
+        *[class*="text-justify"],
         [style*="text-align: justify"] {
           text-align: justify !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
         
+        .text-center, 
+        .print-content .text-center,
+        *[class*="text-center"],
         [style*="text-align: center"] {
           text-align: center !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
         
+        .text-right, 
+        .print-content .text-right,
+        *[class*="text-right"],
         [style*="text-align: right"] {
           text-align: right !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
         
+        .text-left, 
+        .print-content .text-left,
+        *[class*="text-left"],
         [style*="text-align: left"] {
           text-align: left !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
         
-        /* Additional helper classes for text alignment */
-        .text-justify {
+        /* Force justification to work for paragraphs, lists, and table cells */
+        p.text-justify, div.text-justify, li.text-justify, td.text-justify, th.text-justify {
           text-align: justify !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        
-        .text-center {
-          text-align: center !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        
-        .text-right {
-          text-align: right !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        
-        .text-left {
-          text-align: left !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
