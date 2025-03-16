@@ -110,13 +110,11 @@ export const getPrintStyles = (): string => {
         print-color-adjust: exact !important;
       }
       
-      /* Remove background for tr:first-child td */
-      .print-content tr:first-child td {
-        background-color: transparent !important;
-      }
-      
-      .print-content tr:nth-child(even) {
-        background-color: #f9f9f9;
+      /* Ensure all table data cells have white background */
+      .print-content td {
+        background-color: #ffffff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
       
       /* Hide elements that don't print well */
@@ -132,6 +130,15 @@ export const getPrintStyles = (): string => {
         text-align: center;
         border-top: 1px solid #eee;
         padding-top: 10px;
+        position: fixed;
+        bottom: 20px;
+        left: 0;
+        right: 0;
+      }
+      
+      /* Add page number display */
+      @page {
+        margin: 1cm;
       }
       
       /* Text alignment classes */
@@ -177,17 +184,26 @@ export const getPrintStyles = (): string => {
           print-color-adjust: exact !important;
         }
         
-        /* Remove background for tr:first-child td in print */
-        .print-content tr:first-child td {
-          background-color: transparent !important;
+        /* Ensure all table data cells have white background */
+        .print-content td {
+          background-color: #ffffff !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
         
-        .print-content tr:nth-child(even) {
-          background-color: #f9f9f9 !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
+        .print-footer {
+          position: fixed;
+          bottom: 20px;
+          left: 0;
+          right: 0;
+          font-size: 8pt;
+          color: #666;
+          text-align: center;
+        }
+        
+        .print-footer::after {
+          content: "GVVC MarketNotes | Page " counter(page);
+          display: block;
         }
       }
     </style>

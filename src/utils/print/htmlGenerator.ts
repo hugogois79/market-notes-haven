@@ -52,7 +52,7 @@ export const generatePrintHtml = (note: Note): string => {
       </div>
       
       <div class="print-footer">
-        Printed from Notes App
+        GVVC MarketNotes
       </div>
     </body>
     </html>

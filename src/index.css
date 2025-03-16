@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -179,20 +180,24 @@
     print-color-adjust: exact !important;
   }
   
-  tr:first-child td {
-    background-color: transparent !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-  
-  tr:nth-child(even) {
-    background-color: #f9f9f9 !important;
+  td {
+    background-color: #ffffff !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
   
   body {
     font-size: 10pt;
+  }
+  
+  @page {
+    margin: 1cm;
+  }
+  
+  /* Add page number and footer */
+  .print-footer::after {
+    content: "GVVC MarketNotes | Page " counter(page);
+    display: block;
   }
 }
 
