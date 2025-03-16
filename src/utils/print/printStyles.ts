@@ -59,6 +59,7 @@ export const getPrintStyles = (): string => {
       
       .print-content {
         font-size: 10pt;
+        margin-bottom: 60px; /* Add space for footer */
       }
       
       .print-content img {
@@ -124,7 +125,7 @@ export const getPrintStyles = (): string => {
       }
       
       .print-footer {
-        margin-top: 30px;
+        margin-top: 20px;
         font-size: 8pt;
         color: #888;
         text-align: center;
@@ -134,6 +135,8 @@ export const getPrintStyles = (): string => {
         bottom: 20px;
         left: 0;
         right: 0;
+        background-color: white; /* Ensure footer has white background */
+        z-index: 100; /* Keep the footer above content */
       }
       
       /* Add page number display */
@@ -171,6 +174,7 @@ export const getPrintStyles = (): string => {
         
         .print-content {
           font-size: 9.5pt;
+          margin-bottom: 60px; /* Add space for footer */
         }
         
         .print-content table {
@@ -199,6 +203,10 @@ export const getPrintStyles = (): string => {
           font-size: 8pt;
           color: #666;
           text-align: center;
+          background-color: white; /* Ensure footer has white background */
+          border-top: 1px solid #eee;
+          padding-top: 8px;
+          z-index: 999;
         }
         
         .print-footer::after {

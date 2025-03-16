@@ -36,19 +36,21 @@ export const generatePrintHtml = (note: Note): string => {
       ${printStyles}
     </head>
     <body>
-      <div class="print-header">
-        <h1 class="print-title">${note.title}</h1>
-        <div class="print-meta">
-          <span class="print-category">${note.category}</span>
-          <span>Created: ${createdDate}</span>
-          <span> · </span>
-          <span>Updated: ${updatedDate}</span>
+      <div class="print-wrapper">
+        <div class="print-header">
+          <h1 class="print-title">${note.title}</h1>
+          <div class="print-meta">
+            <span class="print-category">${note.category}</span>
+            <span>Created: ${createdDate}</span>
+            <span> · </span>
+            <span>Updated: ${updatedDate}</span>
+          </div>
+          ${tagsHtml}
         </div>
-        ${tagsHtml}
-      </div>
-      
-      <div class="print-content">
-        ${processedContent}
+        
+        <div class="print-content">
+          ${processedContent}
+        </div>
       </div>
       
       <div class="print-footer">

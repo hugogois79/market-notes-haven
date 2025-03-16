@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -190,11 +189,26 @@
     font-size: 10pt;
   }
   
+  .print-content {
+    margin-bottom: 60px; /* Space for footer */
+  }
+  
   @page {
     margin: 1cm;
   }
   
   /* Add page number and footer */
+  .print-footer {
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    background-color: white;
+    padding: 8px 0;
+    border-top: 1px solid #eee;
+    z-index: 999;
+  }
+  
   .print-footer::after {
     content: "GVVC MarketNotes | Page " counter(page);
     display: block;
