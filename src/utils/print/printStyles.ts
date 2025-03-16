@@ -1,4 +1,3 @@
-
 /**
  * Returns CSS styles for the print window
  */
@@ -59,7 +58,7 @@ export const getPrintStyles = (): string => {
       
       .print-content {
         font-size: 10pt;
-        margin-bottom: 60px; /* Add space for footer */
+        margin-bottom: 40px; /* Reduced space for footer */
       }
       
       .print-content img {
@@ -164,6 +163,9 @@ export const getPrintStyles = (): string => {
         right: 0;
         background-color: white; /* Ensure footer has white background */
         z-index: 100; /* Keep the footer above content */
+        max-width: 50%; /* Make footer less wide */
+        margin-left: auto;
+        margin-right: auto;
       }
       
       /* Add page number display */
@@ -201,7 +203,7 @@ export const getPrintStyles = (): string => {
         
         .print-content {
           font-size: 9.5pt;
-          margin-bottom: 60px; /* Add space for footer */
+          margin-bottom: 40px; /* Reduced space for footer */
         }
         
         .print-content table {
@@ -230,15 +232,21 @@ export const getPrintStyles = (): string => {
           font-size: 8pt;
           color: #666;
           text-align: center;
-          background-color: white; /* Ensure footer has white background */
+          background-color: white;
           border-top: 1px solid #eee;
           padding-top: 8px;
           z-index: 999;
+          max-width: 50%; /* Make footer less wide */
+          margin-left: auto;
+          margin-right: auto;
+          white-space: nowrap; /* Prevent line breaks */
+          overflow: hidden; /* Hide overflow text */
+          text-overflow: ellipsis; /* Show ellipsis for overflow */
         }
         
         .print-footer::after {
           content: "Page " counter(page);
-          display: block;
+          display: inline; /* Changed from block to inline */
         }
       }
     </style>
