@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileEdit, Paintbrush, Table2 } from "lucide-react";
@@ -6,6 +5,8 @@ import FormattingToolbar from "./FormattingToolbar";
 import EditorContent from "./EditorContent";
 import AttachmentSection from "./AttachmentSection";
 import TableDialog from "./TableDialog";
+
+import { useEditor } from "./hooks/editor";
 
 interface EditorTabsProps {
   content: string;
@@ -32,19 +33,17 @@ const EditorTabs = ({
   const [rows, setRows] = useState(3);
   const [cols, setCols] = useState(3);
   
-  const { execCommand, formatTableCells, insertVerticalSeparator, highlightText } = useEditor(editorRef);
+  const { execCommand, formatTableCells, insertVerticalSeparator, highlightText, boldText } = useEditor(editorRef);
 
   const handleCreateTable = () => {
     execCommand('insertHTML', createTable(rows, cols));
     setIsTableDialogOpen(false);
   };
 
-  // Create a wrapper function to handle auto-save that doesn't expect parameters
   const handleAutoSave = () => {
     onAutoSave();
   };
 
-  // Create a wrapper for content change that doesn't expect a parameter
   const handleContentChangeWrapper = () => {
     if (editorRef.current) {
       onContentChange(editorRef.current.innerHTML);
@@ -123,11 +122,9 @@ const EditorTabs = ({
   );
 };
 
-// Helper function to create an HTML table
 const createTable = (rows: number, cols: number) => {
   let tableHTML = '<table style="border-collapse: collapse; width: auto; margin: 1rem 0;">';
   
-  // Table header
   tableHTML += '<thead>';
   tableHTML += '<tr>';
   for (let i = 0; i < cols; i++) {
@@ -136,7 +133,6 @@ const createTable = (rows: number, cols: number) => {
   tableHTML += '</tr>';
   tableHTML += '</thead>';
   
-  // Table body
   tableHTML += '<tbody>';
   for (let i = 0; i < rows - 1; i++) {
     tableHTML += '<tr>';
@@ -150,8 +146,5 @@ const createTable = (rows: number, cols: number) => {
   tableHTML += '</table>';
   return tableHTML;
 };
-
-// Import the useEditor hook
-import { useEditor } from "./hooks/useEditor";
 
 export default EditorTabs;
