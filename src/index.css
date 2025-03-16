@@ -159,6 +159,23 @@
   caption-side: bottom;
 }
 
+/* Text alignment classes */
+.text-left {
+  text-align: left !important;
+}
+
+.text-center {
+  text-align: center !important;
+}
+
+.text-right {
+  text-align: right !important;
+}
+
+.text-justify {
+  text-align: justify !important;
+}
+
 /* Make sure tables show grid lines and borders when printed */
 @media print {
   table {
@@ -239,6 +256,31 @@
   
   b, strong {
     font-weight: 600;
+  }
+
+  /* Ensure text alignment styles are preserved in print */
+  .text-justify, [style*="text-align: justify"] {
+    text-align: justify !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  .text-center, [style*="text-align: center"] {
+    text-align: center !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  .text-right, [style*="text-align: right"] {
+    text-align: right !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  .text-left, [style*="text-align: left"] {
+    text-align: left !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
 

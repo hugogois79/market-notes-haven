@@ -1,3 +1,4 @@
+
 /**
  * Returns CSS styles for the print window
  */
@@ -175,19 +176,36 @@ export const getPrintStyles = (): string => {
       
       /* Text alignment classes */
       .print-content .text-left {
-        text-align: left;
+        text-align: left !important;
       }
       
       .print-content .text-center {
-        text-align: center;
+        text-align: center !important;
       }
       
       .print-content .text-right {
-        text-align: right;
+        text-align: right !important;
       }
       
       .print-content .text-justify {
-        text-align: justify;
+        text-align: justify !important;
+      }
+      
+      /* Ensure inline style text alignments are preserved */
+      .print-content [style*="text-align: left"] {
+        text-align: left !important;
+      }
+      
+      .print-content [style*="text-align: center"] {
+        text-align: center !important;
+      }
+      
+      .print-content [style*="text-align: right"] {
+        text-align: right !important;
+      }
+      
+      .print-content [style*="text-align: justify"] {
+        text-align: justify !important;
       }
       
       /* Print-specific adjustments */
@@ -247,6 +265,56 @@ export const getPrintStyles = (): string => {
         .print-footer::after {
           content: "Page " counter(page);
           display: inline; /* Changed from block to inline */
+        }
+        
+        /* Ensure text alignment styles are preserved in print */
+        [style*="text-align: justify"] {
+          text-align: justify !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        
+        [style*="text-align: center"] {
+          text-align: center !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        
+        [style*="text-align: right"] {
+          text-align: right !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        
+        [style*="text-align: left"] {
+          text-align: left !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        
+        /* Additional helper classes for text alignment */
+        .text-justify {
+          text-align: justify !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        
+        .text-center {
+          text-align: center !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        
+        .text-right {
+          text-align: right !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        
+        .text-left {
+          text-align: left !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
       }
     </style>
