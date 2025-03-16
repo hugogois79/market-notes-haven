@@ -227,10 +227,11 @@
     z-index: 999;
   }
   
-  .print-footer::after {
+  /* Remove page number counter */
+  /* .print-footer::after {
     content: "Page " counter(page);
     display: block;
-  }
+  } */
   
   /* Add heading styles for print */
   h1 {

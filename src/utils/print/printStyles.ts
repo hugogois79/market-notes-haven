@@ -262,10 +262,11 @@ export const getPrintStyles = (): string => {
           text-overflow: ellipsis; /* Show ellipsis for overflow */
         }
         
-        .print-footer::after {
+        /* Remove page number counter */
+        /* .print-footer::after {
           content: "Page " counter(page);
-          display: inline; /* Changed from block to inline */
-        }
+          display: inline;
+        } */
         
         /* Ensure text alignment styles are preserved in print */
         [style*="text-align: justify"] {
