@@ -102,12 +102,17 @@ export const getPrintStyles = (): string => {
         text-align: left;
       }
       
-      .print-content th,
-      .print-content tr:first-child td {
+      /* Only apply background color to th elements (table headers), not the first row */
+      .print-content th {
         background-color: #f3f4f6 !important;
         font-weight: 600;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+      }
+      
+      /* Remove background for tr:first-child td */
+      .print-content tr:first-child td {
+        background-color: transparent !important;
       }
       
       .print-content tr:nth-child(even) {
@@ -165,9 +170,22 @@ export const getPrintStyles = (): string => {
           page-break-inside: avoid;
         }
         
-        .print-content th,
-        .print-content tr:first-child td {
+        /* Only apply background color to th elements in print */
+        .print-content th {
           background-color: #f3f4f6 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        
+        /* Remove background for tr:first-child td in print */
+        .print-content tr:first-child td {
+          background-color: transparent !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        
+        .print-content tr:nth-child(even) {
+          background-color: #f9f9f9 !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
