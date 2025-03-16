@@ -1,4 +1,3 @@
-
 import { RefObject, useCallback } from "react";
 import { applyHeadingFormatting, applyListFormatting } from './textFormatters';
 
@@ -246,4 +245,4 @@ export const useTextFormatting = (editorRef: RefObject<HTMLDivElement>) => {
     highlightText,
     boldText
   };
-}, []);
+};
