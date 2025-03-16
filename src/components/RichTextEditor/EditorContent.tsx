@@ -77,9 +77,17 @@ const EditorContent = ({
             e.preventDefault();
             execCommand('formatBlock', '<h2>');
             break;
+          case '3': // Heading 3 (new)
+            e.preventDefault();
+            execCommand('formatBlock', '<h3>');
+            break;
           case '0': // Normal text
             e.preventDefault();
             execCommand('formatBlock', '<p>');
+            break;
+          case 'b': // Bold text (new)
+            e.preventDefault();
+            execCommand('bold');
             break;
           case 'c': // Center align
             e.preventDefault();
@@ -165,6 +173,12 @@ const EditorContent = ({
           margin-top: 0.75rem;
           margin-bottom: 0.5rem;
         }
+        [contenteditable="true"] h3 {
+          font-size: 1.05rem;
+          font-weight: 500;
+          margin-top: 0.5rem;
+          margin-bottom: 0.25rem;
+        }
         [contenteditable="true"] p {
           font-size: 0.875rem;
           margin-bottom: 0.5rem;
@@ -221,6 +235,10 @@ const EditorContent = ({
         [contenteditable="true"] .highlight {
           background-color: #FEF7CD;
           border-bottom: 2px solid #FEF7CD;
+        }
+        [contenteditable="true"] b,
+        [contenteditable="true"] strong {
+          font-weight: 600;
         }
       `}</style>
     </div>

@@ -144,6 +144,24 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
             h2Element.style.marginBottom = '0.5rem';
           }
         }
+      } else if (value === "<h3>") {
+        // Apply H3 styling (new smaller size)
+        document.execCommand(command, false, value);
+        
+        // Get the current selection and find the heading element
+        if (selection && selection.rangeCount > 0) {
+          const container = selection.getRangeAt(0).commonAncestorContainer;
+          let h3Element = container.nodeType === 1 
+            ? (container as Element).closest('h3') 
+            : (container.parentElement?.closest('h3'));
+          
+          if (h3Element && h3Element instanceof HTMLElement) {
+            h3Element.style.fontSize = '1.05rem';  // Smaller than h2
+            h3Element.style.fontWeight = '500';
+            h3Element.style.marginTop = '0.5rem';
+            h3Element.style.marginBottom = '0.25rem';
+          }
+        }
       } else if (value === "<p>") {
         // Apply paragraph styling
         document.execCommand(command, false, value);
@@ -386,10 +404,27 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
     }
   };
 
+  const boldText = () => {
+    if (!editorRef.current) return;
+    
+    // Focus on the editor first
+    editorRef.current.focus();
+    
+    // Execute the bold command
+    document.execCommand('bold', false, '');
+    
+    // Trigger an input event to ensure changes are registered
+    if (editorRef.current) {
+      const inputEvent = new Event('input', { bubbles: true });
+      editorRef.current.dispatchEvent(inputEvent);
+    }
+  };
+
   return {
     execCommand,
     formatTableCells,
     insertVerticalSeparator,
-    highlightText
+    highlightText,
+    boldText
   };
 };

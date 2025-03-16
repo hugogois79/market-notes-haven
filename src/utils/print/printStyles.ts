@@ -87,6 +87,33 @@ export const getPrintStyles = (): string => {
         text-decoration: underline;
       }
       
+      /* Heading styles for print */
+      .print-content h1 {
+        font-size: 14pt;
+        font-weight: 600;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+      }
+      
+      .print-content h2 {
+        font-size: 12pt;
+        font-weight: 500;
+        margin-top: 0.75rem;
+        margin-bottom: 0.5rem;
+      }
+      
+      .print-content h3 {
+        font-size: 10.5pt;
+        font-weight: 500;
+        margin-top: 0.5rem;
+        margin-bottom: 0.25rem;
+      }
+      
+      .print-content b,
+      .print-content strong {
+        font-weight: 600;
+      }
+      
       /* Improved table styling with distinct borders */
       .print-content table {
         border-collapse: collapse;
