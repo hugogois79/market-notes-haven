@@ -36,9 +36,10 @@ export const useKeyboardShortcuts = (
             e.preventDefault();
             execCommand('formatBlock', '<p>');
             break;
-          case 'b': // Bold text
+          case 'b': // Bold text - now properly toggles
             e.preventDefault();
-            execCommand('bold');
+            // When using document.execCommand directly for toggling formats
+            document.execCommand('bold', false);
             break;
           case 'c': // Center align
             e.preventDefault();

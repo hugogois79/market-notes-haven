@@ -228,8 +228,8 @@ export const useTextFormatting = (editorRef: RefObject<HTMLDivElement>) => {
     // Focus on the editor first
     editorRef.current.focus();
     
-    // Execute the bold command
-    document.execCommand('bold', false, '');
+    // Execute the bold command - no third parameter needed for toggle behavior
+    document.execCommand('bold', false);
     
     // Trigger an input event to ensure changes are registered
     if (editorRef.current) {
