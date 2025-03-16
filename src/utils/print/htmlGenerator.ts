@@ -54,7 +54,7 @@ export const generatePrintHtml = (note: Note): string => {
       </div>
       
       <div class="print-footer">
-        GVVC MarketNotes
+        <!-- Empty footer that will only show page numbers via CSS -->
       </div>
     </body>
     </html>

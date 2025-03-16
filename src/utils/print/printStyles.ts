@@ -237,7 +237,7 @@ export const getPrintStyles = (): string => {
         }
         
         .print-footer::after {
-          content: "GVVC MarketNotes | Page " counter(page);
+          content: "Page " counter(page);
           display: block;
         }
       }
