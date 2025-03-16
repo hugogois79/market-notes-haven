@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -16,7 +15,8 @@ import {
   Heading3,
   Text,
   SeparatorVertical,
-  Highlighter
+  Highlighter,
+  Underline
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -121,26 +121,65 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
       <div className="border-l border-muted-foreground/20 mx-1 h-6"></div>
       
       {/* Bold, Italic, Lists, etc. */}
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        onClick={() => execCommand("bold")}
-        title="Bold"
-        className="h-8 w-8"
-      >
-        <Bold size={16} />
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        onClick={() => execCommand("italic")}
-        title="Italic"
-        className="h-8 w-8"
-      >
-        <Italic size={16} />
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => execCommand("bold")}
+              title="Bold"
+              className="h-8 w-8"
+            >
+              <Bold size={16} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Bold (Alt+B)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => execCommand("italic")}
+              title="Italic"
+              className="h-8 w-8"
+            >
+              <Italic size={16} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Italic (Alt+I)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => execCommand("underline")}
+              title="Underline"
+              className="h-8 w-8"
+            >
+              <Underline size={16} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Underline (Alt+U)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       
       {/* Highlight button */}
       <TooltipProvider>

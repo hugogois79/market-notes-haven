@@ -196,29 +196,13 @@ export const useTextFormatting = (editorRef: RefObject<HTMLDivElement>) => {
       return;
     }
     
-    // Create a span with yellow background highlight
-    const highlightedSpan = document.createElement('span');
-    highlightedSpan.style.borderBottom = '2px solid #FEF7CD';
-    highlightedSpan.style.backgroundColor = '#FEF7CD';
+    // Apply background color directly using execCommand for better toggling support
+    document.execCommand('backColor', false, '#FEF7CD');
     
-    try {
-      // Try to apply the highlight span to the selected text
-      range.surroundContents(highlightedSpan);
-      
-      // Trigger an input event to ensure changes are registered
-      if (editorRef.current) {
-        const inputEvent = new Event('input', { bubbles: true });
-        editorRef.current.dispatchEvent(inputEvent);
-      }
-    } catch (e) {
-      // Handle the case when selection crosses node boundaries
-      console.error("Could not highlight across node boundaries", e);
-      
-      // Alternative approach: Use execCommand to insert HTML
-      const selectedText = range.toString();
-      const highlightedHTML = `<span style="border-bottom: 2px solid #FEF7CD; background-color: #FEF7CD;">${selectedText}</span>`;
-      
-      document.execCommand('insertHTML', false, highlightedHTML);
+    // Trigger an input event to ensure changes are registered
+    if (editorRef.current) {
+      const inputEvent = new Event('input', { bubbles: true });
+      editorRef.current.dispatchEvent(inputEvent);
     }
   }, [editorRef]);
 

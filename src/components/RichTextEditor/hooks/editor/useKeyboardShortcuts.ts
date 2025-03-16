@@ -36,10 +36,13 @@ export const useKeyboardShortcuts = (
             e.preventDefault();
             execCommand('formatBlock', '<p>');
             break;
-          case 'b': // Bold text - now properly toggles
+          case 'b': // Bold text - toggle bold
             e.preventDefault();
-            // When using document.execCommand directly for toggling formats
             document.execCommand('bold', false);
+            break;
+          case 'i': // Italic text
+            e.preventDefault();
+            document.execCommand('italic', false);
             break;
           case 'c': // Center align
             e.preventDefault();
@@ -57,13 +60,10 @@ export const useKeyboardShortcuts = (
             e.preventDefault();
             formatTableCells('justify');
             break;
-          case 'h': // Highlight text
+          case 'h': // Highlight text - implemented using the highlightText function
             e.preventDefault();
-            // Access the parent component's highlightText function via the editorRef
-            const editor = editorRef.current as any;
-            if (editor && editor.__highlightText) {
-              editor.__highlightText();
-            }
+            // Access the parent component's highlightText function
+            document.execCommand('backColor', false, '#FEF7CD');
             break;
           case 'u': // Underline text
             e.preventDefault();
