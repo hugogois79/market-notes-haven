@@ -13,6 +13,7 @@ import {
   Table,
   Heading1,
   Heading2,
+  Heading3,
   Text,
   SeparatorVertical,
   Highlighter
@@ -73,6 +74,26 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
           </TooltipTrigger>
           <TooltipContent side="bottom">
             <p>Heading 2 (Alt+2)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => execCommand("formatBlock", "<h3>")}
+              title="Heading 3"
+              className="h-8 w-8"
+            >
+              <Heading3 size={16} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Heading 3 (Alt+3)</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
