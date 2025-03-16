@@ -22,7 +22,9 @@ const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
   useEffect(() => {
     const fetchTokens = async () => {
       const noteTokens = await getTokensForNote(note.id);
-      setTokens(noteTokens);
+      // Filter out BTCUSDT tokens
+      const filteredTokens = noteTokens.filter(token => token.symbol !== "BTCUSDT");
+      setTokens(filteredTokens);
     };
     
     fetchTokens();
@@ -86,7 +88,7 @@ const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
           <span>{formatDate(note.updatedAt)}</span>
         </div>
         
-        {/* Token badges - displayed at the bottom */}
+        {/* Token badges - display non-BTCUSDT tokens at the bottom */}
         {tokens.length > 0 && (
           <div className="flex flex-wrap gap-1 w-full mt-2">
             {tokens.map(token => (
@@ -94,6 +96,13 @@ const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
             ))}
           </div>
         )}
+        
+        {/* Note ID/Serial Number displayed in small text */}
+        <div className="w-full mt-1">
+          <span className="text-[10px] text-muted-foreground block truncate">
+            ID: {note.id}
+          </span>
+        </div>
         
         {/* Tags - displayed right after tokens */}
         {note.tags.length > 0 && (
