@@ -23,6 +23,28 @@ export const generatePrintHtml = (note: Note): string => {
   // Process content to preserve HTML
   const processedContent = note.content;
   
+  // Generate AI summary section if available
+  const summaryHtml = note.summary 
+    ? `
+      <div class="print-summary">
+        <div class="print-summary-header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="print-summary-icon">
+            <polygon points="12 3 20 12 12 21 4 12 12 3"></polygon>
+          </svg>
+          <span>AI Summary</span>
+        </div>
+        <div class="print-summary-content">
+          ${note.summary.split('**').map((part, index) => {
+            // If the index is odd, it's a bold part
+            return index % 2 === 1 
+              ? `<strong class="print-summary-highlight">${part}</strong>` 
+              : part;
+          }).join('')}
+        </div>
+      </div>
+    `
+    : '';
+  
   // Get print styles
   const printStyles = getPrintStyles();
   
@@ -47,6 +69,8 @@ export const generatePrintHtml = (note: Note): string => {
           </div>
           ${tagsHtml}
         </div>
+        
+        ${summaryHtml}
         
         <div class="print-content">
           ${processedContent}

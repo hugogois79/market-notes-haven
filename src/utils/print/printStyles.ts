@@ -1,4 +1,3 @@
-
 /**
  * Returns CSS styles for the print window
  */
@@ -55,6 +54,39 @@ export const getPrintStyles = (): string => {
         border-radius: 12px;
         margin-right: 4px;
         margin-bottom: 4px;
+      }
+      
+      .print-summary {
+        background-color: #D3E4FD;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 20px;
+        color: #333;
+        page-break-inside: avoid;
+      }
+      
+      .print-summary-header {
+        display: flex;
+        align-items: center;
+        font-weight: 600;
+        font-size: 11pt;
+        color: #1967d2;
+        margin-bottom: 8px;
+      }
+      
+      .print-summary-icon {
+        margin-right: 6px;
+        color: #1967d2;
+      }
+      
+      .print-summary-content {
+        font-size: 9.5pt;
+        line-height: 1.5;
+      }
+      
+      .print-summary-highlight {
+        color: #1967d2;
+        font-weight: 600;
       }
       
       .print-content {
@@ -209,6 +241,26 @@ export const getPrintStyles = (): string => {
         .print-content {
           font-size: 9.5pt;
           margin-bottom: 40px; /* Reduced space for footer */
+        }
+        
+        .print-summary {
+          background-color: #D3E4FD !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          margin-bottom: 16px;
+        }
+        
+        .print-summary-header {
+          color: #1967d2 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        
+        .print-summary-highlight {
+          color: #1967d2 !important;
+          font-weight: 600 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
         
         .print-content table {
