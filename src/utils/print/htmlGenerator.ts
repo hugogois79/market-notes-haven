@@ -45,6 +45,32 @@ export const generatePrintHtml = (note: Note): string => {
     `
     : '';
   
+  // Extract conclusion if it exists
+  let conclusionHtml = '';
+  if (processedContent) {
+    // Look for <h1>, <h2>, or <h3> heading with "Conclusion"
+    const conclusionRegex = /<h[1-3][^>]*>\s*Conclusion\s*<\/h[1-3]>([\s\S]*?)(<h[1-3]|$)/i;
+    const match = processedContent.match(conclusionRegex);
+    
+    if (match && match[1]) {
+      // Get content until the next heading or end of content
+      let conclusionContent = match[1];
+      // Remove the ending heading tag if it was captured
+      if (match[2] && match[2].startsWith('<h')) {
+        conclusionContent = conclusionContent.slice(0, -match[2].length);
+      }
+      
+      conclusionHtml = `
+        <div class="print-conclusion">
+          <h3 class="print-conclusion-header">Conclusion</h3>
+          <div class="print-conclusion-content">
+            ${conclusionContent.trim()}
+          </div>
+        </div>
+      `;
+    }
+  }
+  
   // Get print styles
   const printStyles = getPrintStyles();
   
@@ -75,6 +101,8 @@ export const generatePrintHtml = (note: Note): string => {
         <div class="print-content">
           ${processedContent}
         </div>
+        
+        ${conclusionHtml}
       </div>
       
       <div class="print-footer">

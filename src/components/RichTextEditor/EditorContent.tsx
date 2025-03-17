@@ -1,3 +1,4 @@
+
 import { useEffect, RefObject, useCallback } from "react";
 
 interface EditorContentProps {
@@ -61,6 +62,24 @@ const EditorContent = ({
     // Notify parent component about content change
     if (onContentUpdate && editorRef.current) {
       onContentUpdate(editorRef.current.innerHTML);
+      
+      // Apply styling to conclusion headings and sections
+      if (editorRef.current) {
+        const conclusionHeadings = editorRef.current.querySelectorAll('h1, h2, h3');
+        conclusionHeadings.forEach(heading => {
+          if (heading.textContent?.trim().toLowerCase() === 'conclusion') {
+            heading.classList.add('conclusion-heading');
+            
+            // Apply styles to the content after the heading until the next heading
+            let currentElement = heading.nextElementSibling;
+            while (currentElement && 
+                  !['H1', 'H2', 'H3'].includes(currentElement.tagName)) {
+              currentElement.classList.add('conclusion-content');
+              currentElement = currentElement.nextElementSibling;
+            }
+          }
+        });
+      }
     }
     
     debouncedAutoSave(); // This will only trigger autosave if it's enabled
@@ -163,6 +182,18 @@ const EditorContent = ({
         [contenteditable="true"] b,
         [contenteditable="true"] strong {
           font-weight: 600;
+        }
+        
+        /* Styling for conclusion section */
+        [contenteditable="true"] .conclusion-heading {
+          color: #1967d2;
+        }
+        
+        [contenteditable="true"] .conclusion-content {
+          background-color: #D3E4FD;
+          padding: 8px;
+          border-radius: 4px;
+          margin-bottom: 8px;
         }
       `}</style>
     </div>

@@ -1,3 +1,4 @@
+
 /**
  * Returns CSS styles for the print window
  */
@@ -87,6 +88,30 @@ export const getPrintStyles = (): string => {
       .print-summary-highlight {
         color: #1967d2;
         font-weight: 600;
+      }
+      
+      /* Conclusion styles */
+      .print-conclusion {
+        background-color: #D3E4FD;
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        color: #333;
+        page-break-inside: avoid;
+      }
+      
+      .print-conclusion-header {
+        font-weight: 600;
+        font-size: 11pt;
+        color: #1967d2;
+        margin-top: 0;
+        margin-bottom: 8px;
+      }
+      
+      .print-conclusion-content {
+        font-size: 9.5pt;
+        line-height: 1.5;
       }
       
       .print-content {
@@ -257,6 +282,22 @@ export const getPrintStyles = (): string => {
         }
         
         .print-summary-highlight {
+          color: #1967d2 !important;
+          font-weight: 600 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        
+        /* Conclusion print styles */
+        .print-conclusion {
+          background-color: #D3E4FD !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          margin-top: 16px;
+          margin-bottom: 16px;
+        }
+        
+        .print-conclusion-header {
           color: #1967d2 !important;
           font-weight: 600 !important;
           -webkit-print-color-adjust: exact !important;
