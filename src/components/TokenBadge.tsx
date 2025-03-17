@@ -1,34 +1,28 @@
 
-import { Badge } from "@/components/ui/badge";
 import { Token } from "@/types";
-import { CircleDollarSign } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Coins } from "lucide-react";
 
 interface TokenBadgeProps {
   token: Token;
   className?: string;
-  showPrice?: boolean;
+  size?: "default" | "sm";
 }
 
-const TokenBadge = ({ token, className, showPrice = false }: TokenBadgeProps) => {
+const TokenBadge = ({ token, className, size = "default" }: TokenBadgeProps) => {
+  // Determine classes based on size
+  const badgeClasses = size === "sm" 
+    ? "text-xs py-0 px-1.5 gap-1"
+    : "px-2 py-0.5 gap-1.5";
+
   return (
-    <div className="inline-flex items-center gap-1">
-      <Badge 
-        variant="outline" 
-        className={`text-xs px-2 py-0.5 whitespace-nowrap bg-[#1EAEDB] text-white hover:bg-[#1EAEDB]/90 flex items-center gap-1 ${className || ''}`}
-      >
-        <CircleDollarSign size={10} />
-        {token.symbol}
-      </Badge>
-      
-      {showPrice && token.current_price !== undefined && (
-        <span className="text-xs text-green-600 font-medium flex items-center">
-          ${token.current_price.toLocaleString(undefined, { 
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 6
-          })}
-        </span>
-      )}
-    </div>
+    <Badge 
+      variant="secondary" 
+      className={`bg-[#1EAEDB] text-white hover:bg-[#1EAEDB]/80 flex items-center ${badgeClasses} ${className || ''}`}
+    >
+      <Coins size={size === "sm" ? 10 : 12} />
+      {token.symbol}
+    </Badge>
   );
 };
 

@@ -15,6 +15,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { fetchTags } from "@/services/tagService";
+import { getTokensForNote } from "@/services/tokenService";
+import TokenBadge from "@/components/TokenBadge";
+import { Token } from "@/types";
 
 interface IndexProps {
   notes: Note[];
@@ -28,6 +31,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [categories, setCategories] = useState<{name: string, count: number}[]>([]);
   const [tagNameMap, setTagNameMap] = useState<Record<string, string>>({});
+  const [noteTokens, setNoteTokens] = useState<Record<string, Token[]>>({});
   
   // Load tags to map IDs to names
   useEffect(() => {
@@ -65,6 +69,55 @@ const Index = ({ notes, loading = false }: IndexProps) => {
       setCategories(categoryList);
     }
   }, [notes]);
+  
+  // Load tokens for recent notes
+  useEffect(() => {
+    const fetchTokensForNotes = async () => {
+      if (recentNotes.length > 0) {
+        const tokensMap: Record<string, Token[]> = {};
+        
+        for (const note of recentNotes) {
+          try {
+            const tokens = await getTokensForNote(note.id);
+            if (tokens.length > 0) {
+              tokensMap[note.id] = tokens;
+            }
+          } catch (error) {
+            console.error(`Error fetching tokens for note ${note.id}:`, error);
+          }
+        }
+        
+        setNoteTokens(tokensMap);
+      }
+    };
+    
+    // Filter notes based on search query, selected category, and selected tag
+    const filteredNotes = notes.filter(note => {
+      const matchesSearch = searchQuery === "" || 
+        note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        note.content.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesCategory = selectedCategory === null || 
+        note.category === selectedCategory;
+      
+      const matchesTag = selectedTag === null || 
+        note.tags.some(tagId => 
+          // Either match the tag ID or the tag name
+          tagId === selectedTag || tagNameMap[tagId] === selectedTag
+        );
+      
+      return matchesSearch && matchesCategory && matchesTag;
+    });
+    
+    // Get recent notes (last 10) from filtered notes
+    const recentOnes = [...filteredNotes]
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 10);
+    
+    if (recentOnes.length > 0) {
+      fetchTokensForNotes();
+    }
+  }, [notes, searchQuery, selectedCategory, selectedTag, tagNameMap]);
   
   // Filter notes based on search query, selected category, and selected tag
   const filteredNotes = notes.filter(note => {
@@ -293,6 +346,7 @@ const Index = ({ notes, loading = false }: IndexProps) => {
                   <TableHead>Category</TableHead>
                   <TableHead>Preview</TableHead>
                   <TableHead>Tags</TableHead>
+                  <TableHead>Tokens</TableHead>
                   <TableHead>Updated</TableHead>
                 </TableRow>
               </TableHeader>
@@ -331,6 +385,22 @@ const Index = ({ notes, loading = false }: IndexProps) => {
                         </div>
                       ) : (
                         <span className="text-muted-foreground text-xs">No tags</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {noteTokens[note.id] && noteTokens[note.id].length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {noteTokens[note.id].slice(0, 2).map((token) => (
+                            <TokenBadge key={token.id} token={token} size="sm" />
+                          ))}
+                          {noteTokens[note.id].length > 2 && (
+                            <Badge variant="outline" className="text-xs py-0 px-1.5">
+                              +{noteTokens[note.id].length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">No tokens</span>
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
