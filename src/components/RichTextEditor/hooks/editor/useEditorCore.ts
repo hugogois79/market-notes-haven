@@ -4,7 +4,7 @@ import { useTableHandling } from './useTableHandling';
 import { useTextFormatting } from './useTextFormatting';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 
-export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
+export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = true) => {
   // Make editor content editable when loaded
   useEffect(() => {
     if (editorRef.current) {
@@ -12,6 +12,14 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>) => {
       editorRef.current.focus();
     }
   }, [editorRef]);
+
+  // Apply styling for lack of conclusion if needed
+  useEffect(() => {
+    if (editorRef.current && hasConclusion === false) {
+      // Style will be applied in the EditorContent component
+      console.log("useEditor: No conclusion detected");
+    }
+  }, [editorRef, hasConclusion]);
 
   // Compose all the specialized hooks
   const { handlePaste } = useTableHandling(editorRef);

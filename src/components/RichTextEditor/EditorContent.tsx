@@ -10,6 +10,7 @@ interface EditorContentProps {
   onContentUpdate?: (content: string) => void;
   execCommand?: (command: string, value?: string) => void;
   formatTableCells?: (alignment: string) => void;
+  hasConclusion?: boolean; // New prop to track conclusion status
 }
 
 const EditorContent = ({ 
@@ -21,6 +22,7 @@ const EditorContent = ({
   onContentUpdate,
   execCommand,
   formatTableCells,
+  hasConclusion = true, // Default to true to not interfere with existing content
 }: EditorContentProps) => {
   // Set initial content when the component mounts
   useEffect(() => {
@@ -43,6 +45,52 @@ const EditorContent = ({
       return () => document.removeEventListener('selectionchange', handleSelectionChange);
     }
   }, [editorRef, initialContent]);
+
+  // Apply blue background if no conclusion is detected (executed when hasConclusion prop changes)
+  useEffect(() => {
+    if (editorRef.current && hasConclusion === false) {
+      // Wrap content in a div with blue background if no conclusion is found
+      console.log("No conclusion found, applying blue background");
+      
+      // Check if we already applied a wrapper to avoid double wrapping
+      const existingWrapper = editorRef.current.querySelector('.no-conclusion-wrapper');
+      if (!existingWrapper) {
+        // Get current content
+        const content = editorRef.current.innerHTML;
+        
+        // Create wrapper element
+        const wrapper = document.createElement('div');
+        wrapper.className = 'no-conclusion-wrapper';
+        wrapper.style.backgroundColor = '#D3E4FD'; // Light blue background
+        wrapper.style.padding = '12px';
+        wrapper.style.borderRadius = '4px';
+        wrapper.style.marginTop = '8px';
+        wrapper.style.marginBottom = '8px';
+        
+        // Insert content into wrapper
+        wrapper.innerHTML = content;
+        
+        // Clear editor and append wrapper
+        editorRef.current.innerHTML = '';
+        editorRef.current.appendChild(wrapper);
+        
+        // Add note for the user
+        const note = document.createElement('div');
+        note.className = 'conclusion-missing-note';
+        note.style.backgroundColor = '#1967d2';
+        note.style.color = 'white';
+        note.style.padding = '8px';
+        note.style.borderRadius = '4px';
+        note.style.marginBottom = '8px';
+        note.style.fontSize = '14px';
+        note.style.fontWeight = 'bold';
+        note.textContent = 'AI detected this note does not have a conclusion section. Consider adding one.';
+        
+        // Insert note at the top
+        editorRef.current.insertBefore(note, editorRef.current.firstChild);
+      }
+    }
+  }, [editorRef, hasConclusion]);
 
   // Create a debounced auto-save function (will only run if autoSave is enabled)
   const debouncedAutoSave = useCallback(() => {
@@ -194,6 +242,25 @@ const EditorContent = ({
           padding: 8px;
           border-radius: 4px;
           margin-bottom: 8px;
+        }
+        
+        /* Styling for no-conclusion wrapper */
+        [contenteditable="true"] .no-conclusion-wrapper {
+          background-color: #D3E4FD;
+          padding: 12px;
+          border-radius: 4px;
+          margin-top: 8px;
+          margin-bottom: 8px;
+        }
+        
+        [contenteditable="true"] .conclusion-missing-note {
+          background-color: #1967d2;
+          color: white;
+          padding: 8px;
+          border-radius: 4px;
+          margin-bottom: 8px;
+          font-size: 14px;
+          font-weight: bold;
         }
       `}</style>
     </div>

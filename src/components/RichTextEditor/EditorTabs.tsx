@@ -1,21 +1,24 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileEdit, Paintbrush, Table2 } from "lucide-react";
-import FormattingToolbar from "./FormattingToolbar";
 import EditorContent from "./EditorContent";
-import AttachmentSection from "./AttachmentSection";
-import TableDialog from "./TableDialog";
-
-import { useEditor } from "./hooks/editor";
+import EditorToolbar from "./EditorToolbar";
+import PrintModal from "./PrintModal";
+import { useEditor } from "./hooks/editor/useEditorCore";
+import { useToast } from "@/components/ui/use-toast";
+import { uploadNoteAttachment, deleteNoteAttachment } from "@/services/supabaseService";
+import { useMutation } from "@tanstack/react-query";
+import { ImageIcon, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface EditorTabsProps {
   content: string;
   onContentChange: (content: string) => void;
   onContentUpdate: (content: string) => void;
-  onAutoSave: () => void;
-  noteId: string;
+  onAutoSave?: () => void;
+  noteId?: string;
   attachment_url?: string;
-  onAttachmentChange: (url: string | null) => void;
+  onAttachmentChange?: (url: string | null) => void;
+  hasConclusion?: boolean;
 }
 
 const EditorTabs = ({
@@ -26,125 +29,198 @@ const EditorTabs = ({
   noteId,
   attachment_url,
   onAttachmentChange,
+  hasConclusion = true,
 }: EditorTabsProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
-  const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<"visual" | "markdown">("visual");
-  const [rows, setRows] = useState(3);
-  const [cols, setCols] = useState(3);
-  
-  const { execCommand, formatTableCells, insertVerticalSeparator, highlightText, boldText } = useEditor(editorRef);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const { toast } = useToast();
 
-  const handleCreateTable = () => {
-    execCommand('insertHTML', createTable(rows, cols));
-    setIsTableDialogOpen(false);
+  // Initialize editor hooks
+  const { 
+    execCommand, 
+    formatTableCells,
+    insertVerticalSeparator,
+    highlightText,
+    boldText
+  } = useEditor(editorRef, hasConclusion);
+
+  // Upload file mutation
+  const uploadFileMutation = useMutation({
+    mutationFn: async (file: File) => {
+      if (!noteId) {
+        throw new Error("Note ID is required to upload an attachment.");
+      }
+      return uploadNoteAttachment(file, noteId);
+    },
+    onSuccess: (newUrl) => {
+      setIsUploading(false);
+      if (newUrl) {
+        onAttachmentChange?.(newUrl);
+        toast({
+          title: "Attachment Uploaded",
+          description: "The attachment has been successfully uploaded.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Upload Failed",
+          description: "There was an error uploading the attachment.",
+        });
+      }
+    },
+    onError: (error: any) => {
+      setIsUploading(false);
+      toast({
+        variant: "destructive",
+        title: "Upload Error",
+        description: error.message || "Failed to upload attachment.",
+      });
+    },
+  });
+
+  // Delete file mutation
+  const deleteFileMutation = useMutation({
+    mutationFn: async (url: string) => {
+      return deleteNoteAttachment(url);
+    },
+    onSuccess: () => {
+      onAttachmentChange?.(null);
+      toast({
+        title: "Attachment Removed",
+        description: "The attachment has been successfully removed.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Deletion Error",
+        description: error.message || "Failed to delete attachment.",
+      });
+    },
+  });
+
+  // Handle file upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    uploadFileMutation.mutate(file);
   };
 
-  const handleAutoSave = () => {
-    onAutoSave();
-  };
-
-  const handleContentChangeWrapper = () => {
-    if (editorRef.current) {
-      onContentChange(editorRef.current.innerHTML);
+  // Handle file deletion
+  const handleFileDelete = async () => {
+    if (attachment_url) {
+      deleteFileMutation.mutate(attachment_url);
     }
   };
 
+  // Handle content change
+  const handleContentChangeCallback = useCallback(() => {
+    onContentChange(content);
+  }, [content, onContentChange]);
+
   return (
-    <Tabs defaultValue="edit" className="w-full">
-      <div className="border-b px-3">
-        <div className="flex items-center justify-between">
-          <TabsList className="w-auto h-14">
-            <TabsTrigger value="edit" className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand">Editor</TabsTrigger>
-            <TabsTrigger value="attachment" className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand">Attachment</TabsTrigger>
-          </TabsList>
-          
-          <div className="flex items-center gap-1 mr-2">
-            <button
-              type="button"
-              className={`p-1 rounded ${selectedTab === "visual" ? "bg-brand/10 text-brand" : "hover:bg-muted"}`}
-              onClick={() => setSelectedTab("visual")}
-              title="Visual Editor"
-            >
-              <Paintbrush size={16} />
-            </button>
-            <button
-              type="button"
-              className={`p-1 rounded ${selectedTab === "markdown" ? "bg-brand/10 text-brand" : "hover:bg-muted"}`}
-              onClick={() => setSelectedTab("markdown")}
-              title="Markdown Editor"
-            >
-              <FileEdit size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
+    <Tabs defaultValue="write" className="w-full">
+      <TabsList className="bg-secondary p-2 rounded-t-md">
+        <TabsTrigger value="write">Write</TabsTrigger>
+        <TabsTrigger value="preview">Preview</TabsTrigger>
+        <TabsTrigger value="attachment">Attachment</TabsTrigger>
+        <Button variant="ghost" size="sm" onClick={() => setIsPrintModalOpen(true)}>
+          Print
+        </Button>
+      </TabsList>
       
-      <TabsContent value="edit" className="space-y-0 m-0">
-        <FormattingToolbar 
-          execCommand={execCommand} 
-          setIsTableDialogOpen={setIsTableDialogOpen}
+      {/* Write Tab */}
+      <TabsContent value="write" className="p-0 outline-none">
+        <EditorToolbar
+          editorRef={editorRef}
+          execCommand={execCommand}
           formatTableCells={formatTableCells}
           insertVerticalSeparator={insertVerticalSeparator}
           highlightText={highlightText}
+          boldText={boldText}
         />
-        
-        <EditorContent 
+        <EditorContent
           editorRef={editorRef}
-          handleContentChange={handleContentChangeWrapper}
+          handleContentChange={handleContentChangeCallback}
           initialContent={content}
-          onAutoSave={handleAutoSave}
-          autoSaveDelay={2000}
+          onAutoSave={onAutoSave}
           onContentUpdate={onContentUpdate}
           execCommand={execCommand}
           formatTableCells={formatTableCells}
-        />
-        
-        <TableDialog 
-          isOpen={isTableDialogOpen} 
-          onClose={() => setIsTableDialogOpen(false)} 
-          rows={rows}
-          cols={cols}
-          setRows={setRows}
-          setCols={setCols}
-          onCreateTable={handleCreateTable}
+          hasConclusion={hasConclusion}
         />
       </TabsContent>
       
-      <TabsContent value="attachment" className="space-y-4 m-0 p-4">
-        <AttachmentSection 
-          noteId={noteId}
-          attachmentUrl={attachment_url}
-          onAttachmentChange={onAttachmentChange}
-        />
+      {/* Preview Tab */}
+      <TabsContent value="preview" className="p-4">
+        <div className="prose dark:prose-invert max-w-none">
+          <div dangerouslySetInnerHTML={{ __html: content }} />
+        </div>
       </TabsContent>
+      
+      {/* Attachment Tab */}
+      <TabsContent value="attachment" className="p-4">
+        <div className="flex flex-col gap-4">
+          {attachment_url ? (
+            <>
+              <p>Current Attachment:</p>
+              <a href={attachment_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
+                View Attachment
+              </a>
+              <Button variant="destructive" onClick={handleFileDelete} disabled={deleteFileMutation.isPending}>
+                {deleteFileMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Remove Attachment"
+                )}
+              </Button>
+            </>
+          ) : (
+            <>
+              <p>Upload an attachment:</p>
+              <input
+                type="file"
+                id="attachment-upload"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+              <label htmlFor="attachment-upload">
+                <Button variant="outline" asChild disabled={isUploading}>
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="mr-2 h-4 w-4" />
+                      Select File
+                    </>
+                  )}
+                </Button>
+              </label>
+            </>
+          )}
+        </div>
+      </TabsContent>
+
+      {/* Print Modal */}
+      <PrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        content={content}
+        title={""}
+        category={""}
+        attachmentUrl={attachment_url}
+      />
     </Tabs>
   );
-};
-
-const createTable = (rows: number, cols: number) => {
-  let tableHTML = '<table style="border-collapse: collapse; width: auto; margin: 1rem 0;">';
-  
-  tableHTML += '<thead>';
-  tableHTML += '<tr>';
-  for (let i = 0; i < cols; i++) {
-    tableHTML += '<th style="border: 1px solid #d1d5db; padding: 0.5rem 1rem; background-color: #f3f4f6; font-weight: bold; text-align: left;">Header ' + (i + 1) + '</th>';
-  }
-  tableHTML += '</tr>';
-  tableHTML += '</thead>';
-  
-  tableHTML += '<tbody>';
-  for (let i = 0; i < rows - 1; i++) {
-    tableHTML += '<tr>';
-    for (let j = 0; j < cols; j++) {
-      tableHTML += '<td style="border: 1px solid #d1d5db; padding: 0.5rem 1rem; text-align: left;">Cell ' + (i + 1) + '-' + (j + 1) + '</td>';
-    }
-    tableHTML += '</tr>';
-  }
-  tableHTML += '</tbody>';
-  
-  tableHTML += '</table>';
-  return tableHTML;
 };
 
 export default EditorTabs;

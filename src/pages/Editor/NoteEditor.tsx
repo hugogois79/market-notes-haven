@@ -27,6 +27,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   const [linkedTags, setLinkedTags] = useState<Tag[]>([]);
   const [localLinkedTokens, setLocalLinkedTokens] = useState<Token[]>(linkedTokens);
   const [localTradeInfo, setLocalTradeInfo] = useState<TradeInfo | undefined>(currentNote.tradeInfo);
+  const [hasConclusion, setHasConclusion] = useState<boolean>(currentNote.hasConclusion !== false);
 
   // Update local state when currentNote changes
   useEffect(() => {
@@ -34,6 +35,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     setLocalCategory(currentNote.category || "General");
     setLocalLinkedTokens(linkedTokens);
     setLocalTradeInfo(currentNote.tradeInfo);
+    setHasConclusion(currentNote.hasConclusion !== false);
     
     // Convert tag IDs to tag objects
     setLinkedTags(getTagObjects());
@@ -65,13 +67,28 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   };
 
   // Handle summary generation
-  const handleSummaryGenerated = (summary: string) => {
+  const handleSummaryGenerated = (summary: string, detectedHasConclusion?: boolean) => {
     console.log("Summary generated:", summary);
-    setPendingChanges({ ...pendingChanges, summary });
+    console.log("Has conclusion:", detectedHasConclusion);
+    
+    // Update local state with conclusion status if provided
+    if (detectedHasConclusion !== undefined) {
+      setHasConclusion(detectedHasConclusion);
+      setPendingChanges({ 
+        ...pendingChanges, 
+        summary,
+        hasConclusion: detectedHasConclusion 
+      });
+    } else {
+      setPendingChanges({ ...pendingChanges, summary });
+    }
     
     // Trigger immediate autosave when summary is generated
     if (autoSave) {
-      const updatedChanges = { ...pendingChanges, summary };
+      const updatedChanges = detectedHasConclusion !== undefined 
+        ? { ...pendingChanges, summary, hasConclusion: detectedHasConclusion }
+        : { ...pendingChanges, summary };
+      
       handleSaveWithChanges(updatedChanges, true);
     }
   };
@@ -245,6 +262,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         onSummaryGenerated={handleSummaryGenerated}
         tradeInfo={localTradeInfo}
         onTradeInfoChange={handleTradeInfoChange}
+        hasConclusion={hasConclusion}
       />
     </div>
   );

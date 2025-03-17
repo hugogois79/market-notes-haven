@@ -47,7 +47,9 @@ serve(async (req) => {
                   Example: "**Token XYZ** price increased by **25%** with a recommendation to **buy** at **$100**."
                   Start with the most critical financial information.
                   Do not use introductory phrases like "This note discusses" or "This is about".
-                  If the content is too short, unclear, or contains no financial information, respond with a general summary.`;
+                  If the content is too short, unclear, or contains no financial information, respond with a general summary.
+                  
+                  Additionally, analyze if the content contains a proper conclusion section. If not, return hasConclusion: false in your response.`;
     
     // Add trade info extraction if requested
     if (generateTradeInfo) {
@@ -68,30 +70,25 @@ serve(async (req) => {
       When there's a range like "$75,800-$76,200", use the average value.
       
       Always return numbers as actual numbers (not strings).
-      
-      Format your response as JSON with "summary" and "tradeInfo" fields:
-      {
-        "summary": "your summary here",
-        "tradeInfo": {
-          "allTrades": [
-            {
-              "tokenName": "token name (like BTC, ETH, etc)",
-              "quantity": numeric value (not string),
-              "entryPrice": numeric value in USD (not string),
-              "targetPrice": numeric value in USD (not string),
-              "stopPrice": numeric value in USD (not string)
-            },
-            {
-              "tokenName": "another token if multiple are mentioned",
-              "quantity": numeric value (not string),
-              "entryPrice": numeric value in USD (not string),
-              "targetPrice": numeric value in USD (not string),
-              "stopPrice": numeric value in USD (not string)
-            }
-          ]
-        }
-      }`;
+      `;
     }
+
+    // Add additional instruction for conclusion detection
+    systemPrompt += `
+    
+    Check if the content has a proper conclusion section. Look for:
+    1. A heading/title that explicitly contains the word "Conclusion" 
+    2. OR a final paragraph that starts with "In conclusion", "To conclude", "To summarize", etc.
+    3. OR a clear concluding statement that summarizes the key points
+    
+    Format your response as JSON with "summary", "hasConclusion", and if requested "tradeInfo" fields:
+    {
+      "summary": "your summary here",
+      "hasConclusion": true/false,
+      "tradeInfo": {
+        // trade info if requested
+      }
+    }`;
     
     // Make the request to OpenAI API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -121,46 +118,47 @@ serve(async (req) => {
       throw new Error(data.error?.message || 'Failed to generate summary');
     }
     
-    let summary = data.choices[0].message.content.trim();
+    let summary = '';
+    let hasConclusion = true; // Default to true so we don't interfere with existing content
     let tradeInfo = null;
 
-    // Try to parse JSON if that's the response format (when generating trade info)
-    if (generateTradeInfo && summary.startsWith('{') && summary.endsWith('}')) {
-      try {
-        const parsedResponse = JSON.parse(summary);
-        summary = parsedResponse.summary;
+    // Try to parse JSON from the response
+    try {
+      const parsedResponse = JSON.parse(data.choices[0].message.content);
+      summary = parsedResponse.summary || '';
+      hasConclusion = parsedResponse.hasConclusion !== undefined ? parsedResponse.hasConclusion : true;
+      
+      // Process the AI's tradeInfo if present
+      if (parsedResponse.tradeInfo) {
+        tradeInfo = parsedResponse.tradeInfo;
         
-        // Process the AI's tradeInfo to our expected structure
-        if (parsedResponse.tradeInfo) {
-          tradeInfo = parsedResponse.tradeInfo;
-          
-          // Make sure allTrades is an array
-          if (!Array.isArray(tradeInfo.allTrades)) {
-            tradeInfo.allTrades = [tradeInfo.allTrades];
-          }
-          
-          // Clean and normalize the data
-          tradeInfo.allTrades = tradeInfo.allTrades.map(trade => {
-            // Convert string numbers to actual numbers
-            const cleanTrade = {
-              tokenName: trade.tokenName || null,
-              quantity: typeof trade.quantity === 'string' ? 
-                parseFloat(trade.quantity.replace(/,/g, '')) : trade.quantity,
-              entryPrice: typeof trade.entryPrice === 'string' ? 
-                parseFloat(trade.entryPrice.replace(/[^0-9.]/g, '')) : trade.entryPrice,
-              targetPrice: typeof trade.targetPrice === 'string' ? 
-                parseFloat(trade.targetPrice.replace(/[^0-9.]/g, '')) : trade.targetPrice,
-              stopPrice: typeof trade.stopPrice === 'string' ? 
-                parseFloat(trade.stopPrice.replace(/[^0-9.]/g, '')) : trade.stopPrice
-            };
-            
-            return cleanTrade;
-          });
+        // Make sure allTrades is an array
+        if (!Array.isArray(tradeInfo.allTrades)) {
+          tradeInfo.allTrades = [tradeInfo.allTrades];
         }
-      } catch (e) {
-        console.error('Error parsing JSON from OpenAI:', e);
-        // Keep the summary as is if parsing fails
+        
+        // Clean and normalize the data
+        tradeInfo.allTrades = tradeInfo.allTrades.map(trade => {
+          // Convert string numbers to actual numbers
+          const cleanTrade = {
+            tokenName: trade.tokenName || null,
+            quantity: typeof trade.quantity === 'string' ? 
+              parseFloat(trade.quantity.replace(/,/g, '')) : trade.quantity,
+            entryPrice: typeof trade.entryPrice === 'string' ? 
+              parseFloat(trade.entryPrice.replace(/[^0-9.]/g, '')) : trade.entryPrice,
+            targetPrice: typeof trade.targetPrice === 'string' ? 
+              parseFloat(trade.targetPrice.replace(/[^0-9.]/g, '')) : trade.targetPrice,
+            stopPrice: typeof trade.stopPrice === 'string' ? 
+              parseFloat(trade.stopPrice.replace(/[^0-9.]/g, '')) : trade.stopPrice
+          };
+          
+          return cleanTrade;
+        });
       }
+    } catch (e) {
+      console.error('Error parsing JSON from OpenAI:', e);
+      // If parsing fails, use the raw text as summary
+      summary = data.choices[0].message.content.trim();
     }
 
     // If noteId is provided, save the summary to the database
@@ -168,7 +166,10 @@ serve(async (req) => {
       try {
         const supabase = createClient(supabaseUrl, supabaseAnonKey);
         
-        const updateData: any = { summary };
+        const updateData: any = { 
+          summary,
+          has_conclusion: hasConclusion
+        };
         
         // Add trade_info if we have it
         if (tradeInfo) {
@@ -184,7 +185,7 @@ serve(async (req) => {
           console.error('Error saving summary to note:', updateError);
           // Continue execution, don't throw an error since we have the summary
         } else {
-          console.log('Summary and trade info successfully saved to note:', noteId);
+          console.log('Summary and conclusion status successfully saved to note:', noteId);
         }
       } catch (dbError) {
         console.error('Database error:', dbError);
@@ -193,7 +194,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ summary, tradeInfo }),
+      JSON.stringify({ summary, hasConclusion, tradeInfo }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

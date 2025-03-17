@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -46,4 +45,5 @@ export interface Note {
   updatedAt: Date;
   attachment_url?: string;
   tradeInfo?: TradeInfo;
+  hasConclusion?: boolean;
 }
