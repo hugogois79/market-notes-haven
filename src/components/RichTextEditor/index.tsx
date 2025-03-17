@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Tag, Token, Note, TradeInfo } from "@/types";
@@ -33,9 +32,10 @@ interface RichTextEditorProps {
   isSaving?: boolean;
   manualSave?: () => void;
   summary?: string;
-  onSummaryGenerated?: (summary: string) => void;
+  onSummaryGenerated?: (summary: string, hasConclusion?: boolean) => void;
   tradeInfo?: TradeInfo;
   onTradeInfoChange?: (tradeInfo: TradeInfo) => void;
+  hasConclusion?: boolean;
 }
 
 const RichTextEditor = ({
@@ -60,6 +60,7 @@ const RichTextEditor = ({
   onSummaryGenerated,
   tradeInfo,
   onTradeInfoChange = () => {},
+  hasConclusion = true,
 }: RichTextEditorProps) => {
   
   const [tagInput, setTagInput] = useState("");
@@ -275,6 +276,7 @@ const RichTextEditor = ({
           noteId={noteId}
           attachment_url={attachment_url}
           onAttachmentChange={onAttachmentChange}
+          hasConclusion={hasConclusion}
         />
       </Card>
     </div>
