@@ -56,7 +56,7 @@ export const dbNoteToNote = (dbNote: DbNote): Note => ({
   updatedAt: new Date(dbNote.updated_at),
   attachment_url: dbNote.attachment_url || undefined,
   tradeInfo: jsonToTradeInfo(dbNote.trade_info), // Convert JSON to TradeInfo
-  hasConclusion: dbNote.has_conclusion || false, // Include hasConclusion field
+  hasConclusion: dbNote.has_conclusion, // Include hasConclusion field
 });
 
 // Convert app note to database format

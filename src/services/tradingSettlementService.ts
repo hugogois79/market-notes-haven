@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { TradingSettlementNote } from "@/types";
 import { toast } from "sonner";
@@ -78,28 +77,9 @@ export const createTradingSettlementNote = async (note: Omit<TradingSettlementNo
   try {
     const dbNote = tradingSettlementNoteToDbNote(note);
     
-    // Ensure all required fields are present for Supabase insert
-    if (!dbNote.note_id || !dbNote.asset_symbol || dbNote.quantity === undefined || 
-        dbNote.price === undefined || !dbNote.trade_type) {
-      console.error('Missing required fields for trading settlement note');
-      toast.error('Failed to create trading settlement note: Missing required fields');
-      return null;
-    }
-    
     const { data, error } = await supabase
       .from('trading_settlement_notes')
-      .insert({
-        note_id: dbNote.note_id,
-        trade_date: dbNote.trade_date || new Date().toISOString(),
-        settlement_date: dbNote.settlement_date || null,
-        asset_symbol: dbNote.asset_symbol,
-        quantity: dbNote.quantity,
-        price: dbNote.price,
-        trade_type: dbNote.trade_type,
-        fees: dbNote.fees || null,
-        pnl: dbNote.pnl || null,
-        notes: dbNote.notes || null
-      })
+      .insert(dbNote)
       .select()
       .single();
 
