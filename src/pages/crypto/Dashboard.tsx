@@ -1,23 +1,20 @@
 
 import React from "react";
-import { Note } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader } from "lucide-react";
 import NoteCard from "@/components/NoteCard";
+import { useNotes } from "@/contexts/NotesContext";
 
-interface CryptoDashboardProps {
-  notes: Note[];
-  loading: boolean;
-}
-
-const CryptoDashboard: React.FC<CryptoDashboardProps> = ({ notes, loading }) => {
+const CryptoDashboard: React.FC = () => {
+  const { notes, loading, isLoading } = useNotes();
   const cryptoNotes = notes.filter(note => note.category === "Crypto");
+  const isLoaded = !(loading || isLoading);
   
   return (
     <div className="container py-6">
       <h1 className="text-2xl font-bold mb-6">Crypto Dashboard</h1>
       
-      {loading ? (
+      {!isLoaded ? (
         <div className="flex justify-center items-center h-40">
           <Loader className="h-6 w-6 animate-spin text-primary mr-2" />
           <p>Loading crypto data...</p>
