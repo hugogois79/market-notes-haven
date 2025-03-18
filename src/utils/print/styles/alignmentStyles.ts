@@ -20,8 +20,11 @@ export const getAlignmentStyles = (): string => {
       text-align: right !important;
     }
     
+    /* Stronger justification rules */
     .print-content .text-justify,
-    .print-content [style*="text-align: justify"] {
+    .print-content [style*="text-align: justify"],
+    .print-justified p,
+    .print-justified div {
       text-align: justify !important;
     }
     
@@ -37,6 +40,13 @@ export const getAlignmentStyles = (): string => {
     .print-content td[style*="text-align: justify"], 
     .print-content th[style*="text-align: justify"] {
       text-align: justify !important;
+    }
+    
+    /* Force justification for paragraphs in print mode */
+    @media print {
+      .print-justified p {
+        text-align: justify !important;
+      }
     }
   `;
 };

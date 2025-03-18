@@ -1,3 +1,4 @@
+
 import { Note } from "@/types";
 import { formatDate } from "./formatUtils";
 import { getPrintStyles } from "./printStyles";
@@ -22,13 +23,16 @@ export const generatePrintHtml = (note: Note): string => {
   // Process content to preserve HTML
   const processedContent = note.content;
   
-  // Preserve text alignment styles in processed content
+  // Enhanced content processing for text alignment
   const enhancedContent = processedContent
-    // Keep 'style' attributes intact for justified text
+    // Strengthen justified text styling
     .replace(/text-align:\s*justify/gi, 'text-align: justify !important')
-    // Add class for elements with justify alignment
+    // Add more specific class for elements with justify alignment
     .replace(/<([^>]+?)style="([^"]*?)text-align:\s*justify([^"]*?)"([^>]*?)>/gi, 
-             '<$1style="$2text-align: justify !important$3" class="text-justify"$4>');
+             '<$1style="$2text-align: justify !important$3" class="text-justify"$4>')
+    // Handle paragraphs that should be justified but don't have explicit style
+    .replace(/<p\s+class="text-justify"([^>]*)>/gi, 
+             '<p class="text-justify" style="text-align: justify !important"$1>');
   
   // Generate AI summary section if available
   const summaryHtml = note.summary 
@@ -81,7 +85,7 @@ export const generatePrintHtml = (note: Note): string => {
   // Get print styles
   const printStyles = getPrintStyles();
   
-  // Create the complete HTML document for printing
+  // Create the complete HTML document for printing with wrapper class for justified content
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -105,7 +109,7 @@ export const generatePrintHtml = (note: Note): string => {
         
         ${summaryHtml}
         
-        <div class="print-content">
+        <div class="print-content print-justified">
           ${enhancedContent}
         </div>
         

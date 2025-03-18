@@ -23,6 +23,15 @@ export const getPrintMediaStyles = (): string => {
         margin-bottom: 40px; /* Reduced space for footer */
       }
       
+      /* Class to enforce justification throughout the document */
+      .print-justified p, 
+      .print-justified div, 
+      .print-justified li {
+        text-align: justify !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      
       .print-summary {
         background-color: #D3E4FD !important;
         -webkit-print-color-adjust: exact !important;
@@ -147,6 +156,15 @@ export const getPrintMediaStyles = (): string => {
       /* Additional specific selectors for common elements that might need justification */
       .print-content p, .print-content div, .print-content li {
         text-align: inherit !important;
+      }
+      
+      /* More aggressive justification for print content */
+      .print-justified p, 
+      .print-justified div:not(.print-title):not(.print-meta):not(.print-tags):not(.print-category),
+      .print-justified li {
+        text-align: justify !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
     }
   `;
