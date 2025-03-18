@@ -40,9 +40,9 @@ export const generatePrintHtml = (note: Note): string => {
       <div class="print-summary">
         <div class="print-summary-header">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="print-summary-icon">
-            <polygon points="12 3 20 12 12 21 4 12 12 3"></polygon>
+            <path d="M12 3L20 12L12 21L4 12L12 3Z"></path>
           </svg>
-          <span>AI Summary</span>
+          AI Summary
         </div>
         <div class="print-summary-content">
           ${note.summary.split('**').map((part, index) => {

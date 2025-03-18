@@ -16,6 +16,7 @@ interface PrintModalProps {
   content: string;
   title: string;
   category: string;
+  summary?: string;
   attachmentUrl?: string;
 }
 
@@ -25,6 +26,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
   content,
   title,
   category,
+  summary,
   attachmentUrl,
 }) => {
   const handlePrint = useCallback(() => {
@@ -32,10 +34,11 @@ const PrintModal: React.FC<PrintModalProps> = ({
       content,
       title: title || "Untitled Note",
       category: category || "Uncategorized",
+      summary,
       attachment_url: attachmentUrl,
     });
     onClose();
-  }, [content, title, category, attachmentUrl, onClose]);
+  }, [content, title, category, summary, attachmentUrl, onClose]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -46,6 +49,11 @@ const PrintModal: React.FC<PrintModalProps> = ({
         <div className="py-4">
           <p className="text-xs text-muted-foreground">
             This will open the print dialog to print your note or save it as a PDF.
+            {summary && (
+              <span className="block mt-2 text-blue-600">
+                Your AI summary will appear at the top of the printed document.
+              </span>
+            )}
           </p>
         </div>
         <DialogFooter>

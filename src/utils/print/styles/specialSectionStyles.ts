@@ -6,31 +6,33 @@ export const getSpecialSectionStyles = (): string => {
   return `
     /* Summary styles */
     .print-summary {
-      background-color: #D3E4FD;
+      background-color: #E9F2FF;
       border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 20px;
+      padding: 16px;
+      margin-top: 10px;
+      margin-bottom: 24px;
       color: #333;
       page-break-inside: avoid;
+      border: 1px solid #D3E4FD;
     }
     
     .print-summary-header {
       display: flex;
       align-items: center;
       font-weight: 600;
-      font-size: 11pt;
+      font-size: 12pt;
       color: #1967d2;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
     
     .print-summary-icon {
-      margin-right: 6px;
+      margin-right: 8px;
       color: #1967d2;
     }
     
     .print-summary-content {
-      font-size: 9.5pt;
-      line-height: 1.5;
+      font-size: 10pt;
+      line-height: 1.6;
     }
     
     .print-summary-highlight {
@@ -40,26 +42,27 @@ export const getSpecialSectionStyles = (): string => {
     
     /* Conclusion styles */
     .print-conclusion {
-      background-color: #D3E4FD;
+      background-color: #F1F0FB;
       border-radius: 8px;
-      padding: 12px;
-      margin-top: 20px;
-      margin-bottom: 20px;
+      padding: 16px;
+      margin-top: 24px;
+      margin-bottom: 24px;
       color: #333;
       page-break-inside: avoid;
+      border: 1px solid #E6E4F3;
     }
     
     .print-conclusion-header {
       font-weight: 600;
-      font-size: 11pt;
+      font-size: 12pt;
       color: #1967d2;
       margin-top: 0;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
     
     .print-conclusion-content {
-      font-size: 9.5pt;
-      line-height: 1.5;
+      font-size: 10pt;
+      line-height: 1.6;
     }
   `;
 };
