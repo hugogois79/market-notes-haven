@@ -226,7 +226,7 @@ const AiResume: React.FC<AiResumeProps> = ({
       )}
       
       <div className="text-xs text-gray-500">
-        <p>The AI summary highlights key metrics, trade recommendations, and financial insights from your notes. It will also extract trade information like token, quantity, entry, target, and stop prices.</p>
+        <p>The AI summary highlights key metrics, trade recommendations, and financial insights from your notes and trade journal entries.</p>
       </div>
     </div>
   );

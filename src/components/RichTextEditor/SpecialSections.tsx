@@ -1,9 +1,11 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import AiResume from "./AiResume";
 import TradeInfoSection from "./TradeInfoSection";
+import TradingChat from "./TradingChat";
 import { Token, TradeInfo } from "@/types";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SpecialSectionsProps {
   noteId: string;
@@ -28,6 +30,23 @@ const SpecialSections = ({
   tradeInfo,
   onTradeInfoChange
 }: SpecialSectionsProps) => {
+  const [chatSummary, setChatSummary] = useState<string>("");
+  
+  const handleChatSummaryUpdated = (summary: string) => {
+    setChatSummary(summary);
+    
+    // If there's no content-based summary but we have a chat summary,
+    // use the chat summary as the note summary
+    if ((!initialSummary || initialSummary.trim() === "") && summary && onSummaryGenerated) {
+      onSummaryGenerated(summary);
+    }
+  };
+  
+  // Combine content-based summary with chat summary if both exist
+  const combinedSummary = initialSummary && chatSummary 
+    ? `${initialSummary}\n\n**Trade Journal Summary:**\n${chatSummary}` 
+    : initialSummary || chatSummary;
+
   return (
     <>
       {/* AI Resume Section */}
@@ -35,21 +54,37 @@ const SpecialSections = ({
         <AiResume 
           noteId={noteId}
           content={content}
-          initialSummary={initialSummary}
+          initialSummary={combinedSummary}
           onSummaryGenerated={onSummaryGenerated}
         />
       </Card>
       
       {/* Trade Info Section - Only displayed for trading categories */}
       {isTradingCategory && (
-        <Card className="p-4 border rounded-md">
-          <TradeInfoSection 
-            availableTokens={availableTokens}
-            isLoadingTokens={isLoadingTokens}
-            tradeInfo={tradeInfo}
-            onTradeInfoChange={onTradeInfoChange}
-            noteContent={content}
-          />
+        <Card className="p-4 border rounded-md mt-4">
+          <Tabs defaultValue="trade-info">
+            <TabsList className="mb-4">
+              <TabsTrigger value="trade-info">Trade Info</TabsTrigger>
+              <TabsTrigger value="trade-journal">Trade Journal</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="trade-info">
+              <TradeInfoSection 
+                availableTokens={availableTokens}
+                isLoadingTokens={isLoadingTokens}
+                tradeInfo={tradeInfo}
+                onTradeInfoChange={onTradeInfoChange}
+                noteContent={content}
+              />
+            </TabsContent>
+            
+            <TabsContent value="trade-journal">
+              <TradingChat 
+                noteId={noteId} 
+                onChatSummaryUpdated={handleChatSummaryUpdated}
+              />
+            </TabsContent>
+          </Tabs>
         </Card>
       )}
     </>

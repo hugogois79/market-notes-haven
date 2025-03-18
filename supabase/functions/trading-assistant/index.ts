@@ -43,9 +43,20 @@ serve(async (req) => {
             role: 'system',
             content: `You are a specialized trading assistant that helps investors document their trades.
             When users provide information about a trade they've made, reformat it into a clear, 
-            professional trading journal entry. Include all relevant details like entry price, quantity, 
-            ticker/asset, date if provided, and add any implied information about profit potential or risk.
-            Be succinct and factual, but provide insights where appropriate.`
+            structured trading journal entry. Format your response like this:
+            
+            **Trading Journal Entry**
+            
+            - **Date:** [Date if provided, otherwise "Date Not Provided"]
+            - **Ticker/Asset:** [Ticker/Token/Asset Name if provided, otherwise "Not Specified"]
+            - **Quantity:** [Quantity if provided, otherwise "Not Specified"]
+            - **Entry Price:** [Entry Price if provided, otherwise "Not Specified"]
+            - **Profit:** [Profit amount if provided]
+            
+            **Notes:**
+            [Provide a brief analysis of the trade information, including any missing details that would be useful to track]
+            
+            Be factual and precise. If the user doesn't provide specific information, indicate it's missing rather than making assumptions.`
           },
           { role: 'user', content: message }
         ],

@@ -3,14 +3,17 @@ import React, { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Trash2 } from "lucide-react";
+import { Send, Trash2, Bot, User } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 
 interface TradingChatProps {
   noteId?: string;
+  onChatSummaryUpdated?: (summary: string) => void;
 }
 
 interface ChatMessage {
@@ -20,7 +23,7 @@ interface ChatMessage {
   is_ai: boolean;
 }
 
-const TradingChat = ({ noteId }: TradingChatProps) => {
+const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
@@ -97,6 +100,11 @@ const TradingChat = ({ noteId }: TradingChatProps) => {
     onSuccess: () => {
       refetchChatHistory();
       setMessage("");
+      
+      // Generate a summary of chat for the AI Resume section
+      if (chatHistory && chatHistory.length > 0 && onChatSummaryUpdated) {
+        generateChatSummary();
+      }
     },
     onError: (error) => {
       console.error("Error sending message:", error);
@@ -127,6 +135,11 @@ const TradingChat = ({ noteId }: TradingChatProps) => {
         title: "Chat history cleared",
         description: "All trade information has been cleared.",
       });
+      
+      // Clear the summary when chat is cleared
+      if (onChatSummaryUpdated) {
+        onChatSummaryUpdated("");
+      }
     },
     onError: (error) => {
       console.error("Error clearing history:", error);
@@ -137,6 +150,40 @@ const TradingChat = ({ noteId }: TradingChatProps) => {
       });
     },
   });
+
+  // Generate a summary of the chat for AI Resume
+  const generateChatSummary = async () => {
+    if (!chatHistory || chatHistory.length === 0 || !noteId) return;
+    
+    try {
+      // Concatenate all messages, focusing on AI responses which contain structured information
+      const aiMessages = chatHistory.filter(msg => msg.is_ai).map(msg => msg.content);
+      
+      if (aiMessages.length === 0) return;
+      
+      // Use the edge function to generate a summary
+      const response = await supabase.functions.invoke('summarize-note', {
+        body: { 
+          content: aiMessages.join("\n\n"),
+          maxLength: 250,
+          summarizeTradeChat: true
+        },
+      });
+      
+      if (response.error) {
+        console.error("Error generating chat summary:", response.error);
+        return;
+      }
+      
+      const summary = response.data?.summary || "";
+      
+      if (summary && onChatSummaryUpdated) {
+        onChatSummaryUpdated(summary);
+      }
+    } catch (error) {
+      console.error("Error generating chat summary:", error);
+    }
+  };
 
   // Handle sending a new message
   const handleSendMessage = () => {
@@ -157,6 +204,13 @@ const TradingChat = ({ noteId }: TradingChatProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistory]);
 
+  // Generate initial summary when component loads with existing chat history
+  useEffect(() => {
+    if (chatHistory && chatHistory.length > 0 && onChatSummaryUpdated) {
+      generateChatSummary();
+    }
+  }, []);
+
   return (
     <div className="flex flex-col h-[500px]">
       <div className="flex items-center justify-between mb-3">
@@ -171,36 +225,48 @@ const TradingChat = ({ noteId }: TradingChatProps) => {
         </Button>
       </div>
       
-      <Card className="flex-1 mb-3 p-3 overflow-hidden">
-        <ScrollArea className="h-[380px] w-full pr-4">
+      <Card className="flex-1 mb-3 p-0 overflow-hidden bg-slate-50 dark:bg-slate-900 border">
+        <ScrollArea className="h-[380px] w-full">
           {chatHistory && chatHistory.length > 0 ? (
-            <div className="space-y-4">
-              {chatHistory.map((chat: ChatMessage) => (
+            <div className="py-4">
+              {chatHistory.map((chat: ChatMessage, index) => (
                 <div 
                   key={chat.id} 
-                  className={`flex ${chat.is_ai ? 'justify-start' : 'justify-end'}`}
+                  className={`px-4 py-3 ${index % 2 === 0 ? 'bg-slate-50 dark:bg-slate-900' : 'bg-white dark:bg-slate-800'}`}
                 >
-                  <div 
-                    className={`rounded-lg p-3 max-w-[80%] ${
-                      chat.is_ai 
-                        ? 'bg-secondary text-secondary-foreground' 
-                        : 'bg-primary text-primary-foreground'
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap">{chat.content}</p>
-                    <p className="text-xs opacity-70 mt-1">
-                      {new Date(chat.created_at).toLocaleTimeString()}
-                    </p>
+                  <div className="flex items-start max-w-full gap-3">
+                    <Avatar className={`h-8 w-8 ${chat.is_ai ? 'bg-blue-600' : 'bg-green-600'}`}>
+                      {chat.is_ai ? (
+                        <Bot className="h-4 w-4 text-white" />
+                      ) : (
+                        <User className="h-4 w-4 text-white" />
+                      )}
+                    </Avatar>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center">
+                        <p className="text-sm font-medium">
+                          {chat.is_ai ? 'Trading Assistant' : 'You'}
+                        </p>
+                        <p className="text-xs text-muted-foreground ml-2">
+                          {new Date(chat.created_at).toLocaleTimeString()}
+                        </p>
+                      </div>
+                      <div className="text-sm whitespace-pre-wrap">{chat.content}</div>
+                    </div>
                   </div>
                 </div>
               ))}
               <div ref={messagesEndRef} />
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-sm text-muted-foreground">
-                No trade information yet. Start by describing your trade details.
-              </p>
+            <div className="flex items-center justify-center h-full p-4 text-center">
+              <div>
+                <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-3 opacity-40" />
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  No trade information yet. Start by describing your trade details like
+                  entry price, quantity, and asset.
+                </p>
+              </div>
             </div>
           )}
         </ScrollArea>
@@ -212,14 +278,15 @@ const TradingChat = ({ noteId }: TradingChatProps) => {
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Describe your trade (e.g., 'I bought 200 units at $250 each')..."
-          className="pr-12 min-h-[80px]"
+          className="pr-12 min-h-[80px] resize-none focus:ring-1 focus:ring-blue-500"
           disabled={isProcessing}
         />
         <Button
           className="absolute right-2 bottom-2"
           size="sm"
-          onClick={handleSendMessage}
+          variant={message.trim() ? "default" : "ghost"}
           disabled={!message.trim() || isProcessing}
+          onClick={handleSendMessage}
         >
           <Send className="h-4 w-4" />
         </Button>
