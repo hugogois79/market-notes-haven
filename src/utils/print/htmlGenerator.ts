@@ -21,10 +21,44 @@ export const generatePrintHtml = (note: Note): string => {
     : '';
 
   // Process content to preserve HTML
-  const processedContent = note.content;
+  let processedContent = note.content;
+  
+  // Extract conclusion if it exists
+  let conclusionHtml = '';
+  let contentWithoutConclusion = processedContent;
+  
+  if (processedContent) {
+    // Look for <h1>, <h2>, or <h3> heading with "Conclusion"
+    const conclusionRegex = /<h[1-3][^>]*>\s*Conclusion\s*<\/h[1-3]>([\s\S]*?)(<h[1-3]|$)/i;
+    const match = processedContent.match(conclusionRegex);
+    
+    if (match && match[1]) {
+      // Get content until the next heading or end of content
+      let conclusionContent = match[1];
+      // Remove the ending heading tag if it was captured
+      if (match[2] && match[2].startsWith('<h')) {
+        conclusionContent = conclusionContent.slice(0, -match[2].length);
+      }
+      
+      // Create the conclusion section HTML
+      conclusionHtml = `
+        <div class="print-conclusion">
+          <h3 class="print-conclusion-header">Conclusion</h3>
+          <div class="print-conclusion-content">
+            ${conclusionContent.trim()}
+          </div>
+        </div>
+      `;
+      
+      // Remove the conclusion from the main content to avoid duplication
+      // This will remove the heading and the conclusion content
+      const fullMatch = match[0].slice(0, match[0].length - (match[2].startsWith('<h') ? match[2].length : 0));
+      contentWithoutConclusion = processedContent.replace(fullMatch, '');
+    }
+  }
   
   // Enhanced content processing for text alignment
-  const enhancedContent = processedContent
+  const enhancedContent = contentWithoutConclusion
     // Strengthen justified text styling
     .replace(/text-align:\s*justify/gi, 'text-align: justify !important')
     // Add more specific class for elements with justify alignment
@@ -68,32 +102,6 @@ export const generatePrintHtml = (note: Note): string => {
         </div>
       </div>
     `;
-  }
-  
-  // Extract conclusion if it exists
-  let conclusionHtml = '';
-  if (processedContent) {
-    // Look for <h1>, <h2>, or <h3> heading with "Conclusion"
-    const conclusionRegex = /<h[1-3][^>]*>\s*Conclusion\s*<\/h[1-3]>([\s\S]*?)(<h[1-3]|$)/i;
-    const match = processedContent.match(conclusionRegex);
-    
-    if (match && match[1]) {
-      // Get content until the next heading or end of content
-      let conclusionContent = match[1];
-      // Remove the ending heading tag if it was captured
-      if (match[2] && match[2].startsWith('<h')) {
-        conclusionContent = conclusionContent.slice(0, -match[2].length);
-      }
-      
-      conclusionHtml = `
-        <div class="print-conclusion">
-          <h3 class="print-conclusion-header">Conclusion</h3>
-          <div class="print-conclusion-content">
-            ${conclusionContent.trim()}
-          </div>
-        </div>
-      `;
-    }
   }
   
   // Get print styles
