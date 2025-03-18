@@ -277,6 +277,7 @@ const RichTextEditor = ({
           attachment_url={attachment_url}
           onAttachmentChange={onAttachmentChange}
           hasConclusion={hasConclusion}
+          category={category}
         />
       </Card>
     </div>

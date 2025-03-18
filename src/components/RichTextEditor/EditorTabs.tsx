@@ -8,7 +8,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { uploadNoteAttachment, deleteNoteAttachment } from "@/services/supabaseService";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Paperclip, FileText } from "lucide-react";
+import { Paperclip, FileText, LineChart } from "lucide-react";
+import TradingChat from "./TradingChat";
 
 interface EditorTabsProps {
   content: string;
@@ -19,6 +20,7 @@ interface EditorTabsProps {
   attachment_url?: string;
   onAttachmentChange?: (url: string | null) => void;
   hasConclusion?: boolean;
+  category?: string;
 }
 
 const EditorTabs = ({
@@ -30,6 +32,7 @@ const EditorTabs = ({
   attachment_url,
   onAttachmentChange,
   hasConclusion = true,
+  category,
 }: EditorTabsProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -100,6 +103,9 @@ const EditorTabs = ({
     }
   };
 
+  // Check if the current category is Trading or Pair Trading
+  const isTradingCategory = category === "Trading" || category === "Pair Trading";
+
   return (
     <div className="flex flex-col w-full border rounded-md overflow-hidden bg-white">
       <Tabs defaultValue="editor" className="w-full" onValueChange={setActiveTab}>
@@ -113,6 +119,12 @@ const EditorTabs = ({
               <Paperclip className="h-4 w-4 mr-2" />
               Attachment
             </TabsTrigger>
+            {isTradingCategory && (
+              <TabsTrigger value="trading" className="text-base">
+                <LineChart className="h-4 w-4 mr-2" />
+                Trading
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
         
@@ -220,6 +232,12 @@ const EditorTabs = ({
             )}
           </div>
         </TabsContent>
+        
+        {isTradingCategory && (
+          <TabsContent value="trading" className="m-0 p-4">
+            <TradingChat noteId={noteId} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
