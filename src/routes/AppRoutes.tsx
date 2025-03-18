@@ -18,7 +18,9 @@ import CryptoDashboard from "@/pages/crypto/Dashboard";
 import Profile from "@/pages/Profile";
 
 const AppRoutes = () => {
-  const { notes, loading, isLoading, handleSaveNote, handleDeleteNote } = useNotes();
+  // We can get notes and loading state from context, but we don't need to pass them as props anymore
+  // Each component will use the useNotes() hook directly to access this data
+  const { handleSaveNote, handleDeleteNote } = useNotes();
 
   // Function to wrap content with layout for authenticated pages
   const withLayout = (component: React.ReactNode) => (
@@ -27,13 +29,13 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      <Route path="/" element={withLayout(<Index notes={notes} loading={loading || isLoading} />)} />
+      <Route path="/" element={withLayout(<Index />)} />
       <Route path="/auth" element={<Auth />} />
       <Route
         path="/notes"
         element={
           <ProtectedRoute>
-            {withLayout(<Notes notes={notes} loading={loading || isLoading} />)}
+            {withLayout(<Notes />)}
           </ProtectedRoute>
         }
       />
@@ -43,7 +45,6 @@ const AppRoutes = () => {
           <ProtectedRoute>
             {withLayout(
               <Editor 
-                notes={notes} 
                 onSaveNote={handleSaveNote} 
                 onDeleteNote={handleDeleteNote} 
               />
@@ -55,7 +56,7 @@ const AppRoutes = () => {
         path="/categories"
         element={
           <ProtectedRoute>
-            {withLayout(<Categories notes={notes} loading={loading || isLoading} />)}
+            {withLayout(<Categories />)}
           </ProtectedRoute>
         }
       />
@@ -63,7 +64,7 @@ const AppRoutes = () => {
         path="/tags"
         element={
           <ProtectedRoute>
-            {withLayout(<Tags notes={notes} loading={loading || isLoading} />)}
+            {withLayout(<Tags />)}
           </ProtectedRoute>
         }
       />
