@@ -7,6 +7,7 @@ import TradingChat from "./TradingChat";
 import { Token, TradeInfo } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import JournalSummary from "./JournalSummary";
+import TradingSettlementNotes from "./TradingSettlementNotes";
 
 interface SpecialSectionsProps {
   noteId: string;
@@ -67,6 +68,7 @@ const SpecialSections = ({
             <TabsList className="mb-4">
               <TabsTrigger value="trade-info">Trade Info</TabsTrigger>
               <TabsTrigger value="trade-journal">Trade Journal</TabsTrigger>
+              <TabsTrigger value="trade-settlements">Trade Settlements</TabsTrigger>
             </TabsList>
             
             <TabsContent value="trade-info">
@@ -101,6 +103,10 @@ const SpecialSections = ({
                 noteId={noteId} 
                 onChatSummaryUpdated={handleChatSummaryUpdated}
               />
+            </TabsContent>
+            
+            <TabsContent value="trade-settlements">
+              <TradingSettlementNotes noteId={noteId} />
             </TabsContent>
           </Tabs>
         </Card>

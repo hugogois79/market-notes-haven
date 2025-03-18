@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Note, TradeInfo } from "@/types";
 import { Json } from "@/integrations/supabase/types";
@@ -16,6 +15,7 @@ export interface DbNote {
   user_id: string | null;
   attachment_url: string | null;
   trade_info: Json | null; // Changed from TradeInfo to Json for Supabase compatibility
+  has_conclusion: boolean | null;
 }
 
 // Type for our user profile
@@ -56,6 +56,7 @@ export const dbNoteToNote = (dbNote: DbNote): Note => ({
   updatedAt: new Date(dbNote.updated_at),
   attachment_url: dbNote.attachment_url || undefined,
   tradeInfo: jsonToTradeInfo(dbNote.trade_info), // Convert JSON to TradeInfo
+  hasConclusion: dbNote.has_conclusion, // Include hasConclusion field
 });
 
 // Convert app note to database format
@@ -186,6 +187,7 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
         user_id: userId,
         attachment_url: note.attachment_url || null,
         trade_info: tradeInfoToJson(note.tradeInfo), // Convert TradeInfo to JSON
+        has_conclusion: note.hasConclusion
       })
       .eq('id', note.id)
       .select()

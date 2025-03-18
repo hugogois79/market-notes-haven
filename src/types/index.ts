@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   email: string;
@@ -33,6 +34,22 @@ export interface TradeInfo {
   stopPrice?: number;
 }
 
+export interface TradingSettlementNote {
+  id: string;
+  noteId: string;
+  tradeDate: Date;
+  settlementDate?: Date;
+  assetSymbol: string;
+  quantity: number;
+  price: number;
+  tradeType: 'buy' | 'sell' | 'short' | 'cover';
+  fees?: number;
+  pnl?: number;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Note {
   id: string;
   title: string;
@@ -46,4 +63,5 @@ export interface Note {
   attachment_url?: string;
   tradeInfo?: TradeInfo;
   hasConclusion?: boolean;
+  tradingSettlementNotes?: TradingSettlementNote[];
 }

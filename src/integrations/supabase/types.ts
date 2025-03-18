@@ -889,6 +889,62 @@ export type Database = {
           },
         ]
       }
+      trading_settlement_notes: {
+        Row: {
+          asset_symbol: string
+          created_at: string
+          fees: number | null
+          id: string
+          note_id: string
+          notes: string | null
+          pnl: number | null
+          price: number
+          quantity: number
+          settlement_date: string | null
+          trade_date: string
+          trade_type: string
+          updated_at: string
+        }
+        Insert: {
+          asset_symbol: string
+          created_at?: string
+          fees?: number | null
+          id?: string
+          note_id: string
+          notes?: string | null
+          pnl?: number | null
+          price: number
+          quantity: number
+          settlement_date?: string | null
+          trade_date?: string
+          trade_type: string
+          updated_at?: string
+        }
+        Update: {
+          asset_symbol?: string
+          created_at?: string
+          fees?: number | null
+          id?: string
+          note_id?: string
+          notes?: string | null
+          pnl?: number | null
+          price?: number
+          quantity?: number
+          settlement_date?: string | null
+          trade_date?: string
+          trade_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trading_settlement_notes_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_tokens: {
         Row: {
           created_at: string | null
