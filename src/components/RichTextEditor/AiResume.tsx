@@ -83,6 +83,7 @@ const AiResume: React.FC<AiResumeProps> = ({
       
       // Call the callback to update the parent component
       if (onSummaryGenerated) {
+        // Pass only the summary text to the parent component, not the hasConclusion property
         onSummaryGenerated(summaryText);
       }
       
