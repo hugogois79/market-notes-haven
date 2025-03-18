@@ -56,7 +56,7 @@ export const dbNoteToNote = (dbNote: DbNote): Note => ({
   updatedAt: new Date(dbNote.updated_at),
   attachment_url: dbNote.attachment_url || undefined,
   tradeInfo: jsonToTradeInfo(dbNote.trade_info), // Convert JSON to TradeInfo
-  hasConclusion: dbNote.has_conclusion, // Include hasConclusion field
+  hasConclusion: dbNote.has_conclusion || false, // Include hasConclusion field
 });
 
 // Convert app note to database format
@@ -70,6 +70,7 @@ export const noteToDbNote = (note: Note): Omit<DbNote, 'created_at' | 'updated_a
   user_id: null, // Will be set by the service
   attachment_url: note.attachment_url || null,
   trade_info: tradeInfoToJson(note.tradeInfo), // Convert TradeInfo to JSON
+  has_conclusion: note.hasConclusion || null, // Add the has_conclusion field
 });
 
 // Fetch all notes from Supabase
