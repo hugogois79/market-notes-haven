@@ -14,16 +14,33 @@ export const printNote = (noteData: Partial<Note>): void => {
     return;
   }
   
+  // Process summary if it exists to handle potential JSON format
+  let processedSummary = noteData.summary;
+  if (processedSummary) {
+    try {
+      // Try to parse as JSON in case it's stored that way
+      const parsedSummary = JSON.parse(processedSummary);
+      if (parsedSummary && typeof parsedSummary === 'object' && parsedSummary.summary) {
+        processedSummary = parsedSummary.summary;
+      }
+    } catch (e) {
+      // Not JSON, use as-is
+      processedSummary = noteData.summary;
+    }
+  }
+  
   // Create a complete Note object with default values for required properties
   const note: Note = {
     id: "temp-print-id",
     title: noteData.title || "Untitled Note",
     content: noteData.content || "",
-    tags: [],
+    tags: noteData.tags || [],
     category: noteData.category || "Uncategorized",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    attachment_url: noteData.attachment_url
+    createdAt: noteData.createdAt || new Date(),
+    updatedAt: noteData.updatedAt || new Date(),
+    attachment_url: noteData.attachment_url,
+    summary: processedSummary,
+    tradeInfo: noteData.tradeInfo
   };
   
   // Generate the HTML content

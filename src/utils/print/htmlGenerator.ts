@@ -35,8 +35,22 @@ export const generatePrintHtml = (note: Note): string => {
              '<p class="text-justify" style="text-align: justify !important"$1>');
   
   // Generate AI summary section if available
-  const summaryHtml = note.summary 
-    ? `
+  let summaryHtml = '';
+  if (note.summary) {
+    // Check if summary is a string or potentially JSON stored as string
+    let summaryContent = note.summary;
+    try {
+      // Try to parse as JSON in case it's stored that way
+      const parsedSummary = JSON.parse(note.summary);
+      if (parsedSummary && typeof parsedSummary === 'object' && parsedSummary.summary) {
+        summaryContent = parsedSummary.summary;
+      }
+    } catch (e) {
+      // Not JSON, use as-is
+      summaryContent = note.summary;
+    }
+    
+    summaryHtml = `
       <div class="print-summary">
         <div class="print-summary-header">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="print-summary-icon">
@@ -45,7 +59,7 @@ export const generatePrintHtml = (note: Note): string => {
           AI Summary
         </div>
         <div class="print-summary-content">
-          ${note.summary.split('**').map((part, index) => {
+          ${summaryContent.split('**').map((part, index) => {
             // If the index is odd, it's a bold part
             return index % 2 === 1 
               ? `<strong class="print-summary-highlight">${part}</strong>` 
@@ -53,8 +67,8 @@ export const generatePrintHtml = (note: Note): string => {
           }).join('')}
         </div>
       </div>
-    `
-    : '';
+    `;
+  }
   
   // Extract conclusion if it exists
   let conclusionHtml = '';

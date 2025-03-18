@@ -32,6 +32,7 @@ export const getPrintMediaStyles = (): string => {
         print-color-adjust: exact !important;
       }
       
+      /* Make sure summary displays with correct colors */
       .print-summary {
         background-color: #E9F2FF !important;
         border: 1px solid #D3E4FD !important;
@@ -39,6 +40,8 @@ export const getPrintMediaStyles = (): string => {
         print-color-adjust: exact !important;
         margin-bottom: 20px;
         margin-top: 10px;
+        display: block !important;
+        visibility: visible !important;
       }
       
       .print-summary-header {

@@ -14,6 +14,8 @@ export const getSpecialSectionStyles = (): string => {
       color: #333;
       page-break-inside: avoid;
       border: 1px solid #D3E4FD;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      display: block !important;
     }
     
     .print-summary-header {
