@@ -135,7 +135,7 @@ const EditorContent = ({
 
   return (
     <div 
-      className="p-4 min-h-[300px] focus:outline-none overflow-auto text-xs"
+      className="p-4 min-h-[300px] focus:outline-none overflow-auto text-sm"
       ref={editorRef}
       contentEditable
       onInput={handleInput}
@@ -153,25 +153,25 @@ const EditorContent = ({
       {/* Style definitions for headings and lists within the editor */}
       <style>{`
         [contenteditable="true"] h1 {
-          font-size: 1.25rem;
+          font-size: 1.4rem;
           font-weight: 600;
           margin-top: 1rem;
           margin-bottom: 0.5rem;
         }
         [contenteditable="true"] h2 {
-          font-size: 1.1rem;
+          font-size: 1.25rem;
           font-weight: 500;
           margin-top: 0.75rem;
           margin-bottom: 0.5rem;
         }
         [contenteditable="true"] h3 {
-          font-size: 0.95rem;
+          font-size: 1.1rem;
           font-weight: 500;
           margin-top: 0.5rem;
           margin-bottom: 0.25rem;
         }
         [contenteditable="true"] p {
-          font-size: 0.8rem;
+          font-size: 1rem;
           margin-bottom: 0.5rem;
         }
         [contenteditable="true"] ul {
@@ -186,7 +186,7 @@ const EditorContent = ({
         }
         [contenteditable="true"] li {
           margin-bottom: 0.25rem;
-          font-size: 0.8rem;
+          font-size: 1rem;
         }
         [contenteditable="true"] table {
           border-collapse: collapse;
@@ -197,7 +197,7 @@ const EditorContent = ({
         [contenteditable="true"] td {
           border: 1px solid #d1d5db;
           padding: 0.5rem;
-          font-size: 0.8rem;
+          font-size: 1rem;
         }
         [contenteditable="true"] th {
           background-color: #f3f4f6;

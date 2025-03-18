@@ -11,15 +11,15 @@ export const getPrintMediaStyles = (): string => {
     @media print {
       body {
         padding: 0;
-        font-size: 10pt;
+        font-size: 12pt;
       }
       
       .print-title {
-        font-size: 14pt;
+        font-size: 16pt;
       }
       
       .print-content {
-        font-size: 9.5pt;
+        font-size: 11pt;
         margin-bottom: 40px; /* Reduced space for footer */
       }
       

@@ -31,21 +31,21 @@ export const getContentStyles = (): string => {
     
     /* Heading styles for print */
     .print-content h1 {
-      font-size: 14pt;
+      font-size: 16pt;
       font-weight: 600;
       margin-top: 1rem;
       margin-bottom: 0.5rem;
     }
     
     .print-content h2 {
-      font-size: 12pt;
+      font-size: 14pt;
       font-weight: 500;
       margin-top: 0.75rem;
       margin-bottom: 0.5rem;
     }
     
     .print-content h3 {
-      font-size: 10.5pt;
+      font-size: 12pt;
       font-weight: 500;
       margin-top: 0.5rem;
       margin-bottom: 0.25rem;
