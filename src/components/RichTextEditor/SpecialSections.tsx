@@ -6,6 +6,7 @@ import TradeInfoSection from "./TradeInfoSection";
 import TradingChat from "./TradingChat";
 import { Token, TradeInfo } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import JournalSummary from "./JournalSummary";
 
 interface SpecialSectionsProps {
   noteId: string;
@@ -79,6 +80,12 @@ const SpecialSections = ({
             </TabsContent>
             
             <TabsContent value="trade-journal">
+              {/* Added Journal Summary Section */}
+              {chatSummary && (
+                <div className="mb-4">
+                  <JournalSummary summary={chatSummary} />
+                </div>
+              )}
               <TradingChat 
                 noteId={noteId} 
                 onChatSummaryUpdated={handleChatSummaryUpdated}

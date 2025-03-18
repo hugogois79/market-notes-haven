@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,13 +28,11 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch chat history
   const { data: chatHistory, refetch: refetchChatHistory } = useQuery({
     queryKey: ['tradingChatHistory', noteId],
     queryFn: async () => {
       if (!noteId) return [];
       
-      // Using raw SQL query to avoid type issues while types are being updated
       const { data, error } = await supabase
         .from('trading_chat_messages')
         .select('*')
@@ -52,14 +49,12 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
     enabled: !!noteId,
   });
 
-  // Send message to AI for processing
   const { mutate: sendMessage } = useMutation({
     mutationFn: async (message: string) => {
       if (!noteId) throw new Error("Note ID is required");
       setIsProcessing(true);
       
       try {
-        // First save the user message
         const { data: userMessage, error: userMessageError } = await supabase
           .from('trading_chat_messages')
           .insert({
@@ -72,14 +67,12 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
         
         if (userMessageError) throw userMessageError;
         
-        // Process with the AI in our edge function
         const response = await supabase.functions.invoke('trading-assistant', {
           body: { message, noteId }
         });
         
         if (response.error) throw new Error(response.error.message);
         
-        // Save AI response to database
         const { data: aiResponse, error: aiResponseError } = await supabase
           .from('trading_chat_messages')
           .insert({
@@ -101,8 +94,7 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
       refetchChatHistory();
       setMessage("");
       
-      // Generate a summary of chat for the AI Resume section
-      if (chatHistory && chatHistory.length > 0 && onChatSummaryUpdated) {
+      if (onChatSummaryUpdated) {
         generateChatSummary();
       }
     },
@@ -116,12 +108,10 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
     },
   });
 
-  // Clear chat history
   const { mutate: clearHistory } = useMutation({
     mutationFn: async () => {
       if (!noteId) throw new Error("Note ID is required");
       
-      // Direct delete approach without using RPC
       const { error } = await supabase
         .from('trading_chat_messages')
         .delete()
@@ -136,7 +126,6 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
         description: "All trade information has been cleared.",
       });
       
-      // Clear the summary when chat is cleared
       if (onChatSummaryUpdated) {
         onChatSummaryUpdated("");
       }
@@ -151,17 +140,14 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
     },
   });
 
-  // Generate a summary of the chat for AI Resume
   const generateChatSummary = async () => {
     if (!chatHistory || chatHistory.length === 0 || !noteId) return;
     
     try {
-      // Concatenate all messages, focusing on AI responses which contain structured information
       const aiMessages = chatHistory.filter(msg => msg.is_ai).map(msg => msg.content);
       
       if (aiMessages.length === 0) return;
       
-      // Use the edge function to generate a summary
       const response = await supabase.functions.invoke('summarize-note', {
         body: { 
           content: aiMessages.join("\n\n"),
@@ -185,13 +171,11 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
     }
   };
 
-  // Handle sending a new message
   const handleSendMessage = () => {
     if (!message.trim() || !noteId) return;
     sendMessage(message.trim());
   };
 
-  // Handle key press in textarea
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -199,17 +183,15 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
     }
   };
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistory]);
 
-  // Generate initial summary when component loads with existing chat history
   useEffect(() => {
     if (chatHistory && chatHistory.length > 0 && onChatSummaryUpdated) {
       generateChatSummary();
     }
-  }, []);
+  }, [chatHistory]);
 
   return (
     <div className="flex flex-col h-[500px]">
