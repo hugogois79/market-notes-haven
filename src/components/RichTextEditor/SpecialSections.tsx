@@ -80,12 +80,23 @@ const SpecialSections = ({
             </TabsContent>
             
             <TabsContent value="trade-journal">
-              {/* Added Journal Summary Section */}
-              {chatSummary && (
-                <div className="mb-4">
-                  <JournalSummary summary={chatSummary} />
-                </div>
-              )}
+              {/* Journal Summary Section - Always show even when empty */}
+              <div className="mb-4">
+                <JournalSummary 
+                  summary={chatSummary} 
+                  onRefresh={chatSummary ? () => {
+                    if (noteId) {
+                      // This will trigger the chat to regenerate its summary
+                      const tradingChatElement = document.getElementById('trading-chat');
+                      if (tradingChatElement) {
+                        // Signal to the TradingChat component to regenerate the summary
+                        const event = new CustomEvent('regenerate-summary');
+                        tradingChatElement.dispatchEvent(event);
+                      }
+                    }
+                  } : undefined}
+                />
+              </div>
               <TradingChat 
                 noteId={noteId} 
                 onChatSummaryUpdated={handleChatSummaryUpdated}

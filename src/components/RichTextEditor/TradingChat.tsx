@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const componentRef = useRef<HTMLDivElement>(null);
 
   const { data: chatHistory, refetch: refetchChatHistory } = useQuery({
     queryKey: ['tradingChatHistory', noteId],
@@ -152,7 +154,8 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
         body: { 
           content: aiMessages.join("\n\n"),
           maxLength: 250,
-          summarizeTradeChat: true
+          summarizeTradeChat: true,
+          formatAsBulletPoints: true
         },
       });
       
@@ -183,6 +186,23 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
     }
   };
 
+  // Set up the event listener for manual summary regeneration
+  useEffect(() => {
+    const handleRegenerateSummary = () => {
+      generateChatSummary();
+    };
+
+    if (componentRef.current) {
+      componentRef.current.addEventListener('regenerate-summary', handleRegenerateSummary);
+    }
+
+    return () => {
+      if (componentRef.current) {
+        componentRef.current.removeEventListener('regenerate-summary', handleRegenerateSummary);
+      }
+    };
+  }, [chatHistory]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistory]);
@@ -194,7 +214,7 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
   }, [chatHistory]);
 
   return (
-    <div className="flex flex-col h-[500px]">
+    <div id="trading-chat" ref={componentRef} className="flex flex-col h-[500px]">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-md font-medium">Trade Journal</h3>
         <Button 
