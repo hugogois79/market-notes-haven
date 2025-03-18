@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -180,7 +179,7 @@ function AppContent() {
           path="/crypto/dashboard"
           element={
             <ProtectedRoute>
-              {withLayout(<CryptoDashboard />)}
+              {withLayout(<CryptoDashboard notes={notes} loading={loading || isLoading} />)}
             </ProtectedRoute>
           }
         />
