@@ -105,20 +105,20 @@ const EditorTabs = ({
   return (
     <div className="flex flex-col w-full border rounded-md overflow-hidden">
       <Tabs defaultValue="editor" className="w-full" onValueChange={setActiveTab}>
-        <div className="flex items-center bg-[#D3E4FD] p-0">
-          <TabsList className="bg-transparent">
+        <div className="flex items-center p-0 border-b">
+          <TabsList className="bg-transparent border-0">
             <TabsTrigger 
               value="editor" 
-              className="text-xs px-5 py-2 rounded-t-md rounded-b-none data-[state=active]:bg-white data-[state=active]:border-t-2 data-[state=active]:border-t-brand"
+              className="text-base px-6 py-2.5 rounded-t-md rounded-b-none data-[state=active]:bg-white data-[state=active]:border-t-2 data-[state=active]:border-t-brand"
             >
-              <FileText className="h-3.5 w-3.5 mr-1.5" />
+              <FileText className="h-4 w-4 mr-2" />
               Editor
             </TabsTrigger>
             <TabsTrigger 
               value="attachment" 
-              className="text-xs px-5 py-2 rounded-t-md rounded-b-none data-[state=active]:bg-white data-[state=active]:border-t-2 data-[state=active]:border-t-brand"
+              className="text-base px-6 py-2.5 rounded-t-md rounded-b-none data-[state=active]:bg-white data-[state=active]:border-t-2 data-[state=active]:border-t-brand"
             >
-              <Paperclip className="h-3.5 w-3.5 mr-1.5" />
+              <Paperclip className="h-4 w-4 mr-2" />
               Attachment
             </TabsTrigger>
           </TabsList>
