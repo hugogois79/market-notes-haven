@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import EditorContent from "./EditorContent";
@@ -55,7 +54,7 @@ const EditorTabs = ({
   const { mutate: uploadAttachment, isPending: isUploading } = useMutation({
     mutationFn: async (file: File) => {
       if (!noteId) throw new Error("Note ID is required for attachment upload");
-      return uploadNoteAttachment(noteId, file);
+      return uploadNoteAttachment(file, noteId);
     },
     onSuccess: (url) => {
       if (onAttachmentChange) {
@@ -89,7 +88,7 @@ const EditorTabs = ({
     if (!noteId || !attachment_url) return;
 
     try {
-      await deleteNoteAttachment(noteId);
+      await deleteNoteAttachment(attachment_url);
       if (onAttachmentChange) {
         onAttachmentChange(null);
         toast({
