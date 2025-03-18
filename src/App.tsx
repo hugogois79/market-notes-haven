@@ -23,20 +23,17 @@ import { Note } from "./types";
 
 import "./App.css";
 
-// Create a client
 const queryClient = new QueryClient();
 
 function AppContent() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch notes using react-query
   const { data: notesData, isLoading, refetch } = useQuery({
     queryKey: ['notes'],
     queryFn: fetchNotes,
   });
 
-  // Update local state when query data changes
   useEffect(() => {
     if (notesData) {
       console.log("Fetched notes:", notesData.length);
@@ -45,11 +42,9 @@ function AppContent() {
     }
   }, [notesData]);
 
-  // Handle save note (create or update)
   const handleSaveNote = async (note: Note) => {
     try {
       if (note.id.toString().startsWith('temp-')) {
-        // Create new note
         console.log("Creating new note with content:", note.content);
         const newNote = await createNote({
           title: note.title,
@@ -61,11 +56,10 @@ function AppContent() {
         if (newNote) {
           console.log("New note created:", newNote.id);
           setNotes(prev => [newNote, ...prev]);
-          refetch(); // Refresh all notes
+          refetch();
           return newNote;
         }
       } else {
-        // Update existing note
         console.log("Updating note:", note.id);
         const updatedNote = await updateNote(note);
         
@@ -74,7 +68,7 @@ function AppContent() {
           setNotes(prev => 
             prev.map(n => n.id === updatedNote.id ? updatedNote : n)
           );
-          refetch(); // Refresh all notes
+          refetch();
           return updatedNote;
         }
       }
@@ -84,7 +78,6 @@ function AppContent() {
     return null;
   };
 
-  // Handle delete note
   const handleDeleteNote = async (noteId: string) => {
     try {
       console.log("Deleting note:", noteId);
@@ -93,7 +86,7 @@ function AppContent() {
       if (success) {
         console.log("Note deleted successfully");
         setNotes(prev => prev.filter(note => note.id !== noteId));
-        refetch(); // Refresh all notes
+        refetch();
       }
       
       return success;
@@ -103,7 +96,6 @@ function AppContent() {
     }
   };
 
-  // Function to wrap content with layout for authenticated pages
   const withLayout = (component: React.ReactNode) => (
     <MainLayout>{component}</MainLayout>
   );
