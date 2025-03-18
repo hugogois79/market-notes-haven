@@ -294,7 +294,7 @@
   }
   
   /* Force justification to work for specific elements */
-  p.text-justify, div.text-justify, li.text-justify, td.text-justify {
+  p.text-justify, div.text-justify, li.text-justify, td.text-justify, th.text-justify {
     text-align: justify !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;

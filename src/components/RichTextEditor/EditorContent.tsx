@@ -212,6 +212,9 @@ const EditorContent = ({
         [contenteditable="true"] .text-right {
           text-align: right;
         }
+        [contenteditable="true"] .text-justify {
+          text-align: justify;
+        }
         [contenteditable="true"] .chapter-separator {
           width: 100%;
           margin: 1.5rem 0;

@@ -1,4 +1,3 @@
-
 import React, { RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -8,6 +7,7 @@ import {
   AlignLeft, 
   AlignCenter, 
   AlignRight, 
+  AlignJustify,
   ListOrdered, 
   List, 
   Heading1, 
@@ -99,6 +99,14 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         title="Align Right"
       >
         <AlignRight className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => execCommand('justifyFull')}
+        title="Justify"
+      >
+        <AlignJustify className="h-4 w-4" />
       </Button>
       <Button
         variant="ghost"
