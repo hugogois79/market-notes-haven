@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,13 +13,15 @@ import { Note } from "@/types";
 import NoteCard from "@/components/NoteCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
+import { useNotes } from "@/contexts/NotesContext";
 
 interface CategoryCount {
   category: string;
   count: number;
 }
 
-const Categories = ({ notes, loading }: { notes: Note[], loading: boolean }) => {
+const Categories = () => {
+  const { notes, loading, isLoading } = useNotes();
   const [categories, setCategories] = useState<CategoryCount[]>([]);
   const [newCategory, setNewCategory] = useState("");
   const [editingCategory, setEditingCategory] = useState<{ original: string, updated: string } | null>(null);
@@ -29,10 +30,11 @@ const Categories = ({ notes, loading }: { notes: Note[], loading: boolean }) => 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const navigate = useNavigate();
+  const isLoaded = !(loading || isLoading);
 
   // Calculate categories and their counts
   useEffect(() => {
-    if (!loading && notes.length > 0) {
+    if (!isLoaded && notes.length > 0) {
       const categoryMap = new Map<string, number>();
       
       notes.forEach((note) => {
@@ -53,7 +55,7 @@ const Categories = ({ notes, loading }: { notes: Note[], loading: boolean }) => 
         setSelectedCategory(categoriesArray[0].category);
       }
     }
-  }, [notes, loading, selectedCategory]);
+  }, [notes, isLoaded, selectedCategory]);
 
   const handleAddCategory = async () => {
     if (!newCategory.trim()) {

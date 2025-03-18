@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tag as TagIcon, FileText, Search, X, Plus, Trash2 } from "lucide-react";
@@ -34,17 +33,14 @@ import {
 } from "@/components/ui/popover";
 import { fetchTags, createTag, deleteTag, getNotesForTag, migrateExistingTags } from "@/services/tagService";
 import { fetchNotes } from "@/services/supabaseService";
-
-interface TagsPageProps {
-  notes: Note[];
-  loading?: boolean;
-}
+import { useNotes } from "@/contexts/NotesContext";
 
 interface TagWithCount extends Tag {
   count: number;
 }
 
-const Tags = ({ notes, loading = false }: TagsPageProps) => {
+const Tags = () => {
+  const { notes, loading, isLoading } = useNotes();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -58,14 +54,13 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [filteredNotes, setFilteredNotes] = useState<Note[]>([]);
   const [notesMigrated, setNotesMigrated] = useState(false);
+  const isLoaded = !(loading || isLoading);
   
-  // Load tags on component mount
   useEffect(() => {
     const loadTags = async () => {
       try {
         const tagsData = await fetchTags();
         
-        // Transform the data to include count
         const tagsWithCount = await Promise.all(tagsData.map(async (tag) => {
           const noteIds = await getNotesForTag(tag.id);
           return {
@@ -74,12 +69,10 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
           };
         }));
         
-        // Sort tags alphabetically
         tagsWithCount.sort((a, b) => a.name.localeCompare(b.name));
         
         setTags(tagsWithCount);
         
-        // If this is the first load and no tags were found, try to migrate existing tags
         if (isFirstLoad && tagsWithCount.length === 0 && !notesMigrated) {
           setIsFirstLoad(false);
           handleMigrateTags();
@@ -95,11 +88,9 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
     loadTags();
   }, [isFirstLoad, notesMigrated]);
   
-  // Filter notes based on search query and selected tag
   useEffect(() => {
     const filterNotes = async () => {
       if (!selectedTag) {
-        // If no tag is selected, just filter by search query
         setFilteredNotes(notes.filter(note => 
           searchQuery === "" || 
           note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -109,14 +100,11 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
         return;
       }
       
-      // Find the tag object from the selected tag ID
       const tagObj = tags.find(t => t.id === selectedTag);
       if (!tagObj) return;
       
-      // Get all notes associated with this tag
       const noteIds = await getNotesForTag(selectedTag);
       
-      // Filter notes that are in the noteIds array and match the search query
       setFilteredNotes(notes.filter(note => 
         noteIds.includes(note.id) && (
           searchQuery === "" || 
@@ -131,7 +119,6 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
   
   const handleTagClick = (tagId: string) => {
     if (selectedTag === tagId) {
-      // If clicking the same tag, clear the filter
       setSelectedTag(null);
       toast.info("Showing all notes");
     } else {
@@ -183,10 +170,8 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
       const success = await deleteTag(tagToDelete);
       
       if (success) {
-        // Update local state to remove the tag
         setTags(prev => prev.filter(tag => tag.id !== tagToDelete));
         
-        // If the deleted tag was selected, clear the selection
         if (selectedTag === tagToDelete) {
           setSelectedTag(null);
         }
@@ -209,7 +194,6 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
     if (success) {
       toast.success("Tags migrated successfully!");
       setNotesMigrated(true);
-      // Reload the page to show the migrated tags
       window.location.reload();
     } else {
       toast.error("Failed to migrate tags");
@@ -218,7 +202,6 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
 
   return (
     <div className="space-y-6 px-6 py-4 animate-fade-in">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold text-[#1EAEDB] flex items-center gap-2">
@@ -277,7 +260,6 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
         </div>
       </div>
 
-      {/* Search and filter info */}
       <div className="space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -308,7 +290,6 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
         )}
       </div>
 
-      {/* Tags cloud */}
       <div>
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <TagIcon size={20} className="text-[#1EAEDB]" />
@@ -373,7 +354,6 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
         )}
       </div>
 
-      {/* Notes with selected tag */}
       {selectedTag && (
         <div>
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -396,7 +376,6 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
         </div>
       )}
       
-      {/* Show all notes if no tag is selected */}
       {!selectedTag && searchQuery && (
         <div>
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -419,7 +398,6 @@ const Tags = ({ notes, loading = false }: TagsPageProps) => {
         </div>
       )}
 
-      {/* Delete Tag Alert Dialog */}
       <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>

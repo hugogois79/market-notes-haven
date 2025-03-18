@@ -4,15 +4,16 @@ import { Note } from "@/types";
 import NoteActions from "./NoteActions";
 import NoteEditor from "./NoteEditor";
 import { useNoteData } from "./hooks/useNoteData";
+import { useNotes } from "@/contexts/NotesContext";
 
 interface EditorProps {
-  notes: Note[];
   onSaveNote: (note: Note) => Promise<Note | null>;
   onDeleteNote: (noteId: string) => Promise<boolean>;
 }
 
-const Editor = ({ notes, onSaveNote, onDeleteNote }: EditorProps) => {
+const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
+  const { notes } = useNotes();
   
   const {
     currentNote,
