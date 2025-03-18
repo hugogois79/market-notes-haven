@@ -29,7 +29,19 @@ const AiResume: React.FC<AiResumeProps> = ({
     // 1. initialSummary has content
     // 2. The note is not a new/temporary note
     if (initialSummary && !noteId.startsWith('temp-')) {
-      setSummary(initialSummary);
+      // Check if initialSummary is JSON or regular text
+      try {
+        const parsedSummary = JSON.parse(initialSummary);
+        // If it's JSON, extract the summary field
+        if (parsedSummary && typeof parsedSummary === 'object' && parsedSummary.summary) {
+          setSummary(parsedSummary.summary);
+        } else {
+          setSummary(initialSummary);
+        }
+      } catch (e) {
+        // Not JSON, use as-is
+        setSummary(initialSummary);
+      }
     } else {
       // For new notes, ensure summary is empty
       setSummary("");
@@ -59,11 +71,19 @@ const AiResume: React.FC<AiResumeProps> = ({
         throw new Error(error.message || 'Failed to generate summary');
       }
       
-      setSummary(data.summary);
+      // Extract the summary text from the response
+      let summaryText = "";
+      if (typeof data.summary === 'string') {
+        summaryText = data.summary;
+      } else if (data.summary && typeof data.summary === 'object' && data.summary.summary) {
+        summaryText = data.summary.summary;
+      }
+      
+      setSummary(summaryText);
       
       // Call the callback to update the parent component
       if (onSummaryGenerated) {
-        onSummaryGenerated(data.summary);
+        onSummaryGenerated(summaryText);
       }
       
       // Log the trade info to help with debugging

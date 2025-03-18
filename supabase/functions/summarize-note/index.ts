@@ -81,14 +81,9 @@ serve(async (req) => {
     2. OR a final paragraph that starts with "In conclusion", "To conclude", "To summarize", etc.
     3. OR a clear concluding statement that summarizes the key points
     
-    Format your response as JSON with "summary", "hasConclusion", and if requested "tradeInfo" fields:
-    {
-      "summary": "your summary here",
-      "hasConclusion": true/false,
-      "tradeInfo": {
-        // trade info if requested
-      }
-    }`;
+    Format your response as a string with your summary text.
+    DO NOT return raw JSON - just provide a readable, nicely formatted summary.
+    If you've been asked to extract trade info, include that in a separate field in your response but don't include it in the summary text.`;
     
     // Make the request to OpenAI API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -124,39 +119,51 @@ serve(async (req) => {
 
     // Try to parse JSON from the response
     try {
-      const parsedResponse = JSON.parse(data.choices[0].message.content);
-      summary = parsedResponse.summary || '';
-      hasConclusion = parsedResponse.hasConclusion !== undefined ? parsedResponse.hasConclusion : true;
+      const rawResponse = data.choices[0].message.content.trim();
       
-      // Process the AI's tradeInfo if present
-      if (parsedResponse.tradeInfo) {
-        tradeInfo = parsedResponse.tradeInfo;
+      // Try to parse as JSON first
+      try {
+        const parsedResponse = JSON.parse(rawResponse);
+        summary = parsedResponse.summary || '';
+        hasConclusion = parsedResponse.hasConclusion !== undefined ? parsedResponse.hasConclusion : true;
         
-        // Make sure allTrades is an array
-        if (!Array.isArray(tradeInfo.allTrades)) {
-          tradeInfo.allTrades = [tradeInfo.allTrades];
-        }
-        
-        // Clean and normalize the data
-        tradeInfo.allTrades = tradeInfo.allTrades.map(trade => {
-          // Convert string numbers to actual numbers
-          const cleanTrade = {
-            tokenName: trade.tokenName || null,
-            quantity: typeof trade.quantity === 'string' ? 
-              parseFloat(trade.quantity.replace(/,/g, '')) : trade.quantity,
-            entryPrice: typeof trade.entryPrice === 'string' ? 
-              parseFloat(trade.entryPrice.replace(/[^0-9.]/g, '')) : trade.entryPrice,
-            targetPrice: typeof trade.targetPrice === 'string' ? 
-              parseFloat(trade.targetPrice.replace(/[^0-9.]/g, '')) : trade.targetPrice,
-            stopPrice: typeof trade.stopPrice === 'string' ? 
-              parseFloat(trade.stopPrice.replace(/[^0-9.]/g, '')) : trade.stopPrice
-          };
+        // Process the AI's tradeInfo if present
+        if (parsedResponse.tradeInfo) {
+          tradeInfo = parsedResponse.tradeInfo;
           
-          return cleanTrade;
-        });
+          // Make sure allTrades is an array
+          if (tradeInfo.allTrades && !Array.isArray(tradeInfo.allTrades)) {
+            tradeInfo.allTrades = [tradeInfo.allTrades];
+          }
+          
+          // Clean and normalize the data
+          if (tradeInfo.allTrades) {
+            tradeInfo.allTrades = tradeInfo.allTrades.map(trade => {
+              if (!trade) return null;
+              
+              // Convert string numbers to actual numbers
+              const cleanTrade = {
+                tokenName: trade.tokenName || null,
+                quantity: typeof trade.quantity === 'string' ? 
+                  parseFloat(trade.quantity.replace(/,/g, '')) : trade.quantity,
+                entryPrice: typeof trade.entryPrice === 'string' ? 
+                  parseFloat(trade.entryPrice.replace(/[^0-9.]/g, '')) : trade.entryPrice,
+                targetPrice: typeof trade.targetPrice === 'string' ? 
+                  parseFloat(trade.targetPrice.replace(/[^0-9.]/g, '')) : trade.targetPrice,
+                stopPrice: typeof trade.stopPrice === 'string' ? 
+                  parseFloat(trade.stopPrice.replace(/[^0-9.]/g, '')) : trade.stopPrice
+              };
+              
+              return cleanTrade;
+            }).filter(Boolean);
+          }
+        }
+      } catch (e) {
+        // Not valid JSON, use as plain text
+        summary = rawResponse;
       }
     } catch (e) {
-      console.error('Error parsing JSON from OpenAI:', e);
+      console.error('Error parsing response from OpenAI:', e);
       // If parsing fails, use the raw text as summary
       summary = data.choices[0].message.content.trim();
     }
