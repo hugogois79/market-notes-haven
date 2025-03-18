@@ -56,7 +56,7 @@ export const useKeyboardShortcuts = (
             e.preventDefault();
             formatTableCells('right');
             break;
-          case 'j': // Justify
+          case 'j': // Justify text
             e.preventDefault();
             formatTableCells('justify');
             break;
