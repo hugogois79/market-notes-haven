@@ -32,7 +32,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
       content,
       title: title || "Untitled Note",
       category: category || "Uncategorized",
-      attachmentUrl,
+      attachment_url: attachmentUrl, // Fix: Changed from attachmentUrl to attachment_url
     });
     onClose();
   }, [content, title, category, attachmentUrl, onClose]);
