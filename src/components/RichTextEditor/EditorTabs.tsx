@@ -3,7 +3,6 @@ import React, { useState, useCallback, useRef } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import EditorContent from "./EditorContent";
 import EditorToolbar from "./EditorToolbar";
-import PrintModal from "./PrintModal";
 import { useEditor } from "./hooks/editor/useEditorCore";
 import { useToast } from "@/components/ui/use-toast";
 import { uploadNoteAttachment, deleteNoteAttachment } from "@/services/supabaseService";
@@ -33,7 +32,6 @@ const EditorTabs = ({
   hasConclusion = true,
 }: EditorTabsProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
-  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("editor");
 
@@ -103,21 +101,15 @@ const EditorTabs = ({
   };
 
   return (
-    <div className="flex flex-col w-full border rounded-md overflow-hidden">
+    <div className="flex flex-col w-full border rounded-md overflow-hidden bg-white">
       <Tabs defaultValue="editor" className="w-full" onValueChange={setActiveTab}>
-        <div className="flex items-center p-0 border-b">
+        <div className="flex items-center border-b bg-gray-50">
           <TabsList className="bg-transparent border-0">
-            <TabsTrigger 
-              value="editor" 
-              className="text-base px-6 py-2.5 rounded-t-md rounded-b-none data-[state=active]:bg-white data-[state=active]:border-t-2 data-[state=active]:border-t-brand"
-            >
+            <TabsTrigger value="editor" className="text-sm">
               <FileText className="h-4 w-4 mr-2" />
               Editor
             </TabsTrigger>
-            <TabsTrigger 
-              value="attachment" 
-              className="text-base px-6 py-2.5 rounded-t-md rounded-b-none data-[state=active]:bg-white data-[state=active]:border-t-2 data-[state=active]:border-t-brand"
-            >
+            <TabsTrigger value="attachment" className="text-sm">
               <Paperclip className="h-4 w-4 mr-2" />
               Attachment
             </TabsTrigger>
@@ -229,15 +221,6 @@ const EditorTabs = ({
           </div>
         </TabsContent>
       </Tabs>
-
-      <PrintModal
-        isOpen={isPrintModalOpen}
-        onClose={() => setIsPrintModalOpen(false)}
-        content={content}
-        title={""}
-        category={""}
-        attachmentUrl={attachment_url}
-      />
     </div>
   );
 };
