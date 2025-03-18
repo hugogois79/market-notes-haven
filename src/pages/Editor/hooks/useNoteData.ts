@@ -77,6 +77,7 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
           try {
             setIsLoadingTokens(true);
             const tokens = await getTokensForNote(foundNote.id);
+            console.log("Fetched linked tokens:", tokens);
             setLinkedTokens(tokens);
           } catch (error) {
             console.error("Error fetching linked tokens:", error);
@@ -134,6 +135,9 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
     // Only update tokens if they were changed
     if (updatedFields.tokens) {
       setLinkedTokens(updatedFields.tokens);
+      
+      // Log the tokens for debugging
+      console.log('Setting linked tokens:', updatedFields.tokens);
     }
     
     // If the title is included, update the current note immediately to reflect in UI
