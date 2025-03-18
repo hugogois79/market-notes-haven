@@ -80,7 +80,7 @@ export const createTradingSettlementNote = async (note: Omit<TradingSettlementNo
     
     const { data, error } = await supabase
       .from('trading_settlement_notes')
-      .insert([dbNote])
+      .insert(dbNote)
       .select()
       .single();
 

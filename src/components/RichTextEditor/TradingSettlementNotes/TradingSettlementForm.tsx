@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -94,10 +93,21 @@ const TradingSettlementForm: React.FC<TradingSettlementFormProps> = ({
         }
       } else {
         // Create new note
-        const result = await createTradingSettlementNote({
+        // Ensure all required properties are included
+        const newNote: Omit<TradingSettlementNote, 'id' | 'createdAt' | 'updatedAt'> = {
           noteId,
-          ...values,
-        });
+          tradeDate: values.tradeDate,
+          assetSymbol: values.assetSymbol,
+          quantity: values.quantity,
+          price: values.price,
+          tradeType: values.tradeType,
+          settlementDate: values.settlementDate,
+          fees: values.fees,
+          pnl: values.pnl,
+          notes: values.notes,
+        };
+        
+        const result = await createTradingSettlementNote(newNote);
         if (result) {
           toast.success("Trading settlement note created");
           onSuccess();
