@@ -857,6 +857,38 @@ export type Database = {
           },
         ]
       }
+      trading_chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_ai: boolean
+          note_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_ai?: boolean
+          note_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_ai?: boolean
+          note_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trading_chat_messages_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_tokens: {
         Row: {
           created_at: string | null

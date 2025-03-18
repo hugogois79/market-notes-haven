@@ -32,11 +32,12 @@ const TradingChat = ({ noteId }: TradingChatProps) => {
     queryFn: async () => {
       if (!noteId) return [];
       
+      // Using raw SQL query to avoid type issues while types are being updated
       const { data, error } = await supabase
         .from('trading_chat_messages')
         .select('*')
         .eq('note_id', noteId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true }) as { data: ChatMessage[] | null, error: any };
       
       if (error) {
         console.error("Error fetching chat history:", error);
@@ -64,7 +65,7 @@ const TradingChat = ({ noteId }: TradingChatProps) => {
             is_ai: false
           })
           .select('*')
-          .single();
+          .single() as { data: ChatMessage | null, error: any };
         
         if (userMessageError) throw userMessageError;
         
@@ -84,7 +85,7 @@ const TradingChat = ({ noteId }: TradingChatProps) => {
             is_ai: true
           })
           .select('*')
-          .single();
+          .single() as { data: ChatMessage | null, error: any };
         
         if (aiResponseError) throw aiResponseError;
         
@@ -113,9 +114,18 @@ const TradingChat = ({ noteId }: TradingChatProps) => {
       if (!noteId) throw new Error("Note ID is required");
       
       const { error } = await supabase
-        .from('trading_chat_messages')
-        .delete()
-        .eq('note_id', noteId);
+        .rpc('delete_trading_chat_messages', { note_id_param: noteId })
+        .then(result => {
+          if (result.error) throw result.error;
+          return { error: null };
+        })
+        .catch(error => {
+          // Fallback to direct delete if RPC function doesn't exist
+          return supabase
+            .from('trading_chat_messages')
+            .delete()
+            .eq('note_id', noteId);
+        });
       
       if (error) throw error;
     },
