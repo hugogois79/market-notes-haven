@@ -113,19 +113,11 @@ const TradingChat = ({ noteId }: TradingChatProps) => {
     mutationFn: async () => {
       if (!noteId) throw new Error("Note ID is required");
       
+      // Direct delete approach without using RPC
       const { error } = await supabase
-        .rpc('delete_trading_chat_messages', { note_id_param: noteId })
-        .then(result => {
-          if (result.error) throw result.error;
-          return { error: null };
-        })
-        .catch(error => {
-          // Fallback to direct delete if RPC function doesn't exist
-          return supabase
-            .from('trading_chat_messages')
-            .delete()
-            .eq('note_id', noteId);
-        });
+        .from('trading_chat_messages')
+        .delete()
+        .eq('note_id', noteId);
       
       if (error) throw error;
     },
