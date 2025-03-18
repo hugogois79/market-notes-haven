@@ -82,7 +82,7 @@ const EditorContent = ({
         note.style.padding = '8px';
         note.style.borderRadius = '4px';
         note.style.marginBottom = '8px';
-        note.style.fontSize = '14px';
+        note.style.fontSize = '12px';
         note.style.fontWeight = 'bold';
         note.textContent = 'AI detected this note does not have a conclusion section. Consider adding one.';
         
@@ -135,7 +135,7 @@ const EditorContent = ({
 
   return (
     <div 
-      className="p-4 min-h-[300px] focus:outline-none overflow-auto text-sm"
+      className="p-4 min-h-[300px] focus:outline-none overflow-auto text-xs"
       ref={editorRef}
       contentEditable
       onInput={handleInput}
@@ -145,33 +145,33 @@ const EditorContent = ({
         // Add these styles to better handle tables
         overflowX: 'auto',
         whiteSpace: 'normal',
-        // Removed the top padding completely to eliminate the empty space
-        paddingTop: "0"
+        // Reduced top padding
+        paddingTop: "8px"
       }}
       data-placeholder="Start writing..."
     >
       {/* Style definitions for headings and lists within the editor */}
       <style>{`
         [contenteditable="true"] h1 {
-          font-size: 1.5rem;
+          font-size: 1.25rem;
           font-weight: 600;
           margin-top: 1rem;
           margin-bottom: 0.5rem;
         }
         [contenteditable="true"] h2 {
-          font-size: 1.25rem;
+          font-size: 1.1rem;
           font-weight: 500;
           margin-top: 0.75rem;
           margin-bottom: 0.5rem;
         }
         [contenteditable="true"] h3 {
-          font-size: 1.05rem;
+          font-size: 0.95rem;
           font-weight: 500;
           margin-top: 0.5rem;
           margin-bottom: 0.25rem;
         }
         [contenteditable="true"] p {
-          font-size: 0.875rem;
+          font-size: 0.8rem;
           margin-bottom: 0.5rem;
         }
         [contenteditable="true"] ul {
@@ -186,6 +186,7 @@ const EditorContent = ({
         }
         [contenteditable="true"] li {
           margin-bottom: 0.25rem;
+          font-size: 0.8rem;
         }
         [contenteditable="true"] table {
           border-collapse: collapse;
@@ -196,6 +197,7 @@ const EditorContent = ({
         [contenteditable="true"] td {
           border: 1px solid #d1d5db;
           padding: 0.5rem;
+          font-size: 0.8rem;
         }
         [contenteditable="true"] th {
           background-color: #f3f4f6;
@@ -259,7 +261,7 @@ const EditorContent = ({
           padding: 8px;
           border-radius: 4px;
           margin-bottom: 8px;
-          font-size: 14px;
+          font-size: 12px;
           font-weight: bold;
         }
       `}</style>
