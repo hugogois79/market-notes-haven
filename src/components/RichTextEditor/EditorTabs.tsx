@@ -36,7 +36,6 @@ const EditorTabs = ({
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("editor");
 
-  // Initialize editor hooks
   const { 
     execCommand, 
     formatTableCells,
@@ -45,12 +44,10 @@ const EditorTabs = ({
     boldText
   } = useEditor(editorRef, hasConclusion);
 
-  // Handle content change
   const handleContentChangeCallback = useCallback(() => {
     onContentChange(content);
   }, [content, onContentChange]);
 
-  // Handle file upload for attachments
   const { mutate: uploadAttachment, isPending: isUploading } = useMutation({
     mutationFn: async (file: File) => {
       if (!noteId) throw new Error("Note ID is required for attachment upload");
@@ -75,7 +72,6 @@ const EditorTabs = ({
     },
   });
 
-  // Handle file upload
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && noteId) {
@@ -83,7 +79,6 @@ const EditorTabs = ({
     }
   };
 
-  // Handle attachment deletion
   const handleDeleteAttachment = async () => {
     if (!noteId || !attachment_url) return;
 
@@ -109,7 +104,7 @@ const EditorTabs = ({
   return (
     <div className="flex flex-col w-full border rounded-md overflow-hidden">
       <Tabs defaultValue="editor" className="w-full" onValueChange={setActiveTab}>
-        <div className="flex justify-between items-center bg-secondary p-2">
+        <div className="flex justify-between items-center bg-[#D3E4FD] p-2">
           <TabsList className="bg-transparent">
             <TabsTrigger 
               value="editor" 
@@ -242,7 +237,6 @@ const EditorTabs = ({
         </TabsContent>
       </Tabs>
 
-      {/* Print Modal */}
       <PrintModal
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
