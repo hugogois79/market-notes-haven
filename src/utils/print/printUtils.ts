@@ -5,7 +5,7 @@ import { generatePrintHtml } from "./htmlGenerator";
 /**
  * Handles printing a note
  */
-export const printNote = (note: Note): void => {
+export const printNote = (noteData: Partial<Note>): void => {
   // Create a new window for printing
   const printWindow = window.open('', '_blank');
   
@@ -13,6 +13,18 @@ export const printNote = (note: Note): void => {
     console.error('Could not open print window - popup blocker?');
     return;
   }
+  
+  // Create a complete Note object with default values for required properties
+  const note: Note = {
+    id: "temp-print-id",
+    title: noteData.title || "Untitled Note",
+    content: noteData.content || "",
+    tags: [],
+    category: noteData.category || "Uncategorized",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    attachment_url: noteData.attachment_url
+  };
   
   // Generate the HTML content
   const printContent = generatePrintHtml(note);

@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { printNote } from "@/utils/printUtils";
-import { Note } from "@/types";
 
 interface PrintModalProps {
   isOpen: boolean;
@@ -29,19 +28,12 @@ const PrintModal: React.FC<PrintModalProps> = ({
   attachmentUrl,
 }) => {
   const handlePrint = useCallback(() => {
-    // Create a properly formatted Note object that matches the type definition
-    const noteObject: Note = {
-      id: "temp-print-id", // Temporary ID for printing purposes
-      title: title || "Untitled Note",
+    printNote({
       content,
+      title: title || "Untitled Note",
       category: category || "Uncategorized",
-      tags: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      attachment_url: attachmentUrl,
-    };
-    
-    printNote(noteObject);
+      attachment_url: attachmentUrl, // Fix: Changed from attachmentUrl to attachment_url
+    });
     onClose();
   }, [content, title, category, attachmentUrl, onClose]);
 
