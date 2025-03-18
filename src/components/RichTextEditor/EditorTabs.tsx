@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import EditorContent from "./EditorContent";
@@ -8,7 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { uploadNoteAttachment, deleteNoteAttachment } from "@/services/supabaseService";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Paperclip, Printer } from "lucide-react";
+import { Paperclip, FileText } from "lucide-react";
 
 interface EditorTabsProps {
   content: string;
@@ -104,31 +105,23 @@ const EditorTabs = ({
   return (
     <div className="flex flex-col w-full border rounded-md overflow-hidden">
       <Tabs defaultValue="editor" className="w-full" onValueChange={setActiveTab}>
-        <div className="flex justify-between items-center bg-[#D3E4FD] p-2">
+        <div className="flex items-center bg-[#D3E4FD] p-0">
           <TabsList className="bg-transparent">
             <TabsTrigger 
               value="editor" 
-              className="text-xs px-3 py-1 data-[state=active]:bg-background data-[state=active]:shadow-none"
+              className="text-xs px-5 py-2 rounded-t-md rounded-b-none data-[state=active]:bg-white data-[state=active]:border-t-2 data-[state=active]:border-t-brand"
             >
+              <FileText className="h-3.5 w-3.5 mr-1.5" />
               Editor
             </TabsTrigger>
             <TabsTrigger 
               value="attachment" 
-              className="text-xs px-3 py-1 data-[state=active]:bg-background data-[state=active]:shadow-none"
+              className="text-xs px-5 py-2 rounded-t-md rounded-b-none data-[state=active]:bg-white data-[state=active]:border-t-2 data-[state=active]:border-t-brand"
             >
+              <Paperclip className="h-3.5 w-3.5 mr-1.5" />
               Attachment
             </TabsTrigger>
           </TabsList>
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setIsPrintModalOpen(true)}
-            className="ml-auto"
-          >
-            <Printer className="h-3.5 w-3.5 mr-1" />
-            <span className="text-xs">Print</span>
-          </Button>
         </div>
         
         <TabsContent value="editor" className="m-0">
