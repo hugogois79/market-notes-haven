@@ -18,13 +18,10 @@ import { fetchTags } from "@/services/tagService";
 import { getTokensForNote } from "@/services/tokenService";
 import TokenBadge from "@/components/TokenBadge";
 import { Token } from "@/types";
+import { useNotes } from "@/contexts/NotesContext";
 
-interface IndexProps {
-  notes: Note[];
-  loading?: boolean;
-}
-
-const Index = ({ notes, loading = false }: IndexProps) => {
+const Index = () => {
+  const { notes, loading } = useNotes();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
