@@ -59,7 +59,12 @@ const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
     return textContent.substring(0, 120) + (textContent.length > 120 ? "..." : "");
   };
 
-  const handleNoteClick = () => {
+  const handleNoteClick = (event: React.MouseEvent) => {
+    // Don't navigate if they clicked on a token badge directly
+    if ((event.target as HTMLElement).closest('.token-badge')) {
+      return;
+    }
+    
     console.log("Navigating to note:", note.id);
     // Use timeout to ensure the navigation happens after the event is processed
     setTimeout(() => {
@@ -99,7 +104,7 @@ const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
         {tokens.length > 0 && (
           <div className="flex flex-wrap gap-1 w-full mt-2">
             {tokens.map(token => (
-              <TokenBadge key={token.id} token={token} />
+              <TokenBadge key={token.id} token={token} className="token-badge" />
             ))}
           </div>
         )}

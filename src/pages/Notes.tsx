@@ -1,308 +1,264 @@
 
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { 
-  Search, 
-  Plus, 
-  FolderOpen, 
-  Tag, 
-  Filter, 
-  SortDesc, 
-  GridIcon, 
-  List, 
-  Loader 
-} from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-  DropdownMenuCheckboxItem,
-} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Note } from "@/types";
+import {
+  Search,
+  PlusCircle,
+  Tag,
+  Grid3X3,
+  List,
+  X,
+  FolderOpenDot,
+} from "lucide-react";
+import { Card } from "@/components/ui/card";
 import NoteCard from "@/components/NoteCard";
+import { Note, Tag as TagType } from "@/types";
+import { useNavigate } from "react-router-dom";
+import { fetchNotes } from "@/services/supabaseService";
 import { fetchTags } from "@/services/tagService";
+import { fetchTokens } from "@/services/tokenService";
+import TokenSection from "@/components/RichTextEditor/TokenSection";
 
-interface NotesProps {
-  notes: Note[];
-  loading?: boolean;
-}
-
-type SortOption = "date-desc" | "date-asc" | "title-asc" | "title-desc";
-type ViewMode = "grid" | "list";
-
-const Notes = ({ notes, loading = false }: NotesProps) => {
+const Notes = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<SortOption>("date-desc");
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [tagsList, setTagsList] = useState<{id: string, name: string}[]>([]);
-  const [tagIdToNameMap, setTagIdToNameMap] = useState<Record<string, string>>({});
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [selectedToken, setSelectedToken] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  // Fetch tags on component mount
-  useEffect(() => {
-    const loadTags = async () => {
-      try {
-        const tags = await fetchTags();
-        setTagsList(tags);
-        
-        // Create a mapping of tag ID to tag name
-        const idToNameMap: Record<string, string> = {};
-        tags.forEach(tag => {
-          idToNameMap[tag.id] = tag.name;
-        });
-        setTagIdToNameMap(idToNameMap);
-      } catch (error) {
-        console.error("Error loading tags:", error);
-      }
-    };
-    
-    loadTags();
-  }, []);
-  
-  // Get unique categories from notes
-  const categories = Array.from(new Set(notes.map(note => note.category)));
-  
-  // Filter notes based on search, category, and tags
-  const filteredNotes = notes.filter(note => {
-    const matchesSearch = searchQuery === "" || 
-      note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      note.content.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesCategory = selectedCategory === null || note.category === selectedCategory;
-    
-    const matchesTags = selectedTags.length === 0 || 
-      selectedTags.every(tagId => note.tags.includes(tagId));
-    
-    return matchesSearch && matchesCategory && matchesTags;
-  });
-  
-  // Sort filtered notes
-  const sortedNotes = [...filteredNotes].sort((a, b) => {
-    switch (sortBy) {
-      case "date-desc":
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-      case "date-asc":
-        return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
-      case "title-asc":
-        return a.title.localeCompare(b.title);
-      case "title-desc":
-        return b.title.localeCompare(a.title);
-      default:
-        return 0;
-    }
+  // Fetch all notes
+  const {
+    data: notes = [],
+    isLoading: isLoadingNotes,
+    refetch: refetchNotes,
+  } = useQuery({
+    queryKey: ["notes"],
+    queryFn: fetchNotes,
   });
 
-  // Handle toggling a tag selection
-  const toggleTag = (tagId: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tagId) 
-        ? prev.filter(t => t !== tagId) 
-        : [...prev, tagId]
-    );
-  };
+  // Fetch all tags
+  const { data: tags = [], isLoading: isLoadingTags } = useQuery({
+    queryKey: ["tags"],
+    queryFn: fetchTags,
+  });
 
-  // Get tag name from ID
-  const getTagName = (tagId: string) => {
-    return tagIdToNameMap[tagId] || tagId;
-  };
+  // Fetch all tokens
+  const { data: tokens = [], isLoading: isLoadingTokens } = useQuery({
+    queryKey: ["tokens"],
+    queryFn: fetchTokens,
+  });
 
-  const handleNewNote = () => {
+  // Create a mapping of tag IDs to tag names for easy lookup
+  const tagMapping = tags.reduce((acc: Record<string, string>, tag: TagType) => {
+    acc[tag.id] = tag.name;
+    return acc;
+  }, {});
+
+  // Get all available categories from notes
+  const categories = Array.from(new Set(notes.map((note) => note.category)));
+
+  // Filter notes based on search query, selected category, and selected tag
+  const filteredNotes = notes.filter((note) => {
+    // Search query filter
+    const searchMatch =
+      searchQuery === "" ||
+      note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (note.content &&
+        note.content.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    // Category filter
+    const categoryMatch =
+      selectedCategory === null || note.category === selectedCategory;
+
+    // Tag filter
+    const tagMatch =
+      selectedTag === null || note.tags.includes(selectedTag);
+
+    // Check if any of the note's tokens match the selected token
+    const tokenMatch = selectedToken === null;
+    
+    return searchMatch && categoryMatch && tagMatch && tokenMatch;
+  });
+
+  // Handle creating a new note
+  const handleCreateNote = () => {
     navigate("/editor/new");
   };
 
+  // Handle clearing all filters
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setSelectedCategory(null);
+    setSelectedTag(null);
+    setSelectedToken(null);
+  };
+
+  // Check if filters are active
+  const areFiltersActive =
+    searchQuery !== "" || selectedCategory !== null || selectedTag !== null || selectedToken !== null;
+
   return (
-    <div className="space-y-6 py-2 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold">Notes</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-3xl font-bold">Notes</h1>
+          <p className="text-muted-foreground">
             Browse and search all your market research notes
           </p>
         </div>
-        <Button className="gap-2" size="sm" onClick={handleNewNote}>
-          <Plus size={16} />
+        <Button onClick={handleCreateNote} className="gap-2">
+          <PlusCircle size={18} />
           New Note
         </Button>
       </div>
-      
-      {/* Search and Filters */}
+
       <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search notes..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        
-        <div className="flex gap-2">
-          {/* Category filter */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <FolderOpen size={16} />
-                Category
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuRadioGroup 
-                value={selectedCategory || "all"} 
-                onValueChange={(value) => setSelectedCategory(value === "all" ? null : value)}
-              >
-                <DropdownMenuRadioItem value="all">All Categories</DropdownMenuRadioItem>
-                {categories.map((category) => (
-                  <DropdownMenuRadioItem key={category} value={category}>
-                    {category}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          {/* Tags filter */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Tag size={16} />
-                Tags
-                {selectedTags.length > 0 && (
-                  <Badge variant="secondary" className="ml-1">
-                    {selectedTags.length}
-                  </Badge>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Filter by Tags</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {tagsList.length > 0 ? (
-                tagsList.map((tag) => (
-                  <DropdownMenuCheckboxItem
-                    key={tag.id}
-                    checked={selectedTags.includes(tag.id)}
-                    onCheckedChange={() => toggleTag(tag.id)}
-                  >
-                    {tag.name}
-                  </DropdownMenuCheckboxItem>
-                ))
-              ) : (
-                <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                  No tags found
-                </div>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          {/* Sort options */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <SortDesc size={16} />
-                Sort
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuRadioGroup value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
-                <DropdownMenuRadioItem value="date-desc">Newest first</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="date-asc">Oldest first</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="title-asc">Title (A-Z)</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="title-desc">Title (Z-A)</DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          {/* View mode toggle */}
-          <div className="flex rounded-md overflow-hidden border">
-            <Button
-              variant={viewMode === "grid" ? "default" : "ghost"}
-              size="sm"
-              className="rounded-none px-2"
-              onClick={() => setViewMode("grid")}
-            >
-              <GridIcon size={16} />
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="sm"
-              className="rounded-none px-2"
-              onClick={() => setViewMode("list")}
-            >
-              <List size={16} />
-            </Button>
+        <div className="w-full md:w-3/4">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search notes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </div>
-      </div>
-      
-      {/* Results info */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {loading ? "Loading notes..." : `Showing ${sortedNotes.length} of ${notes.length} notes`}
+        <div className="flex gap-2">
+          <Button
+            variant={selectedCategory !== null ? "default" : "outline"}
+            className="gap-1"
+            onClick={() => setSelectedCategory(selectedCategory ? null : categories[0])}
+          >
+            <FolderOpenDot size={16} />
+            Category
+          </Button>
+          <Button
+            variant={selectedTag !== null ? "default" : "outline"}
+            className="gap-1"
+            onClick={() => setSelectedTag(selectedTag ? null : tags[0]?.id)}
+          >
+            <Tag size={16} />
+            Tags{selectedTag ? " (1)" : ""}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+          >
+            {viewMode === "grid" ? <List size={16} /> : <Grid3X3 size={16} />}
+          </Button>
         </div>
-        {(selectedCategory || selectedTags.length > 0 || searchQuery) && (
-          <Button 
-            variant="ghost" 
+      </div>
+
+      {areFiltersActive && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">Filters:</span>
+          {selectedCategory && (
+            <Badge
+              variant="outline"
+              className="flex items-center gap-1 bg-muted/40"
+            >
+              Category: {selectedCategory}
+              <X
+                size={14}
+                className="cursor-pointer"
+                onClick={() => setSelectedCategory(null)}
+              />
+            </Badge>
+          )}
+          {selectedTag && (
+            <Badge
+              variant="outline"
+              className="flex items-center gap-1 bg-muted/40"
+            >
+              Tag: {tagMapping[selectedTag] || selectedTag}
+              <X
+                size={14}
+                className="cursor-pointer"
+                onClick={() => setSelectedTag(null)}
+              />
+            </Badge>
+          )}
+          {searchQuery && (
+            <Badge
+              variant="outline"
+              className="flex items-center gap-1 bg-muted/40"
+            >
+              Search: {searchQuery}
+              <X
+                size={14}
+                className="cursor-pointer"
+                onClick={() => setSearchQuery("")}
+              />
+            </Badge>
+          )}
+          <Button
+            variant="ghost"
             size="sm"
-            onClick={() => {
-              setSelectedCategory(null);
-              setSelectedTags([]);
-              setSearchQuery("");
-            }}
+            onClick={handleClearFilters}
+            className="ml-auto text-xs"
           >
             Clear filters
           </Button>
-        )}
-      </div>
-      
-      {/* Notes list */}
-      {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <Loader className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2 text-lg">Loading notes...</span>
         </div>
-      ) : sortedNotes.length > 0 ? (
-        <div className={viewMode === "grid" 
-          ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" 
-          : "flex flex-col gap-3"
-        }>
-          {sortedNotes.map((note) => (
-            <NoteCard 
-              key={note.id} 
-              note={note} 
-              className={viewMode === "list" ? "h-auto" : ""}
-              tagMapping={tagIdToNameMap}
+      )}
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="p-4 border rounded-md">
+          <TokenSection
+            isFilter={true}
+            selectedTokens={[]}
+            handleRemoveToken={() => {}}
+            handleTokenSelect={() => {}}
+            isLoadingTokens={isLoadingTokens}
+            onFilterChange={setSelectedToken}
+            selectedFilterToken={selectedToken}
+          />
+        </Card>
+        {/* Additional filter cards could go here */}
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          Showing {filteredNotes.length} of {notes.length} notes
+        </div>
+      </div>
+
+      {isLoadingNotes ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card
+              key={i}
+              className="h-40 animate-pulse bg-muted/40 glass-card"
             />
           ))}
         </div>
       ) : (
-        <div className="bg-card rounded-lg p-8 text-center border border-border animate-fade-in">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
-            <Filter size={24} />
-          </div>
-          <h3 className="text-lg font-medium mb-2">No Notes Found</h3>
-          <p className="text-muted-foreground mb-6">
-            {notes.length > 0 
-              ? "Try adjusting your filters or search query"
-              : "Start creating notes to see them here"}
-          </p>
-          <Button onClick={handleNewNote}>
-            Create Your First Note
-          </Button>
+        <div
+          className={
+            viewMode === "grid"
+              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+              : "flex flex-col gap-4"
+          }
+        >
+          {filteredNotes.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <p className="text-muted-foreground">No notes found</p>
+            </div>
+          ) : (
+            filteredNotes.map((note) => (
+              <NoteCard
+                key={note.id}
+                note={note}
+                className={viewMode === "list" ? "flex-row items-center" : ""}
+                tagMapping={tagMapping}
+              />
+            ))
+          )}
         </div>
       )}
     </div>
