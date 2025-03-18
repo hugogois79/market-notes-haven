@@ -1,4 +1,3 @@
-
 import { Note } from "@/types";
 import { formatDate } from "./formatUtils";
 import { getPrintStyles } from "./printStyles";
@@ -22,6 +21,14 @@ export const generatePrintHtml = (note: Note): string => {
 
   // Process content to preserve HTML
   const processedContent = note.content;
+  
+  // Preserve text alignment styles in processed content
+  const enhancedContent = processedContent
+    // Keep 'style' attributes intact for justified text
+    .replace(/text-align:\s*justify/gi, 'text-align: justify !important')
+    // Add class for elements with justify alignment
+    .replace(/<([^>]+?)style="([^"]*?)text-align:\s*justify([^"]*?)"([^>]*?)>/gi, 
+             '<$1style="$2text-align: justify !important$3" class="text-justify"$4>');
   
   // Generate AI summary section if available
   const summaryHtml = note.summary 
@@ -99,7 +106,7 @@ export const generatePrintHtml = (note: Note): string => {
         ${summaryHtml}
         
         <div class="print-content">
-          ${processedContent}
+          ${enhancedContent}
         </div>
         
         ${conclusionHtml}

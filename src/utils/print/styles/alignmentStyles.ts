@@ -24,5 +24,19 @@ export const getAlignmentStyles = (): string => {
     .print-content [style*="text-align: justify"] {
       text-align: justify !important;
     }
+    
+    /* More specific selectors to ensure styles apply even in print */
+    .print-content p.text-justify, 
+    .print-content div.text-justify, 
+    .print-content li.text-justify, 
+    .print-content td.text-justify, 
+    .print-content th.text-justify,
+    .print-content p[style*="text-align: justify"], 
+    .print-content div[style*="text-align: justify"], 
+    .print-content li[style*="text-align: justify"], 
+    .print-content td[style*="text-align: justify"], 
+    .print-content th[style*="text-align: justify"] {
+      text-align: justify !important;
+    }
   `;
 };

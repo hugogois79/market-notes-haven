@@ -135,10 +135,18 @@ export const getPrintMediaStyles = (): string => {
       }
       
       /* Force justification to work for paragraphs, lists, and table cells */
-      p.text-justify, div.text-justify, li.text-justify, td.text-justify, th.text-justify {
+      p.text-justify, div.text-justify, li.text-justify, td.text-justify, th.text-justify,
+      p[style*="text-align: justify"], div[style*="text-align: justify"], 
+      li[style*="text-align: justify"], td[style*="text-align: justify"], 
+      th[style*="text-align: justify"] {
         text-align: justify !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+      }
+      
+      /* Additional specific selectors for common elements that might need justification */
+      .print-content p, .print-content div, .print-content li {
+        text-align: inherit !important;
       }
     }
   `;
