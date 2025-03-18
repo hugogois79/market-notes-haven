@@ -89,7 +89,7 @@ const EditorTabs = ({
     if (!noteId || !attachment_url) return;
 
     try {
-      await deleteNoteAttachment(noteId, attachment_url);
+      await deleteNoteAttachment(noteId);
       if (onAttachmentChange) {
         onAttachmentChange(null);
         toast({
