@@ -105,11 +105,11 @@ const EditorTabs = ({
       <Tabs defaultValue="editor" className="w-full" onValueChange={setActiveTab}>
         <div className="flex items-center border-b bg-gray-50">
           <TabsList className="bg-transparent border-0">
-            <TabsTrigger value="editor" className="text-sm">
+            <TabsTrigger value="editor" className="text-base">
               <FileText className="h-4 w-4 mr-2" />
               Editor
             </TabsTrigger>
-            <TabsTrigger value="attachment" className="text-sm">
+            <TabsTrigger value="attachment" className="text-base">
               <Paperclip className="h-4 w-4 mr-2" />
               Attachment
             </TabsTrigger>
