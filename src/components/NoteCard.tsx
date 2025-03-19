@@ -110,18 +110,24 @@ const NoteCard = ({
     }, 10);
   };
 
+  // Check if the card is in list view mode based on className
+  const isListView = className?.includes("flex-row");
+
   return (
     <Card 
       className={cn(
         "h-auto overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1 glass-card cursor-pointer note-card-compact",
+        isListView && "note-card-list",
         className
       )}
       onClick={handleNoteClick}
       data-note-id={note.id}
     >
-      <CardHeader className="p-2 pb-0">
+      <CardHeader className={cn("p-2 pb-0", isListView && "p-1.5 pb-0")}>
         <div className="flex justify-between items-start gap-2">
-          <h3 className="font-medium text-sm line-clamp-1">{note.title || "Untitled Note"}</h3>
+          <h3 className={cn("font-medium text-sm line-clamp-1", isListView && "text-xs")}>
+            {note.title || "Untitled Note"}
+          </h3>
           {note.category && (
             <Badge variant="outline" className="shrink-0 text-xs">
               {note.category}
@@ -129,23 +135,31 @@ const NoteCard = ({
           )}
         </div>
       </CardHeader>
-      <CardContent className="p-2 pt-1 pb-0">
-        <p className="text-muted-foreground text-xs line-clamp-2">
+      <CardContent className={cn("p-2 pt-1 pb-0", isListView && "p-1.5 pt-0.5 pb-0")}>
+        <p className={cn("text-muted-foreground text-xs line-clamp-2", isListView && "line-clamp-1 text-[10px]")}>
           {getTextPreview(note.content)}
         </p>
       </CardContent>
-      <CardFooter className="p-2 pt-1 flex flex-wrap gap-y-1 items-center">
+      <CardFooter className={cn("p-2 pt-1 flex flex-wrap gap-y-1 items-center", isListView && "p-1.5 pt-0.5 gap-y-0.5")}>
         <div className="flex items-center gap-1 text-xs text-muted-foreground mr-auto">
-          <Calendar size={12} />
-          <span>{formatDate(note.updatedAt || new Date())}</span>
+          <Calendar size={isListView ? 10 : 12} />
+          <span className={cn(isListView && "text-[10px]")}>
+            {formatDate(note.updatedAt || new Date())}
+          </span>
         </div>
         
         {/* Combined tags and tokens section to save space */}
-        <div className="flex flex-wrap items-center gap-1 w-full mt-1">
+        <div className={cn("flex flex-wrap items-center gap-1 w-full mt-1", isListView && "mt-0.5 gap-0.5")}>
           {/* Tags */}
           {note.tags && note.tags.length > 0 && note.tags.map((tagId) => (
-            <Badge key={tagId} className="text-xs py-0 px-1.5 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90 flex items-center gap-1">
-              <Tag size={8} />
+            <Badge 
+              key={tagId} 
+              className={cn(
+                "text-xs py-0 px-1.5 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90 flex items-center gap-1",
+                isListView && "text-[9px] py-0 px-1"
+              )}
+            >
+              <Tag size={isListView ? 7 : 8} />
               {getTagName(tagId)}
             </Badge>
           ))}
@@ -157,6 +171,7 @@ const NoteCard = ({
               token={token} 
               className={cn(
                 "token-badge text-xs py-0",
+                isListView && "text-[9px] py-0 px-1",
                 selectedTokenIds?.includes(token.id) ? "ring-1 ring-offset-1 ring-primary" : ""
               )} 
             />
@@ -165,7 +180,7 @@ const NoteCard = ({
         
         {/* Note ID in small text */}
         <div className="w-full mt-0">
-          <span className="text-[8px] text-muted-foreground block truncate">
+          <span className={cn("text-[8px] text-muted-foreground block truncate", isListView && "text-[7px]")}>
             ID: {note.id}
           </span>
         </div>

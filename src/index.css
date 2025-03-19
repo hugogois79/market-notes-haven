@@ -135,7 +135,13 @@
 
 /* List view note cards - even more compact */
 .note-card-list {
-  max-height: 100px;
+  max-height: 80px;
+  min-height: 70px;
+}
+
+/* Custom list view styles for note cards */
+.note-card-list.flex-row > div:first-child {
+  max-width: 30%;
 }
 
 /* Rich Text Editor Styles */
