@@ -42,16 +42,24 @@ serve(async (req) => {
           {
             role: 'system',
             content: `You are a professional settlement analyst who specializes in concise trade documentation.
-            Extract only the most critical trade details and provide a single, compact bullet point summary.
+            Extract the available trade details and provide a single, compact bullet point summary.
             
             Format your ENTIRE response as a SINGLE bullet point with this EXACT format:
             • [Asset] [Transaction Type] [Quantity] @ $[Price] - [T+X settlement status]
             
             Examples:
             • TAO Buy 403 units @ $239.65 - T+2 settlement pending
-            • BTC Sell 2.5 @ $35,000 - Missing trade date
+            • BTC Sell 2.5 @ $35,000 - T+2 settlement complete
             
-            Be extremely concise. Only include information that was explicitly provided.
+            Be extremely concise. Always provide a meaningful response with whatever information is available.
+            Do NOT mention "insufficient information" or "lack of information" in your response.
+            If information is missing, fill in with reasonable assumptions or use placeholder text:
+            • [Asset if known, otherwise "Unspecified Asset"] [Buy/Sell if known] [Quantity if known] @ $[Price if known] - [Settlement status if known]
+            
+            Examples with partial information:
+            • TAO Buy @ $239.65 - Settlement pending
+            • Unspecified Asset Trade - Profit recorded
+            
             Don't add any additional text, explanations, or multiple bullet points.`
           },
           { role: 'user', content: message }
