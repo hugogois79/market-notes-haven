@@ -13,9 +13,17 @@ interface NoteCardProps {
   note: Note;
   className?: string;
   tagMapping?: Record<string, string>;
+  selectedTokenId?: string | null;
+  onTokenMatch?: (noteId: string, matches: boolean) => void;
 }
 
-const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
+const NoteCard = ({ 
+  note, 
+  className, 
+  tagMapping = {},
+  selectedTokenId = null,
+  onTokenMatch
+}: NoteCardProps) => {
   const navigate = useNavigate();
   const [tokens, setTokens] = useState<Token[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,19 +32,38 @@ const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
     const fetchTokens = async () => {
       setIsLoading(true);
       try {
+        if (!note.id || note.id.toString().startsWith('temp-')) {
+          setTokens([]);
+          setIsLoading(false);
+          // Report that this note doesn't match if we're filtering by token
+          if (selectedTokenId && onTokenMatch) {
+            onTokenMatch(note.id, false);
+          }
+          return;
+        }
+        
         const noteTokens = await getTokensForNote(note.id);
         setTokens(noteTokens);
+        
+        // If we're filtering by token, report whether this note matches
+        if (selectedTokenId && onTokenMatch) {
+          const hasMatchingToken = noteTokens.some(token => token.id === selectedTokenId);
+          onTokenMatch(note.id, hasMatchingToken);
+        }
       } catch (error) {
         console.error(`Error fetching tokens for note ${note.id}:`, error);
+        setTokens([]);
+        // Report no match on error
+        if (selectedTokenId && onTokenMatch) {
+          onTokenMatch(note.id, false);
+        }
       } finally {
         setIsLoading(false);
       }
     };
     
-    if (note.id && !note.id.toString().startsWith('temp-')) {
-      fetchTokens();
-    }
-  }, [note.id]);
+    fetchTokens();
+  }, [note.id, selectedTokenId, onTokenMatch]);
   
   // Helper to get tag name from ID
   const getTagName = (tagId: string) => {
@@ -45,6 +72,7 @@ const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
   
   // Format date to be more readable
   const formatDate = (date: Date) => {
+    if (!date) return "No date";
     return new Date(date).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -109,7 +137,14 @@ const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
         {tokens && tokens.length > 0 && (
           <div className="flex flex-wrap gap-1 w-full mt-2">
             {tokens.map(token => (
-              <TokenBadge key={token.id} token={token} className="token-badge" />
+              <TokenBadge 
+                key={token.id} 
+                token={token} 
+                className={cn(
+                  "token-badge",
+                  selectedTokenId === token.id ? "ring-2 ring-offset-1 ring-primary" : ""
+                )} 
+              />
             ))}
           </div>
         )}
