@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -125,6 +124,14 @@ const Notes = () => {
     ? filteredNotes.length 
     : filteredNotes.length;
 
+  const handleTokenSelect = (token: Token | string) => {
+    if (typeof token === 'string') {
+      setSelectedToken(token);
+    } else {
+      setSelectedToken(token.id);
+    }
+  };
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -250,9 +257,7 @@ const Notes = () => {
             isFilter={true}
             selectedTokens={[]}
             handleRemoveToken={() => {}}
-            handleTokenSelect={(token) => {
-              setSelectedToken(token.id);
-            }}
+            handleTokenSelect={handleTokenSelect}
             isLoadingTokens={isLoadingTokens}
             onFilterChange={setSelectedToken}
             selectedFilterToken={selectedToken}

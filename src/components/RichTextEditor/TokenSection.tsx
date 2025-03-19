@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 interface TokenSectionProps {
   selectedTokens: Token[];
   handleRemoveToken: (tokenId: string) => void;
-  handleTokenSelect: (tokenId: string) => void;
+  handleTokenSelect: (token: Token | string) => void;
   isLoadingTokens: boolean;
   isFilter?: boolean; // New prop to indicate if this is used as a filter
   onFilterChange?: (tokenId: string | null) => void; // New prop for filter mode
@@ -46,7 +46,9 @@ const TokenSection: React.FC<TokenSectionProps> = ({
       onFilterChange(tokenId);
     } else {
       // Normal token selection for linking to notes
-      handleTokenSelect(tokenId);
+      // Find the token object from the ID
+      const tokenObj = tokens.find(t => t.id === tokenId);
+      handleTokenSelect(tokenObj || tokenId);
       
       // Manually reset the select input by forcing a re-render with a key
       const selectElement = document.querySelector('.token-select') as HTMLElement;
