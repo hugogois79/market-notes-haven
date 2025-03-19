@@ -43,7 +43,7 @@ const TokenSection: React.FC<TokenSectionProps> = ({
     
     // If this is filter mode, call the filter change handler
     if (isFilter && onFilterChange) {
-      onFilterChange(tokenId);
+      onFilterChange(tokenId === "all" ? null : tokenId);
     } else {
       // Normal token selection for linking to notes
       // Find the token object from the ID
@@ -82,13 +82,13 @@ const TokenSection: React.FC<TokenSectionProps> = ({
           <Select 
             onValueChange={handleSelectToken} 
             disabled={isLoadingTokens || availableTokens.length === 0}
-            value={selectedFilterToken || ""}
+            value={selectedFilterToken || "all"}
           >
             <SelectTrigger className="w-[180px] h-8 token-select">
               <SelectValue placeholder="Select token..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Tokens</SelectItem>
+              <SelectItem value="all">All Tokens</SelectItem>
               {isLoadingTokens ? (
                 <SelectItem value="loading" disabled>Loading tokens...</SelectItem>
               ) : availableTokens.length === 0 ? (
