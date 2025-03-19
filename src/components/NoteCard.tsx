@@ -95,7 +95,7 @@ const NoteCard = ({
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = htmlContent;
     const textContent = tempDiv.textContent || tempDiv.innerText || "";
-    return textContent.substring(0, 100) + (textContent.length > 100 ? "..." : "");
+    return textContent.substring(0, 75) + (textContent.length > 75 ? "..." : "");
   };
 
   const handleNoteClick = (event: React.MouseEvent) => {
@@ -119,7 +119,7 @@ const NoteCard = ({
       onClick={handleNoteClick}
       data-note-id={note.id}
     >
-      <CardHeader className="p-3 pb-1">
+      <CardHeader className="p-2 pb-0">
         <div className="flex justify-between items-start gap-2">
           <h3 className="font-medium text-sm line-clamp-1">{note.title || "Untitled Note"}</h3>
           {note.category && (
@@ -129,12 +129,12 @@ const NoteCard = ({
           )}
         </div>
       </CardHeader>
-      <CardContent className="p-3 pt-1 pb-1">
+      <CardContent className="p-2 pt-1 pb-0">
         <p className="text-muted-foreground text-xs line-clamp-2">
           {getTextPreview(note.content)}
         </p>
       </CardContent>
-      <CardFooter className="p-3 pt-1 flex flex-wrap gap-y-1 items-center">
+      <CardFooter className="p-2 pt-1 flex flex-wrap gap-y-1 items-center">
         <div className="flex items-center gap-1 text-xs text-muted-foreground mr-auto">
           <Calendar size={12} />
           <span>{formatDate(note.updatedAt || new Date())}</span>
@@ -144,8 +144,8 @@ const NoteCard = ({
         <div className="flex flex-wrap items-center gap-1 w-full mt-1">
           {/* Tags */}
           {note.tags && note.tags.length > 0 && note.tags.map((tagId) => (
-            <Badge key={tagId} className="text-xs py-0.5 px-2 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90 flex items-center gap-1">
-              <Tag size={10} />
+            <Badge key={tagId} className="text-xs py-0 px-1.5 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90 flex items-center gap-1">
+              <Tag size={8} />
               {getTagName(tagId)}
             </Badge>
           ))}
@@ -156,7 +156,7 @@ const NoteCard = ({
               key={token.id} 
               token={token} 
               className={cn(
-                "token-badge text-xs py-0.5",
+                "token-badge text-xs py-0",
                 selectedTokenIds?.includes(token.id) ? "ring-1 ring-offset-1 ring-primary" : ""
               )} 
             />
@@ -165,7 +165,7 @@ const NoteCard = ({
         
         {/* Note ID in small text */}
         <div className="w-full mt-0">
-          <span className="text-[9px] text-muted-foreground block truncate">
+          <span className="text-[8px] text-muted-foreground block truncate">
             ID: {note.id}
           </span>
         </div>

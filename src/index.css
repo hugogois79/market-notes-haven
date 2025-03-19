@@ -130,7 +130,12 @@
 
 /* Compact note card styles */
 .note-card-compact {
-  max-height: 150px;
+  max-height: 130px;
+}
+
+/* List view note cards - even more compact */
+.note-card-list {
+  max-height: 100px;
 }
 
 /* Rich Text Editor Styles */

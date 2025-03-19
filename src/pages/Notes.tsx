@@ -44,31 +44,26 @@ const Notes = () => {
   const [tokenFilteredNotes, setTokenFilteredNotes] = useState<Record<string, string[]>>({});
   const [tokenFilteringComplete, setTokenFilteringComplete] = useState(false);
 
-  // Fetch tags
   const { data: tags = [], isLoading: isLoadingTags } = useQuery({
     queryKey: ["tags"],
     queryFn: fetchTags,
   });
 
-  // Fetch tokens
   const { data: tokens = [], isLoading: isLoadingTokens } = useQuery({
     queryKey: ["tokens"],
     queryFn: fetchTokens,
   });
 
-  // Reset token filtering when token selection changes
   useEffect(() => {
     setTokenFilteredNotes({});
     setTokenFilteringComplete(selectedTokens.length === 0);
   }, [selectedTokens]);
 
-  // Create tag mapping for display
   const tagMapping = tags.reduce((acc: Record<string, string>, tag: TagType) => {
     acc[tag.id] = tag.name;
     return acc;
   }, {});
 
-  // Handle token match feedback from NoteCard components
   const handleTokenMatch = useCallback((noteId: string, tokenId: string, matches: boolean) => {
     if (matches) {
       setTokenFilteredNotes(prev => ({
@@ -78,17 +73,14 @@ const Notes = () => {
     }
   }, []);
 
-  // Get unique categories from notes
   const categories = Array.from(
     new Set(contextNotes.filter(note => note.category).map(note => note.category))
   );
 
-  // Get selected token names for display
   const selectedTokenNames = tokens
     .filter(token => selectedTokens.includes(token.id))
     .map(token => token.symbol);
 
-  // Filter notes based on search, categories, tags, and tokens
   const filteredNotes = contextNotes.filter((note) => {
     if (!note) return false;
 
@@ -106,14 +98,11 @@ const Notes = () => {
       selectedTags.length === 0 || 
       (note.tags && note.tags.some(tag => selectedTags.includes(tag)));
 
-    // For token filtering, a note matches if it contains ANY of the selected tokens
     let tokenMatch = true;
     if (selectedTokens.length > 0) {
       if (!tokenFilteringComplete) {
-        // Still filtering, include all notes for now
         tokenMatch = true;
       } else {
-        // Check if note is in any of the filtered note lists for the selected tokens
         tokenMatch = selectedTokens.some(tokenId => 
           tokenFilteredNotes[tokenId]?.includes(note.id)
         );
@@ -123,12 +112,10 @@ const Notes = () => {
     return searchMatch && categoryMatch && tagMatch && tokenMatch;
   });
 
-  // Create new note
   const handleCreateNote = () => {
     navigate("/editor/new");
   };
 
-  // Toggle category selection
   const toggleCategory = (category: string) => {
     setSelectedCategories(prev => 
       prev.includes(category)
@@ -137,7 +124,6 @@ const Notes = () => {
     );
   };
 
-  // Toggle tag selection
   const toggleTag = (tagId: string) => {
     setSelectedTags(prev => 
       prev.includes(tagId)
@@ -146,7 +132,6 @@ const Notes = () => {
     );
   };
 
-  // Toggle token selection
   const toggleToken = (tokenId: string) => {
     setSelectedTokens(prev => 
       prev.includes(tokenId)
@@ -155,7 +140,6 @@ const Notes = () => {
     );
   };
 
-  // Clear all filters
   const handleClearFilters = () => {
     setSearchQuery("");
     setSelectedCategories([]);
@@ -163,17 +147,14 @@ const Notes = () => {
     setSelectedTokens([]);
   };
 
-  // Check if any filters are active
   const areFiltersActive =
     searchQuery !== "" || 
     selectedCategories.length > 0 || 
     selectedTags.length > 0 || 
     selectedTokens.length > 0;
 
-  // Update token filtering complete status when we have results
   useEffect(() => {
     if (selectedTokens.length > 0) {
-      // Check if we have results for all selected tokens
       const allTokensFiltered = selectedTokens.every(
         tokenId => tokenId in tokenFilteredNotes
       );
@@ -184,15 +165,14 @@ const Notes = () => {
     }
   }, [tokenFilteredNotes, selectedTokens]);
   
-  // Count filtered notes
   const filteredNoteCount = filteredNotes.length;
 
   return (
-    <div className="container mx-auto py-6 space-y-4">
+    <div className="container mx-auto py-4 space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Notes</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold">Notes</h1>
+          <p className="text-muted-foreground text-sm">
             Browse and search all your market research notes
           </p>
         </div>
@@ -202,15 +182,15 @@ const Notes = () => {
         </Button>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4">
+      <div className="flex flex-col md:flex-row gap-2">
         <div className="w-full md:w-3/4">
           <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search notes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 h-9"
             />
           </div>
         </div>
@@ -218,6 +198,8 @@ const Notes = () => {
           <Button
             variant="outline"
             onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+            size="sm"
+            className="h-9"
           >
             {viewMode === "grid" ? <List size={16} /> : <Grid3X3 size={16} />}
           </Button>
@@ -225,7 +207,8 @@ const Notes = () => {
             <Button
               variant="outline"
               onClick={handleClearFilters}
-              className="gap-1 text-xs"
+              className="gap-1 text-xs h-9"
+              size="sm"
             >
               <FilterX size={16} />
               Clear filters
@@ -234,10 +217,9 @@ const Notes = () => {
         </div>
       </div>
 
-      {/* Active filters display */}
       {areFiltersActive && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">Filters:</span>
+          <span className="text-xs text-muted-foreground">Filters:</span>
           
           {selectedCategories.map(category => (
             <Badge
@@ -303,17 +285,15 @@ const Notes = () => {
         </div>
       )}
 
-      {/* Filters section with dropdown menus */}
-      <div className="flex flex-wrap gap-4">
-        {/* Category filter dropdown */}
+      <div className="flex flex-wrap gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2 bg-background">
-              <FolderOpenDot size={16} />
+            <Button variant="outline" className="flex items-center gap-2 bg-background h-9 text-sm" size="sm">
+              <FolderOpenDot size={14} />
               Filter by Category
-              <ChevronDown size={14} className="ml-2" />
+              <ChevronDown size={12} className="ml-1" />
               {selectedCategories.length > 0 && (
-                <Badge className="ml-2 bg-primary text-primary-foreground">
+                <Badge className="ml-1 bg-primary text-primary-foreground text-xs h-5 min-w-5 flex items-center justify-center px-1">
                   {selectedCategories.length}
                 </Badge>
               )}
@@ -338,15 +318,14 @@ const Notes = () => {
           </DropdownMenuContent>
         </DropdownMenu>
         
-        {/* Tag filter dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2 bg-background">
-              <Tag size={16} />
+            <Button variant="outline" className="flex items-center gap-2 bg-background h-9 text-sm" size="sm">
+              <Tag size={14} />
               Filter by Tag
-              <ChevronDown size={14} className="ml-2" />
+              <ChevronDown size={12} className="ml-1" />
               {selectedTags.length > 0 && (
-                <Badge className="ml-2 bg-primary text-primary-foreground">
+                <Badge className="ml-1 bg-primary text-primary-foreground text-xs h-5 min-w-5 flex items-center justify-center px-1">
                   {selectedTags.length}
                 </Badge>
               )}
@@ -371,15 +350,14 @@ const Notes = () => {
           </DropdownMenuContent>
         </DropdownMenu>
         
-        {/* Token filter dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2 bg-background">
-              <Coins size={16} />
+            <Button variant="outline" className="flex items-center gap-2 bg-background h-9 text-sm" size="sm">
+              <Coins size={14} />
               Filter by Token
-              <ChevronDown size={14} className="ml-2" />
+              <ChevronDown size={12} className="ml-1" />
               {selectedTokens.length > 0 && (
-                <Badge className="ml-2 bg-primary text-primary-foreground">
+                <Badge className="ml-1 bg-primary text-primary-foreground text-xs h-5 min-w-5 flex items-center justify-center px-1">
                   {selectedTokens.length}
                 </Badge>
               )}
@@ -405,9 +383,8 @@ const Notes = () => {
         </DropdownMenu>
       </div>
 
-      {/* Notes count */}
       <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           Showing {filteredNoteCount} of {contextNotes.length} notes
           {selectedTokens.length > 0 && !tokenFilteringComplete && (
             <span className="ml-2 italic">Filtering in progress...</span>
@@ -415,13 +392,12 @@ const Notes = () => {
         </div>
       </div>
 
-      {/* Notes display */}
       {isLoadingContextNotes ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card
               key={i}
-              className="h-32 animate-pulse bg-muted/40 glass-card"
+              className="h-28 animate-pulse bg-muted/40 glass-card"
             />
           ))}
         </div>
@@ -429,13 +405,13 @@ const Notes = () => {
         <div
           className={
             viewMode === "grid"
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-              : "flex flex-col gap-4"
+              ? "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
+              : "flex flex-col gap-2"
           }
         >
           {filteredNotes.length === 0 ? (
-            <div className="col-span-full text-center py-12">
-              <p className="text-muted-foreground">
+            <div className="col-span-full text-center py-8">
+              <p className="text-muted-foreground text-sm">
                 {selectedTokens.length > 0 && !tokenFilteringComplete
                   ? "Filtering notes by token..."
                   : contextNotes.length === 0
