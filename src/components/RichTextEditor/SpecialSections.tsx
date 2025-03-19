@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import AiResume from "./AiResume";
 import TradeInfoSection from "./TradeInfoSection";
-import TradingChat from "./TradingChat";
 import { Token, TradeInfo } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import JournalSummary from "./JournalSummary";
@@ -33,16 +32,6 @@ const SpecialSections = ({
   onTradeInfoChange
 }: SpecialSectionsProps) => {
   const [chatSummary, setChatSummary] = useState<string>("");
-  
-  const handleChatSummaryUpdated = (summary: string) => {
-    setChatSummary(summary);
-    
-    // If there's no content-based summary but we have a chat summary,
-    // use the chat summary as the note summary
-    if ((!initialSummary || initialSummary.trim() === "") && summary && onSummaryGenerated) {
-      onSummaryGenerated(summary);
-    }
-  };
   
   // Combine content-based summary with chat summary if both exist
   const combinedSummary = initialSummary && chatSummary 
@@ -99,10 +88,6 @@ const SpecialSections = ({
                   } : undefined}
                 />
               </div>
-              <TradingChat 
-                noteId={noteId} 
-                onChatSummaryUpdated={handleChatSummaryUpdated}
-              />
             </TabsContent>
             
             <TabsContent value="trade-settlements">

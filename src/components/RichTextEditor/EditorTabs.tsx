@@ -1,15 +1,17 @@
 
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import EditorContent from "./EditorContent";
 import EditorToolbar from "./EditorToolbar";
 import { useEditor } from "./hooks/editor/useEditorCore";
 import { useToast } from "@/components/ui/use-toast";
 import { uploadNoteAttachment, deleteNoteAttachment } from "@/services/supabaseService";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Paperclip, FileText, LineChart } from "lucide-react";
 import TradingChat from "./TradingChat";
+import { supabase } from "@/integrations/supabase/client";
+import JournalSummary from "./JournalSummary";
 
 interface EditorTabsProps {
   content: string;
@@ -37,6 +39,7 @@ const EditorTabs = ({
   const editorRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("editor");
+  const [chatSummary, setChatSummary] = useState<string>("");
 
   const { 
     execCommand, 
@@ -102,6 +105,58 @@ const EditorTabs = ({
       });
     }
   };
+
+  const handleChatSummaryUpdated = (summary: string) => {
+    setChatSummary(summary);
+  };
+
+  const generateChatSummary = async () => {
+    if (!noteId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('trading_chat_messages')
+        .select('*')
+        .eq('note_id', noteId)
+        .eq('is_ai', true)
+        .order('created_at', { ascending: true });
+      
+      if (error) {
+        console.error("Error fetching chat history:", error);
+        return;
+      }
+      
+      if (!data || data.length === 0) return;
+      
+      const aiMessages = data.map(msg => msg.content);
+      
+      const response = await supabase.functions.invoke('summarize-note', {
+        body: { 
+          content: aiMessages.join("\n\n"),
+          maxLength: 250,
+          summarizeTradeChat: true,
+          formatAsBulletPoints: true
+        },
+      });
+      
+      if (response.error) {
+        console.error("Error generating chat summary:", response.error);
+        return;
+      }
+      
+      const summary = response.data?.summary || "";
+      setChatSummary(summary);
+    } catch (error) {
+      console.error("Error generating chat summary:", error);
+    }
+  };
+
+  // Load the summary when the component mounts or noteId changes
+  useEffect(() => {
+    if (noteId && isTradingCategory) {
+      generateChatSummary();
+    }
+  }, [noteId]);
 
   // Check if the current category is Trading or Pair Trading
   const isTradingCategory = category === "Trading" || category === "Pair Trading";
@@ -235,7 +290,19 @@ const EditorTabs = ({
         
         {isTradingCategory && (
           <TabsContent value="trading" className="m-0 p-4">
-            <TradingChat noteId={noteId} />
+            {/* Journal Summary Section - Show at the top */}
+            <div className="mb-4">
+              <JournalSummary 
+                summary={chatSummary} 
+                onRefresh={() => generateChatSummary()}
+              />
+            </div>
+            
+            {/* Trading Chat Section */}
+            <TradingChat 
+              noteId={noteId} 
+              onChatSummaryUpdated={handleChatSummaryUpdated}
+            />
           </TabsContent>
         )}
       </Tabs>
