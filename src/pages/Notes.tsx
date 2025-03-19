@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -32,7 +31,6 @@ const Notes = () => {
   const [tokenFilteredNotes, setTokenFilteredNotes] = useState<string[]>([]);
   const [tokenFilteringComplete, setTokenFilteringComplete] = useState(false);
 
-  // Fetch all notes
   const {
     data: notes = [],
     isLoading: isLoadingNotes,
@@ -42,89 +40,70 @@ const Notes = () => {
     queryFn: fetchNotes,
   });
 
-  // Fetch all tags
   const { data: tags = [], isLoading: isLoadingTags } = useQuery({
     queryKey: ["tags"],
     queryFn: fetchTags,
   });
 
-  // Fetch all tokens
   const { data: tokens = [], isLoading: isLoadingTokens } = useQuery({
     queryKey: ["tokens"],
     queryFn: fetchTokens,
   });
 
-  // Reset token filtering when selected token changes
   useEffect(() => {
     setTokenFilteredNotes([]);
     setTokenFilteringComplete(selectedToken === null);
   }, [selectedToken]);
 
-  // Create a mapping of tag IDs to tag names for easy lookup
   const tagMapping = tags.reduce((acc: Record<string, string>, tag: TagType) => {
     acc[tag.id] = tag.name;
     return acc;
   }, {});
 
-  // Token filtering callback
   const handleTokenMatch = useCallback((noteId: string, matches: boolean) => {
     if (matches) {
       setTokenFilteredNotes(prev => [...prev, noteId]);
     }
   }, []);
 
-  // Get all available categories from notes
   const categories = Array.from(
     new Set(notes.filter(note => note.category).map(note => note.category))
   );
 
-  // Find the selected token's name
   const selectedTokenName = tokens.find(token => token.id === selectedToken)?.symbol || selectedToken;
 
-  // Filter notes based on search query, selected category, selected tag, and selected token
   const filteredNotes = notes.filter((note) => {
-    // Skip filtering if the note doesn't exist
     if (!note) return false;
 
-    // Search query filter
     const searchMatch =
       !searchQuery ||
       (note.title && note.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (note.content &&
         note.content.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    // Category filter
     const categoryMatch =
       !selectedCategory || note.category === selectedCategory;
 
-    // Tag filter
     const tagMatch =
       !selectedTag || (note.tags && note.tags.includes(selectedTag));
 
-    // Token filter - if we're filtering by token, check if this note ID is in our filtered list
     const tokenMatch = 
       !selectedToken || 
       (tokenFilteringComplete && tokenFilteredNotes.includes(note.id));
     
-    // If we're not filtering by token, return the other filters' results
-    // If we are filtering by token but filtering isn't complete, show everything
     if (!selectedToken) {
       return searchMatch && categoryMatch && tagMatch;
     } else if (!tokenFilteringComplete) {
-      // While token filtering is in progress, just apply the other filters
       return searchMatch && categoryMatch && tagMatch;
     } else {
-      // When token filtering is complete, apply all filters
       return searchMatch && categoryMatch && tagMatch && tokenMatch;
     }
   });
 
-  // Handle creating a new note
   const handleCreateNote = () => {
     navigate("/editor/new");
   };
 
-  // Handle clearing all filters
   const handleClearFilters = () => {
     setSearchQuery("");
     setSelectedCategory(null);
@@ -132,19 +111,15 @@ const Notes = () => {
     setSelectedToken(null);
   };
 
-  // Check if filters are active
   const areFiltersActive =
     searchQuery !== "" || selectedCategory !== null || selectedTag !== null || selectedToken !== null;
 
-  // Check if all notes have been processed for token filtering
   useEffect(() => {
     if (selectedToken && tokenFilteredNotes.length > 0) {
-      // Once we've processed all notes, mark filtering as complete
       setTokenFilteringComplete(true);
     }
   }, [tokenFilteredNotes, selectedToken]);
   
-  // Count notes that are completely filtered (after token filtering is done)
   const filteredNoteCount = selectedToken && tokenFilteringComplete 
     ? filteredNotes.length 
     : filteredNotes.length;
