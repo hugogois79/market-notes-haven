@@ -19,8 +19,10 @@ interface TokenSectionProps {
   handleTokenSelect: (token: Token | string) => void;
   isLoadingTokens: boolean;
   isFilter?: boolean; // New prop to indicate if this is used as a filter
-  onFilterChange?: (tokenId: string | null) => void; // New prop for filter mode
-  selectedFilterToken?: string | null; // New prop for filter mode
+  onFilterChange?: (tokenId: string | null) => void; // For single token filter
+  selectedFilterToken?: string | null; // For single token filter
+  onMultiFilterChange?: (tokenId: string) => void; // For multi-token filter
+  selectedFilterTokens?: string[]; // For multi-token filter
 }
 
 const TokenSection: React.FC<TokenSectionProps> = ({
@@ -30,7 +32,9 @@ const TokenSection: React.FC<TokenSectionProps> = ({
   isLoadingTokens,
   isFilter = false,
   onFilterChange,
-  selectedFilterToken = null
+  selectedFilterToken = null,
+  onMultiFilterChange,
+  selectedFilterTokens = []
 }) => {
   // Fetch all available tokens
   const { data: tokens = [] } = useQuery({
@@ -41,119 +45,184 @@ const TokenSection: React.FC<TokenSectionProps> = ({
   const handleSelectToken = (tokenId: string) => {
     console.log("TokenSection - Token selected:", tokenId);
     
-    // If this is filter mode, call the filter change handler
+    // Multi-token filter mode
+    if (isFilter && onMultiFilterChange) {
+      onMultiFilterChange(tokenId);
+      return;
+    }
+    
+    // Single token filter mode
     if (isFilter && onFilterChange) {
       onFilterChange(tokenId === "all" ? null : tokenId);
-    } else {
-      // Normal token selection for linking to notes
-      // Find the token object from the ID
-      const tokenObj = tokens.find(t => t.id === tokenId);
-      handleTokenSelect(tokenObj || tokenId);
-      
-      // Manually reset the select input by forcing a re-render with a key
-      const selectElement = document.querySelector('.token-select') as HTMLElement;
-      if (selectElement) {
-        // Force blur to close the dropdown
-        const selectTrigger = selectElement.querySelector('[data-radix-select-trigger]') as HTMLElement;
-        if (selectTrigger) {
-          selectTrigger.blur();
-        }
+      return;
+    }
+    
+    // Normal token selection for linking to notes
+    // Find the token object from the ID
+    const tokenObj = tokens.find(t => t.id === tokenId);
+    handleTokenSelect(tokenObj || tokenId);
+    
+    // Manually reset the select input by forcing a re-render with a key
+    const selectElement = document.querySelector('.token-select') as HTMLElement;
+    if (selectElement) {
+      // Force blur to close the dropdown
+      const selectTrigger = selectElement.querySelector('[data-radix-select-trigger]') as HTMLElement;
+      if (selectTrigger) {
+        selectTrigger.blur();
       }
     }
   };
   
-  // Filter out tokens that are already selected (only for non-filter mode)
-  const availableTokens = isFilter ? tokens : tokens.filter(token => 
-    !selectedTokens.some(selectedToken => selectedToken.id === token.id)
-  );
+  // Filter out tokens that are already selected (only for non-filter mode or multi-filter mode)
+  const getAvailableTokens = () => {
+    if (isFilter && selectedFilterTokens) {
+      // For multi-token filter, exclude already selected tokens
+      return tokens.filter(token => !selectedFilterTokens.includes(token.id));
+    } else if (isFilter) {
+      // For single-token filter, show all tokens
+      return tokens;
+    } else {
+      // For regular token selection, exclude already selected tokens
+      return tokens.filter(token => 
+        !selectedTokens.some(selectedToken => selectedToken.id === token.id)
+      );
+    }
+  };
   
+  const availableTokens = getAvailableTokens();
+  
+  // For normal mode or multi-filter mode
+  if ((isFilter && onMultiFilterChange) || !isFilter) {
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <Coins size={14} className="text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">
+            {isFilter ? "Filter by Tokens" : "Linked Tokens"}
+          </span>
+        </div>
+        
+        {/* Selected tokens display */}
+        <div className="flex flex-wrap gap-2 mb-2">
+          {isFilter ? (
+            // For filter mode, display selected filter tokens
+            selectedFilterTokens.map(tokenId => {
+              const token = tokens.find(t => t.id === tokenId);
+              return token ? (
+                <Badge 
+                  key={token.id}
+                  variant="secondary" 
+                  className="px-3 py-1 text-xs gap-2 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/80"
+                >
+                  {token.symbol} - {token.name}
+                  <button 
+                    onClick={() => onMultiFilterChange(token.id)} 
+                    className="text-white/70 hover:text-white"
+                  >
+                    <X size={12} />
+                  </button>
+                </Badge>
+              ) : null;
+            })
+          ) : (
+            // For normal mode, display linked tokens
+            selectedTokens.map(token => (
+              <Badge 
+                key={token.id} 
+                variant="secondary" 
+                className="px-3 py-1 text-xs gap-2 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/80"
+              >
+                {token.symbol} - {token.name}
+                <button 
+                  onClick={() => handleRemoveToken(token.id)} 
+                  className="text-white/70 hover:text-white"
+                >
+                  <X size={12} />
+                </button>
+              </Badge>
+            ))
+          )}
+        </div>
+        
+        {/* Token selector */}
+        <Select 
+          onValueChange={handleSelectToken} 
+          disabled={isLoadingTokens || availableTokens.length === 0}
+          value=""
+        >
+          <SelectTrigger className="w-[180px] h-8 token-select">
+            <SelectValue placeholder={isFilter ? "Add token filter..." : "Link token..."} />
+          </SelectTrigger>
+          <SelectContent>
+            {isLoadingTokens ? (
+              <SelectItem value="loading" disabled>Loading tokens...</SelectItem>
+            ) : availableTokens.length === 0 ? (
+              <SelectItem value="none" disabled>
+                {isFilter ? "No more tokens available" : "No more tokens available"}
+              </SelectItem>
+            ) : (
+              availableTokens.map(token => (
+                <SelectItem key={token.id} value={token.id}>
+                  {token.symbol} - {token.name}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
+  
+  // For single-filter mode (legacy)
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <Coins size={14} className="text-muted-foreground" />
         <span className="text-sm text-muted-foreground">
-          {isFilter ? "Filter by Token" : "Linked Tokens"}
+          Filter by Token
         </span>
       </div>
       
-      {isFilter ? (
-        // Filter mode display
-        <div className="flex flex-wrap gap-2 items-center">
-          <Select 
-            onValueChange={handleSelectToken} 
-            disabled={isLoadingTokens || availableTokens.length === 0}
-            value={selectedFilterToken || "all"}
+      <div className="flex flex-wrap gap-2 items-center">
+        <Select 
+          onValueChange={handleSelectToken} 
+          disabled={isLoadingTokens || availableTokens.length === 0}
+          value={selectedFilterToken || "all"}
+        >
+          <SelectTrigger className="w-[180px] h-8 token-select">
+            <SelectValue placeholder="Select token..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Tokens</SelectItem>
+            {isLoadingTokens ? (
+              <SelectItem value="loading" disabled>Loading tokens...</SelectItem>
+            ) : availableTokens.length === 0 ? (
+              <SelectItem value="none" disabled>No tokens available</SelectItem>
+            ) : (
+              availableTokens.map(token => (
+                <SelectItem key={token.id} value={token.id}>
+                  {token.symbol} - {token.name}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+        
+        {selectedFilterToken && (
+          <Badge 
+            variant="secondary" 
+            className="px-3 py-1 text-xs gap-2 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/80"
           >
-            <SelectTrigger className="w-[180px] h-8 token-select">
-              <SelectValue placeholder="Select token..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Tokens</SelectItem>
-              {isLoadingTokens ? (
-                <SelectItem value="loading" disabled>Loading tokens...</SelectItem>
-              ) : availableTokens.length === 0 ? (
-                <SelectItem value="none" disabled>No tokens available</SelectItem>
-              ) : (
-                availableTokens.map(token => (
-                  <SelectItem key={token.id} value={token.id}>
-                    {token.symbol} - {token.name}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-          
-          {selectedFilterToken && (
-            <Badge 
-              variant="secondary" 
-              className="px-3 py-1 text-sm gap-2 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/80"
+            {tokens.find(t => t.id === selectedFilterToken)?.symbol} - {tokens.find(t => t.id === selectedFilterToken)?.name}
+            <button 
+              onClick={() => onFilterChange && onFilterChange(null)} 
+              className="text-white/70 hover:text-white"
             >
-              {tokens.find(t => t.id === selectedFilterToken)?.symbol} - {tokens.find(t => t.id === selectedFilterToken)?.name}
-              <button 
-                onClick={() => onFilterChange && onFilterChange(null)} 
-                className="text-white/70 hover:text-white"
-              >
-                <X size={12} />
-              </button>
-            </Badge>
-          )}
-        </div>
-      ) : (
-        // Normal token selection display
-        <div className="flex flex-wrap gap-2 items-center">
-          {selectedTokens.map(token => (
-            <Badge key={token.id} variant="secondary" className="px-3 py-1 text-sm gap-2 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/80">
-              {token.symbol} - {token.name}
-              <button onClick={() => handleRemoveToken(token.id)} className="text-white/70 hover:text-white">
-                <X size={12} />
-              </button>
-            </Badge>
-          ))}
-          
-          <Select 
-            onValueChange={handleSelectToken} 
-            disabled={isLoadingTokens || availableTokens.length === 0}
-            value=""
-          >
-            <SelectTrigger className="w-[180px] h-8 token-select">
-              <SelectValue placeholder="Link token..." />
-            </SelectTrigger>
-            <SelectContent>
-              {isLoadingTokens ? (
-                <SelectItem value="loading" disabled>Loading tokens...</SelectItem>
-              ) : availableTokens.length === 0 ? (
-                <SelectItem value="none" disabled>No more tokens available</SelectItem>
-              ) : (
-                availableTokens.map(token => (
-                  <SelectItem key={token.id} value={token.id}>
-                    {token.symbol} - {token.name}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+              <X size={12} />
+            </button>
+          </Badge>
+        )}
+      </div>
     </div>
   );
 };

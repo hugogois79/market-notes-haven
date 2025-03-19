@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -125,6 +126,11 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Compact note card styles */
+.note-card-compact {
+  max-height: 150px;
 }
 
 /* Rich Text Editor Styles */
@@ -315,6 +321,19 @@
     background-color: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(5px);
     border-bottom: 1px solid var(--border);
+  }
+  
+  /* Compact filter sections */
+  .filter-section {
+    @apply p-3 space-y-2;
+  }
+  
+  .filter-section-title {
+    @apply text-sm font-medium flex items-center gap-1 text-muted-foreground;
+  }
+  
+  .filter-badge {
+    @apply text-xs py-0.5 px-2 cursor-pointer;
   }
 }
 

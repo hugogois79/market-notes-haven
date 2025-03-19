@@ -12,26 +12,28 @@ import {
   List,
   X,
   FolderOpenDot,
+  FilterX,
+  Coins,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import NoteCard from "@/components/NoteCard";
 import { Note, Tag as TagType, Token } from "@/types";
 import { useNavigate } from "react-router-dom";
-import { fetchNotes } from "@/services/supabaseService";
 import { fetchTags } from "@/services/tagService";
 import { fetchTokens } from "@/services/tokenService";
 import TokenSection from "@/components/RichTextEditor/TokenSection";
 import { useNotes } from "@/contexts/NotesContext";
+import TagBadge from "@/components/ui/tag-badge";
 
 const Notes = () => {
   const navigate = useNavigate();
   const { notes: contextNotes, isLoading: isLoadingContextNotes, refetch } = useNotes();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [selectedToken, setSelectedToken] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [tokenFilteredNotes, setTokenFilteredNotes] = useState<string[]>([]);
+  const [tokenFilteredNotes, setTokenFilteredNotes] = useState<Record<string, string[]>>({});
   const [tokenFilteringComplete, setTokenFilteringComplete] = useState(false);
 
   // Fetch tags
@@ -48,9 +50,9 @@ const Notes = () => {
 
   // Reset token filtering when token selection changes
   useEffect(() => {
-    setTokenFilteredNotes([]);
-    setTokenFilteringComplete(selectedToken === null);
-  }, [selectedToken]);
+    setTokenFilteredNotes({});
+    setTokenFilteringComplete(selectedTokens.length === 0);
+  }, [selectedTokens]);
 
   // Create tag mapping for display
   const tagMapping = tags.reduce((acc: Record<string, string>, tag: TagType) => {
@@ -59,9 +61,12 @@ const Notes = () => {
   }, {});
 
   // Handle token match feedback from NoteCard components
-  const handleTokenMatch = useCallback((noteId: string, matches: boolean) => {
+  const handleTokenMatch = useCallback((noteId: string, tokenId: string, matches: boolean) => {
     if (matches) {
-      setTokenFilteredNotes(prev => [...prev, noteId]);
+      setTokenFilteredNotes(prev => ({
+        ...prev,
+        [tokenId]: [...(prev[tokenId] || []), noteId]
+      }));
     }
   }, []);
 
@@ -70,10 +75,12 @@ const Notes = () => {
     new Set(contextNotes.filter(note => note.category).map(note => note.category))
   );
 
-  // Get selected token name for display
-  const selectedTokenName = tokens.find(token => token.id === selectedToken)?.symbol || selectedToken;
+  // Get selected token names for display
+  const selectedTokenNames = tokens
+    .filter(token => selectedTokens.includes(token.id))
+    .map(token => token.symbol);
 
-  // Filter notes based on search, category, tag, and token
+  // Filter notes based on search, categories, tags, and tokens
   const filteredNotes = contextNotes.filter((note) => {
     if (!note) return false;
 
@@ -84,22 +91,28 @@ const Notes = () => {
         note.content.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const categoryMatch =
-      !selectedCategory || note.category === selectedCategory;
+      selectedCategories.length === 0 || 
+      (note.category && selectedCategories.includes(note.category));
 
     const tagMatch =
-      !selectedTag || (note.tags && note.tags.includes(selectedTag));
+      selectedTags.length === 0 || 
+      (note.tags && note.tags.some(tag => selectedTags.includes(tag)));
 
-    const tokenMatch = 
-      !selectedToken || 
-      (tokenFilteringComplete && tokenFilteredNotes.includes(note.id));
-    
-    if (!selectedToken) {
-      return searchMatch && categoryMatch && tagMatch;
-    } else if (!tokenFilteringComplete) {
-      return searchMatch && categoryMatch && tagMatch;
-    } else {
-      return searchMatch && categoryMatch && tagMatch && tokenMatch;
+    // For token filtering, a note matches if it contains ANY of the selected tokens
+    let tokenMatch = true;
+    if (selectedTokens.length > 0) {
+      if (!tokenFilteringComplete) {
+        // Still filtering, include all notes for now
+        tokenMatch = true;
+      } else {
+        // Check if note is in any of the filtered note lists for the selected tokens
+        tokenMatch = selectedTokens.some(tokenId => 
+          tokenFilteredNotes[tokenId]?.includes(note.id)
+        );
+      }
     }
+    
+    return searchMatch && categoryMatch && tagMatch && tokenMatch;
   });
 
   // Create new note
@@ -107,39 +120,67 @@ const Notes = () => {
     navigate("/editor/new");
   };
 
+  // Toggle category selection
+  const toggleCategory = (category: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  // Toggle tag selection
+  const toggleTag = (tagId: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tagId)
+        ? prev.filter(t => t !== tagId)
+        : [...prev, tagId]
+    );
+  };
+
+  // Toggle token selection
+  const toggleToken = (tokenId: string) => {
+    setSelectedTokens(prev => 
+      prev.includes(tokenId)
+        ? prev.filter(t => t !== tokenId)
+        : [...prev, tokenId]
+    );
+  };
+
   // Clear all filters
   const handleClearFilters = () => {
     setSearchQuery("");
-    setSelectedCategory(null);
-    setSelectedTag(null);
-    setSelectedToken(null);
+    setSelectedCategories([]);
+    setSelectedTags([]);
+    setSelectedTokens([]);
   };
 
   // Check if any filters are active
   const areFiltersActive =
-    searchQuery !== "" || selectedCategory !== null || selectedTag !== null || selectedToken !== null;
+    searchQuery !== "" || 
+    selectedCategories.length > 0 || 
+    selectedTags.length > 0 || 
+    selectedTokens.length > 0;
 
   // Update token filtering complete status when we have results
   useEffect(() => {
-    if (selectedToken && tokenFilteredNotes.length > 0) {
-      setTokenFilteringComplete(true);
+    if (selectedTokens.length > 0) {
+      // Check if we have results for all selected tokens
+      const allTokensFiltered = selectedTokens.every(
+        tokenId => tokenId in tokenFilteredNotes
+      );
+      
+      if (allTokensFiltered) {
+        setTokenFilteringComplete(true);
+      }
     }
-  }, [tokenFilteredNotes, selectedToken]);
+  }, [tokenFilteredNotes, selectedTokens]);
   
   // Count filtered notes
   const filteredNoteCount = filteredNotes.length;
 
-  // Handle token selection for filter
-  const handleTokenSelect = (token: Token | string) => {
-    if (typeof token === 'string') {
-      setSelectedToken(token);
-    } else {
-      setSelectedToken(token.id);
-    }
-  };
-
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto py-6 space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Notes</h1>
@@ -167,29 +208,21 @@ const Notes = () => {
         </div>
         <div className="flex gap-2">
           <Button
-            variant={selectedCategory !== null ? "default" : "outline"}
-            className="gap-1"
-            onClick={() => setSelectedCategory(selectedCategory ? null : categories[0])}
-            disabled={categories.length === 0}
-          >
-            <FolderOpenDot size={16} />
-            Category
-          </Button>
-          <Button
-            variant={selectedTag !== null ? "default" : "outline"}
-            className="gap-1"
-            onClick={() => setSelectedTag(selectedTag ? null : tags[0]?.id)}
-            disabled={tags.length === 0}
-          >
-            <Tag size={16} />
-            Tags{selectedTag ? " (1)" : ""}
-          </Button>
-          <Button
             variant="outline"
             onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
           >
             {viewMode === "grid" ? <List size={16} /> : <Grid3X3 size={16} />}
           </Button>
+          {areFiltersActive && (
+            <Button
+              variant="outline"
+              onClick={handleClearFilters}
+              className="gap-1 text-xs"
+            >
+              <FilterX size={16} />
+              Clear filters
+            </Button>
+          )}
         </div>
       </div>
 
@@ -197,45 +230,55 @@ const Notes = () => {
       {areFiltersActive && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted-foreground">Filters:</span>
-          {selectedCategory && (
+          
+          {selectedCategories.map(category => (
             <Badge
+              key={category}
               variant="outline"
               className="flex items-center gap-1 bg-muted/40"
             >
-              Category: {selectedCategory}
+              Category: {category}
               <X
                 size={14}
                 className="cursor-pointer"
-                onClick={() => setSelectedCategory(null)}
+                onClick={() => toggleCategory(category)}
               />
             </Badge>
-          )}
-          {selectedTag && (
+          ))}
+          
+          {selectedTags.map(tagId => (
             <Badge
+              key={tagId}
               variant="outline"
               className="flex items-center gap-1 bg-muted/40"
             >
-              Tag: {tagMapping[selectedTag] || selectedTag}
+              Tag: {tagMapping[tagId] || tagId}
               <X
                 size={14}
                 className="cursor-pointer"
-                onClick={() => setSelectedTag(null)}
+                onClick={() => toggleTag(tagId)}
               />
             </Badge>
-          )}
-          {selectedToken && (
-            <Badge
-              variant="outline"
-              className="flex items-center gap-1 bg-muted/40"
-            >
-              Token: {selectedTokenName}
-              <X
-                size={14}
-                className="cursor-pointer"
-                onClick={() => setSelectedToken(null)}
-              />
-            </Badge>
-          )}
+          ))}
+          
+          {selectedTokens.map(tokenId => {
+            const token = tokens.find(t => t.id === tokenId);
+            return (
+              <Badge
+                key={tokenId}
+                variant="outline"
+                className="flex items-center gap-1 bg-muted/40"
+              >
+                Token: {token?.symbol || tokenId}
+                <X
+                  size={14}
+                  className="cursor-pointer"
+                  onClick={() => toggleToken(tokenId)}
+                />
+              </Badge>
+            );
+          })}
+          
           {searchQuery && (
             <Badge
               variant="outline"
@@ -249,34 +292,13 @@ const Notes = () => {
               />
             </Badge>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClearFilters}
-            className="ml-auto text-xs"
-          >
-            Clear filters
-          </Button>
         </div>
       )}
 
       {/* Filters section */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Token filter */}
-        <Card className="p-4 border rounded-md">
-          <TokenSection
-            isFilter={true}
-            selectedTokens={[]}
-            handleRemoveToken={() => {}}
-            handleTokenSelect={handleTokenSelect}
-            isLoadingTokens={isLoadingTokens}
-            onFilterChange={setSelectedToken}
-            selectedFilterToken={selectedToken}
-          />
-        </Card>
-        
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {/* Category filter */}
-        <Card className="p-4 border rounded-md">
+        <Card className="p-3 border rounded-md">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <FolderOpenDot size={14} className="text-muted-foreground" />
@@ -288,9 +310,9 @@ const Notes = () => {
               {categories.map(category => (
                 <Badge 
                   key={category}
-                  variant={selectedCategory === category ? "default" : "secondary"}
+                  variant={selectedCategories.includes(category) ? "default" : "secondary"}
                   className="cursor-pointer px-3 py-1"
-                  onClick={() => setSelectedCategory(selectedCategory === category ? null : category)}
+                  onClick={() => toggleCategory(category)}
                 >
                   {category}
                 </Badge>
@@ -303,7 +325,7 @@ const Notes = () => {
         </Card>
         
         {/* Tag filter */}
-        <Card className="p-4 border rounded-md">
+        <Card className="p-3 border rounded-md">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <Tag size={14} className="text-muted-foreground" />
@@ -313,18 +335,42 @@ const Notes = () => {
             </div>
             <div className="flex flex-wrap gap-2">
               {tags.map(tag => (
-                <Badge 
+                <TagBadge 
                   key={tag.id}
-                  variant={selectedTag === tag.id ? "default" : "secondary"}
-                  className="cursor-pointer px-3 py-1 flex items-center gap-1"
-                  onClick={() => setSelectedTag(selectedTag === tag.id ? null : tag.id)}
-                >
-                  <Tag size={12} />
-                  {tag.name}
-                </Badge>
+                  tag={tag.name}
+                  selected={selectedTags.includes(tag.id)}
+                  onClick={() => toggleTag(tag.id)}
+                />
               ))}
               {tags.length === 0 && (
                 <span className="text-sm text-muted-foreground">No tags available</span>
+              )}
+            </div>
+          </div>
+        </Card>
+        
+        {/* Token filter */}
+        <Card className="p-3 border rounded-md">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Coins size={14} className="text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                Filter by Token
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {tokens.map(token => (
+                <Badge 
+                  key={token.id}
+                  variant={selectedTokens.includes(token.id) ? "default" : "secondary"}
+                  className="cursor-pointer px-3 py-1 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/80"
+                  onClick={() => toggleToken(token.id)}
+                >
+                  {token.symbol}
+                </Badge>
+              ))}
+              {tokens.length === 0 && (
+                <span className="text-sm text-muted-foreground">No tokens available</span>
               )}
             </div>
           </div>
@@ -335,7 +381,7 @@ const Notes = () => {
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
           Showing {filteredNoteCount} of {contextNotes.length} notes
-          {selectedToken && !tokenFilteringComplete && (
+          {selectedTokens.length > 0 && !tokenFilteringComplete && (
             <span className="ml-2 italic">Filtering in progress...</span>
           )}
         </div>
@@ -347,7 +393,7 @@ const Notes = () => {
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card
               key={i}
-              className="h-40 animate-pulse bg-muted/40 glass-card"
+              className="h-32 animate-pulse bg-muted/40 glass-card"
             />
           ))}
         </div>
@@ -362,7 +408,7 @@ const Notes = () => {
           {filteredNotes.length === 0 ? (
             <div className="col-span-full text-center py-12">
               <p className="text-muted-foreground">
-                {selectedToken && !tokenFilteringComplete
+                {selectedTokens.length > 0 && !tokenFilteringComplete
                   ? "Filtering notes by token..."
                   : contextNotes.length === 0
                   ? "No notes found. Create your first note!"
@@ -376,8 +422,8 @@ const Notes = () => {
                 note={note}
                 className={viewMode === "list" ? "flex-row items-center" : ""}
                 tagMapping={tagMapping}
-                selectedTokenId={selectedToken}
-                onTokenMatch={selectedToken ? handleTokenMatch : undefined}
+                selectedTokenIds={selectedTokens}
+                onTokenMatch={selectedTokens.length > 0 ? handleTokenMatch : undefined}
               />
             ))
           )}
