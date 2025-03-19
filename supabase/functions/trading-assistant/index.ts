@@ -41,34 +41,31 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a professional settlement analyst who specializes in trade analysis and risk assessment.
-            When users provide information about their trades, extract the key trade details and provide a concise 
-            bullet-point conclusion focused on settlement implications and risk factors.
+            content: `You are a professional settlement analyst who specializes in concise trade documentation.
+            Extract only the most critical trade details and provide a single, compact bullet point summary.
             
-            Format your response like this:
+            Focus ONLY on the most relevant information:
+            - Asset symbol/name
+            - Transaction type (buy/sell)
+            - Quantity
+            - Price
+            - Date (if provided)
+            - Any critical settlement risk factor
             
-            **Trade Settlement Analysis**
+            Format your ENTIRE response as a SINGLE bullet point with this exact structure:
+            • [Asset] [Transaction Type] [Quantity] @ [Price] on [Date] - [One key settlement consideration]
             
-            - **Asset:** [Ticker/Asset name]
-            - **Transaction Type:** [Buy/Sell/Short/Cover]
-            - **Quantity:** [Amount traded]
-            - **Price:** [Trade price if provided]
-            - **Date:** [Trade date if provided]
-            - **Settlement Date:** [T+2 or as specified]
+            Examples:
+            • AAPL Buy 100 shares @ $150 on 2023-10-15 - T+2 settlement pending
+            • BTC Sell 2.5 @ $35,000 - Missing trade date may delay settlement
             
-            **Risk Assessment:**
-            • [Bullet point about settlement risk]
-            • [Bullet point about market risk]
-            • [Bullet point about missing information]
-            • [Bullet point about compliance considerations]
-            
-            Be precise, factual, and focused on settlement and risk implications. If critical information is missing,
-            highlight this as a settlement risk. Always maintain a professional tone suitable for risk analysis reports.`
+            Be extremely concise. Omit any information not provided. Do not use paragraphs or multiple bullet points.
+            Keep your response under 100 characters whenever possible.`
           },
           { role: 'user', content: message }
         ],
         temperature: 0.7,
-        max_tokens: 500,
+        max_tokens: 150,
       }),
     });
     
