@@ -15,26 +15,34 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
   
-  // Parse the request body
-  const { message, noteId, action } = await req.json();
-  
-  if (!message || !noteId) {
-    return new Response(
-      JSON.stringify({ error: 'Message and noteId are required' }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
-  }
-  
   try {
+    // Parse the request body
+    const requestData = await req.json();
+    const { message, noteId, action, summaryText } = requestData;
+    
+    if (!message || !noteId) {
+      return new Response(
+        JSON.stringify({ error: 'Message and noteId are required' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
     // Handle removal action if specified
     if (action === 'remove_bullet_point') {
-      const { summaryText } = await req.json();
       if (!summaryText) {
-        throw new Error('Summary text is required for removal action');
+        return new Response(
+          JSON.stringify({ error: 'Summary text is required for removal action' }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
       }
+      
+      console.log(`Processing removal request: "${message}" from summary: "${summaryText}"`);
       
       // Call OpenAI to process the removal request
       const removalResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -79,6 +87,7 @@ serve(async (req) => {
       }
       
       const updatedSummary = removalData.choices[0].message.content;
+      console.log(`Updated summary: "${updatedSummary}"`);
       
       return new Response(
         JSON.stringify({ 

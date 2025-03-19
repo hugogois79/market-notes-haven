@@ -73,6 +73,8 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
         
           if (userMessageError) throw userMessageError;
           
+          console.log("Sending removal request with summary:", currentSummary);
+          
           // Call the edge function with remove action
           const response = await supabase.functions.invoke('trading-assistant', {
             body: { 
