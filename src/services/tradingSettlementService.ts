@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { TradingSettlementNote } from "@/types";
 import { toast } from "sonner";
@@ -75,11 +76,23 @@ export const fetchTradingSettlementNotes = async (noteId: string): Promise<Tradi
 // Create a new trading settlement note
 export const createTradingSettlementNote = async (note: Omit<TradingSettlementNote, 'id' | 'createdAt' | 'updatedAt'>): Promise<TradingSettlementNote | null> => {
   try {
-    const dbNote = tradingSettlementNoteToDbNote(note);
+    // Create a fully typed object with all required fields for Supabase
+    const dbNoteData = {
+      note_id: note.noteId,
+      trade_date: note.tradeDate?.toISOString() || new Date().toISOString(),
+      settlement_date: note.settlementDate?.toISOString() || null,
+      asset_symbol: note.assetSymbol,
+      quantity: note.quantity,
+      price: note.price,
+      trade_type: note.tradeType,
+      fees: note.fees ?? null,
+      pnl: note.pnl ?? null,
+      notes: note.notes ?? null
+    };
     
     const { data, error } = await supabase
       .from('trading_settlement_notes')
-      .insert(dbNote)
+      .insert(dbNoteData)
       .select()
       .single();
 
