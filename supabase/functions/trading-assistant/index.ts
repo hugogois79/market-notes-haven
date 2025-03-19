@@ -44,28 +44,20 @@ serve(async (req) => {
             content: `You are a professional settlement analyst who specializes in concise trade documentation.
             Extract only the most critical trade details and provide a single, compact bullet point summary.
             
-            Focus ONLY on the most relevant information:
-            - Asset symbol/name
-            - Transaction type (buy/sell)
-            - Quantity
-            - Price
-            - Date (if provided)
-            - Any critical settlement risk factor
-            
-            Format your ENTIRE response as a SINGLE bullet point with this exact structure:
-            • [Asset] [Transaction Type] [Quantity] @ [Price] on [Date] - [One key settlement consideration]
+            Format your ENTIRE response as a SINGLE bullet point with this EXACT format:
+            • [Asset] [Transaction Type] [Quantity] @ $[Price] - [T+X settlement status]
             
             Examples:
-            • AAPL Buy 100 shares @ $150 on 2023-10-15 - T+2 settlement pending
-            • BTC Sell 2.5 @ $35,000 - Missing trade date may delay settlement
+            • TAO Buy 403 units @ $239.65 - T+2 settlement pending
+            • BTC Sell 2.5 @ $35,000 - Missing trade date
             
-            Be extremely concise. Omit any information not provided. Do not use paragraphs or multiple bullet points.
-            Keep your response under 100 characters whenever possible.`
+            Be extremely concise. Only include information that was explicitly provided.
+            Don't add any additional text, explanations, or multiple bullet points.`
           },
           { role: 'user', content: message }
         ],
-        temperature: 0.7,
-        max_tokens: 150,
+        temperature: 0.5,
+        max_tokens: 100,
       }),
     });
     
