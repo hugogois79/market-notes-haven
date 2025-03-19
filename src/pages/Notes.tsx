@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -14,6 +13,7 @@ import {
   FolderOpenDot,
   FilterX,
   Coins,
+  ChevronDown,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import NoteCard from "@/components/NoteCard";
@@ -21,9 +21,17 @@ import { Note, Tag as TagType, Token } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { fetchTags } from "@/services/tagService";
 import { fetchTokens } from "@/services/tokenService";
-import TokenSection from "@/components/RichTextEditor/TokenSection";
 import { useNotes } from "@/contexts/NotesContext";
 import TagBadge from "@/components/ui/tag-badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 
 const Notes = () => {
   const navigate = useNavigate();
@@ -295,86 +303,106 @@ const Notes = () => {
         </div>
       )}
 
-      {/* Filters section */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {/* Category filter */}
-        <Card className="p-3 border rounded-md">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <FolderOpenDot size={14} className="text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                Filter by Category
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {categories.map(category => (
-                <Badge 
+      {/* Filters section with dropdown menus */}
+      <div className="flex flex-wrap gap-4">
+        {/* Category filter dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2 bg-background">
+              <FolderOpenDot size={16} />
+              Filter by Category
+              <ChevronDown size={14} className="ml-2" />
+              {selectedCategories.length > 0 && (
+                <Badge className="ml-2 bg-primary text-primary-foreground">
+                  {selectedCategories.length}
+                </Badge>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56 bg-popover">
+            <DropdownMenuLabel>Select Categories</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {categories.length === 0 ? (
+              <DropdownMenuItem disabled>No categories available</DropdownMenuItem>
+            ) : (
+              categories.map(category => (
+                <DropdownMenuCheckboxItem
                   key={category}
-                  variant={selectedCategories.includes(category) ? "default" : "secondary"}
-                  className="cursor-pointer px-3 py-1"
-                  onClick={() => toggleCategory(category)}
+                  checked={selectedCategories.includes(category)}
+                  onCheckedChange={() => toggleCategory(category)}
                 >
                   {category}
-                </Badge>
-              ))}
-              {categories.length === 0 && (
-                <span className="text-sm text-muted-foreground">No categories available</span>
-              )}
-            </div>
-          </div>
-        </Card>
+                </DropdownMenuCheckboxItem>
+              ))
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
         
-        {/* Tag filter */}
-        <Card className="p-3 border rounded-md">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <Tag size={14} className="text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                Filter by Tag
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {tags.map(tag => (
-                <TagBadge 
+        {/* Tag filter dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2 bg-background">
+              <Tag size={16} />
+              Filter by Tag
+              <ChevronDown size={14} className="ml-2" />
+              {selectedTags.length > 0 && (
+                <Badge className="ml-2 bg-primary text-primary-foreground">
+                  {selectedTags.length}
+                </Badge>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56 bg-popover">
+            <DropdownMenuLabel>Select Tags</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {tags.length === 0 ? (
+              <DropdownMenuItem disabled>No tags available</DropdownMenuItem>
+            ) : (
+              tags.map(tag => (
+                <DropdownMenuCheckboxItem
                   key={tag.id}
-                  tag={tag.name}
-                  selected={selectedTags.includes(tag.id)}
-                  onClick={() => toggleTag(tag.id)}
-                />
-              ))}
-              {tags.length === 0 && (
-                <span className="text-sm text-muted-foreground">No tags available</span>
-              )}
-            </div>
-          </div>
-        </Card>
-        
-        {/* Token filter */}
-        <Card className="p-3 border rounded-md">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <Coins size={14} className="text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                Filter by Token
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {tokens.map(token => (
-                <Badge 
-                  key={token.id}
-                  variant={selectedTokens.includes(token.id) ? "default" : "secondary"}
-                  className="cursor-pointer px-3 py-1 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/80"
-                  onClick={() => toggleToken(token.id)}
+                  checked={selectedTags.includes(tag.id)}
+                  onCheckedChange={() => toggleTag(tag.id)}
                 >
-                  {token.symbol}
+                  {tag.name}
+                </DropdownMenuCheckboxItem>
+              ))
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        
+        {/* Token filter dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2 bg-background">
+              <Coins size={16} />
+              Filter by Token
+              <ChevronDown size={14} className="ml-2" />
+              {selectedTokens.length > 0 && (
+                <Badge className="ml-2 bg-primary text-primary-foreground">
+                  {selectedTokens.length}
                 </Badge>
-              ))}
-              {tokens.length === 0 && (
-                <span className="text-sm text-muted-foreground">No tokens available</span>
               )}
-            </div>
-          </div>
-        </Card>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56 bg-popover">
+            <DropdownMenuLabel>Select Tokens</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {tokens.length === 0 ? (
+              <DropdownMenuItem disabled>No tokens available</DropdownMenuItem>
+            ) : (
+              tokens.map(token => (
+                <DropdownMenuCheckboxItem
+                  key={token.id}
+                  checked={selectedTokens.includes(token.id)}
+                  onCheckedChange={() => toggleToken(token.id)}
+                >
+                  {token.symbol} - {token.name}
+                </DropdownMenuCheckboxItem>
+              ))
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Notes count */}
