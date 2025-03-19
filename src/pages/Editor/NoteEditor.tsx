@@ -146,12 +146,15 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
 
   // Handle token changes
   const handleTokensChange = async (tokens: Token[]) => {
-    console.log("Tokens changed:", tokens);
+    console.log("Tokens changed in NoteEditor:", tokens);
     setLocalLinkedTokens(tokens);
     
     if (currentNote.id && !currentNote.id.startsWith('temp-')) {
       const currentTokenIds = linkedTokens.map(token => token.id);
       const newTokenIds = tokens.map(token => token.id);
+      
+      console.log("Current token IDs:", currentTokenIds);
+      console.log("New token IDs:", newTokenIds);
       
       // Find tokens to add (in newTokenIds but not in currentTokenIds)
       const tokensToAdd = newTokenIds.filter(id => !currentTokenIds.includes(id));
@@ -159,9 +162,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       // Find tokens to remove (in currentTokenIds but not in newTokenIds)
       const tokensToRemove = currentTokenIds.filter(id => !newTokenIds.includes(id));
       
+      console.log("Tokens to add:", tokensToAdd);
+      console.log("Tokens to remove:", tokensToRemove);
+      
       // Link new tokens
       for (const tokenId of tokensToAdd) {
         try {
+          console.log(`Linking token ${tokenId} to note ${currentNote.id}`);
           const success = await linkTokenToNote(currentNote.id, tokenId);
           if (!success) {
             toast.error(`Failed to link token: ${tokenId}`);
@@ -174,6 +181,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       // Unlink removed tokens
       for (const tokenId of tokensToRemove) {
         try {
+          console.log(`Unlinking token ${tokenId} from note ${currentNote.id}`);
           const success = await unlinkTokenFromNote(currentNote.id, tokenId);
           if (!success) {
             toast.error(`Failed to unlink token: ${tokenId}`);
@@ -184,7 +192,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       }
     }
     
-    setPendingChanges({ ...pendingChanges, tokens });
+    // Also ensure the tokens are saved in the note object
+    setPendingChanges(prev => ({ ...prev }));
+    
+    // Force a save with the current changes to ensure tokens are saved
+    if (tokens.length > 0) {
+      handleManualSave();
+    }
   };
 
   // Handle attachment changes
@@ -219,6 +233,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Manual save function to handle immediate saves
+  const handleManualSave = async () => {
+    await handleSaveWithChanges(pendingChanges, false);
   };
 
   // Common save function for both manual and auto save
@@ -257,7 +276,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         onSave={handleAutoSave}
         autoSave={autoSave}
         isSaving={isSaving}
-        manualSave={() => saveChanges(false)}
+        manualSave={handleManualSave}
         summary={currentNote.summary}
         onSummaryGenerated={handleSummaryGenerated}
         tradeInfo={localTradeInfo}

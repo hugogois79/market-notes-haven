@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Tag, Token, Note, TradeInfo } from "@/types";
@@ -174,18 +175,39 @@ const RichTextEditor = ({
     setTagInput("");
   };
 
-  // Function to handle selecting a token
-  const handleTokenSelect = (tokenId: string) => {
-    // Find the token in the available tokens
-    if (tokenId && availableTokens.length > 0) {
+  // Function to handle selecting a token - accepts either Token object or token ID string
+  const handleTokenSelect = (tokenOrId: Token | string) => {
+    console.log("RichTextEditor: handleTokenSelect received:", tokenOrId);
+    
+    if (typeof tokenOrId === 'string') {
+      // We received a token ID
+      const tokenId = tokenOrId;
+      
+      // Find the token in available tokens
       const token = availableTokens.find(t => t.id === tokenId);
       if (token) {
+        console.log("RichTextEditor: Found token by ID:", token);
         const tokenExists = linkedTokens.some(t => t.id === token.id);
         if (!tokenExists) {
-          onTokensChange([...linkedTokens, token]);
+          const updatedTokens = [...linkedTokens, token];
+          console.log("RichTextEditor: Updating tokens to:", updatedTokens);
+          onTokensChange(updatedTokens);
         } else {
           toast.info("Token already linked to this note");
         }
+      } else {
+        console.error("RichTextEditor: Token not found with ID:", tokenId);
+      }
+    } else {
+      // We received a token object
+      const token = tokenOrId;
+      const tokenExists = linkedTokens.some(t => t.id === token.id);
+      if (!tokenExists) {
+        const updatedTokens = [...linkedTokens, token];
+        console.log("RichTextEditor: Updating tokens to:", updatedTokens);
+        onTokensChange(updatedTokens);
+      } else {
+        toast.info("Token already linked to this note");
       }
     }
   };
@@ -260,6 +282,7 @@ const RichTextEditor = ({
         linkedTokens={linkedTokens}
         handleRemoveToken={(tokenId) => {
           const updatedTokens = linkedTokens.filter(token => token.id !== tokenId);
+          console.log("Removing token, updated tokens:", updatedTokens);
           onTokensChange(updatedTokens);
         }}
         handleTokenSelect={handleTokenSelect}

@@ -60,7 +60,13 @@ const TokenSection: React.FC<TokenSectionProps> = ({
     // Normal token selection for linking to notes
     // Find the token object from the ID
     const tokenObj = tokens.find(t => t.id === tokenId);
-    handleTokenSelect(tokenObj || tokenId);
+    if (tokenObj) {
+      console.log("Found token object:", tokenObj);
+      handleTokenSelect(tokenObj);
+    } else {
+      console.error("Token not found with ID:", tokenId);
+      handleTokenSelect(tokenId);
+    }
     
     // Manually reset the select input by forcing a re-render with a key
     const selectElement = document.querySelector('.token-select') as HTMLElement;

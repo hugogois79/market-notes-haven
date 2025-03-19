@@ -45,6 +45,7 @@ const NoteCard = ({
         }
         
         const noteTokens = await getTokensForNote(note.id);
+        console.log(`Fetched tokens for note ${note.id}:`, noteTokens);
         setTokens(noteTokens);
         
         // If we're filtering by token, report whether this note matches each selected token
@@ -112,7 +113,7 @@ const NoteCard = ({
   return (
     <Card 
       className={cn(
-        "h-auto overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1 glass-card cursor-pointer",
+        "h-auto overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1 glass-card cursor-pointer note-card-compact",
         className
       )}
       onClick={handleNoteClick}
