@@ -25,7 +25,6 @@ const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
       setIsLoading(true);
       try {
         const noteTokens = await getTokensForNote(note.id);
-        console.log(`Tokens for note ${note.id}:`, noteTokens);
         setTokens(noteTokens);
       } catch (error) {
         console.error(`Error fetching tokens for note ${note.id}:`, error);
@@ -34,7 +33,9 @@ const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
       }
     };
     
-    fetchTokens();
+    if (note.id && !note.id.toString().startsWith('temp-')) {
+      fetchTokens();
+    }
   }, [note.id]);
   
   // Helper to get tag name from ID
@@ -53,6 +54,9 @@ const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
 
   // Extract plain text from HTML content for preview
   const getTextPreview = (htmlContent: string) => {
+    // Handle null/undefined content
+    if (!htmlContent) return "";
+    
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = htmlContent;
     const textContent = tempDiv.textContent || tempDiv.innerText || "";
@@ -65,7 +69,6 @@ const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
       return;
     }
     
-    console.log("Navigating to note:", note.id);
     // Use timeout to ensure the navigation happens after the event is processed
     setTimeout(() => {
       navigate(`/editor/${note.id}`);
@@ -83,10 +86,12 @@ const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
     >
       <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-start gap-2">
-          <h3 className="font-medium text-base line-clamp-2">{note.title}</h3>
-          <Badge variant="outline" className="shrink-0 text-xs">
-            {note.category}
-          </Badge>
+          <h3 className="font-medium text-base line-clamp-2">{note.title || "Untitled Note"}</h3>
+          {note.category && (
+            <Badge variant="outline" className="shrink-0 text-xs">
+              {note.category}
+            </Badge>
+          )}
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-2">
@@ -97,11 +102,11 @@ const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
       <CardFooter className="p-4 pt-2 flex flex-wrap gap-y-2">
         <div className="flex items-center gap-2 text-xs text-muted-foreground mr-auto">
           <Calendar size={14} />
-          <span>{formatDate(note.updatedAt)}</span>
+          <span>{formatDate(note.updatedAt || new Date())}</span>
         </div>
         
         {/* Token badges */}
-        {tokens.length > 0 && (
+        {tokens && tokens.length > 0 && (
           <div className="flex flex-wrap gap-1 w-full mt-2">
             {tokens.map(token => (
               <TokenBadge key={token.id} token={token} className="token-badge" />
@@ -110,7 +115,7 @@ const NoteCard = ({ note, className, tagMapping = {} }: NoteCardProps) => {
         )}
         
         {/* Tags - displayed right after tokens */}
-        {note.tags.length > 0 && (
+        {note.tags && note.tags.length > 0 && (
           <div className="flex flex-wrap items-center gap-1 w-full mt-1">
             {note.tags.map((tagId) => (
               <Badge key={tagId} className="text-xs py-0.5 px-2 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90 flex items-center gap-1">

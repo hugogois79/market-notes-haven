@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import NoteCard from "@/components/NoteCard";
-import { Note, Tag as TagType } from "@/types";
+import { Note, Tag as TagType, Token } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { fetchNotes } from "@/services/supabaseService";
 import { fetchTags } from "@/services/tagService";
@@ -76,12 +76,12 @@ const Notes = () => {
 
     // Tag filter
     const tagMatch =
-      selectedTag === null || note.tags.includes(selectedTag);
+      selectedTag === null || (note.tags && note.tags.includes(selectedTag));
 
-    // Check if any of the note's tokens match the selected token
-    const tokenMatch = selectedToken === null;
+    // Token filter will be applied through the NoteCard component's useEffect
+    // We don't filter by token here as it would require additional async queries for each note
     
-    return searchMatch && categoryMatch && tagMatch && tokenMatch;
+    return searchMatch && categoryMatch && tagMatch;
   });
 
   // Handle creating a new note
@@ -180,6 +180,19 @@ const Notes = () => {
                 size={14}
                 className="cursor-pointer"
                 onClick={() => setSelectedTag(null)}
+              />
+            </Badge>
+          )}
+          {selectedToken && (
+            <Badge
+              variant="outline"
+              className="flex items-center gap-1 bg-muted/40"
+            >
+              Token: {selectedToken}
+              <X
+                size={14}
+                className="cursor-pointer"
+                onClick={() => setSelectedToken(null)}
               />
             </Badge>
           )}
