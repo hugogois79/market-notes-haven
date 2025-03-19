@@ -16,7 +16,7 @@ serve(async (req) => {
   }
   
   // Parse the request body
-  const { message, noteId } = await req.json();
+  const { message, noteId, action } = await req.json();
   
   if (!message || !noteId) {
     return new Response(
@@ -29,7 +29,69 @@ serve(async (req) => {
   }
   
   try {
-    // Call OpenAI API to process the trading information
+    // Handle removal action if specified
+    if (action === 'remove_bullet_point') {
+      const { summaryText } = await req.json();
+      if (!summaryText) {
+        throw new Error('Summary text is required for removal action');
+      }
+      
+      // Call OpenAI to process the removal request
+      const removalResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openAIApiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a helpful assistant that processes journal summaries. 
+              A user wants to remove a bullet point from their journal summary based on their natural language description.
+              
+              Current summary:
+              ${summaryText}
+              
+              The user's request to remove: "${message}"
+              
+              Find the most relevant bullet point to remove based on the user's request. If you find a match, return the updated summary without that bullet point.
+              If no bullet points match, return the original summary unchanged.
+              
+              Format your response as a clean set of bullet points, ONE per line, using the bullet character '•'. 
+              DO NOT include any explanations or additional text.
+              
+              Example format:
+              • First remaining bullet point
+              • Second remaining bullet point`
+            }
+          ],
+          temperature: 0.2,
+          max_tokens: 500,
+        }),
+      });
+      
+      const removalData = await removalResponse.json();
+      
+      if (removalData.error) {
+        throw new Error(removalData.error.message || 'Error calling OpenAI API');
+      }
+      
+      const updatedSummary = removalData.choices[0].message.content;
+      
+      return new Response(
+        JSON.stringify({ 
+          response: "Bullet point removed from summary", 
+          updatedSummary 
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
+    // Standard chat processing for normal messages
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {

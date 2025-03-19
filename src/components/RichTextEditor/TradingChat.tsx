@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Trash2, Bot, User } from "lucide-react";
+import { Send, Trash2, Bot, User, Eraser } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -25,9 +25,11 @@ interface ChatMessage {
 const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isRemoveMode, setIsRemoveMode] = useState(false);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const componentRef = useRef<HTMLDivElement>(null);
+  const [currentSummary, setCurrentSummary] = useState("");
 
   const { data: chatHistory, refetch: refetchChatHistory } = useQuery({
     queryKey: ['tradingChatHistory', noteId],
@@ -56,37 +58,90 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
       setIsProcessing(true);
       
       try {
-        const { data: userMessage, error: userMessageError } = await supabase
-          .from('trading_chat_messages')
-          .insert({
-            note_id: noteId,
-            content: message,
-            is_ai: false
-          })
-          .select('*')
-          .single() as { data: ChatMessage | null, error: any };
+        // Handle remove mode differently
+        if (isRemoveMode) {
+          // Store the user message first
+          const { data: userMessage, error: userMessageError } = await supabase
+            .from('trading_chat_messages')
+            .insert({
+              note_id: noteId,
+              content: `Remove request: ${message}`,
+              is_ai: false
+            })
+            .select('*')
+            .single() as { data: ChatMessage | null, error: any };
         
-        if (userMessageError) throw userMessageError;
-        
-        const response = await supabase.functions.invoke('trading-assistant', {
-          body: { message, noteId }
-        });
-        
-        if (response.error) throw new Error(response.error.message);
-        
-        const { data: aiResponse, error: aiResponseError } = await supabase
-          .from('trading_chat_messages')
-          .insert({
-            note_id: noteId,
-            content: response.data.response,
-            is_ai: true
-          })
-          .select('*')
-          .single() as { data: ChatMessage | null, error: any };
-        
-        if (aiResponseError) throw aiResponseError;
-        
-        return { userMessage, aiResponse };
+          if (userMessageError) throw userMessageError;
+          
+          // Call the edge function with remove action
+          const response = await supabase.functions.invoke('trading-assistant', {
+            body: { 
+              message, 
+              noteId, 
+              action: 'remove_bullet_point',
+              summaryText: currentSummary
+            }
+          });
+          
+          if (response.error) throw new Error(response.error.message);
+          
+          // Update the summary if the call was successful
+          if (response.data.updatedSummary && onChatSummaryUpdated) {
+            onChatSummaryUpdated(response.data.updatedSummary);
+            setCurrentSummary(response.data.updatedSummary);
+          }
+          
+          // Add AI response to the chat
+          const { data: aiResponse, error: aiResponseError } = await supabase
+            .from('trading_chat_messages')
+            .insert({
+              note_id: noteId,
+              content: response.data.response || "Processed removal request",
+              is_ai: true
+            })
+            .select('*')
+            .single() as { data: ChatMessage | null, error: any };
+          
+          if (aiResponseError) throw aiResponseError;
+          
+          // Turn off remove mode
+          setIsRemoveMode(false);
+          
+          return { userMessage, aiResponse };
+        } else {
+          // Normal chat flow
+          const { data: userMessage, error: userMessageError } = await supabase
+            .from('trading_chat_messages')
+            .insert({
+              note_id: noteId,
+              content: message,
+              is_ai: false
+            })
+            .select('*')
+            .single() as { data: ChatMessage | null, error: any };
+          
+          if (userMessageError) throw userMessageError;
+          
+          const response = await supabase.functions.invoke('trading-assistant', {
+            body: { message, noteId }
+          });
+          
+          if (response.error) throw new Error(response.error.message);
+          
+          const { data: aiResponse, error: aiResponseError } = await supabase
+            .from('trading_chat_messages')
+            .insert({
+              note_id: noteId,
+              content: response.data.response,
+              is_ai: true
+            })
+            .select('*')
+            .single() as { data: ChatMessage | null, error: any };
+          
+          if (aiResponseError) throw aiResponseError;
+          
+          return { userMessage, aiResponse };
+        }
       } finally {
         setIsProcessing(false);
       }
@@ -95,7 +150,7 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
       refetchChatHistory();
       setMessage("");
       
-      if (onChatSummaryUpdated) {
+      if (onChatSummaryUpdated && !isRemoveMode) {
         generateChatSummary();
       }
     },
@@ -103,9 +158,10 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
       console.error("Error sending message:", error);
       toast({
         title: "Error sending message",
-        description: "There was an error processing your trade information.",
+        description: "There was an error processing your request.",
         variant: "destructive",
       });
+      setIsRemoveMode(false);
     },
   });
 
@@ -129,6 +185,7 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
       
       if (onChatSummaryUpdated) {
         onChatSummaryUpdated("");
+        setCurrentSummary("");
       }
     },
     onError: (error) => {
@@ -164,6 +221,7 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
       }
       
       const summary = response.data?.summary || "";
+      setCurrentSummary(summary);
       
       if (summary && onChatSummaryUpdated) {
         onChatSummaryUpdated(summary);
@@ -182,6 +240,16 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  const toggleRemoveMode = () => {
+    setIsRemoveMode(!isRemoveMode);
+    if (!isRemoveMode) {
+      toast({
+        title: "Remove mode activated",
+        description: "Type what bullet point you want to remove from the summary",
+      });
     }
   };
 
@@ -216,14 +284,25 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
     <div id="trading-chat" ref={componentRef} className="flex flex-col h-[500px]">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-md font-medium">Trade Journal</h3>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => clearHistory()}
-          className="text-xs"
-        >
-          <Trash2 className="h-3.5 w-3.5 mr-1" /> Clear History
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant={isRemoveMode ? "secondary" : "outline"}
+            size="sm" 
+            onClick={toggleRemoveMode}
+            className="text-xs"
+          >
+            <Eraser className="h-3.5 w-3.5 mr-1" /> 
+            {isRemoveMode ? "Cancel Remove" : "Remove Bullet"}
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => clearHistory()}
+            className="text-xs"
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1" /> Clear History
+          </Button>
+        </div>
       </div>
       
       <Card className="flex-1 mb-3 p-0 overflow-hidden bg-slate-50 dark:bg-slate-900 border">
@@ -278,18 +357,20 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Describe your trade (e.g., 'I bought 200 units at $250 each')..."
-          className="pr-12 min-h-[80px] resize-none focus:ring-1 focus:ring-blue-500"
+          placeholder={isRemoveMode 
+            ? "Describe the bullet point to remove (e.g., 'Remove the BTC trade from yesterday')" 
+            : "Describe your trade (e.g., 'I bought 200 units at $250 each')..."}
+          className={`pr-12 min-h-[80px] resize-none focus:ring-1 ${isRemoveMode ? 'focus:ring-orange-500 border-orange-200' : 'focus:ring-blue-500'}`}
           disabled={isProcessing}
         />
         <Button
-          className="absolute right-2 bottom-2"
+          className={`absolute right-2 bottom-2 ${isRemoveMode ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
           size="sm"
           variant={message.trim() ? "default" : "ghost"}
           disabled={!message.trim() || isProcessing}
           onClick={handleSendMessage}
         >
-          <Send className="h-4 w-4" />
+          {isRemoveMode ? <Eraser className="h-4 w-4" /> : <Send className="h-4 w-4" />}
         </Button>
       </div>
     </div>
