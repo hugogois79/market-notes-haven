@@ -15,6 +15,7 @@ import {
   FilterX,
   Coins,
   ChevronDown,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import NoteCard from "@/components/NoteCard";
@@ -46,6 +47,7 @@ const Notes = () => {
   const [tokenFilteredNotes, setTokenFilteredNotes] = useState<Record<string, string[]>>({});
   const [tokenFilteringComplete, setTokenFilteringComplete] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
 
   const { data: tags = [], isLoading: isLoadingTags } = useQuery({
     queryKey: ["tags"],
@@ -190,6 +192,10 @@ const Notes = () => {
   
   const filteredNoteCount = filteredNotes.length;
 
+  // Prepare the data for the MetadataSection component
+  const selectedTagObjects = tags.filter(tag => selectedTags.includes(tag.id));
+  const selectedTokenObjects = tokens.filter(token => selectedTokens.includes(token.id));
+
   return (
     <div className="container mx-auto py-4">
       <div className="flex items-center justify-between mb-4">
@@ -205,124 +211,100 @@ const Notes = () => {
         </Button>
       </div>
 
-      {/* Top filters section - moved from sidebar */}
-      <div className="mb-6 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Categories filter */}
-          <Card className="p-3">
-            <div className="flex items-center gap-2 font-medium mb-2 text-sm">
-              <FolderOpenDot size={16} className="text-primary" />
-              Categories
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {categories.length === 0 ? (
-                <div className="text-xs text-muted-foreground p-1">No categories available</div>
-              ) : (
-                categories.map(category => (
-                  <Badge
-                    key={category}
-                    variant={selectedCategories.includes(category) ? "default" : "outline"}
-                    className={`cursor-pointer text-xs py-1 px-2 font-normal ${
-                      selectedCategories.includes(category) 
-                        ? "bg-[#0A3A5C]" 
-                        : "hover:bg-muted"
-                    }`}
-                    onClick={() => toggleCategory(category)}
-                  >
-                    {category}
-                    {selectedCategories.includes(category) && (
-                      <X size={12} className="ml-1 inline" />
-                    )}
-                  </Badge>
-                ))
-              )}
-            </div>
-          </Card>
-
-          {/* Tags filter */}
-          <Card className="p-3">
-            <div className="flex items-center gap-2 font-medium mb-2 text-sm">
-              <Tag size={16} className="text-primary" />
-              Tags
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {tags.length === 0 ? (
-                <div className="text-xs text-muted-foreground p-1">No tags available</div>
-              ) : (
-                tags.map(tag => (
-                  <TagBadge
-                    key={tag.id}
-                    tag={tag.name}
-                    selected={selectedTags.includes(tag.id)}
-                    onClick={() => toggleTag(tag.id)}
-                  />
-                ))
-              )}
-            </div>
-          </Card>
-
-          {/* Tokens filter */}
-          <Card className="p-3">
-            <div className="flex items-center gap-2 font-medium mb-2 text-sm">
-              <Coins size={16} className="text-primary" />
-              Tokens
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {tokens.length === 0 ? (
-                <div className="text-xs text-muted-foreground p-1">No tokens available</div>
-              ) : (
-                tokens.map(token => (
-                  <Badge
-                    key={token.id}
-                    variant={selectedTokens.includes(token.id) ? "default" : "outline"}
-                    className={`cursor-pointer text-xs py-1 px-2 font-normal ${
-                      selectedTokens.includes(token.id) 
-                        ? "bg-[#0A3A5C]" 
-                        : "hover:bg-muted"
-                    }`}
-                    onClick={() => toggleToken(token.id)}
-                  >
-                    <Coins size={10} className="mr-1" />
-                    {token.symbol}
-                  </Badge>
-                ))
-              )}
-            </div>
-          </Card>
+      {/* Search and filter controls row */}
+      <div className="flex flex-col sm:flex-row gap-2 items-center mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search notes..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-9"
+          />
         </div>
-
-        {/* Search and controls row */}
-        <div className="flex flex-col sm:flex-row gap-2 items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search notes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9"
-            />
-          </div>
+        
+        <div className="flex gap-2">
+          {/* Filters Button */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-1"
+              >
+                <SlidersHorizontal size={14} />
+                <span>Filters</span>
+                <Badge className="ml-1 h-5 px-1.5" variant={areFiltersActive ? "default" : "outline"}>
+                  {selectedCategories.length + selectedTags.length + selectedTokens.length}
+                </Badge>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[280px]">
+              <DropdownMenuLabel>Categories</DropdownMenuLabel>
+              <div className="max-h-40 overflow-y-auto">
+                {categories.length === 0 ? (
+                  <div className="text-xs text-center py-2 text-muted-foreground">No categories available</div>
+                ) : (
+                  categories.map(category => (
+                    <DropdownMenuCheckboxItem
+                      key={category}
+                      checked={selectedCategories.includes(category)}
+                      onCheckedChange={() => toggleCategory(category)}
+                    >
+                      <div className="flex items-center">
+                        <FolderOpenDot size={14} className="mr-2 text-muted-foreground" />
+                        {category}
+                      </div>
+                    </DropdownMenuCheckboxItem>
+                  ))
+                )}
+              </div>
+              
+              <DropdownMenuSeparator />
+              
+              {/* Tags Filter Section */}
+              <div className="px-2 py-1">
+                <MetadataSection
+                  linkedTags={selectedTagObjects}
+                  tagInput={tagInput}
+                  setTagInput={setTagInput}
+                  handleAddTag={handleAddTag}
+                  handleRemoveTag={handleRemoveTag}
+                  handleSelectTag={handleSelectTag}
+                  isLoadingTags={isLoadingTags}
+                  getAvailableTagsForSelection={getAvailableTagsForSelection}
+                  linkedTokens={selectedTokenObjects as Token[]}
+                  handleRemoveToken={toggleToken}
+                  handleTokenSelect={toggleToken}
+                  isLoadingTokens={isLoadingTokens}
+                  isFilter={true}
+                  onMultiFilterChange={toggleToken}
+                  selectedFilterTokens={selectedTokens}
+                  compact={true}
+                />
+              </div>
+              
+              <DropdownMenuSeparator />
+              
+              {areFiltersActive && (
+                <DropdownMenuItem onClick={handleClearFilters} className="justify-center text-red-500">
+                  <FilterX size={14} className="mr-2" />
+                  Clear all filters
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          {/* View Toggle Button */}
           <Button
             variant="outline"
             onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
             size="sm"
-            className="h-9 sm:w-auto w-full"
+            className="h-9"
           >
             {viewMode === "grid" ? <List size={16} /> : <Grid3X3 size={16} />}
-            <span className="ml-2">{viewMode === "grid" ? "List view" : "Grid view"}</span>
+            <span className="ml-2 hidden sm:inline">{viewMode === "grid" ? "List view" : "Grid view"}</span>
           </Button>
-          
-          {areFiltersActive && (
-            <Button
-              variant="outline"
-              onClick={handleClearFilters}
-              size="sm"
-              className="h-9 gap-1 text-xs"
-            >
-              <FilterX size={14} />
-              Clear all filters
-            </Button>
-          )}
         </div>
       </div>
 
@@ -396,6 +378,16 @@ const Notes = () => {
               />
             </Badge>
           )}
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearFilters}
+            className="h-6 px-2 text-xs ml-auto"
+          >
+            <FilterX size={12} className="mr-1" />
+            Clear all
+          </Button>
         </div>
       )}
 

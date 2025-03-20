@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { X, Coins } from "lucide-react";
+import { X, Coins, ChevronDown } from "lucide-react";
 import { Token } from "@/types";
 import {
   Select,
@@ -10,6 +10,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { fetchTokens } from "@/services/tokenService";
 import { useQuery } from "@tanstack/react-query";
 
@@ -23,6 +32,7 @@ interface TokenSectionProps {
   selectedFilterToken?: string | null; // For single token filter
   onMultiFilterChange?: (tokenId: string) => void; // For multi-token filter
   selectedFilterTokens?: string[]; // For multi-token filter
+  compact?: boolean; // New prop for compact mode
 }
 
 const TokenSection: React.FC<TokenSectionProps> = ({
@@ -34,7 +44,8 @@ const TokenSection: React.FC<TokenSectionProps> = ({
   onFilterChange,
   selectedFilterToken = null,
   onMultiFilterChange,
-  selectedFilterTokens = []
+  selectedFilterTokens = [],
+  compact = false
 }) => {
   // Fetch all available tokens
   const { data: tokens = [] } = useQuery({
@@ -97,7 +108,83 @@ const TokenSection: React.FC<TokenSectionProps> = ({
   
   const availableTokens = getAvailableTokens();
   
-  // For normal mode or multi-filter mode
+  // Compact dropdown mode for filter or regular use
+  if (compact) {
+    const displayTokens = isFilter ? 
+      (selectedFilterTokens?.map(id => tokens.find(t => t.id === id)).filter(Boolean) as Token[]) : 
+      selectedTokens;
+    
+    return (
+      <div className="flex items-center gap-2">
+        <div className="flex flex-wrap gap-2 mr-2">
+          {displayTokens.map((token) => (
+            <Badge 
+              key={token.id} 
+              variant="secondary" 
+              className="px-3 py-1 text-xs gap-2 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/80"
+            >
+              {token.symbol} - {token.name}
+              <button 
+                onClick={() => isFilter && onMultiFilterChange ? 
+                  onMultiFilterChange(token.id) : 
+                  handleRemoveToken(token.id)
+                } 
+                className="text-white/70 hover:text-white"
+              >
+                <X size={12} />
+              </button>
+            </Badge>
+          ))}
+        </div>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="h-8 gap-1 font-normal"
+              disabled={isLoadingTokens || availableTokens.length === 0}
+            >
+              <Coins size={14} />
+              <span className="hidden sm:inline">{isFilter ? "Add Token Filters" : "Add Tokens"}</span>
+              <ChevronDown size={14} className="opacity-70" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-64">
+            <DropdownMenuLabel>{isFilter ? "Filter by Tokens" : "Add Tokens"}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            
+            {isLoadingTokens ? (
+              <div className="px-2 py-3 text-sm text-center text-muted-foreground">Loading tokens...</div>
+            ) : availableTokens.length === 0 ? (
+              <div className="px-2 py-3 text-sm text-center text-muted-foreground">No more tokens available</div>
+            ) : (
+              <div className="max-h-48 overflow-y-auto">
+                {isFilter && onFilterChange && (
+                  <DropdownMenuItem onClick={() => onFilterChange(null)}>
+                    All Tokens
+                  </DropdownMenuItem>
+                )}
+                
+                {availableTokens.map(token => (
+                  <DropdownMenuItem
+                    key={token.id}
+                    onClick={() => handleSelectToken(token.id)}
+                    className="cursor-pointer"
+                  >
+                    <Coins size={12} className="mr-2 opacity-70" />
+                    {token.symbol} - {token.name}
+                  </DropdownMenuItem>
+                ))}
+              </div>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
+  }
+  
+  // For normal mode or multi-filter mode (original code)
   if ((isFilter && onMultiFilterChange) || !isFilter) {
     return (
       <div className="flex flex-col gap-2">
