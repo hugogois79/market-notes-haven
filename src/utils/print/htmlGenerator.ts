@@ -57,7 +57,7 @@ export const generatePrintHtml = (note: Note): string => {
     }
   }
   
-  // Enhanced content processing for text alignment
+  // Enhanced content processing for text alignment and font sizes
   const enhancedContent = contentWithoutConclusion
     // Strengthen justified text styling
     .replace(/text-align:\s*justify/gi, 'text-align: justify !important')
@@ -73,10 +73,19 @@ export const generatePrintHtml = (note: Note): string => {
     .replace(/<p([^>]*?)>/gi, function(match, p1) {
       // Only add font-weight: normal if font-weight isn't already specified
       if (!/font-weight/i.test(p1)) {
-        return `<p${p1} style="font-weight: normal;">`;
+        return `<p${p1} style="font-weight: normal; font-size: 9pt;">`;
       }
       return match;
-    });
+    })
+    // Make sure all font sizes are appropriate for printing
+    .replace(/<h1([^>]*?)>/gi, '<h1$1 style="font-size: 12pt; font-weight: bold;">')
+    .replace(/<h2([^>]*?)>/gi, '<h2$1 style="font-size: 11pt; font-weight: bold;">')
+    .replace(/<h3([^>]*?)>/gi, '<h3$1 style="font-size: 10pt; font-weight: bold;">')
+    // Make list items smaller
+    .replace(/<li([^>]*?)>/gi, '<li$1 style="font-size: 9pt; font-weight: normal;">')
+    // Make table cells smaller
+    .replace(/<td([^>]*?)>/gi, '<td$1 style="font-size: 8pt; font-weight: normal; padding: 4px;">')
+    .replace(/<th([^>]*?)>/gi, '<th$1 style="font-size: 8pt; font-weight: bold; padding: 4px; background-color: #f3f4f6;">');
   
   // Generate AI summary section if available
   let summaryHtml = '';
@@ -97,12 +106,12 @@ export const generatePrintHtml = (note: Note): string => {
     summaryHtml = `
       <div class="print-summary">
         <div class="print-summary-header">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="print-summary-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="print-summary-icon">
             <path d="M12 3L20 12L12 21L4 12L12 3Z"></path>
           </svg>
           AI Summary
         </div>
-        <div class="print-summary-content">
+        <div class="print-summary-content" style="font-size: 9pt; font-weight: normal;">
           ${summaryContent.split('**').map((part, index) => {
             // If the index is odd, it's a bold part
             return index % 2 === 1 
@@ -125,6 +134,28 @@ export const generatePrintHtml = (note: Note): string => {
       <meta charset="UTF-8">
       <title>${note.title}</title>
       ${printStyles}
+      <style>
+        /* Additional overrides for print */
+        @media print {
+          body { font-size: 9pt !important; }
+          p, div, span, li { font-size: 9pt !important; }
+          .print-content p, .print-content div, .print-content span, .print-content li { 
+            font-size: 9pt !important; 
+          }
+          .print-content ul, .print-content ol {
+            padding-left: 15px;
+            margin: 5px 0;
+          }
+          .print-content li {
+            margin-bottom: 2px;
+          }
+          .print-content h1 { font-size: 12pt !important; }
+          .print-content h2 { font-size: 11pt !important; }
+          .print-content h3 { font-size: 10pt !important; }
+          .print-title { font-size: 14pt !important; }
+          .print-summary-content, .print-conclusion-content { font-size: 9pt !important; }
+        }
+      </style>
     </head>
     <body>
       <div class="print-wrapper">

@@ -11,16 +11,41 @@ export const getPrintMediaStyles = (): string => {
     @media print {
       body {
         padding: 0;
-        font-size: 12pt;
+        font-size: 9pt;
+        font-weight: normal;
       }
       
       .print-title {
-        font-size: 16pt;
+        font-size: 14pt;
+        font-weight: bold;
       }
       
       .print-content {
-        font-size: 11pt;
-        margin-bottom: 40px; /* Reduced space for footer */
+        font-size: 9pt;
+        margin-bottom: 30px; /* Reduced space for footer */
+        font-weight: normal;
+      }
+      
+      /* Reset font weight for all elements by default */
+      *, body, div, p, span, td, th, li, ul, ol {
+        font-weight: normal;
+      }
+      
+      /* Only allow explicit bold elements to be bold */
+      b, strong, h1, h2, h3, h4, h5, h6 {
+        font-weight: bold !important;
+      }
+      
+      /* Bullet points should be smaller and tighter */
+      .print-content ul,
+      .print-content ol {
+        padding-left: 15px;
+        margin: 5px 0;
+      }
+      
+      .print-content li {
+        margin-bottom: 2px;
+        font-size: 9pt;
       }
       
       /* Class to enforce justification throughout the document */
@@ -30,19 +55,34 @@ export const getPrintMediaStyles = (): string => {
         text-align: justify !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+        font-weight: normal;
       }
       
+      /* Make sure summary displays with correct colors */
       .print-summary {
-        background-color: #D3E4FD !important;
+        background-color: #E9F2FF !important;
+        border: 1px solid #D3E4FD !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-        margin-bottom: 16px;
+        margin-bottom: 15px;
+        margin-top: 8px;
+        display: block !important;
+        visibility: visible !important;
+        font-weight: normal;
+        padding: 8px;
       }
       
       .print-summary-header {
         color: #1967d2 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+        font-weight: bold;
+        font-size: 9pt;
+      }
+      
+      .print-summary-content {
+        font-weight: normal;
+        font-size: 9pt;
       }
       
       .print-summary-highlight {
@@ -54,11 +94,14 @@ export const getPrintMediaStyles = (): string => {
       
       /* Conclusion print styles */
       .print-conclusion {
-        background-color: #D3E4FD !important;
+        background-color: #F1F0FB !important;
+        border: 1px solid #E6E4F3 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-        margin-top: 16px;
-        margin-bottom: 16px;
+        margin-top: 15px;
+        margin-bottom: 15px;
+        font-weight: normal;
+        padding: 8px;
       }
       
       .print-conclusion-header {
@@ -66,6 +109,22 @@ export const getPrintMediaStyles = (): string => {
         font-weight: 600 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+        font-size: 9pt;
+      }
+      
+      .print-conclusion-content {
+        font-weight: normal;
+        font-size: 9pt;
+      }
+      
+      /* More aggressive justification for print content */
+      .print-justified p, 
+      .print-justified div:not(.print-title):not(.print-meta):not(.print-tags):not(.print-category),
+      .print-justified li {
+        text-align: justify !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        font-weight: normal;
       }
       
       .print-content table {
@@ -77,6 +136,9 @@ export const getPrintMediaStyles = (): string => {
         background-color: #f3f4f6 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+        font-weight: 600;
+        font-size: 8pt;
+        padding: 4px;
       }
       
       /* Ensure all table data cells have white background */
@@ -84,19 +146,22 @@ export const getPrintMediaStyles = (): string => {
         background-color: #ffffff !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+        font-weight: normal;
+        font-size: 8pt;
+        padding: 4px;
       }
       
       .print-footer {
         position: fixed;
-        bottom: 20px;
+        bottom: 15px;
         left: 0;
         right: 0;
-        font-size: 8pt;
+        font-size: 7pt;
         color: #666;
         text-align: center;
         background-color: white;
         border-top: 1px solid #eee;
-        padding-top: 8px;
+        padding-top: 6px;
         z-index: 999;
         max-width: 50%; /* Make footer less wide */
         margin-left: auto;
@@ -104,6 +169,13 @@ export const getPrintMediaStyles = (): string => {
         white-space: nowrap; /* Prevent line breaks */
         overflow: hidden; /* Hide overflow text */
         text-overflow: ellipsis; /* Show ellipsis for overflow */
+        font-weight: normal;
+      }
+      
+      /* Regular paragraphs should have normal font weight */
+      p, div, span, li, td {
+        font-weight: normal !important;
+        font-size: 9pt;
       }
       
       /* Enhanced text alignment support for print */
@@ -139,30 +211,6 @@ export const getPrintMediaStyles = (): string => {
       *[class*="text-left"],
       [style*="text-align: left"] {
         text-align: left !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
-      
-      /* Force justification to work for paragraphs, lists, and table cells */
-      p.text-justify, div.text-justify, li.text-justify, td.text-justify, th.text-justify,
-      p[style*="text-align: justify"], div[style*="text-align: justify"], 
-      li[style*="text-align: justify"], td[style*="text-align: justify"], 
-      th[style*="text-align: justify"] {
-        text-align: justify !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
-      
-      /* Additional specific selectors for common elements that might need justification */
-      .print-content p, .print-content div, .print-content li {
-        text-align: inherit !important;
-      }
-      
-      /* More aggressive justification for print content */
-      .print-justified p, 
-      .print-justified div:not(.print-title):not(.print-meta):not(.print-tags):not(.print-category),
-      .print-justified li {
-        text-align: justify !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
