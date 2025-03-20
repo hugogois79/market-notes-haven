@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Tag } from "lucide-react";
+import { Calendar, Tag, ChevronRight } from "lucide-react";
 import { Note, Token } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -116,75 +116,126 @@ const NoteCard = ({
   return (
     <Card 
       className={cn(
-        "h-auto overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1 glass-card cursor-pointer note-card-compact",
-        isListView && "note-card-list",
+        "h-auto overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1 glass-card cursor-pointer border-l-4",
+        note.category === "Trading" ? "border-l-blue-500" : "border-l-gray-300",
+        isListView ? "flex" : "",
         className
       )}
       onClick={handleNoteClick}
       data-note-id={note.id}
     >
-      <CardHeader className={cn("p-2 pb-0", isListView && "p-1.5 pb-0")}>
-        <div className="flex justify-between items-start gap-2">
-          <h3 className={cn("font-medium text-sm line-clamp-1", isListView && "text-xs")}>
-            {note.title || "Untitled Note"}
-          </h3>
-          {note.category && (
-            <Badge variant="outline" className="shrink-0 text-xs">
-              {note.category}
-            </Badge>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className={cn("p-2 pt-1 pb-0", isListView && "p-1.5 pt-0.5 pb-0")}>
-        <p className={cn("text-muted-foreground text-xs line-clamp-2", isListView && "line-clamp-1 text-[10px]")}>
-          {getTextPreview(note.content)}
-        </p>
-      </CardContent>
-      <CardFooter className={cn("p-2 pt-1 flex flex-wrap gap-y-1 items-center", isListView && "p-1.5 pt-0.5 gap-y-0.5")}>
-        <div className="flex items-center gap-1 text-xs text-muted-foreground mr-auto">
-          <Calendar size={isListView ? 10 : 12} />
-          <span className={cn(isListView && "text-[10px]")}>
-            {formatDate(note.updatedAt || new Date())}
-          </span>
-        </div>
-        
-        {/* Combined tags and tokens section to save space */}
-        <div className={cn("flex flex-wrap items-center gap-1 w-full mt-1", isListView && "mt-0.5 gap-0.5")}>
-          {/* Tags */}
-          {note.tags && note.tags.length > 0 && note.tags.map((tagId) => (
-            <Badge 
-              key={tagId} 
-              className={cn(
-                "text-xs py-0 px-1.5 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90 flex items-center gap-1",
-                isListView && "text-[9px] py-0 px-1"
+      {isListView ? (
+        // List view layout
+        <div className="flex flex-1 p-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-medium text-sm line-clamp-1">
+                {note.title || "Untitled Note"}
+              </h3>
+              {note.category && (
+                <Badge variant="outline" className="ml-2 text-xs">
+                  {note.category}
+                </Badge>
               )}
-            >
-              <Tag size={isListView ? 7 : 8} />
-              {getTagName(tagId)}
-            </Badge>
-          ))}
-          
-          {/* Tokens */}
-          {tokens && tokens.length > 0 && tokens.map(token => (
-            <TokenBadge 
-              key={token.id} 
-              token={token} 
-              className={cn(
-                "token-badge text-xs py-0",
-                isListView && "text-[9px] py-0 px-1",
-                selectedTokenIds?.includes(token.id) ? "ring-1 ring-offset-1 ring-primary" : ""
-              )} 
-            />
-          ))}
+            </div>
+            
+            <p className="text-muted-foreground text-xs line-clamp-1 mb-1.5">
+              {getTextPreview(note.content)}
+            </p>
+            
+            <div className="flex items-center text-xs text-muted-foreground">
+              <Calendar size={12} className="mr-1" />
+              <span>{formatDate(note.updatedAt || new Date())}</span>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-1 mt-1.5">
+              {note.tags && note.tags.length > 0 && note.tags.map((tagId) => (
+                <Badge 
+                  key={tagId} 
+                  className="text-[9px] py-0 px-1 bg-[#0A3A5C] text-white flex items-center gap-0.5"
+                >
+                  <Tag size={7} />
+                  {getTagName(tagId)}
+                </Badge>
+              ))}
+              
+              {tokens && tokens.length > 0 && tokens.map(token => (
+                <TokenBadge 
+                  key={token.id} 
+                  token={token}
+                  className={cn(
+                    "token-badge text-[9px] py-0 px-1",
+                    selectedTokenIds?.includes(token.id) ? "ring-1 ring-offset-1 ring-primary" : ""
+                  )} 
+                />
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center ml-2">
+            <ChevronRight size={16} className="text-muted-foreground" />
+          </div>
         </div>
-        
-        {/* Note ID in small text */}
-        <div className="w-full mt-0">
-          <span className={cn("text-[8px] text-muted-foreground block truncate", isListView && "text-[7px]")}>
-            ID: {note.id}
-          </span>
-        </div>
-      </CardFooter>
+      ) : (
+        // Grid view layout (original layout)
+        <>
+          <CardHeader className="p-3 pb-0">
+            <div className="flex justify-between items-start gap-2">
+              <h3 className="font-medium text-sm line-clamp-1">
+                {note.title || "Untitled Note"}
+              </h3>
+              {note.category && (
+                <Badge variant="outline" className="shrink-0 text-xs">
+                  {note.category}
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="p-3 pt-1.5 pb-0">
+            <p className="text-muted-foreground text-xs line-clamp-2">
+              {getTextPreview(note.content)}
+            </p>
+          </CardContent>
+          <CardFooter className="p-3 pt-1.5 flex flex-wrap gap-y-1 items-center">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mr-auto">
+              <Calendar size={12} />
+              <span>{formatDate(note.updatedAt || new Date())}</span>
+            </div>
+            
+            {/* Combined tags and tokens section */}
+            <div className="flex flex-wrap items-center gap-1 w-full mt-1">
+              {/* Tags */}
+              {note.tags && note.tags.length > 0 && note.tags.map((tagId) => (
+                <Badge 
+                  key={tagId} 
+                  className="text-xs py-0 px-1.5 bg-[#0A3A5C] text-white hover:bg-[#0A3A5C]/90 flex items-center gap-1"
+                >
+                  <Tag size={8} />
+                  {getTagName(tagId)}
+                </Badge>
+              ))}
+              
+              {/* Tokens */}
+              {tokens && tokens.length > 0 && tokens.map(token => (
+                <TokenBadge 
+                  key={token.id} 
+                  token={token} 
+                  className={cn(
+                    "token-badge text-xs py-0",
+                    selectedTokenIds?.includes(token.id) ? "ring-1 ring-offset-1 ring-primary" : ""
+                  )} 
+                />
+              ))}
+            </div>
+            
+            {/* Note ID in small text */}
+            <div className="w-full mt-0.5">
+              <span className="text-[8px] text-muted-foreground block truncate">
+                ID: {note.id}
+              </span>
+            </div>
+          </CardFooter>
+        </>
+      )}
     </Card>
   );
 };
