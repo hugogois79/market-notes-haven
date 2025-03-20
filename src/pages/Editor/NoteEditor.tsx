@@ -28,6 +28,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   const [localLinkedTokens, setLocalLinkedTokens] = useState<Token[]>(linkedTokens);
   const [localTradeInfo, setLocalTradeInfo] = useState<TradeInfo | undefined>(currentNote.tradeInfo);
   const [hasConclusion, setHasConclusion] = useState<boolean>(currentNote.hasConclusion !== false);
+  const [summaryState, setSummaryState] = useState<string>(currentNote.summary || "");
 
   // Update local state when currentNote changes
   useEffect(() => {
@@ -36,6 +37,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     setLocalLinkedTokens(linkedTokens);
     setLocalTradeInfo(currentNote.tradeInfo);
     setHasConclusion(currentNote.hasConclusion !== false);
+    setSummaryState(currentNote.summary || "");
     
     // Convert tag IDs to tag objects
     setLinkedTags(getTagObjects());
@@ -71,6 +73,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     console.log("Summary generated:", summary);
     console.log("Has conclusion:", detectedHasConclusion);
     
+    // Update local state with the new summary
+    setSummaryState(summary);
+    
     // Update local state with conclusion status if provided
     if (detectedHasConclusion !== undefined) {
       setHasConclusion(detectedHasConclusion);
@@ -83,14 +88,12 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       setPendingChanges({ ...pendingChanges, summary });
     }
     
-    // Trigger immediate autosave when summary is generated
-    if (autoSave) {
-      const updatedChanges = detectedHasConclusion !== undefined 
-        ? { ...pendingChanges, summary, hasConclusion: detectedHasConclusion }
-        : { ...pendingChanges, summary };
-      
-      handleSaveWithChanges(updatedChanges, true);
-    }
+    // Trigger immediate save when summary is generated to ensure it's not lost
+    const updatedChanges = detectedHasConclusion !== undefined 
+      ? { ...pendingChanges, summary, hasConclusion: detectedHasConclusion }
+      : { ...pendingChanges, summary };
+    
+    handleSaveWithChanges(updatedChanges, false);
   };
 
   // Handle trade info changes
@@ -220,8 +223,14 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     setIsSaving(true);
     
     try {
-      console.log("Saving changes:", changes);
-      await onSave(changes);
+      // Always include summary in the changes to prevent it from being lost
+      const updatedChanges = {
+        ...changes,
+        summary: changes.summary !== undefined ? changes.summary : summaryState
+      };
+      
+      console.log("Saving changes:", updatedChanges);
+      await onSave(updatedChanges);
       setPendingChanges({});
       
       if (!isAutoSave) {
@@ -237,7 +246,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
 
   // Manual save function to handle immediate saves
   const handleManualSave = async () => {
-    await handleSaveWithChanges(pendingChanges, false);
+    // Always include the summary in the save
+    const updatedChanges = {
+      ...pendingChanges,
+      summary: pendingChanges.summary !== undefined ? pendingChanges.summary : summaryState
+    };
+    
+    await handleSaveWithChanges(updatedChanges, false);
   };
 
   // Common save function for both manual and auto save
@@ -277,7 +292,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         autoSave={autoSave}
         isSaving={isSaving}
         manualSave={handleManualSave}
-        summary={currentNote.summary}
+        summary={summaryState} 
         onSummaryGenerated={handleSummaryGenerated}
         tradeInfo={localTradeInfo}
         onTradeInfoChange={handleTradeInfoChange}

@@ -81,7 +81,8 @@ const AiResume: React.FC<AiResumeProps> = ({
       
       setSummary(summaryText);
       
-      // Call the callback to update the parent component (but don't include hasConclusion anymore)
+      // Call the callback to update the parent component with the new summary
+      // This is critical to ensure the summary is saved with the note
       if (onSummaryGenerated) {
         onSummaryGenerated(summaryText);
       }

@@ -171,17 +171,26 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
     const userId = userData?.user?.id;
 
     console.log('Updating note with content:', note.content);
+    console.log('Updating note with summary:', note.summary);
 
-    // Generate new summary if content has changed
-    const summary = await generateNoteSummary(note.content);
-    console.log('Generated summary:', summary);
+    // Only generate a new summary if one wasn't explicitly provided and content has changed
+    let summaryToSave = note.summary;
+    
+    if (!summaryToSave && note.content) {
+      // Generate new summary if content has changed and no summary was provided
+      const generatedSummary = await generateNoteSummary(note.content);
+      console.log('Generated new summary:', generatedSummary);
+      summaryToSave = generatedSummary;
+    } else {
+      console.log('Using provided summary:', summaryToSave);
+    }
 
     const { data, error } = await supabase
       .from('notes')
       .update({
         title: note.title,
         content: note.content || "", // Ensure content is never null
-        summary: summary, // Update the summary
+        summary: summaryToSave, // Use the provided or generated summary
         tags: note.tags || [],
         category: note.category || "General",
         updated_at: new Date().toISOString(),

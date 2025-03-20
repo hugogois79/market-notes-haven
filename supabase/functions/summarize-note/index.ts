@@ -69,6 +69,8 @@ serve(async (req) => {
     
     const summary = data.choices[0].message.content;
     
+    console.log("Generated summary:", summary);
+    
     // Check if the note content includes a conclusion paragraph
     const hasConclusion = content.toLowerCase().includes('conclusion') || 
                          content.toLowerCase().includes('in summary') ||
