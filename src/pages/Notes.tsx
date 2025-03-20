@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -536,9 +535,10 @@ const Notes = () => {
               <NoteCard
                 key={note.id}
                 note={note}
-                tags={tags}
-                tokens={tokens}
-                viewMode={viewMode}
+                className={viewMode === "list" ? "flex-row" : ""}
+                tagMapping={tagMapping}
+                selectedTokenIds={selectedTokens}
+                onTokenMatch={handleTokenMatch}
               />
             ))}
           </div>
