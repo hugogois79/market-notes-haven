@@ -21,7 +21,7 @@ export const generatePrintHtml = (note: Note): string => {
     : '';
 
   // Process content to preserve HTML
-  let processedContent = note.content;
+  let processedContent = note.content || '';
   
   // Extract conclusion if it exists
   let conclusionHtml = '';
@@ -66,7 +66,17 @@ export const generatePrintHtml = (note: Note): string => {
              '<$1style="$2text-align: justify !important$3" class="text-justify"$4>')
     // Handle paragraphs that should be justified but don't have explicit style
     .replace(/<p\s+class="text-justify"([^>]*)>/gi, 
-             '<p class="text-justify" style="text-align: justify !important"$1>');
+             '<p class="text-justify" style="text-align: justify !important"$1>')
+    // Remove any unwanted font-weight styles that might be causing all text to be bold
+    .replace(/font-weight:\s*bold|font-weight:\s*[5-9]00/gi, '')
+    // Add font-weight: normal to all p tags that don't have explicit font-weight
+    .replace(/<p([^>]*?)>/gi, function(match, p1) {
+      // Only add font-weight: normal if font-weight isn't already specified
+      if (!/font-weight/i.test(p1)) {
+        return `<p${p1} style="font-weight: normal;">`;
+      }
+      return match;
+    });
   
   // Generate AI summary section if available
   let summaryHtml = '';

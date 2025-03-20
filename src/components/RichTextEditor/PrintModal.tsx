@@ -30,13 +30,31 @@ const PrintModal: React.FC<PrintModalProps> = ({
   attachmentUrl,
 }) => {
   const handlePrint = useCallback(() => {
+    // Clean up any potential font-weight styles that might be causing issues
+    let processedContent = content;
+    
+    // Only process if content exists
+    if (processedContent) {
+      // Ensure we're not inadvertently making all text bold
+      processedContent = processedContent
+        // Add normal font-weight to paragraphs without explicit font-weight
+        .replace(/<p([^>]*?)>/gi, function(match, p1) {
+          // Only add font-weight: normal if font-weight isn't already specified
+          if (!/font-weight/i.test(p1)) {
+            return `<p${p1} style="font-weight: normal;">`;
+          }
+          return match;
+        });
+    }
+    
     printNote({
-      content,
+      content: processedContent,
       title: title || "Untitled Note",
       category: category || "Uncategorized",
       summary,
       attachment_url: attachmentUrl,
     });
+    
     onClose();
   }, [content, title, category, summary, attachmentUrl, onClose]);
 

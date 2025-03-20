@@ -12,6 +12,7 @@ export const getBaseStyles = (): string => {
       max-width: 800px;
       margin: 0 auto;
       font-size: 10pt;
+      font-weight: normal; /* Explicitly set normal font weight for body */
     }
     
     .print-header {
@@ -30,6 +31,7 @@ export const getBaseStyles = (): string => {
       font-size: 9pt;
       color: #666;
       margin-bottom: 10px;
+      font-weight: normal;
     }
     
     .print-category {
@@ -39,6 +41,7 @@ export const getBaseStyles = (): string => {
       padding: 3px 8px;
       border-radius: 12px;
       margin-right: 8px;
+      font-weight: normal;
     }
     
     .print-tags {
@@ -54,11 +57,18 @@ export const getBaseStyles = (): string => {
       border-radius: 12px;
       margin-right: 4px;
       margin-bottom: 4px;
+      font-weight: normal;
     }
     
     .print-content {
       font-size: 10pt;
       margin-bottom: 40px; /* Reduced space for footer */
+      font-weight: normal; /* Explicitly set normal font weight for content */
+    }
+    
+    /* Ensure paragraphs have normal weight by default */
+    .print-content p {
+      font-weight: normal;
     }
     
     .print-footer {
@@ -77,6 +87,7 @@ export const getBaseStyles = (): string => {
       max-width: 50%; /* Make footer less wide */
       margin-left: auto;
       margin-right: auto;
+      font-weight: normal;
     }
   `;
 };

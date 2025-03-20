@@ -70,7 +70,23 @@ const NoteActions: React.FC<NoteActionsProps> = ({
     setIsPrinting(true);
     
     try {
-      printNote(currentNote);
+      // Process content to remove any unwanted bold styling
+      let processedNote = { ...currentNote };
+      
+      // Clean up content if it exists
+      if (processedNote.content) {
+        processedNote.content = processedNote.content
+          // Add normal font-weight to paragraphs without explicit font-weight
+          .replace(/<p([^>]*?)>/gi, function(match, p1) {
+            // Only add font-weight: normal if font-weight isn't already specified
+            if (!/font-weight/i.test(p1)) {
+              return `<p${p1} style="font-weight: normal;">`;
+            }
+            return match;
+          });
+      }
+      
+      printNote(processedNote);
       toast.success("Preparing note for printing...");
     } catch (error) {
       toast.error("Failed to print note");

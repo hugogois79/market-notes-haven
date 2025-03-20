@@ -1,6 +1,7 @@
 
 import { Note } from "@/types";
 import { generatePrintHtml } from "./htmlGenerator";
+import { normalizeContent } from "./styles/normalizeStyles";
 
 /**
  * Handles printing a note
@@ -29,11 +30,14 @@ export const printNote = (noteData: Partial<Note>): void => {
     }
   }
   
+  // Normalize content to fix font weight issues
+  const normalizedContent = noteData.content ? normalizeContent(noteData.content) : '';
+  
   // Create a complete Note object with default values for required properties
   const note: Note = {
     id: "temp-print-id",
     title: noteData.title || "Untitled Note",
-    content: noteData.content || "",
+    content: normalizedContent,
     tags: noteData.tags || [],
     category: noteData.category || "Uncategorized",
     createdAt: noteData.createdAt || new Date(),

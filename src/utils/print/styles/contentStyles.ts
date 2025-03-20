@@ -15,6 +15,7 @@ export const getContentStyles = (): string => {
       margin-left: 0;
       color: #666;
       font-style: italic;
+      font-weight: normal;
     }
     
     /* Preserve formatting for highlighted and underlined text */
@@ -22,11 +23,13 @@ export const getContentStyles = (): string => {
     .print-content [style*="background-color: #FEF7CD"] {
       background-color: #FEF7CD;
       border-bottom: 1px solid #FEF7CD;
+      font-weight: inherit; /* Inherit font weight from parent */
     }
     
     .print-content u,
     .print-content [style*="text-decoration: underline"] {
       text-decoration: underline;
+      font-weight: inherit; /* Inherit font weight from parent */
     }
     
     /* Heading styles for print */
@@ -51,6 +54,16 @@ export const getContentStyles = (): string => {
       margin-bottom: 0.25rem;
     }
     
+    /* Normal text should be normal weight */
+    .print-content p, 
+    .print-content div, 
+    .print-content li,
+    .print-content span,
+    .print-content td {
+      font-weight: normal;
+    }
+    
+    /* Only make actual bold elements bold */
     .print-content b,
     .print-content strong {
       font-weight: 600;
