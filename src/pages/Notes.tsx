@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -53,6 +54,9 @@ const Notes = () => {
   const [tokenFilteringComplete, setTokenFilteringComplete] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [categorySearchQuery, setCategorySearchQuery] = useState("");
+  const [tagSearchQuery, setTagSearchQuery] = useState("");
+  const [tokenSearchQuery, setTokenSearchQuery] = useState("");
 
   const { data: tags = [], isLoading: isLoadingTags } = useQuery({
     queryKey: ["tags"],
@@ -165,9 +169,21 @@ const Notes = () => {
 
   const getAvailableTagsForSelection = () => {
     return tags.filter(tag => 
-      !selectedTags.includes(tag.id)
+      !selectedTags.includes(tag.id) &&
+      (!tagSearchQuery || tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase()))
     );
   };
+
+  const filteredCategories = categories.filter(
+    category => !categorySearchQuery || 
+    category.toLowerCase().includes(categorySearchQuery.toLowerCase())
+  );
+
+  const filteredTokens = tokens.filter(
+    token => !tokenSearchQuery || 
+    token.symbol.toLowerCase().includes(tokenSearchQuery.toLowerCase()) ||
+    token.name.toLowerCase().includes(tokenSearchQuery.toLowerCase())
+  );
 
   const handleClearFilters = () => {
     setSearchQuery("");
@@ -234,11 +250,24 @@ const Notes = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-[220px]">
             <DropdownMenuLabel>Select Categories</DropdownMenuLabel>
+            <div className="px-2 py-1.5">
+              <div className="relative mb-2">
+                <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
+                <Input
+                  placeholder="Search categories..."
+                  value={categorySearchQuery}
+                  onChange={(e) => setCategorySearchQuery(e.target.value)}
+                  className="pl-7 h-8 text-xs"
+                />
+              </div>
+            </div>
             <div className="max-h-40 overflow-y-auto">
-              {categories.length === 0 ? (
-                <div className="text-xs text-center py-2 text-muted-foreground">No categories available</div>
+              {filteredCategories.length === 0 ? (
+                <div className="text-xs text-center py-2 text-muted-foreground">
+                  {categorySearchQuery ? "No matching categories" : "No categories available"}
+                </div>
               ) : (
-                categories.map(category => (
+                filteredCategories.map(category => (
                   <DropdownMenuCheckboxItem
                     key={category}
                     checked={selectedCategories.includes(category)}
@@ -305,9 +334,21 @@ const Notes = () => {
                 ))}
               </div>
               
+              <div className="relative mb-2">
+                <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
+                <Input
+                  placeholder="Search tags..."
+                  value={tagSearchQuery}
+                  onChange={(e) => setTagSearchQuery(e.target.value)}
+                  className="pl-7 h-8 text-xs"
+                />
+              </div>
+              
               <div className="max-h-32 overflow-y-auto">
                 {getAvailableTagsForSelection().length === 0 ? (
-                  <div className="text-xs text-center py-2 text-muted-foreground">No more tags available</div>
+                  <div className="text-xs text-center py-2 text-muted-foreground">
+                    {tagSearchQuery ? "No matching tags" : "No more tags available"}
+                  </div>
                 ) : (
                   getAvailableTagsForSelection().map((tag) => (
                     <DropdownMenuItem
@@ -356,11 +397,24 @@ const Notes = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-[220px]">
             <DropdownMenuLabel>Filter by Tokens</DropdownMenuLabel>
+            <div className="px-2 py-1.5">
+              <div className="relative mb-2">
+                <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
+                <Input
+                  placeholder="Search tokens..."
+                  value={tokenSearchQuery}
+                  onChange={(e) => setTokenSearchQuery(e.target.value)}
+                  className="pl-7 h-8 text-xs"
+                />
+              </div>
+            </div>
             <div className="max-h-40 overflow-y-auto">
-              {tokens.length === 0 ? (
-                <div className="text-xs text-center py-2 text-muted-foreground">No tokens available</div>
+              {filteredTokens.length === 0 ? (
+                <div className="text-xs text-center py-2 text-muted-foreground">
+                  {tokenSearchQuery ? "No matching tokens" : "No tokens available"}
+                </div>
               ) : (
-                tokens.map(token => (
+                filteredTokens.map(token => (
                   <DropdownMenuCheckboxItem
                     key={token.id}
                     checked={selectedTokens.includes(token.id)}
