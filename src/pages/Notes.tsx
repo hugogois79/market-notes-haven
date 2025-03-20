@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -492,5 +493,59 @@ const Notes = () => {
         </div>
       )}
 
-      <
+      <div className="mt-6">
+        {isLoadingContextNotes ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading notes...</p>
+            </div>
+          </div>
+        ) : filteredNotes.length === 0 ? (
+          <div className="text-center py-12 border rounded-lg bg-muted/10">
+            <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+              <Search size={20} className="text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-medium">No notes found</h3>
+            <p className="text-muted-foreground mt-1 mb-4 max-w-md mx-auto">
+              {areFiltersActive
+                ? "Try adjusting your filters or search to find what you're looking for."
+                : "Get started by creating your first note."}
+            </p>
+            {areFiltersActive ? (
+              <Button variant="outline" onClick={handleClearFilters}>
+                <FilterX size={14} className="mr-2" />
+                Clear filters
+              </Button>
+            ) : (
+              <Button onClick={handleCreateNote}>
+                <PlusCircle size={14} className="mr-2" />
+                Create note
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div
+            className={
+              viewMode === "grid"
+                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                : "space-y-4"
+            }
+          >
+            {filteredNotes.map((note) => (
+              <NoteCard
+                key={note.id}
+                note={note}
+                tags={tags}
+                tokens={tokens}
+                viewMode={viewMode}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
+export default Notes;
