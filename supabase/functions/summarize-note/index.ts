@@ -15,7 +15,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
   
-  const { content, maxLength = 500, summarizeTradeChat = false, formatAsBulletPoints = false } = await req.json();
+  const { 
+    content, 
+    noteId, 
+    maxLength = 500, 
+    summarizeTradeChat = false, 
+    formatAsBulletPoints = false,
+    generateTradeInfo = false
+  } = await req.json();
   
   if (!content) {
     return new Response(
@@ -39,6 +46,13 @@ serve(async (req) => {
     }
     
     systemPrompt += ` The summary should be no longer than ${maxLength} characters.`;
+    
+    // Add trade info extraction if requested
+    let tradeInfoPrompt = "";
+    if (generateTradeInfo) {
+      tradeInfoPrompt = `Additionally, extract any trading information such as token names, trade entry prices, exit prices, trade direction (buy/sell), and any mentioned profit/loss percentages. Return this information separately.`;
+      systemPrompt += " " + tradeInfoPrompt;
+    }
     
     // Call OpenAI API to generate the summary
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -67,18 +81,53 @@ serve(async (req) => {
       throw new Error(data.error.message || 'Error calling OpenAI API');
     }
     
-    const summary = data.choices[0].message.content;
-    
-    console.log("Generated summary:", summary);
+    const assistantResponse = data.choices[0].message.content;
+    console.log("Generated response:", assistantResponse);
     
     // Check if the note content includes a conclusion paragraph
     const hasConclusion = content.toLowerCase().includes('conclusion') || 
                          content.toLowerCase().includes('in summary') ||
                          content.toLowerCase().includes('to summarize');
     
-    // Return the summary and conclusion flag
+    // Parse the response to separate summary and trade info
+    let summary = assistantResponse;
+    let tradeInfo = null;
+    
+    if (generateTradeInfo) {
+      // Extract trading information if available
+      const tradeRegex = /token names?:?\s*([^,\.]+)|entry price:?\s*([^,\.]+)|exit price:?\s*([^,\.]+)|profit\/loss:?\s*([^,\.]+)|trade direction:?\s*([^,\.]+)/gi;
+      const matches = [...assistantResponse.matchAll(tradeRegex)];
+      
+      if (matches.length > 0) {
+        tradeInfo = {
+          allTrades: []
+        };
+        
+        // Basic extraction - in a real app, this would be more sophisticated
+        const tokenNameMatch = assistantResponse.match(/token (?:name|symbol):?\s*([^,\.]+)/i);
+        const entryPriceMatch = assistantResponse.match(/entry price:?\s*\$?([0-9\.]+)/i);
+        const exitPriceMatch = assistantResponse.match(/exit price:?\s*\$?([0-9\.]+)/i);
+        const profitLossMatch = assistantResponse.match(/profit\/loss:?\s*([^,\.]+)/i);
+        const directionMatch = assistantResponse.match(/(?:trade )?direction:?\s*(buy|sell)/i);
+        
+        if (tokenNameMatch || entryPriceMatch || exitPriceMatch || profitLossMatch || directionMatch) {
+          tradeInfo.allTrades.push({
+            tokenName: tokenNameMatch ? tokenNameMatch[1].trim() : undefined,
+            entryPrice: entryPriceMatch ? entryPriceMatch[1].trim() : undefined,
+            exitPrice: exitPriceMatch ? exitPriceMatch[1].trim() : undefined,
+            profitLoss: profitLossMatch ? profitLossMatch[1].trim() : undefined,
+            direction: directionMatch ? directionMatch[1].trim() : undefined,
+          });
+        }
+      }
+      
+      // For clarity, separate the summary from any extracted trade info
+      summary = assistantResponse.split(/(\bTrade info:|Trading information:|Extracted trade data:)/i)[0].trim();
+    }
+    
+    // Return the summary, trade info, and conclusion flag
     return new Response(
-      JSON.stringify({ summary, hasConclusion }),
+      JSON.stringify({ summary, tradeInfo, hasConclusion }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
