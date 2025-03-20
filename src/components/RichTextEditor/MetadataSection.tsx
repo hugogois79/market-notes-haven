@@ -18,6 +18,11 @@ interface MetadataSectionProps {
   handleRemoveToken: (tokenId: string) => void;
   handleTokenSelect: (tokenId: string) => void;
   isLoadingTokens: boolean;
+  isFilter?: boolean;
+  onFilterChange?: (tokenId: string | null) => void;
+  selectedFilterToken?: string | null;
+  onMultiFilterChange?: (tokenId: string) => void;
+  selectedFilterTokens?: string[];
 }
 
 const MetadataSection = ({
@@ -32,7 +37,12 @@ const MetadataSection = ({
   linkedTokens,
   handleRemoveToken,
   handleTokenSelect,
-  isLoadingTokens
+  isLoadingTokens,
+  isFilter = false,
+  onFilterChange,
+  selectedFilterToken,
+  onMultiFilterChange,
+  selectedFilterTokens
 }: MetadataSectionProps) => {
   return (
     <div className="flex flex-col md:flex-row gap-4">
@@ -55,6 +65,11 @@ const MetadataSection = ({
           handleRemoveToken={handleRemoveToken}
           handleTokenSelect={handleTokenSelect}
           isLoadingTokens={isLoadingTokens}
+          isFilter={isFilter}
+          onFilterChange={onFilterChange}
+          selectedFilterToken={selectedFilterToken}
+          onMultiFilterChange={onMultiFilterChange}
+          selectedFilterTokens={selectedFilterTokens}
         />
       </Card>
     </div>

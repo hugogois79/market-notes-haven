@@ -33,6 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import MetadataSection from "@/components/RichTextEditor/MetadataSection";
 
 const Notes = () => {
   const navigate = useNavigate();
@@ -44,6 +45,7 @@ const Notes = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [tokenFilteredNotes, setTokenFilteredNotes] = useState<Record<string, string[]>>({});
   const [tokenFilteringComplete, setTokenFilteringComplete] = useState(false);
+  const [tagInput, setTagInput] = useState("");
 
   const { data: tags = [], isLoading: isLoadingTags } = useQuery({
     queryKey: ["tags"],
@@ -141,6 +143,26 @@ const Notes = () => {
     );
   };
 
+  const handleAddTag = async () => {
+    return Promise.resolve();
+  };
+
+  const handleRemoveTag = (tagToRemove: string | TagType) => {
+    const tagId = typeof tagToRemove === 'string' ? tagToRemove : tagToRemove.id;
+    toggleTag(tagId);
+  };
+
+  const handleSelectTag = (tag: TagType) => {
+    toggleTag(tag.id);
+  };
+
+  const getAvailableTagsForSelection = () => {
+    // Filter out tags that are already selected
+    return tags.filter(tag => 
+      !selectedTags.includes(tag.id)
+    );
+  };
+
   const handleClearFilters = () => {
     setSearchQuery("");
     setSelectedCategories([]);
@@ -183,48 +205,47 @@ const Notes = () => {
         </Button>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4">
-        {/* Left sidebar with filters */}
-        <div className="w-full md:w-1/4 space-y-4">
+      {/* Top filters section - moved from sidebar */}
+      <div className="mb-6 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Categories filter */}
-          <div className="bg-card rounded-lg shadow-sm p-3">
+          <Card className="p-3">
             <div className="flex items-center gap-2 font-medium mb-2 text-sm">
               <FolderOpenDot size={16} className="text-primary" />
               Categories
             </div>
-            <div className="space-y-1 max-h-[200px] overflow-y-auto">
+            <div className="flex flex-wrap gap-1.5">
               {categories.length === 0 ? (
                 <div className="text-xs text-muted-foreground p-1">No categories available</div>
               ) : (
                 categories.map(category => (
-                  <div 
+                  <Badge
                     key={category}
-                    className={`flex items-center gap-2 px-2 py-1 rounded-md text-sm cursor-pointer ${
+                    variant={selectedCategories.includes(category) ? "default" : "outline"}
+                    className={`cursor-pointer text-xs py-1 px-2 font-normal ${
                       selectedCategories.includes(category) 
-                        ? "bg-primary/10 text-primary" 
-                        : "hover:bg-muted/50"
+                        ? "bg-[#0A3A5C]" 
+                        : "hover:bg-muted"
                     }`}
                     onClick={() => toggleCategory(category)}
                   >
-                    <span className="truncate">{category}</span>
+                    {category}
                     {selectedCategories.includes(category) && (
-                      <Badge variant="default" className="ml-auto h-4 w-4 p-0 flex items-center justify-center">
-                        <X size={10} />
-                      </Badge>
+                      <X size={12} className="ml-1 inline" />
                     )}
-                  </div>
+                  </Badge>
                 ))
               )}
             </div>
-          </div>
+          </Card>
 
           {/* Tags filter */}
-          <div className="bg-card rounded-lg shadow-sm p-3">
+          <Card className="p-3">
             <div className="flex items-center gap-2 font-medium mb-2 text-sm">
               <Tag size={16} className="text-primary" />
               Tags
             </div>
-            <div className="flex flex-wrap gap-1 max-h-[200px] overflow-y-auto">
+            <div className="flex flex-wrap gap-1.5">
               {tags.length === 0 ? (
                 <div className="text-xs text-muted-foreground p-1">No tags available</div>
               ) : (
@@ -238,15 +259,15 @@ const Notes = () => {
                 ))
               )}
             </div>
-          </div>
+          </Card>
 
           {/* Tokens filter */}
-          <div className="bg-card rounded-lg shadow-sm p-3">
+          <Card className="p-3">
             <div className="flex items-center gap-2 font-medium mb-2 text-sm">
               <Coins size={16} className="text-primary" />
               Tokens
             </div>
-            <div className="flex flex-wrap gap-1 max-h-[200px] overflow-y-auto">
+            <div className="flex flex-wrap gap-1.5">
               {tokens.length === 0 ? (
                 <div className="text-xs text-muted-foreground p-1">No tokens available</div>
               ) : (
@@ -267,176 +288,172 @@ const Notes = () => {
                 ))
               )}
             </div>
-          </div>
+          </Card>
+        </div>
 
-          {/* Clear filters button */}
+        {/* Search and controls row */}
+        <div className="flex flex-col sm:flex-row gap-2 items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search notes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-9"
+            />
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+            size="sm"
+            className="h-9 sm:w-auto w-full"
+          >
+            {viewMode === "grid" ? <List size={16} /> : <Grid3X3 size={16} />}
+            <span className="ml-2">{viewMode === "grid" ? "List view" : "Grid view"}</span>
+          </Button>
+          
           {areFiltersActive && (
             <Button
               variant="outline"
               onClick={handleClearFilters}
-              className="w-full gap-1 text-xs"
               size="sm"
+              className="h-9 gap-1 text-xs"
             >
               <FilterX size={14} />
               Clear all filters
             </Button>
           )}
         </div>
+      </div>
 
-        {/* Main content area */}
-        <div className="w-full md:w-3/4 space-y-4">
-          {/* Search and view mode controls */}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search notes..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-9"
-              />
-            </div>
-            <Button
+      {/* Active filters display */}
+      {areFiltersActive && (
+        <div className="flex flex-wrap items-center gap-2 p-2 bg-muted/30 rounded-md mb-4">
+          <span className="text-xs text-muted-foreground">Active filters:</span>
+          
+          {selectedCategories.map(category => (
+            <Badge
+              key={category}
               variant="outline"
-              onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-              size="sm"
-              className="h-9 sm:w-auto w-full"
+              className="flex items-center gap-1 bg-muted/40"
             >
-              {viewMode === "grid" ? <List size={16} /> : <Grid3X3 size={16} />}
-              <span className="ml-2">{viewMode === "grid" ? "List view" : "Grid view"}</span>
-            </Button>
-          </div>
-
-          {/* Active filters display */}
-          {areFiltersActive && (
-            <div className="flex flex-wrap items-center gap-2 p-2 bg-muted/30 rounded-md">
-              <span className="text-xs text-muted-foreground">Active filters:</span>
-              
-              {selectedCategories.map(category => (
-                <Badge
-                  key={category}
-                  variant="outline"
-                  className="flex items-center gap-1 bg-muted/40"
-                >
-                  <FolderOpenDot size={12} />
-                  {category}
-                  <X
-                    size={12}
-                    className="cursor-pointer ml-1"
-                    onClick={() => toggleCategory(category)}
-                  />
-                </Badge>
-              ))}
-              
-              {selectedTags.map(tagId => (
-                <Badge
-                  key={tagId}
-                  variant="outline"
-                  className="flex items-center gap-1 bg-muted/40"
-                >
-                  <Tag size={12} />
-                  {tagMapping[tagId] || tagId}
-                  <X
-                    size={12}
-                    className="cursor-pointer ml-1"
-                    onClick={() => toggleTag(tagId)}
-                  />
-                </Badge>
-              ))}
-              
-              {selectedTokens.map(tokenId => {
-                const token = tokens.find(t => t.id === tokenId);
-                return (
-                  <Badge
-                    key={tokenId}
-                    variant="outline"
-                    className="flex items-center gap-1 bg-muted/40"
-                  >
-                    <Coins size={12} />
-                    {token?.symbol || tokenId}
-                    <X
-                      size={12}
-                      className="cursor-pointer ml-1"
-                      onClick={() => toggleToken(tokenId)}
-                    />
-                  </Badge>
-                );
-              })}
-              
-              {searchQuery && (
-                <Badge
-                  variant="outline"
-                  className="flex items-center gap-1 bg-muted/40"
-                >
-                  <Search size={12} />
-                  {searchQuery}
-                  <X
-                    size={12}
-                    className="cursor-pointer ml-1"
-                    onClick={() => setSearchQuery("")}
-                  />
-                </Badge>
-              )}
-            </div>
-          )}
-
-          {/* Results count */}
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
-              Showing {filteredNoteCount} of {contextNotes.length} notes
-              {selectedTokens.length > 0 && !tokenFilteringComplete && (
-                <span className="ml-2 italic">Filtering in progress...</span>
-              )}
-            </div>
-          </div>
-
-          {/* Notes display */}
-          {isLoadingContextNotes ? (
-            <div className={viewMode === "grid" 
-              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
-              : "flex flex-col gap-2"
-            }>
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Card
-                  key={i}
-                  className="h-28 animate-pulse bg-muted/40 glass-card"
+              <FolderOpenDot size={12} />
+              {category}
+              <X
+                size={12}
+                className="cursor-pointer ml-1"
+                onClick={() => toggleCategory(category)}
+              />
+            </Badge>
+          ))}
+          
+          {selectedTags.map(tagId => (
+            <Badge
+              key={tagId}
+              variant="outline"
+              className="flex items-center gap-1 bg-muted/40"
+            >
+              <Tag size={12} />
+              {tagMapping[tagId] || tagId}
+              <X
+                size={12}
+                className="cursor-pointer ml-1"
+                onClick={() => toggleTag(tagId)}
+              />
+            </Badge>
+          ))}
+          
+          {selectedTokens.map(tokenId => {
+            const token = tokens.find(t => t.id === tokenId);
+            return (
+              <Badge
+                key={tokenId}
+                variant="outline"
+                className="flex items-center gap-1 bg-muted/40"
+              >
+                <Coins size={12} />
+                {token?.symbol || tokenId}
+                <X
+                  size={12}
+                  className="cursor-pointer ml-1"
+                  onClick={() => toggleToken(tokenId)}
                 />
-              ))}
-            </div>
-          ) : (
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
-                  : "flex flex-col gap-2"
-              }
+              </Badge>
+            );
+          })}
+          
+          {searchQuery && (
+            <Badge
+              variant="outline"
+              className="flex items-center gap-1 bg-muted/40"
             >
-              {filteredNotes.length === 0 ? (
-                <div className="col-span-full text-center py-8">
-                  <p className="text-muted-foreground text-sm">
-                    {selectedTokens.length > 0 && !tokenFilteringComplete
-                      ? "Filtering notes by token..."
-                      : contextNotes.length === 0
-                      ? "No notes found. Create your first note!"
-                      : "No notes match your filters"}
-                  </p>
-                </div>
-              ) : (
-                filteredNotes.map((note) => (
-                  <NoteCard
-                    key={note.id}
-                    note={note}
-                    className={viewMode === "list" ? "flex-row items-center" : ""}
-                    tagMapping={tagMapping}
-                    selectedTokenIds={selectedTokens}
-                    onTokenMatch={selectedTokens.length > 0 ? handleTokenMatch : undefined}
-                  />
-                ))
-              )}
-            </div>
+              <Search size={12} />
+              {searchQuery}
+              <X
+                size={12}
+                className="cursor-pointer ml-1"
+                onClick={() => setSearchQuery("")}
+              />
+            </Badge>
+          )}
+        </div>
+      )}
+
+      {/* Results count */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-xs text-muted-foreground">
+          Showing {filteredNoteCount} of {contextNotes.length} notes
+          {selectedTokens.length > 0 && !tokenFilteringComplete && (
+            <span className="ml-2 italic">Filtering in progress...</span>
           )}
         </div>
       </div>
+
+      {/* Notes display */}
+      {isLoadingContextNotes ? (
+        <div className={viewMode === "grid" 
+          ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+          : "flex flex-col gap-2"
+        }>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card
+              key={i}
+              className="h-28 animate-pulse bg-muted/40 glass-card"
+            />
+          ))}
+        </div>
+      ) : (
+        <div
+          className={
+            viewMode === "grid"
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+              : "flex flex-col gap-2"
+          }
+        >
+          {filteredNotes.length === 0 ? (
+            <div className="col-span-full text-center py-8">
+              <p className="text-muted-foreground text-sm">
+                {selectedTokens.length > 0 && !tokenFilteringComplete
+                  ? "Filtering notes by token..."
+                  : contextNotes.length === 0
+                  ? "No notes found. Create your first note!"
+                  : "No notes match your filters"}
+              </p>
+            </div>
+          ) : (
+            filteredNotes.map((note) => (
+              <NoteCard
+                key={note.id}
+                note={note}
+                className={viewMode === "list" ? "flex-row items-center" : ""}
+                tagMapping={tagMapping}
+                selectedTokenIds={selectedTokens}
+                onTokenMatch={selectedTokens.length > 0 ? handleTokenMatch : undefined}
+              />
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 };
