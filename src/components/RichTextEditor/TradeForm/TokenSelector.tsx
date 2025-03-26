@@ -34,7 +34,7 @@ export const TokenSelector = ({
           </SelectValue>
         </SelectTrigger>
         <SelectContent className="max-h-[200px]">
-          {/* Add a placeholder if needed */}
+          {/* Use a non-empty string for placeholder value */}
           {safeSelectedToken === "placeholder" && (
             <SelectItem value="placeholder">Select a token</SelectItem>
           )}

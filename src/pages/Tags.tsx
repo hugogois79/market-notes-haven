@@ -98,6 +98,10 @@ const Tags = () => {
   const [newCategory, setNewCategory] = useState("");
   const isLoaded = !(loading || isLoading);
   
+  const handleNewCategoryDialog = (show: boolean) => {
+    setShowNewCategoryDialog(show);
+  };
+
   useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -905,7 +909,7 @@ const Tags = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={showNewCategoryDialog} onOpenChange={setShowNewCategoryDialog}>
+      <Dialog open={showNewCategoryDialog} onOpenChange={handleNewCategoryDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New Category</DialogTitle>
@@ -919,7 +923,7 @@ const Tags = () => {
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && newCategory.trim()) {
                   handleCreateCategory();
                 }
               }}
@@ -935,6 +939,7 @@ const Tags = () => {
             <Button 
               variant="brand" 
               onClick={handleCreateCategory}
+              disabled={!newCategory.trim()}
             >
               Create Category
             </Button>
@@ -946,3 +951,4 @@ const Tags = () => {
 };
 
 export default Tags;
+

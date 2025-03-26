@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { X, Coins, ChevronDown } from "lucide-react";
@@ -248,9 +247,9 @@ const TokenSection: React.FC<TokenSectionProps> = ({
           </SelectTrigger>
           <SelectContent>
             {isLoadingTokens ? (
-              <SelectItem value="loading" disabled>Loading tokens...</SelectItem>
+              <SelectItem value="loading">Loading tokens...</SelectItem>
             ) : availableTokens.length === 0 ? (
-              <SelectItem value="none" disabled>
+              <SelectItem value="no-tokens">
                 {isFilter ? "No more tokens available" : "No more tokens available"}
               </SelectItem>
             ) : (
@@ -288,9 +287,9 @@ const TokenSection: React.FC<TokenSectionProps> = ({
           <SelectContent>
             <SelectItem value="all">All Tokens</SelectItem>
             {isLoadingTokens ? (
-              <SelectItem value="loading" disabled>Loading tokens...</SelectItem>
+              <SelectItem value="loading">Loading tokens...</SelectItem>
             ) : availableTokens.length === 0 ? (
-              <SelectItem value="none" disabled>No tokens available</SelectItem>
+              <SelectItem value="no-tokens">No tokens available</SelectItem>
             ) : (
               availableTokens.map(token => (
                 <SelectItem key={token.id} value={token.id}>
@@ -321,3 +320,4 @@ const TokenSection: React.FC<TokenSectionProps> = ({
 };
 
 export default TokenSection;
+
