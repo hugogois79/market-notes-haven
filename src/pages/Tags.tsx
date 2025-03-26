@@ -12,7 +12,7 @@ import {
   fetchCategories,
   updateTagCategory,
   fetchTagsByCategory
-} from "@/services/tagService";
+} from "@/services/tag";
 import { useNotes } from "@/contexts/NotesContext";
 
 import TagsList from "@/components/Tags/TagsList";

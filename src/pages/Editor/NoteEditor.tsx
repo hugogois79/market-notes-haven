@@ -3,7 +3,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
 import { Note, Token, Tag, TradeInfo } from "@/types";
 import { toast } from "sonner";
-import { linkTagToNote, unlinkTagFromNote } from "@/services/tagService";
+import { linkTagToNote, unlinkTagFromNote } from "@/services/tag"; // Updated import path
 import { linkTokenToNote, unlinkTokenFromNote } from "@/services/tokenService";
 
 interface NoteEditorProps {
