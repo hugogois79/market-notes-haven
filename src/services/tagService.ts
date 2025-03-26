@@ -178,7 +178,7 @@ export const updateTagCategory = async (tagId: string, category: string | null):
 export const fetchCategories = async (): Promise<string[]> => {
   try {
     const { data, error } = await supabase
-      .from('notes')
+      .from('tags')
       .select('category')
       .not('category', 'is', null)
       .order('category', { ascending: true });
