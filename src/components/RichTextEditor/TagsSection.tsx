@@ -53,10 +53,28 @@ const TagsSection: React.FC<TagsSectionProps> = ({
   const [tagSearchQuery, setTagSearchQuery] = useState("");
   const availableTags = getAvailableTagsForSelection();
   
-  // Filter available tags based on search query
+  // Filter available tags based on search query and selected category
   const filteredAvailableTags = availableTags.filter(tag => 
-    tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
+    tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase()) &&
+    (!categoryFilter || 
+     tag.category === categoryFilter || 
+     (tag.categories && tag.categories.includes(categoryFilter)))
   );
+
+  // Function to display tag categories
+  const renderTagCategories = (tag: Tag) => {
+    if (!tag.categories || tag.categories.length === 0) {
+      return tag.category ? (
+        <span className="text-xs text-muted-foreground ml-1">({tag.category})</span>
+      ) : null;
+    }
+    
+    return (
+      <span className="text-xs text-muted-foreground ml-1">
+        ({tag.categories.join(', ')})
+      </span>
+    );
+  };
 
   if (compact) {
     return (
@@ -68,6 +86,7 @@ const TagsSection: React.FC<TagsSectionProps> = ({
               className="bg-[#0A3A5C] hover:bg-[#0A3A5C]/80 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1"
             >
               <span>{tag.name}</span>
+              {renderTagCategories(tag)}
               <button
                 onClick={() => handleRemoveTag(tag)}
                 className="text-white/70 hover:text-white"
@@ -136,7 +155,8 @@ const TagsSection: React.FC<TagsSectionProps> = ({
                       onClick={() => handleSelectTag(tag)}
                       className="cursor-pointer"
                     >
-                      {tag.name}
+                      <span className="flex-1">{tag.name}</span>
+                      {renderTagCategories(tag)}
                     </DropdownMenuItem>
                   ))}
                 </div>
@@ -190,6 +210,7 @@ const TagsSection: React.FC<TagsSectionProps> = ({
             className="bg-[#0A3A5C] hover:bg-[#0A3A5C]/80 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1"
           >
             <span>{tag.name}</span>
+            {renderTagCategories(tag)}
             <button
               onClick={() => handleRemoveTag(tag)}
               className="text-white/70 hover:text-white"
@@ -256,7 +277,8 @@ const TagsSection: React.FC<TagsSectionProps> = ({
                   onClick={() => handleSelectTag(tag)}
                   className="cursor-pointer"
                 >
-                  {tag.name}
+                  <span className="flex-1">{tag.name}</span>
+                  {renderTagCategories(tag)}
                 </DropdownMenuItem>
               ))}
               {filteredAvailableTags.length === 0 && (

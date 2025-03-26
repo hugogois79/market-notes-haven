@@ -25,6 +25,7 @@ export interface Tag {
   id: string;
   name: string;
   category?: string | null;
+  categories?: string[]; // New field for multiple categories
 }
 
 export interface TradeInfo {

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Tag } from "@/types";
 
@@ -18,12 +17,32 @@ export const fetchTags = async (): Promise<Tag[]> => {
       return [];
     }
 
-    // Transform the data to match our Tag interface
-    return (data || []).map(item => ({
-      id: item.id,
-      name: item.name,
-      category: item.category || null
+    // Get categories for each tag
+    const tagsWithCategories = await Promise.all((data || []).map(async (tag) => {
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('tag_categories')
+        .select('category')
+        .eq('tag_id', tag.id);
+      
+      if (categoriesError) {
+        console.error(`Error fetching categories for tag ${tag.id}:`, categoriesError);
+        return {
+          id: tag.id,
+          name: tag.name,
+          categories: [],
+          category: tag.category || null // Keep original category for backward compatibility
+        };
+      }
+      
+      return {
+        id: tag.id,
+        name: tag.name,
+        categories: categoriesData.map(c => c.category),
+        category: tag.category || null // Keep original category for backward compatibility
+      };
     }));
+
+    return tagsWithCategories;
   } catch (error) {
     console.error('Error fetching tags:', error);
     return [];
@@ -33,23 +52,81 @@ export const fetchTags = async (): Promise<Tag[]> => {
 // Fetch tags by category
 export const fetchTagsByCategory = async (category: string): Promise<Tag[]> => {
   try {
-    const { data, error } = await supabase
-      .from('tags')
-      .select('*')
-      .eq('category', category)
-      .order('name', { ascending: true });
+    // First get tags from the tag_categories junction table
+    const { data: tagCategoriesData, error: tagCategoriesError } = await supabase
+      .from('tag_categories')
+      .select('tag_id')
+      .eq('category', category);
 
-    if (error) {
-      console.error(`Error fetching tags for category ${category}:`, error);
+    if (tagCategoriesError) {
+      console.error(`Error fetching tag IDs for category ${category}:`, tagCategoriesError);
       return [];
     }
 
-    // Transform the data to match our Tag interface
-    return (data || []).map(item => ({
-      id: item.id,
-      name: item.name,
-      category: item.category || null
+    const tagIds = tagCategoriesData.map(tc => tc.tag_id);
+    
+    // Also include tags with the legacy category field
+    const { data: legacyTagsData, error: legacyTagsError } = await supabase
+      .from('tags')
+      .select('*')
+      .eq('category', category)
+      .not('id', 'in', tagIds.length > 0 ? tagIds : ['00000000-0000-0000-0000-000000000000']);
+      
+    if (legacyTagsError) {
+      console.error(`Error fetching legacy tags for category ${category}:`, legacyTagsError);
+      return [];
+    }
+    
+    // If no tags found from either source, return empty array
+    if (tagIds.length === 0 && (!legacyTagsData || legacyTagsData.length === 0)) {
+      return [];
+    }
+    
+    // Get tags by IDs from tag_categories
+    let tagsData: any[] = [];
+    if (tagIds.length > 0) {
+      const { data, error } = await supabase
+        .from('tags')
+        .select('*')
+        .in('id', tagIds)
+        .order('name', { ascending: true });
+        
+      if (error) {
+        console.error(`Error fetching tags for category ${category}:`, error);
+      } else {
+        tagsData = data || [];
+      }
+    }
+    
+    // Combine with legacy tags
+    const allTags = [...tagsData, ...(legacyTagsData || [])];
+    
+    // Get all categories for each tag
+    const tagsWithCategories = await Promise.all(allTags.map(async (tag) => {
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('tag_categories')
+        .select('category')
+        .eq('tag_id', tag.id);
+      
+      if (categoriesError) {
+        console.error(`Error fetching categories for tag ${tag.id}:`, categoriesError);
+        return {
+          id: tag.id,
+          name: tag.name,
+          categories: [],
+          category: tag.category || null // Keep original category for backward compatibility
+        };
+      }
+      
+      return {
+        id: tag.id,
+        name: tag.name,
+        categories: categoriesData.map(c => c.category),
+        category: tag.category || null // Keep original category for backward compatibility
+      };
     }));
+
+    return tagsWithCategories;
   } catch (error) {
     console.error(`Error fetching tags for category ${category}:`, error);
     return [];
@@ -74,56 +151,47 @@ export const createTag = async (tagName: string, category?: string | null): Prom
       return null;
     }
 
-    // If tag already exists, return it
+    // If tag already exists, add the category if provided
     if (existingTags && existingTags.length > 0) {
-      // If the tag exists but we're trying to update its category
-      if (category !== undefined && existingTags[0].category !== category) {
-        const { data: updatedTag, error: updateError } = await supabase
-          .from('tags')
-          .update({ category: category })
-          .eq('id', existingTags[0].id)
-          .select()
-          .single();
-        
-        if (updateError) {
-          console.error('Error updating tag category:', updateError);
-          // Return the existing tag with our interface structure
-          return {
-            id: existingTags[0].id,
-            name: existingTags[0].name,
-            category: existingTags[0].category || null
-          };
+      // If a category is provided, add it to tag_categories
+      if (category) {
+        const { error: categoryError } = await supabase
+          .from('tag_categories')
+          .upsert({
+            tag_id: existingTags[0].id,
+            category: category
+          });
+          
+        if (categoryError) {
+          console.error('Error adding category to existing tag:', categoryError);
         }
+      }
+      
+      // Get all categories for this tag
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('tag_categories')
+        .select('category')
+        .eq('tag_id', existingTags[0].id);
         
-        // Return the updated tag with our interface structure
-        return updatedTag ? {
-          id: updatedTag.id,
-          name: updatedTag.name,
-          category: updatedTag.category || null
-        } : null;
+      if (categoriesError) {
+        console.error('Error fetching categories for tag:', categoriesError);
       }
       
       // Return the existing tag with our interface structure
       return {
         id: existingTags[0].id,
         name: existingTags[0].name,
-        category: existingTags[0].category || null
+        category: existingTags[0].category || null,
+        categories: categoriesData?.map(c => c.category) || []
       };
     }
 
     // Otherwise create a new tag
-    const tagData: {
-      name: string;
-      user_id: string | undefined;
-      category?: string | null;
-    } = {
+    const tagData = {
       name: tagName,
-      user_id: userId
+      user_id: userId,
+      category: category || null // Still maintain the original category field for backward compatibility
     };
-    
-    if (category !== undefined) {
-      tagData.category = category;
-    }
     
     const { data, error } = await supabase
       .from('tags')
@@ -136,11 +204,26 @@ export const createTag = async (tagName: string, category?: string | null): Prom
       return null;
     }
 
+    // If category provided, add it to tag_categories
+    if (category && data) {
+      const { error: categoryError } = await supabase
+        .from('tag_categories')
+        .insert({
+          tag_id: data.id,
+          category: category
+        });
+        
+      if (categoryError) {
+        console.error('Error adding category to new tag:', categoryError);
+      }
+    }
+
     // Return the new tag with our interface structure
     return data ? {
       id: data.id,
       name: data.name,
-      category: data.category || null
+      category: data.category || null,
+      categories: category ? [category] : []
     } : null;
   } catch (error) {
     console.error('Error creating tag:', error);
@@ -148,9 +231,73 @@ export const createTag = async (tagName: string, category?: string | null): Prom
   }
 };
 
-// Update a tag's category
+// Add a category to a tag
+export const addCategoryToTag = async (tagId: string, category: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('tag_categories')
+      .insert({
+        tag_id: tagId,
+        category: category
+      });
+
+    if (error) {
+      console.error('Error adding category to tag:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error adding category to tag:', error);
+    return false;
+  }
+};
+
+// Remove a category from a tag
+export const removeCategoryFromTag = async (tagId: string, category: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('tag_categories')
+      .delete()
+      .eq('tag_id', tagId)
+      .eq('category', category);
+
+    if (error) {
+      console.error('Error removing category from tag:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error removing category from tag:', error);
+    return false;
+  }
+};
+
+// Get categories for a tag
+export const getCategoriesForTag = async (tagId: string): Promise<string[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('tag_categories')
+      .select('category')
+      .eq('tag_id', tagId);
+
+    if (error) {
+      console.error('Error fetching categories for tag:', error);
+      return [];
+    }
+
+    return data.map(item => item.category);
+  } catch (error) {
+    console.error('Error fetching categories for tag:', error);
+    return [];
+  }
+};
+
+// Update a tag's category (legacy method - for backward compatibility)
 export const updateTagCategory = async (tagId: string, category: string | null): Promise<Tag | null> => {
   try {
+    // First, update the legacy category field
     const { data, error } = await supabase
       .from('tags')
       .update({ category })
@@ -163,11 +310,36 @@ export const updateTagCategory = async (tagId: string, category: string | null):
       return null;
     }
 
+    // If category is provided, also add it to tag_categories
+    if (category) {
+      const { error: categoryError } = await supabase
+        .from('tag_categories')
+        .upsert({
+          tag_id: tagId,
+          category: category
+        });
+        
+      if (categoryError) {
+        console.error('Error adding category in junction table:', categoryError);
+      }
+    }
+
+    // Get all categories for this tag
+    const { data: categoriesData, error: categoriesError } = await supabase
+      .from('tag_categories')
+      .select('category')
+      .eq('tag_id', tagId);
+      
+    if (categoriesError) {
+      console.error('Error fetching categories for tag:', categoriesError);
+    }
+
     // Return the updated tag with our interface structure
     return data ? {
       id: data.id,
       name: data.name,
-      category: data.category || null
+      category: data.category || null,
+      categories: categoriesData?.map(c => c.category) || []
     } : null;
   } catch (error) {
     console.error('Error updating tag category:', error);
@@ -178,7 +350,7 @@ export const updateTagCategory = async (tagId: string, category: string | null):
 // Get all available categories
 export const fetchCategories = async (): Promise<string[]> => {
   try {
-    // First, get all categories from notes table
+    // Get categories from notes table
     const { data: noteCategories, error: noteError } = await supabase
       .from('notes')
       .select('category')
@@ -189,7 +361,7 @@ export const fetchCategories = async (): Promise<string[]> => {
       return [];
     }
 
-    // Then, get all categories from tags table
+    // Get categories from tags table (legacy)
     const { data: tagCategories, error: tagError } = await supabase
       .from('tags')
       .select('category')
@@ -200,10 +372,22 @@ export const fetchCategories = async (): Promise<string[]> => {
       return [];
     }
 
-    // Merge both sets of categories and remove duplicates
+    // Get categories from tag_categories table (new)
+    const { data: newTagCategories, error: newTagError } = await supabase
+      .from('tag_categories')
+      .select('category')
+      .not('category', 'is', null);
+
+    if (newTagError) {
+      console.error('Error fetching new tag categories:', newTagError);
+      return [];
+    }
+
+    // Merge all categories and remove duplicates
     const allCategories = [
       ...noteCategories.map(item => item.category),
-      ...tagCategories.map(item => item.category)
+      ...tagCategories.map(item => item.category),
+      ...newTagCategories.map(item => item.category)
     ];
     
     // Extract unique categories and sort them
@@ -229,7 +413,18 @@ export const deleteTag = async (tagId: string): Promise<boolean> => {
       return false;
     }
 
-    // Then, delete the tag itself
+    // Then, delete all categories for this tag
+    const { error: categoriesError } = await supabase
+      .from('tag_categories')
+      .delete()
+      .eq('tag_id', tagId);
+
+    if (categoriesError) {
+      console.error('Error deleting tag categories:', categoriesError);
+      return false;
+    }
+
+    // Finally, delete the tag itself
     const { error } = await supabase
       .from('tags')
       .delete()
@@ -283,12 +478,35 @@ export const getTagsForNote = async (noteId: string): Promise<Tag[]> => {
       return [];
     }
 
-    // Transform the data to match our Tag interface
-    return data.map(item => ({
-      id: item.tags.id,
-      name: item.tags.name,
-      category: item.tags.category || null
-    })) || [];
+    // Get all tags
+    const tagIds = data.map(item => item.tag_id);
+    
+    // Get categories for each tag
+    const tagsWithCategories = await Promise.all(data.map(async (item) => {
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('tag_categories')
+        .select('category')
+        .eq('tag_id', item.tag_id);
+      
+      if (categoriesError) {
+        console.error(`Error fetching categories for tag ${item.tag_id}:`, categoriesError);
+        return {
+          id: item.tags.id,
+          name: item.tags.name,
+          category: item.tags.category || null,
+          categories: []
+        };
+      }
+      
+      return {
+        id: item.tags.id,
+        name: item.tags.name,
+        category: item.tags.category || null,
+        categories: categoriesData.map(c => c.category)
+      };
+    }));
+
+    return tagsWithCategories;
   } catch (error) {
     console.error('Error fetching tags for note:', error);
     return [];
@@ -453,3 +671,4 @@ export const migrateExistingTags = async (): Promise<boolean> => {
     return false;
   }
 };
+

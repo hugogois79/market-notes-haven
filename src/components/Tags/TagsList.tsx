@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Tag as TagIcon, Edit, Trash2, Check, X } from "lucide-react";
+import { Tag as TagIcon, Edit, Trash2, Check, X, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -44,10 +44,13 @@ const TagsList = ({
   const [isEditingTag, setIsEditingTag] = useState<string | null>(null);
   const [editTagCategory, setEditTagCategory] = useState<string | null>(null);
   const [isUpdatingTag, setIsUpdatingTag] = useState(false);
+  const [isAddingCategory, setIsAddingCategory] = useState<string | null>(null);
 
   const getFilteredTags = () => {
     return tags.filter(tag => 
-      (!selectedCategory || tag.category === selectedCategory) &&
+      (!selectedCategory || 
+       tag.category === selectedCategory || 
+       (tag.categories && tag.categories.includes(selectedCategory))) &&
       tag.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   };
@@ -93,7 +96,7 @@ const TagsList = ({
       {getFilteredTags().length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {getFilteredTags().map((tag) => (
-            <div key={tag.id} className="flex items-center">
+            <div key={tag.id} className="flex items-center mb-2">
               <div className="flex items-center mr-1">
                 <Checkbox
                   id={`select-${tag.id}`}
@@ -102,23 +105,39 @@ const TagsList = ({
                   className="mr-1 data-[state=checked]:bg-[#1EAEDB] data-[state=checked]:text-white"
                 />
               </div>
-              <Badge 
-                variant={selectedTag === tag.id ? "default" : "secondary"}
-                className={`text-sm py-1 px-3 cursor-pointer hover:bg-opacity-90 transition-all ${
-                  selectedTag === tag.id ? 'bg-[#1EAEDB]' : bulkSelectedTags.includes(tag.id) ? 'border-[#1EAEDB] border' : ''
-                }`}
-                onClick={() => onTagClick(tag.id)}
-              >
-                {tag.name}
-                <span className="ml-1 bg-primary-foreground text-primary rounded-full px-1.5 py-0.5 text-xs">
-                  {tag.count}
-                </span>
-                {tag.category && (
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    ({tag.category})
+              <div className="flex flex-col">
+                <Badge 
+                  variant={selectedTag === tag.id ? "default" : "secondary"}
+                  className={`text-sm py-1 px-3 cursor-pointer hover:bg-opacity-90 transition-all ${
+                    selectedTag === tag.id ? 'bg-[#1EAEDB]' : bulkSelectedTags.includes(tag.id) ? 'border-[#1EAEDB] border' : ''
+                  }`}
+                  onClick={() => onTagClick(tag.id)}
+                >
+                  {tag.name}
+                  <span className="ml-1 bg-primary-foreground text-primary rounded-full px-1.5 py-0.5 text-xs">
+                    {tag.count}
                   </span>
-                )}
-              </Badge>
+                </Badge>
+                
+                {/* Show categories */}
+                {(tag.categories && tag.categories.length > 0) || tag.category ? (
+                  <div className="flex flex-wrap gap-1 mt-1 ml-1">
+                    {/* Legacy category */}
+                    {tag.category && (!tag.categories || !tag.categories.includes(tag.category)) && (
+                      <Badge variant="outline" className="text-xs py-0.5 px-1.5">
+                        {tag.category}
+                      </Badge>
+                    )}
+                    
+                    {/* New categories */}
+                    {tag.categories && tag.categories.map(cat => (
+                      <Badge key={cat} variant="outline" className="text-xs py-0.5 px-1.5">
+                        {cat}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
               
               {isEditingTag === tag.id ? (
                 <div className="flex items-center ml-1">
@@ -168,6 +187,42 @@ const TagsList = ({
                     <X size={14} className="text-muted-foreground" />
                   </Button>
                 </div>
+              ) : isAddingCategory === tag.id ? (
+                <div className="flex items-center ml-1">
+                  <Select
+                    value=""
+                    onValueChange={(value) => {
+                      if (value === "new") {
+                        onNewCategoryDialog(true);
+                      } else if (value) {
+                        onUpdateTagCategory(tag.id, value);
+                        setIsAddingCategory(null);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-7 w-[120px]">
+                      <SelectValue placeholder="Add category..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories
+                        .filter(cat => !tag.categories || !tag.categories.includes(cat))
+                        .map(category => (
+                          <SelectItem key={category} value={category}>{category}</SelectItem>
+                        ))}
+                      <SelectItem value="new" className="text-[#1EAEDB] font-medium">+ Create new</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Button 
+                    type="button"
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 w-7 p-0"
+                    onClick={() => setIsAddingCategory(null)}
+                  >
+                    <X size={14} className="text-muted-foreground" />
+                  </Button>
+                </div>
               ) : (
                 <div className="flex">
                   <Button 
@@ -179,6 +234,7 @@ const TagsList = ({
                       setIsEditingTag(tag.id);
                       setEditTagCategory(tag.category);
                     }}
+                    title="Edit primary category"
                   >
                     <Edit size={14} className="text-muted-foreground hover:text-primary" />
                   </Button>
@@ -188,7 +244,19 @@ const TagsList = ({
                     variant="ghost" 
                     size="sm" 
                     className="h-7 w-7 p-0"
+                    onClick={() => setIsAddingCategory(tag.id)}
+                    title="Add category"
+                  >
+                    <Plus size={14} className="text-muted-foreground hover:text-primary" />
+                  </Button>
+                  
+                  <Button 
+                    type="button"
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 w-7 p-0"
                     onClick={() => onTagDelete(tag.id)}
+                    title="Delete tag"
                   >
                     <Trash2 size={14} className="text-muted-foreground hover:text-destructive" />
                   </Button>

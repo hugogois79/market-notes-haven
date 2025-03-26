@@ -15,7 +15,6 @@ import {
 } from "@/services/tagService";
 import { useNotes } from "@/contexts/NotesContext";
 
-// Import our components
 import TagsList from "@/components/Tags/TagsList";
 import CategoryList from "@/components/Tags/CategoryList";
 import TagsFilters from "@/components/Tags/TagsFilters";
@@ -231,7 +230,11 @@ const Tags = () => {
     
     if (updatedTag) {
       setTags(prev => prev.map(tag => 
-        tag.id === tagId ? { ...tag, category: updatedTag.category } : tag
+        tag.id === tagId ? { 
+          ...tag, 
+          category: updatedTag.category,
+          categories: updatedTag.categories
+        } : tag
       ));
       
       toast.success(`Updated tag category`);
@@ -281,7 +284,11 @@ const Tags = () => {
           successCount++;
           // Update the tags list
           setTags(prev => prev.map(tag => 
-            tag.id === tagId ? { ...tag, category: updatedTag.category } : tag
+            tag.id === tagId ? { 
+              ...tag, 
+              category: updatedTag.category,
+              categories: updatedTag.categories
+            } : tag
           ));
         }
       }
@@ -320,7 +327,9 @@ const Tags = () => {
 
   const getFilteredTags = () => {
     return tags.filter(tag => 
-      (!selectedCategory || tag.category === selectedCategory) &&
+      (!selectedCategory || 
+       tag.category === selectedCategory || 
+       (tag.categories && tag.categories.includes(selectedCategory))) &&
       tag.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   };

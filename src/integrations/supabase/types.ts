@@ -820,6 +820,35 @@ export type Database = {
         }
         Relationships: []
       }
+      tag_categories: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          tag_id: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          tag_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          tag_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tag_categories_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tags: {
         Row: {
           category: string | null
