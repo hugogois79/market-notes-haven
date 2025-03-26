@@ -17,7 +17,12 @@ export const fetchTags = async (): Promise<Tag[]> => {
       return [];
     }
 
-    return data || [];
+    // Transform the data to match our Tag interface
+    return (data || []).map(item => ({
+      id: item.id,
+      name: item.name,
+      category: item.category || null
+    }));
   } catch (error) {
     console.error('Error fetching tags:', error);
     return [];
@@ -38,7 +43,12 @@ export const fetchTagsByCategory = async (category: string): Promise<Tag[]> => {
       return [];
     }
 
-    return data || [];
+    // Transform the data to match our Tag interface
+    return (data || []).map(item => ({
+      id: item.id,
+      name: item.name,
+      category: item.category || null
+    }));
   } catch (error) {
     console.error(`Error fetching tags for category ${category}:`, error);
     return [];
@@ -76,17 +86,36 @@ export const createTag = async (tagName: string, category?: string): Promise<Tag
         
         if (updateError) {
           console.error('Error updating tag category:', updateError);
-          return existingTags[0] as Tag;
+          // Return the existing tag with our interface structure
+          return {
+            id: existingTags[0].id,
+            name: existingTags[0].name,
+            category: existingTags[0].category || null
+          };
         }
         
-        return updatedTag as Tag;
+        // Return the updated tag with our interface structure
+        return updatedTag ? {
+          id: updatedTag.id,
+          name: updatedTag.name,
+          category: updatedTag.category || null
+        } : null;
       }
       
-      return existingTags[0] as Tag;
+      // Return the existing tag with our interface structure
+      return {
+        id: existingTags[0].id,
+        name: existingTags[0].name,
+        category: existingTags[0].category || null
+      };
     }
 
     // Otherwise create a new tag
-    const tagData: any = {
+    const tagData: {
+      name: string;
+      user_id: string | undefined;
+      category?: string;
+    } = {
       name: tagName,
       user_id: userId
     };
@@ -106,7 +135,12 @@ export const createTag = async (tagName: string, category?: string): Promise<Tag
       return null;
     }
 
-    return data as Tag;
+    // Return the new tag with our interface structure
+    return data ? {
+      id: data.id,
+      name: data.name,
+      category: data.category || null
+    } : null;
   } catch (error) {
     console.error('Error creating tag:', error);
     return null;
@@ -128,7 +162,12 @@ export const updateTagCategory = async (tagId: string, category: string | null):
       return null;
     }
 
-    return data as Tag;
+    // Return the updated tag with our interface structure
+    return data ? {
+      id: data.id,
+      name: data.name,
+      category: data.category || null
+    } : null;
   } catch (error) {
     console.error('Error updating tag category:', error);
     return null;
@@ -226,8 +265,12 @@ export const getTagsForNote = async (noteId: string): Promise<Tag[]> => {
       return [];
     }
 
-    // Transform the data to get tag objects
-    return data.map(item => item.tags) || [];
+    // Transform the data to match our Tag interface
+    return data.map(item => ({
+      id: item.tags.id,
+      name: item.tags.name,
+      category: item.tags.category || null
+    })) || [];
   } catch (error) {
     console.error('Error fetching tags for note:', error);
     return [];
