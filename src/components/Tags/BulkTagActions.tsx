@@ -39,12 +39,13 @@ const BulkTagActions = ({
         size="sm" 
         onClick={onClearSelection}
         className="h-8 px-2"
+        type="button"
       >
         Clear selection
       </Button>
       <Dialog open={bulkCategoryAssignOpen} onOpenChange={onBulkCategoryAssignOpen}>
         <DialogTrigger asChild>
-          <Button variant="brand" size="sm" className="h-8 gap-1">
+          <Button variant="brand" size="sm" className="h-8 gap-1" type="button">
             <FolderOpen size={14} />
             Assign to category
           </Button>
@@ -83,6 +84,7 @@ const BulkTagActions = ({
             <Button 
               variant="outline" 
               onClick={() => onBulkCategoryAssignOpen(false)}
+              type="button"
             >
               Cancel
             </Button>
@@ -90,6 +92,7 @@ const BulkTagActions = ({
               variant="brand" 
               onClick={onBulkUpdateCategories}
               disabled={isBulkUpdating}
+              type="button"
             >
               {isBulkUpdating ? "Updating..." : "Update Categories"}
             </Button>

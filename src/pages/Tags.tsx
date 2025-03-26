@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tag as TagIcon, Plus, TagsIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,7 +15,7 @@ import {
 } from "@/services/tagService";
 import { useNotes } from "@/contexts/NotesContext";
 
-// Import our new components
+// Import our components
 import TagsList from "@/components/Tags/TagsList";
 import CategoryList from "@/components/Tags/CategoryList";
 import TagsFilters from "@/components/Tags/TagsFilters";
@@ -167,7 +166,7 @@ const Tags = () => {
     setIsAddingTag(true);
     
     try {
-      const tag = await createTag(newTag.trim(), selectedCategory);
+      const tag = await createTag(newTag.trim(), selectedCategory || null);
       
       if (tag) {
         setTags(prev => [...prev, { ...tag, count: 0 }].sort((a, b) => a.name.localeCompare(b.name)));
@@ -226,7 +225,7 @@ const Tags = () => {
   };
 
   const handleUpdateTagCategory = async (tagId: string, category: string | null) => {
-    if (!tagId) return;
+    if (!tagId) return false;
     
     const updatedTag = await updateTagCategory(tagId, category);
     
@@ -445,7 +444,7 @@ const Tags = () => {
 
       <NewCategoryDialog 
         open={showNewCategoryDialog}
-        onOpenChange={handleNewCategoryDialog}
+        onOpenChange={setShowNewCategoryDialog}
         newCategory={newCategory}
         onNewCategoryChange={setNewCategory}
         onCreateCategory={handleCreateCategory}

@@ -74,6 +74,7 @@ const TagsFilters = ({
               {tags.find(t => t.id === selectedTag)?.name || "Unknown"}
             </Badge>
             <Button 
+              type="button"
               variant="ghost" 
               size="sm" 
               className="ml-2 h-8 w-8 p-0" 

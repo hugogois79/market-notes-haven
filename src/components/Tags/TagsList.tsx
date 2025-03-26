@@ -74,19 +74,18 @@ const TagsList = ({
         
         {getFilteredTags().length > 0 && (
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onSelectAllTags}
-              className="gap-1"
-            >
+            <div className="flex items-center gap-1">
               <Checkbox 
+                id="select-all"
                 checked={getFilteredTags().length > 0 && 
                   getFilteredTags().every(tag => bulkSelectedTags.includes(tag.id))} 
-                className="mr-1"
+                onCheckedChange={onSelectAllTags}
+                className="mr-1 data-[state=checked]:bg-[#1EAEDB] data-[state=checked]:text-white"
               />
-              Select all
-            </Button>
+              <label htmlFor="select-all" className="text-sm cursor-pointer">
+                Select all
+              </label>
+            </div>
           </div>
         )}
       </div>
@@ -146,6 +145,7 @@ const TagsList = ({
                   </Select>
                   
                   <Button 
+                    type="button"
                     variant="ghost" 
                     size="sm" 
                     className="h-7 w-7 p-0"
@@ -156,6 +156,7 @@ const TagsList = ({
                   </Button>
                   
                   <Button 
+                    type="button"
                     variant="ghost" 
                     size="sm" 
                     className="h-7 w-7 p-0"
@@ -170,6 +171,7 @@ const TagsList = ({
               ) : (
                 <div className="flex">
                   <Button 
+                    type="button"
                     variant="ghost" 
                     size="sm" 
                     className="h-7 w-7 p-0 ml-1"
@@ -182,6 +184,7 @@ const TagsList = ({
                   </Button>
                   
                   <Button 
+                    type="button"
                     variant="ghost" 
                     size="sm" 
                     className="h-7 w-7 p-0"

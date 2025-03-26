@@ -33,7 +33,7 @@ const AddTagDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="brand" className="gap-2">
+        <Button variant="brand" className="gap-2" type="button">
           <Plus size={16} />
           Add Tag
         </Button>
@@ -87,6 +87,7 @@ const AddTagDialog = ({
           <Button 
             variant="outline" 
             onClick={() => onOpenChange(false)}
+            type="button"
           >
             Cancel
           </Button>
@@ -94,6 +95,7 @@ const AddTagDialog = ({
             variant="brand" 
             onClick={onAddTag}
             disabled={isAddingTag}
+            type="button"
           >
             {isAddingTag ? "Adding..." : "Add Tag"}
           </Button>
