@@ -120,6 +120,44 @@ export type Database = {
           },
         ]
       }
+      demo_documents: {
+        Row: {
+          chunk_order: number | null
+          date_created: string | null
+          embedding: string | null
+          file_id: string | null
+          id: string
+          metadata: Json | null
+          text: string | null
+        }
+        Insert: {
+          chunk_order?: number | null
+          date_created?: string | null
+          embedding?: string | null
+          file_id?: string | null
+          id?: string
+          metadata?: Json | null
+          text?: string | null
+        }
+        Update: {
+          chunk_order?: number | null
+          date_created?: string | null
+          embedding?: string | null
+          file_id?: string | null
+          id?: string
+          metadata?: Json | null
+          text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demo_documents_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       diana: {
         Row: {
           content: string | null
@@ -140,6 +178,38 @@ export type Database = {
           metadata?: Json | null
         }
         Relationships: []
+      }
+      document_summaries: {
+        Row: {
+          date_created: string | null
+          document_id: string | null
+          embedding: string | null
+          id: string
+          text: string | null
+        }
+        Insert: {
+          date_created?: string | null
+          document_id?: string | null
+          embedding?: string | null
+          id?: string
+          text?: string | null
+        }
+        Update: {
+          date_created?: string | null
+          document_id?: string | null
+          embedding?: string | null
+          id?: string
+          text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_summaries_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "demo_documents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       documents: {
         Row: {
@@ -203,8 +273,11 @@ export type Database = {
           created_at: string
           date_info: Json | null
           description: string | null
+          full_amount: number
           id: string
+          payment_method_id: string | null
           project_id: string | null
+          report_number: number | null
           status: Database["public"]["Enums"]["report_status"]
           submitted_date: string | null
           title: string
@@ -215,8 +288,11 @@ export type Database = {
           created_at?: string
           date_info?: Json | null
           description?: string | null
+          full_amount?: number
           id?: string
+          payment_method_id?: string | null
           project_id?: string | null
+          report_number?: number | null
           status?: Database["public"]["Enums"]["report_status"]
           submitted_date?: string | null
           title: string
@@ -227,8 +303,11 @@ export type Database = {
           created_at?: string
           date_info?: Json | null
           description?: string | null
+          full_amount?: number
           id?: string
+          payment_method_id?: string | null
           project_id?: string | null
+          report_number?: number | null
           status?: Database["public"]["Enums"]["report_status"]
           submitted_date?: string | null
           title?: string
@@ -236,6 +315,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "expense_reports_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "expense_reports_project_id_fkey"
             columns: ["project_id"]
@@ -311,18 +397,21 @@ export type Database = {
           google_drive_id: string | null
           id: string
           name: string | null
+          pages: number | null
         }
         Insert: {
           date_created?: string
           google_drive_id?: string | null
           id?: string
           name?: string | null
+          pages?: number | null
         }
         Update: {
           date_created?: string
           google_drive_id?: string | null
           id?: string
           name?: string | null
+          pages?: number | null
         }
         Relationships: []
       }
@@ -469,6 +558,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_methods: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       portfolios_tokens: {
         Row: {
@@ -704,30 +820,6 @@ export type Database = {
         }
         Relationships: []
       }
-      summaries: {
-        Row: {
-          date_created: string
-          embedding: string | null
-          id: string
-          metadata: Json | null
-          summary: string | null
-        }
-        Insert: {
-          date_created?: string
-          embedding?: string | null
-          id?: string
-          metadata?: Json | null
-          summary?: string | null
-        }
-        Update: {
-          date_created?: string
-          embedding?: string | null
-          id?: string
-          metadata?: Json | null
-          summary?: string | null
-        }
-        Relationships: []
-      }
       tags: {
         Row: {
           created_at: string | null
@@ -749,6 +841,39 @@ export type Database = {
           name?: string
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      todos: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          is_complete: boolean | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          is_complete?: boolean | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          is_complete?: boolean | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,7 @@ const Categories = () => {
 
   // Calculate categories and their counts
   useEffect(() => {
-    if (!isLoaded && notes.length > 0) {
+    if (isLoaded || notes.length > 0) {
       const categoryMap = new Map<string, number>();
       
       notes.forEach((note) => {
