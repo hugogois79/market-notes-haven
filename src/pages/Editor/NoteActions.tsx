@@ -108,9 +108,9 @@ const NoteActions: React.FC<NoteActionsProps> = ({
         Back
       </Button>
       
-      {!isNewNote && currentNote && !currentNote.id.toString().startsWith("temp-") && (
+      {(!isNewNote || (currentNote && !currentNote.id.toString().startsWith("temp-"))) && (
         <div className="flex items-center gap-2">
-          {currentNote.attachment_url && (
+          {currentNote && currentNote.attachment_url && (
             <a 
               href={currentNote.attachment_url}
               target="_blank"
@@ -128,7 +128,7 @@ const NoteActions: React.FC<NoteActionsProps> = ({
             size="sm"
             className="gap-2"
             onClick={handlePrint}
-            disabled={isPrinting}
+            disabled={isPrinting || !currentNote}
           >
             <Printer size={16} />
             {isPrinting ? "Printing..." : "Print"}
@@ -140,7 +140,7 @@ const NoteActions: React.FC<NoteActionsProps> = ({
                 variant="destructive" 
                 size="sm" 
                 className="gap-2"
-                disabled={isDeleting}
+                disabled={isDeleting || !currentNote}
               >
                 <Trash2 size={16} />
                 {isDeleting ? "Deleting..." : "Delete"}

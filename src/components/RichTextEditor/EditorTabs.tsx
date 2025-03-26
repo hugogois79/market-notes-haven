@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import EditorContent from "./EditorContent";
@@ -51,7 +50,10 @@ const EditorTabs = ({
 
   const handleContentChangeCallback = useCallback(() => {
     onContentChange(content);
-  }, [content, onContentChange]);
+    if (onAutoSave) {
+      onAutoSave();
+    }
+  }, [content, onContentChange, onAutoSave]);
 
   const { mutate: uploadAttachment, isPending: isUploading } = useMutation({
     mutationFn: async (file: File) => {

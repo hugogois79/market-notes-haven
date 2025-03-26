@@ -273,13 +273,14 @@ const RichTextEditor = ({
         handleTokenSelect={handleTokenSelect}
         isLoadingTokens={isLoadingTokens}
         category={category}
+        categoryFilter={category}
       />
       
       <Card className="p-0 border rounded-md overflow-hidden">
         <EditorTabs 
           content={content}
           onContentChange={handleContentChange}
-          onContentUpdate={handleContentUpdate}
+          onContentUpdate={setCurrentContent}
           onAutoSave={handleAutoSave}
           noteId={noteId}
           attachment_url={attachment_url}
