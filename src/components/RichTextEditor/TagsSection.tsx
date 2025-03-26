@@ -1,9 +1,9 @@
 
-import React, { Dispatch, SetStateAction } from "react";
+import React, { Dispatch, SetStateAction, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tag } from "@/types";
-import { Loader, Plus, X, Tags, ChevronDown, Tag as TagIcon } from "lucide-react";
+import { Loader, Plus, X, Tags, ChevronDown, Tag as TagIcon, Search } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import TagBadge from "@/components/ui/tag-badge";
 
 export interface TagsSectionProps {
   linkedTags: Tag[];
@@ -23,6 +31,9 @@ export interface TagsSectionProps {
   isLoadingTags: boolean;
   getAvailableTagsForSelection: () => Tag[];
   compact?: boolean;
+  categoryFilter?: string | null;
+  setCategoryFilter?: Dispatch<SetStateAction<string | null>>;
+  availableCategories?: string[];
 }
 
 const TagsSection: React.FC<TagsSectionProps> = ({
@@ -34,9 +45,18 @@ const TagsSection: React.FC<TagsSectionProps> = ({
   handleSelectTag,
   isLoadingTags,
   getAvailableTagsForSelection,
-  compact = false
+  compact = false,
+  categoryFilter,
+  setCategoryFilter,
+  availableCategories = []
 }) => {
+  const [tagSearchQuery, setTagSearchQuery] = useState("");
   const availableTags = getAvailableTagsForSelection();
+  
+  // Filter available tags based on search query
+  const filteredAvailableTags = availableTags.filter(tag => 
+    tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
+  );
 
   if (compact) {
     return (
@@ -75,10 +95,42 @@ const TagsSection: React.FC<TagsSectionProps> = ({
             <DropdownMenuLabel>Select or Create Tag</DropdownMenuLabel>
             <DropdownMenuSeparator />
             
-            {availableTags.length > 0 && (
+            {availableCategories.length > 0 && setCategoryFilter && (
+              <div className="px-2 py-2">
+                <Select
+                  value={categoryFilter || ""}
+                  onValueChange={(value) => setCategoryFilter(value === "all" ? null : value)}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Filter by category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {availableCategories.map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            <div className="px-2 py-1">
+              <div className="relative">
+                <Search className="absolute left-2 top-1.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  value={tagSearchQuery}
+                  onChange={(e) => setTagSearchQuery(e.target.value)}
+                  placeholder="Search tags..."
+                  className="pl-8 h-7 text-sm"
+                />
+              </div>
+            </div>
+            
+            {filteredAvailableTags.length > 0 && (
               <>
                 <div className="max-h-32 overflow-y-auto px-1 py-1">
-                  {availableTags.map((tag) => (
+                  {filteredAvailableTags.map((tag) => (
                     <DropdownMenuItem
                       key={tag.id}
                       onClick={() => handleSelectTag(tag)}
@@ -149,6 +201,25 @@ const TagsSection: React.FC<TagsSectionProps> = ({
         ))}
       </div>
       
+      {availableCategories.length > 0 && setCategoryFilter && (
+        <div className="mb-3">
+          <Select
+            value={categoryFilter || "all"}
+            onValueChange={(value) => setCategoryFilter(value === "all" ? null : value)}
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filter by category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {availableCategories.map(category => (
+                <SelectItem key={category} value={category}>{category}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      
       <div className="flex gap-2">
         {/* Tag dropdown selection */}
         <DropdownMenu>
@@ -156,24 +227,44 @@ const TagsSection: React.FC<TagsSectionProps> = ({
             <Button 
               variant="outline" 
               className="w-[150px] justify-between font-normal text-left"
-              disabled={isLoadingTags || availableTags.length === 0}
+              disabled={isLoadingTags || filteredAvailableTags.length === 0}
             >
               <span className="truncate">
-                {isLoadingTags ? "Loading..." : (availableTags.length === 0 ? "No tags" : "Select tag")}
+                {isLoadingTags ? "Loading..." : (filteredAvailableTags.length === 0 ? "No tags" : "Select tag")}
               </span>
               <ChevronDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-[150px] max-h-[180px] overflow-auto">
-            {availableTags.map((tag) => (
-              <DropdownMenuItem
-                key={tag.id}
-                onClick={() => handleSelectTag(tag)}
-                className="cursor-pointer"
-              >
-                {tag.name}
-              </DropdownMenuItem>
-            ))}
+          <DropdownMenuContent className="w-[200px]">
+            <div className="p-2">
+              <div className="relative mb-2">
+                <Search className="absolute left-2 top-1.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  value={tagSearchQuery}
+                  onChange={(e) => setTagSearchQuery(e.target.value)}
+                  placeholder="Search tags..."
+                  className="pl-8 h-8 text-sm"
+                />
+              </div>
+            </div>
+            <DropdownMenuSeparator />
+            <div className="max-h-[180px] overflow-auto">
+              {filteredAvailableTags.map((tag) => (
+                <DropdownMenuItem
+                  key={tag.id}
+                  onClick={() => handleSelectTag(tag)}
+                  className="cursor-pointer"
+                >
+                  {tag.name}
+                </DropdownMenuItem>
+              ))}
+              {filteredAvailableTags.length === 0 && (
+                <div className="text-center p-2 text-sm text-muted-foreground">
+                  No matching tags found
+                </div>
+              )}
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
         

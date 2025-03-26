@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Tag } from "@/types";
 
@@ -24,8 +25,29 @@ export const fetchTags = async (): Promise<Tag[]> => {
   }
 };
 
+// Fetch tags by category
+export const fetchTagsByCategory = async (category: string): Promise<Tag[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('tags')
+      .select('*')
+      .eq('category', category)
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error(`Error fetching tags for category ${category}:`, error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error(`Error fetching tags for category ${category}:`, error);
+    return [];
+  }
+};
+
 // Create a new tag
-export const createTag = async (tagName: string): Promise<Tag | null> => {
+export const createTag = async (tagName: string, category?: string): Promise<Tag | null> => {
   try {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
@@ -44,6 +66,23 @@ export const createTag = async (tagName: string): Promise<Tag | null> => {
 
     // If tag already exists, return it
     if (existingTags && existingTags.length > 0) {
+      // If the tag exists but we're trying to update its category
+      if (category && existingTags[0].category !== category) {
+        const { data: updatedTag, error: updateError } = await supabase
+          .from('tags')
+          .update({ category })
+          .eq('id', existingTags[0].id)
+          .select()
+          .single();
+        
+        if (updateError) {
+          console.error('Error updating tag category:', updateError);
+          return existingTags[0] as Tag;
+        }
+        
+        return updatedTag as Tag;
+      }
+      
       return existingTags[0] as Tag;
     }
 
@@ -53,6 +92,7 @@ export const createTag = async (tagName: string): Promise<Tag | null> => {
       .insert([{
         name: tagName,
         user_id: userId,
+        category: category || null
       }])
       .select()
       .single();
@@ -66,6 +106,51 @@ export const createTag = async (tagName: string): Promise<Tag | null> => {
   } catch (error) {
     console.error('Error creating tag:', error);
     return null;
+  }
+};
+
+// Update a tag's category
+export const updateTagCategory = async (tagId: string, category: string | null): Promise<Tag | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('tags')
+      .update({ category })
+      .eq('id', tagId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating tag category:', error);
+      return null;
+    }
+
+    return data as Tag;
+  } catch (error) {
+    console.error('Error updating tag category:', error);
+    return null;
+  }
+};
+
+// Get all available categories
+export const fetchCategories = async (): Promise<string[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('notes')
+      .select('category')
+      .not('category', 'is', null)
+      .order('category', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching categories:', error);
+      return [];
+    }
+
+    // Extract unique categories
+    const categories = [...new Set(data.map(item => item.category))];
+    return categories.filter(Boolean) as string[];
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return [];
   }
 };
 
