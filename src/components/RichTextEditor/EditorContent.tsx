@@ -87,7 +87,7 @@ const EditorContent = ({
 
   return (
     <div 
-      className="p-4 min-h-[300px] max-h-[60vh] focus:outline-none overflow-auto text-sm"
+      className="p-4 min-h-[300px] h-full w-full focus:outline-none overflow-auto text-sm"
       ref={editorRef}
       contentEditable
       onInput={handleContentChange}
@@ -99,7 +99,10 @@ const EditorContent = ({
         overflowY: 'auto',
         whiteSpace: 'normal',
         // Reduced top padding
-        paddingTop: "8px"
+        paddingTop: "8px",
+        // Ensure content wraps within the container
+        wordWrap: "break-word",
+        wordBreak: "break-word"
       }}
       data-placeholder="Start writing..."
     >
