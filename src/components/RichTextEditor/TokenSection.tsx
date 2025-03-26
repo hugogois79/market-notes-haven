@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { X, Coins, ChevronDown } from "lucide-react";
@@ -320,4 +321,3 @@ const TokenSection: React.FC<TokenSectionProps> = ({
 };
 
 export default TokenSection;
-

@@ -124,12 +124,12 @@ const TagsList = ({
               {isEditingTag === tag.id ? (
                 <div className="flex items-center ml-1">
                   <Select
-                    value={editTagCategory || ""}
+                    value={editTagCategory !== null ? editTagCategory : "none"}
                     onValueChange={(value) => {
                       if (value === "new") {
                         onNewCategoryDialog(true);
                       } else {
-                        setEditTagCategory(value === "" ? null : value);
+                        setEditTagCategory(value === "none" ? null : value);
                       }
                     }}
                   >
@@ -137,7 +137,7 @@ const TagsList = ({
                       <SelectValue placeholder="Category..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No category</SelectItem>
+                      <SelectItem value="none">No category</SelectItem>
                       {categories.map(category => (
                         <SelectItem key={category} value={category}>{category}</SelectItem>
                       ))}

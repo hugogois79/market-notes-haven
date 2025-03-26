@@ -17,7 +17,7 @@ export const TokenSelector = ({
   selectedToken,
   onTokenChange
 }: TokenSelectorProps) => {
-  // Ensure selectedToken is never empty
+  // Ensure selectedToken is never empty by using a placeholder value
   const safeSelectedToken = selectedToken || "placeholder";
   
   return (

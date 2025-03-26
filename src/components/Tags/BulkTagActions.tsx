@@ -58,12 +58,12 @@ const BulkTagActions = ({
           </DialogHeader>
           <div className="py-4">
             <Select
-              value={bulkSelectedCategory || ""}
+              value={bulkSelectedCategory !== null ? bulkSelectedCategory : "none"}
               onValueChange={(value) => {
                 if (value === "new") {
                   onNewCategoryDialog(true);
                 } else {
-                  onBulkSelectedCategoryChange(value === "" ? null : value);
+                  onBulkSelectedCategoryChange(value === "none" ? null : value);
                 }
               }}
             >
@@ -71,7 +71,7 @@ const BulkTagActions = ({
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No category (remove existing)</SelectItem>
+                <SelectItem value="none">No category (remove existing)</SelectItem>
                 {categories.map(category => (
                   <SelectItem key={category} value={category}>{category}</SelectItem>
                 ))}

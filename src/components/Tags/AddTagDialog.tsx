@@ -61,12 +61,12 @@ const AddTagDialog = ({
           
           <div>
             <Select
-              value={selectedCategory || ""}
+              value={selectedCategory !== null ? selectedCategory : "none"}
               onValueChange={(value) => {
                 if (value === "new") {
                   onNewCategoryDialog(true);
                 } else {
-                  onSelectedCategoryChange(value === "" ? null : value);
+                  onSelectedCategoryChange(value === "none" ? null : value);
                 }
               }}
             >
@@ -74,7 +74,7 @@ const AddTagDialog = ({
                 <SelectValue placeholder="Select category (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No category</SelectItem>
+                <SelectItem value="none">No category</SelectItem>
                 {categories.map(category => (
                   <SelectItem key={category} value={category}>{category}</SelectItem>
                 ))}
