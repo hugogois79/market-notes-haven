@@ -127,6 +127,7 @@ const RichTextEditor = ({
           if (newTag) {
             onTagsChange([...linkedTags, newTag]);
             refetchTags();
+            toast.success(`Created tag "${tagName}" in category "${category}"`);
           } else {
             toast.error("Failed to create tag");
           }

@@ -1,3 +1,4 @@
+
 import React, { Dispatch, SetStateAction, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,6 +169,11 @@ const TagsSection: React.FC<TagsSectionProps> = ({
                   {isLoadingTags ? <Loader size={14} className="animate-spin" /> : <Plus size={14} />}
                 </Button>
               </div>
+              {categoryFilter && (
+                <div className="mt-1 text-xs text-muted-foreground">
+                  New tags will be linked to category: {categoryFilter}
+                </div>
+              )}
             </div>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -252,29 +258,36 @@ const TagsSection: React.FC<TagsSectionProps> = ({
         
         <div className="flex items-center px-2 text-xs text-muted-foreground">OR</div>
         
-        <div className="flex gap-2 flex-1">
-          <Input
-            type="text"
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            placeholder="Create new tag..."
-            className="flex-1"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && tagInput.trim()) {
-                e.preventDefault();
-                handleAddTag();
-              }
-            }}
-          />
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            onClick={() => handleAddTag()}
-            disabled={!tagInput.trim() || isLoadingTags}
-          >
-            {isLoadingTags ? <Loader size={16} className="animate-spin" /> : <Plus size={16} />}
-          </Button>
+        <div className="flex-1">
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              placeholder="Create new tag..."
+              className="flex-1"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && tagInput.trim()) {
+                  e.preventDefault();
+                  handleAddTag();
+                }
+              }}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              onClick={() => handleAddTag()}
+              disabled={!tagInput.trim() || isLoadingTags}
+            >
+              {isLoadingTags ? <Loader size={16} className="animate-spin" /> : <Plus size={16} />}
+            </Button>
+          </div>
+          {categoryFilter && (
+            <div className="mt-1 text-xs text-muted-foreground">
+              New tags will be linked to category: {categoryFilter}
+            </div>
+          )}
         </div>
       </div>
     </div>
