@@ -70,23 +70,7 @@ const NoteActions: React.FC<NoteActionsProps> = ({
     setIsPrinting(true);
     
     try {
-      // Process content to remove any unwanted bold styling
-      let processedNote = { ...currentNote };
-      
-      // Clean up content if it exists
-      if (processedNote.content) {
-        processedNote.content = processedNote.content
-          // Add normal font-weight to paragraphs without explicit font-weight
-          .replace(/<p([^>]*?)>/gi, function(match, p1) {
-            // Only add font-weight: normal if font-weight isn't already specified
-            if (!/font-weight/i.test(p1)) {
-              return `<p${p1} style="font-weight: normal;">`;
-            }
-            return match;
-          });
-      }
-      
-      printNote(processedNote);
+      printNote(currentNote);
       toast.success("Preparing note for printing...");
     } catch (error) {
       toast.error("Failed to print note");
@@ -95,6 +79,9 @@ const NoteActions: React.FC<NoteActionsProps> = ({
       setIsPrinting(false);
     }
   };
+
+  // Determine if the note can have actions (if it's not a new unsaved note)
+  const canHaveActions = currentNote && (!isNewNote || !currentNote.id.toString().startsWith("temp-"));
 
   return (
     <div className="flex items-center justify-between mb-4">
@@ -108,7 +95,7 @@ const NoteActions: React.FC<NoteActionsProps> = ({
         Back
       </Button>
       
-      {(!isNewNote || (currentNote && !currentNote.id.toString().startsWith("temp-"))) && (
+      {canHaveActions && (
         <div className="flex items-center gap-2">
           {currentNote && currentNote.attachment_url && (
             <a 

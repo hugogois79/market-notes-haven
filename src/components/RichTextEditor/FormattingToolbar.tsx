@@ -17,7 +17,8 @@ import {
   Text,
   SeparatorVertical,
   Highlighter,
-  Underline
+  Underline,
+  Printer
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -27,6 +28,7 @@ export interface FormattingToolbarProps {
   formatTableCells: (alignment: string) => void;
   insertVerticalSeparator: () => void;
   highlightText: () => void;
+  onPrint?: () => void;
 }
 
 const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ 
@@ -34,7 +36,8 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
   setIsTableDialogOpen,
   formatTableCells,
   insertVerticalSeparator,
-  highlightText
+  highlightText,
+  onPrint
 }) => {
   return (
     <div className="flex items-center flex-wrap gap-1 p-2 bg-muted/60 rounded-t-md mx-2 mb-0 sticky top-0 z-10 backdrop-blur-sm shadow-sm border-b">
@@ -346,6 +349,29 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+
+      {/* Print button */}
+      {onPrint && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={onPrint}
+                title="Print Note"
+                className="h-8 w-8"
+              >
+                <Printer size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Print Note</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
     </div>
   );
 };

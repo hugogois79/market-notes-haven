@@ -1,3 +1,4 @@
+
 import React, { RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -15,6 +16,7 @@ import {
   Table,
   Highlighter,
   Grip,
+  Printer
 } from "lucide-react";
 
 interface EditorToolbarProps {
@@ -24,6 +26,7 @@ interface EditorToolbarProps {
   insertVerticalSeparator?: () => void;
   highlightText?: () => void;
   boldText?: () => void;
+  onPrintClick?: () => void;
 }
 
 const EditorToolbar: React.FC<EditorToolbarProps> = ({ 
@@ -32,7 +35,8 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
   formatTableCells,
   insertVerticalSeparator,
   highlightText,
-  boldText
+  boldText,
+  onPrintClick
 }) => {
   return (
     <div className="flex flex-wrap gap-1 p-2 bg-muted border-b">
@@ -154,6 +158,14 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         title="Insert Table"
       >
         <Table className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onPrintClick}
+        title="Print Note"
+      >
+        <Printer className="h-4 w-4" />
       </Button>
     </div>
   );

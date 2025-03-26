@@ -4,6 +4,7 @@ import { Tag, Token, Note, TradeInfo } from "@/types";
 import { useEditorState } from "./hooks/useEditorState";
 import { useTokenHandling } from "./hooks/useTokenHandling";
 import EditorMain from "./components/EditorMain";
+import { printNote } from "@/utils/printUtils";
 
 interface RichTextEditorProps {
   title: string;
@@ -97,6 +98,22 @@ const RichTextEditor = ({
     handleTokenSelect,
     handleRemoveToken
   } = useTokenHandling(linkedTokens, onTokensChange);
+
+  // Handle direct print for current note
+  const handlePrint = () => {
+    printNote({
+      id: noteId,
+      title: title,
+      content: currentContent,
+      category: category,
+      tags: linkedTags,
+      summary: summary,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      attachment_url: attachment_url,
+      tradeInfo: tradeInfo
+    });
+  };
 
   return (
     <EditorMain

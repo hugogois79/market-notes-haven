@@ -1,11 +1,12 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import EditorHeader from "../EditorHeader";
 import EditorStatusBar from "../EditorStatusBar";
 import EditorTabs from "../EditorTabs";
 import MetadataSection from "../MetadataSection";
 import SpecialSections from "../SpecialSections";
+import PrintModal from "../PrintModal";
 import { Tag, Token, TradeInfo } from "@/types";
 
 interface EditorMainProps {
@@ -80,6 +81,11 @@ const EditorMain: React.FC<EditorMainProps> = ({
   hasConclusion = true,
 }) => {
   const isTradingCategory = category === "Trading" || category === "Pair Trading";
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+
+  const handlePrintClick = () => {
+    setIsPrintModalOpen(true);
+  };
 
   return (
     <div className="flex flex-col gap-4 mt-2">
@@ -94,6 +100,7 @@ const EditorMain: React.FC<EditorMainProps> = ({
         isSaving={isSaving}
         lastSaved={lastSaved}
         onSave={handleManualSave}
+        onPrint={handlePrintClick}
       />
       
       <SpecialSections 
@@ -136,8 +143,20 @@ const EditorMain: React.FC<EditorMainProps> = ({
           onAttachmentChange={onAttachmentChange}
           hasConclusion={hasConclusion}
           category={category}
+          onPrint={handlePrintClick}
         />
       </Card>
+
+      {/* Print Modal */}
+      <PrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        content={currentContent}
+        title={title}
+        category={category}
+        summary={summary}
+        attachmentUrl={attachment_url}
+      />
     </div>
   );
 };
