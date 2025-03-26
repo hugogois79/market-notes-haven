@@ -1,4 +1,3 @@
-
 import React, { Dispatch, SetStateAction, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,14 +52,10 @@ const TagsSection: React.FC<TagsSectionProps> = ({
   const [tagSearchQuery, setTagSearchQuery] = useState("");
   const availableTags = getAvailableTagsForSelection();
   
-  // Filter available tags based on search query
-  // Note: We're not filtering by category here since getAvailableTagsForSelection is already providing
-  // category-filtered tags from the parent component
   const filteredAvailableTags = availableTags.filter(tag => 
     tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
   );
 
-  // Function to display tag categories
   const renderTagCategories = (tag: Tag) => {
     if (!tag.categories || tag.categories.length === 0) {
       return tag.category ? (
@@ -180,7 +175,6 @@ const TagsSection: React.FC<TagsSectionProps> = ({
     );
   }
 
-  // Original non-compact layout
   return (
     <div className="space-y-2">
       <div className="text-sm font-medium flex items-center gap-1">
@@ -209,7 +203,6 @@ const TagsSection: React.FC<TagsSectionProps> = ({
       </div>
       
       <div className="flex gap-2">
-        {/* Tag dropdown selection */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button 
@@ -257,10 +250,8 @@ const TagsSection: React.FC<TagsSectionProps> = ({
           </DropdownMenuContent>
         </DropdownMenu>
         
-        {/* Divider for "Or" text */}
         <div className="flex items-center px-2 text-xs text-muted-foreground">OR</div>
         
-        {/* Add new tag input */}
         <div className="flex gap-2 flex-1">
           <Input
             type="text"

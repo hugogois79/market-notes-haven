@@ -24,6 +24,7 @@ interface MetadataSectionProps {
   onMultiFilterChange?: (tokenId: string) => void;
   selectedFilterTokens?: string[];
   compact?: boolean; // Added prop for compact layout
+  categoryFilter?: string; // Added missing prop to fix the TypeScript error
 }
 
 const MetadataSection = ({
@@ -44,7 +45,8 @@ const MetadataSection = ({
   selectedFilterToken,
   onMultiFilterChange,
   selectedFilterTokens,
-  compact = false // Default to false for backward compatibility
+  compact = false, // Default to false for backward compatibility
+  categoryFilter // Added the prop here as well
 }: MetadataSectionProps) => {
   // Use different layout based on compact prop
   return compact ? (
@@ -91,6 +93,7 @@ const MetadataSection = ({
           isLoadingTags={isLoadingTags}
           getAvailableTagsForSelection={getAvailableTagsForSelection}
           compact={compact}
+          categoryFilter={categoryFilter} // Pass the categoryFilter prop to TagsSection if needed
         />
       </Card>
       

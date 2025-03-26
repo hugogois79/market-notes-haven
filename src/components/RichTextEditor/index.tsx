@@ -1,13 +1,11 @@
-
 import { useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Tag, Token, Note, TradeInfo } from "@/types";
 import { useQuery } from "@tanstack/react-query";
-import { fetchTags, createTag } from "@/services/tag"; // Updated import path
+import { fetchTags, createTag } from "@/services/tag";
 import { fetchTokens } from "@/services/tokenService";
 import { toast } from "sonner";
 
-// Import refactored components
 import EditorHeader from "./EditorHeader";
 import EditorStatusBar from "./EditorStatusBar";
 import EditorTabs from "./EditorTabs";
@@ -70,25 +68,21 @@ const RichTextEditor = ({
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [currentContent, setCurrentContent] = useState(content);
   
-  // Fetch available tags (as fallback if not provided via props)
   const { data: fetchedTags = [], isLoading: isLoadingTags, refetch: refetchTags } = useQuery({
     queryKey: ['tags'],
     queryFn: fetchTags,
-    enabled: !availableTagsForSelection, // Only fetch if not provided via props
+    enabled: !availableTagsForSelection,
   });
 
-  // Fetch available tokens
   const { data: availableTokens = [], isLoading: isLoadingTokens } = useQuery({
     queryKey: ['tokens'],
     queryFn: fetchTokens,
   });
 
-  // Handle content updates from editor
   const handleContentUpdate = useCallback((newContent: string) => {
     setCurrentContent(newContent);
   }, []);
 
-  // Handle autosave
   const handleAutoSave = useCallback(() => {
     if (autoSave && onSave) {
       onSave();
@@ -96,7 +90,6 @@ const RichTextEditor = ({
     }
   }, [autoSave, onSave]);
 
-  // Manual save function
   const handleManualSave = () => {
     if (manualSave) {
       manualSave();
@@ -104,7 +97,6 @@ const RichTextEditor = ({
     }
   };
 
-  // Handle content change
   const handleContentChange = () => {
     onContentChange(currentContent);
   };
@@ -114,7 +106,6 @@ const RichTextEditor = ({
     
     const tagName = tagInput.trim();
     
-    // Check if the tag already exists in linkedTags
     const tagExists = linkedTags.some((tag) => 
       typeof tag === 'string' 
         ? tag === tagName 
@@ -125,20 +116,16 @@ const RichTextEditor = ({
       try {
         const tagsToSearch = availableTagsForSelection || fetchedTags;
         
-        // First check if tag exists in available tags
         const existingTag = tagsToSearch.find(
           tag => tag && tag.name && tag.name.toLowerCase() === tagName.toLowerCase()
         );
         
         if (existingTag) {
-          // If tag exists, use it
           onTagsChange([...linkedTags, existingTag]);
         } else {
-          // If tag doesn't exist, create a new one in the database with current note's category
           const newTag = await createTag(tagName, category);
           if (newTag) {
             onTagsChange([...linkedTags, newTag]);
-            // Refresh the tags list
             refetchTags();
           } else {
             toast.error("Failed to create tag");
@@ -155,7 +142,6 @@ const RichTextEditor = ({
     setTagInput("");
   };
 
-  // Function to handle removing a tag
   const handleRemoveTag = (tagToRemove: string | Tag) => {
     const tagId = typeof tagToRemove === 'string' ? tagToRemove : tagToRemove.id;
     const updatedTags = linkedTags.filter(tag => 
@@ -165,7 +151,6 @@ const RichTextEditor = ({
     onTagsChange(updatedTags);
   };
 
-  // Function to handle selecting an existing tag
   const handleSelectTag = (tag: Tag) => {
     const tagExists = linkedTags.some(t => 
       typeof t === 'string' ? t === tag.id : t.id === tag.id
@@ -180,15 +165,12 @@ const RichTextEditor = ({
     setTagInput("");
   };
 
-  // Function to handle selecting a token - accepts either Token object or token ID string
   const handleTokenSelect = (tokenOrId: Token | string) => {
     console.log("RichTextEditor: handleTokenSelect received:", tokenOrId);
     
     if (typeof tokenOrId === 'string') {
-      // We received a token ID
       const tokenId = tokenOrId;
       
-      // Find the token in available tokens
       const token = availableTokens.find(t => t.id === tokenId);
       if (token) {
         console.log("RichTextEditor: Found token by ID:", token);
@@ -204,7 +186,6 @@ const RichTextEditor = ({
         console.error("RichTextEditor: Token not found with ID:", tokenId);
       }
     } else {
-      // We received a token object
       const token = tokenOrId;
       const tokenExists = linkedTokens.some(t => t.id === token.id);
       if (!tokenExists) {
@@ -218,8 +199,6 @@ const RichTextEditor = ({
   };
 
   const getAvailableTagsForSelection = () => {
-    // Use the provided filtered tags if available, otherwise fallback to all fetched tags
-    // And filter out tags that are already linked to this note
     const tagsToFilter = availableTagsForSelection || fetchedTags;
     if (!tagsToFilter || !Array.isArray(tagsToFilter)) {
       return [];
@@ -234,15 +213,12 @@ const RichTextEditor = ({
     );
   };
 
-  // Check if the category is related to trading
   const isTradingCategory = category === "Trading" || category === "Pair Trading";
 
-  // Handle title change
   const handleTitleChange = useCallback((newTitle: string) => {
     console.log("RichTextEditor received title change:", newTitle);
     onTitleChange(newTitle);
     
-    // Trigger auto-save after title change
     if (autoSave && onSave) {
       setTimeout(() => {
         onSave();
@@ -260,14 +236,12 @@ const RichTextEditor = ({
         onCategoryChange={onCategoryChange}
       />
       
-      {/* Status and Save Button */}
       <EditorStatusBar 
         isSaving={isSaving}
         lastSaved={lastSaved}
         onSave={handleManualSave}
       />
       
-      {/* AI Resume and Trade Info Sections */}
       <SpecialSections 
         noteId={noteId}
         content={currentContent}
@@ -280,7 +254,6 @@ const RichTextEditor = ({
         onTradeInfoChange={onTradeInfoChange}
       />
       
-      {/* Tags and Tokens Section */}
       <MetadataSection 
         linkedTags={linkedTags}
         tagInput={tagInput}
@@ -298,10 +271,9 @@ const RichTextEditor = ({
         }}
         handleTokenSelect={handleTokenSelect}
         isLoadingTokens={isLoadingTokens}
-        categoryFilter={category}
+        category={category}
       />
       
-      {/* Editor with Tabs */}
       <Card className="p-0 border rounded-md overflow-hidden">
         <EditorTabs 
           content={content}
