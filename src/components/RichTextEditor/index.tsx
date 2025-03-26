@@ -37,6 +37,7 @@ interface RichTextEditorProps {
   tradeInfo?: TradeInfo;
   onTradeInfoChange?: (tradeInfo: TradeInfo) => void;
   hasConclusion?: boolean;
+  availableTagsForSelection?: Tag[];
 }
 
 const RichTextEditor = ({
@@ -62,16 +63,18 @@ const RichTextEditor = ({
   tradeInfo,
   onTradeInfoChange = () => {},
   hasConclusion = true,
+  availableTagsForSelection,
 }: RichTextEditorProps) => {
   
   const [tagInput, setTagInput] = useState("");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [currentContent, setCurrentContent] = useState(content);
   
-  // Fetch available tags
-  const { data: availableTags = [], isLoading: isLoadingTags, refetch: refetchTags } = useQuery({
+  // Fetch available tags (as fallback if not provided via props)
+  const { data: fetchedTags = [], isLoading: isLoadingTags, refetch: refetchTags } = useQuery({
     queryKey: ['tags'],
     queryFn: fetchTags,
+    enabled: !availableTagsForSelection, // Only fetch if not provided via props
   });
 
   // Fetch available tokens
@@ -120,8 +123,10 @@ const RichTextEditor = ({
     
     if (!tagExists) {
       try {
+        const tagsToSearch = availableTagsForSelection || fetchedTags;
+        
         // First check if tag exists in available tags
-        const existingTag = availableTags.find(
+        const existingTag = tagsToSearch.find(
           tag => tag && tag.name && tag.name.toLowerCase() === tagName.toLowerCase()
         );
         
@@ -129,8 +134,8 @@ const RichTextEditor = ({
           // If tag exists, use it
           onTagsChange([...linkedTags, existingTag]);
         } else {
-          // If tag doesn't exist, create a new one in the database
-          const newTag = await createTag(tagName);
+          // If tag doesn't exist, create a new one in the database with current note's category
+          const newTag = await createTag(tagName, category);
           if (newTag) {
             onTagsChange([...linkedTags, newTag]);
             // Refresh the tags list
@@ -213,8 +218,14 @@ const RichTextEditor = ({
   };
 
   const getAvailableTagsForSelection = () => {
-    // Filter out tags that are already linked to this note
-    return availableTags.filter(tag => 
+    // Use the provided filtered tags if available, otherwise fallback to all fetched tags
+    // And filter out tags that are already linked to this note
+    const tagsToFilter = availableTagsForSelection || fetchedTags;
+    if (!tagsToFilter || !Array.isArray(tagsToFilter)) {
+      return [];
+    }
+    
+    return tagsToFilter.filter(tag => 
       tag && linkedTags.some(linkedTag => 
         typeof linkedTag === 'string' 
           ? linkedTag === tag.id 
@@ -287,6 +298,7 @@ const RichTextEditor = ({
         }}
         handleTokenSelect={handleTokenSelect}
         isLoadingTokens={isLoadingTokens}
+        categoryFilter={category}
       />
       
       {/* Editor with Tabs */}

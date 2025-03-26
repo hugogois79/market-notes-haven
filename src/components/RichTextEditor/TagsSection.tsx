@@ -53,12 +53,11 @@ const TagsSection: React.FC<TagsSectionProps> = ({
   const [tagSearchQuery, setTagSearchQuery] = useState("");
   const availableTags = getAvailableTagsForSelection();
   
-  // Filter available tags based on search query and selected category
+  // Filter available tags based on search query
+  // Note: We're not filtering by category here since getAvailableTagsForSelection is already providing
+  // category-filtered tags from the parent component
   const filteredAvailableTags = availableTags.filter(tag => 
-    tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase()) &&
-    (!categoryFilter || 
-     tag.category === categoryFilter || 
-     (tag.categories && tag.categories.includes(categoryFilter)))
+    tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
   );
 
   // Function to display tag categories
@@ -111,27 +110,12 @@ const TagsSection: React.FC<TagsSectionProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-64">
-            <DropdownMenuLabel>Select or Create Tag</DropdownMenuLabel>
+            <DropdownMenuLabel>
+              {categoryFilter 
+                ? `Tags for ${categoryFilter}` 
+                : "Select or Create Tag"}
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            
-            {availableCategories.length > 0 && setCategoryFilter && (
-              <div className="px-2 py-2">
-                <Select
-                  value={categoryFilter || "all"}
-                  onValueChange={(value) => setCategoryFilter(value === "all" ? null : value)}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="Filter by category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    {availableCategories.map(category => (
-                      <SelectItem key={category} value={category}>{category}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
             
             <div className="px-2 py-1">
               <div className="relative">
@@ -201,7 +185,9 @@ const TagsSection: React.FC<TagsSectionProps> = ({
     <div className="space-y-2">
       <div className="text-sm font-medium flex items-center gap-1">
         <Tags size={16} className="text-[#1EAEDB]" />
-        Tags
+        {categoryFilter 
+          ? `Tags for ${categoryFilter}` 
+          : "Tags"}
       </div>
       <div className="flex flex-wrap gap-2 mb-2">
         {linkedTags.map((tag) => (
@@ -221,25 +207,6 @@ const TagsSection: React.FC<TagsSectionProps> = ({
           </div>
         ))}
       </div>
-      
-      {availableCategories.length > 0 && setCategoryFilter && (
-        <div className="mb-3">
-          <Select
-            value={categoryFilter || "all"}
-            onValueChange={(value) => setCategoryFilter(value === "all" ? null : value)}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filter by category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {availableCategories.map(category => (
-                <SelectItem key={category} value={category}>{category}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
       
       <div className="flex gap-2">
         {/* Tag dropdown selection */}

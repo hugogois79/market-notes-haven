@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Note, Token, Tag } from "@/types";
@@ -17,6 +18,7 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
   const [isNewNote, setIsNewNote] = useState(false);
   const [linkedTokens, setLinkedTokens] = useState<Token[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [tagCategories, setTagCategories] = useState<string[]>([]);
   const [isLoadingTags, setIsLoadingTags] = useState(false);
   const [isLoadingTokens, setIsLoadingTokens] = useState(false);
 
@@ -28,6 +30,20 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
         const tags = await fetchTags();
         console.log("Loaded tags:", tags);
         setAllTags(tags);
+        
+        // Extract unique categories from tags
+        const categories = new Set<string>();
+        tags.forEach(tag => {
+          if (tag.category) {
+            categories.add(tag.category);
+          }
+          if (tag.categories && Array.isArray(tag.categories)) {
+            tag.categories.forEach(cat => {
+              if (cat) categories.add(cat);
+            });
+          }
+        });
+        setTagCategories(Array.from(categories).sort());
       } catch (error) {
         console.error("Error loading tags:", error);
       } finally {
@@ -164,13 +180,32 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
     }
   };
 
+  // Filter tags that match the current note category
+  const getTagsFilteredByCategory = (category: string | null = null) => {
+    if (!category || !allTags) return allTags;
+    
+    return allTags.filter(tag => {
+      // Check the main category field
+      if (tag.category === category) return true;
+      
+      // Check the categories array if it exists
+      if (tag.categories && Array.isArray(tag.categories)) {
+        return tag.categories.includes(category);
+      }
+      
+      return false;
+    });
+  };
+
   return {
     currentNote,
     isNewNote,
     linkedTokens,
     allTags,
+    tagCategories,
     isLoadingTags,
     isLoadingTokens,
-    handleSave
+    handleSave,
+    getTagsFilteredByCategory
   };
 };

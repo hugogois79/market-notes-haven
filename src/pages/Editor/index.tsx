@@ -20,7 +20,8 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
     isNewNote,
     linkedTokens,
     allTags,
-    handleSave
+    handleSave,
+    getTagsFilteredByCategory
   } = useNoteData({ notes, onSaveNote });
 
   // Handle deleting the note with loading state
@@ -62,6 +63,7 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
           onSave={handleSave}
           linkedTokens={linkedTokens}
           allTags={allTags}
+          getTagsFilteredByCategory={getTagsFilteredByCategory}
         />
       )}
     </div>

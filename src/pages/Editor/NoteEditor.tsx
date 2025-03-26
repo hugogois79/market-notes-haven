@@ -11,13 +11,15 @@ interface NoteEditorProps {
   onSave: (updatedFields: Partial<Note>) => Promise<void>;
   linkedTokens: Token[];
   allTags: Tag[];
+  getTagsFilteredByCategory?: (category: string | null) => Tag[];
 }
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ 
   currentNote, 
   onSave, 
   linkedTokens,
-  allTags
+  allTags,
+  getTagsFilteredByCategory
 }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<Partial<Note>>({});
@@ -29,6 +31,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   const [localTradeInfo, setLocalTradeInfo] = useState<TradeInfo | undefined>(currentNote.tradeInfo);
   const [hasConclusion, setHasConclusion] = useState<boolean>(currentNote.hasConclusion !== false);
   const [summaryState, setSummaryState] = useState<string>(currentNote.summary || "");
+  const [availableTags, setAvailableTags] = useState<Tag[]>(allTags);
 
   // Update local state when currentNote changes
   useEffect(() => {
@@ -41,7 +44,15 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     
     // Convert tag IDs to tag objects
     setLinkedTags(getTagObjects());
-  }, [currentNote, allTags, linkedTokens]);
+    
+    // Update available tags based on category
+    if (getTagsFilteredByCategory) {
+      const filteredTags = getTagsFilteredByCategory(currentNote.category || null);
+      setAvailableTags(filteredTags);
+    } else {
+      setAvailableTags(allTags);
+    }
+  }, [currentNote, allTags, linkedTokens, getTagsFilteredByCategory]);
 
   // Handle title change
   const handleTitleChange = useCallback((title: string) => {
@@ -60,6 +71,12 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     console.log("NoteEditor: Category changing to:", category);
     setLocalCategory(category);
     setPendingChanges({ ...pendingChanges, category });
+    
+    // Update available tags when category changes
+    if (getTagsFilteredByCategory) {
+      const filteredTags = getTagsFilteredByCategory(category);
+      setAvailableTags(filteredTags);
+    }
     
     // Trigger immediate autosave when category changes
     if (autoSave) {
@@ -272,6 +289,12 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     });
   };
 
+  // Function to get available tags filtered by the current category
+  const getAvailableTagsForSelection = () => {
+    // If no filtered tags available or no active category filter, return all 
+    return availableTags;
+  };
+
   return (
     <div className="flex-1">
       <RichTextEditor 
@@ -297,6 +320,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         tradeInfo={localTradeInfo}
         onTradeInfoChange={handleTradeInfoChange}
         hasConclusion={hasConclusion}
+        availableTagsForSelection={getAvailableTagsForSelection()}
       />
     </div>
   );
