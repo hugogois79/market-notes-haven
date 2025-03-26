@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Paperclip, Printer } from "lucide-react";
+import { Edit, Paperclip } from "lucide-react";
 import EditorContent from "./EditorContent";
 import EditorToolbar from "./EditorToolbar";
 import AttachmentSection from "./AttachmentSection";
@@ -29,7 +29,6 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
   onAttachmentChange = () => {},
   hasConclusion = true,
   category = "General",
-  onPrint,
 }) => {
   const [activeTab, setActiveTab] = useState("editor");
 
@@ -46,16 +45,6 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
             <span>Attachment</span>
           </TabsTrigger>
         </TabsList>
-        
-        {onPrint && (
-          <button 
-            className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm px-2 py-1 rounded-md hover:bg-muted transition-colors"
-            onClick={onPrint}
-          >
-            <Printer size={14} />
-            <span className="hidden sm:inline">Print</span>
-          </button>
-        )}
       </div>
       
       <TabsContent value="editor" className="mt-0 p-0">

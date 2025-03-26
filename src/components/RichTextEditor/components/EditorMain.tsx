@@ -80,18 +80,9 @@ const EditorMain: React.FC<EditorMainProps> = ({
   tradeInfo,
   onTradeInfoChange = () => {},
   hasConclusion = true,
-  onPrint,
 }) => {
   const isTradingCategory = category === "Trading" || category === "Pair Trading";
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-
-  const handlePrintClick = () => {
-    if (onPrint) {
-      onPrint();
-    } else {
-      setIsPrintModalOpen(true);
-    }
-  };
 
   return (
     <div className="flex flex-col gap-4 mt-2">
@@ -106,7 +97,6 @@ const EditorMain: React.FC<EditorMainProps> = ({
         isSaving={isSaving}
         lastSaved={lastSaved}
         onSave={handleManualSave}
-        onPrint={handlePrintClick}
       />
       
       <SpecialSections 
@@ -149,7 +139,6 @@ const EditorMain: React.FC<EditorMainProps> = ({
           onAttachmentChange={onAttachmentChange}
           hasConclusion={hasConclusion}
           category={category}
-          onPrint={handlePrintClick}
         />
       </Card>
 

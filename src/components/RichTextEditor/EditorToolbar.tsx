@@ -15,8 +15,7 @@ import {
   Heading2,
   Table,
   Highlighter,
-  Grip,
-  Printer
+  Grip
 } from "lucide-react";
 
 interface EditorToolbarProps {
@@ -39,7 +38,6 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
   insertVerticalSeparator,
   highlightText,
   boldText,
-  onPrintClick,
   hasConclusion,
   category,
   className
@@ -164,14 +162,6 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         title="Insert Table"
       >
         <Table className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onPrintClick}
-        title="Print Note"
-      >
-        <Printer className="h-4 w-4" />
       </Button>
     </div>
   );
