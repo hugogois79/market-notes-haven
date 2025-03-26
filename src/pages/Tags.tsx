@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Tag as TagIcon, FileText, Search, X, Plus, Trash2, FolderOpen, Edit, Check, Filter } from "lucide-react";
+import { Tag as TagIcon, FileText, Search, X, Plus, Trash2, FolderOpen, Edit, Check, Filter, Tags, CheckSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import TagBadge from "@/components/ui/tag-badge";
 import { 
   fetchTags, 
@@ -65,6 +66,7 @@ import { useNotes } from "@/contexts/NotesContext";
 
 interface TagWithCount extends Tag {
   count: number;
+  isSelected?: boolean;
 }
 
 const Tags = () => {
@@ -88,6 +90,12 @@ const Tags = () => {
   const [editTagCategory, setEditTagCategory] = useState<string | null>(null);
   const [isUpdatingTag, setIsUpdatingTag] = useState(false);
   const [activeTab, setActiveTab] = useState("tags");
+  const [bulkSelectedTags, setBulkSelectedTags] = useState<string[]>([]);
+  const [bulkCategoryAssignOpen, setBulkCategoryAssignOpen] = useState(false);
+  const [bulkSelectedCategory, setBulkSelectedCategory] = useState<string | null>(null);
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [showNewCategoryDialog, setShowNewCategoryDialog] = useState(false);
+  const [newCategory, setNewCategory] = useState("");
   const isLoaded = !(loading || isLoading);
   
   useEffect(() => {
@@ -119,6 +127,7 @@ const Tags = () => {
           return {
             ...tag,
             count: noteIds.length,
+            isSelected: bulkSelectedTags.includes(tag.id)
           };
         }));
         
@@ -139,7 +148,7 @@ const Tags = () => {
     };
     
     loadTags();
-  }, [isFirstLoad, notesMigrated, selectedCategory]);
+  }, [isFirstLoad, notesMigrated, selectedCategory, bulkSelectedTags]);
   
   useEffect(() => {
     const filterNotes = async () => {
@@ -224,6 +233,7 @@ const Tags = () => {
       
       if (success) {
         setTags(prev => prev.filter(tag => tag.id !== tagToDelete));
+        setBulkSelectedTags(prev => prev.filter(id => id !== tagToDelete));
         
         if (selectedTag === tagToDelete) {
           setSelectedTag(null);
@@ -273,6 +283,83 @@ const Tags = () => {
       setIsEditingTag(null);
       setEditTagCategory(null);
     }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategory.trim()) {
+      toast.error("Category name cannot be empty");
+      return;
+    }
+
+    // Add to categories list
+    if (!categories.includes(newCategory.trim())) {
+      setCategories(prev => [...prev, newCategory.trim()].sort());
+    }
+    
+    // Use this category for bulk update if in that dialog
+    if (bulkCategoryAssignOpen) {
+      setBulkSelectedCategory(newCategory.trim());
+    } else {
+      setSelectedCategory(newCategory.trim());
+    }
+    
+    setNewCategory("");
+    setShowNewCategoryDialog(false);
+    toast.success(`Created new category: ${newCategory.trim()}`);
+  };
+
+  const handleBulkUpdateCategories = async () => {
+    if (bulkSelectedTags.length === 0) {
+      toast.error("No tags selected");
+      return;
+    }
+
+    setIsBulkUpdating(true);
+    
+    try {
+      let successCount = 0;
+      
+      for (const tagId of bulkSelectedTags) {
+        const updatedTag = await updateTagCategory(tagId, bulkSelectedCategory);
+        if (updatedTag) {
+          successCount++;
+          // Update the tags list
+          setTags(prev => prev.map(tag => 
+            tag.id === tagId ? { ...tag, category: updatedTag.category } : tag
+          ));
+        }
+      }
+      
+      if (successCount > 0) {
+        toast.success(`Updated category for ${successCount} tags`);
+        // Clear selection after successful update
+        setBulkSelectedTags([]);
+      } else {
+        toast.error("Failed to update categories");
+      }
+    } finally {
+      setIsBulkUpdating(false);
+      setBulkCategoryAssignOpen(false);
+    }
+  };
+
+  const toggleTagSelection = (tagId: string) => {
+    setBulkSelectedTags(prev => {
+      if (prev.includes(tagId)) {
+        return prev.filter(id => id !== tagId);
+      } else {
+        return [...prev, tagId];
+      }
+    });
+  };
+
+  const selectAllFilteredTags = () => {
+    const filteredTagIds = getFilteredTags().map(tag => tag.id);
+    setBulkSelectedTags(filteredTagIds);
+  };
+
+  const clearTagSelection = () => {
+    setBulkSelectedTags([]);
   };
 
   const getFilteredTags = () => {
@@ -326,17 +413,24 @@ const Tags = () => {
                 
                 <div>
                   <Select
-                    value={selectedCategory || "all"}
-                    onValueChange={(value) => setSelectedCategory(value === "all" ? null : value)}
+                    value={selectedCategory || ""}
+                    onValueChange={(value) => {
+                      if (value === "new") {
+                        setShowNewCategoryDialog(true);
+                      } else {
+                        setSelectedCategory(value === "" ? null : value);
+                      }
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">No category</SelectItem>
+                      <SelectItem value="">No category</SelectItem>
                       {categories.map(category => (
                         <SelectItem key={category} value={category}>{category}</SelectItem>
                       ))}
+                      <SelectItem value="new" className="text-[#1EAEDB] font-medium">+ Create new category</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -386,7 +480,13 @@ const Tags = () => {
               
               <Select
                 value={selectedCategory || "all"}
-                onValueChange={(value) => setSelectedCategory(value === "all" ? null : value)}
+                onValueChange={(value) => {
+                  if (value === "new") {
+                    setShowNewCategoryDialog(true);
+                  } else {
+                    setSelectedCategory(value === "all" ? null : value);
+                  }
+                }}
               >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Filter by category" />
@@ -396,34 +496,123 @@ const Tags = () => {
                   {categories.map(category => (
                     <SelectItem key={category} value={category}>{category}</SelectItem>
                   ))}
+                  <SelectItem value="new" className="text-[#1EAEDB] font-medium">+ Create new category</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            {selectedTag && (
-              <div className="flex items-center">
-                <span className="text-sm text-muted-foreground mr-2">Filtered by tag:</span>
-                <Badge variant="default" className="cursor-pointer bg-[#1EAEDB]">
-                  {tags.find(t => t.id === selectedTag)?.name || "Unknown"}
-                </Badge>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="ml-2 h-8 w-8 p-0" 
-                  onClick={handleClearSelection}
-                >
-                  <X className="h-4 w-4" />
-                  <span className="sr-only">Clear filter</span>
-                </Button>
+            {(selectedTag || bulkSelectedTags.length > 0) && (
+              <div className="flex flex-wrap gap-2 items-center">
+                {selectedTag && (
+                  <div className="flex items-center mr-2">
+                    <span className="text-sm text-muted-foreground">Filtered by tag:</span>
+                    <Badge variant="default" className="cursor-pointer bg-[#1EAEDB] ml-2">
+                      {tags.find(t => t.id === selectedTag)?.name || "Unknown"}
+                    </Badge>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="ml-2 h-8 w-8 p-0" 
+                      onClick={handleClearSelection}
+                    >
+                      <X className="h-4 w-4" />
+                      <span className="sr-only">Clear filter</span>
+                    </Button>
+                  </div>
+                )}
+                
+                {bulkSelectedTags.length > 0 && (
+                  <div className="flex items-center gap-2 ml-auto">
+                    <span className="text-sm font-medium">{bulkSelectedTags.length} tags selected</span>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={clearTagSelection}
+                      className="h-8 px-2"
+                    >
+                      Clear selection
+                    </Button>
+                    <Dialog open={bulkCategoryAssignOpen} onOpenChange={setBulkCategoryAssignOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="brand" size="sm" className="h-8 gap-1">
+                          <FolderOpen size={14} />
+                          Assign to category
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Assign to Category</DialogTitle>
+                          <DialogDescription>
+                            Assign {bulkSelectedTags.length} selected tags to a category
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                          <Select
+                            value={bulkSelectedCategory || ""}
+                            onValueChange={(value) => {
+                              if (value === "new") {
+                                setShowNewCategoryDialog(true);
+                              } else {
+                                setBulkSelectedCategory(value === "" ? null : value);
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">No category (remove existing)</SelectItem>
+                              {categories.map(category => (
+                                <SelectItem key={category} value={category}>{category}</SelectItem>
+                              ))}
+                              <SelectItem value="new" className="text-[#1EAEDB] font-medium">+ Create new category</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <DialogFooter>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setBulkCategoryAssignOpen(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            variant="brand" 
+                            onClick={handleBulkUpdateCategories}
+                            disabled={isBulkUpdating}
+                          >
+                            {isBulkUpdating ? "Updating..." : "Update Categories"}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
           <div>
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <TagIcon size={20} className="text-[#1EAEDB]" />
-              {selectedCategory ? `Tags in "${selectedCategory}"` : "All Tags"}
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <TagIcon size={20} className="text-[#1EAEDB]" />
+                {selectedCategory ? `Tags in "${selectedCategory}"` : "All Tags"}
+              </h2>
+              
+              {getFilteredTags().length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={selectAllFilteredTags}
+                    className="gap-1"
+                  >
+                    <CheckSquare size={14} />
+                    Select all
+                  </Button>
+                </div>
+              )}
+            </div>
             
             {loading ? (
               <div className="text-center py-8">
@@ -434,10 +623,18 @@ const Tags = () => {
               <div className="flex flex-wrap gap-2">
                 {getFilteredTags().map((tag) => (
                   <div key={tag.id} className="flex items-center">
+                    <div className="flex items-center mr-1">
+                      <Checkbox
+                        id={`select-${tag.id}`}
+                        checked={bulkSelectedTags.includes(tag.id)}
+                        onCheckedChange={() => toggleTagSelection(tag.id)}
+                        className="mr-1 data-[state=checked]:bg-[#1EAEDB] data-[state=checked]:text-white"
+                      />
+                    </div>
                     <Badge 
                       variant={selectedTag === tag.id ? "default" : "secondary"}
                       className={`text-sm py-1 px-3 cursor-pointer hover:bg-opacity-90 transition-all ${
-                        selectedTag === tag.id ? 'bg-[#1EAEDB]' : ''
+                        selectedTag === tag.id ? 'bg-[#1EAEDB]' : bulkSelectedTags.includes(tag.id) ? 'border-[#1EAEDB] border' : ''
                       }`}
                       onClick={() => handleTagClick(tag.id)}
                     >
@@ -456,7 +653,13 @@ const Tags = () => {
                       <div className="flex items-center ml-1">
                         <Select
                           value={editTagCategory || ""}
-                          onValueChange={setEditTagCategory}
+                          onValueChange={(value) => {
+                            if (value === "new") {
+                              setShowNewCategoryDialog(true);
+                            } else {
+                              setEditTagCategory(value === "" ? null : value);
+                            }
+                          }}
                         >
                           <SelectTrigger className="h-7 w-[120px]">
                             <SelectValue placeholder="Category..." />
@@ -466,6 +669,7 @@ const Tags = () => {
                             {categories.map(category => (
                               <SelectItem key={category} value={category}>{category}</SelectItem>
                             ))}
+                            <SelectItem value="new" className="text-[#1EAEDB] font-medium">+ Create new</SelectItem>
                           </SelectContent>
                         </Select>
                         
@@ -700,6 +904,43 @@ const Tags = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={showNewCategoryDialog} onOpenChange={setShowNewCategoryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Category</DialogTitle>
+            <DialogDescription>
+              Add a new category to organize your tags
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Category name"
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleCreateCategory();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowNewCategoryDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="brand" 
+              onClick={handleCreateCategory}
+            >
+              Create Category
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
