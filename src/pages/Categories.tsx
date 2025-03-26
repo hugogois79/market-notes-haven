@@ -22,7 +22,7 @@ interface CategoryCount {
 }
 
 const Categories = () => {
-  const { notes, loading, isLoading } = useNotes();
+  const { notes, loading, isLoading, refetch } = useNotes();
   const [categories, setCategories] = useState<CategoryCount[]>([]);
   const [newCategory, setNewCategory] = useState("");
   const [editingCategory, setEditingCategory] = useState<{ original: string, updated: string } | null>(null);
@@ -30,6 +30,7 @@ const Categories = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
   const isLoaded = !(loading || isLoading);
 
@@ -51,7 +52,7 @@ const Categories = () => {
       
       setCategories(categoriesArray);
       
-      // Set default selected category if none is selected
+      // Set default selected category if none is selected and categories exist
       if (!selectedCategory && categoriesArray.length > 0) {
         setSelectedCategory(categoriesArray[0].category);
       }
@@ -70,6 +71,8 @@ const Categories = () => {
       return;
     }
 
+    setIsSaving(true);
+    
     // Create a new note with the category
     try {
       const { data, error } = await supabase
@@ -85,15 +88,21 @@ const Categories = () => {
 
       if (error) throw error;
       
+      // Success handling with optimistic UI update
+      const newCategoryItem = { category: newCategory, count: 1 };
+      setCategories(prev => [...prev, newCategoryItem].sort((a, b) => a.category.localeCompare(b.category)));
+      
       toast.success(`Added category: ${newCategory}`);
       setNewCategory("");
       setDialogOpen(false);
       
-      // Reload the page to refresh notes
-      window.location.reload();
+      // Refresh notes in the background
+      refetch();
     } catch (error) {
       console.error("Error adding category:", error);
       toast.error("Failed to add category");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -114,6 +123,8 @@ const Categories = () => {
       return;
     }
 
+    setIsSaving(true);
+
     try {
       // Update all notes with this category
       const { error } = await supabase
@@ -123,19 +134,29 @@ const Categories = () => {
 
       if (error) throw error;
       
+      // Optimistic UI update
+      setCategories(prev => prev.map(cat => 
+        cat.category === editingCategory.original 
+          ? { ...cat, category: editingCategory.updated } 
+          : cat
+      ));
+      
       toast.success(`Updated category: ${editingCategory.updated}`);
-      setEditingCategory(null);
-      setEditDialogOpen(false);
       
       if (selectedCategory === editingCategory.original) {
         setSelectedCategory(editingCategory.updated);
       }
       
-      // Reload the page to refresh notes
-      window.location.reload();
+      setEditingCategory(null);
+      setEditDialogOpen(false);
+      
+      // Refresh notes in the background
+      refetch();
     } catch (error) {
       console.error("Error updating category:", error);
       toast.error("Failed to update category");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -146,6 +167,8 @@ const Categories = () => {
       return;
     }
 
+    setIsSaving(true);
+
     try {
       // Remove category from notes (set to null)
       const { error } = await supabase
@@ -155,17 +178,24 @@ const Categories = () => {
 
       if (error) throw error;
       
+      // Optimistic UI update
+      setCategories(prev => prev.filter(c => c.category !== category));
+      
       toast.success(`Deleted category: ${category}`);
       
       if (selectedCategory === category) {
-        setSelectedCategory(null);
+        // Find a new category to select, or select null if no categories left
+        const nextCategory = categories.find(c => c.category !== category);
+        setSelectedCategory(nextCategory ? nextCategory.category : null);
       }
       
-      // Reload the page to refresh notes
-      window.location.reload();
+      // Refresh notes in the background
+      refetch();
     } catch (error) {
       console.error("Error deleting category:", error);
       toast.error("Failed to delete category");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -208,11 +238,11 @@ const Categories = () => {
               />
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSaving}>
                 Cancel
               </Button>
-              <Button onClick={handleAddCategory}>
-                Create Category
+              <Button onClick={handleAddCategory} disabled={isSaving}>
+                {isSaving ? "Creating..." : "Create Category"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -227,7 +257,7 @@ const Categories = () => {
         
         <TabsContent value="all" className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {loading ? (
+            {loading || isLoading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <Skeleton key={i} className="h-[150px] rounded-lg" />
               ))
@@ -263,6 +293,7 @@ const Categories = () => {
                           });
                           setEditDialogOpen(true);
                         }}
+                        disabled={isSaving}
                       >
                         <Edit className="w-4 h-4 mr-1" /> Edit
                       </Button>
@@ -271,6 +302,7 @@ const Categories = () => {
                         size="sm"
                         className="text-destructive hover:text-destructive"
                         onClick={() => handleDeleteCategory(category.category)}
+                        disabled={isSaving}
                       >
                         <Trash2 className="w-4 h-4 mr-1" /> Delete
                       </Button>
@@ -315,7 +347,7 @@ const Categories = () => {
                 )}
 
                 {/* Empty state when no categories */}
-                {categories.length === 0 && uncategorizedNotes.length === 0 && !loading && (
+                {categories.length === 0 && uncategorizedNotes.length === 0 && !loading && !isLoading && (
                   <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
                     <Folder className="w-16 h-16 text-muted-foreground mb-4" />
                     <h3 className="text-xl font-semibold mb-2">No Categories Found</h3>
@@ -352,6 +384,7 @@ const Categories = () => {
                         });
                         setEditDialogOpen(true);
                       }}
+                      disabled={isSaving}
                     >
                       <Edit className="w-4 h-4 mr-1" /> Edit Category
                     </Button>
@@ -360,6 +393,7 @@ const Categories = () => {
                       size="sm"
                       className="text-destructive hover:text-destructive"
                       onClick={() => handleDeleteCategory(selectedCategory)}
+                      disabled={isSaving}
                     >
                       <Trash2 className="w-4 h-4 mr-1" /> Delete Category
                     </Button>
@@ -392,7 +426,7 @@ const Categories = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {loading ? (
+            {loading || isLoading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <Skeleton key={i} className="h-[200px] rounded-lg" />
               ))
@@ -448,11 +482,11 @@ const Categories = () => {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} disabled={isSaving}>
               Cancel
             </Button>
-            <Button onClick={handleEditCategory}>
-              Update Category
+            <Button onClick={handleEditCategory} disabled={isSaving}>
+              {isSaving ? "Updating..." : "Update Category"}
             </Button>
           </DialogFooter>
         </DialogContent>
