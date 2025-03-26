@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Tag } from "@/types";
 
@@ -56,7 +57,7 @@ export const fetchTagsByCategory = async (category: string): Promise<Tag[]> => {
 };
 
 // Create a new tag
-export const createTag = async (tagName: string, category?: string): Promise<Tag | null> => {
+export const createTag = async (tagName: string, category?: string | null): Promise<Tag | null> => {
   try {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
@@ -76,7 +77,7 @@ export const createTag = async (tagName: string, category?: string): Promise<Tag
     // If tag already exists, return it
     if (existingTags && existingTags.length > 0) {
       // If the tag exists but we're trying to update its category
-      if (category && existingTags[0].category !== category) {
+      if (category !== undefined && existingTags[0].category !== category) {
         const { data: updatedTag, error: updateError } = await supabase
           .from('tags')
           .update({ category: category })
@@ -114,13 +115,13 @@ export const createTag = async (tagName: string, category?: string): Promise<Tag
     const tagData: {
       name: string;
       user_id: string | undefined;
-      category?: string;
+      category?: string | null;
     } = {
       name: tagName,
       user_id: userId
     };
     
-    if (category) {
+    if (category !== undefined) {
       tagData.category = category;
     }
     
@@ -177,20 +178,37 @@ export const updateTagCategory = async (tagId: string, category: string | null):
 // Get all available categories
 export const fetchCategories = async (): Promise<string[]> => {
   try {
-    const { data, error } = await supabase
-      .from('tags')
+    // First, get all categories from notes table
+    const { data: noteCategories, error: noteError } = await supabase
+      .from('notes')
       .select('category')
-      .not('category', 'is', null)
-      .order('category', { ascending: true });
+      .not('category', 'is', null);
 
-    if (error) {
-      console.error('Error fetching categories:', error);
+    if (noteError) {
+      console.error('Error fetching note categories:', noteError);
       return [];
     }
 
-    // Extract unique categories
-    const categories = [...new Set(data.map(item => item.category))];
-    return categories.filter(Boolean) as string[];
+    // Then, get all categories from tags table
+    const { data: tagCategories, error: tagError } = await supabase
+      .from('tags')
+      .select('category')
+      .not('category', 'is', null);
+
+    if (tagError) {
+      console.error('Error fetching tag categories:', tagError);
+      return [];
+    }
+
+    // Merge both sets of categories and remove duplicates
+    const allCategories = [
+      ...noteCategories.map(item => item.category),
+      ...tagCategories.map(item => item.category)
+    ];
+    
+    // Extract unique categories and sort them
+    const uniqueCategories = [...new Set(allCategories)].filter(Boolean) as string[];
+    return uniqueCategories.sort();
   } catch (error) {
     console.error('Error fetching categories:', error);
     return [];
