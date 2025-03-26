@@ -1,119 +1,162 @@
 
-import React, { useRef, useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Paperclip, X, File, Upload, Loader } from "lucide-react";
+import React, { useState, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Upload, Trash2, ExternalLink, Image, FileText } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AttachmentSectionProps {
   noteId: string;
   attachmentUrl?: string | null;
-  onAttachmentChange?: (url: string | null) => void;
+  onAttachmentChange: (url: string | null) => void;
 }
 
 const AttachmentSection: React.FC<AttachmentSectionProps> = ({ 
-  noteId,
-  attachmentUrl,
-  onAttachmentChange = () => {}
+  noteId, 
+  attachmentUrl, 
+  onAttachmentChange 
 }) => {
-  const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Validate file size (limit to 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File is too large. Maximum size is 10MB.");
+      return;
     }
-  };
-  
-  const handleChooseFile = () => {
-    fileInputRef.current?.click();
-  };
-  
-  const handleRemoveFile = () => {
-    setFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    
+    setIsUploading(true);
+    
+    try {
+      // Create a unique filename to prevent collisions
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${noteId}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      
+      // Upload to Supabase storage
+      const { data, error } = await supabase.storage
+        .from('attachments')
+        .upload(`notes/${fileName}`, file);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('attachments')
+        .getPublicUrl(`notes/${fileName}`);
+      
+      // Update the note with the attachment URL
+      onAttachmentChange(urlData.publicUrl);
+      toast.success("File uploaded successfully");
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast.error("Failed to upload file");
+    } finally {
+      setIsUploading(false);
     }
   };
 
   const handleRemoveAttachment = () => {
+    // We're just removing the reference to the file, not deleting it from storage
     onAttachmentChange(null);
+    toast.success("Attachment removed");
   };
-  
+
+  // Determine file type from URL or extension
+  const getFileType = (url: string): 'image' | 'document' => {
+    const extension = url.split('.').pop()?.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(extension || '')) {
+      return 'image';
+    }
+    return 'document';
+  };
+
   return (
-    <div className="space-y-2">
-      <div className="text-sm font-medium">Attachments</div>
+    <div className="space-y-4">
+      <h3 className="text-md font-medium">Attachments</h3>
       
       <input 
-        type="file"
+        type="file" 
         ref={fileInputRef}
-        onChange={handleFileSelect}
-        className="hidden"
+        className="hidden" 
+        onChange={handleUpload}
       />
       
-      {!file && !attachmentUrl && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-full flex items-center gap-2"
-          onClick={handleChooseFile}
-        >
-          <Paperclip size={14} />
-          Attach file
-        </Button>
-      )}
-      
-      {file && (
-        <div className="flex items-center gap-2 p-2 border rounded bg-secondary/20">
-          <File size={16} className="shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm truncate">{file.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {(file.size / 1024).toFixed(1)} KB
-            </p>
-          </div>
-          <div className="flex items-center gap-1">
-            {isUploading ? (
-              <Loader size={16} className="animate-spin" />
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                  onClick={handleRemoveFile}
-                >
-                  <X size={14} />
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-      
-      {attachmentUrl && (
-        <div className="flex items-center gap-2 p-2 border rounded bg-secondary/20">
-          <File size={16} className="shrink-0" />
-          <div className="flex-1 min-w-0">
-            <a 
-              href={attachmentUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm truncate hover:underline block"
-            >
-              Attachment
-            </a>
-          </div>
+      {!attachmentUrl ? (
+        <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-8 bg-gray-50">
+          <p className="text-muted-foreground mb-4">Upload a file to attach to this note</p>
           <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7"
-            onClick={handleRemoveAttachment}
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="gap-2"
           >
-            <X size={14} />
+            <Upload size={16} />
+            {isUploading ? 'Uploading...' : 'Upload File'}
           </Button>
+        </div>
+      ) : (
+        <div className="border rounded-lg p-4">
+          <div className="flex justify-between items-center mb-3">
+            <div className="flex items-center gap-2">
+              {getFileType(attachmentUrl) === 'image' ? (
+                <Image size={20} className="text-blue-500" />
+              ) : (
+                <FileText size={20} className="text-blue-500" />
+              )}
+              <span className="text-sm font-medium">
+                {attachmentUrl.split('/').pop()}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => window.open(attachmentUrl, '_blank')}
+                title="Open file"
+              >
+                <ExternalLink size={16} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                onClick={handleRemoveAttachment}
+                title="Remove attachment"
+              >
+                <Trash2 size={16} />
+              </Button>
+            </div>
+          </div>
+          
+          {getFileType(attachmentUrl) === 'image' && (
+            <div className="mt-2">
+              <img 
+                src={attachmentUrl} 
+                alt="Attachment preview" 
+                className="max-w-full rounded border" 
+              />
+            </div>
+          )}
+          
+          <div className="mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="w-full gap-2"
+            >
+              <Upload size={16} />
+              {isUploading ? 'Uploading...' : 'Replace File'}
+            </Button>
+          </div>
         </div>
       )}
     </div>

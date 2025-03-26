@@ -1,32 +1,28 @@
-import { useEffect, RefObject, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 interface EditorContentProps {
-  editorRef: RefObject<HTMLDivElement>;
-  handleContentChange: () => void; // No parameters expected
-  initialContent: string;
-  onAutoSave?: () => void; // No parameters expected
-  autoSaveDelay?: number;
+  content: string;
+  onChange: (content: string) => void; 
   onContentUpdate?: (content: string) => void;
-  execCommand?: (command: string, value?: string) => void;
-  formatTableCells?: (alignment: string) => void;
-  hasConclusion?: boolean; // Keeping the prop but we won't use it for highlighting
+  onAutoSave?: () => void; 
+  autoSaveDelay?: number;
+  hasConclusion?: boolean;
 }
 
 const EditorContent = ({ 
-  editorRef, 
-  handleContentChange, 
-  initialContent,
+  content,
+  onChange, 
+  onContentUpdate,
   onAutoSave,
   autoSaveDelay = 3000,
-  onContentUpdate,
-  execCommand,
-  formatTableCells,
-  hasConclusion = true, // Default to true to not interfere with existing content
+  hasConclusion = true,
 }: EditorContentProps) => {
+  const editorRef = useRef<HTMLDivElement>(null);
+  
   // Set initial content when the component mounts
   useEffect(() => {
     if (editorRef.current) {
-      editorRef.current.innerHTML = initialContent || '';
+      editorRef.current.innerHTML = content || '';
       
       // Keep focus in the editor after applying formatting
       const handleSelectionChange = () => {
@@ -43,13 +39,13 @@ const EditorContent = ({
       document.addEventListener('selectionchange', handleSelectionChange);
       return () => document.removeEventListener('selectionchange', handleSelectionChange);
     }
-  }, [editorRef, initialContent]);
+  }, [content]);
 
   // Create a debounced auto-save function (will only run if autoSave is enabled)
   const debouncedAutoSave = useCallback(() => {
     if (onAutoSave) {
       const timer = setTimeout(() => {
-        onAutoSave(); // Call without arguments
+        onAutoSave(); 
       }, autoSaveDelay);
       
       return () => clearTimeout(timer);
@@ -57,33 +53,35 @@ const EditorContent = ({
   }, [onAutoSave, autoSaveDelay]);
 
   // Setup input handler - still tracks changes but doesn't auto-save
-  const handleInput = () => {
-    handleContentChange(); // Call without arguments
-    
-    // Notify parent component about content change
-    if (onContentUpdate && editorRef.current) {
-      onContentUpdate(editorRef.current.innerHTML);
+  const handleContentChange = () => {
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
       
-      // Apply styling to conclusion headings and sections
-      if (editorRef.current) {
-        const conclusionHeadings = editorRef.current.querySelectorAll('h1, h2, h3');
-        conclusionHeadings.forEach(heading => {
-          if (heading.textContent?.trim().toLowerCase() === 'conclusion') {
-            heading.classList.add('conclusion-heading');
-            
-            // Apply styles to the content after the heading until the next heading
-            let currentElement = heading.nextElementSibling;
-            while (currentElement && 
-                  !['H1', 'H2', 'H3'].includes(currentElement.tagName)) {
-              currentElement.classList.add('conclusion-content');
-              currentElement = currentElement.nextElementSibling;
+      // Notify parent component about content change
+      if (onContentUpdate && editorRef.current) {
+        onContentUpdate(editorRef.current.innerHTML);
+        
+        // Apply styling to conclusion headings and sections
+        if (editorRef.current) {
+          const conclusionHeadings = editorRef.current.querySelectorAll('h1, h2, h3');
+          conclusionHeadings.forEach(heading => {
+            if (heading.textContent?.trim().toLowerCase() === 'conclusion') {
+              heading.classList.add('conclusion-heading');
+              
+              // Apply styles to the content after the heading until the next heading
+              let currentElement = heading.nextElementSibling;
+              while (currentElement && 
+                    !['H1', 'H2', 'H3'].includes(currentElement.tagName)) {
+                currentElement.classList.add('conclusion-content');
+                currentElement = currentElement.nextElementSibling;
+              }
             }
-          }
-        });
+          });
+        }
       }
+      
+      debouncedAutoSave(); // This will only trigger autosave if it's enabled
     }
-    
-    debouncedAutoSave(); // This will only trigger autosave if it's enabled
   };
 
   return (
@@ -91,7 +89,7 @@ const EditorContent = ({
       className="p-4 min-h-[300px] focus:outline-none overflow-auto text-sm"
       ref={editorRef}
       contentEditable
-      onInput={handleInput}
+      onInput={handleContentChange}
       onBlur={handleContentChange}
       style={{ 
         lineHeight: '1.5',

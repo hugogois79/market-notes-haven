@@ -20,13 +20,16 @@ import {
 } from "lucide-react";
 
 interface EditorToolbarProps {
-  editorRef: RefObject<HTMLDivElement>;
+  editorRef: RefObject<HTMLDivElement> | null;
   execCommand: (command: string, value?: string) => void;
   formatTableCells?: (format: string) => void;
   insertVerticalSeparator?: () => void;
   highlightText?: () => void;
   boldText?: () => void;
   onPrintClick?: () => void;
+  hasConclusion?: boolean;
+  category?: string;
+  className?: string;
 }
 
 const EditorToolbar: React.FC<EditorToolbarProps> = ({ 
@@ -36,10 +39,13 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
   insertVerticalSeparator,
   highlightText,
   boldText,
-  onPrintClick
+  onPrintClick,
+  hasConclusion,
+  category,
+  className
 }) => {
   return (
-    <div className="flex flex-wrap gap-1 p-2 bg-muted border-b">
+    <div className={`flex flex-wrap gap-1 p-2 bg-muted border-b ${className || ''}`}>
       <Button
         variant="ghost"
         size="sm"

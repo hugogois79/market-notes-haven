@@ -60,7 +60,8 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
       
       <TabsContent value="editor" className="mt-0 p-0">
         <EditorToolbar 
-          className="border-b"
+          editorRef={null}
+          execCommand={() => {}}
           hasConclusion={hasConclusion}
           category={category}
         />
@@ -70,6 +71,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
             onChange={onContentChange} 
             onContentUpdate={onContentUpdate}
             onAutoSave={onAutoSave}
+            hasConclusion={hasConclusion}
           />
         </div>
       </TabsContent>
@@ -77,8 +79,8 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
       <TabsContent value="attachment" className="mt-0 p-4">
         <AttachmentSection 
           noteId={noteId}
-          currentUrl={attachment_url}
-          onUrlChange={onAttachmentChange}
+          attachmentUrl={attachment_url}
+          onAttachmentChange={onAttachmentChange}
         />
       </TabsContent>
     </Tabs>
