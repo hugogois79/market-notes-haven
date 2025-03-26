@@ -241,7 +241,7 @@ const TokenSection: React.FC<TokenSectionProps> = ({
         <Select 
           onValueChange={handleSelectToken} 
           disabled={isLoadingTokens || availableTokens.length === 0}
-          value=""
+          value="placeholder"
         >
           <SelectTrigger className="w-[180px] h-8 token-select">
             <SelectValue placeholder={isFilter ? "Add token filter..." : "Link token..."} />

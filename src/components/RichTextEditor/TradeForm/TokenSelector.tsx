@@ -17,20 +17,28 @@ export const TokenSelector = ({
   selectedToken,
   onTokenChange
 }: TokenSelectorProps) => {
+  // Ensure selectedToken is never empty
+  const safeSelectedToken = selectedToken || "placeholder";
+  
   return (
     <div className="space-y-1 col-span-2 md:col-span-1">
       <Label htmlFor="token">Token</Label>
       <Select
-        value={selectedToken}
+        value={safeSelectedToken}
         onValueChange={onTokenChange}
         disabled={isLoadingTokens}
       >
         <SelectTrigger id="token" className="w-full">
           <SelectValue placeholder={isLoadingTokens ? "Loading tokens..." : "Select token"}>
-            {getTokenDisplay(selectedToken, availableTokens)}
+            {getTokenDisplay(safeSelectedToken, availableTokens)}
           </SelectValue>
         </SelectTrigger>
         <SelectContent className="max-h-[200px]">
+          {/* Add a placeholder if needed */}
+          {safeSelectedToken === "placeholder" && (
+            <SelectItem value="placeholder">Select a token</SelectItem>
+          )}
+          
           {availableTokens.map((token) => (
             <SelectItem key={token.id} value={token.id}>
               <div className="flex items-center gap-2">

@@ -98,7 +98,7 @@ const TagsSection: React.FC<TagsSectionProps> = ({
             {availableCategories.length > 0 && setCategoryFilter && (
               <div className="px-2 py-2">
                 <Select
-                  value={categoryFilter || ""}
+                  value={categoryFilter || "all"}
                   onValueChange={(value) => setCategoryFilter(value === "all" ? null : value)}
                 >
                   <SelectTrigger className="h-8 text-sm">

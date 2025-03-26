@@ -69,7 +69,7 @@ export const createTag = async (tagName: string, category?: string): Promise<Tag
       if (category && existingTags[0].category !== category) {
         const { data: updatedTag, error: updateError } = await supabase
           .from('tags')
-          .update({ category })
+          .update({ category: category })
           .eq('id', existingTags[0].id)
           .select()
           .single();
@@ -86,13 +86,18 @@ export const createTag = async (tagName: string, category?: string): Promise<Tag
     }
 
     // Otherwise create a new tag
+    const tagData: any = {
+      name: tagName,
+      user_id: userId
+    };
+    
+    if (category) {
+      tagData.category = category;
+    }
+    
     const { data, error } = await supabase
       .from('tags')
-      .insert([{
-        name: tagName,
-        user_id: userId,
-        category: category || null
-      }])
+      .insert([tagData])
       .select()
       .single();
 

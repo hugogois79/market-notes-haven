@@ -94,6 +94,9 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
     console.log("EditorHeader: Current category value:", category);
   }, [title, category]);
 
+  // Make sure we have a valid category value
+  const safeCategory = category || "General";
+
   return (
     <div className="space-y-4">
       {isPrintMode ? (
@@ -120,7 +123,7 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
             Category
           </Label>
           <Select
-            value={category || "General"}
+            value={safeCategory}
             onValueChange={handleCategoryChange}
           >
             <SelectTrigger id="category" className="w-full md:w-60">

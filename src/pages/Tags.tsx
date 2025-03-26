@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tag as TagIcon, FileText, Search, X, Plus, Trash2, FolderOpen, Edit, Check, Filter } from "lucide-react";
@@ -91,7 +90,6 @@ const Tags = () => {
   const [activeTab, setActiveTab] = useState("tags");
   const isLoaded = !(loading || isLoading);
   
-  // Fetch categories
   useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -105,7 +103,6 @@ const Tags = () => {
     loadCategories();
   }, []);
   
-  // Fetch tags
   useEffect(() => {
     const loadTags = async () => {
       try {
@@ -144,7 +141,6 @@ const Tags = () => {
     loadTags();
   }, [isFirstLoad, notesMigrated, selectedCategory]);
   
-  // Filter notes based on selected tag and search query
   useEffect(() => {
     const filterNotes = async () => {
       if (!selectedTag) {
@@ -279,7 +275,6 @@ const Tags = () => {
     }
   };
 
-  // Get filtered tags for the current category
   const getFilteredTags = () => {
     return tags.filter(tag => 
       (!selectedCategory || tag.category === selectedCategory) &&
@@ -331,14 +326,14 @@ const Tags = () => {
                 
                 <div>
                   <Select
-                    value={selectedCategory || ""}
-                    onValueChange={setSelectedCategory}
+                    value={selectedCategory || "all"}
+                    onValueChange={(value) => setSelectedCategory(value === "all" ? null : value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No category</SelectItem>
+                      <SelectItem value="all">No category</SelectItem>
                       {categories.map(category => (
                         <SelectItem key={category} value={category}>{category}</SelectItem>
                       ))}
@@ -390,14 +385,14 @@ const Tags = () => {
               </div>
               
               <Select
-                value={selectedCategory || ""}
-                onValueChange={(value) => setSelectedCategory(value || null)}
+                value={selectedCategory || "all"}
+                onValueChange={(value) => setSelectedCategory(value === "all" ? null : value)}
               >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Filter by category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {categories.map(category => (
                     <SelectItem key={category} value={category}>{category}</SelectItem>
                   ))}
@@ -639,7 +634,6 @@ const Tags = () => {
                 </div>
               )}
               
-              {/* Uncategorized tags card */}
               {tags.filter(tag => !tag.category).length > 0 && (
                 <Card className="overflow-hidden">
                   <CardHeader className="pb-2">

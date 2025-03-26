@@ -48,13 +48,16 @@ export const TradeInfoForm: React.FC<TradeInfoFormProps> = ({
   onStopPriceChange,
   onRefreshPrice,
 }) => {
+  // Make sure selectedToken is never empty (default to a placeholder value if empty)
+  const safeSelectedToken = selectedToken || "placeholder"; 
+  
   return (
     <>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <TokenSelector
           availableTokens={availableTokens}
           isLoadingTokens={isLoadingTokens}
-          selectedToken={selectedToken}
+          selectedToken={safeSelectedToken}
           onTokenChange={onTokenChange}
         />
 
