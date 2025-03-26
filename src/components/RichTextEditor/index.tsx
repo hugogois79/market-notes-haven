@@ -3,7 +3,7 @@ import { useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Tag, Token, Note, TradeInfo } from "@/types";
 import { useQuery } from "@tanstack/react-query";
-import { fetchTags, createTag } from "@/services/tagService";
+import { fetchTags, createTag } from "@/services/tag"; // Updated import path
 import { fetchTokens } from "@/services/tokenService";
 import { toast } from "sonner";
 
@@ -122,7 +122,7 @@ const RichTextEditor = ({
       try {
         // First check if tag exists in available tags
         const existingTag = availableTags.find(
-          tag => tag.name.toLowerCase() === tagName.toLowerCase()
+          tag => tag && tag.name && tag.name.toLowerCase() === tagName.toLowerCase()
         );
         
         if (existingTag) {
@@ -215,11 +215,11 @@ const RichTextEditor = ({
   const getAvailableTagsForSelection = () => {
     // Filter out tags that are already linked to this note
     return availableTags.filter(tag => 
-      !linkedTags.some(linkedTag => 
+      tag && linkedTags.some(linkedTag => 
         typeof linkedTag === 'string' 
           ? linkedTag === tag.id 
           : linkedTag.id === tag.id
-      )
+      ) === false
     );
   };
 

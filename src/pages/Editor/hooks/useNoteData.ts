@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Note, Token, Tag } from "@/types";
 import { getTokensForNote } from "@/services/tokenService";
-import { fetchTags, getTagsForNote } from "@/services/tagService";
+import { fetchTags, getTagsForNote } from "@/services/tag";
 import { useParams, useNavigate } from "react-router-dom";
 
 interface UseNoteDataProps {
@@ -21,13 +20,11 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
   const [isLoadingTags, setIsLoadingTags] = useState(false);
   const [isLoadingTokens, setIsLoadingTokens] = useState(false);
 
-  // Effect to load tokens and tags
   useEffect(() => {
     const loadTokensAndTags = async () => {
       setIsLoadingTags(true);
       
       try {
-        // Fetch tags
         const tags = await fetchTags();
         console.log("Loaded tags:", tags);
         setAllTags(tags);
@@ -41,7 +38,6 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
     loadTokensAndTags();
   }, []);
 
-  // Effect to load the note or set up a new one
   useEffect(() => {
     console.log("Editor: noteId =", noteId);
     console.log("Notes available:", notes.length);
@@ -49,7 +45,6 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
     if (noteId === "new") {
       console.log("Setting up new note");
       setIsNewNote(true);
-      // Create a placeholder new note object with default values
       const newNoteTemplate: Note = {
         id: "temp-" + Date.now().toString(),
         title: "Untitled Note",
@@ -72,7 +67,6 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
         setCurrentNote(foundNote);
         setIsNewNote(false);
         
-        // Fetch linked tokens for this note
         const fetchLinkedTokens = async () => {
           try {
             setIsLoadingTokens(true);
@@ -88,7 +82,6 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
         
         fetchLinkedTokens();
         
-        // Fetch linked tags if the ID is not a temp ID
         if (!foundNote.id.startsWith('temp-')) {
           const fetchTagsForNote = async () => {
             try {
@@ -96,7 +89,6 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
               const noteTags = await getTagsForNote(foundNote.id);
               console.log("Fetched tags for note:", noteTags);
               
-              // Update the foundNote.tags to match what's in the database
               if (noteTags.length > 0) {
                 foundNote.tags = noteTags.map(tag => tag.id);
                 setCurrentNote({...foundNote});
@@ -111,36 +103,28 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
           fetchTagsForNote();
         }
       } else {
-        // Note not found, redirect to notes list
         toast.error("Note not found");
         navigate("/notes");
       }
     }
-    // If notes hasn't loaded yet, we'll wait for the next render when notes are available
   }, [noteId, notes, navigate]);
 
-  // Handle saving the note
   const handleSave = async (updatedFields: Partial<Note>): Promise<void> => {
     if (!currentNote) return;
     
     console.log('Updating note with fields:', updatedFields);
     
-    // Merge the updated fields with the current note
     const updatedNote: Note = {
       ...currentNote,
       ...updatedFields,
       updatedAt: new Date()
     };
     
-    // Only update tokens if they were changed
     if (updatedFields.tokens) {
       setLinkedTokens(updatedFields.tokens);
-      
-      // Log the tokens for debugging
       console.log('Setting linked tokens:', updatedFields.tokens);
     }
     
-    // If the title is included, update the current note immediately to reflect in UI
     if (updatedFields.title !== undefined) {
       setCurrentNote(prevNote => {
         if (!prevNote) return updatedNote;
@@ -148,7 +132,6 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
       });
     }
     
-    // If the category is included, update the current note immediately
     if (updatedFields.category !== undefined) {
       setCurrentNote(prevNote => {
         if (!prevNote) return updatedNote;
@@ -156,7 +139,6 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
       });
     }
     
-    // If tags are included, update the current note immediately
     if (updatedFields.tags !== undefined) {
       setCurrentNote(prevNote => {
         if (!prevNote) return updatedNote;
@@ -171,14 +153,11 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
       console.log('Saved category:', savedNote.category);
       
       if (isNewNote) {
-        // Redirect to the new note's edit page
         navigate(`/editor/${savedNote.id}`, { replace: true });
         setIsNewNote(false);
       }
       
       setCurrentNote(savedNote);
-      
-      // No need to show toast here as it will be handled by the caller
     } else {
       console.error('Failed to save note');
       toast.error("Failed to save note");

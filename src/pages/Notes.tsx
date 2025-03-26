@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,7 @@ import { Card } from "@/components/ui/card";
 import NoteCard from "@/components/NoteCard";
 import { Note, Tag as TagType, Token } from "@/types";
 import { useNavigate } from "react-router-dom";
-import { fetchTags } from "@/services/tagService";
+import { fetchTags } from "@/services/tag";
 import { fetchTokens } from "@/services/tokenService";
 import { useNotes } from "@/contexts/NotesContext";
 import TagBadge from "@/components/ui/tag-badge";
@@ -95,36 +94,38 @@ const Notes = () => {
     .filter(token => selectedTokens.includes(token.id))
     .map(token => token.symbol);
 
-  const filteredNotes = contextNotes.filter((note) => {
-    if (!note) return false;
+  const filteredNotes = useMemo(() => {
+    if (!contextNotes || contextNotes.length === 0) return [];
+  
+    return contextNotes.filter(note => {
+      const searchMatch =
+        !searchQuery ||
+        (note.title && note.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (note.content &&
+          note.content.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const searchMatch =
-      !searchQuery ||
-      (note.title && note.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (note.content &&
-        note.content.toLowerCase().includes(searchQuery.toLowerCase()));
+      const categoryMatch =
+        selectedCategories.length === 0 || 
+        (note.category && selectedCategories.includes(note.category));
 
-    const categoryMatch =
-      selectedCategories.length === 0 || 
-      (note.category && selectedCategories.includes(note.category));
+      const tagMatch =
+        selectedTags.length === 0 || 
+        (note.tags && note.tags.some(tag => selectedTags.includes(tag)));
 
-    const tagMatch =
-      selectedTags.length === 0 || 
-      (note.tags && note.tags.some(tag => selectedTags.includes(tag)));
-
-    let tokenMatch = true;
-    if (selectedTokens.length > 0) {
-      if (!tokenFilteringComplete) {
-        tokenMatch = true;
-      } else {
-        tokenMatch = selectedTokens.some(tokenId => 
-          tokenFilteredNotes[tokenId]?.includes(note.id)
-        );
+      let tokenMatch = true;
+      if (selectedTokens.length > 0) {
+        if (!tokenFilteringComplete) {
+          tokenMatch = true;
+        } else {
+          tokenMatch = selectedTokens.some(tokenId => 
+            tokenFilteredNotes[tokenId]?.includes(note.id)
+          );
+        }
       }
-    }
-    
-    return searchMatch && categoryMatch && tagMatch && tokenMatch;
-  });
+      
+      return searchMatch && categoryMatch && tagMatch && tokenMatch;
+    });
+  }, [contextNotes, searchQuery, selectedCategories, selectedTags, selectedTokens, tokenFilteringComplete, tokenFilteredNotes]);
 
   const handleCreateNote = () => {
     navigate("/editor/new");

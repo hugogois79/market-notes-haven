@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fetchTags } from "@/services/tagService";
+import { fetchTags, fetchCategories } from "@/services/tag";
 import { getTokensForNote } from "@/services/tokenService";
 import TokenBadge from "@/components/TokenBadge";
 import { Token } from "@/types";
@@ -30,7 +30,6 @@ const Index = () => {
   const [tagNameMap, setTagNameMap] = useState<Record<string, string>>({});
   const [noteTokens, setNoteTokens] = useState<Record<string, Token[]>>({});
   
-  // Load tags to map IDs to names
   useEffect(() => {
     const loadTags = async () => {
       try {
@@ -48,7 +47,6 @@ const Index = () => {
     loadTags();
   }, []);
   
-  // Extract categories from notes
   useEffect(() => {
     if (notes.length > 0) {
       const categoryCounts: Record<string, number> = {};
@@ -67,7 +65,6 @@ const Index = () => {
     }
   }, [notes]);
   
-  // Load tokens for recent notes
   useEffect(() => {
     const fetchTokensForNotes = async () => {
       if (recentNotes.length > 0) {
@@ -88,7 +85,6 @@ const Index = () => {
       }
     };
     
-    // Filter notes based on search query, selected category, and selected tag
     const filteredNotes = notes.filter(note => {
       const matchesSearch = searchQuery === "" || 
         note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -99,14 +95,12 @@ const Index = () => {
       
       const matchesTag = selectedTag === null || 
         note.tags.some(tagId => 
-          // Either match the tag ID or the tag name
           tagId === selectedTag || tagNameMap[tagId] === selectedTag
         );
       
       return matchesSearch && matchesCategory && matchesTag;
     });
     
-    // Get recent notes (last 10) from filtered notes
     const recentOnes = [...filteredNotes]
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       .slice(0, 10);
@@ -116,7 +110,6 @@ const Index = () => {
     }
   }, [notes, searchQuery, selectedCategory, selectedTag, tagNameMap]);
   
-  // Filter notes based on search query, selected category, and selected tag
   const filteredNotes = notes.filter(note => {
     const matchesSearch = searchQuery === "" || 
       note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -127,19 +120,16 @@ const Index = () => {
     
     const matchesTag = selectedTag === null || 
       note.tags.some(tagId => 
-        // Either match the tag ID or the tag name
         tagId === selectedTag || tagNameMap[tagId] === selectedTag
       );
     
     return matchesSearch && matchesCategory && matchesTag;
   });
   
-  // Get recent notes (last 10) from filtered notes - changed from 6 to 10
   const recentNotes = [...filteredNotes]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 10);
 
-  // Icons for common categories
   const getCategoryIcon = (categoryName: string) => {
     switch(categoryName.toLowerCase()) {
       case 'stocks':
@@ -168,7 +158,6 @@ const Index = () => {
   const handleCategoryClick = (category: string) => {
     console.log("Selected category:", category);
     if (selectedCategory === category) {
-      // If clicking the same category, clear the filter
       setSelectedCategory(null);
       toast.info("Showing all notes");
     } else {
@@ -177,14 +166,11 @@ const Index = () => {
     }
   };
 
-  // Handle tag click to filter by tag
   const handleTagClick = (tagId: string, tagName: string, event: React.MouseEvent) => {
-    // Stop propagation to prevent note click handler from firing
     event.stopPropagation();
     
     console.log("Selected tag:", tagName);
     if (selectedTag === tagId || selectedTag === tagName) {
-      // If clicking the same tag, clear the filter
       setSelectedTag(null);
       toast.info("Cleared tag filter");
     } else {
@@ -193,13 +179,11 @@ const Index = () => {
     }
   };
 
-  // Clear tag filter
   const clearTagFilter = () => {
     setSelectedTag(null);
     toast.info("Cleared tag filter");
   };
 
-  // Format date to be more readable
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString("en-US", {
       month: "short",
@@ -208,12 +192,10 @@ const Index = () => {
     });
   };
 
-  // Handle note click to navigate to editor
   const handleNoteClick = (noteId: string) => {
     navigate(`/editor/${noteId}`);
   };
 
-  // Extract plain text from HTML content for preview
   const getTextPreview = (htmlContent: string) => {
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = htmlContent;
@@ -221,14 +203,12 @@ const Index = () => {
     return textContent.substring(0, 100) + (textContent.length > 100 ? "..." : "");
   };
 
-  // Helper to get tag name from ID
   const getTagName = (tagId: string) => {
     return tagNameMap[tagId] || tagId;
   };
 
   return (
     <div className="space-y-6 px-6 py-4 animate-fade-in">
-      {/* Header without Logo */}
       <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold text-brand">Dashboard</h1>
@@ -242,7 +222,6 @@ const Index = () => {
         </Button>
       </div>
 
-      {/* Search field */}
       <div className="relative">
         <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
         <Input
@@ -281,7 +260,6 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Categories Section - Moved to the top */}
       <div>
         <div className="flex items-center mb-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -317,7 +295,6 @@ const Index = () => {
         )}
       </div>
 
-      {/* Recent Notes Section - Now below Categories */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
