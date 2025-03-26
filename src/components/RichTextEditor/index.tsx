@@ -65,7 +65,7 @@ const RichTextEditor = ({
       title: title,
       content: currentContent,
       category: category,
-      tags: linkedTags.map(tag => tag.id), // Convert Tag objects to tag IDs
+      tags: linkedTags.map(tag => typeof tag === 'string' ? tag : tag.id), // Convert Tag objects to tag IDs
       summary: summary,
       createdAt: new Date(),
       updatedAt: new Date(),
