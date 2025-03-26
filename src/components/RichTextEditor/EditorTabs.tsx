@@ -33,8 +33,8 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
   const [activeTab, setActiveTab] = useState("editor");
 
   return (
-    <Tabs defaultValue="editor" className="w-full" onValueChange={setActiveTab}>
-      <div className="flex justify-between items-center px-4 pt-2 border-b">
+    <Tabs defaultValue="editor" className="w-full flex flex-col h-full" onValueChange={setActiveTab}>
+      <div className="flex justify-between items-center px-4 pt-2 border-b sticky top-0 bg-background z-10">
         <TabsList className="grid grid-cols-2 w-auto">
           <TabsTrigger value="editor" className="flex items-center gap-1">
             <Edit className="h-4 w-4" />
@@ -47,14 +47,14 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
         </TabsList>
       </div>
       
-      <TabsContent value="editor" className="mt-0 p-0">
+      <TabsContent value="editor" className="mt-0 p-0 flex-1 overflow-hidden flex flex-col">
         <EditorToolbar 
           editorRef={null}
           execCommand={() => {}}
           hasConclusion={hasConclusion}
           category={category}
         />
-        <div className="p-4">
+        <div className="flex-1 overflow-auto">
           <EditorContent 
             content={content} 
             onChange={onContentChange} 
@@ -65,7 +65,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
         </div>
       </TabsContent>
       
-      <TabsContent value="attachment" className="mt-0 p-4">
+      <TabsContent value="attachment" className="mt-0 p-4 flex-1 overflow-auto">
         <AttachmentSection 
           noteId={noteId}
           attachmentUrl={attachment_url}

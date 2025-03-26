@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useCallback } from "react";
 
 interface EditorContentProps {
@@ -86,15 +87,16 @@ const EditorContent = ({
 
   return (
     <div 
-      className="p-4 min-h-[300px] focus:outline-none overflow-auto text-sm"
+      className="p-4 min-h-[300px] max-h-[60vh] focus:outline-none overflow-auto text-sm"
       ref={editorRef}
       contentEditable
       onInput={handleContentChange}
       onBlur={handleContentChange}
       style={{ 
         lineHeight: '1.5',
-        // Add these styles to better handle tables
+        // Add these styles to better handle tables and overflow
         overflowX: 'auto',
+        overflowY: 'auto',
         whiteSpace: 'normal',
         // Reduced top padding
         paddingTop: "8px"

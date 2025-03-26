@@ -85,7 +85,7 @@ const EditorMain: React.FC<EditorMainProps> = ({
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   return (
-    <div className="flex flex-col gap-4 mt-2">
+    <div className="flex flex-col gap-4 mt-2 h-full max-h-screen overflow-hidden">
       <EditorHeader 
         title={title} 
         onTitleChange={onTitleChange}
@@ -99,48 +99,50 @@ const EditorMain: React.FC<EditorMainProps> = ({
         onSave={handleManualSave}
       />
       
-      <SpecialSections 
-        noteId={noteId}
-        content={currentContent}
-        initialSummary={summary}
-        onSummaryGenerated={onSummaryGenerated}
-        isTradingCategory={isTradingCategory}
-        availableTokens={availableTokens}
-        isLoadingTokens={isLoadingTokens}
-        tradeInfo={tradeInfo}
-        onTradeInfoChange={onTradeInfoChange}
-      />
-      
-      <MetadataSection 
-        linkedTags={linkedTags}
-        tagInput={tagInput}
-        setTagInput={setTagInput}
-        handleAddTag={handleAddTag}
-        handleRemoveTag={handleRemoveTag}
-        handleSelectTag={handleSelectTag}
-        isLoadingTags={isLoadingTags}
-        getAvailableTagsForSelection={getAvailableTagsForSelection}
-        linkedTokens={linkedTokens}
-        handleRemoveToken={handleRemoveToken}
-        handleTokenSelect={handleTokenSelect}
-        isLoadingTokens={isLoadingTokens}
-        category={category}
-        categoryFilter={category}
-      />
-      
-      <Card className="p-0 border rounded-md overflow-hidden">
-        <EditorTabs 
-          content={content}
-          onContentChange={onContentChange}
-          onContentUpdate={handleContentUpdate}
-          onAutoSave={handleAutoSave}
+      <div className="flex flex-col gap-4 overflow-y-auto flex-1 pb-4">
+        <SpecialSections 
           noteId={noteId}
-          attachment_url={attachment_url}
-          onAttachmentChange={onAttachmentChange}
-          hasConclusion={hasConclusion}
-          category={category}
+          content={currentContent}
+          initialSummary={summary}
+          onSummaryGenerated={onSummaryGenerated}
+          isTradingCategory={isTradingCategory}
+          availableTokens={availableTokens}
+          isLoadingTokens={isLoadingTokens}
+          tradeInfo={tradeInfo}
+          onTradeInfoChange={onTradeInfoChange}
         />
-      </Card>
+        
+        <MetadataSection 
+          linkedTags={linkedTags}
+          tagInput={tagInput}
+          setTagInput={setTagInput}
+          handleAddTag={handleAddTag}
+          handleRemoveTag={handleRemoveTag}
+          handleSelectTag={handleSelectTag}
+          isLoadingTags={isLoadingTags}
+          getAvailableTagsForSelection={getAvailableTagsForSelection}
+          linkedTokens={linkedTokens}
+          handleRemoveToken={handleRemoveToken}
+          handleTokenSelect={handleTokenSelect}
+          isLoadingTokens={isLoadingTokens}
+          category={category}
+          categoryFilter={category}
+        />
+        
+        <Card className="p-0 border rounded-md overflow-hidden flex-1 min-h-0 flex flex-col">
+          <EditorTabs 
+            content={content}
+            onContentChange={onContentChange}
+            onContentUpdate={handleContentUpdate}
+            onAutoSave={handleAutoSave}
+            noteId={noteId}
+            attachment_url={attachment_url}
+            onAttachmentChange={onAttachmentChange}
+            hasConclusion={hasConclusion}
+            category={category}
+          />
+        </Card>
+      </div>
 
       {/* Print Modal */}
       <PrintModal

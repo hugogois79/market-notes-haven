@@ -12,7 +12,7 @@ interface EditorStatusBarProps {
 
 const EditorStatusBar = ({ isSaving, lastSaved, onSave }: EditorStatusBarProps) => {
   return (
-    <div className="flex items-center justify-between py-2">
+    <div className="flex items-center justify-between py-2 sticky top-0 bg-background z-10 border-b">
       <div className="text-sm text-muted-foreground">
         {isSaving ? (
           <span className="text-brand">Saving...</span>
