@@ -58,6 +58,22 @@ const RichTextEditor = ({
   availableTagsForSelection,
 }: RichTextEditorProps) => {
   
+  // Handle direct print for current note
+  const handlePrint = () => {
+    printNote({
+      id: noteId,
+      title: title,
+      content: currentContent,
+      category: category,
+      tags: linkedTags.map(tag => tag.id), // Convert Tag objects to tag IDs
+      summary: summary,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      attachment_url: attachment_url,
+      tradeInfo: tradeInfo
+    });
+  };
+  
   // Use custom hooks to manage editor state and token handling
   const {
     tagInput,
@@ -99,22 +115,6 @@ const RichTextEditor = ({
     handleRemoveToken
   } = useTokenHandling(linkedTokens, onTokensChange);
 
-  // Handle direct print for current note
-  const handlePrint = () => {
-    printNote({
-      id: noteId,
-      title: title,
-      content: currentContent,
-      category: category,
-      tags: linkedTags,
-      summary: summary,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      attachment_url: attachment_url,
-      tradeInfo: tradeInfo
-    });
-  };
-
   return (
     <EditorMain
       title={title}
@@ -150,6 +150,7 @@ const RichTextEditor = ({
       tradeInfo={tradeInfo}
       onTradeInfoChange={onTradeInfoChange}
       hasConclusion={hasConclusion}
+      onPrint={handlePrint}
     />
   );
 };

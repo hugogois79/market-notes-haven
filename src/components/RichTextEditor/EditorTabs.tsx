@@ -22,6 +22,7 @@ interface EditorTabsProps {
   onAttachmentChange?: (url: string | null) => void;
   hasConclusion?: boolean;
   category?: string;
+  onPrint?: () => void;
 }
 
 const EditorTabs = ({
@@ -34,6 +35,7 @@ const EditorTabs = ({
   onAttachmentChange,
   hasConclusion = true,
   category,
+  onPrint,
 }: EditorTabsProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -153,15 +155,13 @@ const EditorTabs = ({
     }
   };
 
-  // Load the summary when the component mounts or noteId changes
+  const isTradingCategory = category === "Trading" || category === "Pair Trading";
+
   useEffect(() => {
     if (noteId && isTradingCategory) {
       generateChatSummary();
     }
   }, [noteId]);
-
-  // Check if the current category is Trading or Pair Trading
-  const isTradingCategory = category === "Trading" || category === "Pair Trading";
 
   return (
     <div className="flex flex-col w-full border rounded-md overflow-hidden bg-white">
@@ -193,6 +193,7 @@ const EditorTabs = ({
             insertVerticalSeparator={insertVerticalSeparator}
             highlightText={highlightText}
             boldText={boldText}
+            onPrintClick={onPrint}
           />
           
           <EditorContent
@@ -292,7 +293,6 @@ const EditorTabs = ({
         
         {isTradingCategory && (
           <TabsContent value="trading" className="m-0 p-4">
-            {/* Journal Summary Section - Show at the top */}
             <div className="mb-4">
               <JournalSummary 
                 summary={chatSummary} 
@@ -300,7 +300,6 @@ const EditorTabs = ({
               />
             </div>
             
-            {/* Trading Chat Section */}
             <TradingChat 
               noteId={noteId} 
               onChatSummaryUpdated={handleChatSummaryUpdated}

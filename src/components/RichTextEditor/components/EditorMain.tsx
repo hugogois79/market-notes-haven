@@ -43,6 +43,7 @@ interface EditorMainProps {
   tradeInfo?: TradeInfo;
   onTradeInfoChange?: (tradeInfo: TradeInfo) => void;
   hasConclusion?: boolean;
+  onPrint?: () => void;
 }
 
 const EditorMain: React.FC<EditorMainProps> = ({
@@ -79,12 +80,17 @@ const EditorMain: React.FC<EditorMainProps> = ({
   tradeInfo,
   onTradeInfoChange = () => {},
   hasConclusion = true,
+  onPrint,
 }) => {
   const isTradingCategory = category === "Trading" || category === "Pair Trading";
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   const handlePrintClick = () => {
-    setIsPrintModalOpen(true);
+    if (onPrint) {
+      onPrint();
+    } else {
+      setIsPrintModalOpen(true);
+    }
   };
 
   return (
