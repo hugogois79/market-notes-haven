@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Tag as TagIcon, FileText, Search, X, Plus, Trash2, FolderOpen, Edit, Check, Filter, Tags, CheckSquare } from "lucide-react";
+import { Tag as TagIcon, FileText, Search, X, Plus, Trash2, FolderOpen, Edit, Check, Filter, Tags as TagsIcon, CheckSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
