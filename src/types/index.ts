@@ -24,6 +24,7 @@ export interface Token {
 export interface Tag {
   id: string;
   name: string;
+  category?: string | null;
 }
 
 export interface TradeInfo {
