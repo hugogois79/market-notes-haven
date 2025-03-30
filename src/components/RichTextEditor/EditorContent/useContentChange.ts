@@ -33,6 +33,10 @@ export const useContentChange = ({
   // Handle content change event
   const handleContentChange = useCallback(() => {
     if (editorRef.current) {
+      // Process checkboxes in the content
+      processCheckboxes();
+      
+      // Get the updated content and notify parent
       onChange(editorRef.current.innerHTML);
       
       // Notify parent component about content change
@@ -55,12 +59,55 @@ export const useContentChange = ({
               }
             }
           });
+          
+          // Apply styling to Implementation Checklist section
+          const implementationHeadings = editorRef.current.querySelectorAll('h1, h2, h3');
+          implementationHeadings.forEach(heading => {
+            if (heading.textContent?.trim().toLowerCase().includes('implementation checklist')) {
+              heading.classList.add('implementation-heading');
+            }
+          });
+          
+          // Apply styling to Restart Conditions section
+          const restartHeadings = editorRef.current.querySelectorAll('h1, h2, h3');
+          restartHeadings.forEach(heading => {
+            if (heading.textContent?.trim().toLowerCase().includes('restart conditions')) {
+              heading.classList.add('restart-heading');
+            }
+          });
         }
       }
       
       debouncedAutoSave(); // This will only trigger autosave if it's enabled
     }
   }, [onChange, onContentUpdate, debouncedAutoSave, editorRef]);
+  
+  // Process checkboxes in the content
+  const processCheckboxes = () => {
+    if (!editorRef.current) return;
+    
+    // Find all checkbox elements
+    const checkboxItems = editorRef.current.querySelectorAll('.checkbox-item');
+    
+    checkboxItems.forEach(item => {
+      const checkbox = item.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      const label = item.querySelector('.checkbox-label');
+      
+      if (checkbox && label) {
+        // Set up change handler for the checkbox
+        checkbox.onchange = () => {
+          // Update the content when checkbox state changes
+          if (editorRef.current) {
+            const inputEvent = new Event('input', {
+              bubbles: true,
+              cancelable: true,
+            });
+            editorRef.current.dispatchEvent(inputEvent);
+          }
+        };
+      }
+    });
+  };
 
   return { handleContentChange };
 };

@@ -47,12 +47,16 @@ const ContentStyles: React.FC = () => {
         border-collapse: collapse;
         width: 100%;
         margin: 1rem 0;
+        table-layout: fixed;
       }
       [contenteditable="true"] th, 
       [contenteditable="true"] td {
         border: 1px solid #d1d5db;
         padding: 0.5rem;
         font-size: 1rem;
+        max-width: 100%;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
       }
       [contenteditable="true"] th {
         background-color: #f3f4f6;
@@ -121,6 +125,54 @@ const ContentStyles: React.FC = () => {
         margin-bottom: 8px;
         font-size: 12px;
         font-weight: bold;
+      }
+      
+      /* Enhanced checkbox styling */
+      [contenteditable="true"] .checkbox-item {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 0.5rem;
+        gap: 0.5rem;
+      }
+      
+      [contenteditable="true"] .editor-checkbox {
+        margin-top: 0.25rem;
+        cursor: pointer;
+        width: 1rem;
+        height: 1rem;
+      }
+      
+      [contenteditable="true"] .checkbox-label {
+        flex: 1;
+        min-width: 0;
+      }
+      
+      /* Restart conditions and Implementation Checklist styling */
+      [contenteditable="true"] ol li {
+        padding-left: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+      
+      [contenteditable="true"] hr {
+        border: none;
+        border-top: 1px solid #d1d5db;
+        margin: 1rem 0;
+      }
+      
+      /* Trading framework styling */
+      [contenteditable="true"] .trading-framework {
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        padding: 1rem;
+        margin: 1rem 0;
+        background-color: #f9fafb;
+      }
+      
+      [contenteditable="true"] .trading-framework h2 {
+        border-bottom: 1px solid #d1d5db;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+        color: #1967d2;
       }
     `}</style>
   );

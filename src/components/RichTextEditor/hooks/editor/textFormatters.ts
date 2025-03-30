@@ -37,6 +37,15 @@ export function applyHeadingFormatting(command: string, value: string, selection
         element.style.fontWeight = '500';
         element.style.marginTop = '0.75rem';
         element.style.marginBottom = '0.5rem';
+        
+        // If this is likely a section heading for trading frameworks, apply special styling
+        const textContent = element.textContent?.toLowerCase() || '';
+        if (textContent.includes('restart condition') || 
+            textContent.includes('implementation checklist')) {
+          element.style.color = '#1967d2';
+          element.style.borderBottom = '1px solid #d1d5db';
+          element.style.paddingBottom = '0.5rem';
+        }
       }
     } else if (value === "<h3>") {
       element = container.nodeType === 1 
@@ -91,6 +100,79 @@ export function applyListFormatting(command: string, value: string, selection: S
       items.forEach(item => {
         (item as HTMLElement).style.marginBottom = '0.25rem';
       });
+    }
+  }
+}
+
+/**
+ * Formats checkbox text into actual checkboxes
+ */
+export function formatCheckboxText(editorRef: HTMLDivElement | null) {
+  if (!editorRef) return;
+  
+  // Find all paragraphs that might contain checkbox patterns
+  const paragraphs = editorRef.querySelectorAll('p');
+  paragraphs.forEach(paragraph => {
+    const text = paragraph.textContent || '';
+    
+    // Check for checkbox patterns: [ ], [x], or []
+    if (text.trim().startsWith('[ ]') || text.trim().startsWith('[x]') || text.trim().startsWith('[]')) {
+      // Create checkbox element
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = text.trim().startsWith('[x]');
+      checkbox.className = 'editor-checkbox';
+      checkbox.contentEditable = 'false';
+      
+      // Create label for checkbox
+      const label = document.createElement('span');
+      label.className = 'checkbox-label';
+      label.textContent = text.replace(/^\s*\[\s*x?\s*\]\s*/, '');
+      
+      // Update paragraph
+      paragraph.innerHTML = '';
+      paragraph.className = 'checkbox-item';
+      paragraph.appendChild(checkbox);
+      paragraph.appendChild(label);
+    }
+  });
+}
+
+/**
+ * Creates a horizontal separator with styling
+ */
+export function createSeparator(editorRef: HTMLDivElement | null) {
+  if (!editorRef) return;
+  
+  const separator = document.createElement('hr');
+  separator.className = 'editor-separator';
+  separator.style.border = 'none';
+  separator.style.borderTop = '1px solid #d1d5db';
+  separator.style.margin = '1rem 0';
+  
+  const range = window.getSelection()?.getRangeAt(0);
+  if (range) {
+    range.deleteContents();
+    range.insertNode(separator);
+    
+    // Move cursor after the separator
+    range.setStartAfter(separator);
+    range.setEndAfter(separator);
+    
+    // Create a new paragraph after the separator if needed
+    const paragraph = document.createElement('p');
+    paragraph.innerHTML = '<br>';
+    range.insertNode(paragraph);
+    
+    // Set focus to the new paragraph
+    range.setStart(paragraph, 0);
+    range.setEnd(paragraph, 0);
+    range.collapse(true);
+    
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(range);
     }
   }
 }
