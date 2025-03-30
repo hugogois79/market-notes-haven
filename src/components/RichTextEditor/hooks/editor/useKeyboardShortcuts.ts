@@ -38,31 +38,34 @@ export const useKeyboardShortcuts = (
             break;
           case 'b': // Bold text - toggle bold
             e.preventDefault();
-            document.execCommand('bold', false);
+            execCommand('bold');
             break;
           case 'i': // Italic text
             e.preventDefault();
-            document.execCommand('italic', false);
+            execCommand('italic');
             break;
           case 'c': // Center align
             e.preventDefault();
+            execCommand('justifyCenter');
             formatTableCells('center');
             break;
           case 'l': // Left align
             e.preventDefault();
+            execCommand('justifyLeft');
             formatTableCells('left');
             break;
           case 'r': // Right align
             e.preventDefault();
+            execCommand('justifyRight');
             formatTableCells('right');
             break;
           case 'j': // Justify text
             e.preventDefault();
+            execCommand('justifyFull');
             formatTableCells('justify');
             break;
-          case 'h': // Highlight text - implemented using the highlightText function
+          case 'h': // Highlight text
             e.preventDefault();
-            // Access the parent component's highlightText function
             document.execCommand('backColor', false, '#FEF7CD');
             break;
           case 'u': // Underline text

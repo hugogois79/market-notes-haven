@@ -1,10 +1,11 @@
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Edit, Paperclip } from "lucide-react";
 import EditorContent from "./EditorContent";
 import EditorToolbar from "./EditorToolbar";
 import AttachmentSection from "./AttachmentSection";
+import { useEditor } from "./hooks/editor";
 
 interface EditorTabsProps {
   content: string;
@@ -29,8 +30,19 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
   onAttachmentChange = () => {},
   hasConclusion = true,
   category = "General",
+  onPrint,
 }) => {
   const [activeTab, setActiveTab] = useState("editor");
+  const editorRef = useRef<HTMLDivElement>(null);
+  
+  // Initialize editor with necessary functions
+  const {
+    execCommand,
+    formatTableCells,
+    insertVerticalSeparator,
+    highlightText,
+    boldText
+  } = useEditor(editorRef, hasConclusion);
 
   return (
     <Tabs defaultValue="editor" className="w-full flex flex-col h-full" onValueChange={setActiveTab}>
@@ -49,10 +61,15 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
       
       <TabsContent value="editor" className="mt-0 p-0 flex-1 overflow-hidden flex flex-col">
         <EditorToolbar 
-          editorRef={null}
-          execCommand={() => {}}
+          editorRef={editorRef}
+          execCommand={execCommand}
+          formatTableCells={formatTableCells}
+          insertVerticalSeparator={insertVerticalSeparator}
+          highlightText={highlightText}
+          boldText={boldText}
           hasConclusion={hasConclusion}
           category={category}
+          onPrint={onPrint}
         />
         <div className="flex-1 overflow-auto">
           <EditorContent 
@@ -61,6 +78,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
             onContentUpdate={onContentUpdate}
             onAutoSave={onAutoSave}
             hasConclusion={hasConclusion}
+            editorRef={editorRef}
           />
         </div>
       </TabsContent>

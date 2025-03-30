@@ -3,6 +3,7 @@ import { RefObject, useEffect } from "react";
 import { useTableHandling } from './useTableHandling';
 import { useTextFormatting } from './useTextFormatting';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';
+import { formatCheckboxText } from './textFormatters';
 
 export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = true) => {
   // Make editor content editable when loaded
@@ -37,6 +38,16 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
         
         // Make it editable within the contenteditable area
         checkboxInput.contentEditable = 'false';
+        
+        // Add change event listener to handle checkbox state changes
+        checkboxInput.addEventListener('change', () => {
+          // Trigger input event to register content change
+          const inputEvent = new Event('input', {
+            bubbles: true,
+            cancelable: true,
+          });
+          editorRef.current?.dispatchEvent(inputEvent);
+        });
         
         // Replace the text marker with the actual checkbox
         const label = document.createElement('span');
