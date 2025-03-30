@@ -44,6 +44,10 @@ export const useKeyboardShortcuts = (
             e.preventDefault();
             execCommand('italic');
             break;
+          case 'u': // Underline text
+            e.preventDefault();
+            execCommand('underline');
+            break;
           case 'c': // Center align
             e.preventDefault();
             formatTableCells('center');
@@ -63,10 +67,6 @@ export const useKeyboardShortcuts = (
           case 'h': // Highlight text
             e.preventDefault();
             document.execCommand('backColor', false, '#FEF7CD');
-            break;
-          case 'u': // Underline text
-            e.preventDefault();
-            execCommand('underline');
             break;
         }
       }

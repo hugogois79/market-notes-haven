@@ -25,6 +25,7 @@ interface EditorToolbarProps {
   insertVerticalSeparator?: () => void;
   highlightText?: () => void;
   boldText?: () => void;
+  underlineText?: () => void; 
   onPrint?: () => void;
   hasConclusion?: boolean;
   category?: string;
@@ -38,6 +39,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
   insertVerticalSeparator,
   highlightText,
   boldText,
+  underlineText,
   hasConclusion,
   category,
   className,
@@ -64,7 +66,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => execCommand('underline')}
+        onClick={() => underlineText ? underlineText() : execCommand('underline')}
         title="Underline (Alt+U)"
       >
         <Underline className="h-4 w-4" />

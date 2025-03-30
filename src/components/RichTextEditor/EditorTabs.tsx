@@ -42,6 +42,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
     insertVerticalSeparator,
     highlightText,
     boldText,
+    underlineText,
     processCheckboxes
   } = useEditor(editorRef, hasConclusion);
 
@@ -75,6 +76,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
           insertVerticalSeparator={insertVerticalSeparator}
           highlightText={highlightText}
           boldText={boldText}
+          underlineText={underlineText}
           hasConclusion={hasConclusion}
           category={category}
           onPrint={handlePrint}

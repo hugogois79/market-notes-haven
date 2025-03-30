@@ -1,4 +1,3 @@
-
 import { RefObject, useCallback } from "react";
 import { applyHeadingFormatting, applyListFormatting } from './textFormatters';
 
@@ -275,11 +274,28 @@ export const useTextFormatting = (editorRef: RefObject<HTMLDivElement>) => {
     }
   }, [editorRef]);
 
+  const underlineText = useCallback(() => {
+    if (!editorRef.current) return;
+    
+    // Focus on the editor first
+    editorRef.current.focus();
+    
+    // Apply underline formatting
+    document.execCommand('underline', false);
+    
+    // Trigger an input event to ensure changes are registered
+    if (editorRef.current) {
+      const inputEvent = new Event('input', { bubbles: true });
+      editorRef.current.dispatchEvent(inputEvent);
+    }
+  }, [editorRef]);
+
   return {
     execCommand,
     formatTableCells,
     insertVerticalSeparator,
     highlightText,
-    boldText
+    boldText,
+    underlineText
   };
 };

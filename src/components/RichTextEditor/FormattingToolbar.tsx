@@ -28,6 +28,7 @@ export interface FormattingToolbarProps {
   formatTableCells: (alignment: string) => void;
   insertVerticalSeparator: () => void;
   highlightText: () => void;
+  underlineText?: () => void;
   onPrint?: () => void;
 }
 
@@ -37,6 +38,7 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
   formatTableCells,
   insertVerticalSeparator,
   highlightText,
+  underlineText,
   onPrint
 }) => {
   return (
@@ -172,7 +174,7 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
               type="button"
               size="icon"
               variant="ghost"
-              onClick={() => execCommand("underline")}
+              onClick={() => underlineText ? underlineText() : execCommand("underline")}
               title="Underline"
               className="h-8 w-8"
             >

@@ -83,7 +83,8 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
     formatTableCells, 
     insertVerticalSeparator, 
     highlightText,
-    boldText
+    boldText,
+    underlineText
   } = useTextFormatting(editorRef);
 
   // Setup paste event handler
@@ -108,6 +109,7 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
     insertVerticalSeparator,
     highlightText,
     boldText,
+    underlineText,
     processCheckboxes
   };
 };
