@@ -29,7 +29,14 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      <Route path="/" element={withLayout(<Index />)} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            {withLayout(<Index />)}
+          </ProtectedRoute>
+        }
+      />
       <Route path="/auth" element={<Auth />} />
       <Route
         path="/notes"

@@ -186,6 +186,7 @@ export type Database = {
           embedding: string | null
           id: string
           text: string | null
+          valid: boolean | null
         }
         Insert: {
           date_created?: string | null
@@ -193,6 +194,7 @@ export type Database = {
           embedding?: string | null
           id?: string
           text?: string | null
+          valid?: boolean | null
         }
         Update: {
           date_created?: string | null
@@ -200,6 +202,7 @@ export type Database = {
           embedding?: string | null
           id?: string
           text?: string | null
+          valid?: boolean | null
         }
         Relationships: [
           {
@@ -394,24 +397,30 @@ export type Database = {
       files: {
         Row: {
           date_created: string
+          embedding: string | null
           google_drive_id: string | null
           id: string
           name: string | null
           pages: number | null
+          summary: string | null
         }
         Insert: {
           date_created?: string
+          embedding?: string | null
           google_drive_id?: string | null
           id?: string
           name?: string | null
           pages?: number | null
+          summary?: string | null
         }
         Update: {
           date_created?: string
+          embedding?: string | null
           google_drive_id?: string | null
           id?: string
           name?: string | null
           pages?: number | null
+          summary?: string | null
         }
         Relationships: []
       }
