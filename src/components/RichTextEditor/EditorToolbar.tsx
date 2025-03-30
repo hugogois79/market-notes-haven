@@ -25,7 +25,7 @@ interface EditorToolbarProps {
   insertVerticalSeparator?: () => void;
   highlightText?: () => void;
   boldText?: () => void;
-  onPrintClick?: () => void;
+  onPrint?: () => void;
   hasConclusion?: boolean;
   category?: string;
   className?: string;
@@ -40,7 +40,8 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
   boldText,
   hasConclusion,
   category,
-  className
+  className,
+  onPrint
 }) => {
   return (
     <div className={`flex flex-wrap gap-1 p-2 bg-muted border-b ${className || ''}`}>
