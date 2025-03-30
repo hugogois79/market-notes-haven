@@ -41,8 +41,16 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
     formatTableCells,
     insertVerticalSeparator,
     highlightText,
-    boldText
+    boldText,
+    processCheckboxes
   } = useEditor(editorRef, hasConclusion);
+
+  // Handle print functionality
+  const handlePrint = () => {
+    if (onPrint) {
+      onPrint();
+    }
+  };
 
   return (
     <Tabs defaultValue="editor" className="w-full flex flex-col h-full" onValueChange={setActiveTab}>
@@ -69,7 +77,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
           boldText={boldText}
           hasConclusion={hasConclusion}
           category={category}
-          onPrint={onPrint}
+          onPrint={handlePrint}
         />
         <div className="flex-1 overflow-auto">
           <EditorContent 

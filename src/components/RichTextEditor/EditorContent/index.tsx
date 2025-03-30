@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from "react";
 import ContentStyles from "./ContentStyles";
 import { useContentChange } from "./useContentChange";
@@ -39,26 +40,13 @@ const EditorContent: React.FC<EditorContentProps> = ({
   // Set initial content when the component mounts
   useEffect(() => {
     if (editorRef.current) {
-      // Convert string content to actual HTML
-      editorRef.current.innerHTML = content || '';
+      // Only set innerHTML if it's different from current content to prevent cursor jumping
+      if (editorRef.current.innerHTML !== content) {
+        editorRef.current.innerHTML = content || '';
+      }
       
       // Format any checkboxes that might be in the content
       processCheckboxes();
-      
-      // Keep focus in the editor after applying formatting
-      const handleSelectionChange = () => {
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          const isInEditor = editorRef.current?.contains(range.commonAncestorContainer);
-          if (isInEditor) {
-            editorRef.current?.focus();
-          }
-        }
-      };
-      
-      document.addEventListener('selectionchange', handleSelectionChange);
-      return () => document.removeEventListener('selectionchange', handleSelectionChange);
     }
   }, [content, processCheckboxes]);
 
@@ -66,28 +54,21 @@ const EditorContent: React.FC<EditorContentProps> = ({
     <div 
       className="p-4 min-h-[300px] h-full w-full focus:outline-none overflow-auto text-sm editor-content"
       ref={editorRef}
-      contentEditable
+      contentEditable="true"
       onInput={handleContentChange}
       onBlur={handleContentChange}
       style={{ 
         lineHeight: '1.5',
-        // Add these styles to better handle tables and overflow
         overflowX: 'auto',
         overflowY: 'auto',
         whiteSpace: 'normal',
-        // Reduced top padding
         paddingTop: "8px",
-        // Ensure content wraps within the container
         wordWrap: "break-word",
         wordBreak: "break-word",
-        // Maximum width to prevent horizontal overflow
         maxWidth: "100%"
       }}
       data-placeholder="Start writing..."
-    >
-      {/* Style definitions for headings and lists within the editor */}
-      <ContentStyles />
-    </div>
+    />
   );
 };
 

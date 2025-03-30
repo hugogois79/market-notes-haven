@@ -49,7 +49,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         variant="ghost"
         size="sm"
         onClick={() => boldText ? boldText() : execCommand('bold')}
-        title="Bold (Ctrl+B)"
+        title="Bold (Alt+B)"
       >
         <Bold className="h-4 w-4" />
       </Button>
@@ -57,7 +57,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         variant="ghost"
         size="sm"
         onClick={() => execCommand('italic')}
-        title="Italic (Ctrl+I)"
+        title="Italic (Alt+I)"
       >
         <Italic className="h-4 w-4" />
       </Button>
@@ -65,7 +65,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         variant="ghost"
         size="sm"
         onClick={() => execCommand('underline')}
-        title="Underline (Ctrl+U)"
+        title="Underline (Alt+U)"
       >
         <Underline className="h-4 w-4" />
       </Button>
@@ -88,32 +88,32 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => execCommand('justifyLeft')}
-        title="Align Left"
+        onClick={() => formatTableCells ? formatTableCells('left') : execCommand('justifyLeft')}
+        title="Align Left (Alt+L)"
       >
         <AlignLeft className="h-4 w-4" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => execCommand('justifyCenter')}
-        title="Align Center"
+        onClick={() => formatTableCells ? formatTableCells('center') : execCommand('justifyCenter')}
+        title="Align Center (Alt+C)"
       >
         <AlignCenter className="h-4 w-4" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => execCommand('justifyRight')}
-        title="Align Right"
+        onClick={() => formatTableCells ? formatTableCells('right') : execCommand('justifyRight')}
+        title="Align Right (Alt+R)"
       >
         <AlignRight className="h-4 w-4" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => execCommand('justifyFull')}
-        title="Justify"
+        onClick={() => formatTableCells ? formatTableCells('justify') : execCommand('justifyFull')}
+        title="Justify (Alt+J)"
       >
         <AlignJustify className="h-4 w-4" />
       </Button>
@@ -121,7 +121,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         variant="ghost"
         size="sm"
         onClick={() => execCommand('formatBlock', '<h1>')}
-        title="Heading 1"
+        title="Heading 1 (Alt+1)"
       >
         <Heading1 className="h-4 w-4" />
       </Button>
@@ -129,22 +129,22 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         variant="ghost"
         size="sm"
         onClick={() => execCommand('formatBlock', '<h2>')}
-        title="Heading 2"
+        title="Heading 2 (Alt+2)"
       >
         <Heading2 className="h-4 w-4" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => highlightText?.()}
-        title="Highlight Text"
+        onClick={() => highlightText ? highlightText() : execCommand('backColor', '#FEF7CD')}
+        title="Highlight Text (Alt+H)"
       >
         <Highlighter className="h-4 w-4" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => insertVerticalSeparator?.()}
+        onClick={() => insertVerticalSeparator ? insertVerticalSeparator() : null}
         title="Insert Separator"
       >
         <Grip className="h-4 w-4" />
@@ -164,6 +164,16 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
       >
         <Table className="h-4 w-4" />
       </Button>
+      {onPrint && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onPrint}
+          title="Print"
+        >
+          <span className="text-xs">Print</span>
+        </Button>
+      )}
     </div>
   );
 };

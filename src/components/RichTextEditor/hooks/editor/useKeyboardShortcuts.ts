@@ -12,7 +12,7 @@ export const useKeyboardShortcuts = (
     
     const handleKeyDown = (e: KeyboardEvent) => {
       // Only apply shortcuts when editor is focused
-      if (!editorRef.current?.contains(document.activeElement)) return;
+      if (!editorRef.current?.contains(document.activeElement) && document.activeElement !== editorRef.current) return;
       
       // Handle ALT key combinations
       if (e.altKey) {
@@ -46,22 +46,18 @@ export const useKeyboardShortcuts = (
             break;
           case 'c': // Center align
             e.preventDefault();
-            execCommand('justifyCenter');
             formatTableCells('center');
             break;
           case 'l': // Left align
             e.preventDefault();
-            execCommand('justifyLeft');
             formatTableCells('left');
             break;
           case 'r': // Right align
             e.preventDefault();
-            execCommand('justifyRight');
             formatTableCells('right');
             break;
           case 'j': // Justify text
             e.preventDefault();
-            execCommand('justifyFull');
             formatTableCells('justify');
             break;
           case 'h': // Highlight text

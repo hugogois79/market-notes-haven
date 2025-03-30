@@ -28,6 +28,11 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
       
       // Check if the paragraph starts with '[ ]' or '[x]' or '[]'
       if (text.trim().startsWith('[ ]') || text.trim().startsWith('[x]') || text.trim().startsWith('[]')) {
+        // Skip if already processed (has checkbox element)
+        if (paragraph.querySelector('input[type="checkbox"]')) {
+          return;
+        }
+
         // Create a checkbox element
         const checkboxInput = document.createElement('input');
         checkboxInput.type = 'checkbox';
