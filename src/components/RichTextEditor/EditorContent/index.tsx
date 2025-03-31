@@ -92,87 +92,19 @@ const EditorContent: React.FC<EditorContentProps> = ({
           parent = parent.parentElement;
         }
       }
-    }, 500); // Run more frequently
+    }, 200); // Run more frequently
     
     return () => clearInterval(ensureEditableInterval);
   }, [editorRef]);
 
-  // Improved click handler to properly position the cursor at the click position
+  // Simple click handler that just focuses the editor
   const handleEditorClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Stop propagation to prevent parent handlers
+    e.stopPropagation();
     
     if (editorRef.current) {
-      // Ensure content is editable when clicked
+      // Ensure content is editable
       editorRef.current.contentEditable = 'true';
-      
-      // Focus the editor
       editorRef.current.focus();
-      
-      // Use the selection API to place cursor at click position
-      const selection = window.getSelection();
-      if (selection) {
-        try {
-          // Get precise click position using caretRangeFromPoint (more accurate)
-          const caretRange = document.caretRangeFromPoint(e.clientX, e.clientY);
-          if (caretRange) {
-            selection.removeAllRanges();
-            selection.addRange(caretRange);
-            return;
-          }
-        } catch (err) {
-          console.log("Error setting cursor position:", err);
-        }
-        
-        // Fallback: try to find the clicked element and set cursor position
-        let clickedNode = e.target as Node;
-        if (clickedNode && editorRef.current.contains(clickedNode)) {
-          const newRange = document.createRange();
-          
-          // If we clicked text node directly
-          if (clickedNode.nodeType === Node.TEXT_NODE) {
-            try {
-              // Try to position at the right offset in text
-              const textNode = clickedNode as Text;
-              // Calculate approximate text position
-              const textRect = newRange.getBoundingClientRect();
-              const ratio = (e.clientX - textRect.left) / (textRect.width || 1);
-              const offset = Math.floor(ratio * textNode.length);
-              
-              newRange.setStart(textNode, Math.min(offset, textNode.length));
-              newRange.collapse(true);
-              selection.removeAllRanges();
-              selection.addRange(newRange);
-              return;
-            } catch (err) {
-              console.log("Error setting text node position:", err);
-            }
-          }
-          
-          // Fallback to simply placing cursor at the element
-          try {
-            if (clickedNode.nodeType === Node.ELEMENT_NODE) {
-              newRange.selectNodeContents(clickedNode);
-              newRange.collapse(false); // collapse to end
-              selection.removeAllRanges();
-              selection.addRange(newRange);
-              return;
-            }
-          } catch (err) {
-            console.log("Error setting element position:", err);
-          }
-        }
-        
-        // Last resort fallback - just put cursor somewhere in editor
-        try {
-          const lastResortRange = document.createRange();
-          lastResortRange.selectNodeContents(editorRef.current);
-          lastResortRange.collapse(false);
-          selection.removeAllRanges();
-          selection.addRange(lastResortRange);
-        } catch (err) {
-          console.log("Final fallback error:", err);
-        }
-      }
     }
   };
 
@@ -188,7 +120,6 @@ const EditorContent: React.FC<EditorContentProps> = ({
         onBlur={handleContentChange}
         onClick={handleEditorClick}
         onFocus={() => {
-          // Ensure we can type when the editor gets focus
           if (editorRef.current) {
             editorRef.current.contentEditable = 'true';
           }

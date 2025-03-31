@@ -48,58 +48,20 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
   // Effect to ensure editor is editable when switching tabs
   useEffect(() => {
     if (activeTab === "editor" && editorRef.current) {
-      // Short delay to ensure the DOM is ready
+      editorRef.current.contentEditable = 'true';
+      editorRef.current.setAttribute('contenteditable', 'true');
+      
+      // Short timeout to ensure DOM is ready before focusing
       setTimeout(() => {
         if (editorRef.current) {
-          editorRef.current.contentEditable = 'true';
-          editorRef.current.setAttribute('contenteditable', 'true');
           editorRef.current.focus();
-          
-          // Ensure cursor is visible for editing
-          const selection = window.getSelection();
-          if (selection) {
-            try {
-              const range = document.createRange();
-              
-              // Try to find some content to place cursor
-              const textNodes = Array.from(editorRef.current.querySelectorAll('*'))
-                .filter(el => el.textContent && el.textContent.trim().length > 0);
-              
-              if (textNodes.length > 0) {
-                // Place cursor at beginning of first text node
-                range.setStart(textNodes[0], 0);
-                range.collapse(true);
-              } else {
-                // Or just at the beginning of editor
-                range.setStart(editorRef.current, 0);
-                range.collapse(true);
-              }
-              
-              selection.removeAllRanges();
-              selection.addRange(range);
-            } catch (err) {
-              console.log("Error setting initial cursor position:", err);
-            }
-          }
-          
-          console.log("Editor tab active, ensuring contentEditable");
         }
-      }, 50); // Reduced delay for better responsiveness
+      }, 10);
     }
   }, [activeTab]);
   
-  // Additional check for editor editability after content changes
-  useEffect(() => {
-    if (activeTab === "editor" && editorRef.current) {
-      // Make sure the editor is editable after content is loaded/updated
-      editorRef.current.contentEditable = 'true';
-    }
-  }, [content, activeTab]);
-
-  // Improved click handler for the container
+  // Simplified container click handler that just focuses the editor
   const handleContainerClick = (e: React.MouseEvent) => {
-    if (activeTab !== "editor" || !editorRef.current) return;
-    
     // Don't interfere if clicking on a button or control
     const target = e.target as HTMLElement;
     if (
@@ -112,10 +74,9 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
       return;
     }
     
-    // Find if we clicked directly inside the editor
-    if (!editorRef.current.contains(e.target as Node)) {
-      // We clicked outside the editor but inside the container
-      // so focus the editor
+    // Focus the editor
+    if (editorRef.current) {
+      editorRef.current.contentEditable = 'true';
       editorRef.current.focus();
     }
   };
