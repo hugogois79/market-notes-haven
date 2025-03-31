@@ -48,16 +48,12 @@ const EditorContent: React.FC<EditorContentProps> = ({
       // Process any checkboxes that might be in the content
       processCheckboxes();
       
-      // Force editor to be editable - try multiple approaches
+      // Make sure the editor is editable
       editorRef.current.setAttribute('contenteditable', 'true');
       editorRef.current.contentEditable = 'true';
       
-      // Force focus into the editor once loaded if it's empty
-      if (!content || content === '') {
-        editorRef.current.focus();
-      }
-      
       // Apply other necessary attributes
+      editorRef.current.style.outline = 'none';
       editorRef.current.style.userSelect = 'text';
       editorRef.current.style.webkitUserSelect = 'text';
       editorRef.current.style.cursor = 'text';
@@ -66,43 +62,23 @@ const EditorContent: React.FC<EditorContentProps> = ({
     }
   }, [content, processCheckboxes, editorRef]);
 
-  // Add an additional effect to ensure the editor is always editable
+  // Add an effect to ensure the editor remains editable
   useEffect(() => {
-    // Immediate check and fix
-    if (editorRef.current && editorRef.current.contentEditable !== 'true') {
-      editorRef.current.contentEditable = 'true';
-      console.log("Fixed contentEditable on mount");
-    }
-    
     const ensureEditableInterval = setInterval(() => {
       if (editorRef.current) {
-        if (editorRef.current.contentEditable !== 'true') {
-          editorRef.current.contentEditable = 'true';
-          editorRef.current.setAttribute('contenteditable', 'true');
-          console.log("Re-enabled contentEditable on editor");
-        }
-        
-        // Also make sure no parent elements have contenteditable="false"
-        let parent = editorRef.current.parentElement;
-        while (parent) {
-          if (parent.getAttribute('contenteditable') === 'false') {
-            parent.setAttribute('contenteditable', 'true');
-            console.log("Fixed parent contentEditable");
-          }
-          parent = parent.parentElement;
-        }
+        editorRef.current.setAttribute('contenteditable', 'true');
+        editorRef.current.contentEditable = 'true';
       }
-    }, 200); // Run more frequently
+    }, 100);
     
     return () => clearInterval(ensureEditableInterval);
   }, [editorRef]);
 
-  // Simple click handler that just focuses the editor
   const handleEditorClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    // Prevent default behavior that might be causing issues
+    e.preventDefault();
     
     if (editorRef.current) {
-      // Ensure content is editable
       editorRef.current.contentEditable = 'true';
       editorRef.current.focus();
     }
@@ -119,11 +95,6 @@ const EditorContent: React.FC<EditorContentProps> = ({
         onInput={handleContentChange}
         onBlur={handleContentChange}
         onClick={handleEditorClick}
-        onFocus={() => {
-          if (editorRef.current) {
-            editorRef.current.contentEditable = 'true';
-          }
-        }}
         style={{ 
           lineHeight: '1.5',
           overflowX: 'auto',

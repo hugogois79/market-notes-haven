@@ -30,6 +30,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
   onAttachmentChange = () => {},
   hasConclusion = true,
   category = "General",
+  onPrint,
 }) => {
   const [activeTab, setActiveTab] = useState("editor");
   const editorRef = useRef<HTMLDivElement>(null);
@@ -48,6 +49,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
   // Effect to ensure editor is editable when switching tabs
   useEffect(() => {
     if (activeTab === "editor" && editorRef.current) {
+      // Use multiple approaches to ensure editability
       editorRef.current.contentEditable = 'true';
       editorRef.current.setAttribute('contenteditable', 'true');
       
@@ -56,26 +58,13 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
         if (editorRef.current) {
           editorRef.current.focus();
         }
-      }, 10);
+      }, 100);
     }
   }, [activeTab]);
-  
-  // Simplified container click handler that just focuses the editor
-  const handleContainerClick = (e: React.MouseEvent) => {
-    // Don't interfere if clicking on a button or control
-    const target = e.target as HTMLElement;
-    if (
-      target.tagName === 'BUTTON' || 
-      target.closest('button') || 
-      target.tagName === 'INPUT' ||
-      target.tagName === 'SELECT' ||
-      target.tagName === 'TEXTAREA'
-    ) {
-      return;
-    }
-    
-    // Focus the editor
-    if (editorRef.current) {
+
+  // Simplified handler that makes the editor area clickable
+  const handleContainerClick = () => {
+    if (editorRef.current && activeTab === "editor") {
       editorRef.current.contentEditable = 'true';
       editorRef.current.focus();
     }
@@ -108,7 +97,11 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
           hasConclusion={hasConclusion}
           category={category}
         />
-        <div className="flex-1 overflow-auto" onClick={handleContainerClick}>
+        <div 
+          className="flex-1 overflow-auto" 
+          onClick={handleContainerClick} 
+          style={{ cursor: 'text' }}
+        >
           <EditorContent 
             content={content} 
             onChange={onContentChange} 

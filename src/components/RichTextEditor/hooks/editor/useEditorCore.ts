@@ -9,21 +9,14 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
   // Make editor content editable when loaded and ensure it remains that way
   useEffect(() => {
     if (editorRef.current) {
-      // Ensure it's editable using multiple approaches
-      editorRef.current.setAttribute('contenteditable', 'true');
+      // Make sure the editor is fully editable
       editorRef.current.contentEditable = 'true';
+      editorRef.current.setAttribute('contenteditable', 'true');
       
-      // Set focus
-      editorRef.current.focus();
-      
-      // Process any existing checkboxes
-      processCheckboxes();
-      
-      // Ensure the element isn't disabled or read-only somehow
+      // Set appropriate styling
       editorRef.current.style.userSelect = 'text';
       editorRef.current.style.webkitUserSelect = 'text';
       editorRef.current.style.cursor = 'text';
-      editorRef.current.style.pointerEvents = 'auto';
       
       // Make sure the editor can be interacted with
       editorRef.current.tabIndex = 0;
@@ -32,37 +25,24 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
       editorRef.current.removeAttribute('readonly');
       editorRef.current.removeAttribute('disabled');
       
+      // Process any existing checkboxes
+      processCheckboxes();
+      
       console.log("Editor initialized and set to contentEditable");
     }
     
-    // Add a more frequent check to ensure editability
+    // Continuously check and fix editability
     const editableCheckInterval = setInterval(() => {
       if (editorRef.current) {
         if (editorRef.current.contentEditable !== 'true') {
           editorRef.current.contentEditable = 'true';
           editorRef.current.setAttribute('contenteditable', 'true');
-          console.log("Restored contentEditable state on editor");
         }
       }
-    }, 100); // Check very frequently
+    }, 50); // Check very frequently
     
     return () => {
       clearInterval(editableCheckInterval);
-    };
-  }, [editorRef]);
-
-  // Add a simpler click event handler
-  useEffect(() => {
-    const handleClick = () => {
-      if (editorRef.current) {
-        editorRef.current.contentEditable = 'true';
-      }
-    };
-    
-    document.addEventListener('click', handleClick);
-    
-    return () => {
-      document.removeEventListener('click', handleClick);
     };
   }, [editorRef]);
 
@@ -120,7 +100,6 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
   // Apply styling for lack of conclusion if needed
   useEffect(() => {
     if (editorRef.current && hasConclusion === false) {
-      // Style will be applied in the EditorContent component
       console.log("useEditor: No conclusion detected");
     }
   }, [editorRef, hasConclusion]);
