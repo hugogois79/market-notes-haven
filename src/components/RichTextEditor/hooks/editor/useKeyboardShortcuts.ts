@@ -19,6 +19,16 @@ export const useKeyboardShortcuts = (
         // Log key press for debugging
         console.log('ALT key combination:', e.key, 'KeyCode:', e.keyCode);
         
+        // For numeric keys, we need to handle them with special care
+        // Handle number 3 and hash (#) - Alt+3 key can register as either
+        if (e.key === '3' || e.key === '#') {
+          e.preventDefault();
+          console.log('Applying H3 heading');
+          editorRef.current?.focus(); // Ensure editor has focus
+          document.execCommand('formatBlock', false, 'h3'); // Direct command execution
+          return;
+        }
+        
         switch (e.key) {
           // Heading shortcuts - handle both numpad and regular number keys
           case '1': // Heading 1
@@ -31,11 +41,7 @@ export const useKeyboardShortcuts = (
             e.preventDefault();
             execCommand('formatBlock', '<h2>');
             break;
-          case '3': // Heading 3
-          case '#': // Sometimes ALT+3 registers as #
-            e.preventDefault();
-            execCommand('formatBlock', '<h3>');
-            break;
+          // We've moved the H3 case outside the switch for special handling
           case '0': // Normal text
           case ')': // Sometimes ALT+0 registers as )
             e.preventDefault();
