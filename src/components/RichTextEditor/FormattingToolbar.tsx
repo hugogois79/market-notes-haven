@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -17,8 +16,7 @@ import {
   Text,
   SeparatorVertical,
   Highlighter,
-  Underline,
-  Printer
+  Underline
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -38,8 +36,7 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
   formatTableCells,
   insertVerticalSeparator,
   highlightText,
-  underlineText,
-  onPrint
+  underlineText
 }) => {
   return (
     <div className="flex items-center flex-wrap gap-1 p-2 bg-muted/60 rounded-t-md mx-2 mb-0 sticky top-0 z-10 backdrop-blur-sm shadow-sm border-b">

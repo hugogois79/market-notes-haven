@@ -9,11 +9,20 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
   // Make editor content editable when loaded
   useEffect(() => {
     if (editorRef.current) {
+      // Ensure it's editable
       editorRef.current.setAttribute('contenteditable', 'true');
+      editorRef.current.contentEditable = 'true';
+      
+      // Set focus
       editorRef.current.focus();
       
       // Process any existing checkboxes
       processCheckboxes();
+      
+      // Ensure the element isn't disabled or read-only somehow
+      editorRef.current.style.userSelect = 'text';
+      editorRef.current.style.webkitUserSelect = 'text';
+      editorRef.current.style.cursor = 'text';
     }
   }, [editorRef]);
 
