@@ -58,7 +58,7 @@ export interface Note {
   content: string;
   summary?: string;
   tags: string[];
-  tokens?: Token[];
+  tokens?: Token[]; // Explicitly defined here
   category: string;
   createdAt: Date;
   updatedAt: Date;

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -8,11 +9,11 @@ import {
   AlignLeft, 
   AlignCenter, 
   AlignRight, 
-  AlignJustify,
+  Link, 
+  Image,
+  Strikethrough,
+  Square,
   Table,
-  Heading1,
-  Heading2,
-  Heading3,
   Text,
   SeparatorVertical,
   Highlighter,
@@ -20,19 +21,40 @@ import {
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-export interface FormattingToolbarProps {
-  execCommand: (command: string, value?: string) => void;
-  setIsTableDialogOpen: (isOpen: boolean) => void;
-  formatTableCells: (alignment: string) => void;
+interface FormattingToolbarProps {
+  editorRef: React.RefObject<HTMLDivElement>;
+  formatBold: () => void;
+  formatItalic: () => void;
+  formatUnorderedList: () => void;
+  formatOrderedList: () => void;
+  formatAlignLeft: () => void;
+  formatAlignCenter: () => void;
+  formatAlignRight: () => void;
+  formatLink: () => void;
+  formatImage: () => void;
+  formatStrikethrough: () => void;
+  insertCheckbox: () => void;
+  insertTable: () => void;
+  formatTableCells: () => void;
   insertVerticalSeparator: () => void;
   highlightText: () => void;
-  underlineText?: () => void;
-  onPrint?: () => void;
+  underlineText: () => void;
 }
 
-const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ 
-  execCommand, 
-  setIsTableDialogOpen,
+const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
+  editorRef,
+  formatBold,
+  formatItalic,
+  formatUnorderedList,
+  formatOrderedList,
+  formatAlignLeft,
+  formatAlignCenter,
+  formatAlignRight,
+  formatLink,
+  formatImage,
+  formatStrikethrough,
+  insertCheckbox,
+  insertTable,
   formatTableCells,
   insertVerticalSeparator,
   highlightText,
@@ -40,337 +62,189 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
 }) => {
   return (
     <div className="flex items-center flex-wrap gap-1 p-2 bg-muted/60 rounded-t-md mx-2 mb-0 sticky top-0 z-10 backdrop-blur-sm shadow-sm border-b">
-      {/* Heading format options */}
-      <TooltipProvider>
+      <TooltipProvider delayDuration={300}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => execCommand("formatBlock", "<h1>")}
-              title="Title"
-              className="h-8 w-8"
-            >
-              <Heading1 size={16} />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={formatBold}>
+              <Bold className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Heading 1 (Alt+1)</p>
+          <TooltipContent>
+            <p>Bold (Ctrl+B)</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
-      
-      <TooltipProvider>
+        
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => execCommand("formatBlock", "<h2>")}
-              title="Subtitle"
-              className="h-8 w-8"
-            >
-              <Heading2 size={16} />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={formatItalic}>
+              <Italic className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Heading 2 (Alt+2)</p>
+          <TooltipContent>
+            <p>Italic (Ctrl+I)</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
-      
-      <TooltipProvider>
+        
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => execCommand("formatBlock", "<h3>")}
-              title="Heading 3"
-              className="h-8 w-8"
-            >
-              <Heading3 size={16} />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={underlineText}>
+              <Underline className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Heading 3 (Alt+3)</p>
+          <TooltipContent>
+            <p>Underline (Ctrl+U)</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
-      
-      <TooltipProvider>
+        
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => execCommand("formatBlock", "<p>")}
-              title="Normal Text"
-              className="h-8 w-8"
-            >
-              <Text size={16} />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={formatStrikethrough}>
+              <Strikethrough className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Normal Text (Alt+0)</p>
+          <TooltipContent>
+            <p>Strikethrough</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
-      
-      <div className="border-l border-muted-foreground/20 mx-1 h-6"></div>
-      
-      {/* Bold, Italic, Lists, etc. */}
-      <TooltipProvider>
+        
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => execCommand("bold")}
-              title="Bold"
-              className="h-8 w-8"
-            >
-              <Bold size={16} />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={highlightText}>
+              <Highlighter className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Bold (Alt+B)</p>
+          <TooltipContent>
+            <p>Highlight Text</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
-      
-      <TooltipProvider>
+        
+        <div className="h-6 w-px bg-muted-foreground/20 mx-1" />
+        
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => execCommand("italic")}
-              title="Italic"
-              className="h-8 w-8"
-            >
-              <Italic size={16} />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={formatUnorderedList}>
+              <List className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Italic (Alt+I)</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => underlineText ? underlineText() : execCommand("underline")}
-              title="Underline"
-              className="h-8 w-8"
-            >
-              <Underline size={16} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Underline (Alt+U)</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      
-      {/* Highlight button */}
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={highlightText}
-              title="Highlight Text"
-              className="h-8 w-8"
-            >
-              <Highlighter size={16} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Highlight Text (Alt+H)</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => execCommand("insertUnorderedList")}
-              title="Bullet List"
-              className="h-8 w-8"
-            >
-              <List size={16} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
+          <TooltipContent>
             <p>Bullet List</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
-      
-      <TooltipProvider>
+        
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => execCommand("insertOrderedList")}
-              title="Numbered List"
-              className="h-8 w-8"
-            >
-              <ListOrdered size={16} />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={formatOrderedList}>
+              <ListOrdered className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">
+          <TooltipContent>
             <p>Numbered List</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
-      
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        onClick={insertVerticalSeparator}
-        title="Chapter Separator"
-        className="h-8 w-8"
-      >
-        <SeparatorVertical size={16} />
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        onClick={() => setIsTableDialogOpen(true)}
-        title="Insert Table"
-        className="h-8 w-8"
-      >
-        <Table size={16} />
-      </Button>
-
-      {/* Text alignment buttons */}
-      <div className="border-l border-muted-foreground/20 mx-1 h-6"></div>
-      
-      <TooltipProvider>
+        
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => formatTableCells("left")}
-              title="Align Left"
-              className="h-8 w-8"
-            >
-              <AlignLeft size={16} />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={insertCheckbox}>
+              <Square className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Align Left (Alt+L)</p>
+          <TooltipContent>
+            <p>Checkbox</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <div className="h-6 w-px bg-muted-foreground/20 mx-1" />
+        
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={formatAlignLeft}>
+              <AlignLeft className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Align Left</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={formatAlignCenter}>
+              <AlignCenter className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Align Center</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={formatAlignRight}>
+              <AlignRight className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Align Right</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <div className="h-6 w-px bg-muted-foreground/20 mx-1" />
+        
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={formatLink}>
+              <Link className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Insert Link</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={formatImage}>
+              <Image className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Insert Image</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={insertTable}>
+              <Table className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Insert Table</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={formatTableCells}>
+              <Text className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Format Table Cells</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={insertVerticalSeparator}>
+              <SeparatorVertical className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Insert Separator</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => formatTableCells("center")}
-              title="Align Center"
-              className="h-8 w-8"
-            >
-              <AlignCenter size={16} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Align Center (Alt+C)</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => formatTableCells("right")}
-              title="Align Right"
-              className="h-8 w-8"
-            >
-              <AlignRight size={16} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Align Right (Alt+R)</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => formatTableCells("justify")}
-              title="Justify"
-              className="h-8 w-8"
-            >
-              <AlignJustify size={16} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Justify (Alt+J)</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      {/* Print button */}
-      {onPrint && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                onClick={onPrint}
-                title="Print Note"
-                className="h-8 w-8"
-              >
-                <Printer size={16} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>Print Note</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )}
     </div>
   );
 };
