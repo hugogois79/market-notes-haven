@@ -37,7 +37,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
     editorRef
   });
   
-  // Set initial content when the component mounts
+  // Set initial content when the component mounts and ensure it's editable
   useEffect(() => {
     if (editorRef.current) {
       // Only set innerHTML if it's different from current content to prevent cursor jumping
@@ -45,7 +45,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
         editorRef.current.innerHTML = content || '';
       }
       
-      // Format any checkboxes that might be in the content
+      // Process any checkboxes that might be in the content
       processCheckboxes();
       
       // Make sure contenteditable is explicitly set to true
@@ -63,6 +63,18 @@ const EditorContent: React.FC<EditorContentProps> = ({
     }
   }, [content, processCheckboxes, editorRef]);
 
+  // Add an additional effect to ensure the editor is always editable
+  useEffect(() => {
+    const ensureEditableInterval = setInterval(() => {
+      if (editorRef.current && editorRef.current.contentEditable !== 'true') {
+        editorRef.current.contentEditable = 'true';
+        console.log("Re-enabled contentEditable on editor");
+      }
+    }, 1000);
+    
+    return () => clearInterval(ensureEditableInterval);
+  }, [editorRef]);
+
   return (
     <>
       <ContentStyles />
@@ -73,6 +85,12 @@ const EditorContent: React.FC<EditorContentProps> = ({
         suppressContentEditableWarning={true}
         onInput={handleContentChange}
         onBlur={handleContentChange}
+        onClick={(e) => {
+          // Ensure we can click into the editor
+          if (editorRef.current && editorRef.current.contentEditable !== 'true') {
+            editorRef.current.contentEditable = 'true';
+          }
+        }}
         style={{ 
           lineHeight: '1.5',
           overflowX: 'auto',

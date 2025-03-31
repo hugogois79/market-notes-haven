@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Edit, Paperclip } from "lucide-react";
 import EditorContent from "./EditorContent";
@@ -44,6 +44,20 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
     underlineText,
     processCheckboxes
   } = useEditor(editorRef, hasConclusion);
+  
+  // Effect to ensure editor is editable when switching tabs
+  useEffect(() => {
+    if (activeTab === "editor" && editorRef.current) {
+      // Short delay to ensure the DOM is ready
+      setTimeout(() => {
+        if (editorRef.current) {
+          editorRef.current.contentEditable = 'true';
+          editorRef.current.focus();
+          console.log("Editor tab active, ensuring contentEditable");
+        }
+      }, 100);
+    }
+  }, [activeTab]);
 
   return (
     <Tabs defaultValue="editor" className="w-full flex flex-col h-full" onValueChange={setActiveTab}>

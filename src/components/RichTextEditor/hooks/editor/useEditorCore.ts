@@ -23,7 +23,19 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
       editorRef.current.style.userSelect = 'text';
       editorRef.current.style.webkitUserSelect = 'text';
       editorRef.current.style.cursor = 'text';
+      
+      console.log("Editor initialized and set to contentEditable");
     }
+    
+    // Add a periodic check to ensure editability isn't lost somehow
+    const editableCheckInterval = setInterval(() => {
+      if (editorRef.current && editorRef.current.contentEditable !== 'true') {
+        editorRef.current.contentEditable = 'true';
+        console.log("Restored contentEditable state on editor");
+      }
+    }, 2000);
+    
+    return () => clearInterval(editableCheckInterval);
   }, [editorRef]);
 
   // Process checkboxes in the content
