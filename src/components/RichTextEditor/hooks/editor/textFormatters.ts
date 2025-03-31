@@ -53,7 +53,7 @@ export function applyHeadingFormatting(command: string, value: string, selection
         : (container.parentElement?.closest('h3'));
       
       if (element && element instanceof HTMLElement) {
-        element.style.fontSize = '1.05rem';
+        element.style.fontSize = '1rem'; // Smaller font size for H3
         element.style.fontWeight = '500';
         element.style.marginTop = '0.5rem';
         element.style.marginBottom = '0.25rem';

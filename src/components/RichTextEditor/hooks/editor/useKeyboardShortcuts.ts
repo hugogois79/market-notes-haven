@@ -24,8 +24,17 @@ export const useKeyboardShortcuts = (
         if (e.key === '3' || e.key === '#') {
           e.preventDefault();
           console.log('Applying H3 heading');
-          editorRef.current?.focus(); // Ensure editor has focus
-          document.execCommand('formatBlock', false, 'h3'); // Direct command execution
+          
+          // Focus the editor first
+          editorRef.current?.focus();
+          
+          // Apply h3 formatting directly
+          document.execCommand('formatBlock', false, '<h3>');
+          
+          // Trigger input event to ensure changes are registered
+          const inputEvent = new Event('input', { bubbles: true });
+          editorRef.current?.dispatchEvent(inputEvent);
+          
           return;
         }
         

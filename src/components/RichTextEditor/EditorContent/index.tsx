@@ -47,28 +47,39 @@ const EditorContent: React.FC<EditorContentProps> = ({
       
       // Format any checkboxes that might be in the content
       processCheckboxes();
+      
+      // Set contenteditable attribute
+      editorRef.current.setAttribute('contenteditable', 'true');
+      
+      // Force focus into the editor once loaded if it's empty
+      if (!content || content === '') {
+        editorRef.current.focus();
+      }
     }
-  }, [content, processCheckboxes]);
+  }, [content, processCheckboxes, editorRef]);
 
   return (
-    <div 
-      className="p-4 min-h-[300px] h-full w-full focus:outline-none overflow-auto text-sm editor-content"
-      ref={editorRef}
-      contentEditable="true"
-      onInput={handleContentChange}
-      onBlur={handleContentChange}
-      style={{ 
-        lineHeight: '1.5',
-        overflowX: 'auto',
-        overflowY: 'auto',
-        whiteSpace: 'normal',
-        paddingTop: "8px",
-        wordWrap: "break-word",
-        wordBreak: "break-word",
-        maxWidth: "100%"
-      }}
-      data-placeholder="Start writing..."
-    />
+    <>
+      <ContentStyles />
+      <div 
+        className="p-4 min-h-[300px] h-full w-full focus:outline-none overflow-auto text-sm editor-content"
+        ref={editorRef}
+        contentEditable="true"
+        onInput={handleContentChange}
+        onBlur={handleContentChange}
+        style={{ 
+          lineHeight: '1.5',
+          overflowX: 'auto',
+          overflowY: 'auto',
+          whiteSpace: 'normal',
+          paddingTop: "8px",
+          wordWrap: "break-word",
+          wordBreak: "break-word",
+          maxWidth: "100%"
+        }}
+        data-placeholder="Start writing..."
+      />
+    </>
   );
 };
 

@@ -20,7 +20,7 @@ const ContentStyles: React.FC = () => {
         margin-bottom: 0.5rem;
       }
       [contenteditable="true"] h3 {
-        font-size: 1.1rem;
+        font-size: 1rem;
         font-weight: 500;
         margin-top: 0.5rem;
         margin-bottom: 0.25rem;

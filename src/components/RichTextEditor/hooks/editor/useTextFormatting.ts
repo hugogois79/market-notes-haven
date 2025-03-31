@@ -1,3 +1,4 @@
+
 import { RefObject, useCallback } from "react";
 import { applyHeadingFormatting, applyListFormatting } from './textFormatters';
 
@@ -20,16 +21,33 @@ export const useTextFormatting = (editorRef: RefObject<HTMLDivElement>) => {
         selection?.removeAllRanges();
         selection?.addRange(range);
       }
-    }
-    
-    // For list and heading formatting, ensure consistent styles
-    if (command === "formatBlock") {
-      applyHeadingFormatting(command, value, selection);
-    } else if (command === "insertUnorderedList" || command === "insertOrderedList") {
-      applyListFormatting(command, value, selection);
-    } else {
-      // Execute regular commands
-      document.execCommand(command, false, value);
+      
+      // For heading 3 specifically, make sure we execute the command directly
+      if (command === "formatBlock" && value === "<h3>") {
+        document.execCommand(command, false, value);
+        
+        // Apply custom styling for H3 elements
+        if (selection && selection.rangeCount > 0) {
+          const container = selection.getRangeAt(0).commonAncestorContainer;
+          const h3Element = container.nodeType === 1 
+            ? (container as Element).closest('h3') 
+            : (container.parentElement?.closest('h3'));
+          
+          if (h3Element && h3Element instanceof HTMLElement) {
+            h3Element.style.fontSize = '1rem'; // Smaller size for H3
+            h3Element.style.fontWeight = '500';
+          }
+        }
+      } 
+      // For list and heading formatting, ensure consistent styles
+      else if (command === "formatBlock") {
+        applyHeadingFormatting(command, value, selection);
+      } else if (command === "insertUnorderedList" || command === "insertOrderedList") {
+        applyListFormatting(command, value, selection);
+      } else {
+        // Execute regular commands
+        document.execCommand(command, false, value);
+      }
     }
     
     // Focus back on the editor after applying format

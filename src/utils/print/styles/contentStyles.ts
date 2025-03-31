@@ -48,7 +48,7 @@ export const getContentStyles = (): string => {
     }
     
     .print-content h3 {
-      font-size: 10pt;
+      font-size: 9.5pt; /* Smaller size for H3 in print */
       font-weight: 500;
       margin-top: 0.4rem;
       margin-bottom: 0.2rem;
