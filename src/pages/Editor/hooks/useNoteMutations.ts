@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Note, TradeInfo, Tag, Token } from "@/types";
 import { toast } from "sonner";
@@ -125,7 +124,7 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     console.log("Tokens changed in NoteEditor:", tokens);
     
     if (currentNote.id && !currentNote.id.startsWith('temp-')) {
-      const currentTokenIds = currentNote.linkedTokens?.map(token => token.id) || [];
+      const currentTokenIds = currentNote.tokens?.map(token => token.id) || [];
       const newTokenIds = tokens.map(token => token.id);
       
       console.log("Current token IDs:", currentTokenIds);
