@@ -48,7 +48,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
       // Process any checkboxes that might be in the content
       processCheckboxes();
       
-      // Make sure the editor is definitely editable
+      // Explicit force to enable editing
       editorRef.current.setAttribute('contenteditable', 'true');
       editorRef.current.contentEditable = 'true';
       
@@ -68,17 +68,30 @@ const EditorContent: React.FC<EditorContentProps> = ({
             const selection = window.getSelection();
             const range = document.createRange();
             
-            if (selection && editorRef.current.firstChild) {
-              range.setStart(editorRef.current.firstChild, 0);
-              range.collapse(true);
-              selection.removeAllRanges();
-              selection.addRange(range);
-            } else if (selection) {
-              // If no firstChild, set cursor at the beginning of the element
-              range.setStart(editorRef.current, 0);
-              range.collapse(true);
-              selection.removeAllRanges();
-              selection.addRange(range);
+            try {
+              if (selection) {
+                // Create a text node if there isn't content to ensure cursor positioning works
+                if (!editorRef.current.firstChild) {
+                  const textNode = document.createTextNode('');
+                  editorRef.current.appendChild(textNode);
+                }
+                
+                if (editorRef.current.firstChild) {
+                  range.setStart(editorRef.current.firstChild, 0);
+                  range.collapse(true);
+                  selection.removeAllRanges();
+                  selection.addRange(range);
+                } else {
+                  // Fallback if no firstChild
+                  range.setStart(editorRef.current, 0);
+                  range.collapse(true);
+                  selection.removeAllRanges();
+                  selection.addRange(range);
+                }
+              }
+              console.log("Cursor positioned at beginning");
+            } catch (error) {
+              console.error("Error positioning cursor:", error);
             }
           }
         }
@@ -92,22 +105,24 @@ const EditorContent: React.FC<EditorContentProps> = ({
   useEffect(() => {
     const ensureEditableInterval = setInterval(() => {
       if (editorRef.current) {
-        editorRef.current.setAttribute('contenteditable', 'true');
-        editorRef.current.contentEditable = 'true';
+        if (editorRef.current.contentEditable !== 'true') {
+          editorRef.current.setAttribute('contenteditable', 'true');
+          editorRef.current.contentEditable = 'true';
+          console.log("Fixed editor editability");
+        }
       }
     }, 50);
     
     return () => clearInterval(ensureEditableInterval);
   }, [editorRef]);
 
-  const handleEditorClick = (e: React.MouseEvent) => {
-    // Force editor to be editable when clicked
+  // All-purpose click handler
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
     if (editorRef.current) {
       editorRef.current.contentEditable = 'true';
       editorRef.current.focus();
-      
-      // Log state after click for debugging
-      console.log("Editor clicked, contentEditable:", editorRef.current.contentEditable);
+      console.log("Editor clicked and focused");
     }
   };
 
@@ -121,7 +136,14 @@ const EditorContent: React.FC<EditorContentProps> = ({
         suppressContentEditableWarning={true}
         onInput={handleContentChange}
         onBlur={handleContentChange}
-        onClick={handleEditorClick}
+        onClick={handleClick}
+        onMouseDown={(e) => {
+          // Prevent the browser from changing focus
+          e.stopPropagation();
+          if (editorRef.current) {
+            editorRef.current.focus();
+          }
+        }}
         style={{ 
           lineHeight: '1.5',
           overflowX: 'auto',

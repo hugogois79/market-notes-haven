@@ -9,7 +9,7 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
   // Make editor content editable when loaded and ensure it remains that way
   useEffect(() => {
     if (editorRef.current) {
-      // Make sure the editor is fully editable
+      // Apply multiple techniques to ensure editability
       editorRef.current.contentEditable = 'true';
       editorRef.current.setAttribute('contenteditable', 'true');
       
@@ -17,6 +17,7 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
       editorRef.current.style.userSelect = 'text';
       editorRef.current.style.webkitUserSelect = 'text';
       editorRef.current.style.cursor = 'text';
+      editorRef.current.style.minHeight = '200px';
       
       // Make sure the editor can be interacted with
       editorRef.current.tabIndex = 0;
@@ -31,7 +32,11 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
       // Force focus on the editor after initialization
       setTimeout(() => {
         if (editorRef.current) {
+          // Apply all necessary attributes again just before focusing
+          editorRef.current.contentEditable = 'true';
+          editorRef.current.setAttribute('contenteditable', 'true');
           editorRef.current.focus();
+          
           console.log("Initial focus set on editor");
           
           // Try to place cursor at beginning for empty editors
@@ -43,7 +48,15 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
             // Ensure proper cursor placement
             if (selection) {
               try {
-                range.setStart(editorRef.current, 0);
+                // Create a text node if there isn't content
+                if (!editorRef.current.firstChild) {
+                  const textNode = document.createTextNode('');
+                  editorRef.current.appendChild(textNode);
+                  range.setStart(textNode, 0);
+                } else {
+                  range.setStart(editorRef.current.firstChild, 0);
+                }
+                
                 range.collapse(true);
                 selection.removeAllRanges();
                 selection.addRange(range);
@@ -68,7 +81,7 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
           console.log("Forced editor to be editable");
         }
       }
-    }, 25); // Check very frequently (40 times per second)
+    }, 10); // Check extremely frequently (100 times per second)
     
     return () => {
       clearInterval(editableCheckInterval);

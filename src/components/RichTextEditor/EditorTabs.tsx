@@ -49,27 +49,66 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
   // Effect to ensure editor is editable when switching tabs
   useEffect(() => {
     if (activeTab === "editor" && editorRef.current) {
-      // Use multiple approaches to ensure editability
+      // Force editability and focus when switching to editor tab
       editorRef.current.contentEditable = 'true';
       editorRef.current.setAttribute('contenteditable', 'true');
+      
+      // Remove any attributes that might interfere with editing
+      editorRef.current.removeAttribute('readonly');
+      editorRef.current.removeAttribute('disabled');
       
       // Short timeout to ensure DOM is ready before focusing
       setTimeout(() => {
         if (editorRef.current) {
           editorRef.current.focus();
           console.log("Tab changed to editor - forced focus");
+          
+          // Try to place cursor at beginning for empty content
+          const selection = window.getSelection();
+          if (selection && (!content || content.trim() === '')) {
+            try {
+              const range = document.createRange();
+              
+              // Create a text node if there isn't content
+              if (!editorRef.current.firstChild) {
+                const textNode = document.createTextNode('');
+                editorRef.current.appendChild(textNode);
+                range.setStart(textNode, 0);
+              } else {
+                range.setStart(editorRef.current.firstChild, 0);
+              }
+              
+              range.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(range);
+              console.log("Cursor positioned for empty content");
+            } catch (error) {
+              console.error("Error positioning cursor:", error);
+            }
+          }
         }
       }, 50);
     }
-  }, [activeTab]);
+  }, [activeTab, content]);
 
-  // Force focus when clicked anywhere in the container
-  const handleContainerClick = () => {
+  // Force focus via direct DOM manipulation when container clicked
+  const handleContainerClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (activeTab === "editor") {
       if (editorRef.current) {
+        // Force editability at the DOM level
         editorRef.current.contentEditable = 'true';
+        editorRef.current.setAttribute('contenteditable', 'true');
+        
+        // Remove any attributes that might interfere with editing
+        editorRef.current.removeAttribute('readonly');
+        editorRef.current.removeAttribute('disabled');
+        
+        // Focus immediately
         editorRef.current.focus();
-        console.log("Container clicked - editor focused");
+        console.log("Container clicked - editor focused via DOM");
       }
     }
   };
@@ -89,7 +128,11 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
         </TabsList>
       </div>
       
-      <TabsContent value="editor" className="mt-0 p-0 flex-1 overflow-hidden flex flex-col">
+      <TabsContent 
+        value="editor" 
+        className="mt-0 p-0 flex-1 overflow-hidden flex flex-col"
+        onClick={handleContainerClick}
+      >
         <EditorToolbar 
           editorRef={editorRef}
           execCommand={execCommand}
