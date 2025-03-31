@@ -113,10 +113,10 @@ const EditorContent: React.FC<EditorContentProps> = ({
       if (selection) {
         try {
           // Get precise click position using caretRangeFromPoint (more accurate)
-          const range = document.caretRangeFromPoint(e.clientX, e.clientY);
-          if (range) {
+          const caretRange = document.caretRangeFromPoint(e.clientX, e.clientY);
+          if (caretRange) {
             selection.removeAllRanges();
-            selection.addRange(range);
+            selection.addRange(caretRange);
             return;
           }
         } catch (err) {
@@ -126,7 +126,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
         // Fallback: try to find the clicked element and set cursor position
         let clickedNode = e.target as Node;
         if (clickedNode && editorRef.current.contains(clickedNode)) {
-          const range = document.createRange();
+          const newRange = document.createRange();
           
           // If we clicked text node directly
           if (clickedNode.nodeType === Node.TEXT_NODE) {
@@ -134,14 +134,14 @@ const EditorContent: React.FC<EditorContentProps> = ({
               // Try to position at the right offset in text
               const textNode = clickedNode as Text;
               // Calculate approximate text position
-              const textRect = range.getBoundingClientRect();
+              const textRect = newRange.getBoundingClientRect();
               const ratio = (e.clientX - textRect.left) / (textRect.width || 1);
               const offset = Math.floor(ratio * textNode.length);
               
-              range.setStart(textNode, Math.min(offset, textNode.length));
-              range.collapse(true);
+              newRange.setStart(textNode, Math.min(offset, textNode.length));
+              newRange.collapse(true);
               selection.removeAllRanges();
-              selection.addRange(range);
+              selection.addRange(newRange);
               return;
             } catch (err) {
               console.log("Error setting text node position:", err);
@@ -151,10 +151,10 @@ const EditorContent: React.FC<EditorContentProps> = ({
           // Fallback to simply placing cursor at the element
           try {
             if (clickedNode.nodeType === Node.ELEMENT_NODE) {
-              range.selectNodeContents(clickedNode);
-              range.collapse(false); // collapse to end
+              newRange.selectNodeContents(clickedNode);
+              newRange.collapse(false); // collapse to end
               selection.removeAllRanges();
-              selection.addRange(range);
+              selection.addRange(newRange);
               return;
             }
           } catch (err) {
@@ -164,10 +164,11 @@ const EditorContent: React.FC<EditorContentProps> = ({
         
         // Last resort fallback - just put cursor somewhere in editor
         try {
-          range.selectNodeContents(editorRef.current);
-          range.collapse(false);
+          const lastResortRange = document.createRange();
+          lastResortRange.selectNodeContents(editorRef.current);
+          lastResortRange.collapse(false);
           selection.removeAllRanges();
-          selection.addRange(range);
+          selection.addRange(lastResortRange);
         } catch (err) {
           console.log("Final fallback error:", err);
         }
