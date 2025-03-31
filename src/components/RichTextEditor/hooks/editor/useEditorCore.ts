@@ -18,6 +18,7 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
       editorRef.current.style.webkitUserSelect = 'text';
       editorRef.current.style.cursor = 'text';
       editorRef.current.style.minHeight = '200px';
+      editorRef.current.style.whiteSpace = 'pre-wrap'; // Use pre-wrap to preserve formatting
       
       // Make sure the editor can be interacted with
       editorRef.current.tabIndex = 0;
@@ -50,7 +51,7 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
               try {
                 // Create a text node if there isn't content
                 if (!editorRef.current.firstChild) {
-                  const textNode = document.createTextNode('');
+                  const textNode = document.createTextNode('\u200B'); // Zero-width space for better cursor visibility
                   editorRef.current.appendChild(textNode);
                   range.setStart(textNode, 0);
                 } else {
@@ -67,12 +68,12 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
             }
           }
         }
-      }, 100);
+      }, 10); // Much shorter delay for faster focusing
       
       console.log("Editor initialized and set to contentEditable");
     }
     
-    // Continuously check and fix editability - check very frequently
+    // Continuously check and fix editability - check extremely frequently
     const editableCheckInterval = setInterval(() => {
       if (editorRef.current) {
         if (editorRef.current.contentEditable !== 'true') {
@@ -81,7 +82,7 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
           console.log("Forced editor to be editable");
         }
       }
-    }, 10); // Check extremely frequently (100 times per second)
+    }, 5); // Check extremely frequently (200 times per second)
     
     return () => {
       clearInterval(editableCheckInterval);

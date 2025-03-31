@@ -71,7 +71,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
               
               // Create a text node if there isn't content
               if (!editorRef.current.firstChild) {
-                const textNode = document.createTextNode('');
+                const textNode = document.createTextNode('\u200B'); // Zero-width space
                 editorRef.current.appendChild(textNode);
                 range.setStart(textNode, 0);
               } else {
@@ -90,6 +90,23 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
       }, 50);
     }
   }, [activeTab, content]);
+
+  // Effect to continuously check and fix editability - check extremely frequently
+  useEffect(() => {
+    const editableCheckInterval = setInterval(() => {
+      if (activeTab === "editor" && editorRef.current) {
+        if (editorRef.current.contentEditable !== 'true') {
+          editorRef.current.contentEditable = 'true';
+          editorRef.current.setAttribute('contenteditable', 'true');
+          console.log("Forced editor tab to be editable");
+        }
+      }
+    }, 5); // Check extremely frequently (200 times per second)
+    
+    return () => {
+      clearInterval(editableCheckInterval);
+    };
+  }, [activeTab]);
 
   // Force focus via direct DOM manipulation when container clicked
   const handleContainerClick = (e: React.MouseEvent) => {

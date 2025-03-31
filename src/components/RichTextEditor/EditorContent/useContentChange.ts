@@ -31,8 +31,17 @@ export const useContentChange = ({
   }, [onAutoSave, autoSaveDelay]);
 
   // Handle content change event
-  const handleContentChange = useCallback(() => {
+  const handleContentChange = useCallback((event?: React.FormEvent) => {
+    if (event) {
+      // Prevent default browser handling for custom processing
+      event.preventDefault();
+    }
+  
     if (editorRef.current) {
+      // Re-establish editability every time content changes
+      editorRef.current.contentEditable = 'true';
+      editorRef.current.setAttribute('contenteditable', 'true');
+      
       // Process checkboxes in the content
       processCheckboxes();
       
@@ -83,13 +92,18 @@ export const useContentChange = ({
   }, [onChange, onContentUpdate, debouncedAutoSave, editorRef]);
   
   // Process checkboxes in the content
-  const processCheckboxes = () => {
+  const processCheckboxes = useCallback(() => {
     if (!editorRef.current) return;
     
     // Find all possible checkbox patterns and replace them
     const allParagraphs = editorRef.current.querySelectorAll('p');
     allParagraphs.forEach(paragraph => {
       const text = paragraph.textContent || '';
+      
+      // Skip paragraphs that already have a checkbox
+      if (paragraph.querySelector('input[type="checkbox"]')) {
+        return;
+      }
       
       // Check if the paragraph starts with '[ ]' or '[x]' or '[]'
       if (text.trim().startsWith('[ ]') || text.trim().startsWith('[x]') || text.trim().startsWith('[]')) {
@@ -108,8 +122,6 @@ export const useContentChange = ({
         checkboxInput.addEventListener('change', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          // This just toggles the visual state but doesn't modify the content
-          // The actual content change is handled in the parent
           
           // Trigger input event to register content change
           const inputEvent = new Event('input', {
@@ -131,7 +143,7 @@ export const useContentChange = ({
         paragraph.className = 'checkbox-item';
       }
     });
-  };
+  }, [editorRef]);
 
   return { handleContentChange, processCheckboxes };
 };

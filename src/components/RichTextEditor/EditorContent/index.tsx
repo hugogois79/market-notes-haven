@@ -111,7 +111,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
           console.log("Fixed editor editability");
         }
       }
-    }, 50);
+    }, 10); // Check very frequently to ensure editability
     
     return () => clearInterval(ensureEditableInterval);
   }, [editorRef]);
@@ -148,7 +148,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
           lineHeight: '1.5',
           overflowX: 'auto',
           overflowY: 'auto',
-          whiteSpace: 'normal',
+          whiteSpace: 'pre-wrap', // Change from normal to pre-wrap to preserve formatting
           paddingTop: "8px",
           wordWrap: "break-word",
           wordBreak: "break-word",
