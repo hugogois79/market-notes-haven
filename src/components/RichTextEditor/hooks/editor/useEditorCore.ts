@@ -23,9 +23,14 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
       editorRef.current.style.userSelect = 'text';
       editorRef.current.style.webkitUserSelect = 'text';
       editorRef.current.style.cursor = 'text';
+      editorRef.current.style.pointerEvents = 'auto';
       
       // Make sure the editor can be interacted with
       editorRef.current.tabIndex = 0;
+      
+      // Remove any problematic attributes
+      editorRef.current.removeAttribute('readonly');
+      editorRef.current.removeAttribute('disabled');
       
       console.log("Editor initialized and set to contentEditable");
     }
@@ -42,6 +47,7 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
         // Also check if parents have disabled contentEditable
         let parent = editorRef.current.parentElement;
         while (parent) {
+          // Fix any parent with contenteditable="false"
           if (parent.getAttribute('contenteditable') === 'false') {
             parent.removeAttribute('contenteditable');
             console.log("Removed conflicting contentEditable on parent");
@@ -49,11 +55,32 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
           parent = parent.parentElement;
         }
       }
-    }, 500); // Run more frequently than before
+    }, 300); // Check more frequently
     
     return () => {
       clearInterval(editableCheckInterval);
       console.log("Editor cleanup: cleared interval");
+    };
+  }, [editorRef]);
+
+  // Handle click event to ensure the editor is focused and editable
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      if (editorRef.current && editorRef.current.contains(e.target as Node)) {
+        // Click is within our editor
+        if (editorRef.current.contentEditable !== 'true') {
+          console.log("Fixing contentEditable from click handler");
+          editorRef.current.contentEditable = 'true';
+          editorRef.current.focus();
+        }
+      }
+    };
+    
+    // Add global click handler to ensure editor editability
+    document.addEventListener('click', handleDocumentClick);
+    
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
     };
   }, [editorRef]);
 

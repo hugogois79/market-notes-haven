@@ -97,24 +97,80 @@ const EditorContent: React.FC<EditorContentProps> = ({
     return () => clearInterval(ensureEditableInterval);
   }, [editorRef]);
 
-  // Add a click handler to ensure the editor gets focus
+  // Improved click handler to properly position the cursor at the click position
   const handleEditorClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Stop propagation to prevent parent handlers
+    
     if (editorRef.current) {
       // Ensure content is editable when clicked
-      if (editorRef.current.contentEditable !== 'true') {
-        editorRef.current.contentEditable = 'true';
-      }
+      editorRef.current.contentEditable = 'true';
       
       // Focus the editor
       editorRef.current.focus();
       
-      // Make sure the cursor is placed at the click position
+      // Use the selection API to place cursor at click position
       const selection = window.getSelection();
       if (selection) {
-        const range = document.createRange();
-        range.setStart(e.target as Node, 0);
-        selection.removeAllRanges();
-        selection.addRange(range);
+        try {
+          // Get precise click position using caretRangeFromPoint (more accurate)
+          const range = document.caretRangeFromPoint(e.clientX, e.clientY);
+          if (range) {
+            selection.removeAllRanges();
+            selection.addRange(range);
+            return;
+          }
+        } catch (err) {
+          console.log("Error setting cursor position:", err);
+        }
+        
+        // Fallback: try to find the clicked element and set cursor position
+        let clickedNode = e.target as Node;
+        if (clickedNode && editorRef.current.contains(clickedNode)) {
+          const range = document.createRange();
+          
+          // If we clicked text node directly
+          if (clickedNode.nodeType === Node.TEXT_NODE) {
+            try {
+              // Try to position at the right offset in text
+              const textNode = clickedNode as Text;
+              // Calculate approximate text position
+              const textRect = range.getBoundingClientRect();
+              const ratio = (e.clientX - textRect.left) / (textRect.width || 1);
+              const offset = Math.floor(ratio * textNode.length);
+              
+              range.setStart(textNode, Math.min(offset, textNode.length));
+              range.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(range);
+              return;
+            } catch (err) {
+              console.log("Error setting text node position:", err);
+            }
+          }
+          
+          // Fallback to simply placing cursor at the element
+          try {
+            if (clickedNode.nodeType === Node.ELEMENT_NODE) {
+              range.selectNodeContents(clickedNode);
+              range.collapse(false); // collapse to end
+              selection.removeAllRanges();
+              selection.addRange(range);
+              return;
+            }
+          } catch (err) {
+            console.log("Error setting element position:", err);
+          }
+        }
+        
+        // Last resort fallback - just put cursor somewhere in editor
+        try {
+          range.selectNodeContents(editorRef.current);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        } catch (err) {
+          console.log("Final fallback error:", err);
+        }
       }
     }
   };

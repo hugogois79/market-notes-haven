@@ -55,13 +55,31 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
           editorRef.current.setAttribute('contenteditable', 'true');
           editorRef.current.focus();
           
-          // Ensure cursor position is correct for editing
+          // Ensure cursor is visible for editing
           const selection = window.getSelection();
           if (selection) {
-            const range = document.createRange();
-            range.setStart(editorRef.current, 0);
-            selection.removeAllRanges();
-            selection.addRange(range);
+            try {
+              const range = document.createRange();
+              
+              // Try to find some content to place cursor
+              const textNodes = Array.from(editorRef.current.querySelectorAll('*'))
+                .filter(el => el.textContent && el.textContent.trim().length > 0);
+              
+              if (textNodes.length > 0) {
+                // Place cursor at beginning of first text node
+                range.setStart(textNodes[0], 0);
+                range.collapse(true);
+              } else {
+                // Or just at the beginning of editor
+                range.setStart(editorRef.current, 0);
+                range.collapse(true);
+              }
+              
+              selection.removeAllRanges();
+              selection.addRange(range);
+            } catch (err) {
+              console.log("Error setting initial cursor position:", err);
+            }
           }
           
           console.log("Editor tab active, ensuring contentEditable");
@@ -77,6 +95,30 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
       editorRef.current.contentEditable = 'true';
     }
   }, [content, activeTab]);
+
+  // Improved click handler for the container
+  const handleContainerClick = (e: React.MouseEvent) => {
+    if (activeTab !== "editor" || !editorRef.current) return;
+    
+    // Don't interfere if clicking on a button or control
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === 'BUTTON' || 
+      target.closest('button') || 
+      target.tagName === 'INPUT' ||
+      target.tagName === 'SELECT' ||
+      target.tagName === 'TEXTAREA'
+    ) {
+      return;
+    }
+    
+    // Find if we clicked directly inside the editor
+    if (!editorRef.current.contains(e.target as Node)) {
+      // We clicked outside the editor but inside the container
+      // so focus the editor
+      editorRef.current.focus();
+    }
+  };
 
   return (
     <Tabs defaultValue="editor" className="w-full flex flex-col h-full" onValueChange={setActiveTab}>
@@ -105,13 +147,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
           hasConclusion={hasConclusion}
           category={category}
         />
-        <div className="flex-1 overflow-auto" onClick={() => {
-          // Ensure editor gets focus when clicking anywhere in this container
-          if (editorRef.current) {
-            editorRef.current.contentEditable = 'true';
-            editorRef.current.focus();
-          }
-        }}>
+        <div className="flex-1 overflow-auto" onClick={handleContainerClick}>
           <EditorContent 
             content={content} 
             onChange={onContentChange} 
