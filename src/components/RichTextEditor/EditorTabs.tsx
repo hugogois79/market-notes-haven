@@ -57,20 +57,20 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
       setTimeout(() => {
         if (editorRef.current) {
           editorRef.current.focus();
+          console.log("Tab changed to editor - forced focus");
         }
-      }, 100);
+      }, 50);
     }
   }, [activeTab]);
 
   // Force focus when clicked anywhere in the container
   const handleContainerClick = () => {
-    if (editorRef.current && activeTab === "editor") {
-      editorRef.current.contentEditable = 'true';
-      setTimeout(() => {
-        if (editorRef.current) {
-          editorRef.current.focus();
-        }
-      }, 10);
+    if (activeTab === "editor") {
+      if (editorRef.current) {
+        editorRef.current.contentEditable = 'true';
+        editorRef.current.focus();
+        console.log("Container clicked - editor focused");
+      }
     }
   };
 

@@ -32,8 +32,29 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
       setTimeout(() => {
         if (editorRef.current) {
           editorRef.current.focus();
+          console.log("Initial focus set on editor");
+          
+          // Try to place cursor at beginning for empty editors
+          const content = editorRef.current.innerHTML;
+          if (!content || content.trim() === '') {
+            const selection = window.getSelection();
+            const range = document.createRange();
+            
+            // Ensure proper cursor placement
+            if (selection) {
+              try {
+                range.setStart(editorRef.current, 0);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                console.log("Cursor positioned at beginning");
+              } catch (error) {
+                console.error("Error positioning cursor:", error);
+              }
+            }
+          }
         }
-      }, 200);
+      }, 100);
       
       console.log("Editor initialized and set to contentEditable");
     }
@@ -44,9 +65,10 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
         if (editorRef.current.contentEditable !== 'true') {
           editorRef.current.contentEditable = 'true';
           editorRef.current.setAttribute('contenteditable', 'true');
+          console.log("Forced editor to be editable");
         }
       }
-    }, 50);
+    }, 25); // Check very frequently (40 times per second)
     
     return () => {
       clearInterval(editableCheckInterval);

@@ -48,35 +48,54 @@ const EditorContent: React.FC<EditorContentProps> = ({
       // Process any checkboxes that might be in the content
       processCheckboxes();
       
-      // Make sure the editor is editable - use multiple approaches for maximum compatibility
+      // Make sure the editor is definitely editable
       editorRef.current.setAttribute('contenteditable', 'true');
       editorRef.current.contentEditable = 'true';
       
-      // Apply other necessary attributes
+      // Apply all necessary attributes for maximum compatibility
       editorRef.current.style.outline = 'none';
       editorRef.current.style.userSelect = 'text';
       editorRef.current.style.webkitUserSelect = 'text';
       editorRef.current.style.cursor = 'text';
       
-      // Force focus when loaded
+      // Force focus when loaded with a slight delay to ensure the DOM is ready
       setTimeout(() => {
         if (editorRef.current) {
           editorRef.current.focus();
+          
+          // Try to position cursor at the beginning for new notes
+          if (!content || content.trim() === '') {
+            const selection = window.getSelection();
+            const range = document.createRange();
+            
+            if (selection && editorRef.current.firstChild) {
+              range.setStart(editorRef.current.firstChild, 0);
+              range.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(range);
+            } else if (selection) {
+              // If no firstChild, set cursor at the beginning of the element
+              range.setStart(editorRef.current, 0);
+              range.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(range);
+            }
+          }
         }
       }, 100);
       
-      console.log("Editor initialized with content and set to editable");
+      console.log("Editor initialized with content:", content ? "has content" : "empty", "and set to editable");
     }
   }, [content, processCheckboxes, editorRef]);
 
-  // Add an effect to ensure the editor remains editable
+  // Add an effect to ensure the editor remains editable - check very frequently
   useEffect(() => {
     const ensureEditableInterval = setInterval(() => {
       if (editorRef.current) {
         editorRef.current.setAttribute('contenteditable', 'true');
         editorRef.current.contentEditable = 'true';
       }
-    }, 100);
+    }, 50);
     
     return () => clearInterval(ensureEditableInterval);
   }, [editorRef]);
@@ -86,6 +105,9 @@ const EditorContent: React.FC<EditorContentProps> = ({
     if (editorRef.current) {
       editorRef.current.contentEditable = 'true';
       editorRef.current.focus();
+      
+      // Log state after click for debugging
+      console.log("Editor clicked, contentEditable:", editorRef.current.contentEditable);
     }
   };
 
@@ -95,7 +117,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
       <div 
         className="p-4 min-h-[300px] h-full w-full focus:outline-none overflow-auto text-sm editor-content"
         ref={editorRef}
-        contentEditable="true"
+        contentEditable="true" 
         suppressContentEditableWarning={true}
         onInput={handleContentChange}
         onBlur={handleContentChange}
