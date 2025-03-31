@@ -48,7 +48,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
       // Format any checkboxes that might be in the content
       processCheckboxes();
       
-      // Set contenteditable attribute
+      // Set contenteditable attribute and ensure focus
       editorRef.current.setAttribute('contenteditable', 'true');
       
       // Force focus into the editor once loaded if it's empty
