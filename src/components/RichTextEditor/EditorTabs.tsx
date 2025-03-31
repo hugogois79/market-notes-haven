@@ -52,12 +52,31 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
       setTimeout(() => {
         if (editorRef.current) {
           editorRef.current.contentEditable = 'true';
+          editorRef.current.setAttribute('contenteditable', 'true');
           editorRef.current.focus();
+          
+          // Ensure cursor position is correct for editing
+          const selection = window.getSelection();
+          if (selection) {
+            const range = document.createRange();
+            range.setStart(editorRef.current, 0);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+          
           console.log("Editor tab active, ensuring contentEditable");
         }
-      }, 100);
+      }, 50); // Reduced delay for better responsiveness
     }
   }, [activeTab]);
+  
+  // Additional check for editor editability after content changes
+  useEffect(() => {
+    if (activeTab === "editor" && editorRef.current) {
+      // Make sure the editor is editable after content is loaded/updated
+      editorRef.current.contentEditable = 'true';
+    }
+  }, [content, activeTab]);
 
   return (
     <Tabs defaultValue="editor" className="w-full flex flex-col h-full" onValueChange={setActiveTab}>
@@ -86,7 +105,13 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
           hasConclusion={hasConclusion}
           category={category}
         />
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto" onClick={() => {
+          // Ensure editor gets focus when clicking anywhere in this container
+          if (editorRef.current) {
+            editorRef.current.contentEditable = 'true';
+            editorRef.current.focus();
+          }
+        }}>
           <EditorContent 
             content={content} 
             onChange={onContentChange} 

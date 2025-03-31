@@ -6,10 +6,10 @@ import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 import { formatCheckboxText } from './textFormatters';
 
 export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = true) => {
-  // Make editor content editable when loaded
+  // Make editor content editable when loaded and ensure it remains that way
   useEffect(() => {
     if (editorRef.current) {
-      // Ensure it's editable
+      // Ensure it's editable using multiple approaches
       editorRef.current.setAttribute('contenteditable', 'true');
       editorRef.current.contentEditable = 'true';
       
@@ -24,18 +24,37 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
       editorRef.current.style.webkitUserSelect = 'text';
       editorRef.current.style.cursor = 'text';
       
+      // Make sure the editor can be interacted with
+      editorRef.current.tabIndex = 0;
+      
       console.log("Editor initialized and set to contentEditable");
     }
     
     // Add a periodic check to ensure editability isn't lost somehow
     const editableCheckInterval = setInterval(() => {
-      if (editorRef.current && editorRef.current.contentEditable !== 'true') {
-        editorRef.current.contentEditable = 'true';
-        console.log("Restored contentEditable state on editor");
+      if (editorRef.current) {
+        if (editorRef.current.contentEditable !== 'true') {
+          editorRef.current.contentEditable = 'true';
+          editorRef.current.setAttribute('contenteditable', 'true');
+          console.log("Restored contentEditable state on editor");
+        }
+        
+        // Also check if parents have disabled contentEditable
+        let parent = editorRef.current.parentElement;
+        while (parent) {
+          if (parent.getAttribute('contenteditable') === 'false') {
+            parent.removeAttribute('contenteditable');
+            console.log("Removed conflicting contentEditable on parent");
+          }
+          parent = parent.parentElement;
+        }
       }
-    }, 2000);
+    }, 500); // Run more frequently than before
     
-    return () => clearInterval(editableCheckInterval);
+    return () => {
+      clearInterval(editableCheckInterval);
+      console.log("Editor cleanup: cleared interval");
+    };
   }, [editorRef]);
 
   // Process checkboxes in the content

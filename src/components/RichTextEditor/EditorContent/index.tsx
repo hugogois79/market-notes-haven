@@ -48,32 +48,76 @@ const EditorContent: React.FC<EditorContentProps> = ({
       // Process any checkboxes that might be in the content
       processCheckboxes();
       
-      // Make sure contenteditable is explicitly set to true
+      // Force editor to be editable - try multiple approaches
       editorRef.current.setAttribute('contenteditable', 'true');
-      editorRef.current.contentEditable = 'true'; // Double ensure it's set
+      editorRef.current.contentEditable = 'true';
       
       // Force focus into the editor once loaded if it's empty
       if (!content || content === '') {
-        setTimeout(() => {
-          if (editorRef.current) {
-            editorRef.current.focus();
-          }
-        }, 100);
+        editorRef.current.focus();
       }
+      
+      // Apply other necessary attributes
+      editorRef.current.style.userSelect = 'text';
+      editorRef.current.style.webkitUserSelect = 'text';
+      editorRef.current.style.cursor = 'text';
+      
+      console.log("Editor initialized with content and set to editable");
     }
   }, [content, processCheckboxes, editorRef]);
 
   // Add an additional effect to ensure the editor is always editable
   useEffect(() => {
+    // Immediate check and fix
+    if (editorRef.current && editorRef.current.contentEditable !== 'true') {
+      editorRef.current.contentEditable = 'true';
+      console.log("Fixed contentEditable on mount");
+    }
+    
     const ensureEditableInterval = setInterval(() => {
-      if (editorRef.current && editorRef.current.contentEditable !== 'true') {
-        editorRef.current.contentEditable = 'true';
-        console.log("Re-enabled contentEditable on editor");
+      if (editorRef.current) {
+        if (editorRef.current.contentEditable !== 'true') {
+          editorRef.current.contentEditable = 'true';
+          editorRef.current.setAttribute('contenteditable', 'true');
+          console.log("Re-enabled contentEditable on editor");
+        }
+        
+        // Also make sure no parent elements have contenteditable="false"
+        let parent = editorRef.current.parentElement;
+        while (parent) {
+          if (parent.getAttribute('contenteditable') === 'false') {
+            parent.setAttribute('contenteditable', 'true');
+            console.log("Fixed parent contentEditable");
+          }
+          parent = parent.parentElement;
+        }
       }
-    }, 1000);
+    }, 500); // Run more frequently
     
     return () => clearInterval(ensureEditableInterval);
   }, [editorRef]);
+
+  // Add a click handler to ensure the editor gets focus
+  const handleEditorClick = (e: React.MouseEvent) => {
+    if (editorRef.current) {
+      // Ensure content is editable when clicked
+      if (editorRef.current.contentEditable !== 'true') {
+        editorRef.current.contentEditable = 'true';
+      }
+      
+      // Focus the editor
+      editorRef.current.focus();
+      
+      // Make sure the cursor is placed at the click position
+      const selection = window.getSelection();
+      if (selection) {
+        const range = document.createRange();
+        range.setStart(e.target as Node, 0);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }
+  };
 
   return (
     <>
@@ -85,9 +129,10 @@ const EditorContent: React.FC<EditorContentProps> = ({
         suppressContentEditableWarning={true}
         onInput={handleContentChange}
         onBlur={handleContentChange}
-        onClick={(e) => {
-          // Ensure we can click into the editor
-          if (editorRef.current && editorRef.current.contentEditable !== 'true') {
+        onClick={handleEditorClick}
+        onFocus={() => {
+          // Ensure we can type when the editor gets focus
+          if (editorRef.current) {
             editorRef.current.contentEditable = 'true';
           }
         }}
@@ -100,7 +145,10 @@ const EditorContent: React.FC<EditorContentProps> = ({
           wordWrap: "break-word",
           wordBreak: "break-word",
           maxWidth: "100%",
-          outline: "none"
+          outline: "none",
+          cursor: "text",
+          userSelect: "text",
+          WebkitUserSelect: "text"
         }}
         data-placeholder="Start writing..."
       />
