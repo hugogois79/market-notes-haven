@@ -80,7 +80,6 @@ const EditorMain: React.FC<EditorMainProps> = ({
   tradeInfo,
   onTradeInfoChange = () => {},
   hasConclusion = true,
-  onPrint,
 }) => {
   const isTradingCategory = category === "Trading" || category === "Pair Trading";
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -98,7 +97,6 @@ const EditorMain: React.FC<EditorMainProps> = ({
         isSaving={isSaving}
         lastSaved={lastSaved}
         onSave={handleManualSave}
-        onPrint={onPrint}
       />
       
       <div className="flex flex-col gap-4 overflow-hidden flex-1 relative">
@@ -143,7 +141,6 @@ const EditorMain: React.FC<EditorMainProps> = ({
               onAttachmentChange={onAttachmentChange}
               hasConclusion={hasConclusion}
               category={category}
-              onPrint={onPrint}
             />
           </Card>
         </div>

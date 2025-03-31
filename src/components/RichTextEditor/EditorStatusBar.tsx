@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Save, Printer } from "lucide-react";
+import { Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface EditorStatusBarProps {
@@ -10,7 +10,7 @@ interface EditorStatusBarProps {
   onPrint?: () => void;
 }
 
-const EditorStatusBar = ({ isSaving, lastSaved, onSave, onPrint }: EditorStatusBarProps) => {
+const EditorStatusBar = ({ isSaving, lastSaved, onSave }: EditorStatusBarProps) => {
   return (
     <div className="flex items-center justify-between py-2 px-4 bg-background z-20 border-b w-full sticky top-0">
       <div className="text-sm text-muted-foreground">
@@ -32,18 +32,6 @@ const EditorStatusBar = ({ isSaving, lastSaved, onSave, onPrint }: EditorStatusB
           <Save size={16} />
           {isSaving ? "Saving..." : "Save"}
         </Button>
-        
-        {onPrint && (
-          <Button
-            onClick={onPrint}
-            variant="outline"
-            className="gap-2 whitespace-nowrap"
-            size="sm"
-          >
-            <Printer size={16} />
-            Print
-          </Button>
-        )}
       </div>
     </div>
   );

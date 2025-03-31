@@ -26,7 +26,6 @@ interface EditorToolbarProps {
   highlightText?: () => void;
   boldText?: () => void;
   underlineText?: () => void; 
-  onPrint?: () => void;
   hasConclusion?: boolean;
   category?: string;
   className?: string;
@@ -42,8 +41,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
   underlineText,
   hasConclusion,
   category,
-  className,
-  onPrint
+  className
 }) => {
   return (
     <div className={`flex flex-wrap gap-1 p-2 bg-muted border-b ${className || ''}`}>
@@ -166,16 +164,6 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
       >
         <Table className="h-4 w-4" />
       </Button>
-      {onPrint && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onPrint}
-          title="Print"
-        >
-          <span className="text-xs">Print</span>
-        </Button>
-      )}
     </div>
   );
 };

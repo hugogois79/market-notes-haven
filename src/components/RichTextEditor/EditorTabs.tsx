@@ -30,7 +30,6 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
   onAttachmentChange = () => {},
   hasConclusion = true,
   category = "General",
-  onPrint,
 }) => {
   const [activeTab, setActiveTab] = useState("editor");
   const editorRef = useRef<HTMLDivElement>(null);
@@ -45,13 +44,6 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
     underlineText,
     processCheckboxes
   } = useEditor(editorRef, hasConclusion);
-
-  // Handle print functionality
-  const handlePrint = () => {
-    if (onPrint) {
-      onPrint();
-    }
-  };
 
   return (
     <Tabs defaultValue="editor" className="w-full flex flex-col h-full" onValueChange={setActiveTab}>
@@ -79,7 +71,6 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
           underlineText={underlineText}
           hasConclusion={hasConclusion}
           category={category}
-          onPrint={handlePrint}
         />
         <div className="flex-1 overflow-auto">
           <EditorContent 
