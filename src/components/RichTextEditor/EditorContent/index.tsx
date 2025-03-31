@@ -48,7 +48,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
       // Process any checkboxes that might be in the content
       processCheckboxes();
       
-      // Make sure the editor is editable
+      // Make sure the editor is editable - use multiple approaches for maximum compatibility
       editorRef.current.setAttribute('contenteditable', 'true');
       editorRef.current.contentEditable = 'true';
       
@@ -57,6 +57,13 @@ const EditorContent: React.FC<EditorContentProps> = ({
       editorRef.current.style.userSelect = 'text';
       editorRef.current.style.webkitUserSelect = 'text';
       editorRef.current.style.cursor = 'text';
+      
+      // Force focus when loaded
+      setTimeout(() => {
+        if (editorRef.current) {
+          editorRef.current.focus();
+        }
+      }, 100);
       
       console.log("Editor initialized with content and set to editable");
     }
@@ -75,9 +82,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
   }, [editorRef]);
 
   const handleEditorClick = (e: React.MouseEvent) => {
-    // Prevent default behavior that might be causing issues
-    e.preventDefault();
-    
+    // Force editor to be editable when clicked
     if (editorRef.current) {
       editorRef.current.contentEditable = 'true';
       editorRef.current.focus();

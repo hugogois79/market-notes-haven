@@ -28,10 +28,17 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
       // Process any existing checkboxes
       processCheckboxes();
       
+      // Force focus on the editor after initialization
+      setTimeout(() => {
+        if (editorRef.current) {
+          editorRef.current.focus();
+        }
+      }, 200);
+      
       console.log("Editor initialized and set to contentEditable");
     }
     
-    // Continuously check and fix editability
+    // Continuously check and fix editability - check very frequently
     const editableCheckInterval = setInterval(() => {
       if (editorRef.current) {
         if (editorRef.current.contentEditable !== 'true') {
@@ -39,7 +46,7 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
           editorRef.current.setAttribute('contenteditable', 'true');
         }
       }
-    }, 50); // Check very frequently
+    }, 50);
     
     return () => {
       clearInterval(editableCheckInterval);

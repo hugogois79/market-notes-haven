@@ -62,11 +62,15 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
     }
   }, [activeTab]);
 
-  // Simplified handler that makes the editor area clickable
+  // Force focus when clicked anywhere in the container
   const handleContainerClick = () => {
     if (editorRef.current && activeTab === "editor") {
       editorRef.current.contentEditable = 'true';
-      editorRef.current.focus();
+      setTimeout(() => {
+        if (editorRef.current) {
+          editorRef.current.focus();
+        }
+      }, 10);
     }
   };
 
