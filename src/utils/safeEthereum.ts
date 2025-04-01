@@ -5,7 +5,7 @@
 export const isEthereumAvailable = (): boolean => {
   try {
     return typeof window !== 'undefined' && 
-           window.hasOwnProperty('ethereum') && 
+           'ethereum' in window && 
            window.ethereum !== undefined;
   } catch (error) {
     console.error('Error checking ethereum availability:', error);
