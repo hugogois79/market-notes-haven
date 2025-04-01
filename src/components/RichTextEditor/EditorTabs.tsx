@@ -61,7 +61,6 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
       setTimeout(() => {
         if (editorRef.current) {
           editorRef.current.focus();
-          console.log("Tab changed to editor - forced focus");
           
           // Try to place cursor at beginning for empty content
           const selection = window.getSelection();
@@ -81,7 +80,6 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
               range.collapse(true);
               selection.removeAllRanges();
               selection.addRange(range);
-              console.log("Cursor positioned for empty content");
             } catch (error) {
               console.error("Error positioning cursor:", error);
             }
@@ -91,17 +89,16 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
     }
   }, [activeTab, content]);
 
-  // Effect to continuously check and fix editability - check extremely frequently
+  // Effect to continuously check and fix editability
   useEffect(() => {
     const editableCheckInterval = setInterval(() => {
       if (activeTab === "editor" && editorRef.current) {
         if (editorRef.current.contentEditable !== 'true') {
           editorRef.current.contentEditable = 'true';
           editorRef.current.setAttribute('contenteditable', 'true');
-          console.log("Forced editor tab to be editable");
         }
       }
-    }, 5); // Check extremely frequently (200 times per second)
+    }, 5);
     
     return () => {
       clearInterval(editableCheckInterval);
@@ -125,21 +122,20 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
         
         // Focus immediately
         editorRef.current.focus();
-        console.log("Container clicked - editor focused via DOM");
       }
     }
   };
 
   return (
     <Tabs defaultValue="editor" className="w-full flex flex-col h-full" onValueChange={setActiveTab}>
-      <div className="flex justify-between items-center px-4 pt-2 border-b sticky top-0 bg-background z-10">
-        <TabsList className="grid grid-cols-2 w-auto">
-          <TabsTrigger value="editor" className="flex items-center gap-1">
-            <Edit className="h-4 w-4" />
+      <div className="flex justify-between items-center px-2 pt-1 border-b sticky top-0 bg-background z-10">
+        <TabsList className="grid grid-cols-2 w-auto h-7">
+          <TabsTrigger value="editor" className="flex items-center gap-0.5 px-2 text-xs h-6">
+            <Edit className="h-3.5 w-3.5" />
             <span>Editor</span>
           </TabsTrigger>
-          <TabsTrigger value="attachment" className="flex items-center gap-1">
-            <Paperclip className="h-4 w-4" />
+          <TabsTrigger value="attachment" className="flex items-center gap-0.5 px-2 text-xs h-6">
+            <Paperclip className="h-3.5 w-3.5" />
             <span>Attachment</span>
           </TabsTrigger>
         </TabsList>
@@ -177,7 +173,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
         </div>
       </TabsContent>
       
-      <TabsContent value="attachment" className="mt-0 p-4 flex-1 overflow-auto">
+      <TabsContent value="attachment" className="mt-0 p-2 flex-1 overflow-auto">
         <AttachmentSection 
           noteId={noteId}
           attachmentUrl={attachment_url}

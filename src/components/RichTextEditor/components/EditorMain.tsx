@@ -99,8 +99,8 @@ const EditorMain: React.FC<EditorMainProps> = ({
         onSave={handleManualSave}
       />
       
-      <div className="flex flex-col gap-4 overflow-hidden flex-1 relative">
-        <div className="overflow-y-auto flex-1 pb-4 space-y-4">
+      <div className="flex flex-col gap-2 overflow-hidden flex-1 relative">
+        <div className="overflow-y-auto flex-1 pb-2 space-y-2">
           <SpecialSections 
             noteId={noteId}
             content={currentContent}

@@ -38,8 +38,6 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
           editorRef.current.setAttribute('contenteditable', 'true');
           editorRef.current.focus();
           
-          console.log("Initial focus set on editor");
-          
           // Try to place cursor at beginning for empty editors
           const content = editorRef.current.innerHTML;
           if (!content || content.trim() === '') {
@@ -61,7 +59,6 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
                 range.collapse(true);
                 selection.removeAllRanges();
                 selection.addRange(range);
-                console.log("Cursor positioned at beginning");
               } catch (error) {
                 console.error("Error positioning cursor:", error);
               }
@@ -69,8 +66,6 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
           }
         }
       }, 10); // Much shorter delay for faster focusing
-      
-      console.log("Editor initialized and set to contentEditable");
     }
     
     // Continuously check and fix editability - check extremely frequently
@@ -79,7 +74,6 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
         if (editorRef.current.contentEditable !== 'true') {
           editorRef.current.contentEditable = 'true';
           editorRef.current.setAttribute('contenteditable', 'true');
-          console.log("Forced editor to be editable");
         }
       }
     }, 5); // Check extremely frequently (200 times per second)
@@ -139,13 +133,6 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
       }
     });
   };
-
-  // Apply styling for lack of conclusion if needed
-  useEffect(() => {
-    if (editorRef.current && hasConclusion === false) {
-      console.log("useEditor: No conclusion detected");
-    }
-  }, [editorRef, hasConclusion]);
 
   // Compose all the specialized hooks
   const { handlePaste } = useTableHandling(editorRef);

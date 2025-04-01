@@ -89,15 +89,12 @@ const EditorContent: React.FC<EditorContentProps> = ({
                   selection.addRange(range);
                 }
               }
-              console.log("Cursor positioned at beginning");
             } catch (error) {
               console.error("Error positioning cursor:", error);
             }
           }
         }
       }, 100);
-      
-      console.log("Editor initialized with content:", content ? "has content" : "empty", "and set to editable");
     }
   }, [content, processCheckboxes, editorRef]);
 
@@ -108,10 +105,9 @@ const EditorContent: React.FC<EditorContentProps> = ({
         if (editorRef.current.contentEditable !== 'true') {
           editorRef.current.setAttribute('contenteditable', 'true');
           editorRef.current.contentEditable = 'true';
-          console.log("Fixed editor editability");
         }
       }
-    }, 10); // Check very frequently to ensure editability
+    }, 10);
     
     return () => clearInterval(ensureEditableInterval);
   }, [editorRef]);
@@ -122,7 +118,6 @@ const EditorContent: React.FC<EditorContentProps> = ({
     if (editorRef.current) {
       editorRef.current.contentEditable = 'true';
       editorRef.current.focus();
-      console.log("Editor clicked and focused");
     }
   };
 
@@ -130,7 +125,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
     <>
       <ContentStyles />
       <div 
-        className="p-3 min-h-[200px] h-full w-full focus:outline-none overflow-auto text-xs editor-content"
+        className="p-2 min-h-[200px] h-full w-full focus:outline-none overflow-auto text-xs editor-content"
         ref={editorRef}
         contentEditable="true" 
         suppressContentEditableWarning={true}
@@ -145,11 +140,11 @@ const EditorContent: React.FC<EditorContentProps> = ({
           }
         }}
         style={{ 
-          lineHeight: '1.4',
+          lineHeight: '1.2',
           overflowX: 'auto',
           overflowY: 'auto',
-          whiteSpace: 'pre-wrap', // Change from normal to pre-wrap to preserve formatting
-          paddingTop: "6px",
+          whiteSpace: 'pre-wrap',
+          paddingTop: "4px",
           wordWrap: "break-word",
           wordBreak: "break-word",
           maxWidth: "100%",

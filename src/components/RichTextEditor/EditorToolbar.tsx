@@ -44,114 +44,128 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
   className
 }) => {
   return (
-    <div className={`flex flex-wrap gap-1 p-2 bg-muted border-b ${className || ''}`}>
+    <div className={`flex flex-wrap gap-0.5 p-1 bg-muted border-b ${className || ''}`}>
       <Button
         variant="ghost"
         size="sm"
+        className="h-6 w-6 p-1"
         onClick={() => boldText ? boldText() : execCommand('bold')}
         title="Bold (Alt+B)"
       >
-        <Bold className="h-4 w-4" />
+        <Bold className="h-3.5 w-3.5" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
+        className="h-6 w-6 p-1"
         onClick={() => execCommand('italic')}
         title="Italic (Alt+I)"
       >
-        <Italic className="h-4 w-4" />
+        <Italic className="h-3.5 w-3.5" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
+        className="h-6 w-6 p-1"
         onClick={() => underlineText ? underlineText() : execCommand('underline')}
         title="Underline (Alt+U)"
       >
-        <Underline className="h-4 w-4" />
+        <Underline className="h-3.5 w-3.5" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
+        className="h-6 w-6 p-1"
         onClick={() => execCommand('insertorderedlist')}
         title="Numbered List"
       >
-        <ListOrdered className="h-4 w-4" />
+        <ListOrdered className="h-3.5 w-3.5" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
+        className="h-6 w-6 p-1"
         onClick={() => execCommand('insertunorderedlist')}
         title="Bullet List"
       >
-        <List className="h-4 w-4" />
+        <List className="h-3.5 w-3.5" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
+        className="h-6 w-6 p-1"
         onClick={() => formatTableCells ? formatTableCells('left') : execCommand('justifyLeft')}
         title="Align Left (Alt+L)"
       >
-        <AlignLeft className="h-4 w-4" />
+        <AlignLeft className="h-3.5 w-3.5" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
+        className="h-6 w-6 p-1"
         onClick={() => formatTableCells ? formatTableCells('center') : execCommand('justifyCenter')}
         title="Align Center (Alt+C)"
       >
-        <AlignCenter className="h-4 w-4" />
+        <AlignCenter className="h-3.5 w-3.5" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
+        className="h-6 w-6 p-1"
         onClick={() => formatTableCells ? formatTableCells('right') : execCommand('justifyRight')}
         title="Align Right (Alt+R)"
       >
-        <AlignRight className="h-4 w-4" />
+        <AlignRight className="h-3.5 w-3.5" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
+        className="h-6 w-6 p-1"
         onClick={() => formatTableCells ? formatTableCells('justify') : execCommand('justifyFull')}
         title="Justify (Alt+J)"
       >
-        <AlignJustify className="h-4 w-4" />
+        <AlignJustify className="h-3.5 w-3.5" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
+        className="h-6 w-6 p-1"
         onClick={() => execCommand('formatBlock', '<h1>')}
         title="Heading 1 (Alt+1)"
       >
-        <Heading1 className="h-4 w-4" />
+        <Heading1 className="h-3.5 w-3.5" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
+        className="h-6 w-6 p-1"
         onClick={() => execCommand('formatBlock', '<h2>')}
         title="Heading 2 (Alt+2)"
       >
-        <Heading2 className="h-4 w-4" />
+        <Heading2 className="h-3.5 w-3.5" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
+        className="h-6 w-6 p-1"
         onClick={() => highlightText ? highlightText() : execCommand('backColor', '#FEF7CD')}
         title="Highlight Text (Alt+H)"
       >
-        <Highlighter className="h-4 w-4" />
+        <Highlighter className="h-3.5 w-3.5" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
+        className="h-6 w-6 p-1"
         onClick={() => insertVerticalSeparator ? insertVerticalSeparator() : null}
         title="Insert Separator"
       >
-        <Grip className="h-4 w-4" />
+        <Grip className="h-3.5 w-3.5" />
       </Button>
       <Button
         variant="ghost"
         size="sm"
+        className="h-6 w-6 p-1"
         onClick={() => {
           const rows = prompt('Number of rows', '3');
           const cols = prompt('Number of columns', '3');
@@ -162,7 +176,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         }}
         title="Insert Table"
       >
-        <Table className="h-4 w-4" />
+        <Table className="h-3.5 w-3.5" />
       </Button>
     </div>
   );

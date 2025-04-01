@@ -22,10 +22,10 @@ export function applyHeadingFormatting(command: string, value: string, selection
         : (container.parentElement?.closest('h1'));
       
       if (element && element instanceof HTMLElement) {
-        element.style.fontSize = '1.5rem';
+        element.style.fontSize = '1.1rem';
         element.style.fontWeight = '600';
-        element.style.marginTop = '1rem';
-        element.style.marginBottom = '0.5rem';
+        element.style.marginTop = '0.5rem';
+        element.style.marginBottom = '0.2rem';
       }
     } else if (value === "<h2>") {
       element = container.nodeType === 1 
@@ -33,10 +33,10 @@ export function applyHeadingFormatting(command: string, value: string, selection
         : (container.parentElement?.closest('h2'));
       
       if (element && element instanceof HTMLElement) {
-        element.style.fontSize = '1.25rem';
+        element.style.fontSize = '1rem';
         element.style.fontWeight = '500';
-        element.style.marginTop = '0.75rem';
-        element.style.marginBottom = '0.5rem';
+        element.style.marginTop = '0.4rem';
+        element.style.marginBottom = '0.2rem';
         
         // If this is likely a section heading for trading frameworks, apply special styling
         const textContent = element.textContent?.toLowerCase() || '';
@@ -44,7 +44,7 @@ export function applyHeadingFormatting(command: string, value: string, selection
             textContent.includes('implementation checklist')) {
           element.style.color = '#1967d2';
           element.style.borderBottom = '1px solid #d1d5db';
-          element.style.paddingBottom = '0.5rem';
+          element.style.paddingBottom = '0.2rem';
         }
       }
     } else if (value === "<h3>") {
@@ -53,10 +53,10 @@ export function applyHeadingFormatting(command: string, value: string, selection
         : (container.parentElement?.closest('h3'));
       
       if (element && element instanceof HTMLElement) {
-        element.style.fontSize = '1rem'; // Smaller font size for H3
+        element.style.fontSize = '0.9rem'; // Smaller font size for H3
         element.style.fontWeight = '500';
-        element.style.marginTop = '0.5rem';
-        element.style.marginBottom = '0.25rem';
+        element.style.marginTop = '0.3rem';
+        element.style.marginBottom = '0.1rem';
       }
     } else if (value === "<p>") {
       element = container.nodeType === 1 
@@ -64,8 +64,8 @@ export function applyHeadingFormatting(command: string, value: string, selection
         : (container.parentElement?.closest('p'));
       
       if (element && element instanceof HTMLElement) {
-        element.style.fontSize = '0.875rem';
-        element.style.marginBottom = '0.5rem';
+        element.style.fontSize = '0.8rem';
+        element.style.marginBottom = '0.2rem';
       }
     }
   }
@@ -92,13 +92,13 @@ export function applyListFormatting(command: string, value: string, selection: S
       } else if (listElement.tagName === 'OL') {
         listElement.style.listStyleType = 'decimal';
       }
-      listElement.style.paddingLeft = '2rem';
-      listElement.style.margin = '0.5rem 0';
+      listElement.style.paddingLeft = '1.2rem';
+      listElement.style.margin = '0.2rem 0';
       
       // Style list items
       const items = listElement.querySelectorAll('li');
       items.forEach(item => {
-        (item as HTMLElement).style.marginBottom = '0.25rem';
+        (item as HTMLElement).style.marginBottom = '0.1rem';
       });
     }
   }
@@ -148,7 +148,7 @@ export function createSeparator(editorRef: HTMLDivElement | null) {
   separator.className = 'editor-separator';
   separator.style.border = 'none';
   separator.style.borderTop = '1px solid #d1d5db';
-  separator.style.margin = '1rem 0';
+  separator.style.margin = '0.4rem 0';
   
   const range = window.getSelection()?.getRangeAt(0);
   if (range) {
