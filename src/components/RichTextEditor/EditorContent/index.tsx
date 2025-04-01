@@ -130,7 +130,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
     <>
       <ContentStyles />
       <div 
-        className="p-4 min-h-[300px] h-full w-full focus:outline-none overflow-auto text-sm editor-content"
+        className="p-3 min-h-[200px] h-full w-full focus:outline-none overflow-auto text-xs editor-content"
         ref={editorRef}
         contentEditable="true" 
         suppressContentEditableWarning={true}
@@ -145,11 +145,11 @@ const EditorContent: React.FC<EditorContentProps> = ({
           }
         }}
         style={{ 
-          lineHeight: '1.5',
+          lineHeight: '1.4',
           overflowX: 'auto',
           overflowY: 'auto',
           whiteSpace: 'pre-wrap', // Change from normal to pre-wrap to preserve formatting
-          paddingTop: "8px",
+          paddingTop: "6px",
           wordWrap: "break-word",
           wordBreak: "break-word",
           maxWidth: "100%",

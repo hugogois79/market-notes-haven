@@ -6,31 +6,31 @@ export const getBaseStyles = (): string => {
   return `
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      line-height: 1.4;
+      line-height: 1.3;
       color: #333;
-      padding: 20px;
+      padding: 16px;
       max-width: 800px;
       margin: 0 auto;
-      font-size: 9pt;
+      font-size: 8.5pt;
       font-weight: normal; /* Explicitly set normal font weight for body */
     }
     
     .print-header {
       border-bottom: 1px solid #eee;
-      padding-bottom: 10px;
-      margin-bottom: 10px;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
     }
     
     .print-title {
-      font-size: 14pt;
+      font-size: 13pt;
       font-weight: bold;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
     }
     
     .print-meta {
-      font-size: 8pt;
+      font-size: 7.5pt;
       color: #666;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       font-weight: normal;
     }
     
@@ -38,31 +38,31 @@ export const getBaseStyles = (): string => {
       display: inline-block;
       font-size: 7pt;
       background-color: #f0f0f0;
-      padding: 2px 6px;
-      border-radius: 10px;
-      margin-right: 6px;
+      padding: 1.5px 5px;
+      border-radius: 8px;
+      margin-right: 5px;
       font-weight: normal;
     }
     
     .print-tags {
-      margin-bottom: 15px;
+      margin-bottom: 12px;
     }
     
     .print-tag {
       display: inline-block;
-      font-size: 7pt;
+      font-size: 6.5pt;
       background-color: #e8f0fe;
       color: #1967d2;
-      padding: 1px 5px;
-      border-radius: 10px;
+      padding: 1px 4px;
+      border-radius: 8px;
       margin-right: 3px;
-      margin-bottom: 3px;
+      margin-bottom: 2px;
       font-weight: normal;
     }
     
     .print-content {
-      font-size: 9pt;
-      margin-bottom: 30px; /* Reduced space for footer */
+      font-size: 8.5pt;
+      margin-bottom: 24px; /* Reduced space for footer */
       font-weight: normal; /* Explicitly set normal font weight for content */
     }
     
@@ -72,14 +72,14 @@ export const getBaseStyles = (): string => {
     }
     
     .print-footer {
-      margin-top: 15px;
-      font-size: 7pt;
+      margin-top: 12px;
+      font-size: 6.5pt;
       color: #888;
       text-align: center;
       border-top: 1px solid #eee;
-      padding-top: 8px;
+      padding-top: 6px;
       position: fixed;
-      bottom: 15px;
+      bottom: 12px;
       left: 0;
       right: 0;
       background-color: white; /* Ensure footer has white background */
