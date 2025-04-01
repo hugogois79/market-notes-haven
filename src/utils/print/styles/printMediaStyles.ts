@@ -5,24 +5,24 @@
 export const getPrintMediaStyles = (): string => {
   return `
     @page {
-      margin: 0.8cm;
+      margin: 0.6cm;
     }
     
     @media print {
       body {
         padding: 0;
-        font-size: 8.5pt;
+        font-size: 8pt;
         font-weight: normal;
       }
       
       .print-title {
-        font-size: 13pt;
+        font-size: 12pt;
         font-weight: bold;
       }
       
       .print-content {
-        font-size: 8.5pt;
-        margin-bottom: 24px; /* Reduced space for footer */
+        font-size: 8pt;
+        margin-bottom: 20px; /* Reduced space for footer */
         font-weight: normal;
       }
       
@@ -39,13 +39,13 @@ export const getPrintMediaStyles = (): string => {
       /* Bullet points should be smaller and tighter */
       .print-content ul,
       .print-content ol {
-        padding-left: 12px;
-        margin: 4px 0;
+        padding-left: 10px;
+        margin: 2px 0;
       }
       
       .print-content li {
-        margin-bottom: 1.5px;
-        font-size: 8.5pt;
+        margin-bottom: 1px;
+        font-size: 8pt;
       }
       
       /* Class to enforce justification throughout the document */
@@ -64,12 +64,12 @@ export const getPrintMediaStyles = (): string => {
         border: 1px solid #D3E4FD !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-        margin-bottom: 12px;
-        margin-top: 6px;
+        margin-bottom: 8px;
+        margin-top: 4px;
         display: block !important;
         visibility: visible !important;
         font-weight: normal;
-        padding: 6px;
+        padding: 4px;
       }
       
       .print-summary-header {
@@ -77,12 +77,12 @@ export const getPrintMediaStyles = (): string => {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
         font-weight: bold;
-        font-size: 8.5pt;
+        font-size: 8pt;
       }
       
       .print-summary-content {
         font-weight: normal;
-        font-size: 8.5pt;
+        font-size: 8pt;
       }
       
       .print-summary-highlight {
@@ -98,10 +98,10 @@ export const getPrintMediaStyles = (): string => {
         border: 1px solid #E6E4F3 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-        margin-top: 12px;
-        margin-bottom: 12px;
+        margin-top: 8px;
+        margin-bottom: 8px;
         font-weight: normal;
-        padding: 6px;
+        padding: 4px;
       }
       
       .print-conclusion-header {
@@ -109,12 +109,12 @@ export const getPrintMediaStyles = (): string => {
         font-weight: 600 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-        font-size: 8.5pt;
+        font-size: 8pt;
       }
       
       .print-conclusion-content {
         font-weight: normal;
-        font-size: 8.5pt;
+        font-size: 8pt;
       }
       
       /* More aggressive justification for print content */
@@ -137,8 +137,8 @@ export const getPrintMediaStyles = (): string => {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
         font-weight: 600;
-        font-size: 7.5pt;
-        padding: 3px;
+        font-size: 7pt;
+        padding: 2px;
       }
       
       /* Ensure all table data cells have white background */
@@ -147,21 +147,21 @@ export const getPrintMediaStyles = (): string => {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
         font-weight: normal;
-        font-size: 7.5pt;
-        padding: 3px;
+        font-size: 7pt;
+        padding: 2px;
       }
       
       .print-footer {
         position: fixed;
-        bottom: 12px;
+        bottom: 8px;
         left: 0;
         right: 0;
-        font-size: 6.5pt;
+        font-size: 6pt;
         color: #666;
         text-align: center;
         background-color: white;
         border-top: 1px solid #eee;
-        padding-top: 5px;
+        padding-top: 3px;
         z-index: 999;
         max-width: 50%; /* Make footer less wide */
         margin-left: auto;
@@ -175,7 +175,9 @@ export const getPrintMediaStyles = (): string => {
       /* Regular paragraphs should have normal font weight */
       p, div, span, li, td {
         font-weight: normal !important;
-        font-size: 8.5pt;
+        font-size: 8pt;
+        margin-top: 0;
+        margin-bottom: 0.05rem;
       }
       
       /* Enhanced text alignment support for print */

@@ -11,7 +11,7 @@ export const getContentStyles = (): string => {
     
     .print-content blockquote {
       border-left: 1px solid #ddd;
-      padding-left: 4px;
+      padding-left: 3px;
       margin-left: 0;
       color: #666;
       font-style: italic;
@@ -34,24 +34,24 @@ export const getContentStyles = (): string => {
     
     /* Heading styles for print */
     .print-content h1 {
-      font-size: 9.5pt;
+      font-size: 9pt;
       font-weight: 600;
-      margin-top: 0.4rem;
-      margin-bottom: 0.2rem;
+      margin-top: 0.3rem;
+      margin-bottom: 0.1rem;
     }
     
     .print-content h2 {
-      font-size: 8.5pt;
-      font-weight: 500;
-      margin-top: 0.3rem;
-      margin-bottom: 0.2rem;
-    }
-    
-    .print-content h3 {
       font-size: 8pt;
       font-weight: 500;
       margin-top: 0.2rem;
       margin-bottom: 0.1rem;
+    }
+    
+    .print-content h3 {
+      font-size: 7.5pt;
+      font-weight: 500;
+      margin-top: 0.15rem;
+      margin-bottom: 0.05rem;
     }
     
     /* Normal text should be normal weight */
@@ -60,9 +60,11 @@ export const getContentStyles = (): string => {
     .print-content li,
     .print-content span,
     .print-content td {
-      font-size: 7.5pt;
+      font-size: 7pt;
       font-weight: normal;
-      line-height: 1.2;
+      line-height: 1.1;
+      margin-top: 0;
+      margin-bottom: 0.05rem;
     }
     
     /* Only make actual bold elements bold */
@@ -80,12 +82,12 @@ export const getContentStyles = (): string => {
     /* Adjust list spacing for printing */
     .print-content ul,
     .print-content ol {
-      padding-left: 10px;
-      margin: 2px 0;
+      padding-left: 8px;
+      margin: 1px 0;
     }
     
     .print-content li {
-      margin-bottom: 1px;
+      margin-bottom: 0.5px;
     }
   `;
 };

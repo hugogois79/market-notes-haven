@@ -10,45 +10,46 @@ const ContentStyles: React.FC = () => {
       [contenteditable="true"] h1 {
         font-size: 1.1rem;
         font-weight: 600;
-        margin-top: 0.5rem;
-        margin-bottom: 0.2rem;
+        margin-top: 0.4rem;
+        margin-bottom: 0.1rem;
       }
       [contenteditable="true"] h2 {
         font-size: 1rem;
         font-weight: 500;
-        margin-top: 0.4rem;
-        margin-bottom: 0.2rem;
+        margin-top: 0.3rem;
+        margin-bottom: 0.1rem;
       }
       [contenteditable="true"] h3 {
         font-size: 0.9rem;
         font-weight: 500;
-        margin-top: 0.3rem;
+        margin-top: 0.2rem;
         margin-bottom: 0.1rem;
       }
       [contenteditable="true"] p {
         font-size: 0.8rem;
-        margin-bottom: 0.2rem;
-        line-height: 1.3;
+        margin-bottom: 0.1rem;
+        line-height: 1.2;
+        margin-top: 0;
       }
       [contenteditable="true"] ul {
         list-style-type: disc;
         padding-left: 1.2rem;
-        margin: 0.2rem 0;
+        margin: 0.1rem 0;
       }
       [contenteditable="true"] ol {
         list-style-type: decimal;
         padding-left: 1.2rem;
-        margin: 0.2rem 0;
+        margin: 0.1rem 0;
       }
       [contenteditable="true"] li {
-        margin-bottom: 0.1rem;
+        margin-bottom: 0.05rem;
         font-size: 0.8rem;
-        line-height: 1.3;
+        line-height: 1.2;
       }
       [contenteditable="true"] table {
         border-collapse: collapse;
         width: 100%;
-        margin: 0.4rem 0;
+        margin: 0.3rem 0;
         table-layout: fixed;
       }
       [contenteditable="true"] th, 
@@ -78,11 +79,11 @@ const ContentStyles: React.FC = () => {
       }
       [contenteditable="true"] .chapter-separator {
         width: 100%;
-        margin: 0.6rem 0;
+        margin: 0.4rem 0;
         text-align: center;
         position: relative;
         overflow: hidden;
-        height: 12px;
+        height: 8px;
       }
       [contenteditable="true"] .chapter-separator hr {
         margin: 0;
@@ -105,26 +106,26 @@ const ContentStyles: React.FC = () => {
       
       [contenteditable="true"] .conclusion-content {
         background-color: #D3E4FD;
-        padding: 3px;
+        padding: 2px;
         border-radius: 3px;
-        margin-bottom: 3px;
+        margin-bottom: 2px;
       }
       
       /* Styling for no-conclusion wrapper */
       [contenteditable="true"] .no-conclusion-wrapper {
         background-color: #D3E4FD;
-        padding: 4px;
+        padding: 2px;
         border-radius: 3px;
-        margin-top: 3px;
-        margin-bottom: 3px;
+        margin-top: 2px;
+        margin-bottom: 2px;
       }
       
       [contenteditable="true"] .conclusion-missing-note {
         background-color: #1967d2;
         color: white;
-        padding: 3px;
+        padding: 2px;
         border-radius: 3px;
-        margin-bottom: 3px;
+        margin-bottom: 2px;
         font-size: 0.7rem;
         font-weight: bold;
       }
@@ -133,15 +134,15 @@ const ContentStyles: React.FC = () => {
       [contenteditable="true"] .checkbox-item {
         display: flex;
         align-items: flex-start;
-        margin-bottom: 0.2rem;
-        gap: 0.2rem;
+        margin-bottom: 0.1rem;
+        gap: 0.1rem;
       }
       
       [contenteditable="true"] .editor-checkbox {
-        margin-top: 0.1rem;
+        margin-top: 0.05rem;
         cursor: pointer;
-        width: 0.8rem;
-        height: 0.8rem;
+        width: 0.7rem;
+        height: 0.7rem;
       }
       
       [contenteditable="true"] .checkbox-label {
@@ -152,29 +153,29 @@ const ContentStyles: React.FC = () => {
       
       /* Restart conditions and Implementation Checklist styling */
       [contenteditable="true"] ol li {
-        padding-left: 0.2rem;
-        margin-bottom: 0.2rem;
+        padding-left: 0.1rem;
+        margin-bottom: 0.1rem;
       }
       
       [contenteditable="true"] hr {
         border: none;
         border-top: 1px solid #d1d5db;
-        margin: 0.4rem 0;
+        margin: 0.3rem 0;
       }
       
       /* Trading framework styling */
       [contenteditable="true"] .trading-framework {
         border: 1px solid #d1d5db;
         border-radius: 3px;
-        padding: 0.4rem;
-        margin: 0.4rem 0;
+        padding: 0.2rem;
+        margin: 0.3rem 0;
         background-color: #f9fafb;
       }
       
       [contenteditable="true"] .trading-framework h2 {
         border-bottom: 1px solid #d1d5db;
-        padding-bottom: 0.2rem;
-        margin-bottom: 0.4rem;
+        padding-bottom: 0.1rem;
+        margin-bottom: 0.2rem;
         color: #1967d2;
       }
     `}</style>
