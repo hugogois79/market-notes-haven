@@ -22,10 +22,12 @@ export function applyHeadingFormatting(command: string, value: string, selection
         : (container.parentElement?.closest('h1'));
       
       if (element && element instanceof HTMLElement) {
-        element.style.fontSize = '1.1rem';
+        element.style.fontSize = '1.3rem';
         element.style.fontWeight = '600';
         element.style.marginTop = '0.5rem';
         element.style.marginBottom = '0.2rem';
+        element.style.textDecoration = 'underline';
+        element.style.paddingBottom = '0.1rem';
       }
     } else if (value === "<h2>") {
       element = container.nodeType === 1 
@@ -33,7 +35,7 @@ export function applyHeadingFormatting(command: string, value: string, selection
         : (container.parentElement?.closest('h2'));
       
       if (element && element instanceof HTMLElement) {
-        element.style.fontSize = '1rem';
+        element.style.fontSize = '1.1rem';
         element.style.fontWeight = '500';
         element.style.marginTop = '0.4rem';
         element.style.marginBottom = '0.2rem';
@@ -53,7 +55,7 @@ export function applyHeadingFormatting(command: string, value: string, selection
         : (container.parentElement?.closest('h3'));
       
       if (element && element instanceof HTMLElement) {
-        element.style.fontSize = '0.9rem'; // Smaller font size for H3
+        element.style.fontSize = '0.9rem';
         element.style.fontWeight = '500';
         element.style.marginTop = '0.3rem';
         element.style.marginBottom = '0.1rem';

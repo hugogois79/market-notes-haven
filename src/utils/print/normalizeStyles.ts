@@ -1,3 +1,4 @@
+
 /**
  * Helper function to normalize styles before printing
  */
@@ -19,8 +20,8 @@ export const normalizeContent = (content: string): string => {
     // But keep bold tags and strong tags bold
     .replace(/<b([^>]*)>/gi, '<b$1 style="font-weight: bold !important;">')
     .replace(/<strong([^>]*)>/gi, '<strong$1 style="font-weight: bold !important;">')
-    // Make sure all headings have appropriate sizes
-    .replace(/<h1([^>]*?)>/gi, '<h1$1 style="font-size: 12pt; font-weight: bold;">')
+    // Make sure all headings have appropriate sizes and styles
+    .replace(/<h1([^>]*?)>/gi, '<h1$1 style="font-size: 12pt; font-weight: bold; text-decoration: underline;">')
     .replace(/<h2([^>]*?)>/gi, '<h2$1 style="font-size: 11pt; font-weight: bold;">')
     .replace(/<h3([^>]*?)>/gi, '<h3$1 style="font-size: 10pt; font-weight: bold;">')
     // Make list items smaller

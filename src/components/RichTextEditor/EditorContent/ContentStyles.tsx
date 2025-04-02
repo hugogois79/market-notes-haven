@@ -8,13 +8,15 @@ const ContentStyles: React.FC = () => {
   return (
     <style>{`
       [contenteditable="true"] h1 {
-        font-size: 1.1rem;
+        font-size: 1.3rem;
         font-weight: 600;
         margin-top: 0.4rem;
         margin-bottom: 0.1rem;
+        text-decoration: underline;
+        padding-bottom: 0.1rem;
       }
       [contenteditable="true"] h2 {
-        font-size: 1rem;
+        font-size: 1.1rem;
         font-weight: 500;
         margin-top: 0.3rem;
         margin-bottom: 0.1rem;
