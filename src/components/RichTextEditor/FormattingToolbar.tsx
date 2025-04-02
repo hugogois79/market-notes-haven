@@ -20,7 +20,7 @@ interface FormattingToolbarProps {
   formatStrikethrough: () => void;
   insertCheckbox: () => void;
   insertTable: () => void;
-  formatTableCells: () => void;
+  formatTableCells: (alignment: string) => void; // Updated to accept string parameter
   insertVerticalSeparator: () => void;
   highlightText: () => void;
   underlineText: () => void;

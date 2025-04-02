@@ -128,6 +128,22 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
     }
   };
 
+  // Create wrapper functions for alignment actions to avoid passing arguments directly
+  const handleAlignLeft = () => {
+    if (formatTableCells) formatTableCells('left');
+    else execCommand('justifyLeft');
+  };
+  
+  const handleAlignCenter = () => {
+    if (formatTableCells) formatTableCells('center');
+    else execCommand('justifyCenter');
+  };
+  
+  const handleAlignRight = () => {
+    if (formatTableCells) formatTableCells('right');
+    else execCommand('justifyRight');
+  };
+
   return (
     <>
       <Tabs defaultValue="editor" className="w-full flex flex-col h-full" onValueChange={setActiveTab}>
@@ -197,9 +213,9 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
           formatItalic={() => execCommand('italic')}
           formatUnorderedList={() => execCommand('insertunorderedlist')}
           formatOrderedList={() => execCommand('insertorderedlist')}
-          formatAlignLeft={() => formatTableCells ? formatTableCells('left') : execCommand('justifyLeft')}
-          formatAlignCenter={() => formatTableCells ? formatTableCells('center') : execCommand('justifyCenter')}
-          formatAlignRight={() => formatTableCells ? formatTableCells('right') : execCommand('justifyRight')}
+          formatAlignLeft={handleAlignLeft}
+          formatAlignCenter={handleAlignCenter}
+          formatAlignRight={handleAlignRight}
           formatLink={() => execCommand('createlink', prompt('Enter link URL:', 'http://') || '')}
           formatImage={() => execCommand('insertImage', prompt('Enter image URL:', 'http://') || '')}
           formatStrikethrough={() => execCommand('strikeThrough')}
