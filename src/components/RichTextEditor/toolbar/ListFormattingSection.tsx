@@ -17,7 +17,7 @@ const ListFormattingSection = ({
 }: ListFormattingSectionProps) => {
   return (
     <>
-      <ToolbarButton icon={List} onClick={formatUnorderedList} tooltip="Text List (No Bullets)" />
+      <ToolbarButton icon={List} onClick={formatUnorderedList} tooltip="Bullet List" />
       <ToolbarButton icon={ListOrdered} onClick={formatOrderedList} tooltip="Numbered List" />
       <ToolbarButton icon={Square} onClick={insertCheckbox} tooltip="Checkbox" />
       <ToolbarDivider />

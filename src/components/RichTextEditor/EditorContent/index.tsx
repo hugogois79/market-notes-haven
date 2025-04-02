@@ -49,7 +49,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
       // Process any checkboxes that might be in the content
       processCheckboxes();
       
-      // Format any existing lists to remove bullet points
+      // Format any existing lists to maintain bullet points
       processExistingListsFormatting(editorRef);
       
       // Explicit force to enable editing
@@ -102,7 +102,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
     }
   }, [content, processCheckboxes, editorRef]);
 
-  // Add an effect to ensure the editor remains editable - check very frequently
+  // Add an effect to ensure the editor remains editable and lists have bullet points
   useEffect(() => {
     const ensureEditableInterval = setInterval(() => {
       if (editorRef.current) {
@@ -111,10 +111,10 @@ const EditorContent: React.FC<EditorContentProps> = ({
           editorRef.current.contentEditable = 'true';
         }
         
-        // Continuously check and format lists
+        // Continuously check and format lists to maintain bullet points
         processExistingListsFormatting(editorRef);
       }
-    }, 1000); // Check less frequently for list formatting
+    }, 1000);
     
     return () => clearInterval(ensureEditableInterval);
   }, [editorRef]);

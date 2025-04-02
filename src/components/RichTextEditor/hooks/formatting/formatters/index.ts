@@ -4,6 +4,6 @@
  */
 
 export { applyHeadingFormatting } from './headingFormatters';
-export { applyListFormatting, processExistingListsFormatting } from './listFormatters';
+export { applyListFormatting, processExistingListsFormatting, addBulletPoint } from './listFormatters';
 export { formatCheckboxText } from './checkboxFormatters';
 export { createSeparator } from './separatorFormatters';

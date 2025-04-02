@@ -1,3 +1,4 @@
+
 /**
  * Specialized formatting utilities for lists
  */
@@ -19,44 +20,33 @@ export function applyListFormatting(command: string, value: string, selection: S
     
     if (listElement && listElement instanceof HTMLElement) {
       if (listElement.tagName === 'UL') {
-        // Remove bullet styling for unordered lists
-        listElement.style.listStyleType = 'none';
-        listElement.style.paddingLeft = '0.5rem';
+        // Apply proper bullet styling for unordered lists
+        listElement.style.listStyleType = 'disc';
+        listElement.style.paddingLeft = '1.5rem';
       } else if (listElement.tagName === 'OL') {
         listElement.style.listStyleType = 'decimal';
         listElement.style.paddingLeft = '1.5rem';
       }
       
-      // Apply more professional spacing
+      // Apply professional spacing
       listElement.style.margin = '0.25rem 0';
       
       // Style list items
       const items = listElement.querySelectorAll('li');
       items.forEach(item => {
         if (item instanceof HTMLElement) {
-          item.style.marginBottom = '0.15rem';
-          item.style.lineHeight = '1.4';
+          item.style.marginBottom = '0.25rem';
+          item.style.lineHeight = '1.5';
           item.style.fontSize = '0.95rem';
           
-          // Remove bullet styling
-          item.style.display = 'block';
+          // Ensure proper list display with bullets
+          item.style.display = 'list-item';
           item.style.position = 'relative';
           
-          // Add a slight indent for readability without bullets
-          if (listElement.tagName === 'UL') {
-            item.style.textIndent = '0';
-            
-            // Add a small indicator instead of bullets for better readability
-            if (!item.querySelector('.custom-list-marker')) {
-              const marker = document.createElement('span');
-              marker.className = 'custom-list-marker';
-              marker.style.display = 'inline-block';
-              marker.style.width = '8px';
-              marker.style.marginRight = '4px';
-              
-              // Keep the element but make it invisible
-              item.insertBefore(marker, item.firstChild);
-            }
+          // Remove any custom markers that might have been added previously
+          const customMarker = item.querySelector('.custom-list-marker');
+          if (customMarker) {
+            customMarker.remove();
           }
         }
       });
@@ -74,39 +64,63 @@ export function processExistingListsFormatting(editorRef: React.RefObject<HTMLDi
   const unorderedLists = editorRef.current.querySelectorAll('ul');
   unorderedLists.forEach(list => {
     if (list instanceof HTMLElement) {
-      // Apply no bullet style
-      list.style.listStyleType = 'none';
-      list.style.paddingLeft = '0.5rem';
+      // Apply bullet style
+      list.style.listStyleType = 'disc';
+      list.style.paddingLeft = '1.5rem';
       list.style.margin = '0.25rem 0';
       
       // Style each list item
       const items = list.querySelectorAll('li');
       items.forEach(item => {
         if (item instanceof HTMLElement) {
-          item.style.marginBottom = '0.15rem';
-          item.style.lineHeight = '1.4';
+          item.style.marginBottom = '0.25rem';
+          item.style.lineHeight = '1.5';
           item.style.fontSize = '0.95rem';
-          item.style.display = 'block';
-          item.style.position = 'relative';
-          item.style.textIndent = '0';
+          item.style.display = 'list-item';
           
-          // If the item doesn't have our custom marker, add it
-          if (!item.querySelector('.custom-list-marker')) {
-            const marker = document.createElement('span');
-            marker.className = 'custom-list-marker';
-            marker.style.display = 'inline-block';
-            marker.style.width = '8px';
-            marker.style.marginRight = '4px';
-            
-            // Insert at the beginning
-            if (item.firstChild) {
-              item.insertBefore(marker, item.firstChild);
-            } else {
-              item.appendChild(marker);
-            }
+          // Remove any custom markers that might have been added previously
+          const customMarker = item.querySelector('.custom-list-marker');
+          if (customMarker) {
+            customMarker.remove();
           }
         }
       });
     }
   });
+  
+  // Find all ordered lists in the editor
+  const orderedLists = editorRef.current.querySelectorAll('ol');
+  orderedLists.forEach(list => {
+    if (list instanceof HTMLElement) {
+      // Apply decimal number style
+      list.style.listStyleType = 'decimal';
+      list.style.paddingLeft = '1.5rem';
+      list.style.margin = '0.25rem 0';
+      
+      // Style each list item
+      const items = list.querySelectorAll('li');
+      items.forEach(item => {
+        if (item instanceof HTMLElement) {
+          item.style.marginBottom = '0.25rem';
+          item.style.lineHeight = '1.5';
+          item.style.fontSize = '0.95rem';
+          item.style.display = 'list-item';
+        }
+      });
+    }
+  });
 }
+
+/**
+ * Adds a bulletpoint to the current selection
+ */
+export function addBulletPoint() {
+  const selection = window.getSelection();
+  if (!selection || !selection.rangeCount) return;
+  
+  document.execCommand('insertUnorderedList', false);
+  
+  // Ensure proper styling
+  applyListFormatting('insertUnorderedList', '', selection);
+}
+

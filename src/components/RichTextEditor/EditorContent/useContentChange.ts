@@ -54,6 +54,22 @@ export const useContentChange = ({
         
         // Apply styling to conclusion headings and sections
         if (editorRef.current) {
+          // Process any lists to ensure they have bullet points
+          const lists = editorRef.current.querySelectorAll('ul, ol');
+          lists.forEach(list => {
+            if (list instanceof HTMLElement) {
+              if (list.tagName === 'UL') {
+                list.style.listStyleType = 'disc';
+                list.style.paddingLeft = '1.5rem';
+              } else if (list.tagName === 'OL') {
+                list.style.listStyleType = 'decimal';
+                list.style.paddingLeft = '1.5rem';
+              }
+              list.style.margin = '0.25rem 0';
+            }
+          });
+          
+          // Rest of conclusion formatting
           const conclusionHeadings = editorRef.current.querySelectorAll('h1, h2, h3');
           conclusionHeadings.forEach(heading => {
             if (heading.textContent?.trim().toLowerCase() === 'conclusion') {

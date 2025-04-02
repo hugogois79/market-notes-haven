@@ -6,4 +6,4 @@ export * from './useKeyboardShortcuts';
 export * from '../formatting/formatters';
 
 // Add specialized formatting functions
-export { processExistingListsFormatting } from '../formatting/formatters';
+export { processExistingListsFormatting, addBulletPoint } from '../formatting/formatters';

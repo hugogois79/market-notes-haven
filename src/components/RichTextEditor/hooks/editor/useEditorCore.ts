@@ -30,7 +30,7 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
       // Process any existing checkboxes
       processCheckboxes();
       
-      // Process existing lists to remove bullet points
+      // Process existing lists to ensure proper bullet points
       processExistingListsFormatting(editorRef);
       
       // Force focus on the editor after initialization
@@ -71,6 +71,17 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
       }, 10); // Much shorter delay for faster focusing
     }
     
+    // Set up an observer to maintain bullet points when content changes
+    const observerOptions = { childList: true, subtree: true, characterData: true };
+    const observer = new MutationObserver(() => {
+      // Process existing lists to maintain bullet points
+      processExistingListsFormatting(editorRef);
+    });
+    
+    if (editorRef.current) {
+      observer.observe(editorRef.current, observerOptions);
+    }
+    
     // Continuously check and fix editability - check extremely frequently
     const editableCheckInterval = setInterval(() => {
       if (editorRef.current) {
@@ -78,11 +89,15 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
           editorRef.current.contentEditable = 'true';
           editorRef.current.setAttribute('contenteditable', 'true');
         }
+        
+        // Periodically check for lists that need bullet points
+        processExistingListsFormatting(editorRef);
       }
-    }, 5); // Check extremely frequently (200 times per second)
+    }, 500); // Check occasionally for list formatting
     
     return () => {
       clearInterval(editableCheckInterval);
+      observer.disconnect();
     };
   }, [editorRef]);
 
