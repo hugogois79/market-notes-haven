@@ -4,4 +4,4 @@ export * from './useEditorCore';
 export * from './useTableHandling';
 export * from './useTextFormatting';
 export * from './useKeyboardShortcuts';
-export * from './textFormatters';
+export * from '../formatting/formatters';

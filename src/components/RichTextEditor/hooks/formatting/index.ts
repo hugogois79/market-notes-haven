@@ -4,7 +4,7 @@ import { useExecCommand } from "./useExecCommand";
 import { useTextStyles } from "./useTextStyles";
 import { useAlignmentFormatting } from "./useAlignmentFormatting";
 import { useElementInsert } from "./useElementInsert";
-import { applyHeadingFormatting, applyListFormatting } from '../editor/textFormatters';
+import { applyHeadingFormatting, applyListFormatting } from './formatters';
 
 /**
  * Main hook that combines all formatting functionality
@@ -61,3 +61,4 @@ export { useExecCommand } from "./useExecCommand";
 export { useTextStyles } from "./useTextStyles";
 export { useAlignmentFormatting } from "./useAlignmentFormatting";
 export { useElementInsert } from "./useElementInsert";
+export * from "./formatters";
