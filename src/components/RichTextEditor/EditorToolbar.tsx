@@ -13,6 +13,7 @@ import {
   List, 
   Heading1, 
   Heading2,
+  Heading3,
   Table,
   Highlighter,
   Grip
@@ -143,6 +144,15 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         title="Heading 2 (Alt+2)"
       >
         <Heading2 className="h-3.5 w-3.5" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 w-6 p-1"
+        onClick={() => execCommand('formatBlock', '<h3>')}
+        title="Heading 3 (Alt+3)"
+      >
+        <Heading3 className="h-3.5 w-3.5" />
       </Button>
       <Button
         variant="ghost"

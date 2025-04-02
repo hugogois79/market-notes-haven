@@ -1,4 +1,3 @@
-
 import { RefObject, useCallback } from "react";
 import { applyHeadingFormatting, applyListFormatting } from './textFormatters';
 
@@ -34,7 +33,7 @@ export const useTextFormatting = (editorRef: RefObject<HTMLDivElement>) => {
             : (container.parentElement?.closest('h3'));
           
           if (h3Element && h3Element instanceof HTMLElement) {
-            h3Element.style.fontSize = '1rem'; // Smaller size for H3
+            h3Element.style.fontSize = '0.9rem'; // Smaller size for H3
             h3Element.style.fontWeight = '500';
           }
         }
