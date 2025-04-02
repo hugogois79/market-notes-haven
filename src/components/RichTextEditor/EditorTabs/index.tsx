@@ -88,16 +88,33 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
       </Tabs>
 
       {activeTab === "editor" && (
-        <FloatingToolbarWrapper
-          editorRef={editorRef}
-          boldText={boldText}
-          underlineText={underlineText}
-          highlightText={highlightText}
-          execCommand={execCommand}
-          formatTableCells={formatTableCells}
-          insertVerticalSeparator={insertVerticalSeparator}
-          isVisible={true} // Always show the toolbar
-        />
+        <>
+          {/* Top floating toolbar (existing) */}
+          <FloatingToolbarWrapper
+            editorRef={editorRef}
+            boldText={boldText}
+            underlineText={underlineText}
+            highlightText={highlightText}
+            execCommand={execCommand}
+            formatTableCells={formatTableCells}
+            insertVerticalSeparator={insertVerticalSeparator}
+            isVisible={false} // Hide top floating toolbar
+            position="top"
+          />
+          
+          {/* Bottom fixed toolbar (new) */}
+          <FloatingToolbarWrapper
+            editorRef={editorRef}
+            boldText={boldText}
+            underlineText={underlineText}
+            highlightText={highlightText}
+            execCommand={execCommand}
+            formatTableCells={formatTableCells}
+            insertVerticalSeparator={insertVerticalSeparator}
+            isVisible={true}
+            position="bottom"
+          />
+        </>
       )}
     </>
   );

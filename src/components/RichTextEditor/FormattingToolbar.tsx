@@ -25,6 +25,7 @@ interface FormattingToolbarProps {
   highlightText: () => void;
   underlineText: () => void;
   isFloating?: boolean;
+  position?: 'top' | 'bottom';
 }
 
 const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
@@ -44,11 +45,18 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
   insertVerticalSeparator,
   highlightText,
   underlineText,
-  isFloating = false
+  isFloating = false,
+  position = 'top'
 }) => {
+  const isBottom = position === 'bottom';
+  
   return (
-    <div className={`flex items-center flex-wrap gap-0 p-1 bg-background/95 backdrop-blur-md rounded-md border border-muted shadow-md sticky top-0 z-[100] ${
-      isFloating ? 'fixed bottom-3 left-1/2 transform -translate-x-1/2 max-w-[95%] w-fit' : 'mx-0 mb-0 rounded-t-md border-b'
+    <div className={`flex items-center flex-wrap gap-0 p-1 bg-background/95 backdrop-blur-md rounded-md ${
+      isFloating 
+        ? isBottom 
+          ? 'w-full border-t shadow-md py-1' 
+          : 'fixed bottom-3 left-1/2 transform -translate-x-1/2 max-w-[95%] w-fit border border-muted shadow-md' 
+        : 'mx-0 mb-0 rounded-t-md border-b'
     }`}>
       <TooltipProvider delayDuration={300}>
         <TextFormattingSection 

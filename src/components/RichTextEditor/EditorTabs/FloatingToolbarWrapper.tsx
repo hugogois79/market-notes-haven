@@ -11,6 +11,7 @@ interface FloatingToolbarWrapperProps {
   formatTableCells: (alignment: string) => void;
   insertVerticalSeparator: () => void;
   isVisible: boolean;
+  position?: 'top' | 'bottom';
 }
 
 const FloatingToolbarWrapper: React.FC<FloatingToolbarWrapperProps> = ({
@@ -21,9 +22,10 @@ const FloatingToolbarWrapper: React.FC<FloatingToolbarWrapperProps> = ({
   execCommand,
   formatTableCells,
   insertVerticalSeparator,
-  isVisible
+  isVisible,
+  position = 'top'
 }) => {
-  // Always show the toolbar
+  // Don't show if not visible
   if (!isVisible) return null;
 
   // Create wrapper functions for alignment actions
@@ -68,6 +70,7 @@ const FloatingToolbarWrapper: React.FC<FloatingToolbarWrapperProps> = ({
       insertVerticalSeparator={insertVerticalSeparator}
       highlightText={highlightText || (() => execCommand('backColor', '#FEF7CD'))}
       underlineText={underlineText || (() => execCommand('underline'))}
+      position={position}
     />
   );
 };
