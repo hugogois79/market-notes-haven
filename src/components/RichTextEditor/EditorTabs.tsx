@@ -128,7 +128,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
 
   return (
     <Tabs defaultValue="editor" className="w-full flex flex-col h-full" onValueChange={setActiveTab}>
-      <div className="flex justify-between items-center px-2 pt-1 border-b sticky top-0 bg-background z-10">
+      <div className="flex justify-between items-center px-2 pt-1 border-b sticky top-0 bg-background z-30">
         <TabsList className="grid grid-cols-2 w-auto h-7">
           <TabsTrigger value="editor" className="flex items-center gap-0.5 px-2 text-xs h-6">
             <Edit className="h-3.5 w-3.5" />
@@ -156,6 +156,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
           underlineText={underlineText}
           hasConclusion={hasConclusion}
           category={category}
+          className="sticky top-[2.25rem] z-20"
         />
         <div 
           className="flex-1 overflow-auto" 

@@ -45,7 +45,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
   className
 }) => {
   return (
-    <div className={`flex flex-wrap gap-0.5 p-1 bg-muted border-b ${className || ''}`}>
+    <div className={`flex flex-wrap gap-0.5 p-1 bg-muted border-b sticky top-0 z-20 ${className || ''}`}>
       <Button
         variant="ghost"
         size="sm"

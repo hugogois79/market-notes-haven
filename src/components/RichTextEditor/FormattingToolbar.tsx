@@ -45,7 +45,7 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
   underlineText
 }) => {
   return (
-    <div className="flex items-center flex-wrap gap-1 p-2 bg-muted/60 rounded-t-md mx-2 mb-0 sticky top-0 z-10 backdrop-blur-sm shadow-sm border-b">
+    <div className="flex items-center flex-wrap gap-1 p-2 bg-muted/60 rounded-t-md mx-2 mb-0 sticky top-0 z-30 backdrop-blur-sm shadow-sm border-b">
       <TooltipProvider delayDuration={300}>
         <TextFormattingSection 
           formatBold={formatBold}

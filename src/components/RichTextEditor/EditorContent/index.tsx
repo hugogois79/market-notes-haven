@@ -145,6 +145,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
           overflowY: 'auto',
           whiteSpace: 'pre-wrap',
           paddingTop: "2px",
+          paddingBottom: "50px", /* Add extra padding at bottom for better scroll experience */
           wordWrap: "break-word",
           wordBreak: "break-word",
           maxWidth: "100%",
