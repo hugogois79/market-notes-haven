@@ -1,4 +1,3 @@
-
 /**
  * Media query styles specifically for print
  */
@@ -16,13 +15,13 @@ export const getPrintMediaStyles = (): string => {
       }
       
       .print-title {
-        font-size: 12pt;
+        font-size: 18pt;
         font-weight: bold;
       }
       
       .print-content {
         font-size: 8pt;
-        margin-bottom: 20px; /* Reduced space for footer */
+        margin-bottom: 20px;
         font-weight: normal;
       }
       
@@ -34,6 +33,29 @@ export const getPrintMediaStyles = (): string => {
       /* Only allow explicit bold elements to be bold */
       b, strong, h1, h2, h3, h4, h5, h6 {
         font-weight: bold !important;
+      }
+      
+      /* Heading styles with more distinct size differences */
+      .print-content h1, h1 {
+        font-size: 18pt !important;
+        font-weight: 700 !important;
+        text-decoration: underline !important;
+        margin-top: 0.8rem !important;
+        margin-bottom: 0.5rem !important;
+      }
+      
+      .print-content h2, h2 {
+        font-size: 14pt !important;
+        font-weight: 600 !important;
+        margin-top: 0.6rem !important;
+        margin-bottom: 0.4rem !important;
+      }
+      
+      .print-content h3, h3 {
+        font-size: 12pt !important;
+        font-weight: 500 !important;
+        margin-top: 0.4rem !important;
+        margin-bottom: 0.3rem !important;
       }
       
       /* Bullet points should be smaller and tighter */

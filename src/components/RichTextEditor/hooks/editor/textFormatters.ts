@@ -22,12 +22,13 @@ export function applyHeadingFormatting(command: string, value: string, selection
         : (container.parentElement?.closest('h1'));
       
       if (element && element instanceof HTMLElement) {
-        element.style.fontSize = '1.6rem';
-        element.style.fontWeight = '600';
-        element.style.marginTop = '0.5rem';
-        element.style.marginBottom = '0.2rem';
+        element.style.fontSize = '2rem';
+        element.style.fontWeight = '700';
+        element.style.marginTop = '1rem';
+        element.style.marginBottom = '0.5rem';
         element.style.textDecoration = 'underline';
-        element.style.paddingBottom = '0.1rem';
+        element.style.paddingBottom = '0.2rem';
+        element.style.color = '#000';
       }
     } else if (value === "<h2>") {
       element = container.nodeType === 1 
@@ -35,10 +36,11 @@ export function applyHeadingFormatting(command: string, value: string, selection
         : (container.parentElement?.closest('h2'));
       
       if (element && element instanceof HTMLElement) {
-        element.style.fontSize = '1.3rem';
-        element.style.fontWeight = '500';
-        element.style.marginTop = '0.4rem';
-        element.style.marginBottom = '0.2rem';
+        element.style.fontSize = '1.5rem';
+        element.style.fontWeight = '600';
+        element.style.marginTop = '0.8rem';
+        element.style.marginBottom = '0.4rem';
+        element.style.color = '#000';
         
         // If this is likely a section heading for trading frameworks, apply special styling
         const textContent = element.textContent?.toLowerCase() || '';
@@ -55,10 +57,11 @@ export function applyHeadingFormatting(command: string, value: string, selection
         : (container.parentElement?.closest('h3'));
       
       if (element && element instanceof HTMLElement) {
-        element.style.fontSize = '1.1rem';
+        element.style.fontSize = '1.2rem';
         element.style.fontWeight = '500';
-        element.style.marginTop = '0.3rem';
-        element.style.marginBottom = '0.1rem';
+        element.style.marginTop = '0.6rem';
+        element.style.marginBottom = '0.3rem';
+        element.style.color = '#000';
       }
     } else if (value === "<p>") {
       element = container.nodeType === 1 

@@ -1,4 +1,3 @@
-
 import React from "react";
 
 /**
@@ -8,24 +7,27 @@ const ContentStyles: React.FC = () => {
   return (
     <style>{`
       [contenteditable="true"] h1 {
-        font-size: 1.6rem;
-        font-weight: 600;
-        margin-top: 0.4rem;
-        margin-bottom: 0.1rem;
+        font-size: 2rem;
+        font-weight: 700;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
         text-decoration: underline;
-        padding-bottom: 0.1rem;
+        padding-bottom: 0.2rem;
+        color: #000;
       }
       [contenteditable="true"] h2 {
-        font-size: 1.3rem;
-        font-weight: 500;
-        margin-top: 0.3rem;
-        margin-bottom: 0.1rem;
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-top: 0.8rem;
+        margin-bottom: 0.4rem;
+        color: #000;
       }
       [contenteditable="true"] h3 {
-        font-size: 1.1rem;
+        font-size: 1.2rem;
         font-weight: 500;
-        margin-top: 0.2rem;
-        margin-bottom: 0.1rem;
+        margin-top: 0.6rem;
+        margin-bottom: 0.3rem;
+        color: #000;
       }
       [contenteditable="true"] p {
         font-size: 0.8rem;

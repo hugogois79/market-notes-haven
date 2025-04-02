@@ -21,9 +21,9 @@ export const normalizeContent = (content: string): string => {
     .replace(/<b([^>]*)>/gi, '<b$1 style="font-weight: bold !important;">')
     .replace(/<strong([^>]*)>/gi, '<strong$1 style="font-weight: bold !important;">')
     // Make sure all headings have appropriate sizes and styles
-    .replace(/<h1([^>]*?)>/gi, '<h1$1 style="font-size: 14pt; font-weight: bold; text-decoration: underline;">')
-    .replace(/<h2([^>]*?)>/gi, '<h2$1 style="font-size: 12pt; font-weight: bold;">')
-    .replace(/<h3([^>]*?)>/gi, '<h3$1 style="font-size: 10pt; font-weight: bold;">')
+    .replace(/<h1([^>]*?)>/gi, '<h1$1 style="font-size: 18pt; font-weight: bold; text-decoration: underline;">')
+    .replace(/<h2([^>]*?)>/gi, '<h2$1 style="font-size: 14pt; font-weight: bold;">')
+    .replace(/<h3([^>]*?)>/gi, '<h3$1 style="font-size: 12pt; font-weight: bold;">')
     // Make list items smaller
     .replace(/<li([^>]*?)>/gi, '<li$1 style="font-size: 9pt; font-weight: normal;">')
     // Make table cells smaller
