@@ -1,8 +1,9 @@
+
 import { RefObject, useEffect } from "react";
 import { useTableHandling } from './useTableHandling';
 import { useTextFormatting } from '../formatting';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';
-import { formatCheckboxText } from '../formatting/formatters';
+import { formatCheckboxText, processExistingListsFormatting } from '../formatting/formatters';
 
 export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = true) => {
   // Make editor content editable when loaded and ensure it remains that way
@@ -28,6 +29,9 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
       
       // Process any existing checkboxes
       processCheckboxes();
+      
+      // Process existing lists to remove bullet points
+      processExistingListsFormatting(editorRef);
       
       // Force focus on the editor after initialization
       setTimeout(() => {

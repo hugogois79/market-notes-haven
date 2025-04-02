@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import ContentStyles from "./ContentStyles";
 import { useContentChange } from "./useContentChange";
+import { processExistingListsFormatting } from "../hooks/formatting/formatters";
 
 interface EditorContentProps {
   content: string;
@@ -47,6 +48,9 @@ const EditorContent: React.FC<EditorContentProps> = ({
       
       // Process any checkboxes that might be in the content
       processCheckboxes();
+      
+      // Format any existing lists to remove bullet points
+      processExistingListsFormatting(editorRef);
       
       // Explicit force to enable editing
       editorRef.current.setAttribute('contenteditable', 'true');
@@ -106,8 +110,11 @@ const EditorContent: React.FC<EditorContentProps> = ({
           editorRef.current.setAttribute('contenteditable', 'true');
           editorRef.current.contentEditable = 'true';
         }
+        
+        // Continuously check and format lists
+        processExistingListsFormatting(editorRef);
       }
-    }, 10);
+    }, 1000); // Check less frequently for list formatting
     
     return () => clearInterval(ensureEditableInterval);
   }, [editorRef]);
