@@ -23,6 +23,7 @@ const FloatingToolbarWrapper: React.FC<FloatingToolbarWrapperProps> = ({
   insertVerticalSeparator,
   isVisible
 }) => {
+  // Always show the toolbar
   if (!isVisible) return null;
 
   // Create wrapper functions for alignment actions

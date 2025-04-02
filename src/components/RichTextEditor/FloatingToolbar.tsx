@@ -24,7 +24,7 @@ interface FloatingToolbarProps {
 
 const FloatingToolbar: React.FC<FloatingToolbarProps> = (props) => {
   return (
-    <div className="floating-toolbar-container sticky bottom-4 left-0 right-0 z-50 flex justify-center">
+    <div className="floating-toolbar-container fixed bottom-4 left-0 right-0 z-[9999] flex justify-center">
       <FormattingToolbar {...props} isFloating={true} />
     </div>
   );
