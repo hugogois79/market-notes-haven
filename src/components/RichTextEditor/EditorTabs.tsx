@@ -7,6 +7,7 @@ import EditorToolbar from "./EditorToolbar";
 import AttachmentSection from "./AttachmentSection";
 import { useEditor } from "./hooks/editor";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import FloatingToolbar from "./FloatingToolbar";
 
 interface EditorTabsProps {
   content: string;
@@ -128,64 +129,96 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
   };
 
   return (
-    <Tabs defaultValue="editor" className="w-full flex flex-col h-full" onValueChange={setActiveTab}>
-      <div className="flex justify-between items-center px-2 pt-1 border-b sticky top-0 bg-background z-50">
-        <TabsList className="grid grid-cols-2 w-auto h-7">
-          <TabsTrigger value="editor" className="flex items-center gap-0.5 px-2 text-xs h-6">
-            <Edit className="h-3.5 w-3.5" />
-            <span>Editor</span>
-          </TabsTrigger>
-          <TabsTrigger value="attachment" className="flex items-center gap-0.5 px-2 text-xs h-6">
-            <Paperclip className="h-3.5 w-3.5" />
-            <span>Attachment</span>
-          </TabsTrigger>
-        </TabsList>
-      </div>
-      
-      <TabsContent 
-        value="editor" 
-        className="mt-0 p-0 flex-1 overflow-hidden flex flex-col"
-        onClick={handleContainerClick}
-      >
-        <div className="sticky top-[2.25rem] z-[90] bg-background">
-          <EditorToolbar 
-            editorRef={editorRef}
-            execCommand={execCommand}
-            formatTableCells={formatTableCells}
-            insertVerticalSeparator={insertVerticalSeparator}
-            highlightText={highlightText}
-            boldText={boldText}
-            underlineText={underlineText}
-            hasConclusion={hasConclusion}
-            category={category}
-          />
+    <>
+      <Tabs defaultValue="editor" className="w-full flex flex-col h-full" onValueChange={setActiveTab}>
+        <div className="flex justify-between items-center px-2 pt-1 border-b sticky top-0 bg-background z-50">
+          <TabsList className="grid grid-cols-2 w-auto h-7">
+            <TabsTrigger value="editor" className="flex items-center gap-0.5 px-2 text-xs h-6">
+              <Edit className="h-3.5 w-3.5" />
+              <span>Editor</span>
+            </TabsTrigger>
+            <TabsTrigger value="attachment" className="flex items-center gap-0.5 px-2 text-xs h-6">
+              <Paperclip className="h-3.5 w-3.5" />
+              <span>Attachment</span>
+            </TabsTrigger>
+          </TabsList>
         </div>
-        <ScrollArea className="flex-1 overflow-y-auto h-full">
-          <div 
-            className="p-2 pt-0" 
-            onClick={handleContainerClick} 
-            style={{ cursor: 'text', paddingBottom: '200px' }}
-          >
-            <EditorContent 
-              content={content} 
-              onChange={onContentChange} 
-              onContentUpdate={onContentUpdate}
-              onAutoSave={onAutoSave}
-              hasConclusion={hasConclusion}
+        
+        <TabsContent 
+          value="editor" 
+          className="mt-0 p-0 flex-1 overflow-hidden flex flex-col"
+          onClick={handleContainerClick}
+        >
+          <div className="sticky top-[2.25rem] z-[100] bg-background border-b shadow-sm">
+            <EditorToolbar 
               editorRef={editorRef}
+              execCommand={execCommand}
+              formatTableCells={formatTableCells}
+              insertVerticalSeparator={insertVerticalSeparator}
+              highlightText={highlightText}
+              boldText={boldText}
+              underlineText={underlineText}
+              hasConclusion={hasConclusion}
+              category={category}
             />
           </div>
-        </ScrollArea>
-      </TabsContent>
-      
-      <TabsContent value="attachment" className="mt-0 p-2 flex-1 overflow-auto">
-        <AttachmentSection 
-          noteId={noteId}
-          attachmentUrl={attachment_url}
-          onAttachmentChange={onAttachmentChange}
+          
+          <ScrollArea className="flex-1 overflow-y-auto h-full editor-content-scroll-area">
+            <div 
+              className="p-2 pt-0" 
+              onClick={handleContainerClick} 
+              style={{ cursor: 'text', paddingBottom: '200px' }}
+            >
+              <EditorContent 
+                content={content} 
+                onChange={onContentChange} 
+                onContentUpdate={onContentUpdate}
+                onAutoSave={onAutoSave}
+                hasConclusion={hasConclusion}
+                editorRef={editorRef}
+              />
+            </div>
+          </ScrollArea>
+        </TabsContent>
+        
+        <TabsContent value="attachment" className="mt-0 p-2 flex-1 overflow-auto">
+          <AttachmentSection 
+            noteId={noteId}
+            attachmentUrl={attachment_url}
+            onAttachmentChange={onAttachmentChange}
+          />
+        </TabsContent>
+      </Tabs>
+
+      {activeTab === "editor" && (
+        <FloatingToolbar
+          editorRef={editorRef}
+          formatBold={boldText || (() => execCommand('bold'))}
+          formatItalic={() => execCommand('italic')}
+          formatUnorderedList={() => execCommand('insertunorderedlist')}
+          formatOrderedList={() => execCommand('insertorderedlist')}
+          formatAlignLeft={() => formatTableCells ? formatTableCells('left') : execCommand('justifyLeft')}
+          formatAlignCenter={() => formatTableCells ? formatTableCells('center') : execCommand('justifyCenter')}
+          formatAlignRight={() => formatTableCells ? formatTableCells('right') : execCommand('justifyRight')}
+          formatLink={() => execCommand('createlink', prompt('Enter link URL:', 'http://') || '')}
+          formatImage={() => execCommand('insertImage', prompt('Enter image URL:', 'http://') || '')}
+          formatStrikethrough={() => execCommand('strikeThrough')}
+          insertCheckbox={() => execCommand('insertHTML', '<input type="checkbox" style="margin-right: 5px;">')}
+          insertTable={() => {
+            const rows = prompt('Number of rows', '3');
+            const cols = prompt('Number of columns', '3');
+            
+            if (rows && cols && !isNaN(Number(rows)) && !isNaN(Number(cols))) {
+              execCommand('insertTable', `${rows},${cols}`);
+            }
+          }}
+          formatTableCells={formatTableCells || (() => {})}
+          insertVerticalSeparator={insertVerticalSeparator || (() => {})}
+          highlightText={highlightText || (() => execCommand('backColor', '#FEF7CD'))}
+          underlineText={underlineText || (() => execCommand('underline'))}
         />
-      </TabsContent>
-    </Tabs>
+      )}
+    </>
   );
 };
 
