@@ -33,9 +33,9 @@ export function applyListFormatting(command: string, value: string, selection: S
       const items = listElement.querySelectorAll('li');
       items.forEach(item => {
         if (item instanceof HTMLElement) {
-          item.style.marginBottom = '0.1rem';
-          item.style.lineHeight = '1.5';
-          item.style.fontSize = '0.9rem';
+          item.style.marginBottom = '0.15rem';
+          item.style.lineHeight = '1.4';
+          item.style.fontSize = '0.95rem';
         }
       });
     }

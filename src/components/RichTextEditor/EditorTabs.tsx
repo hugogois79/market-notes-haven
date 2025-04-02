@@ -147,23 +147,24 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
         className="mt-0 p-0 flex-1 overflow-hidden flex flex-col"
         onClick={handleContainerClick}
       >
-        <EditorToolbar 
-          editorRef={editorRef}
-          execCommand={execCommand}
-          formatTableCells={formatTableCells}
-          insertVerticalSeparator={insertVerticalSeparator}
-          highlightText={highlightText}
-          boldText={boldText}
-          underlineText={underlineText}
-          hasConclusion={hasConclusion}
-          category={category}
-          className="sticky top-[2.25rem] z-40"
-        />
-        <ScrollArea className="flex-1">
+        <div className="sticky top-[2.25rem] z-[90] bg-background">
+          <EditorToolbar 
+            editorRef={editorRef}
+            execCommand={execCommand}
+            formatTableCells={formatTableCells}
+            insertVerticalSeparator={insertVerticalSeparator}
+            highlightText={highlightText}
+            boldText={boldText}
+            underlineText={underlineText}
+            hasConclusion={hasConclusion}
+            category={category}
+          />
+        </div>
+        <ScrollArea className="flex-1 overflow-y-auto h-full">
           <div 
-            className="p-2" 
+            className="p-2 pt-0" 
             onClick={handleContainerClick} 
-            style={{ cursor: 'text' }}
+            style={{ cursor: 'text', paddingBottom: '200px' }}
           >
             <EditorContent 
               content={content} 
