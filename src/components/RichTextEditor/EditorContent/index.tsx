@@ -125,7 +125,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
     <>
       <ContentStyles />
       <div 
-        className="p-1 min-h-[200px] h-full w-full focus:outline-none overflow-auto text-xs editor-content"
+        className="p-1 min-h-[200px] h-full w-full focus:outline-none editor-content"
         ref={editorRef}
         contentEditable="true" 
         suppressContentEditableWarning={true}
@@ -142,10 +142,10 @@ const EditorContent: React.FC<EditorContentProps> = ({
         style={{ 
           lineHeight: '1.1',
           overflowX: 'auto',
-          overflowY: 'auto',
+          overflowY: 'visible',
           whiteSpace: 'pre-wrap',
           paddingTop: "2px",
-          paddingBottom: "50px", /* Add extra padding at bottom for better scroll experience */
+          paddingBottom: "100px", /* Add extra padding at bottom for better scroll experience */
           wordWrap: "break-word",
           wordBreak: "break-word",
           maxWidth: "100%",

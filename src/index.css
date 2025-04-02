@@ -377,3 +377,35 @@
   border-bottom: 2px solid var(--brand);
   background: transparent;
 }
+
+/* Enhanced sticky toolbar behavior */
+.sticky-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 50 !important;
+  background-color: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Editor content - ensure proper spacing for the content */
+.editor-content {
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+/* Improve toolbar appearance */
+.toolbar-button {
+  @apply h-6 w-6 p-1 rounded-sm hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-primary;
+}
+
+/* Ensure dropdowns always appear on top */
+.dropdown-menu {
+  z-index: 100;
+  background: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+

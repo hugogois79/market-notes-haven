@@ -27,14 +27,14 @@ export function applyListFormatting(command: string, value: string, selection: S
       
       // Apply more professional spacing
       listElement.style.paddingLeft = '1.5rem';
-      listElement.style.margin = '0.3rem 0';
+      listElement.style.margin = '0.25rem 0';
       
       // Style list items
       const items = listElement.querySelectorAll('li');
       items.forEach(item => {
         if (item instanceof HTMLElement) {
-          item.style.marginBottom = '0.15rem';
-          item.style.lineHeight = '1.4';
+          item.style.marginBottom = '0.1rem';
+          item.style.lineHeight = '1.5';
           item.style.fontSize = '0.9rem';
         }
       });
