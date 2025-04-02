@@ -25,12 +25,15 @@ export function applyListFormatting(command: string, value: string, selection: S
         listElement.style.listStyleType = 'decimal';
       }
       listElement.style.paddingLeft = '1.2rem';
-      listElement.style.margin = '0.2rem 0';
+      listElement.style.margin = '0.4rem 0';
       
       // Style list items
       const items = listElement.querySelectorAll('li');
       items.forEach(item => {
-        (item as HTMLElement).style.marginBottom = '0.1rem';
+        if (item instanceof HTMLElement) {
+          item.style.marginBottom = '0.2rem';
+          item.style.lineHeight = '1.4';
+        }
       });
     }
   }
