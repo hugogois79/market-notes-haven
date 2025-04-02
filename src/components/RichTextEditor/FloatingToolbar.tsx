@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import FormattingToolbar from "./FormattingToolbar";
 
 interface FloatingToolbarProps {
@@ -23,49 +23,8 @@ interface FloatingToolbarProps {
 }
 
 const FloatingToolbar: React.FC<FloatingToolbarProps> = (props) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [scrollPosition, setScrollPosition] = useState(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const position = window.scrollY;
-      setScrollPosition(position);
-      
-      // Show the floating toolbar when scrolled down more than 200px
-      if (position > 200) {
-        setIsVisible(true);
-      } else {
-        setIsVisible(false);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    
-    // Get the scroll position of the editor content area
-    const editorContent = document.querySelector('.editor-content-scroll-area');
-    if (editorContent) {
-      editorContent.addEventListener('scroll', (e) => {
-        const target = e.target as HTMLElement;
-        if (target.scrollTop > 200) {
-          setIsVisible(true);
-        } else {
-          setIsVisible(false);
-        }
-      });
-    }
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      if (editorContent) {
-        editorContent.removeEventListener('scroll', handleScroll);
-      }
-    };
-  }, []);
-
-  if (!isVisible) return null;
-
   return (
-    <div className="floating-toolbar-container">
+    <div className="floating-toolbar-container sticky bottom-4 left-0 right-0 z-50 flex justify-center">
       <FormattingToolbar {...props} isFloating={true} />
     </div>
   );

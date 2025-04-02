@@ -96,7 +96,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
           execCommand={execCommand}
           formatTableCells={formatTableCells}
           insertVerticalSeparator={insertVerticalSeparator}
-          isVisible={true}
+          isVisible={true} // Always show the toolbar
         />
       )}
     </>
