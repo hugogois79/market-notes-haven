@@ -3,7 +3,7 @@ import { RefObject, useEffect } from "react";
 import { useTableHandling } from './useTableHandling';
 import { useTextFormatting } from '../formatting';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';
-import { formatCheckboxText, processExistingListsFormatting } from '../formatting/formatters';
+import { formatCheckboxText, processExistingListsFormatting, resetListNumbering } from '../formatting/formatters';
 
 export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = true) => {
   // Make editor content editable when loaded and ensure it remains that way
@@ -30,8 +30,11 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
       // Process any existing checkboxes
       processCheckboxes();
       
-      // Process existing lists to ensure proper bullet points
+      // Process existing lists to ensure proper bullet points and numbering
       processExistingListsFormatting(editorRef);
+      
+      // Reset numbering for ordered lists
+      resetListNumbering(editorRef);
       
       // Force focus on the editor after initialization
       setTimeout(() => {
@@ -74,8 +77,9 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
     // Set up an observer to maintain bullet points when content changes
     const observerOptions = { childList: true, subtree: true, characterData: true };
     const observer = new MutationObserver(() => {
-      // Process existing lists to maintain bullet points
+      // Process existing lists to maintain bullet points and numbering
       processExistingListsFormatting(editorRef);
+      resetListNumbering(editorRef);
     });
     
     if (editorRef.current) {
@@ -90,8 +94,9 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
           editorRef.current.setAttribute('contenteditable', 'true');
         }
         
-        // Periodically check for lists that need bullet points
+        // Periodically check for lists that need bullet points or numbering
         processExistingListsFormatting(editorRef);
+        resetListNumbering(editorRef);
       }
     }, 500); // Check occasionally for list formatting
     

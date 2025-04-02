@@ -1,5 +1,6 @@
 
 import { useCallback, RefObject } from "react";
+import { processExistingListsFormatting, resetListNumbering } from '../hooks/formatting/formatters';
 
 interface UseContentChangeProps {
   onChange: (content: string) => void;
@@ -45,6 +46,12 @@ export const useContentChange = ({
       // Process checkboxes in the content
       processCheckboxes();
       
+      // Ensure lists have proper formatting
+      processExistingListsFormatting(editorRef);
+      
+      // Reset numbering for ordered lists
+      resetListNumbering(editorRef);
+      
       // Get the updated content and notify parent
       onChange(editorRef.current.innerHTML);
       
@@ -54,7 +61,7 @@ export const useContentChange = ({
         
         // Apply styling to conclusion headings and sections
         if (editorRef.current) {
-          // Process any lists to ensure they have bullet points
+          // Process any lists to ensure they have bullet points and proper numbering
           const lists = editorRef.current.querySelectorAll('ul, ol');
           lists.forEach(list => {
             if (list instanceof HTMLElement) {
@@ -64,6 +71,16 @@ export const useContentChange = ({
               } else if (list.tagName === 'OL') {
                 list.style.listStyleType = 'decimal';
                 list.style.paddingLeft = '1.5rem';
+                list.style.counterReset = 'item';
+                
+                // Ensure each item has correct counter
+                const items = list.querySelectorAll('li');
+                items.forEach((item, index) => {
+                  if (item instanceof HTMLElement) {
+                    item.style.counterIncrement = 'item';
+                    item.setAttribute('data-index', String(index + 1));
+                  }
+                });
               }
               list.style.margin = '0.25rem 0';
             }

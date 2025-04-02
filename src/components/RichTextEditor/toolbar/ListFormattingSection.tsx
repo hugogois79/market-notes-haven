@@ -17,9 +17,22 @@ const ListFormattingSection = ({
 }: ListFormattingSectionProps) => {
   return (
     <>
-      <ToolbarButton icon={List} onClick={formatUnorderedList} tooltip="Bullet List" />
-      <ToolbarButton icon={ListOrdered} onClick={formatOrderedList} tooltip="Numbered List" />
-      <ToolbarButton icon={Square} onClick={insertCheckbox} tooltip="Checkbox" />
+      <ToolbarButton 
+        icon={List} 
+        onClick={formatUnorderedList} 
+        tooltip="Bullet List" 
+      />
+      <ToolbarButton 
+        icon={ListOrdered} 
+        onClick={formatOrderedList} 
+        tooltip="Numbered List" 
+        className="text-emphasis"  // Add emphasis to improve visibility
+      />
+      <ToolbarButton 
+        icon={Square} 
+        onClick={insertCheckbox} 
+        tooltip="Checkbox" 
+      />
       <ToolbarDivider />
     </>
   );

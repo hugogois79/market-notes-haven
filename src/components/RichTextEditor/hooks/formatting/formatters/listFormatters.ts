@@ -24,6 +24,7 @@ export function applyListFormatting(command: string, value: string, selection: S
         listElement.style.listStyleType = 'disc';
         listElement.style.paddingLeft = '1rem';
       } else if (listElement.tagName === 'OL') {
+        // Apply proper number styling for ordered lists
         listElement.style.listStyleType = 'decimal';
         listElement.style.paddingLeft = '1rem';
       }
@@ -39,7 +40,7 @@ export function applyListFormatting(command: string, value: string, selection: S
           item.style.lineHeight = '1.2';
           item.style.fontSize = '0.85rem';
           
-          // Ensure proper list display with bullets
+          // Ensure proper list display with visible markers
           item.style.display = 'list-item';
           item.style.position = 'relative';
           
@@ -92,19 +93,24 @@ export function processExistingListsFormatting(editorRef: React.RefObject<HTMLDi
   const orderedLists = editorRef.current.querySelectorAll('ol');
   orderedLists.forEach(list => {
     if (list instanceof HTMLElement) {
-      // Apply decimal number style
+      // Apply decimal number style with stronger visibility
       list.style.listStyleType = 'decimal';
       list.style.paddingLeft = '1rem';
       list.style.margin = '0.15rem 0';
+      list.style.counterReset = 'item'; // Reset counter for each list
       
       // Style each list item
       const items = list.querySelectorAll('li');
-      items.forEach(item => {
+      items.forEach((item, index) => {
         if (item instanceof HTMLElement) {
           item.style.marginBottom = '0.1rem';
           item.style.lineHeight = '1.2';
           item.style.fontSize = '0.85rem';
           item.style.display = 'list-item';
+          item.style.counterIncrement = 'item'; // Increment counter for each item
+          
+          // Ensure the list item is properly numbered
+          item.setAttribute('data-index', String(index + 1));
         }
       });
     }
@@ -122,4 +128,42 @@ export function addBulletPoint() {
   
   // Ensure proper styling
   applyListFormatting('insertUnorderedList', '', selection);
+}
+
+/**
+ * Adds a numbered point to the current selection
+ */
+export function addNumberedPoint() {
+  const selection = window.getSelection();
+  if (!selection || !selection.rangeCount) return;
+  
+  document.execCommand('insertOrderedList', false);
+  
+  // Ensure proper styling
+  applyListFormatting('insertOrderedList', '', selection);
+}
+
+/**
+ * Reset list numbering when needed
+ */
+export function resetListNumbering(editorRef: React.RefObject<HTMLDivElement>) {
+  if (!editorRef.current) return;
+  
+  // Find all ordered lists
+  const orderedLists = editorRef.current.querySelectorAll('ol');
+  orderedLists.forEach(list => {
+    if (list instanceof HTMLElement) {
+      // Reset counter for this list
+      list.style.counterReset = 'item';
+      
+      // Update each list item's counter
+      const items = list.querySelectorAll('li');
+      items.forEach((item, index) => {
+        if (item instanceof HTMLElement) {
+          item.style.counterIncrement = 'item';
+          item.setAttribute('data-index', String(index + 1));
+        }
+      });
+    }
+  });
 }
