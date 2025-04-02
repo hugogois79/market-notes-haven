@@ -22,22 +22,22 @@ export function applyListFormatting(command: string, value: string, selection: S
       if (listElement.tagName === 'UL') {
         // Apply proper bullet styling for unordered lists
         listElement.style.listStyleType = 'disc';
-        listElement.style.paddingLeft = '1.5rem';
+        listElement.style.paddingLeft = '1rem';
       } else if (listElement.tagName === 'OL') {
         listElement.style.listStyleType = 'decimal';
-        listElement.style.paddingLeft = '1.5rem';
+        listElement.style.paddingLeft = '1rem';
       }
       
-      // Apply professional spacing
-      listElement.style.margin = '0.25rem 0';
+      // Apply compact spacing
+      listElement.style.margin = '0.15rem 0';
       
       // Style list items
       const items = listElement.querySelectorAll('li');
       items.forEach(item => {
         if (item instanceof HTMLElement) {
-          item.style.marginBottom = '0.25rem';
-          item.style.lineHeight = '1.5';
-          item.style.fontSize = '0.95rem';
+          item.style.marginBottom = '0.1rem';
+          item.style.lineHeight = '1.2';
+          item.style.fontSize = '0.85rem';
           
           // Ensure proper list display with bullets
           item.style.display = 'list-item';
@@ -66,16 +66,16 @@ export function processExistingListsFormatting(editorRef: React.RefObject<HTMLDi
     if (list instanceof HTMLElement) {
       // Apply bullet style
       list.style.listStyleType = 'disc';
-      list.style.paddingLeft = '1.5rem';
-      list.style.margin = '0.25rem 0';
+      list.style.paddingLeft = '1rem';
+      list.style.margin = '0.15rem 0';
       
       // Style each list item
       const items = list.querySelectorAll('li');
       items.forEach(item => {
         if (item instanceof HTMLElement) {
-          item.style.marginBottom = '0.25rem';
-          item.style.lineHeight = '1.5';
-          item.style.fontSize = '0.95rem';
+          item.style.marginBottom = '0.1rem';
+          item.style.lineHeight = '1.2';
+          item.style.fontSize = '0.85rem';
           item.style.display = 'list-item';
           
           // Remove any custom markers that might have been added previously
@@ -94,16 +94,16 @@ export function processExistingListsFormatting(editorRef: React.RefObject<HTMLDi
     if (list instanceof HTMLElement) {
       // Apply decimal number style
       list.style.listStyleType = 'decimal';
-      list.style.paddingLeft = '1.5rem';
-      list.style.margin = '0.25rem 0';
+      list.style.paddingLeft = '1rem';
+      list.style.margin = '0.15rem 0';
       
       // Style each list item
       const items = list.querySelectorAll('li');
       items.forEach(item => {
         if (item instanceof HTMLElement) {
-          item.style.marginBottom = '0.25rem';
-          item.style.lineHeight = '1.5';
-          item.style.fontSize = '0.95rem';
+          item.style.marginBottom = '0.1rem';
+          item.style.lineHeight = '1.2';
+          item.style.fontSize = '0.85rem';
           item.style.display = 'list-item';
         }
       });
@@ -123,4 +123,3 @@ export function addBulletPoint() {
   // Ensure proper styling
   applyListFormatting('insertUnorderedList', '', selection);
 }
-

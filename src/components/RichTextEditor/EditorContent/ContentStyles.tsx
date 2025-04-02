@@ -20,7 +20,7 @@ const ContentStyles: React.FC = () => {
       [contenteditable="true"] h2 {
         font-size: 1.25rem;
         font-weight: 600;
-        margin-top: 0.7rem;
+        margin-top: 0.6rem;
         margin-bottom: 0.3rem;
         color: #000;
         line-height: 1.1;
@@ -28,32 +28,32 @@ const ContentStyles: React.FC = () => {
       [contenteditable="true"] h3 {
         font-size: 1.1rem;
         font-weight: 500;
-        margin-top: 0.6rem;
+        margin-top: 0.5rem;
         margin-bottom: 0.2rem;
         color: #000;
         line-height: 1;
       }
       [contenteditable="true"] p {
-        font-size: 0.9rem;
-        margin-bottom: 0.3rem;
+        font-size: 0.85rem;
+        margin-bottom: 0.2rem;
         margin-top: 0;
-        line-height: 1.3;
+        line-height: 1.2;
         max-width: 100%;
       }
       [contenteditable="true"] ul {
         list-style-type: disc;
         padding-left: 1rem;
-        margin: 0.3rem 0;
+        margin: 0.15rem 0;
       }
       [contenteditable="true"] ol {
         list-style-type: decimal;
         padding-left: 1rem;
-        margin: 0.3rem 0;
+        margin: 0.15rem 0;
       }
       [contenteditable="true"] li {
         margin-bottom: 0.1rem;
-        font-size: 0.9rem;
-        line-height: 1.3;
+        font-size: 0.85rem;
+        line-height: 1.2;
       }
       [contenteditable="true"] table {
         border-collapse: collapse;
@@ -143,33 +143,33 @@ const ContentStyles: React.FC = () => {
       [contenteditable="true"] .checkbox-item {
         display: flex;
         align-items: flex-start;
-        margin-bottom: 0.2rem;
-        gap: 0.2rem;
+        margin-bottom: 0.1rem;
+        gap: 0.15rem;
       }
       
       [contenteditable="true"] .editor-checkbox {
-        margin-top: 0.1rem;
+        margin-top: 0.05rem;
         cursor: pointer;
-        width: 0.8rem;
-        height: 0.8rem;
+        width: 0.7rem;
+        height: 0.7rem;
       }
       
       [contenteditable="true"] .checkbox-label {
         flex: 1;
         min-width: 0;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
       }
       
       /* Restart conditions and Implementation Checklist styling */
       [contenteditable="true"] ol li {
-        padding-left: 0.2rem;
-        margin-bottom: 0.2rem;
+        padding-left: 0.1rem;
+        margin-bottom: 0.1rem;
       }
       
       [contenteditable="true"] hr {
         border: none;
         border-top: 1px solid #d1d5db;
-        margin: 0.4rem 0;
+        margin: 0.3rem 0;
       }
       
       /* Trading framework styling */
@@ -184,7 +184,7 @@ const ContentStyles: React.FC = () => {
       [contenteditable="true"] .trading-framework h2 {
         border-bottom: 1px solid #d1d5db;
         padding-bottom: 0.2rem;
-        margin-bottom: 0.3rem;
+        margin-bottom: 0.2rem;
         color: #1967d2;
       }
       
@@ -197,22 +197,22 @@ const ContentStyles: React.FC = () => {
       
       [contenteditable="true"] ol.strategic-list > li {
         counter-increment: item;
-        margin-bottom: 0.3rem;
+        margin-bottom: 0.1rem;
         display: flex;
       }
       
       [contenteditable="true"] ol.strategic-list > li::before {
         content: counter(item) ".";
         font-weight: 600;
-        padding-right: 0.3rem;
-        min-width: 1.2rem;
+        padding-right: 0.2rem;
+        min-width: 1rem;
         display: inline-block;
         text-align: right;
       }
       
       /* Compact section styling similar to Claude */
       [contenteditable="true"] .section-item {
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.3rem;
       }
       
       [contenteditable="true"] .section-title {
@@ -221,7 +221,7 @@ const ContentStyles: React.FC = () => {
       }
       
       [contenteditable="true"] .section-content {
-        margin-left: 0.3rem;
+        margin-left: 0.2rem;
       }
     `}</style>
   );
