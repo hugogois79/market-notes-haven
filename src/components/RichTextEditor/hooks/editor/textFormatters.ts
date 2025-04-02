@@ -22,7 +22,7 @@ export function applyHeadingFormatting(command: string, value: string, selection
         : (container.parentElement?.closest('h1'));
       
       if (element && element instanceof HTMLElement) {
-        element.style.fontSize = '1.3rem';
+        element.style.fontSize = '1.6rem';
         element.style.fontWeight = '600';
         element.style.marginTop = '0.5rem';
         element.style.marginBottom = '0.2rem';
@@ -35,7 +35,7 @@ export function applyHeadingFormatting(command: string, value: string, selection
         : (container.parentElement?.closest('h2'));
       
       if (element && element instanceof HTMLElement) {
-        element.style.fontSize = '1.1rem';
+        element.style.fontSize = '1.3rem';
         element.style.fontWeight = '500';
         element.style.marginTop = '0.4rem';
         element.style.marginBottom = '0.2rem';
@@ -55,7 +55,7 @@ export function applyHeadingFormatting(command: string, value: string, selection
         : (container.parentElement?.closest('h3'));
       
       if (element && element instanceof HTMLElement) {
-        element.style.fontSize = '0.9rem';
+        element.style.fontSize = '1.1rem';
         element.style.fontWeight = '500';
         element.style.marginTop = '0.3rem';
         element.style.marginBottom = '0.1rem';

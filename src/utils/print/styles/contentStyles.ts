@@ -34,7 +34,7 @@ export const getContentStyles = (): string => {
     
     /* Heading styles for print */
     .print-content h1 {
-      font-size: 11pt;
+      font-size: 14pt;
       font-weight: 600;
       margin-top: 0.3rem;
       margin-bottom: 0.1rem;
@@ -43,14 +43,14 @@ export const getContentStyles = (): string => {
     }
     
     .print-content h2 {
-      font-size: 9pt;
+      font-size: 12pt;
       font-weight: 500;
       margin-top: 0.2rem;
       margin-bottom: 0.1rem;
     }
     
     .print-content h3 {
-      font-size: 7.5pt;
+      font-size: 10pt;
       font-weight: 500;
       margin-top: 0.15rem;
       margin-bottom: 0.05rem;
