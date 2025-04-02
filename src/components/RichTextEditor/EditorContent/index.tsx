@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import ContentStyles from "./ContentStyles";
 import { useContentChange } from "./useContentChange";
 
@@ -125,7 +125,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
     <>
       <ContentStyles />
       <div 
-        className="p-1 min-h-[200px] h-full w-full focus:outline-none editor-content"
+        className="min-h-[200px] h-full w-full focus:outline-none editor-content"
         ref={editorRef}
         contentEditable="true" 
         suppressContentEditableWarning={true}
@@ -144,8 +144,8 @@ const EditorContent: React.FC<EditorContentProps> = ({
           overflowX: 'auto',
           overflowY: 'visible',
           whiteSpace: 'pre-wrap',
-          paddingTop: "2px",
-          paddingBottom: "100px", /* Add extra padding at bottom for better scroll experience */
+          padding: "0",
+          paddingBottom: "80px", /* Reduced padding at bottom for better scroll experience */
           wordWrap: "break-word",
           wordBreak: "break-word",
           maxWidth: "100%",

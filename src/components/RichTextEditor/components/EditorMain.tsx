@@ -99,50 +99,52 @@ const EditorMain: React.FC<EditorMainProps> = ({
         onSave={handleManualSave}
       />
       
-      <div className="flex flex-col gap-2 overflow-hidden flex-1 relative">
-        <div className="overflow-y-auto flex-1 pb-2 space-y-2">
-          <SpecialSections 
-            noteId={noteId}
-            content={currentContent}
-            initialSummary={summary}
-            onSummaryGenerated={onSummaryGenerated}
-            isTradingCategory={isTradingCategory}
-            availableTokens={availableTokens}
-            isLoadingTokens={isLoadingTokens}
-            tradeInfo={tradeInfo}
-            onTradeInfoChange={onTradeInfoChange}
-          />
-          
-          <MetadataSection 
-            linkedTags={linkedTags}
-            tagInput={tagInput}
-            setTagInput={setTagInput}
-            handleAddTag={handleAddTag}
-            handleRemoveTag={handleRemoveTag}
-            handleSelectTag={handleSelectTag}
-            isLoadingTags={isLoadingTags}
-            getAvailableTagsForSelection={getAvailableTagsForSelection}
-            linkedTokens={linkedTokens}
-            handleRemoveToken={handleRemoveToken}
-            handleTokenSelect={handleTokenSelect}
-            isLoadingTokens={isLoadingTokens}
-            category={category}
-            categoryFilter={category}
-          />
-          
-          <Card className="p-0 border rounded-md overflow-hidden flex-1 min-h-0 flex flex-col">
-            <EditorTabs 
-              content={content}
-              onContentChange={onContentChange}
-              onContentUpdate={handleContentUpdate}
-              onAutoSave={handleAutoSave}
+      <div className="flex flex-col overflow-hidden flex-1 relative">
+        <div className="overflow-y-auto flex-1">
+          <div className="space-y-1">
+            <SpecialSections 
               noteId={noteId}
-              attachment_url={attachment_url}
-              onAttachmentChange={onAttachmentChange}
-              hasConclusion={hasConclusion}
-              category={category}
+              content={currentContent}
+              initialSummary={summary}
+              onSummaryGenerated={onSummaryGenerated}
+              isTradingCategory={isTradingCategory}
+              availableTokens={availableTokens}
+              isLoadingTokens={isLoadingTokens}
+              tradeInfo={tradeInfo}
+              onTradeInfoChange={onTradeInfoChange}
             />
-          </Card>
+            
+            <MetadataSection 
+              linkedTags={linkedTags}
+              tagInput={tagInput}
+              setTagInput={setTagInput}
+              handleAddTag={handleAddTag}
+              handleRemoveTag={handleRemoveTag}
+              handleSelectTag={handleSelectTag}
+              isLoadingTags={isLoadingTags}
+              getAvailableTagsForSelection={getAvailableTagsForSelection}
+              linkedTokens={linkedTokens}
+              handleRemoveToken={handleRemoveToken}
+              handleTokenSelect={handleTokenSelect}
+              isLoadingTokens={isLoadingTokens}
+              category={category}
+              categoryFilter={category}
+            />
+            
+            <Card className="p-0 border rounded-md overflow-hidden flex-1 min-h-0 flex flex-col">
+              <EditorTabs 
+                content={content}
+                onContentChange={onContentChange}
+                onContentUpdate={handleContentUpdate}
+                onAutoSave={handleAutoSave}
+                noteId={noteId}
+                attachment_url={attachment_url}
+                onAttachmentChange={onAttachmentChange}
+                hasConclusion={hasConclusion}
+                category={category}
+              />
+            </Card>
+          </div>
         </div>
       </div>
 

@@ -16,7 +16,7 @@ interface FloatingToolbarProps {
   formatStrikethrough: () => void;
   insertCheckbox: () => void;
   insertTable: () => void;
-  formatTableCells: (alignment: string) => void; // Updated to accept string parameter
+  formatTableCells: (alignment: string) => void;
   insertVerticalSeparator: () => void;
   highlightText: () => void;
   underlineText: () => void;
@@ -31,8 +31,8 @@ const FloatingToolbar: React.FC<FloatingToolbarProps> = (props) => {
       const position = window.scrollY;
       setScrollPosition(position);
       
-      // Show the floating toolbar when scrolled down more than 300px
-      if (position > 300) {
+      // Show the floating toolbar when scrolled down more than 200px
+      if (position > 200) {
         setIsVisible(true);
       } else {
         setIsVisible(false);
@@ -46,7 +46,7 @@ const FloatingToolbar: React.FC<FloatingToolbarProps> = (props) => {
     if (editorContent) {
       editorContent.addEventListener('scroll', (e) => {
         const target = e.target as HTMLElement;
-        if (target.scrollTop > 300) {
+        if (target.scrollTop > 200) {
           setIsVisible(true);
         } else {
           setIsVisible(false);

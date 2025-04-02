@@ -20,7 +20,7 @@ interface FormattingToolbarProps {
   formatStrikethrough: () => void;
   insertCheckbox: () => void;
   insertTable: () => void;
-  formatTableCells: (alignment: string) => void; // Updated to accept string parameter
+  formatTableCells: (alignment: string) => void;
   insertVerticalSeparator: () => void;
   highlightText: () => void;
   underlineText: () => void;
@@ -47,8 +47,8 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
   isFloating = false
 }) => {
   return (
-    <div className={`flex items-center flex-wrap gap-1 p-2 bg-background/95 backdrop-blur-md rounded-md border border-muted shadow-md sticky top-0 z-[100] ${
-      isFloating ? 'fixed bottom-6 left-1/2 transform -translate-x-1/2 max-w-[95%] w-fit' : 'mx-0 mb-0 rounded-t-md border-b'
+    <div className={`flex items-center flex-wrap gap-0 p-1 bg-background/95 backdrop-blur-md rounded-md border border-muted shadow-md sticky top-0 z-[100] ${
+      isFloating ? 'fixed bottom-3 left-1/2 transform -translate-x-1/2 max-w-[95%] w-fit' : 'mx-0 mb-0 rounded-t-md border-b'
     }`}>
       <TooltipProvider delayDuration={300}>
         <TextFormattingSection 
