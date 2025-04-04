@@ -1,6 +1,6 @@
 
 import { useCallback, RefObject } from "react";
-import { processExistingListsFormatting, resetListNumbering } from '../hooks/formatting/formatters';
+import { processExistingListsFormatting } from '../hooks/formatting/formatters';
 
 interface UseContentChangeProps {
   onChange: (content: string) => void;
@@ -48,9 +48,6 @@ export const useContentChange = ({
       
       // Ensure lists have proper formatting
       processExistingListsFormatting(editorRef);
-      
-      // Reset numbering for ordered lists
-      resetListNumbering(editorRef);
       
       // Get the updated content and notify parent
       onChange(editorRef.current.innerHTML);

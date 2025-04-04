@@ -79,7 +79,6 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         className="h-5 w-5 p-0.5"
         onClick={() => execCommand('insertorderedlist')}
         title="Numbered List"
-        className="text-emphasis" // Add emphasis for better visibility
       >
         <ListOrdered className="h-3 w-3" />
       </Button>

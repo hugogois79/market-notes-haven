@@ -26,7 +26,7 @@ const ListFormattingSection = ({
         icon={ListOrdered} 
         onClick={formatOrderedList} 
         tooltip="Numbered List" 
-        className="text-emphasis"  // Add emphasis to improve visibility
+        className="text-emphasis" 
       />
       <ToolbarButton 
         icon={Square} 

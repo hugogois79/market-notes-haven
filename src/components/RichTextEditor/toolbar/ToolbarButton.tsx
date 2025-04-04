@@ -8,14 +8,20 @@ interface ToolbarButtonProps {
   icon: LucideIcon;
   onClick: () => void;
   tooltip: string;
+  className?: string;
 }
 
-const ToolbarButton = ({ icon: Icon, onClick, tooltip }: ToolbarButtonProps) => {
+const ToolbarButton = ({ icon: Icon, onClick, tooltip, className }: ToolbarButtonProps) => {
   return (
     <TooltipProvider delayDuration={300}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClick}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className={`h-8 w-8 ${className || ''}`} 
+            onClick={onClick}
+          >
             <Icon className="h-4 w-4" />
           </Button>
         </TooltipTrigger>

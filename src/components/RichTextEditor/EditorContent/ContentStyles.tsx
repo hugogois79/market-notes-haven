@@ -6,7 +6,8 @@ import React from "react";
  */
 const ContentStyles = () => {
   return (
-    <style jsx global>{`
+    <style dangerouslySetInnerHTML={{
+      __html: `
       .editor-content h1 {
         font-size: 1.5rem;
         font-weight: 600;
@@ -165,7 +166,8 @@ const ContentStyles = () => {
         line-height: 1.2 !important;
         font-size: 0.85rem !important;
       }
-    `}</style>
+      `
+    }} />
   );
 };
 

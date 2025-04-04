@@ -3,7 +3,7 @@ import { RefObject, useEffect } from "react";
 import { useTableHandling } from './useTableHandling';
 import { useTextFormatting } from '../formatting';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';
-import { formatCheckboxText, processExistingListsFormatting, resetListNumbering } from '../formatting/formatters';
+import { formatCheckboxText, processExistingListsFormatting } from '../formatting/formatters';
 
 export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = true) => {
   // Make editor content editable when loaded and ensure it remains that way
@@ -32,9 +32,6 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
       
       // Process existing lists to ensure proper bullet points and numbering
       processExistingListsFormatting(editorRef);
-      
-      // Reset numbering for ordered lists
-      resetListNumbering(editorRef);
       
       // Force focus on the editor after initialization
       setTimeout(() => {
@@ -79,7 +76,6 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
     const observer = new MutationObserver(() => {
       // Process existing lists to maintain bullet points and numbering
       processExistingListsFormatting(editorRef);
-      resetListNumbering(editorRef);
     });
     
     if (editorRef.current) {
@@ -96,7 +92,6 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
         
         // Periodically check for lists that need bullet points or numbering
         processExistingListsFormatting(editorRef);
-        resetListNumbering(editorRef);
       }
     }, 500); // Check occasionally for list formatting
     
