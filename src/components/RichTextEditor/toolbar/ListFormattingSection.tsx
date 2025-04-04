@@ -1,40 +1,42 @@
 
 import React from "react";
+import { List, ListOrdered } from "lucide-react";
 import ToolbarButton from "./ToolbarButton";
-import ToolbarDivider from "./ToolbarDivider";
-import { List, ListOrdered, Square } from "lucide-react";
 
 interface ListFormattingSectionProps {
-  formatUnorderedList: () => void;
-  formatOrderedList: () => void;
-  insertCheckbox: () => void;
+  execCommand: (command: string, value?: string) => void;
+  editorRef: React.RefObject<HTMLDivElement>;
+  className?: string;
 }
 
-const ListFormattingSection = ({
-  formatUnorderedList,
-  formatOrderedList,
-  insertCheckbox
-}: ListFormattingSectionProps) => {
+const ListFormattingSection: React.FC<ListFormattingSectionProps> = ({
+  execCommand,
+  editorRef,
+  className
+}) => {
+  const handleBulletList = () => {
+    execCommand('insertUnorderedList');
+  };
+
+  const handleNumberedList = () => {
+    execCommand('insertOrderedList');
+  };
+
   return (
-    <>
+    <div className={`flex items-center gap-0.5 ${className || ''}`}>
       <ToolbarButton 
         icon={List} 
-        onClick={formatUnorderedList} 
-        tooltip="Bullet List" 
+        onClick={handleBulletList} 
+        tooltip="Bullet List"
+        className="text-blue-500 hover:bg-blue-50"
       />
       <ToolbarButton 
         icon={ListOrdered} 
-        onClick={formatOrderedList} 
-        tooltip="Numbered List" 
-        className="text-emphasis" 
+        onClick={handleNumberedList} 
+        tooltip="Numbered List"
+        className="text-blue-500 hover:bg-blue-50"
       />
-      <ToolbarButton 
-        icon={Square} 
-        onClick={insertCheckbox} 
-        tooltip="Checkbox" 
-      />
-      <ToolbarDivider />
-    </>
+    </div>
   );
 };
 

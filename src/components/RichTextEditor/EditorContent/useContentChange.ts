@@ -1,6 +1,6 @@
 
 import { useCallback, RefObject } from "react";
-import { processExistingListsFormatting } from '../hooks/formatting/formatters';
+import { processExistingListsFormatting, resetListNumbering } from '../hooks/formatting/formatters';
 
 interface UseContentChangeProps {
   onChange: (content: string) => void;
@@ -64,10 +64,10 @@ export const useContentChange = ({
             if (list instanceof HTMLElement) {
               if (list.tagName === 'UL') {
                 list.style.listStyleType = 'disc';
-                list.style.paddingLeft = '1.5rem';
+                list.style.paddingLeft = '2rem';
               } else if (list.tagName === 'OL') {
                 list.style.listStyleType = 'decimal';
-                list.style.paddingLeft = '1.5rem';
+                list.style.paddingLeft = '2rem';
                 list.style.counterReset = 'item';
                 
                 // Ensure each item has correct counter
@@ -79,7 +79,7 @@ export const useContentChange = ({
                   }
                 });
               }
-              list.style.margin = '0.25rem 0';
+              list.style.margin = '0.5rem 0';
             }
           });
           

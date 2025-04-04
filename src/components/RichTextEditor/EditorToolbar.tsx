@@ -1,193 +1,138 @@
 
-import React, { RefObject } from "react";
-import { Button } from "@/components/ui/button";
+import React from "react";
 import { 
-  Bold, 
-  Italic, 
-  Underline, 
-  AlignLeft, 
-  AlignCenter, 
-  AlignRight, 
-  AlignJustify,
-  ListOrdered, 
-  List, 
-  Heading1, 
-  Heading2,
-  Heading3,
-  Table,
-  Highlighter,
-  Grip
+  Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, 
+  Type, List, ListOrdered, Heading1, Heading2, Heading3, 
+  Table, SeparatorHorizontal, CheckSquare, Highlighter
 } from "lucide-react";
+import TextFormattingSection from "./toolbar/TextFormattingSection";
+import AlignmentSection from "./toolbar/AlignmentSection";
+import ListFormattingSection from "./toolbar/ListFormattingSection";
+import InsertSection from "./toolbar/InsertSection";
+import ToolbarDivider from "./toolbar/ToolbarDivider";
+import ToolbarButton from "./toolbar/ToolbarButton";
 
 interface EditorToolbarProps {
-  editorRef: RefObject<HTMLDivElement> | null;
+  editorRef: React.RefObject<HTMLDivElement>;
   execCommand: (command: string, value?: string) => void;
-  formatTableCells?: (format: string) => void;
+  formatTableCells?: (alignment: string) => void;
   insertVerticalSeparator?: () => void;
   highlightText?: () => void;
   boldText?: () => void;
-  underlineText?: () => void; 
+  underlineText?: () => void;
   hasConclusion?: boolean;
   category?: string;
   className?: string;
 }
 
-const EditorToolbar: React.FC<EditorToolbarProps> = ({ 
-  editorRef, 
-  execCommand, 
+const EditorToolbar: React.FC<EditorToolbarProps> = ({
+  editorRef,
+  execCommand,
   formatTableCells,
   insertVerticalSeparator,
   highlightText,
   boldText,
   underlineText,
-  hasConclusion,
-  category,
-  className
+  hasConclusion = true,
+  category = "General",
+  className = ""
 }) => {
+  const handleTextAlign = (alignment: string) => {
+    if (formatTableCells) {
+      formatTableCells(alignment);
+    } else {
+      switch (alignment) {
+        case 'left':
+          execCommand('justifyLeft');
+          break;
+        case 'center':
+          execCommand('justifyCenter');
+          break;
+        case 'right':
+          execCommand('justifyRight');
+          break;
+      }
+    }
+  };
+
+  const applyHeading = (level: string) => {
+    execCommand('formatBlock', level);
+  };
+
   return (
-    <div className={`flex flex-wrap gap-0 p-0.5 bg-muted/95 border-b sticky top-0 z-40 backdrop-blur-sm shadow-sm ${className || ''}`}>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-5 w-5 p-0.5"
-        onClick={() => boldText ? boldText() : execCommand('bold')}
-        title="Bold (Alt+B)"
-      >
-        <Bold className="h-3 w-3" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-5 w-5 p-0.5"
-        onClick={() => execCommand('italic')}
-        title="Italic (Alt+I)"
-      >
-        <Italic className="h-3 w-3" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-5 w-5 p-0.5"
-        onClick={() => underlineText ? underlineText() : execCommand('underline')}
-        title="Underline (Alt+U)"
-      >
-        <Underline className="h-3 w-3" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-5 w-5 p-0.5"
-        onClick={() => execCommand('insertorderedlist')}
-        title="Numbered List"
-      >
-        <ListOrdered className="h-3 w-3" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-5 w-5 p-0.5"
-        onClick={() => execCommand('insertunorderedlist')}
-        title="Bullet List"
-      >
-        <List className="h-3 w-3" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-5 w-5 p-0.5"
-        onClick={() => formatTableCells ? formatTableCells('left') : execCommand('justifyLeft')}
-        title="Align Left (Alt+L)"
-      >
-        <AlignLeft className="h-3 w-3" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-5 w-5 p-0.5"
-        onClick={() => formatTableCells ? formatTableCells('center') : execCommand('justifyCenter')}
-        title="Align Center (Alt+C)"
-      >
-        <AlignCenter className="h-3 w-3" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-5 w-5 p-0.5"
-        onClick={() => formatTableCells ? formatTableCells('right') : execCommand('justifyRight')}
-        title="Align Right (Alt+R)"
-      >
-        <AlignRight className="h-3 w-3" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-5 w-5 p-0.5"
-        onClick={() => formatTableCells ? formatTableCells('justify') : execCommand('justifyFull')}
-        title="Justify (Alt+J)"
-      >
-        <AlignJustify className="h-3 w-3" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-5 w-5 p-0.5"
-        onClick={() => execCommand('formatBlock', '<h1>')}
-        title="Heading 1 (Alt+1)"
-      >
-        <Heading1 className="h-3 w-3" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-5 w-5 p-0.5"
-        onClick={() => execCommand('formatBlock', '<h2>')}
-        title="Heading 2 (Alt+2)"
-      >
-        <Heading2 className="h-3 w-3" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-5 w-5 p-0.5"
-        onClick={() => execCommand('formatBlock', '<h3>')}
-        title="Heading 3 (Alt+3)"
-      >
-        <Heading3 className="h-3 w-3" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-5 w-5 p-0.5"
-        onClick={() => highlightText ? highlightText() : execCommand('backColor', '#FEF7CD')}
-        title="Highlight Text (Alt+H)"
-      >
-        <Highlighter className="h-3 w-3" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-5 w-5 p-0.5"
-        onClick={() => insertVerticalSeparator ? insertVerticalSeparator() : null}
-        title="Insert Separator"
-      >
-        <Grip className="h-3 w-3" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-5 w-5 p-0.5"
-        onClick={() => {
-          const rows = prompt('Number of rows', '3');
-          const cols = prompt('Number of columns', '3');
-          
-          if (rows && cols && !isNaN(Number(rows)) && !isNaN(Number(cols))) {
-            execCommand('insertTable', `${rows},${cols}`);
-          }
+    <div className={`flex items-center flex-wrap p-1 gap-0.5 ${className}`}>
+      {/* Text Formatting Section */}
+      <TextFormattingSection 
+        boldText={boldText || (() => execCommand('bold'))}
+        italicText={() => execCommand('italic')}
+        underlineText={underlineText || (() => execCommand('underline'))}
+        highlightText={highlightText || (() => execCommand('backColor', '#FEF7CD'))}
+      />
+      
+      <ToolbarDivider />
+      
+      {/* Heading Section */}
+      <div className="flex items-center gap-0.5">
+        <ToolbarButton 
+          icon={Heading1} 
+          onClick={() => applyHeading('<h1>')} 
+          tooltip="Heading 1"
+        />
+        <ToolbarButton 
+          icon={Heading2} 
+          onClick={() => applyHeading('<h2>')} 
+          tooltip="Heading 2"
+        />
+        <ToolbarButton 
+          icon={Heading3} 
+          onClick={() => applyHeading('<h3>')} 
+          tooltip="Heading 3"
+        />
+        <ToolbarButton 
+          icon={Type} 
+          onClick={() => applyHeading('<p>')} 
+          tooltip="Normal text"
+        />
+      </div>
+      
+      <ToolbarDivider />
+      
+      {/* List Formatting Section */}
+      <ListFormattingSection 
+        execCommand={execCommand}
+        editorRef={editorRef}
+      />
+      
+      <ToolbarDivider />
+      
+      {/* Alignment Section */}
+      <AlignmentSection 
+        onAlignLeft={() => handleTextAlign('left')}
+        onAlignCenter={() => handleTextAlign('center')}
+        onAlignRight={() => handleTextAlign('right')}
+      />
+      
+      <ToolbarDivider />
+      
+      {/* Insert Section */}
+      <InsertSection 
+        onInsertTable={() => {
+          document.execCommand('insertHTML', false, 
+            '<table style="width:100%; border-collapse:collapse; margin:1rem 0;">' +
+            '<tr><th style="border:1px solid #ccc; padding:8px; text-align:left;">Header 1</th>' +
+            '<th style="border:1px solid #ccc; padding:8px; text-align:left;">Header 2</th></tr>' +
+            '<tr><td style="border:1px solid #ccc; padding:8px;">Cell 1</td>' +
+            '<td style="border:1px solid #ccc; padding:8px;">Cell 2</td></tr>' +
+            '</table>');
         }}
-        title="Insert Table"
-      >
-        <Table className="h-3 w-3" />
-      </Button>
+        onInsertCheckbox={() => {
+          document.execCommand('insertHTML', false, 
+            '<p><input type="checkbox" class="editor-checkbox" contenteditable="false"> <span>Checkbox item</span></p>');
+        }}
+        onInsertSeparator={insertVerticalSeparator || (() => {
+          document.execCommand('insertHTML', false, '<hr style="border:none; border-top:1px solid #ccc; margin:1rem 0;" />');
+        })}
+      />
     </div>
   );
 };

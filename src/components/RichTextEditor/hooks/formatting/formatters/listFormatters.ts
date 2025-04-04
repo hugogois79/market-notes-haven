@@ -1,162 +1,142 @@
+import { RefObject } from "react";
 
 /**
- * Specialized formatting utilities for lists
+ * Apply list formatting to selected content
  */
-
-/**
- * Applies list formatting with consistent styles
- */
-export function applyListFormatting(command: string, value: string, selection: Selection | null) {
-  if (!selection) return;
-  
-  document.execCommand(command, false, value);
-  
-  // Apply additional styling to the created list
-  if (selection && selection.rangeCount > 0) {
-    const container = selection.getRangeAt(0).commonAncestorContainer;
-    const listElement = container.nodeType === 1 
-      ? (container as Element).closest('ul, ol') 
-      : (container.parentElement?.closest('ul, ol'));
-    
-    if (listElement && listElement instanceof HTMLElement) {
-      if (listElement.tagName === 'UL') {
-        // Apply proper bullet styling for unordered lists
-        listElement.style.listStyleType = 'disc';
-        listElement.style.paddingLeft = '1rem';
-      } else if (listElement.tagName === 'OL') {
-        // Apply proper number styling for ordered lists
-        listElement.style.listStyleType = 'decimal';
-        listElement.style.paddingLeft = '1rem';
-      }
-      
-      // Apply compact spacing
-      listElement.style.margin = '0.15rem 0';
-      
-      // Style list items
-      const items = listElement.querySelectorAll('li');
-      items.forEach(item => {
-        if (item instanceof HTMLElement) {
-          item.style.marginBottom = '0.1rem';
-          item.style.lineHeight = '1.2';
-          item.style.fontSize = '0.85rem';
-          
-          // Ensure proper list display with visible markers
-          item.style.display = 'list-item';
-          item.style.position = 'relative';
-          
-          // Remove any custom markers that might have been added previously
-          const customMarker = item.querySelector('.custom-list-marker');
-          if (customMarker) {
-            customMarker.remove();
-          }
-        }
-      });
-    }
-  }
-}
-
-/**
- * Process any existing content to ensure proper formatting
- */
-export function processExistingListsFormatting(editorRef: React.RefObject<HTMLDivElement>) {
+export const applyListFormatting = (editorRef: RefObject<HTMLDivElement>, listType: 'ul' | 'ol'): void => {
   if (!editorRef.current) return;
   
-  // Find all unordered lists in the editor
-  const unorderedLists = editorRef.current.querySelectorAll('ul');
-  unorderedLists.forEach(list => {
+  // Focus the editor first
+  editorRef.current.focus();
+  
+  // Use browser's execCommand to apply list formatting
+  document.execCommand(listType === 'ul' ? 'insertUnorderedList' : 'insertOrderedList', false);
+  
+  // Find all the lists we just created and apply proper styling
+  const lists = editorRef.current.querySelectorAll(listType);
+  
+  lists.forEach(list => {
     if (list instanceof HTMLElement) {
-      // Apply bullet style
-      list.style.listStyleType = 'disc';
-      list.style.paddingLeft = '1rem';
-      list.style.margin = '0.15rem 0';
+      list.style.paddingLeft = '2rem';
+      list.style.margin = '0.5rem 0';
       
-      // Style each list item
+      if (listType === 'ul') {
+        list.style.listStyleType = 'disc';
+      } else if (listType === 'ol') {
+        list.style.listStyleType = 'decimal';
+      }
+      
+      // Ensure items are properly styled
       const items = list.querySelectorAll('li');
       items.forEach(item => {
         if (item instanceof HTMLElement) {
-          item.style.marginBottom = '0.1rem';
-          item.style.lineHeight = '1.2';
-          item.style.fontSize = '0.85rem';
-          item.style.display = 'list-item';
-          
-          // Remove any custom markers that might have been added previously
-          const customMarker = item.querySelector('.custom-list-marker');
-          if (customMarker) {
-            customMarker.remove();
-          }
+          item.style.margin = '0.25rem 0';
         }
       });
     }
   });
   
-  // Find all ordered lists in the editor
-  const orderedLists = editorRef.current.querySelectorAll('ol');
-  orderedLists.forEach(list => {
-    if (list instanceof HTMLElement) {
-      // Apply decimal number style with stronger visibility
-      list.style.listStyleType = 'decimal';
-      list.style.paddingLeft = '1rem';
-      list.style.margin = '0.15rem 0';
-      list.style.counterReset = 'item'; // Reset counter for each list
-      
-      // Style each list item
-      const items = list.querySelectorAll('li');
-      items.forEach((item, index) => {
-        if (item instanceof HTMLElement) {
-          item.style.marginBottom = '0.1rem';
-          item.style.lineHeight = '1.2';
-          item.style.fontSize = '0.85rem';
-          item.style.display = 'list-item';
-          item.style.counterIncrement = 'item'; // Increment counter for each item
-          
-          // Ensure the list item is properly numbered
-          item.setAttribute('data-index', String(index + 1));
-        }
-      });
-    }
-  });
-}
+  // Ensure the content change is registered
+  if (editorRef.current) {
+    const inputEvent = new Event('input', { bubbles: true });
+    editorRef.current.dispatchEvent(inputEvent);
+  }
+};
 
 /**
- * Adds a bulletpoint to the current selection
+ * Process existing lists to ensure proper formatting
  */
-export function addBulletPoint() {
-  const selection = window.getSelection();
-  if (!selection || !selection.rangeCount) return;
+export const processExistingListsFormatting = (editorRef: RefObject<HTMLDivElement>): void => {
+  if (!editorRef.current) return;
   
+  // Process all lists to ensure they have proper styles
+  const allLists = editorRef.current.querySelectorAll('ul, ol');
+  
+  allLists.forEach(list => {
+    if (list instanceof HTMLElement) {
+      // Apply appropriate styling based on list type
+      if (list.tagName === 'UL') {
+        list.style.listStyleType = 'disc';
+        list.style.paddingLeft = '2rem';
+        list.style.margin = '0.5rem 0';
+      } else if (list.tagName === 'OL') {
+        list.style.listStyleType = 'decimal';
+        list.style.paddingLeft = '2rem';
+        list.style.margin = '0.5rem 0';
+        
+        // Reset counter for ordered lists
+        list.style.counterReset = 'item';
+        
+        // Process all list items for ordered lists
+        const items = list.querySelectorAll('li');
+        items.forEach((item, index) => {
+          if (item instanceof HTMLElement) {
+            item.style.counterIncrement = 'item';
+            // Add a data attribute to keep track of the index
+            item.setAttribute('data-index', String(index + 1));
+          }
+        });
+      }
+      
+      // Style all list items
+      const items = list.querySelectorAll('li');
+      items.forEach(item => {
+        if (item instanceof HTMLElement) {
+          item.style.margin = '0.25rem 0';
+          item.style.display = 'list-item';
+        }
+      });
+    }
+  });
+};
+
+/**
+ * Add a bullet point at the current cursor position
+ */
+export const addBulletPoint = (editorRef: RefObject<HTMLDivElement>): void => {
+  if (!editorRef.current) return;
+  
+  // Focus the editor
+  editorRef.current.focus();
+  
+  // Insert an unordered list
   document.execCommand('insertUnorderedList', false);
   
-  // Ensure proper styling
-  applyListFormatting('insertUnorderedList', '', selection);
-}
+  // Process the list to ensure proper formatting
+  processExistingListsFormatting(editorRef);
+};
 
 /**
- * Adds a numbered point to the current selection
+ * Add a numbered point at the current cursor position
  */
-export function addNumberedPoint() {
-  const selection = window.getSelection();
-  if (!selection || !selection.rangeCount) return;
+export const addNumberedPoint = (editorRef: RefObject<HTMLDivElement>): void => {
+  if (!editorRef.current) return;
   
+  // Focus the editor
+  editorRef.current.focus();
+  
+  // Insert an ordered list
   document.execCommand('insertOrderedList', false);
   
-  // Ensure proper styling
-  applyListFormatting('insertOrderedList', '', selection);
-}
+  // Process the list to ensure proper formatting
+  processExistingListsFormatting(editorRef);
+};
 
 /**
- * Reset list numbering when needed
+ * Reset the numbering for ordered lists
  */
-export function resetListNumbering(editorRef: React.RefObject<HTMLDivElement>) {
+export const resetListNumbering = (editorRef: RefObject<HTMLDivElement>): void => {
   if (!editorRef.current) return;
   
   // Find all ordered lists
   const orderedLists = editorRef.current.querySelectorAll('ol');
+  
   orderedLists.forEach(list => {
     if (list instanceof HTMLElement) {
-      // Reset counter for this list
+      // Reset the counter
       list.style.counterReset = 'item';
       
-      // Update each list item's counter
+      // Update each item's counter increment
       const items = list.querySelectorAll('li');
       items.forEach((item, index) => {
         if (item instanceof HTMLElement) {
@@ -166,4 +146,4 @@ export function resetListNumbering(editorRef: React.RefObject<HTMLDivElement>) {
       });
     }
   });
-}
+};
