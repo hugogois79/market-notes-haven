@@ -1,91 +1,107 @@
+
 import { RefObject } from "react";
 
 /**
- * Apply list formatting to selected content
+ * Apply consistent formatting to list elements
  */
-export const applyListFormatting = (editorRef: RefObject<HTMLDivElement>, listType: 'ul' | 'ol'): void => {
+export const applyListFormatting = (command: string, value: string, selection: Selection | null) => {
+  if (!selection) return;
+  
+  // Execute the list command
+  document.execCommand(command, false, value);
+  
+  // Find all lists within the selection and format them
+  const range = selection.getRangeAt(0);
+  const container = range.commonAncestorContainer;
+  let parentElement = container.nodeType === 1 
+    ? container as Element 
+    : container.parentElement;
+    
+  // Go up to find the editor container
+  while (parentElement && !parentElement.classList.contains('editor-content')) {
+    parentElement = parentElement.parentElement as Element;
+  }
+  
+  if (parentElement) {
+    const lists = parentElement.querySelectorAll('ul, ol');
+    lists.forEach(list => {
+      if (list instanceof HTMLElement) {
+        list.style.marginLeft = '2rem';
+        list.style.marginTop = '0.5rem';
+        list.style.marginBottom = '0.5rem';
+        
+        if (list.tagName === 'UL') {
+          list.style.listStyleType = 'disc';
+        } else if (list.tagName === 'OL') {
+          list.style.listStyleType = 'decimal';
+          list.style.counterReset = 'item';
+          resetListNumbering(list);
+        }
+      }
+    });
+  }
+};
+
+/**
+ * Format existing lists in the editor to ensure they have proper styling and numbering
+ */
+export const processExistingListsFormatting = (editorRef: RefObject<HTMLDivElement>) => {
   if (!editorRef.current) return;
   
-  // Focus the editor first
-  editorRef.current.focus();
-  
-  // Use browser's execCommand to apply list formatting
-  document.execCommand(listType === 'ul' ? 'insertUnorderedList' : 'insertOrderedList', false);
-  
-  // Find all the lists we just created and apply proper styling
-  const lists = editorRef.current.querySelectorAll(listType);
-  
-  lists.forEach(list => {
+  // Format all unordered lists
+  const unorderedLists = editorRef.current.querySelectorAll('ul');
+  unorderedLists.forEach(list => {
     if (list instanceof HTMLElement) {
+      list.style.listStyleType = 'disc';
       list.style.paddingLeft = '2rem';
-      list.style.margin = '0.5rem 0';
+      list.style.marginTop = '0.5rem';
+      list.style.marginBottom = '0.5rem';
+      list.style.display = 'block';
       
-      if (listType === 'ul') {
-        list.style.listStyleType = 'disc';
-      } else if (listType === 'ol') {
-        list.style.listStyleType = 'decimal';
-      }
-      
-      // Ensure items are properly styled
-      const items = list.querySelectorAll('li');
-      items.forEach(item => {
+      // Ensure each list item is displayed correctly
+      const listItems = list.querySelectorAll('li');
+      listItems.forEach(item => {
         if (item instanceof HTMLElement) {
-          item.style.margin = '0.25rem 0';
+          item.style.display = 'list-item';
+          item.style.marginBottom = '0.25rem';
         }
       });
     }
   });
   
-  // Ensure the content change is registered
-  if (editorRef.current) {
-    const inputEvent = new Event('input', { bubbles: true });
-    editorRef.current.dispatchEvent(inputEvent);
-  }
+  // Format all ordered lists
+  const orderedLists = editorRef.current.querySelectorAll('ol');
+  orderedLists.forEach(list => {
+    if (list instanceof HTMLElement) {
+      list.style.listStyleType = 'decimal';
+      list.style.paddingLeft = '2rem';
+      list.style.marginTop = '0.5rem';
+      list.style.marginBottom = '0.5rem';
+      list.style.counterReset = 'item';
+      list.style.display = 'block';
+      
+      // Reset numbering for this list
+      resetListNumbering(list);
+    }
+  });
 };
 
 /**
- * Process existing lists to ensure proper formatting
+ * Reset and fix the numbering of ordered lists
  */
-export const processExistingListsFormatting = (editorRef: RefObject<HTMLDivElement>): void => {
-  if (!editorRef.current) return;
+export const resetListNumbering = (list: HTMLElement) => {
+  if (list.tagName !== 'OL') return;
   
-  // Process all lists to ensure they have proper styles
-  const allLists = editorRef.current.querySelectorAll('ul, ol');
+  // Get all list items
+  const items = list.querySelectorAll('li');
   
-  allLists.forEach(list => {
-    if (list instanceof HTMLElement) {
-      // Apply appropriate styling based on list type
-      if (list.tagName === 'UL') {
-        list.style.listStyleType = 'disc';
-        list.style.paddingLeft = '2rem';
-        list.style.margin = '0.5rem 0';
-      } else if (list.tagName === 'OL') {
-        list.style.listStyleType = 'decimal';
-        list.style.paddingLeft = '2rem';
-        list.style.margin = '0.5rem 0';
-        
-        // Reset counter for ordered lists
-        list.style.counterReset = 'item';
-        
-        // Process all list items for ordered lists
-        const items = list.querySelectorAll('li');
-        items.forEach((item, index) => {
-          if (item instanceof HTMLElement) {
-            item.style.counterIncrement = 'item';
-            // Add a data attribute to keep track of the index
-            item.setAttribute('data-index', String(index + 1));
-          }
-        });
-      }
-      
-      // Style all list items
-      const items = list.querySelectorAll('li');
-      items.forEach(item => {
-        if (item instanceof HTMLElement) {
-          item.style.margin = '0.25rem 0';
-          item.style.display = 'list-item';
-        }
-      });
+  // Set counter increment for each item
+  items.forEach((item, index) => {
+    if (item instanceof HTMLElement) {
+      item.style.counterIncrement = 'item';
+      item.setAttribute('value', String(index + 1));
+      item.style.display = 'list-item';
+      item.style.marginBottom = '0.25rem';
     }
   });
 };
@@ -93,57 +109,25 @@ export const processExistingListsFormatting = (editorRef: RefObject<HTMLDivEleme
 /**
  * Add a bullet point at the current cursor position
  */
-export const addBulletPoint = (editorRef: RefObject<HTMLDivElement>): void => {
+export const addBulletPoint = (editorRef: RefObject<HTMLDivElement>) => {
   if (!editorRef.current) return;
   
-  // Focus the editor
-  editorRef.current.focus();
-  
-  // Insert an unordered list
+  // Create a bullet list
   document.execCommand('insertUnorderedList', false);
   
-  // Process the list to ensure proper formatting
+  // Format the list that was just created
   processExistingListsFormatting(editorRef);
 };
 
 /**
  * Add a numbered point at the current cursor position
  */
-export const addNumberedPoint = (editorRef: RefObject<HTMLDivElement>): void => {
+export const addNumberedPoint = (editorRef: RefObject<HTMLDivElement>) => {
   if (!editorRef.current) return;
   
-  // Focus the editor
-  editorRef.current.focus();
-  
-  // Insert an ordered list
+  // Create a numbered list
   document.execCommand('insertOrderedList', false);
   
-  // Process the list to ensure proper formatting
+  // Format the list that was just created
   processExistingListsFormatting(editorRef);
-};
-
-/**
- * Reset the numbering for ordered lists
- */
-export const resetListNumbering = (editorRef: RefObject<HTMLDivElement>): void => {
-  if (!editorRef.current) return;
-  
-  // Find all ordered lists
-  const orderedLists = editorRef.current.querySelectorAll('ol');
-  
-  orderedLists.forEach(list => {
-    if (list instanceof HTMLElement) {
-      // Reset the counter
-      list.style.counterReset = 'item';
-      
-      // Update each item's counter increment
-      const items = list.querySelectorAll('li');
-      items.forEach((item, index) => {
-        if (item instanceof HTMLElement) {
-          item.style.counterIncrement = 'item';
-          item.setAttribute('data-index', String(index + 1));
-        }
-      });
-    }
-  });
 };

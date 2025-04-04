@@ -1,35 +1,59 @@
 
 import React from "react";
 import ToolbarButton from "./ToolbarButton";
-import { Link, Image, Table, Text, SeparatorVertical } from "lucide-react";
+import { Link, Image, Table, Text, SeparatorVertical, CheckSquare } from "lucide-react";
 
 interface InsertSectionProps {
-  formatLink: () => void;
-  formatImage: () => void;
-  insertTable: () => void;
-  formatTableCells: (alignment: string) => void; // Updated to accept string parameter
-  insertVerticalSeparator: () => void;
+  formatLink?: () => void;
+  formatImage?: () => void;
+  insertTable?: () => void;
+  formatTableCells?: (alignment: string) => void;
+  insertVerticalSeparator?: () => void;
+  onInsertTable?: () => void;
+  onInsertCheckbox?: () => void;
+  onInsertSeparator?: () => void;
 }
 
-const InsertSection = ({
+const InsertSection: React.FC<InsertSectionProps> = ({
   formatLink,
   formatImage,
   insertTable,
   formatTableCells,
-  insertVerticalSeparator
-}: InsertSectionProps) => {
+  insertVerticalSeparator,
+  onInsertTable,
+  onInsertCheckbox,
+  onInsertSeparator
+}) => {
+  const handleInsertTable = () => {
+    if (insertTable) {
+      insertTable();
+    } else if (onInsertTable) {
+      onInsertTable();
+    }
+  };
+
+  const handleInsertSeparator = () => {
+    if (insertVerticalSeparator) {
+      insertVerticalSeparator();
+    } else if (onInsertSeparator) {
+      onInsertSeparator();
+    }
+  };
+
   return (
-    <>
-      <ToolbarButton icon={Link} onClick={formatLink} tooltip="Insert Link" />
-      <ToolbarButton icon={Image} onClick={formatImage} tooltip="Insert Image" />
-      <ToolbarButton icon={Table} onClick={insertTable} tooltip="Insert Table" />
-      <ToolbarButton 
-        icon={Text} 
-        onClick={() => formatTableCells('left')} // Pass a default alignment
-        tooltip="Format Table Cells" 
-      />
-      <ToolbarButton icon={SeparatorVertical} onClick={insertVerticalSeparator} tooltip="Insert Separator" />
-    </>
+    <div className="flex items-center gap-0.5">
+      {formatLink && <ToolbarButton icon={Link} onClick={formatLink} tooltip="Insert Link" />}
+      {formatImage && <ToolbarButton icon={Image} onClick={formatImage} tooltip="Insert Image" />}
+      <ToolbarButton icon={Table} onClick={handleInsertTable} tooltip="Insert Table" />
+      {formatTableCells && (
+        <ToolbarButton 
+          icon={Text} 
+          onClick={() => formatTableCells('left')}
+          tooltip="Format Table Cells" 
+        />
+      )}
+      <ToolbarButton icon={SeparatorVertical} onClick={handleInsertSeparator} tooltip="Insert Separator" />
+    </div>
   );
 };
 

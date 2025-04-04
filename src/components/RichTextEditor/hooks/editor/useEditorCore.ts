@@ -3,7 +3,7 @@ import { RefObject, useEffect } from "react";
 import { useTableHandling } from './useTableHandling';
 import { useTextFormatting } from '../formatting';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';
-import { formatCheckboxText, processExistingListsFormatting, resetListNumbering } from '../formatting/formatters';
+import { formatCheckboxText, processExistingListsFormatting } from '../formatting/formatters';
 
 export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = true) => {
   // Make editor content editable when loaded and ensure it remains that way

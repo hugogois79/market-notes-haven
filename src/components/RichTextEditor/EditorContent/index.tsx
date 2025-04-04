@@ -132,7 +132,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
     <>
       <ContentStyles />
       <div 
-        className="min-h-[200px] h-full w-full focus:outline-none editor-content"
+        className="min-h-[300px] h-full w-full focus:outline-none editor-content"
         ref={editorRef}
         contentEditable="true" 
         suppressContentEditableWarning={true}
@@ -147,12 +147,12 @@ const EditorContent: React.FC<EditorContentProps> = ({
           }
         }}
         style={{ 
-          lineHeight: '1.1',
+          lineHeight: '1.5',
           overflowX: 'auto',
           overflowY: 'visible',
           whiteSpace: 'pre-wrap',
-          padding: "0",
-          paddingBottom: "120px", /* Increased padding at bottom to make room for the bottom toolbar */
+          padding: "8px 12px",
+          paddingBottom: "140px", /* Increased padding at bottom to make room for the bottom toolbar */
           wordWrap: "break-word",
           wordBreak: "break-word",
           maxWidth: "100%",

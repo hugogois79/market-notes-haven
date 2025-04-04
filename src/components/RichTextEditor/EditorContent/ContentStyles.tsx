@@ -1,6 +1,5 @@
 
 import React from "react";
-import { createGlobalStyle } from "styled-components";
 
 /**
  * Styles for the editor content, applied globally to ensure consistent appearance
@@ -10,8 +9,9 @@ const ContentStyles = () => {
     <style>
       {`
         .editor-content {
-          line-height: 1.1;
+          line-height: 1.5;
           font-size: 14px;
+          padding-bottom: 120px;
         }
         
         .editor-content h1 {
@@ -40,6 +40,7 @@ const ContentStyles = () => {
           list-style-type: disc !important;
           margin: 0.5rem 0;
           padding-left: 2rem;
+          display: block;
         }
         
         .editor-content ol {
@@ -47,6 +48,7 @@ const ContentStyles = () => {
           margin: 0.5rem 0;
           padding-left: 2rem;
           counter-reset: item;
+          display: block;
         }
         
         .editor-content li {

@@ -63,10 +63,10 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
     <div className={`flex items-center flex-wrap p-1 gap-0.5 ${className}`}>
       {/* Text Formatting Section */}
       <TextFormattingSection 
-        boldText={boldText || (() => execCommand('bold'))}
+        boldText={boldText}
         italicText={() => execCommand('italic')}
-        underlineText={underlineText || (() => execCommand('underline'))}
-        highlightText={highlightText || (() => execCommand('backColor', '#FEF7CD'))}
+        underlineText={underlineText}
+        highlightText={highlightText}
       />
       
       <ToolbarDivider />

@@ -1,6 +1,6 @@
 
 import { useCallback, RefObject } from "react";
-import { processExistingListsFormatting, resetListNumbering } from '../hooks/formatting/formatters';
+import { processExistingListsFormatting } from '../hooks/formatting/formatters';
 
 interface UseContentChangeProps {
   onChange: (content: string) => void;

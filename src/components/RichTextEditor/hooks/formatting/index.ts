@@ -37,9 +37,9 @@ export const useTextFormatting = (editorRef: RefObject<HTMLDivElement>) => {
     } 
     // For list and heading formatting, ensure consistent styles
     else if (command === "formatBlock") {
-      applyHeadingFormatting(command, value, window.getSelection());
+      applyHeadingFormatting(command, value);
     } else if (command === "insertUnorderedList" || command === "insertOrderedList") {
-      applyListFormatting(command, value, window.getSelection());
+      applyListFormatting(command, value);
     } else {
       // Execute regular commands
       execCommandBase(command, value);
