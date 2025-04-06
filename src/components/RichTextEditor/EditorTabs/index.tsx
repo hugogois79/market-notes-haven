@@ -103,7 +103,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
             variant="floating"
           />
           
-          {/* Bottom fixed toolbar */}
+          {/* Bottom toolbar - changed from fixed to floating */}
           <FloatingToolbarWrapper
             editorRef={editorRef}
             boldText={boldText}
@@ -114,7 +114,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
             insertVerticalSeparator={insertVerticalSeparator}
             isVisible={true}
             position="bottom"
-            variant="fixed"
+            variant="floating"
             className="py-1 px-2"
           />
         </>

@@ -91,7 +91,7 @@ const PortableToolbar: React.FC<PortableToolbarProps> = ({
       baseClasses += position === 'top' 
         ? "absolute top-2 left-1/2 transform -translate-x-1/2 z-40 " 
         : position === 'bottom' 
-          ? "fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40 " 
+          ? "absolute bottom-4 left-1/2 transform -translate-x-1/2 z-40 " 
           : "";
     }
     
