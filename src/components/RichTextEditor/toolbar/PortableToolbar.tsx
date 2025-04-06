@@ -1,11 +1,11 @@
-
-import React from "react";
+import React, { useState } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import TextFormattingSection from "./TextFormattingSection";
 import ListFormattingSection from "./ListFormattingSection";
 import AlignmentSection from "./AlignmentSection";
 import InsertSection from "./InsertSection";
 import ToolbarDivider from "./ToolbarDivider";
+import ImageUploader from "../components/ImageUploader";
 
 interface PortableToolbarProps {
   editorRef: React.RefObject<HTMLDivElement>;
@@ -56,11 +56,11 @@ const PortableToolbar: React.FC<PortableToolbarProps> = ({
   position = 'inline',
   execCommand,
 }) => {
-  // Generate the appropriate CSS classes based on variant and position
+  const [imageUploaderOpen, setImageUploaderOpen] = useState(false);
+  
   const getContainerClasses = () => {
     let baseClasses = "flex items-center flex-wrap gap-0 p-1 bg-background/95 backdrop-blur-md rounded-md ";
     
-    // Add variant-specific classes
     switch (variant) {
       case 'floating':
         baseClasses += "border border-muted shadow-md ";
@@ -77,7 +77,6 @@ const PortableToolbar: React.FC<PortableToolbarProps> = ({
         baseClasses += "border ";
     }
     
-    // Add position-specific classes
     if (variant === 'fixed') {
       switch (position) {
         case 'top':
@@ -100,7 +99,6 @@ const PortableToolbar: React.FC<PortableToolbarProps> = ({
     return baseClasses + className;
   };
 
-  // Default execCommand implementation if not provided
   const handleExecCommand = (cmd: string, val?: string) => {
     if (execCommand) {
       execCommand(cmd, val);
@@ -108,47 +106,69 @@ const PortableToolbar: React.FC<PortableToolbarProps> = ({
       document.execCommand(cmd, false, val);
     }
   };
+  
+  const handleImageClick = () => {
+    if (formatImage) {
+      formatImage();
+    } else {
+      setImageUploaderOpen(true);
+    }
+  };
+  
+  const handleImageInsert = (url: string) => {
+    if (url) {
+      handleExecCommand('insertImage', url);
+    }
+  };
 
   return (
-    <div className={getContainerClasses()}>
-      <TooltipProvider delayDuration={300}>
-        <TextFormattingSection 
-          boldText={formatBold}
-          italicText={formatItalic}
-          underlineText={underlineText}
-          formatStrikethrough={formatStrikethrough}
-          highlightText={highlightText}
-        />
-        
-        <ToolbarDivider />
-        
-        <ListFormattingSection 
-          formatUnorderedList={formatUnorderedList}
-          formatOrderedList={formatOrderedList}
-          insertCheckbox={insertCheckbox}
-          execCommand={execCommand}
-        />
-        
-        <ToolbarDivider />
-        
-        <AlignmentSection 
-          formatAlignLeft={formatAlignLeft}
-          formatAlignCenter={formatAlignCenter}
-          formatAlignRight={formatAlignRight}
-          formatAlignJustify={formatAlignJustify}
-        />
-        
-        <ToolbarDivider />
-        
-        <InsertSection 
-          formatLink={formatLink}
-          formatImage={formatImage}
-          insertTable={insertTable}
-          formatTableCells={formatTableCells}
-          insertVerticalSeparator={insertVerticalSeparator}
-        />
-      </TooltipProvider>
-    </div>
+    <>
+      <div className={getContainerClasses()}>
+        <TooltipProvider delayDuration={300}>
+          <TextFormattingSection 
+            boldText={formatBold}
+            italicText={formatItalic}
+            underlineText={underlineText}
+            formatStrikethrough={formatStrikethrough}
+            highlightText={highlightText}
+          />
+          
+          <ToolbarDivider />
+          
+          <ListFormattingSection 
+            formatUnorderedList={formatUnorderedList}
+            formatOrderedList={formatOrderedList}
+            insertCheckbox={insertCheckbox}
+            execCommand={execCommand}
+          />
+          
+          <ToolbarDivider />
+          
+          <AlignmentSection 
+            formatAlignLeft={formatAlignLeft}
+            formatAlignCenter={formatAlignCenter}
+            formatAlignRight={formatAlignRight}
+            formatAlignJustify={formatAlignJustify}
+          />
+          
+          <ToolbarDivider />
+          
+          <InsertSection 
+            formatLink={formatLink}
+            formatImage={handleImageClick}
+            insertTable={insertTable}
+            formatTableCells={formatTableCells}
+            insertVerticalSeparator={insertVerticalSeparator}
+          />
+        </TooltipProvider>
+      </div>
+      
+      <ImageUploader 
+        open={imageUploaderOpen}
+        onOpenChange={setImageUploaderOpen}
+        onImageInsert={handleImageInsert}
+      />
+    </>
   );
 };
 

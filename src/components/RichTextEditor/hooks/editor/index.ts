@@ -3,6 +3,7 @@
 export * from './useEditorCore';
 export * from './useTableHandling';
 export * from './useKeyboardShortcuts';
+export * from './useImageUpload';
 export * from '../formatting/formatters';
 
 // Add specialized formatting functions
