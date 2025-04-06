@@ -27,8 +27,8 @@ export const applyListFormatting = (command: string, value: string, selection: S
     lists.forEach(list => {
       if (list instanceof HTMLElement) {
         list.style.marginLeft = '2rem';
-        list.style.marginTop = '0.5rem';
-        list.style.marginBottom = '0.5rem';
+        list.style.marginTop = '0.3rem';
+        list.style.marginBottom = '0.3rem';
         
         if (list.tagName === 'UL') {
           list.style.listStyleType = 'disc';
@@ -54,8 +54,8 @@ export const processExistingListsFormatting = (editorRef: RefObject<HTMLDivEleme
     if (list instanceof HTMLElement) {
       list.style.listStyleType = 'disc';
       list.style.paddingLeft = '2rem';
-      list.style.marginTop = '0.5rem';
-      list.style.marginBottom = '0.5rem';
+      list.style.marginTop = '0.3rem';
+      list.style.marginBottom = '0.3rem';
       list.style.display = 'block';
       
       // Ensure each list item is displayed correctly
@@ -63,7 +63,7 @@ export const processExistingListsFormatting = (editorRef: RefObject<HTMLDivEleme
       listItems.forEach(item => {
         if (item instanceof HTMLElement) {
           item.style.display = 'list-item';
-          item.style.marginBottom = '0.25rem';
+          item.style.marginBottom = '0.1rem';
         }
       });
     }
@@ -75,8 +75,8 @@ export const processExistingListsFormatting = (editorRef: RefObject<HTMLDivEleme
     if (list instanceof HTMLElement) {
       list.style.listStyleType = 'decimal';
       list.style.paddingLeft = '2rem';
-      list.style.marginTop = '0.5rem';
-      list.style.marginBottom = '0.5rem';
+      list.style.marginTop = '0.3rem';
+      list.style.marginBottom = '0.3rem';
       list.style.counterReset = 'item';
       list.style.display = 'block';
       
@@ -101,7 +101,7 @@ export const resetListNumbering = (list: HTMLElement) => {
       item.style.counterIncrement = 'item';
       item.setAttribute('value', String(index + 1));
       item.style.display = 'list-item';
-      item.style.marginBottom = '0.25rem';
+      item.style.marginBottom = '0.1rem';
     }
   });
 };

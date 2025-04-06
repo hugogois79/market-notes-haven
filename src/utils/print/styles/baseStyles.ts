@@ -45,7 +45,7 @@ export const getBaseStyles = (): string => {
     }
     
     .print-tags {
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
     
     .print-tag {
@@ -70,7 +70,7 @@ export const getBaseStyles = (): string => {
     .print-content p {
       font-weight: normal;
       margin-top: 0;
-      margin-bottom: 0.05rem;
+      margin-bottom: 0.03rem;
     }
     
     .print-footer {

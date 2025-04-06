@@ -36,8 +36,8 @@ export const getContentStyles = (): string => {
     .print-content h1 {
       font-size: 18pt;
       font-weight: 700;
-      margin-top: 0.8rem;
-      margin-bottom: 0.5rem;
+      margin-top: 0.6rem;
+      margin-bottom: 0.3rem;
       text-decoration: underline;
       padding-bottom: 0.2rem;
     }
@@ -45,15 +45,15 @@ export const getContentStyles = (): string => {
     .print-content h2 {
       font-size: 14pt;
       font-weight: 600;
-      margin-top: 0.6rem;
-      margin-bottom: 0.4rem;
+      margin-top: 0.5rem;
+      margin-bottom: 0.2rem;
     }
     
     .print-content h3 {
       font-size: 12pt;
       font-weight: 500;
-      margin-top: 0.4rem;
-      margin-bottom: 0.3rem;
+      margin-top: 0.3rem;
+      margin-bottom: 0.2rem;
     }
     
     /* Normal text should be normal weight */
@@ -66,7 +66,7 @@ export const getContentStyles = (): string => {
       font-weight: normal;
       line-height: 1.1;
       margin-top: 0;
-      margin-bottom: 0.05rem;
+      margin-bottom: 0.03rem;
     }
     
     /* Only make actual bold elements bold */
