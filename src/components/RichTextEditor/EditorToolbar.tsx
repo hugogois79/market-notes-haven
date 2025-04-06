@@ -1,7 +1,7 @@
 
 import React from "react";
 import { 
-  Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, 
+  Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, AlignJustify,
   Type, List, ListOrdered, Heading1, Heading2, Heading3, 
   Table, SeparatorHorizontal, CheckSquare, Highlighter
 } from "lucide-react";
@@ -50,6 +50,9 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
           break;
         case 'right':
           execCommand('justifyRight');
+          break;
+        case 'justify':
+          execCommand('justifyFull');
           break;
       }
     }
@@ -110,6 +113,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         onAlignLeft={() => handleTextAlign('left')}
         onAlignCenter={() => handleTextAlign('center')}
         onAlignRight={() => handleTextAlign('right')}
+        onAlignJustify={() => handleTextAlign('justify')}
       />
       
       <ToolbarDivider />

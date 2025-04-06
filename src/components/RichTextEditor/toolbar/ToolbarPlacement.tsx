@@ -42,6 +42,11 @@ const ToolbarPlacement: React.FC<ToolbarPlacementProps> = ({
     if (formatTableCells) formatTableCells('right');
     else execCommand('justifyRight');
   };
+  
+  const handleAlignJustify = () => {
+    if (formatTableCells) formatTableCells('justify');
+    else execCommand('justifyFull');
+  };
 
   return (
     <PortableToolbar
@@ -53,6 +58,7 @@ const ToolbarPlacement: React.FC<ToolbarPlacementProps> = ({
       formatAlignLeft={handleAlignLeft}
       formatAlignCenter={handleAlignCenter}
       formatAlignRight={handleAlignRight}
+      formatAlignJustify={handleAlignJustify}
       formatLink={() => execCommand('createlink', prompt('Enter link URL:', 'http://') || '')}
       formatImage={() => execCommand('insertImage', prompt('Enter image URL:', 'http://') || '')}
       formatStrikethrough={() => execCommand('strikeThrough')}

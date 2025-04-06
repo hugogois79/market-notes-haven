@@ -47,6 +47,11 @@ const FloatingToolbarWrapper: React.FC<FloatingToolbarWrapperProps> = ({
     if (formatTableCells) formatTableCells('right');
     else execCommand('justifyRight');
   };
+  
+  const handleAlignJustify = () => {
+    if (formatTableCells) formatTableCells('justify');
+    else execCommand('justifyFull');
+  };
 
   return (
     <PortableToolbar
@@ -58,6 +63,7 @@ const FloatingToolbarWrapper: React.FC<FloatingToolbarWrapperProps> = ({
       formatAlignLeft={handleAlignLeft}
       formatAlignCenter={handleAlignCenter}
       formatAlignRight={handleAlignRight}
+      formatAlignJustify={handleAlignJustify}
       formatLink={() => execCommand('createlink', prompt('Enter link URL:', 'http://') || '')}
       formatImage={() => execCommand('insertImage', prompt('Enter image URL:', 'http://') || '')}
       formatStrikethrough={() => execCommand('strikeThrough')}

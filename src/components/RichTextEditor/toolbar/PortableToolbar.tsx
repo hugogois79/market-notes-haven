@@ -16,6 +16,7 @@ interface PortableToolbarProps {
   formatAlignLeft?: () => void;
   formatAlignCenter?: () => void;
   formatAlignRight?: () => void;
+  formatAlignJustify?: () => void;
   formatLink?: () => void;
   formatImage?: () => void;
   formatStrikethrough?: () => void;
@@ -40,6 +41,7 @@ const PortableToolbar: React.FC<PortableToolbarProps> = ({
   formatAlignLeft,
   formatAlignCenter,
   formatAlignRight,
+  formatAlignJustify,
   formatLink,
   formatImage,
   formatStrikethrough,
@@ -133,6 +135,7 @@ const PortableToolbar: React.FC<PortableToolbarProps> = ({
           formatAlignLeft={formatAlignLeft}
           formatAlignCenter={formatAlignCenter}
           formatAlignRight={formatAlignRight}
+          formatAlignJustify={formatAlignJustify}
         />
         
         <ToolbarDivider />
