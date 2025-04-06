@@ -1,22 +1,21 @@
 
 import React, { RefObject } from "react";
-import PortableToolbar from "../toolbar/PortableToolbar";
+import PortableToolbar from "./PortableToolbar";
 
-interface FloatingToolbarWrapperProps {
+export interface ToolbarPlacementProps {
   editorRef: RefObject<HTMLDivElement>;
-  boldText: (() => void) | null;
-  underlineText: (() => void) | null;
-  highlightText: (() => void) | null;
+  boldText?: () => void;
+  underlineText?: () => void;
+  highlightText?: () => void;
   execCommand: (command: string, value?: string) => void;
   formatTableCells: (alignment: string) => void;
   insertVerticalSeparator: () => void;
-  isVisible: boolean;
-  position?: 'top' | 'bottom';
+  position?: 'top' | 'bottom' | 'inline';
   variant?: 'default' | 'floating' | 'inline' | 'fixed';
   className?: string;
 }
 
-const FloatingToolbarWrapper: React.FC<FloatingToolbarWrapperProps> = ({
+const ToolbarPlacement: React.FC<ToolbarPlacementProps> = ({
   editorRef,
   boldText,
   underlineText,
@@ -24,14 +23,10 @@ const FloatingToolbarWrapper: React.FC<FloatingToolbarWrapperProps> = ({
   execCommand,
   formatTableCells,
   insertVerticalSeparator,
-  isVisible,
-  position = 'top',
-  variant = 'floating',
-  className = ""
+  position = 'inline',
+  variant = 'default',
+  className = "",
 }) => {
-  // Don't show if not visible
-  if (!isVisible) return null;
-
   // Create wrapper functions for alignment actions
   const handleAlignLeft = () => {
     if (formatTableCells) formatTableCells('left');
@@ -82,4 +77,4 @@ const FloatingToolbarWrapper: React.FC<FloatingToolbarWrapperProps> = ({
   );
 };
 
-export default FloatingToolbarWrapper;
+export default ToolbarPlacement;
