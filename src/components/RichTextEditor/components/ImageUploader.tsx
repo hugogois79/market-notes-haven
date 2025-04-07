@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useImageUpload } from '../hooks/editor/useImageUpload';
 
 interface ImageUploaderProps {
@@ -46,7 +46,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ open, onOpenChange, onIma
   };
 
   // Reset state when dialog opens/closes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!open) {
       setTimeout(() => {
         setImageUrl('');
@@ -60,6 +60,9 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ open, onOpenChange, onIma
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Insert Image</DialogTitle>
+          <DialogDescription>
+            Add an image to your note
+          </DialogDescription>
         </DialogHeader>
         
         <Tabs 
