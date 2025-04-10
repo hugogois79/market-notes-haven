@@ -1,6 +1,7 @@
 
 import { RefObject, useEffect } from 'react';
 import { addBulletPoint, addNumberedPoint } from '../formatting/formatters/listFormatters';
+import { createSeparator } from '../formatting/formatters/separatorFormatters';
 
 export const useKeyboardShortcuts = (
   editorRef: RefObject<HTMLDivElement>,
@@ -102,6 +103,16 @@ export const useKeyboardShortcuts = (
           case 'H':
             e.preventDefault();
             document.execCommand('backColor', false, '#FEF7CD');
+            break;
+          
+          // Add separator shortcut
+          case 's': // Separator
+          case 'S':
+            e.preventDefault();
+            console.log('Alt+S pressed - adding separator');
+            if (editorRef.current) {
+              createSeparator(editorRef.current);
+            }
             break;
         }
         

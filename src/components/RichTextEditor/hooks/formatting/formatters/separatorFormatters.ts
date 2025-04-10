@@ -9,35 +9,34 @@
 export function createSeparator(editorRef: HTMLDivElement | null) {
   if (!editorRef) return;
   
-  const separator = document.createElement('hr');
-  separator.className = 'editor-separator';
-  separator.style.border = 'none';
-  separator.style.borderTop = '1px solid #d1d5db';
-  separator.style.margin = '0.4rem 0';
+  console.log("Inserting separator");
   
-  const range = window.getSelection()?.getRangeAt(0);
-  if (range) {
-    range.deleteContents();
-    range.insertNode(separator);
-    
-    // Move cursor after the separator
-    range.setStartAfter(separator);
-    range.setEndAfter(separator);
-    
-    // Create a new paragraph after the separator if needed
-    const paragraph = document.createElement('p');
-    paragraph.innerHTML = '<br>';
-    range.insertNode(paragraph);
-    
-    // Set focus to the new paragraph
-    range.setStart(paragraph, 0);
-    range.setEnd(paragraph, 0);
-    range.collapse(true);
-    
-    const selection = window.getSelection();
-    if (selection) {
-      selection.removeAllRanges();
-      selection.addRange(range);
-    }
-  }
+  // Focus the editor first
+  editorRef.focus();
+  
+  // Create HTML for a clean, styled separator
+  const separatorHTML = `
+    <div class="editor-separator" style="
+      width: 100%;
+      margin: 1rem 0;
+      text-align: center;
+      position: relative;
+      clear: both;
+    ">
+      <hr style="
+        border: none;
+        height: 1px;
+        background-color: #d1d5db;
+        margin: 0;
+      "/>
+    </div>
+    <p><br></p>
+  `;
+  
+  // Insert the separator HTML
+  document.execCommand('insertHTML', false, separatorHTML);
+  
+  // Trigger input event to ensure changes are registered
+  const inputEvent = new Event('input', { bubbles: true });
+  editorRef.dispatchEvent(inputEvent);
 }

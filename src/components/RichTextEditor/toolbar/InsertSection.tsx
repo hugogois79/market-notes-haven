@@ -1,7 +1,7 @@
 
 import React from "react";
 import ToolbarButton from "./ToolbarButton";
-import { Link, Image, Table, Text, SeparatorVertical, CheckSquare, List, ListOrdered } from "lucide-react";
+import { Link, Image, Table, Text, SeparatorHorizontal, CheckSquare, List, ListOrdered } from "lucide-react";
 import ImageUploader from "../components/ImageUploader";
 
 interface InsertSectionProps {
@@ -90,7 +90,11 @@ const InsertSection: React.FC<InsertSectionProps> = ({
             tooltip="Format Table Cells" 
           />
         )}
-        <ToolbarButton icon={SeparatorVertical} onClick={handleInsertSeparator} tooltip="Insert Separator" />
+        <ToolbarButton 
+          icon={SeparatorHorizontal} 
+          onClick={handleInsertSeparator} 
+          tooltip="Insert Separator (Alt+S)" 
+        />
         {formatUnorderedList && (
           <ToolbarButton 
             icon={List} 

@@ -129,6 +129,21 @@ const ContentStyles = () => {
           display: inline-block;
           margin-left: 0.5rem;
         }
+        
+        .editor-content .editor-separator {
+          width: 100%;
+          margin: 1rem 0;
+          text-align: center;
+          position: relative;
+          clear: both;
+        }
+        
+        .editor-content .editor-separator hr {
+          border: none;
+          height: 1px;
+          background-color: #d1d5db;
+          margin: 0;
+        }
       `}
     </style>
   );
