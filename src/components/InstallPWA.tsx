@@ -4,6 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { toast } from 'sonner';
 
+/**
+ * Note: This component is currently not used in the application.
+ * It was previously used to provide PWA installation functionality.
+ * Kept for potential future use.
+ */
+
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
@@ -75,7 +81,7 @@ const InstallPWA = () => {
     setInstallPrompt(null);
   };
 
-  // Add a debug button that's always visible to help troubleshoot
+  // Component is no longer used in the UI
   return (
     <>
       <Button 
