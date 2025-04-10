@@ -38,10 +38,19 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
       
       console.log('Uploading file to Supabase storage...');
       
+      // Get user auth status
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        throw new Error('User not authenticated');
+      }
+      
       // Upload to Supabase storage - using the correct bucket name 'Note Attachments'
       const { data, error } = await supabase.storage
         .from('Note Attachments')
-        .upload(`notes/${fileName}`, file);
+        .upload(`notes/${fileName}`, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
       
       if (error) {
         console.error('Upload error:', error);
@@ -62,9 +71,13 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
       toast.success("File uploaded successfully");
     } catch (error) {
       console.error("Error uploading file:", error);
-      toast.error("Failed to upload file");
+      toast.error("Failed to upload file. Please check your connection and try again.");
     } finally {
       setIsUploading(false);
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
