@@ -120,44 +120,6 @@ export type Database = {
           },
         ]
       }
-      demo_documents: {
-        Row: {
-          chunk_order: number | null
-          date_created: string | null
-          embedding: string | null
-          file_id: string | null
-          id: string
-          metadata: Json | null
-          text: string | null
-        }
-        Insert: {
-          chunk_order?: number | null
-          date_created?: string | null
-          embedding?: string | null
-          file_id?: string | null
-          id?: string
-          metadata?: Json | null
-          text?: string | null
-        }
-        Update: {
-          chunk_order?: number | null
-          date_created?: string | null
-          embedding?: string | null
-          file_id?: string | null
-          id?: string
-          metadata?: Json | null
-          text?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "demo_documents_file_id_fkey"
-            columns: ["file_id"]
-            isOneToOne: false
-            referencedRelation: "files"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       diana: {
         Row: {
           content: string | null
@@ -209,7 +171,7 @@ export type Database = {
             foreignKeyName: "document_summaries_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
-            referencedRelation: "demo_documents"
+            referencedRelation: "documents_new"
             referencedColumns: ["id"]
           },
         ]
@@ -237,6 +199,44 @@ export type Database = {
           metadata?: Json | null
         }
         Relationships: []
+      }
+      documents_new: {
+        Row: {
+          chunk_order: number | null
+          content: string | null
+          date_created: string | null
+          embedding: string | null
+          file_id: string | null
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          chunk_order?: number | null
+          content?: string | null
+          date_created?: string | null
+          embedding?: string | null
+          file_id?: string | null
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          chunk_order?: number | null
+          content?: string | null
+          date_created?: string | null
+          embedding?: string | null
+          file_id?: string | null
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demo_documents_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       expense_categories: {
         Row: {
@@ -397,30 +397,36 @@ export type Database = {
       files: {
         Row: {
           date_created: string
+          description: string | null
           embedding: string | null
           google_drive_id: string | null
+          google_drive_url: string | null
           id: string
           name: string | null
           pages: number | null
-          summary: string | null
+          status: Database["public"]["Enums"]["file_status"] | null
         }
         Insert: {
           date_created?: string
+          description?: string | null
           embedding?: string | null
           google_drive_id?: string | null
+          google_drive_url?: string | null
           id?: string
           name?: string | null
           pages?: number | null
-          summary?: string | null
+          status?: Database["public"]["Enums"]["file_status"] | null
         }
         Update: {
           date_created?: string
+          description?: string | null
           embedding?: string | null
           google_drive_id?: string | null
+          google_drive_url?: string | null
           id?: string
           name?: string | null
           pages?: number | null
-          summary?: string | null
+          status?: Database["public"]["Enums"]["file_status"] | null
         }
         Relationships: []
       }
@@ -1235,6 +1241,26 @@ export type Database = {
           similarity: number
         }[]
       }
+      match_documents_new: {
+        Args: { query_embedding: string; match_count?: number; filter?: Json }
+        Returns: {
+          id: string
+          content: string
+          similarity: number
+          file_name: string
+          file_url: string
+          metadata: Json
+          file_id: string
+        }[]
+      }
+      match_files: {
+        Args: { query_embedding: string; match_count?: number; filter?: Json }
+        Returns: {
+          id: string
+          description: string
+          similarity: number
+        }[]
+      }
       sparsevec_out: {
         Args: { "": unknown }
         Returns: unknown
@@ -1274,6 +1300,7 @@ export type Database = {
     }
     Enums: {
       expense_status: "pending" | "approved" | "rejected"
+      file_status: "parsed" | "summarized" | "processed"
       report_status: "draft" | "submitted" | "approved" | "rejected"
     }
     CompositeTypes: {
@@ -1391,6 +1418,7 @@ export const Constants = {
   public: {
     Enums: {
       expense_status: ["pending", "approved", "rejected"],
+      file_status: ["parsed", "summarized", "processed"],
       report_status: ["draft", "submitted", "approved", "rejected"],
     },
   },

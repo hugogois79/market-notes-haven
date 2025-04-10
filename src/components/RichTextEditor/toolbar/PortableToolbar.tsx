@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import TextFormattingSection from "./TextFormattingSection";
@@ -26,6 +27,7 @@ interface PortableToolbarProps {
   insertVerticalSeparator?: () => void;
   highlightText?: () => void;
   underlineText?: () => void;
+  formatNormalText?: () => void;
   className?: string;
   variant?: 'default' | 'floating' | 'inline' | 'fixed';
   position?: 'top' | 'bottom' | 'inline';
@@ -51,6 +53,7 @@ const PortableToolbar: React.FC<PortableToolbarProps> = ({
   insertVerticalSeparator,
   highlightText,
   underlineText,
+  formatNormalText,
   className = "",
   variant = 'default',
   position = 'inline',
@@ -121,6 +124,11 @@ const PortableToolbar: React.FC<PortableToolbarProps> = ({
     }
   };
 
+  // Create normal text handler if not provided but execCommand is available
+  const handleNormalText = formatNormalText || (execCommand ? 
+    () => execCommand('formatBlock', '<p>') : 
+    undefined);
+
   return (
     <>
       <div className={getContainerClasses()}>
@@ -159,6 +167,7 @@ const PortableToolbar: React.FC<PortableToolbarProps> = ({
             insertTable={insertTable}
             formatTableCells={formatTableCells}
             insertVerticalSeparator={insertVerticalSeparator}
+            formatNormalText={handleNormalText}
           />
         </TooltipProvider>
       </div>

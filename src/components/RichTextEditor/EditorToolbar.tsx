@@ -62,6 +62,10 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
     execCommand('formatBlock', level);
   };
 
+  const formatNormalText = () => {
+    execCommand('formatBlock', '<p>');
+  };
+
   return (
     <div className={`flex items-center flex-wrap p-1 gap-0.5 ${className}`}>
       {/* Text Formatting Section */}
@@ -93,7 +97,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         />
         <ToolbarButton 
           icon={Type} 
-          onClick={() => applyHeading('<p>')} 
+          onClick={formatNormalText} 
           tooltip="Normal text"
         />
       </div>
@@ -136,6 +140,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         onInsertSeparator={insertVerticalSeparator || (() => {
           document.execCommand('insertHTML', false, '<hr style="border:none; border-top:1px solid #ccc; margin:1rem 0;" />');
         })}
+        formatNormalText={formatNormalText}
       />
     </div>
   );

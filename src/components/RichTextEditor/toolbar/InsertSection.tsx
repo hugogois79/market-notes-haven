@@ -1,3 +1,4 @@
+
 import React from "react";
 import ToolbarButton from "./ToolbarButton";
 import { Link, Image, Table, Text, SeparatorVertical, CheckSquare } from "lucide-react";
@@ -12,6 +13,7 @@ interface InsertSectionProps {
   onInsertTable?: () => void;
   onInsertCheckbox?: () => void;
   onInsertSeparator?: () => void;
+  formatNormalText?: () => void;
 }
 
 const InsertSection: React.FC<InsertSectionProps> = ({
@@ -22,7 +24,8 @@ const InsertSection: React.FC<InsertSectionProps> = ({
   insertVerticalSeparator,
   onInsertTable,
   onInsertCheckbox,
-  onInsertSeparator
+  onInsertSeparator,
+  formatNormalText
 }) => {
   const [imageDialogOpen, setImageDialogOpen] = React.useState(false);
   
@@ -72,6 +75,13 @@ const InsertSection: React.FC<InsertSectionProps> = ({
           />
         )}
         <ToolbarButton icon={SeparatorVertical} onClick={handleInsertSeparator} tooltip="Insert Separator" />
+        {formatNormalText && (
+          <ToolbarButton 
+            icon={Text} 
+            onClick={formatNormalText}
+            tooltip="Normal Text" 
+          />
+        )}
       </div>
       
       {/* Use our standalone ImageUploader component */}

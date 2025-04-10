@@ -52,6 +52,10 @@ const FloatingToolbarWrapper: React.FC<FloatingToolbarWrapperProps> = ({
     if (formatTableCells) formatTableCells('justify');
     else execCommand('justifyFull');
   };
+  
+  const formatNormalText = () => {
+    execCommand('formatBlock', '<p>');
+  };
 
   return (
     <PortableToolbar
@@ -80,6 +84,7 @@ const FloatingToolbarWrapper: React.FC<FloatingToolbarWrapperProps> = ({
       insertVerticalSeparator={insertVerticalSeparator}
       highlightText={highlightText || (() => execCommand('backColor', '#FEF7CD'))}
       underlineText={underlineText || (() => execCommand('underline'))}
+      formatNormalText={formatNormalText}
       position={position}
       variant={variant}
       className={className}

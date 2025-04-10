@@ -47,6 +47,10 @@ const ToolbarPlacement: React.FC<ToolbarPlacementProps> = ({
     if (formatTableCells) formatTableCells('justify');
     else execCommand('justifyFull');
   };
+  
+  const formatNormalText = () => {
+    execCommand('formatBlock', '<p>');
+  };
 
   return (
     <PortableToolbar
@@ -75,6 +79,7 @@ const ToolbarPlacement: React.FC<ToolbarPlacementProps> = ({
       insertVerticalSeparator={insertVerticalSeparator}
       highlightText={highlightText || (() => execCommand('backColor', '#FEF7CD'))}
       underlineText={underlineText || (() => execCommand('underline'))}
+      formatNormalText={formatNormalText}
       position={position}
       variant={variant}
       className={className}
