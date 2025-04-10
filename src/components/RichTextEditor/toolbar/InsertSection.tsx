@@ -1,7 +1,7 @@
 
 import React from "react";
 import ToolbarButton from "./ToolbarButton";
-import { Link, Image, Table, Text, SeparatorVertical, CheckSquare } from "lucide-react";
+import { Link, Image, Table, Text, SeparatorVertical, CheckSquare, List, ListOrdered } from "lucide-react";
 import ImageUploader from "../components/ImageUploader";
 
 interface InsertSectionProps {
@@ -14,6 +14,8 @@ interface InsertSectionProps {
   onInsertCheckbox?: () => void;
   onInsertSeparator?: () => void;
   formatNormalText?: () => void;
+  formatUnorderedList?: () => void;
+  formatOrderedList?: () => void;
 }
 
 const InsertSection: React.FC<InsertSectionProps> = ({
@@ -25,7 +27,9 @@ const InsertSection: React.FC<InsertSectionProps> = ({
   onInsertTable,
   onInsertCheckbox,
   onInsertSeparator,
-  formatNormalText
+  formatNormalText,
+  formatUnorderedList,
+  formatOrderedList
 }) => {
   const [imageDialogOpen, setImageDialogOpen] = React.useState(false);
   
@@ -61,6 +65,18 @@ const InsertSection: React.FC<InsertSectionProps> = ({
     }
   };
 
+  const handleBulletList = () => {
+    if (formatUnorderedList) {
+      formatUnorderedList();
+    }
+  };
+
+  const handleNumberedList = () => {
+    if (formatOrderedList) {
+      formatOrderedList();
+    }
+  };
+
   return (
     <>
       <div className="flex items-center gap-0.5">
@@ -75,6 +91,20 @@ const InsertSection: React.FC<InsertSectionProps> = ({
           />
         )}
         <ToolbarButton icon={SeparatorVertical} onClick={handleInsertSeparator} tooltip="Insert Separator" />
+        {formatUnorderedList && (
+          <ToolbarButton 
+            icon={List} 
+            onClick={handleBulletList}
+            tooltip="Bullet List (Alt+U)" 
+          />
+        )}
+        {formatOrderedList && (
+          <ToolbarButton 
+            icon={ListOrdered} 
+            onClick={handleNumberedList}
+            tooltip="Numbered List (Alt+O)" 
+          />
+        )}
         {formatNormalText && (
           <ToolbarButton 
             icon={Text} 

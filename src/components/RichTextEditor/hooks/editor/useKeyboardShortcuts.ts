@@ -1,5 +1,6 @@
 
 import { RefObject, useEffect } from 'react';
+import { addBulletPoint, addNumberedPoint } from '../formatting/formatters/listFormatters';
 
 export const useKeyboardShortcuts = (
   editorRef: RefObject<HTMLDivElement>,
@@ -101,6 +102,18 @@ export const useKeyboardShortcuts = (
           case 'H':
             e.preventDefault();
             document.execCommand('backColor', false, '#FEF7CD');
+            break;
+            
+          // List formatting shortcuts - newly added
+          case 'o': // Ordered (numbered) list
+          case 'O':
+            e.preventDefault();
+            addNumberedPoint(editorRef);
+            break;
+          case 'u': // Unordered (bullet) list
+          case 'U':
+            e.preventDefault();
+            addBulletPoint(editorRef);
             break;
         }
       }

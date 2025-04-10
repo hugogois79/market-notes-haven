@@ -168,6 +168,8 @@ const PortableToolbar: React.FC<PortableToolbarProps> = ({
             formatTableCells={formatTableCells}
             insertVerticalSeparator={insertVerticalSeparator}
             formatNormalText={handleNormalText}
+            formatUnorderedList={formatUnorderedList}
+            formatOrderedList={formatOrderedList}
           />
         </TooltipProvider>
       </div>

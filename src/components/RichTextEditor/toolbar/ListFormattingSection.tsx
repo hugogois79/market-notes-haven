@@ -47,12 +47,12 @@ const ListFormattingSection: React.FC<ListFormattingSectionProps> = ({
       <ToolbarButton 
         icon={List} 
         onClick={handleBulletList} 
-        tooltip="Bullet List"
+        tooltip="Bullet List (Alt+U)"
       />
       <ToolbarButton 
         icon={ListOrdered} 
         onClick={handleNumberedList} 
-        tooltip="Numbered List"
+        tooltip="Numbered List (Alt+O)"
       />
       {insertCheckbox && (
         <ToolbarButton 
