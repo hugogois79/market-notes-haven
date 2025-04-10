@@ -36,19 +36,26 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
       const fileExt = file.name.split('.').pop();
       const fileName = `${noteId}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       
-      // Upload to Supabase storage (use the existing 'Note Attachments' bucket)
+      console.log('Uploading file to Supabase storage...');
+      
+      // Upload to Supabase storage - using the correct bucket name 'Note Attachments'
       const { data, error } = await supabase.storage
         .from('Note Attachments')
         .upload(`notes/${fileName}`, file);
       
       if (error) {
+        console.error('Upload error:', error);
         throw error;
       }
+      
+      console.log('File uploaded successfully:', data);
       
       // Get the public URL
       const { data: urlData } = supabase.storage
         .from('Note Attachments')
         .getPublicUrl(`notes/${fileName}`);
+      
+      console.log('File public URL:', urlData);
       
       // Update the note with the attachment URL
       onAttachmentChange(urlData.publicUrl);
