@@ -112,11 +112,20 @@ export const resetListNumbering = (list: HTMLElement) => {
 export const addBulletPoint = (editorRef: RefObject<HTMLDivElement>) => {
   if (!editorRef.current) return;
   
+  console.log("Adding bullet point");
+  
+  // Focus the editor element first to ensure commands work
+  editorRef.current.focus();
+  
   // Create a bullet list
   document.execCommand('insertUnorderedList', false);
   
   // Format the list that was just created
   processExistingListsFormatting(editorRef);
+  
+  // Trigger a change event to ensure the editor updates
+  const event = new Event('input', { bubbles: true });
+  editorRef.current.dispatchEvent(event);
 };
 
 /**
@@ -125,9 +134,18 @@ export const addBulletPoint = (editorRef: RefObject<HTMLDivElement>) => {
 export const addNumberedPoint = (editorRef: RefObject<HTMLDivElement>) => {
   if (!editorRef.current) return;
   
+  console.log("Adding numbered point");
+  
+  // Focus the editor element first to ensure commands work
+  editorRef.current.focus();
+  
   // Create a numbered list
   document.execCommand('insertOrderedList', false);
   
   // Format the list that was just created
   processExistingListsFormatting(editorRef);
+  
+  // Trigger a change event to ensure the editor updates
+  const event = new Event('input', { bubbles: true });
+  editorRef.current.dispatchEvent(event);
 };

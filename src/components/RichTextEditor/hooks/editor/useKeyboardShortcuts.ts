@@ -103,18 +103,18 @@ export const useKeyboardShortcuts = (
             e.preventDefault();
             document.execCommand('backColor', false, '#FEF7CD');
             break;
-            
-          // List formatting shortcuts - newly added
-          case 'o': // Ordered (numbered) list
-          case 'O':
-            e.preventDefault();
-            addNumberedPoint(editorRef);
-            break;
-          case 'u': // Unordered (bullet) list
-          case 'U':
-            e.preventDefault();
-            addBulletPoint(editorRef);
-            break;
+        }
+        
+        // Handle list formatting shortcuts outside of switch for better clarity
+        // These need to be handled specially since 'u' is already used for underline
+        if (e.key === 'o' || e.key === 'O') {
+          e.preventDefault();
+          console.log('Alt+O pressed - adding numbered list');
+          addNumberedPoint(editorRef);
+        } else if ((e.key === 'u' || e.key === 'U') && e.altKey) {
+          e.preventDefault();
+          console.log('Alt+U pressed - adding bullet list');
+          addBulletPoint(editorRef);
         }
       }
     };
