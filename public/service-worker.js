@@ -19,6 +19,7 @@ self.addEventListener('install', event => {
         console.log('Service Worker: Caching files');
         return cache.addAll(urlsToCache);
       })
+      .then(() => self.skipWaiting()) // Force activation
   );
 });
 
@@ -50,7 +51,7 @@ self.addEventListener('activate', event => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim()) // Take control immediately
   );
 });
 

@@ -27,6 +27,19 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     };
   }, []);
 
+  // Register service worker for PWA functionality
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(reg => {
+          console.log('Service worker registered:', reg);
+        })
+        .catch(err => {
+          console.error('Service worker registration failed:', err);
+        });
+    }
+  }, []);
+
   return (
     <div className="flex min-h-screen bg-background overflow-hidden w-full">
       <div className={`transition-all duration-300 ${sidebarOpen ? 'block' : 'hidden md:block'} fixed left-0 top-0 h-full z-40`}>

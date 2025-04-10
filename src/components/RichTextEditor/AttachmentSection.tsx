@@ -36,7 +36,7 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
       const fileExt = file.name.split('.').pop();
       const fileName = `${noteId}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       
-      console.log('Uploading file to Supabase storage...');
+      console.log('Uploading file to Supabase storage...', fileName);
       
       // Get user auth status
       const { data: userData } = await supabase.auth.getUser();
@@ -44,10 +44,11 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
         throw new Error('User not authenticated');
       }
       
-      // Upload to Supabase storage - using the correct bucket name 'Note Attachments'
+      // Upload to Supabase storage - make sure we're using the correct bucket format
+      // Note: Bucket names in Supabase URLs might include spaces, but in code we should use the exact bucket name
       const { data, error } = await supabase.storage
         .from('Note Attachments')
-        .upload(`notes/${fileName}`, file, {
+        .upload(`public/${userData.user.id}/${fileName}`, file, {
           cacheControl: '3600',
           upsert: true
         });
@@ -59,10 +60,10 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
       
       console.log('File uploaded successfully:', data);
       
-      // Get the public URL
+      // Get the public URL - make sure we're using the correct bucket format
       const { data: urlData } = supabase.storage
         .from('Note Attachments')
-        .getPublicUrl(`notes/${fileName}`);
+        .getPublicUrl(`public/${userData.user.id}/${fileName}`);
       
       console.log('File public URL:', urlData);
       

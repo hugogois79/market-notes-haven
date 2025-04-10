@@ -52,6 +52,7 @@ const InstallPWA = () => {
 
   const handleInstallClick = async () => {
     if (!installPrompt) {
+      console.log('No installation prompt available');
       toast.error('Installation is not available at the moment');
       return;
     }
@@ -74,18 +75,25 @@ const InstallPWA = () => {
     setInstallPrompt(null);
   };
 
-  // Always render the button regardless of installable state for debugging
+  // Add a debug button that's always visible to help troubleshoot
   return (
-    <Button 
-      onClick={handleInstallClick} 
-      variant="outline"
-      className="gap-2 ml-4"
-      size="sm"
-      disabled={!isInstallable}
-    >
-      <Download size={16} />
-      Install App
-    </Button>
+    <>
+      <Button 
+        onClick={handleInstallClick} 
+        variant="outline"
+        className="gap-2 ml-4"
+        size="sm"
+        disabled={!isInstallable}
+      >
+        <Download size={16} />
+        Install App
+      </Button>
+      <div className="hidden">
+        Debug Info: 
+        {isInstallable ? 'Installable' : 'Not Installable'}, 
+        {isInstalled ? 'Installed' : 'Not Installed'}
+      </div>
+    </>
   );
 };
 
