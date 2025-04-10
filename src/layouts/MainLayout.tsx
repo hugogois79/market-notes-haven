@@ -2,6 +2,7 @@
 import Sidebar from "@/components/Sidebar";
 import { useState, ReactNode, useEffect } from "react";
 import UserProfileButton from "@/components/UserProfileButton";
+import InstallPWA from "@/components/InstallPWA";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MainLayoutProps {
@@ -37,7 +38,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           (isMobile ? 'md:ml-80' : (sidebarExpanded ? 'md:ml-80' : 'md:ml-24')) 
           : 'ml-0'
       }`}>
-        <header className="h-14 px-4 border-b flex items-center justify-end">
+        <header className="h-14 px-4 border-b flex items-center justify-between">
+          <InstallPWA />
           <div className="flex items-center">
             <UserProfileButton />
           </div>
