@@ -36,9 +36,9 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
       const fileExt = file.name.split('.').pop();
       const fileName = `${noteId}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       
-      // Upload to Supabase storage
+      // Upload to Supabase storage (use 'note_attachments' bucket instead of 'attachments')
       const { data, error } = await supabase.storage
-        .from('attachments')
+        .from('note_attachments')
         .upload(`notes/${fileName}`, file);
       
       if (error) {
@@ -47,7 +47,7 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
       
       // Get the public URL
       const { data: urlData } = supabase.storage
-        .from('attachments')
+        .from('note_attachments')
         .getPublicUrl(`notes/${fileName}`);
       
       // Update the note with the attachment URL
