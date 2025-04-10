@@ -12,10 +12,11 @@ const urlsToCache = [
 
 // Install service worker
 self.addEventListener('install', event => {
+  console.log('Service Worker installing...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache');
+        console.log('Service Worker: Caching files');
         return cache.addAll(urlsToCache);
       })
   );
@@ -37,16 +38,25 @@ self.addEventListener('fetch', event => {
 
 // Update service worker
 self.addEventListener('activate', event => {
+  console.log('Service Worker activating...');
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheWhitelist.indexOf(cacheName) === -1) {
+            console.log('Service Worker: Clearing old cache');
             return caches.delete(cacheName);
           }
         })
       );
     })
   );
+});
+
+// Listen for messages from the client
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });

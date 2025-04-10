@@ -18,6 +18,7 @@ const InstallPWA = () => {
     // Check if the app is already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
+      console.log('PWA is already installed');
       return;
     }
 
@@ -29,7 +30,7 @@ const InstallPWA = () => {
       // Update UI to show the install button
       setIsInstallable(true);
       
-      console.log('App can be installed', e);
+      console.log('App can be installed, prompt event captured');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -73,16 +74,14 @@ const InstallPWA = () => {
     setInstallPrompt(null);
   };
 
-  if (isInstalled || !isInstallable) {
-    return null;
-  }
-
+  // Always render the button regardless of installable state for debugging
   return (
     <Button 
       onClick={handleInstallClick} 
       variant="outline"
-      className="gap-2"
+      className="gap-2 ml-4"
       size="sm"
+      disabled={!isInstallable}
     >
       <Download size={16} />
       Install App

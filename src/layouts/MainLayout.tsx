@@ -39,7 +39,9 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           : 'ml-0'
       }`}>
         <header className="h-14 px-4 border-b flex items-center justify-between">
-          <InstallPWA />
+          <div className="flex items-center">
+            <InstallPWA />
+          </div>
           <div className="flex items-center">
             <UserProfileButton />
           </div>
