@@ -11,6 +11,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -22,6 +32,7 @@ const InstallPWA = () => {
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [showInstallDialog, setShowInstallDialog] = useState(false);
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   useEffect(() => {
     // Check if the app is already installed
@@ -31,6 +42,7 @@ const InstallPWA = () => {
       return;
     }
 
+    // Capture installation prompt for later use
     const handleBeforeInstallPrompt = (e: Event) => {
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
@@ -69,15 +81,16 @@ const InstallPWA = () => {
       return;
     }
     
+    // Check if this is iOS where PWA installation is manual
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    
+    if (isIOS) {
+      setShowIOSInstructions(true);
+      return;
+    }
+    
     if (!installPrompt) {
-      console.log('No installation prompt available');
-      // Check if this is iOS where PWA installation is manual
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-      if (isIOS) {
-        toast.info('To install on iOS: tap the share button and then "Add to Home Screen"');
-      } else {
-        toast.error('Installation is not available at the moment');
-      }
+      toast.info('Installation is not available at the moment');
       return;
     }
 
@@ -93,7 +106,7 @@ const InstallPWA = () => {
     try {
       // Show the install prompt
       console.log('Triggering installation prompt');
-      installPrompt.prompt();
+      await installPrompt.prompt();
 
       // Wait for the user to respond to the prompt
       const choiceResult = await installPrompt.userChoice;
@@ -173,6 +186,26 @@ const InstallPWA = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* iOS Installation Instructions */}
+      <AlertDialog open={showIOSInstructions} onOpenChange={setShowIOSInstructions}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Install on iOS</AlertDialogTitle>
+            <AlertDialogDescription>
+              To install this app on your iOS device:
+              <ol className="mt-2 space-y-2 list-decimal list-inside">
+                <li>Tap the Share button (📤) at the bottom of your screen</li>
+                <li>Scroll down and tap "Add to Home Screen"</li>
+                <li>Tap "Add" in the top right corner</li>
+              </ol>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

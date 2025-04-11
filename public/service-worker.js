@@ -91,6 +91,9 @@ self.addEventListener('fetch', event => {
             });
             
           return response;
+        }).catch(error => {
+          console.log('Fetch failed:', error);
+          // You might want to return a custom offline page here
         });
       })
   );
