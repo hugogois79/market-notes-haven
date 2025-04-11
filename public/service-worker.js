@@ -7,10 +7,11 @@ const urlsToCache = [
   '/index.html',
   '/manifest.json',
   '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+  '/icons/icon-512x512.png',
+  '/favicon.ico'
 ];
 
-// Install service worker
+// Install service worker and cache initial assets
 self.addEventListener('install', event => {
   console.log('Service Worker installing...');
   event.waitUntil(
@@ -23,21 +24,7 @@ self.addEventListener('install', event => {
   );
 });
 
-// Fetch resources
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      })
-  );
-});
-
-// Update service worker
+// Activate and clean up old caches
 self.addEventListener('activate', event => {
   console.log('Service Worker activating...');
   const cacheWhitelist = [CACHE_NAME];
@@ -46,12 +33,66 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheWhitelist.indexOf(cacheName) === -1) {
-            console.log('Service Worker: Clearing old cache');
+            console.log('Service Worker: Clearing old cache', cacheName);
             return caches.delete(cacheName);
           }
+          return null;
         })
       );
-    }).then(() => self.clients.claim()) // Take control immediately
+    }).then(() => {
+      console.log('Service Worker: Claiming clients');
+      return self.clients.claim(); // Take control immediately
+    })
+  );
+});
+
+// Fetch resources with network-first strategy for API calls and cache-first for assets
+self.addEventListener('fetch', event => {
+  // Skip cross-origin requests
+  if (!event.request.url.startsWith(self.location.origin)) {
+    return;
+  }
+  
+  // Network-first strategy for API requests
+  if (event.request.url.includes('/api/') || event.request.url.includes('supabase')) {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => {
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+  
+  // Cache-first strategy for static assets
+  event.respondWith(
+    caches.match(event.request)
+      .then(response => {
+        // Cache hit - return response
+        if (response) {
+          return response;
+        }
+        
+        // Clone the request
+        const fetchRequest = event.request.clone();
+        
+        return fetch(fetchRequest).then(response => {
+          // Check if we received a valid response
+          if (!response || response.status !== 200 || response.type !== 'basic') {
+            return response;
+          }
+          
+          // Clone the response
+          const responseToCache = response.clone();
+          
+          caches.open(CACHE_NAME)
+            .then(cache => {
+              cache.put(event.request, responseToCache);
+            });
+            
+          return response;
+        });
+      })
   );
 });
 

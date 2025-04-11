@@ -3,12 +3,14 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { toast } from 'sonner';
-
-/**
- * Note: This component is currently not used in the application.
- * It was previously used to provide PWA installation functionality.
- * Kept for potential future use.
- */
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -19,6 +21,7 @@ const InstallPWA = () => {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [showInstallDialog, setShowInstallDialog] = useState(false);
 
   useEffect(() => {
     // Check if the app is already installed
@@ -47,6 +50,7 @@ const InstallPWA = () => {
       setInstallPrompt(null);
       setIsInstallable(false);
       setIsInstalled(true);
+      setShowInstallDialog(false);
       toast.success('Application installed successfully!');
       console.log('PWA was installed');
     });
@@ -56,13 +60,24 @@ const InstallPWA = () => {
     };
   }, []);
 
-  const handleInstallClick = async () => {
+  const handleInstallClick = () => {
+    if (isInstalled) {
+      toast.info('Application is already installed');
+      return;
+    }
+    
     if (!installPrompt) {
       console.log('No installation prompt available');
       toast.error('Installation is not available at the moment');
       return;
     }
 
+    setShowInstallDialog(true);
+  };
+
+  const confirmInstallation = async () => {
+    if (!installPrompt) return;
+    
     // Show the install prompt
     installPrompt.prompt();
 
@@ -78,10 +93,13 @@ const InstallPWA = () => {
     }
     
     // We no longer need the prompt, clear it
-    setInstallPrompt(null);
+    setShowInstallDialog(false);
   };
 
-  // Component is no longer used in the UI
+  if (isInstalled) {
+    return null; // Don't show the button if the app is already installed
+  }
+
   return (
     <>
       <Button 
@@ -94,11 +112,50 @@ const InstallPWA = () => {
         <Download size={16} />
         Install App
       </Button>
-      <div className="hidden">
-        Debug Info: 
-        {isInstallable ? 'Installable' : 'Not Installable'}, 
-        {isInstalled ? 'Installed' : 'Not Installed'}
-      </div>
+
+      <Dialog open={showInstallDialog} onOpenChange={setShowInstallDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Install a app</DialogTitle>
+            <DialogDescription>
+              Market Notes Haven
+              <div className="text-sm text-muted-foreground mt-1">
+                lovable.dev
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-4 py-4">
+            <div className="bg-brand rounded-md p-2">
+              <img 
+                src="/icons/icon-192x192.png" 
+                alt="App icon" 
+                className="w-12 h-12"
+              />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Market Notes Haven</p>
+              <p className="text-xs text-muted-foreground">Track and manage your market notes efficiently</p>
+            </div>
+          </div>
+          <DialogFooter className="flex sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowInstallDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="brand"
+              onClick={confirmInstallation}
+              className="bg-[#1EAEDB] text-white hover:bg-[#0FA0CE]"
+            >
+              Install
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
