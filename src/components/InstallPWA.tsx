@@ -27,7 +27,7 @@ const InstallPWA = () => {
     // Check if the app is already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
-      console.log('PWA is already installed');
+      console.log('PWA is already installed in standalone mode');
       return;
     }
 
@@ -35,11 +35,12 @@ const InstallPWA = () => {
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
       // Stash the event so it can be triggered later
-      setInstallPrompt(e as BeforeInstallPromptEvent);
+      const promptEvent = e as BeforeInstallPromptEvent;
+      setInstallPrompt(promptEvent);
       // Update UI to show the install button
       setIsInstallable(true);
       
-      console.log('App can be installed, prompt event captured');
+      console.log('App can be installed, prompt event captured and stored');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -52,7 +53,7 @@ const InstallPWA = () => {
       setIsInstalled(true);
       setShowInstallDialog(false);
       toast.success('Application installed successfully!');
-      console.log('PWA was installed');
+      console.log('PWA was installed successfully');
     });
 
     return () => {
@@ -61,6 +62,8 @@ const InstallPWA = () => {
   }, []);
 
   const handleInstallClick = () => {
+    console.log('Install button clicked, installPrompt available:', !!installPrompt);
+    
     if (isInstalled) {
       toast.info('Application is already installed');
       return;
@@ -68,7 +71,13 @@ const InstallPWA = () => {
     
     if (!installPrompt) {
       console.log('No installation prompt available');
-      toast.error('Installation is not available at the moment');
+      // Check if this is iOS where PWA installation is manual
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      if (isIOS) {
+        toast.info('To install on iOS: tap the share button and then "Add to Home Screen"');
+      } else {
+        toast.error('Installation is not available at the moment');
+      }
       return;
     }
 
@@ -76,20 +85,29 @@ const InstallPWA = () => {
   };
 
   const confirmInstallation = async () => {
-    if (!installPrompt) return;
+    if (!installPrompt) {
+      console.log('No installation prompt available when trying to confirm installation');
+      return;
+    }
     
-    // Show the install prompt
-    installPrompt.prompt();
+    try {
+      // Show the install prompt
+      console.log('Triggering installation prompt');
+      installPrompt.prompt();
 
-    // Wait for the user to respond to the prompt
-    const choiceResult = await installPrompt.userChoice;
-    
-    if (choiceResult.outcome === 'accepted') {
-      console.log('User accepted the install prompt');
-      toast.success('Installation started!');
-    } else {
-      console.log('User dismissed the install prompt');
-      toast.info('Installation cancelled');
+      // Wait for the user to respond to the prompt
+      const choiceResult = await installPrompt.userChoice;
+      
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+        toast.success('Installation started!');
+      } else {
+        console.log('User dismissed the install prompt');
+        toast.info('Installation cancelled');
+      }
+    } catch (err) {
+      console.error('Error during installation:', err);
+      toast.error('Installation failed. Please try again.');
     }
     
     // We no longer need the prompt, clear it
@@ -107,7 +125,6 @@ const InstallPWA = () => {
         variant="outline"
         className="gap-2 ml-4"
         size="sm"
-        disabled={!isInstallable}
       >
         <Download size={16} />
         Install App
@@ -116,7 +133,7 @@ const InstallPWA = () => {
       <Dialog open={showInstallDialog} onOpenChange={setShowInstallDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Install a app</DialogTitle>
+            <DialogTitle>Install app</DialogTitle>
             <DialogDescription>
               Market Notes Haven
               <div className="text-sm text-muted-foreground mt-1">

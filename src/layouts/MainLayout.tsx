@@ -30,13 +30,15 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   // Register service worker for PWA functionality
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(reg => {
-          console.log('Service worker registered:', reg);
-        })
-        .catch(err => {
-          console.error('Service worker registration failed:', err);
-        });
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(registration => {
+            console.log('Service worker registered:', registration);
+          })
+          .catch(err => {
+            console.error('Service worker registration failed:', err);
+          });
+      });
     }
   }, []);
 
