@@ -15,7 +15,7 @@ const InstallPWA = () => {
   const [showAndroidInstructions, setShowAndroidInstructions] = useState(false);
 
   const handleInstallClick = () => {
-    console.log('Install button clicked');
+    console.log('Install button clicked, installable:', isInstallable, 'installed:', isInstalled);
     
     if (isInstalled) {
       toast.info('Application is already installed');
@@ -23,6 +23,7 @@ const InstallPWA = () => {
     }
     
     const { isIOS, isAndroid } = getPlatformInfo();
+    console.log('Platform info:', { isIOS, isAndroid });
     
     if (isIOS) {
       setShowIOSInstructions(true);
@@ -37,12 +38,25 @@ const InstallPWA = () => {
     if (isInstallable) {
       setShowInstallDialog(true);
     } else {
-      toast.info('Installation is not available at the moment');
+      toast.warning('Installation is not available at the moment');
     }
   };
 
   const confirmInstallation = async () => {
-    const success = await triggerInstall();
+    try {
+      const success = await triggerInstall();
+      if (success) {
+        // Notify service worker about installation
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'APP_INSTALLED'
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Installation error:', error);
+      toast.error('Installation failed');
+    }
     setShowInstallDialog(false);
   };
 

@@ -1,7 +1,7 @@
 
 // Service worker for Market Notes Haven
 
-const CACHE_NAME = 'market-notes-haven-v4';
+const CACHE_NAME = 'market-notes-haven-v5';
 const urlsToCache = [
   '/',
   '/index.html',

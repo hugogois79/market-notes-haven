@@ -15,7 +15,8 @@ export function usePwaInstall() {
 
   useEffect(() => {
     // Check if the app is already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    if (window.matchMedia('(display-mode: standalone)').matches || 
+        window.navigator.standalone === true) {
       setIsInstalled(true);
       console.log('PWA is already installed in standalone mode');
       return;
@@ -64,13 +65,20 @@ export function usePwaInstall() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     // Check if the app got installed
-    window.addEventListener('appinstalled', () => {
+    window.addEventListener('appinstalled', (event) => {
       // Clear the prompt
       setInstallPrompt(null);
       setIsInstallable(false);
       setIsInstalled(true);
       toast.success('Application installed successfully!');
       console.log('PWA was installed successfully');
+      
+      // Notify service worker
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'APP_INSTALLED'
+        });
+      }
     });
 
     // Listen for messages from service worker about theme updates
