@@ -1,7 +1,6 @@
-
 // Service worker for Market Notes Haven
 
-const CACHE_NAME = 'market-notes-haven-v6';
+const CACHE_NAME = 'market-notes-haven-v7';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -46,6 +45,25 @@ self.addEventListener('activate', event => {
   );
 });
 
+// Handle installation prompt event for browsers that support it
+self.addEventListener('beforeinstallprompt', event => {
+  // Prevents Chrome 76+ from automatically showing the prompt
+  event.preventDefault();
+  console.log('Installation prompt available from browser');
+  
+  // Store the event for later use if needed
+  self.deferredInstallPrompt = event;
+  
+  // Optionally notify clients that installation is available
+  self.clients.matchAll().then(clients => {
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'INSTALL_AVAILABLE'
+      });
+    });
+  });
+});
+
 // Detect theme preference changes and handle messages
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
@@ -81,6 +99,15 @@ self.addEventListener('message', event => {
           });
         }
       });
+    });
+  }
+  
+  // Handle request to show installation prompt
+  if (event.data && event.data.type === 'SHOW_INSTALL_PROMPT' && self.deferredInstallPrompt) {
+    console.log('Service Worker: Installation prompt requested');
+    // Notify the requesting client to show the prompt
+    event.source.postMessage({
+      type: 'TRIGGER_INSTALL_PROMPT'
     });
   }
 });
@@ -169,4 +196,21 @@ self.addEventListener('sync', event => {
 self.addEventListener('updatefound', () => {
   console.log('Service Worker update found!');
   // You can notify users of an update here
+});
+
+// When the app is installed
+self.addEventListener('appinstalled', (event) => {
+  console.log('App was installed successfully');
+  
+  // Clean up the stored prompt
+  self.deferredInstallPrompt = null;
+  
+  // Notify clients that the app was installed
+  self.clients.matchAll().then(clients => {
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'APP_INSTALLED'
+      });
+    });
+  });
 });
