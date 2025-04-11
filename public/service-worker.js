@@ -1,7 +1,7 @@
 
 // Service worker for Market Notes Haven
 
-const CACHE_NAME = 'market-notes-haven-v1';
+const CACHE_NAME = 'market-notes-haven-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -97,6 +97,26 @@ self.addEventListener('fetch', event => {
         });
       })
   );
+});
+
+// Handle push notifications
+self.addEventListener('push', event => {
+  const title = 'Market Notes Haven';
+  const options = {
+    body: event.data?.text() || 'New updates available',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-192x192.png'
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Background sync for offline capabilities
+self.addEventListener('sync', event => {
+  if (event.tag === 'sync-notes') {
+    // Implement background sync logic for notes
+    console.log('Background sync triggered for notes');
+  }
 });
 
 // Listen for messages from the client

@@ -4,7 +4,7 @@
   "short_name": "Notes Haven",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#0D1117",
   "theme_color": "#1EAEDB",
   "description": "A comprehensive market notes tracking and management application",
   "icons": [
@@ -19,6 +19,39 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshots/mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["productivity", "finance", "utilities"],
+  "prefer_related_applications": false,
+  "handle_links": "preferred",
+  "shortcuts": [
+    {
+      "name": "New Note",
+      "short_name": "New",
+      "description": "Create a new market note",
+      "url": "/notes/new",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your dashboard",
+      "url": "/",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ]
 }

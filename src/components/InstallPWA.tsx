@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { Download, X, ChevronDown, Info, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -10,6 +10,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogClose
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -33,6 +34,7 @@ const InstallPWA = () => {
   const [isInstalled, setIsInstalled] = useState(false);
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+  const [showAndroidInstructions, setShowAndroidInstructions] = useState(false);
 
   useEffect(() => {
     // Check if the app is already installed
@@ -83,9 +85,19 @@ const InstallPWA = () => {
     
     // Check if this is iOS where PWA installation is manual
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isAndroid = /Android/.test(navigator.userAgent);
+    
+    // Browser detection
+    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+    const isSafari = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
     
     if (isIOS) {
       setShowIOSInstructions(true);
+      return;
+    }
+    
+    if (isAndroid && !installPrompt) {
+      setShowAndroidInstructions(true);
       return;
     }
     
@@ -135,8 +147,7 @@ const InstallPWA = () => {
     <>
       <Button 
         onClick={handleInstallClick} 
-        variant="outline"
-        className="gap-2 ml-4"
+        className="gap-2 bg-gradient-to-r from-[#1EAEDB] to-[#0FA0CE] hover:from-[#0FA0CE] hover:to-[#0D92BE] text-white border-none"
         size="sm"
       >
         <Download size={16} />
@@ -144,44 +155,65 @@ const InstallPWA = () => {
       </Button>
 
       <Dialog open={showInstallDialog} onOpenChange={setShowInstallDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Install app</DialogTitle>
-            <DialogDescription>
-              Market Notes Haven
-              <div className="text-sm text-muted-foreground mt-1">
-                lovable.dev
-              </div>
+        <DialogContent className="sm:max-w-md border-[#1EAEDB] bg-[#0D1117] text-white">
+          <DialogHeader className="border-b border-gray-800 pb-4">
+            <DialogTitle className="text-xl font-bold text-[#1EAEDB]">Install Market Notes Haven</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              A powerful platform for your market insights
             </DialogDescription>
           </DialogHeader>
+          
           <div className="flex items-center gap-4 py-4">
-            <div className="bg-brand rounded-md p-2">
+            <div className="bg-[#1EAEDB]/10 p-3 rounded-lg">
               <img 
                 src="/icons/icon-192x192.png" 
                 alt="App icon" 
-                className="w-12 h-12"
+                className="w-16 h-16 rounded-md"
               />
             </div>
-            <div>
-              <p className="text-sm font-medium">Market Notes Haven</p>
-              <p className="text-xs text-muted-foreground">Track and manage your market notes efficiently</p>
+            <div className="flex-1">
+              <h3 className="text-lg font-medium">Market Notes Haven</h3>
+              <p className="text-sm text-gray-400">Track market insights even when offline</p>
+              <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center text-xs bg-[#1EAEDB]/20 text-[#1EAEDB] px-2 py-1 rounded">
+                  <Info size={12} className="mr-1" />
+                  PWA Enabled
+                </div>
+                <span className="text-xs text-gray-500">v2.0.0</span>
+              </div>
             </div>
           </div>
-          <DialogFooter className="flex sm:justify-between">
+          
+          <div className="bg-[#171B22] rounded-lg p-4 text-sm">
+            <div className="flex items-start">
+              <Check size={16} className="text-green-500 mt-0.5 mr-2 shrink-0" />
+              <span>Access all features even without internet connection</span>
+            </div>
+            <div className="flex items-start mt-2">
+              <Check size={16} className="text-green-500 mt-0.5 mr-2 shrink-0" />
+              <span>Quick access from your home screen</span>
+            </div>
+            <div className="flex items-start mt-2">
+              <Check size={16} className="text-green-500 mt-0.5 mr-2 shrink-0" />
+              <span>Native app-like experience</span>
+            </div>
+          </div>
+          
+          <DialogFooter className="flex sm:justify-between border-t border-gray-800 pt-4 mt-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => setShowInstallDialog(false)}
+              className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
             >
               Cancel
             </Button>
             <Button
               type="button"
-              variant="brand"
               onClick={confirmInstallation}
-              className="bg-[#1EAEDB] text-white hover:bg-[#0FA0CE]"
+              className="bg-gradient-to-r from-[#1EAEDB] to-[#0FA0CE] hover:from-[#0FA0CE] hover:to-[#0D92BE] text-white border-none"
             >
-              Install
+              Install Now
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -189,20 +221,58 @@ const InstallPWA = () => {
 
       {/* iOS Installation Instructions */}
       <AlertDialog open={showIOSInstructions} onOpenChange={setShowIOSInstructions}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-[#0D1117] text-white border-[#1EAEDB]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Install on iOS</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-[#1EAEDB]">Install on iOS</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-300">
               To install this app on your iOS device:
-              <ol className="mt-2 space-y-2 list-decimal list-inside">
-                <li>Tap the Share button (📤) at the bottom of your screen</li>
-                <li>Scroll down and tap "Add to Home Screen"</li>
-                <li>Tap "Add" in the top right corner</li>
+              <ol className="mt-3 space-y-3 list-decimal list-inside">
+                <li className="flex items-start">
+                  <span className="mr-2">1.</span>
+                  <span>Tap the Share button <span className="inline-block bg-gray-700 text-white px-1 rounded">📤</span> at the bottom of your screen</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2">2.</span>
+                  <span>Scroll down and tap <span className="font-medium text-[#1EAEDB]">"Add to Home Screen"</span></span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2">3.</span>
+                  <span>Tap <span className="font-medium text-[#1EAEDB]">"Add"</span> in the top right corner</span>
+                </li>
               </ol>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Close</AlertDialogCancel>
+            <AlertDialogCancel className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">Close</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Android Installation Instructions */}
+      <AlertDialog open={showAndroidInstructions} onOpenChange={setShowAndroidInstructions}>
+        <AlertDialogContent className="bg-[#0D1117] text-white border-[#1EAEDB]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#1EAEDB]">Install on Android</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-300">
+              To install this app on your Android device:
+              <ol className="mt-3 space-y-3 list-decimal list-inside">
+                <li className="flex items-start">
+                  <span className="mr-2">1.</span>
+                  <span>Tap the menu button <span className="inline-block bg-gray-700 text-white px-1 rounded">⋮</span> in Chrome</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2">2.</span>
+                  <span>Select <span className="font-medium text-[#1EAEDB]">"Install app"</span> or <span className="font-medium text-[#1EAEDB]">"Add to Home screen"</span></span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2">3.</span>
+                  <span>Follow the on-screen instructions to complete installation</span>
+                </li>
+              </ol>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">Close</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
