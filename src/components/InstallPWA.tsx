@@ -5,12 +5,28 @@ import { usePwaInstall } from '@/hooks/use-pwa-install';
 import IOSInstallInstructions from './pwa/IOSInstallInstructions';
 import AndroidInstallInstructions from './pwa/AndroidInstallInstructions';
 import InstallConfirmation from './pwa/InstallConfirmation';
+import AppBanner from './pwa/AppBanner';
 
 const InstallPWA = () => {
   const { isInstallable, isInstalled, triggerInstall, getPlatformInfo } = usePwaInstall();
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
   const [showAndroidInstructions, setShowAndroidInstructions] = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
+
+  // Check if app can be opened in PWA mode
+  useEffect(() => {
+    // Only show the banner if the app is installed but we're in browser mode
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isSafariStandalone = 'standalone' in navigator && (navigator as any).standalone === true;
+    
+    // The app is installed but not currently in standalone mode
+    if (isInstalled && !isStandalone && !isSafariStandalone) {
+      setShowBanner(true);
+    } else {
+      setShowBanner(false);
+    }
+  }, [isInstalled]);
 
   // Listen for browser installation prompts
   useEffect(() => {
@@ -76,10 +92,10 @@ const InstallPWA = () => {
     setShowInstallDialog(false);
   };
 
-  // This component doesn't render a UI element anymore
-  // but still provides the installation dialogs
   return (
     <>
+      {showBanner && <AppBanner />}
+      
       <InstallConfirmation 
         open={showInstallDialog} 
         onOpenChange={setShowInstallDialog} 

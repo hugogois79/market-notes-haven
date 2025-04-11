@@ -67,7 +67,7 @@
   },
   "capture_links": "existing_client_navigate",
   "launch_handler": {
-    "client_mode": "auto"
+    "client_mode": "focus-existing"
   },
   "file_handlers": [
     {
@@ -75,6 +75,12 @@
       "accept": {
         "text/markdown": [".md"]
       }
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://marketnotes.lovable.app/manifest.json"
     }
   ]
 }

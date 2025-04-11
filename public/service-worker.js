@@ -1,6 +1,6 @@
 // Service worker for Market Notes Haven
 
-const CACHE_NAME = 'market-notes-haven-v7';
+const CACHE_NAME = 'market-notes-haven-v8';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -64,8 +64,35 @@ self.addEventListener('beforeinstallprompt', event => {
   });
 });
 
-// Detect theme preference changes and handle messages
+// Handle app launch requests
 self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'OPEN_IN_APP') {
+    console.log('Service Worker: Open in app requested');
+    
+    // Find all the PWA windows that might be open
+    self.clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true
+    }).then(clients => {
+      // Try to find an open PWA window
+      const pwaClient = clients.find(client => 
+        client.url.includes(self.location.origin) && 
+        client.url.includes(event.data.path || '') &&
+        client.type === 'window'
+      );
+      
+      if (pwaClient) {
+        // If we found a matching PWA window, focus it
+        console.log('Found existing PWA window, focusing it');
+        pwaClient.focus();
+      } else {
+        // Otherwise open a new PWA window
+        console.log('Opening new PWA window');
+        self.clients.openWindow(self.location.origin + (event.data.path || ''));
+      }
+    });
+  }
+  
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
