@@ -34,12 +34,11 @@ const InstallPWA = () => {
       return;
     }
     
-    if (!isInstallable) {
+    if (isInstallable) {
+      setShowInstallDialog(true);
+    } else {
       toast.info('Installation is not available at the moment');
-      return;
     }
-
-    setShowInstallDialog(true);
   };
 
   const confirmInstallation = async () => {
@@ -55,7 +54,7 @@ const InstallPWA = () => {
     <>
       <Button 
         onClick={handleInstallClick} 
-        className="gap-2 bg-gradient-to-r from-[#1EAEDB] to-[#0FA0CE] hover:from-[#0FA0CE] hover:to-[#0D92BE] text-white border-none"
+        className="flex items-center gap-2 bg-[#00b8d9] hover:bg-[#00a3c0] text-white rounded-md px-4 py-2 font-medium"
         size="sm"
       >
         <Download size={16} />

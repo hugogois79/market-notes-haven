@@ -1,7 +1,7 @@
 
 // Service worker for Market Notes Haven
 
-const CACHE_NAME = 'market-notes-haven-v3';
+const CACHE_NAME = 'market-notes-haven-v4';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -55,6 +55,7 @@ self.addEventListener('message', event => {
   // Handle theme change messages from the client
   if (event.data && event.data.type === 'THEME_CHANGE') {
     const themeColor = event.data.themeColor;
+    console.log('Service Worker: Theme color changed to', themeColor);
     // Broadcast theme change to all clients
     self.clients.matchAll().then(clients => {
       clients.forEach(client => {
@@ -62,6 +63,21 @@ self.addEventListener('message', event => {
           client.postMessage({
             type: 'THEME_UPDATED',
             themeColor: themeColor
+          });
+        }
+      });
+    });
+  }
+  
+  // Handle installation events
+  if (event.data && event.data.type === 'APP_INSTALLED') {
+    console.log('Service Worker: App installed notification received');
+    // Broadcast installation to all clients
+    self.clients.matchAll().then(clients => {
+      clients.forEach(client => {
+        if (client.id !== event.source.id) {
+          client.postMessage({
+            type: 'APP_INSTALLED'
           });
         }
       });
@@ -116,7 +132,11 @@ self.addEventListener('fetch', event => {
           return response;
         }).catch(error => {
           console.log('Fetch failed:', error);
-          // You might want to return a custom offline page here
+          if (event.request.mode === 'navigate') {
+            // Return a custom offline page for navigation requests
+            return caches.match('/');
+          }
+          
           return new Response('You are offline. Please check your connection.', {
             headers: { 'Content-Type': 'text/plain' }
           });
