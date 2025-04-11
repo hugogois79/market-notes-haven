@@ -2,6 +2,15 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
+// Extend Window interface to include navigator with standalone property for iOS Safari
+interface SafariNavigator extends Navigator {
+  standalone?: boolean;
+}
+
+interface WindowWithSafariNavigator extends Window {
+  navigator: SafariNavigator;
+}
+
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
@@ -15,8 +24,12 @@ export function usePwaInstall() {
 
   useEffect(() => {
     // Check if the app is already installed
-    if (window.matchMedia('(display-mode: standalone)').matches || 
-        window.navigator.standalone === true) {
+    // For standard browsers
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    // For iOS Safari
+    const isSafariStandalone = (window as WindowWithSafariNavigator).navigator.standalone === true;
+    
+    if (isStandalone || isSafariStandalone) {
       setIsInstalled(true);
       console.log('PWA is already installed in standalone mode');
       return;
