@@ -11,6 +11,7 @@ export function usePwaInstall() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [themePreference, setThemePreference] = useState<'light' | 'dark'>('dark');
 
   useEffect(() => {
     // Check if the app is already installed
@@ -19,6 +20,33 @@ export function usePwaInstall() {
       console.log('PWA is already installed in standalone mode');
       return;
     }
+
+    // Detect system theme preference
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setThemePreference(prefersDark ? 'dark' : 'light');
+
+    // Listen for theme changes
+    const themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleThemeChange = (e: MediaQueryListEvent) => {
+      const newTheme = e.matches ? 'dark' : 'light';
+      setThemePreference(newTheme);
+      
+      // Notify service worker about theme change
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'THEME_CHANGE',
+          themeColor: newTheme === 'dark' ? '#0D1117' : '#FFFFFF'
+        });
+      }
+      
+      // Update theme-color meta tag
+      const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+      if (themeColorMeta) {
+        themeColorMeta.setAttribute('content', newTheme === 'dark' ? '#0D1117' : '#FFFFFF');
+      }
+    };
+
+    themeMediaQuery.addEventListener('change', handleThemeChange);
 
     // Capture installation prompt for later use
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -45,10 +73,36 @@ export function usePwaInstall() {
       console.log('PWA was installed successfully');
     });
 
+    // Listen for messages from service worker about theme updates
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'THEME_UPDATED') {
+          const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+          if (themeColorMeta) {
+            themeColorMeta.setAttribute('content', event.data.themeColor);
+          }
+        }
+      });
+    }
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      themeMediaQuery.removeEventListener('change', handleThemeChange);
     };
   }, []);
+
+  // Initialize theme-color meta tag on mount
+  useEffect(() => {
+    let themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (!themeColorMeta) {
+      themeColorMeta = document.createElement('meta');
+      themeColorMeta.setAttribute('name', 'theme-color');
+      document.head.appendChild(themeColorMeta);
+    }
+    
+    const color = themePreference === 'dark' ? '#0D1117' : '#FFFFFF';
+    themeColorMeta.setAttribute('content', color);
+  }, [themePreference]);
 
   const triggerInstall = async () => {
     if (!installPrompt) {
@@ -95,6 +149,7 @@ export function usePwaInstall() {
     isInstalled,
     installPrompt,
     triggerInstall,
-    getPlatformInfo
+    getPlatformInfo,
+    themePreference
   };
 }

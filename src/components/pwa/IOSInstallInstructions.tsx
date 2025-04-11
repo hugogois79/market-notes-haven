@@ -37,6 +37,11 @@ const IOSInstallInstructions = ({ open, onOpenChange }: IOSInstallInstructionsPr
                 <span>Tap <span className="font-medium text-[#1EAEDB]">"Add"</span> in the top right corner</span>
               </li>
             </ol>
+            <div className="mt-4 p-3 bg-gray-800 rounded-md">
+              <p className="text-xs text-gray-400">
+                Once installed, this app will support your device's color scheme for a seamless experience.
+              </p>
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

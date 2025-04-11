@@ -1,7 +1,7 @@
 
 // Service worker for Market Notes Haven
 
-const CACHE_NAME = 'market-notes-haven-v2';
+const CACHE_NAME = 'market-notes-haven-v3';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -44,6 +44,29 @@ self.addEventListener('activate', event => {
       return self.clients.claim(); // Take control immediately
     })
   );
+});
+
+// Detect theme preference changes
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  
+  // Handle theme change messages from the client
+  if (event.data && event.data.type === 'THEME_CHANGE') {
+    const themeColor = event.data.themeColor;
+    // Broadcast theme change to all clients
+    self.clients.matchAll().then(clients => {
+      clients.forEach(client => {
+        if (client.id !== event.source.id) {
+          client.postMessage({
+            type: 'THEME_UPDATED',
+            themeColor: themeColor
+          });
+        }
+      });
+    });
+  }
 });
 
 // Fetch resources with network-first strategy for API calls and cache-first for assets
@@ -94,6 +117,9 @@ self.addEventListener('fetch', event => {
         }).catch(error => {
           console.log('Fetch failed:', error);
           // You might want to return a custom offline page here
+          return new Response('You are offline. Please check your connection.', {
+            headers: { 'Content-Type': 'text/plain' }
+          });
         });
       })
   );
@@ -116,12 +142,5 @@ self.addEventListener('sync', event => {
   if (event.tag === 'sync-notes') {
     // Implement background sync logic for notes
     console.log('Background sync triggered for notes');
-  }
-});
-
-// Listen for messages from the client
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
   }
 });

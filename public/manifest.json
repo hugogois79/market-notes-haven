@@ -53,5 +53,16 @@
       "url": "/",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "theme_color_dark": "#0D1117",
+  "theme_color_light": "#FFFFFF",
+  "id": "/",
+  "orientation": "any",
+  "dir": "auto",
+  "lang": "en",
+  "scope": "/",
+  "display_override": ["standalone", "window-controls-overlay"],
+  "edge_side_panel": {
+    "preferred_width": 480
+  }
 }
