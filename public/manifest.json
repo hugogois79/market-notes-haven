@@ -4,8 +4,8 @@
   "short_name": "Notes Haven",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0D1117",
-  "theme_color": "#00b8d9",
+  "background_color": "#1A1D21",
+  "theme_color": "#3B82F6",
   "description": "A comprehensive market notes tracking and management application",
   "icons": [
     {
@@ -54,7 +54,7 @@
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ],
-  "theme_color_dark": "#0D1117",
+  "theme_color_dark": "#1A1D21",
   "theme_color_light": "#FFFFFF",
   "id": "/",
   "orientation": "any",
@@ -64,5 +64,17 @@
   "display_override": ["standalone", "window-controls-overlay"],
   "edge_side_panel": {
     "preferred_width": 480
-  }
+  },
+  "capture_links": "existing_client_navigate",
+  "launch_handler": {
+    "client_mode": "auto"
+  },
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "text/markdown": [".md"]
+      }
+    }
+  ]
 }

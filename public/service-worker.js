@@ -1,7 +1,7 @@
 
 // Service worker for Market Notes Haven
 
-const CACHE_NAME = 'market-notes-haven-v5';
+const CACHE_NAME = 'market-notes-haven-v6';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -46,7 +46,7 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Detect theme preference changes
+// Detect theme preference changes and handle messages
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
@@ -163,4 +163,10 @@ self.addEventListener('sync', event => {
     // Implement background sync logic for notes
     console.log('Background sync triggered for notes');
   }
+});
+
+// Handle service worker updates
+self.addEventListener('updatefound', () => {
+  console.log('Service Worker update found!');
+  // You can notify users of an update here
 });
