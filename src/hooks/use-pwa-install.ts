@@ -26,8 +26,9 @@ export function usePwaInstall() {
     // Check if the app is already installed
     // For standard browsers
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    // For iOS Safari
-    const isSafariStandalone = (window as WindowWithSafariNavigator).navigator.standalone === true;
+    // For iOS Safari - use type assertion to handle Safari's standalone property
+    const isSafariStandalone = 'standalone' in window.navigator ? 
+      (window.navigator as SafariNavigator).standalone === true : false;
     
     if (isStandalone || isSafariStandalone) {
       setIsInstalled(true);
