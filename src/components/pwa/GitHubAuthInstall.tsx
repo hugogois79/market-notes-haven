@@ -45,18 +45,15 @@ const GitHubAuthInstall = ({ open, onOpenChange, onInstall }: GitHubAuthInstallP
       if ('registerProtocolHandler' in navigator) {
         navigator.registerProtocolHandler(
           'web+marketnotes',
-          `${window.location.origin}/?protocol=%s`,
-          'Market Notes Protocol'
+          `${window.location.origin}/?protocol=%s`
         );
         navigator.registerProtocolHandler(
           'github-app',
-          `${window.location.origin}/github-install?action=%s`,
-          'GitHub App Protocol'
+          `${window.location.origin}/github-install?action=%s`
         );
         navigator.registerProtocolHandler(
           'marketnotes',
-          `${window.location.origin}/?openInApp=true&path=%s`,
-          'Market Notes Application'
+          `${window.location.origin}/?openInApp=true&path=%s`
         );
       }
     } catch (error) {

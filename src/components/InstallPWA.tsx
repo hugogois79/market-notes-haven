@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { usePwaInstall } from '@/hooks/use-pwa-install';
@@ -43,13 +42,11 @@ const InstallPWA = () => {
       try {
         navigator.registerProtocolHandler(
           'web+marketnotes',
-          `${window.location.origin}/?protocol=%s`,
-          'Market Notes Protocol'
+          `${window.location.origin}/?protocol=%s`
         );
         navigator.registerProtocolHandler(
           'marketnotes',
-          `${window.location.origin}/?openInApp=true&path=%s`,
-          'Market Notes Application'
+          `${window.location.origin}/?openInApp=true&path=%s`
         );
       } catch (error) {
         console.error('Failed to register protocol handler:', error);
