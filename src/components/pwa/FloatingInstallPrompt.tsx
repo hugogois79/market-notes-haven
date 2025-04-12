@@ -7,33 +7,15 @@ import { toast } from 'sonner';
 
 const FloatingInstallPrompt = () => {
   const { isInstallable, isInstalled, triggerInstall } = usePwaInstall();
-  const [showPrompt, setShowPrompt] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(true); // Always show the prompt
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    // Show the install prompt after a short delay for better UX
-    if (isInstallable && !isInstalled && !dismissed) {
-      const timer = setTimeout(() => {
-        // Check if we've already shown this prompt before
-        const hasShownPrompt = localStorage.getItem('installPromptShown');
-        if (!hasShownPrompt) {
-          setShowPrompt(true);
-          // Mark as shown, but allow showing again after 3 days
-          localStorage.setItem('installPromptShown', Date.now().toString());
-        } else {
-          // Check if it's been more than 3 days since we last showed the prompt
-          const lastShown = parseInt(hasShownPrompt, 10);
-          const threeDaysInMs = 3 * 24 * 60 * 60 * 1000;
-          if (Date.now() - lastShown > threeDaysInMs) {
-            setShowPrompt(true);
-            localStorage.setItem('installPromptShown', Date.now().toString());
-          }
-        }
-      }, 3000);
-      
-      return () => clearTimeout(timer);
+    // Always show the prompt for development/testing
+    if (!dismissed) {
+      setShowPrompt(true);
     }
-  }, [isInstallable, isInstalled, dismissed]);
+  }, [dismissed]);
 
   const handleInstall = async () => {
     try {

@@ -24,10 +24,10 @@ const InstallButton = ({
   const { isInstallable, isInstalled } = usePwaInstall();
   const { handleInstallClick } = useInstallHandler();
 
-  // Don't show the button if the app is already installed or can't be installed
-  if (isInstalled || (!isInstallable && !onClick)) {
-    return null;
-  }
+  // Always show the button for now, we can add restrictions later
+  // if (isInstalled || (!isInstallable && !onClick)) {
+  //   return null;
+  // }
 
   const handleClick = () => {
     if (onClick) {

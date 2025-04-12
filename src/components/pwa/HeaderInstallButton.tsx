@@ -9,10 +9,7 @@ const HeaderInstallButton = () => {
   const { isInstallable, isInstalled } = usePwaInstall();
   const { handleInstallClick } = useInstallHandler();
 
-  if (isInstalled || !isInstallable) {
-    return null;
-  }
-
+  // Always show the button, don't restrict it so much
   return (
     <Button
       onClick={handleInstallClick}

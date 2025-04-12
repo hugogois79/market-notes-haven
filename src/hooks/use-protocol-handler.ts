@@ -30,12 +30,15 @@ export function useProtocolHandler() {
     // Try to register protocol handlers when component mounts
     if ('registerProtocolHandler' in navigator) {
       try {
+        // Always use web+ prefix for custom protocols (as per console error)
         navigator.registerProtocolHandler(
           'web+marketnotes',
           `${window.location.origin}/?protocol=%s`
         );
+        
+        // Use standard protocols that don't require the web+ prefix
         navigator.registerProtocolHandler(
-          'marketnotes',
+          'web+app',
           `${window.location.origin}/?openInApp=true&path=%s`
         );
       } catch (error) {

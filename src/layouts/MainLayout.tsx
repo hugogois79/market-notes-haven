@@ -1,3 +1,4 @@
+
 import Sidebar from "@/components/Sidebar";
 import { useState, ReactNode, useEffect } from "react";
 import UserProfileButton from "@/components/UserProfileButton";
@@ -5,6 +6,7 @@ import InstallPWA from "@/components/InstallPWA";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import HeaderInstallButton from "@/components/pwa/HeaderInstallButton";
+import InstallButton from "@/components/pwa/InstallButton";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -78,8 +80,9 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           : 'ml-0'
       }`}>
         <header className="h-14 px-4 border-b flex items-center justify-between">
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
             <InstallPWA />
+            <InstallButton variant="default" size="sm" showText={true} />
           </div>
           <div className="flex items-center gap-2">
             <HeaderInstallButton />
