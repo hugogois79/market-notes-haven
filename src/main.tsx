@@ -48,4 +48,9 @@ if (!rootElement) {
   throw new Error("Root element not found");
 }
 
-createRoot(rootElement).render(<App />);
+// Ensure we use createRoot API for React 18
+createRoot(rootElement).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
