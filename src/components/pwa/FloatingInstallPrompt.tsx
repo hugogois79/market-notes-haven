@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePwaInstall } from '@/hooks/use-pwa-install';
 import { Button } from '@/components/ui/button';
-import { Download, X } from 'lucide-react';
+import { Download, X, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 const FloatingInstallPrompt = () => {
@@ -11,10 +11,10 @@ const FloatingInstallPrompt = () => {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    // Don't show immediately, wait a bit for better user experience
+    // Show the install prompt after a short delay for better UX
     if (isInstallable && !isInstalled && !dismissed) {
       const timer = setTimeout(() => {
-        // Check if we have already shown this prompt before
+        // Check if we've already shown this prompt before
         const hasShownPrompt = localStorage.getItem('installPromptShown');
         if (!hasShownPrompt) {
           setShowPrompt(true);
@@ -29,7 +29,7 @@ const FloatingInstallPrompt = () => {
             localStorage.setItem('installPromptShown', Date.now().toString());
           }
         }
-      }, 5000);
+      }, 3000);
       
       return () => clearTimeout(timer);
     }
@@ -58,38 +58,36 @@ const FloatingInstallPrompt = () => {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end space-y-2">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 max-w-xs animate-fade-in">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="font-medium text-sm">Install Market Notes Haven</h3>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-6 w-6 p-0" 
-            onClick={handleDismiss}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-        <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
-          Install this app on your device for a better experience, faster access, and offline capabilities.
-        </p>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDismiss}
-            className="text-xs"
-          >
-            Not now
-          </Button>
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end space-y-2 animate-fade-in-up">
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden max-w-xs">
+        <div className="p-4">
+          <div className="flex justify-between items-start">
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
+                <Download className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="font-medium">Install Market Notes Haven</h3>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-6 w-6 p-0" 
+              onClick={handleDismiss}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-3 mb-4">
+            Get faster access to your notes, work offline, and enjoy a better experience by installing this app on your device.
+          </p>
+          
           <Button
             onClick={handleInstall}
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white text-xs"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
           >
-            <Download className="mr-1.5 h-3 w-3" />
-            Install
+            Install App
+            <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
       </div>

@@ -1,10 +1,10 @@
-
 import Sidebar from "@/components/Sidebar";
 import { useState, ReactNode, useEffect } from "react";
 import UserProfileButton from "@/components/UserProfileButton";
 import InstallPWA from "@/components/InstallPWA";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
+import HeaderInstallButton from "@/components/pwa/HeaderInstallButton";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -15,7 +15,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
 
-  // Listen for changes in the sidebar expanded/collapsed state
   useEffect(() => {
     const handleSidebarResize = (e: CustomEvent) => {
       setSidebarExpanded(e.detail.expanded);
@@ -28,7 +27,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     };
   }, []);
 
-  // Register service worker for PWA functionality
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -36,7 +34,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           .then(registration => {
             console.log('Service worker registered:', registration);
             
-            // Check for service worker updates
             registration.addEventListener('updatefound', () => {
               const newWorker = registration.installing;
               if (newWorker) {
@@ -59,7 +56,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           });
       });
       
-      // Handle offline/online events
       window.addEventListener('online', () => {
         toast.success('You are back online');
       });
@@ -85,7 +81,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           <div className="flex items-center">
             <InstallPWA />
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
+            <HeaderInstallButton />
             <UserProfileButton />
           </div>
         </header>

@@ -2,8 +2,9 @@
 import React from 'react';
 import { usePwaInstall } from '@/hooks/use-pwa-install';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { Download, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { useInstallHandler } from '@/hooks/use-install-handler';
 
 interface InstallButtonProps {
   showText?: boolean;
@@ -20,33 +21,30 @@ const InstallButton = ({
   className = "",
   onClick
 }: InstallButtonProps) => {
-  const { isInstallable, isInstalled, triggerInstall } = usePwaInstall();
+  const { isInstallable, isInstalled } = usePwaInstall();
+  const { handleInstallClick } = useInstallHandler();
 
-  if (isInstalled || !isInstallable) {
+  // Don't show the button if the app is already installed or can't be installed
+  if (isInstalled || (!isInstallable && !onClick)) {
     return null;
   }
 
-  const handleInstall = async () => {
-    try {
-      const success = await triggerInstall();
-      if (success) {
-        toast.success('Installation started!');
-      }
-      if (onClick) onClick();
-    } catch (error) {
-      console.error('Installation error:', error);
-      toast.error('Installation failed. Please try again.');
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else {
+      handleInstallClick();
     }
   };
 
   return (
     <Button
-      onClick={handleInstall}
+      onClick={handleClick}
       variant={variant}
       size={size}
       className={`${className} flex items-center gap-2`}
     >
-      <Download className="h-4 w-4" />
+      {variant === "default" ? <Plus className="h-4 w-4" /> : <Download className="h-4 w-4" />}
       {showText && <span>Install App</span>}
     </Button>
   );
