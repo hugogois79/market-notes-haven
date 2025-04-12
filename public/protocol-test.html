@@ -1,0 +1,90 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Protocol Handler Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.5;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    button {
+      background-color: #3B82F6;
+      color: white;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #2563EB;
+    }
+    .info {
+      background-color: #F3F4F6;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 20px;
+      font-size: 14px;
+    }
+    .code {
+      background-color: #E5E7EB;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1>Market Notes Haven Protocol Handler Test</h1>
+  <p>This page allows you to test the custom protocol handlers for the Market Notes Haven application.</p>
+
+  <div class="button-group">
+    <button onclick="openWithProtocol('marketnotes://')">Open App (marketnotes://)</button>
+    <button onclick="openWithProtocol('web+marketnotes://install')">Install via Protocol (web+marketnotes://install)</button>
+    <button onclick="openWithProtocol('github-app://install')">Install via GitHub Protocol (github-app://install)</button>
+    <button onclick="openWebsite()">Open Web Version</button>
+  </div>
+
+  <div class="info">
+    <p><strong>How it works:</strong></p>
+    <p>When you click on a protocol button, your browser will attempt to launch the application via its registered protocol handler. If the app is installed and properly registered these links should open the app.</p>
+    <p>For testing during development, you can register the protocol by:</p>
+    <ol>
+      <li>Installing the PWA</li>
+      <li>Visiting <span class="code">chrome://apps</span> in Chrome</li>
+      <li>Right-clicking on the app and selecting "Open as window"</li>
+    </ol>
+  </div>
+
+  <script>
+    function openWithProtocol(protocol) {
+      try {
+        window.location.href = protocol;
+      } catch (e) {
+        alert('Error opening protocol: ' + e.message);
+      }
+    }
+    
+    function openWebsite() {
+      window.location.href = '/';
+    }
+  </script>
+</body>
+</html>

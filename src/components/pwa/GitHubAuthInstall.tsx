@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
-import { Github, ChevronRight, Shield, Download } from 'lucide-react';
+import { Github, ChevronRight, Shield, Download, ExternalLink } from 'lucide-react';
 
 interface GitHubAuthInstallProps {
   open: boolean;
@@ -18,12 +18,49 @@ interface GitHubAuthInstallProps {
 }
 
 const GitHubAuthInstall = ({ open, onOpenChange, onInstall }: GitHubAuthInstallProps) => {
+  // Enhanced GitHub authentication flow
   const handleGitHubAuth = async () => {
     try {
-      // For demo purposes, we'll just trigger the install directly
-      onInstall();
+      // Try the GitHub protocol handler first
+      const protocolUrl = `github-app://install`;
+      window.location.href = protocolUrl;
+      
+      // Fallback to regular installation after a delay
+      setTimeout(() => {
+        // If we're still here after 100ms, protocol handler likely failed
+        if (document.visibilityState !== 'hidden') {
+          onInstall(); // Fallback to regular installation
+        }
+      }, 100);
     } catch (error) {
-      console.error('GitHub authentication failed:', error);
+      console.error('GitHub protocol authentication failed:', error);
+      // Fallback to regular installation
+      onInstall();
+    }
+  };
+  
+  // Add protocol handler registration
+  const registerProtocolHandler = () => {
+    try {
+      if ('registerProtocolHandler' in navigator) {
+        navigator.registerProtocolHandler(
+          'web+marketnotes',
+          `${window.location.origin}/?protocol=%s`,
+          'Market Notes Protocol'
+        );
+        navigator.registerProtocolHandler(
+          'github-app',
+          `${window.location.origin}/github-install?action=%s`,
+          'GitHub App Protocol'
+        );
+        navigator.registerProtocolHandler(
+          'marketnotes',
+          `${window.location.origin}/?openInApp=true&path=%s`,
+          'Market Notes Application'
+        );
+      }
+    } catch (error) {
+      console.error('Failed to register protocol handler:', error);
     }
   };
 
@@ -37,7 +74,7 @@ const GitHubAuthInstall = ({ open, onOpenChange, onInstall }: GitHubAuthInstallP
             </div>
             <div>
               <h3 className="text-lg font-medium text-white">GitHub Sync</h3>
-              <p className="text-sm text-white/80">Web3 Wallet Integration</p>
+              <p className="text-sm text-white/80">Protocol Handler Integration</p>
             </div>
           </div>
           
@@ -48,16 +85,16 @@ const GitHubAuthInstall = ({ open, onOpenChange, onInstall }: GitHubAuthInstallP
         </div>
         
         <div className="p-4">
-          <h4 className="text-sm font-medium mb-2">Secure installation via GitHub protocol</h4>
+          <h4 className="text-sm font-medium mb-2">Enhanced installation via protocol handlers</h4>
           
           <div className="space-y-3 mb-4">
-            <p className="text-sm">Similar to how Safe Gnosis and Hyperliquid work, this installation:</p>
+            <p className="text-sm">Similar to Hyperliquid and Safe Gnosis, this installation:</p>
             <ul className="list-disc pl-5 text-sm space-y-1.5">
-              <li>Creates a verified application bundle</li>
+              <li>Uses custom protocol handlers (marketnotes://, github-app://)</li>
+              <li>Enables "Open in app" functionality from browser</li>
               <li>Syncs with GitHub for version control</li>
-              <li>Enables secure updates through GitHub protocol</li>
-              <li>Adds native-like integration with your browser</li>
-              <li>Supports Web3 authentication patterns</li>
+              <li>Provides native-like integration with your browser</li>
+              <li>Supports direct deep linking to app features</li>
             </ul>
           </div>
           
@@ -72,10 +109,14 @@ const GitHubAuthInstall = ({ open, onOpenChange, onInstall }: GitHubAuthInstallP
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              registerProtocolHandler();
+              onOpenChange(false);
+            }}
             className="mb-2 sm:mb-0 order-1 sm:order-none"
           >
-            Cancel
+            <ExternalLink className="mr-2 h-4 w-4" />
+            Register Protocol
           </Button>
           
           <Button

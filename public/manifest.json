@@ -83,8 +83,16 @@
       "url": "/?protocol=%s"
     },
     {
+      "protocol": "web+tradingapp",
+      "url": "/?action=%s"
+    },
+    {
       "protocol": "github-app",
       "url": "/github-install?action=%s"
+    },
+    {
+      "protocol": "marketnotes",
+      "url": "/?openInApp=true&path=%s"
     }
   ],
   "related_applications": [

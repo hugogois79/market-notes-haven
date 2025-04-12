@@ -18,16 +18,47 @@ const InstallPWA = () => {
 
   // Check if app can be opened in PWA mode
   useEffect(() => {
-    // Only show the banner if the app is installed but we're in browser mode
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isSafariStandalone = 'standalone' in navigator && (navigator as any).standalone === true;
+    // Check if we need to show the banner
+    const checkStandaloneMode = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const isSafariStandalone = 'standalone' in navigator && (navigator as any).standalone === true;
+      
+      // The app is installed but not currently in standalone mode
+      if (isInstalled && !isStandalone && !isSafariStandalone) {
+        setShowBanner(true);
+      } else {
+        setShowBanner(false);
+      }
+    };
     
-    // The app is installed but not currently in standalone mode
-    if (isInstalled && !isStandalone && !isSafariStandalone) {
-      setShowBanner(true);
-    } else {
-      setShowBanner(false);
+    checkStandaloneMode();
+    
+    // Listen for changes in display mode
+    const displayModeMediaQuery = window.matchMedia('(display-mode: standalone)');
+    const handleDisplayModeChange = () => checkStandaloneMode();
+    displayModeMediaQuery.addEventListener('change', handleDisplayModeChange);
+    
+    // Try to register protocol handlers when component mounts
+    if ('registerProtocolHandler' in navigator) {
+      try {
+        navigator.registerProtocolHandler(
+          'web+marketnotes',
+          `${window.location.origin}/?protocol=%s`,
+          'Market Notes Protocol'
+        );
+        navigator.registerProtocolHandler(
+          'marketnotes',
+          `${window.location.origin}/?openInApp=true&path=%s`,
+          'Market Notes Application'
+        );
+      } catch (error) {
+        console.error('Failed to register protocol handler:', error);
+      }
     }
+
+    return () => {
+      displayModeMediaQuery.removeEventListener('change', handleDisplayModeChange);
+    };
   }, [isInstalled]);
 
   // Listen for browser installation prompts
@@ -42,8 +73,18 @@ const InstallPWA = () => {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     
+    // Handle protocol-based installations and deep links
+    const handleAppMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'PROTOCOL_INSTALL_COMPLETE') {
+        toast.success('Installation via protocol successful!');
+      }
+    };
+    
+    window.addEventListener('message', handleAppMessage);
+    
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('message', handleAppMessage);
     };
   }, [isInstalled]);
 
@@ -100,7 +141,7 @@ const InstallPWA = () => {
   const handleGitHubInstall = async () => {
     try {
       // Simulate GitHub auth and installation process
-      toast.loading('Initiating secure GitHub protocol installation...');
+      toast.loading('Initiating protocol handler installation...');
       
       // Send message to service worker
       if (navigator.serviceWorker && navigator.serviceWorker.controller) {
@@ -117,7 +158,7 @@ const InstallPWA = () => {
         
         setTimeout(() => {
           toast.dismiss();
-          toast.loading('Creating secure container...', { duration: 1500 });
+          toast.loading('Registering protocol handlers...', { duration: 1500 });
           
           setTimeout(() => {
             toast.dismiss();
@@ -125,11 +166,11 @@ const InstallPWA = () => {
             
             setTimeout(() => {
               toast.dismiss();
-              toast.success('Installation via GitHub protocol successful!', {
+              toast.success('Installation via protocol successful!', {
                 description: 'Application is now installed securely',
                 action: {
                   label: 'Open',
-                  onClick: () => window.location.reload()
+                  onClick: () => window.location.href = 'marketnotes://'
                 }
               });
               
