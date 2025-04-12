@@ -77,6 +77,16 @@
       }
     }
   ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+marketnotes",
+      "url": "/?protocol=%s"
+    },
+    {
+      "protocol": "github-app",
+      "url": "/github-install?action=%s"
+    }
+  ],
   "related_applications": [
     {
       "platform": "webapp",
@@ -85,6 +95,21 @@
     {
       "platform": "github",
       "url": "https://github.com/app/market-notes-haven"
+    },
+    {
+      "platform": "chrome_web_store",
+      "url": "https://chrome.google.com/webstore/detail/market-notes-haven/placeholder",
+      "id": "placeholder"
     }
-  ]
+  ],
+  "url_handlers": [
+    {
+      "origin": "https://marketnotes.lovable.app"
+    }
+  ],
+  "web_package": {
+    "integrity": {
+      "signature": "sha256-GITHUB_PACKAGE_SIGNATURE_EXAMPLE"
+    }
+  }
 }

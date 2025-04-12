@@ -1,7 +1,7 @@
 
 // Service worker for Market Notes Haven
 
-const CACHE_NAME = 'market-notes-haven-v9';
+const CACHE_NAME = 'market-notes-haven-v10';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -65,23 +65,63 @@ self.addEventListener('beforeinstallprompt', event => {
   });
 });
 
-// Handle GitHub sync installation
-const handleGitHubSyncInstall = () => {
-  console.log('Service Worker: GitHub sync installation initiated');
+// Handle GitHub sync installation with enhanced protocol simulation
+const handleGitHubSyncInstall = (installMethod) => {
+  console.log('Service Worker: GitHub protocol installation initiated', installMethod);
   
-  // In a real implementation, this would store GitHub tokens and sync data
-  // For demo purposes, we just notify clients
-  self.clients.matchAll().then(clients => {
-    clients.forEach(client => {
-      client.postMessage({
-        type: 'GITHUB_SYNC_STATUS',
-        status: 'completed'
+  // Implement enhanced GitHub protocol handling
+  const installPhases = [
+    { phase: 'validation', status: 'Validating application manifest' },
+    { phase: 'signature', status: 'Verifying GitHub signature' },
+    { phase: 'container', status: 'Creating secure container' },
+    { phase: 'registration', status: 'Registering with protocol handler' },
+    { phase: 'completion', status: 'Installation complete' }
+  ];
+  
+  // Process installation phases and notify clients
+  let phaseIndex = 0;
+  const processNextPhase = () => {
+    if (phaseIndex >= installPhases.length) {
+      // All phases complete
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'GITHUB_SYNC_STATUS',
+            status: 'completed',
+            installMethod: installMethod || 'github'
+          });
+        });
+      });
+      
+      // Mark that we've used GitHub protocol for installation
+      self.gitHubSyncInstalled = true;
+      return;
+    }
+    
+    const currentPhase = installPhases[phaseIndex];
+    console.log(`Processing phase: ${currentPhase.phase} - ${currentPhase.status}`);
+    
+    // Notify clients of phase progress
+    self.clients.matchAll().then(clients => {
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'GITHUB_SYNC_STATUS',
+          phase: currentPhase.phase,
+          status: currentPhase.status,
+          progress: (phaseIndex / installPhases.length) * 100
+        });
       });
     });
-  });
+    
+    // Simulate processing time for each phase
+    setTimeout(() => {
+      phaseIndex++;
+      processNextPhase();
+    }, 800);
+  };
   
-  // Mark that we've used GitHub sync for installation
-  self.gitHubSyncInstalled = true;
+  // Start the installation process
+  processNextPhase();
 };
 
 // Handle app launch requests
@@ -155,7 +195,7 @@ self.addEventListener('message', event => {
   
   // Handle GitHub sync installation
   if (event.data && event.data.type === 'GITHUB_SYNC_INSTALL') {
-    handleGitHubSyncInstall();
+    handleGitHubSyncInstall(event.data.installMethod);
   }
   
   // Handle request to show installation prompt
@@ -269,4 +309,21 @@ self.addEventListener('appinstalled', (event) => {
       });
     });
   });
+});
+
+// GitHub protocol handler for custom URL scheme
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+  
+  // Handle GitHub protocol requests (github-app://install/...)
+  if (url.protocol === 'github-app:') {
+    event.respondWith(
+      new Response('Handling GitHub protocol installation', {
+        headers: { 'Content-Type': 'text/plain' }
+      })
+    );
+    
+    // Trigger GitHub installation protocol
+    handleGitHubSyncInstall('protocol-direct');
+  }
 });

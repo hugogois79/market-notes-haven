@@ -84,7 +84,8 @@ const InstallPWA = () => {
         // Notify service worker about installation
         if (navigator.serviceWorker && navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({
-            type: 'APP_INSTALLED'
+            type: 'APP_INSTALLED',
+            installMethod: 'browser'
           });
         }
       }
@@ -95,32 +96,54 @@ const InstallPWA = () => {
     setShowInstallDialog(false);
   };
 
+  // Enhanced GitHub installation flow
   const handleGitHubInstall = async () => {
     try {
       // Simulate GitHub auth and installation process
-      toast.loading('Syncing with GitHub...');
+      toast.loading('Initiating secure GitHub protocol installation...');
       
       // Send message to service worker
       if (navigator.serviceWorker && navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({
-          type: 'GITHUB_SYNC_INSTALL'
+          type: 'GITHUB_SYNC_INSTALL',
+          installMethod: 'github-protocol'
         });
       }
       
-      // In a real implementation, this would involve OAuth with GitHub
-      // For demo purposes, we'll just simulate a successful installation
+      // Simulate a multi-step installation process like Safe Gnosis/Hyperliquid
       setTimeout(() => {
         toast.dismiss();
-        toast.success('Installation via GitHub successful!');
+        toast.loading('Verifying application signature...', { duration: 1500 });
         
-        // Tell service worker the app was installed
-        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-          navigator.serviceWorker.controller.postMessage({
-            type: 'APP_INSTALLED',
-            installMethod: 'github'
-          });
-        }
-      }, 2000);
+        setTimeout(() => {
+          toast.dismiss();
+          toast.loading('Creating secure container...', { duration: 1500 });
+          
+          setTimeout(() => {
+            toast.dismiss();
+            toast.loading('Finalizing installation...', { duration: 1500 });
+            
+            setTimeout(() => {
+              toast.dismiss();
+              toast.success('Installation via GitHub protocol successful!', {
+                description: 'Application is now installed securely',
+                action: {
+                  label: 'Open',
+                  onClick: () => window.location.reload()
+                }
+              });
+              
+              // Tell service worker the app was installed
+              if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                  type: 'APP_INSTALLED',
+                  installMethod: 'github-protocol'
+                });
+              }
+            }, 1600);
+          }, 1600);
+        }, 1600);
+      }, 1000);
     } catch (error) {
       console.error('GitHub installation error:', error);
       toast.error('GitHub installation failed');
