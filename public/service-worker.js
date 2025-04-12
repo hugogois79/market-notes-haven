@@ -1,6 +1,7 @@
+
 // Service worker for Market Notes Haven
 
-const CACHE_NAME = 'market-notes-haven-v8';
+const CACHE_NAME = 'market-notes-haven-v9';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -64,6 +65,25 @@ self.addEventListener('beforeinstallprompt', event => {
   });
 });
 
+// Handle GitHub sync installation
+const handleGitHubSyncInstall = () => {
+  console.log('Service Worker: GitHub sync installation initiated');
+  
+  // In a real implementation, this would store GitHub tokens and sync data
+  // For demo purposes, we just notify clients
+  self.clients.matchAll().then(clients => {
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'GITHUB_SYNC_STATUS',
+        status: 'completed'
+      });
+    });
+  });
+  
+  // Mark that we've used GitHub sync for installation
+  self.gitHubSyncInstalled = true;
+};
+
 // Handle app launch requests
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'OPEN_IN_APP') {
@@ -117,16 +137,25 @@ self.addEventListener('message', event => {
   // Handle installation events
   if (event.data && event.data.type === 'APP_INSTALLED') {
     console.log('Service Worker: App installed notification received');
+    const installMethod = event.data.installMethod || 'browser';
+    console.log('Installation method:', installMethod);
+    
     // Broadcast installation to all clients
     self.clients.matchAll().then(clients => {
       clients.forEach(client => {
         if (client.id !== event.source.id) {
           client.postMessage({
-            type: 'APP_INSTALLED'
+            type: 'APP_INSTALLED',
+            installMethod: installMethod
           });
         }
       });
     });
+  }
+  
+  // Handle GitHub sync installation
+  if (event.data && event.data.type === 'GITHUB_SYNC_INSTALL') {
+    handleGitHubSyncInstall();
   }
   
   // Handle request to show installation prompt

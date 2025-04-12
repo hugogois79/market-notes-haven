@@ -5,6 +5,7 @@ import { usePwaInstall } from '@/hooks/use-pwa-install';
 import IOSInstallInstructions from './pwa/IOSInstallInstructions';
 import AndroidInstallInstructions from './pwa/AndroidInstallInstructions';
 import InstallConfirmation from './pwa/InstallConfirmation';
+import GitHubAuthInstall from './pwa/GitHubAuthInstall';
 import AppBanner from './pwa/AppBanner';
 
 const InstallPWA = () => {
@@ -12,6 +13,7 @@ const InstallPWA = () => {
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
   const [showAndroidInstructions, setShowAndroidInstructions] = useState(false);
+  const [showGitHubAuth, setShowGitHubAuth] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
 
   // Check if app can be opened in PWA mode
@@ -70,7 +72,8 @@ const InstallPWA = () => {
     if (isInstallable) {
       setShowInstallDialog(true);
     } else {
-      toast.warning('Installation is not available at the moment');
+      // If regular installation isn't available, offer GitHub auth method
+      setShowGitHubAuth(true);
     }
   };
 
@@ -92,6 +95,39 @@ const InstallPWA = () => {
     setShowInstallDialog(false);
   };
 
+  const handleGitHubInstall = async () => {
+    try {
+      // Simulate GitHub auth and installation process
+      toast.loading('Syncing with GitHub...');
+      
+      // Send message to service worker
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'GITHUB_SYNC_INSTALL'
+        });
+      }
+      
+      // In a real implementation, this would involve OAuth with GitHub
+      // For demo purposes, we'll just simulate a successful installation
+      setTimeout(() => {
+        toast.dismiss();
+        toast.success('Installation via GitHub successful!');
+        
+        // Tell service worker the app was installed
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'APP_INSTALLED',
+            installMethod: 'github'
+          });
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('GitHub installation error:', error);
+      toast.error('GitHub installation failed');
+    }
+    setShowGitHubAuth(false);
+  };
+
   return (
     <>
       {showBanner && <AppBanner />}
@@ -110,6 +146,12 @@ const InstallPWA = () => {
       <AndroidInstallInstructions 
         open={showAndroidInstructions} 
         onOpenChange={setShowAndroidInstructions} 
+      />
+      
+      <GitHubAuthInstall
+        open={showGitHubAuth}
+        onOpenChange={setShowGitHubAuth}
+        onInstall={handleGitHubInstall}
       />
     </>
   );

@@ -81,6 +81,10 @@
     {
       "platform": "webapp",
       "url": "https://marketnotes.lovable.app/manifest.json"
+    },
+    {
+      "platform": "github",
+      "url": "https://github.com/app/market-notes-haven"
     }
   ]
 }
