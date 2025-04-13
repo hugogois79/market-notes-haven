@@ -70,5 +70,4 @@ export const printNote = (noteData: Partial<Note>): void => {
   };
 };
 
-// Export the same function as an alias for backward compatibility
-export { printNote } from "./print/printUtils";
+// Remove the duplicated export that was causing the error
