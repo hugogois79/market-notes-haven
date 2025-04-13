@@ -9,15 +9,13 @@ import ProtocolHandler from "@/components/pwa/ProtocolHandler";
 
 const AppContent = () => {
   return (
-    <>
-      <NotesProvider>
-        <ProtocolHandler />
-        <AppRoutes />
-        <Toaster />
-        <InstallPWA />
-        <FloatingInstallPrompt />
-      </NotesProvider>
-    </>
+    <NotesProvider>
+      <ProtocolHandler />
+      <AppRoutes />
+      <Toaster />
+      <InstallPWA />
+      <FloatingInstallPrompt />
+    </NotesProvider>
   );
 };
 
