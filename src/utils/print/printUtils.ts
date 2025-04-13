@@ -69,5 +69,3 @@ export const printNote = (noteData: Partial<Note>): void => {
     }, 500);
   };
 };
-
-// Remove the duplicated export that was causing the error
