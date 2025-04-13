@@ -278,6 +278,7 @@ export type Database = {
           description: string | null
           full_amount: number
           id: string
+          notes: string | null
           payment_method_id: string | null
           project_id: string | null
           report_number: number | null
@@ -293,6 +294,7 @@ export type Database = {
           description?: string | null
           full_amount?: number
           id?: string
+          notes?: string | null
           payment_method_id?: string | null
           project_id?: string | null
           report_number?: number | null
@@ -308,6 +310,7 @@ export type Database = {
           description?: string | null
           full_amount?: number
           id?: string
+          notes?: string | null
           payment_method_id?: string | null
           project_id?: string | null
           report_number?: number | null

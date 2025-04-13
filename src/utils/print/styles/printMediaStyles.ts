@@ -1,3 +1,4 @@
+
 /**
  * Media query styles specifically for print
  */
@@ -237,6 +238,72 @@ export const getPrintMediaStyles = (): string => {
         text-align: left !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+      }
+      
+      /* Vacation-specific print styles */
+      body.vacation-print {
+        font-size: 10pt !important;
+      }
+      
+      .vacation-print .print-title {
+        font-size: 24pt !important;
+        color: #1967d2 !important;
+        text-align: center !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        margin-bottom: 0.5rem !important;
+      }
+      
+      .vacation-print .print-content {
+        font-size: 10pt !important;
+      }
+      
+      .vacation-print .print-content p {
+        font-size: 10pt !important;
+        text-align: center !important;
+        margin-bottom: 0.2rem !important;
+      }
+      
+      .vacation-day-header {
+        margin: 1rem 0 0.5rem 0 !important;
+        page-break-after: avoid !important;
+      }
+      
+      .vacation-day-number {
+        color: #1967d2 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        font-weight: bold !important;
+        font-size: 14pt !important;
+      }
+      
+      .vacation-image-container {
+        text-align: center !important;
+        margin: 0.5rem 0 !important;
+        page-break-inside: avoid !important;
+      }
+      
+      .vacation-image {
+        max-width: 80% !important;
+        height: auto !important;
+        border: 1px solid #ccc !important;
+        padding: 4px !important;
+        background-color: white !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      
+      .vacation-itinerary {
+        margin: 0.5rem auto !important;
+        padding-left: 1.5rem !important;
+        width: 80% !important;
+        text-align: left !important;
+      }
+      
+      .vacation-activity {
+        font-size: 10pt !important;
+        margin-bottom: 0.2rem !important;
+        text-align: left !important;
       }
     }
   `;

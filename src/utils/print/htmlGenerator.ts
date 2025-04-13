@@ -23,6 +23,9 @@ export const generatePrintHtml = (note: Note): string => {
   // Process content to preserve HTML
   let processedContent = note.content || '';
   
+  // Check if this is a vacation note
+  const isVacationNote = note.category === 'Vacations' || note.category === 'Vacation';
+  
   // Extract conclusion if it exists
   let conclusionHtml = '';
   let contentWithoutConclusion = processedContent;
@@ -73,19 +76,19 @@ export const generatePrintHtml = (note: Note): string => {
     .replace(/<p([^>]*?)>/gi, function(match, p1) {
       // Only add font-weight: normal if font-weight isn't already specified
       if (!/font-weight/i.test(p1)) {
-        return `<p${p1} style="font-weight: normal; font-size: 8pt; margin-bottom: 0.05rem;">`;
+        return `<p${p1} style="font-weight: normal; font-size: ${isVacationNote ? '10pt' : '8pt'}; margin-bottom: 0.05rem;">`;
       }
       return match;
     })
     // Make sure all font sizes are appropriate for printing
-    .replace(/<h1([^>]*?)>/gi, '<h1$1 style="font-size: 10pt; font-weight: bold; margin-bottom: 0.1rem; margin-top: 0.3rem;">')
-    .replace(/<h2([^>]*?)>/gi, '<h2$1 style="font-size: 9pt; font-weight: bold; margin-bottom: 0.1rem; margin-top: 0.2rem;">')
-    .replace(/<h3([^>]*?)>/gi, '<h3$1 style="font-size: 8.5pt; font-weight: bold; margin-bottom: 0.05rem; margin-top: 0.15rem;">')
+    .replace(/<h1([^>]*?)>/gi, `<h1$1 style="font-size: ${isVacationNote ? '14pt' : '10pt'}; font-weight: bold; margin-bottom: 0.1rem; margin-top: 0.3rem;">`)
+    .replace(/<h2([^>]*?)>/gi, `<h2$1 style="font-size: ${isVacationNote ? '12pt' : '9pt'}; font-weight: bold; margin-bottom: 0.1rem; margin-top: 0.2rem;">`)
+    .replace(/<h3([^>]*?)>/gi, `<h3$1 style="font-size: ${isVacationNote ? '11pt' : '8.5pt'}; font-weight: bold; margin-bottom: 0.05rem; margin-top: 0.15rem;">`)
     // Make list items smaller with less spacing
-    .replace(/<li([^>]*?)>/gi, '<li$1 style="font-size: 8pt; font-weight: normal; margin-bottom: 0.05rem;">')
+    .replace(/<li([^>]*?)>/gi, `<li$1 style="font-size: ${isVacationNote ? '10pt' : '8pt'}; font-weight: normal; margin-bottom: 0.05rem;">`)
     // Make table cells smaller
-    .replace(/<td([^>]*?)>/gi, '<td$1 style="font-size: 7.5pt; font-weight: normal; padding: 2px;">')
-    .replace(/<th([^>]*?)>/gi, '<th$1 style="font-size: 7.5pt; font-weight: bold; padding: 2px; background-color: #f3f4f6;">');
+    .replace(/<td([^>]*?)>/gi, `<td$1 style="font-size: ${isVacationNote ? '9pt' : '7.5pt'}; font-weight: normal; padding: 2px;">`)
+    .replace(/<th([^>]*?)>/gi, `<th$1 style="font-size: ${isVacationNote ? '9pt' : '7.5pt'}; font-weight: bold; padding: 2px; background-color: #f3f4f6;">`);
   
   // Generate AI summary section if available
   let summaryHtml = '';
@@ -111,7 +114,7 @@ export const generatePrintHtml = (note: Note): string => {
           </svg>
           AI Summary
         </div>
-        <div class="print-summary-content" style="font-size: 8pt; font-weight: normal;">
+        <div class="print-summary-content" style="font-size: ${isVacationNote ? '10pt' : '8pt'}; font-weight: normal;">
           ${summaryContent.split('**').map((part, index) => {
             // If the index is odd, it's a bold part
             return index % 2 === 1 
@@ -126,6 +129,9 @@ export const generatePrintHtml = (note: Note): string => {
   // Get print styles
   const printStyles = getPrintStyles();
   
+  // Additional styles for vacation notes
+  const vacationBodyClass = isVacationNote ? 'vacation-print' : '';
+  
   // Create the complete HTML document for printing with wrapper class for justified content
   return `
     <!DOCTYPE html>
@@ -137,10 +143,10 @@ export const generatePrintHtml = (note: Note): string => {
       <style>
         /* Additional overrides for print */
         @media print {
-          body { font-size: 8pt !important; }
-          p, div, span, li { font-size: 8pt !important; margin-top: 0 !important; margin-bottom: 0.05rem !important; }
+          body { font-size: ${isVacationNote ? '10pt' : '8pt'} !important; }
+          p, div, span, li { font-size: ${isVacationNote ? '10pt' : '8pt'} !important; margin-top: 0 !important; margin-bottom: 0.05rem !important; }
           .print-content p, .print-content div, .print-content span, .print-content li { 
-            font-size: 8pt !important; 
+            font-size: ${isVacationNote ? '10pt' : '8pt'} !important; 
             margin-top: 0 !important;
             margin-bottom: 0.05rem !important;
           }
@@ -151,11 +157,11 @@ export const generatePrintHtml = (note: Note): string => {
           .print-content li {
             margin-bottom: 1px;
           }
-          .print-content h1 { font-size: 10pt !important; margin-top: 0.3rem !important; margin-bottom: 0.1rem !important; }
-          .print-content h2 { font-size: 9pt !important; margin-top: 0.2rem !important; margin-bottom: 0.1rem !important; }
-          .print-content h3 { font-size: 8.5pt !important; margin-top: 0.15rem !important; margin-bottom: 0.05rem !important; }
-          .print-title { font-size: 12pt !important; }
-          .print-summary-content, .print-conclusion-content { font-size: 8pt !important; }
+          .print-content h1 { font-size: ${isVacationNote ? '14pt' : '10pt'} !important; margin-top: 0.3rem !important; margin-bottom: 0.1rem !important; }
+          .print-content h2 { font-size: ${isVacationNote ? '12pt' : '9pt'} !important; margin-top: 0.2rem !important; margin-bottom: 0.1rem !important; }
+          .print-content h3 { font-size: ${isVacationNote ? '11pt' : '8.5pt'} !important; margin-top: 0.15rem !important; margin-bottom: 0.05rem !important; }
+          .print-title { font-size: ${isVacationNote ? '24pt' : '12pt'} !important; }
+          .print-summary-content, .print-conclusion-content { font-size: ${isVacationNote ? '10pt' : '8pt'} !important; }
           
           /* Further reduce line height */
           .print-content, .print-content p, .print-content div, .print-content span, .print-content li {
@@ -164,7 +170,7 @@ export const generatePrintHtml = (note: Note): string => {
         }
       </style>
     </head>
-    <body>
+    <body class="${vacationBodyClass}">
       <div class="print-wrapper">
         <div class="print-header">
           <h1 class="print-title">${note.title}</h1>
@@ -179,7 +185,7 @@ export const generatePrintHtml = (note: Note): string => {
         
         ${summaryHtml}
         
-        <div class="print-content print-justified">
+        <div class="print-content ${isVacationNote ? '' : 'print-justified'}">
           ${enhancedContent}
         </div>
         
