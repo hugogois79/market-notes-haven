@@ -1,10 +1,106 @@
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { NavigateFunction } from 'react-router-dom';
+import { toast } from 'sonner';
 import { usePwaInstall } from '@/hooks/use-pwa-install';
 
-export function useProtocolHandler() {
+export function useProtocolHandler(navigate?: NavigateFunction) {
   const { isInstalled } = usePwaInstall();
   const [showBanner, setShowBanner] = useState(false);
+
+  // Handle protocol activations coming from URLs
+  const handleProtocolActivation = useCallback((url: string) => {
+    const urlObj = new URL(url);
+    const params = new URLSearchParams(urlObj.search);
+    
+    // Check if the page was opened via protocol
+    const protocolAction = params.get('protocol');
+    const openInApp = params.get('openInApp');
+    const action = params.get('action');
+    const path = params.get('path');
+    
+    if (protocolAction) {
+      console.log('Protocol action received:', protocolAction);
+      
+      // Handle web+marketnotes:// protocol actions
+      switch (protocolAction) {
+        case 'install':
+          toast.info('Installation requested via protocol', {
+            description: 'Initializing installation process...'
+          });
+          
+          // Notify service worker to handle installation
+          if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+              type: 'GITHUB_SYNC_INSTALL',
+              installMethod: 'protocol'
+            });
+          }
+          break;
+          
+        case 'open':
+          toast.success('Opening application via protocol');
+          break;
+          
+        default:
+          console.log('Unknown protocol action:', protocolAction);
+      }
+      
+      // Remove the query parameters
+      if (navigate) {
+        navigate(urlObj.pathname);
+      } else {
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+    
+    if (action) {
+      console.log('GitHub action received:', action);
+      
+      // Handle github-app:// protocol actions
+      if (action === 'install') {
+        toast.info('GitHub installation requested', {
+          description: 'Initializing GitHub-based installation...'
+        });
+        
+        // Trigger GitHub installation process
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'GITHUB_SYNC_INSTALL',
+            installMethod: 'github-protocol'
+          });
+        }
+      }
+      
+      // Remove the query parameters
+      if (navigate) {
+        navigate(urlObj.pathname);
+      } else {
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+    
+    if (openInApp === 'true' && navigate) {
+      console.log('Open in app request received');
+      // We're already in the app, so just navigate to the path if provided
+      if (path) {
+        navigate(path);
+      } else {
+        navigate('/');
+      }
+      
+      // Notify the user that the app is open
+      toast.success('App opened successfully', {
+        description: 'You are now using the installed application'
+      });
+      
+      // Remove the query parameters
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [navigate]);
 
   useEffect(() => {
     // Check if we need to show the banner
@@ -51,5 +147,5 @@ export function useProtocolHandler() {
     };
   }, [isInstalled]);
 
-  return { showBanner };
+  return { showBanner, handleProtocolActivation };
 }
