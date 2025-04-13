@@ -10,8 +10,8 @@ import ProtocolHandler from "@/components/pwa/ProtocolHandler";
 const AppContent = () => {
   return (
     <>
-      <ProtocolHandler />
       <NotesProvider>
+        <ProtocolHandler />
         <AppRoutes />
         <Toaster />
         <InstallPWA />
