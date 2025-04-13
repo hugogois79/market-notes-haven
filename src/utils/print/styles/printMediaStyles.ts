@@ -246,12 +246,24 @@ export const getPrintMediaStyles = (): string => {
       }
       
       .vacation-print .print-title {
-        font-size: 24pt !important;
+        font-size: 28pt !important;
         color: #1967d2 !important;
         text-align: center !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
         margin-bottom: 0.5rem !important;
+      }
+      
+      .vacation-print .print-meta {
+        text-align: center !important;
+        font-size: 11pt !important;
+      }
+      
+      .vacation-print .print-category {
+        color: #1967d2 !important;
+        font-weight: bold !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
       
       .vacation-print .print-content {
@@ -277,14 +289,22 @@ export const getPrintMediaStyles = (): string => {
         font-size: 14pt !important;
       }
       
+      .vacation-date {
+        color: #1967d2 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        font-weight: bold !important;
+        font-style: italic !important;
+      }
+      
       .vacation-image-container {
         text-align: center !important;
-        margin: 0.5rem 0 !important;
+        margin: 0.8rem 0 !important;
         page-break-inside: avoid !important;
       }
       
       .vacation-image {
-        max-width: 80% !important;
+        max-width: 85% !important;
         height: auto !important;
         border: 1px solid #ccc !important;
         padding: 4px !important;

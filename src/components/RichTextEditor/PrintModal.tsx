@@ -29,6 +29,8 @@ const PrintModal: React.FC<PrintModalProps> = ({
   summary,
   attachmentUrl,
 }) => {
+  const isVacationNote = category === 'Vacations' || category === 'Vacation';
+  
   const handlePrint = useCallback(() => {
     // Clean up any potential font-weight styles that might be causing issues
     let processedContent = content;
@@ -70,6 +72,11 @@ const PrintModal: React.FC<PrintModalProps> = ({
             {summary && (
               <span className="block mt-2 text-blue-600">
                 Your AI summary will appear at the top of the printed document.
+              </span>
+            )}
+            {isVacationNote && (
+              <span className="block mt-2 text-blue-600">
+                Vacation mode enabled: Larger text with centered formatting and enhanced date display.
               </span>
             )}
           </p>

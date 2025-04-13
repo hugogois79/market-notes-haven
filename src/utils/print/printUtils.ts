@@ -2,6 +2,7 @@
 import { Note } from "@/types";
 import { generatePrintHtml } from "./htmlGenerator";
 import { normalizeContent } from "./styles/normalizeStyles";
+import { enhanceVacationContent } from "./vacationEnhancer";
 
 /**
  * Handles printing a note
@@ -31,7 +32,15 @@ export const printNote = (noteData: Partial<Note>): void => {
   }
   
   // Normalize content to fix font weight issues
-  const normalizedContent = noteData.content ? normalizeContent(noteData.content) : '';
+  let normalizedContent = noteData.content ? normalizeContent(noteData.content) : '';
+  
+  // Check if this is a vacation note and apply special formatting
+  const isVacationNote = noteData.category === 'Vacations' || noteData.category === 'Vacation';
+  
+  if (isVacationNote) {
+    // Process vacation content to center text and enhance formatting
+    normalizedContent = enhanceVacationContent(normalizedContent);
+  }
   
   // Create a complete Note object with default values for required properties
   const note: Note = {
@@ -57,15 +66,15 @@ export const printNote = (noteData: Partial<Note>): void => {
   
   // Wait for images to load before printing
   printWindow.onload = () => {
-    // Trigger the print dialog
-    printWindow.print();
-    
-    // Close the window after printing (some browsers may do this automatically)
-    // Set a timeout to avoid closing before print dialog appears
     setTimeout(() => {
-      if (!printWindow.closed) {
-        printWindow.close();
-      }
-    }, 500);
+      printWindow.print();
+      
+      // Close the window after printing (some browsers may do this automatically)
+      setTimeout(() => {
+        if (!printWindow.closed) {
+          printWindow.close();
+        }
+      }, 500);
+    }, isVacationNote ? 1500 : 1000); // Allow more time for vacation photos to load
   };
 };
