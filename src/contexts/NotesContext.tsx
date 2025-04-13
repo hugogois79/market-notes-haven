@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchNotes, createNote, updateNote, deleteNote } from "@/services/supabaseService";
 import { Note } from "@/types";
@@ -15,7 +15,11 @@ interface NotesContextType {
 
 const NotesContext = createContext<NotesContextType | undefined>(undefined);
 
-export const NotesProvider = ({ children }: { children: ReactNode }) => {
+interface NotesProviderProps {
+  children: ReactNode;
+}
+
+export const NotesProvider = ({ children }: NotesProviderProps) => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
 
