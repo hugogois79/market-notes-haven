@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { useNotes } from "@/contexts/NotesContext";
 import MainLayout from "@/layouts/MainLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";

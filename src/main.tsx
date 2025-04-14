@@ -32,9 +32,11 @@ const root = createRoot(rootElement);
 
 // Rendering with BrowserRouter as the outermost router component
 root.render(
-  <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </QueryClientProvider>
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </QueryClientProvider>
+  </React.StrictMode>
 );
