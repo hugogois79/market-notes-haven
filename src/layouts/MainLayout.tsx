@@ -1,3 +1,4 @@
+
 import Sidebar from "@/components/Sidebar";
 import { useState, ReactNode, useEffect } from "react";
 import UserProfileButton from "@/components/UserProfileButton";
@@ -23,29 +24,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     return () => {
       window.removeEventListener('sidebar-resize' as any, handleSidebarResize);
     };
-  }, []);
-
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        // Register service worker for basic offline functionality
-        navigator.serviceWorker.register('/service-worker.js')
-          .then(registration => {
-            console.log('Service worker registered:', registration);
-          })
-          .catch(err => {
-            console.error('Service worker registration failed:', err);
-          });
-      });
-      
-      window.addEventListener('online', () => {
-        toast.success('You are back online');
-      });
-      
-      window.addEventListener('offline', () => {
-        toast.warning('You are offline. Some features may be limited.');
-      });
-    }
   }, []);
 
   return (
