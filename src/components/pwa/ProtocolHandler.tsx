@@ -10,7 +10,7 @@ const ProtocolHandler = () => {
   useEffect(() => {
     // Handle any protocol parameters that might be in the URL
     handleProtocolActivation(window.location.href);
-  }, [handleProtocolActivation, location.pathname]);
+  }, [handleProtocolActivation, location]);
 
   return null; // This component doesn't render anything
 };
