@@ -3,6 +3,9 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient();
 
 // Safe initialization - prevent conflicts with browser extensions
 if (window && !Object.getOwnPropertyDescriptor(window, 'ethereum')) {
@@ -26,5 +29,9 @@ if (!rootElement) {
 // Using a single instance of createRoot
 const root = createRoot(rootElement);
 
-// Rendering without StrictMode to prevent double-rendering which could cause hooks issues
-root.render(<App />);
+// Rendering with QueryClientProvider but without additional router
+root.render(
+  <QueryClientProvider client={queryClient}>
+    <App />
+  </QueryClientProvider>
+);
