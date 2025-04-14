@@ -11,81 +11,85 @@ export function useProtocolHandler() {
 
   // Handle protocol activations coming from URLs
   const handleProtocolActivation = useCallback((url: string) => {
-    const urlObj = new URL(url);
-    const params = new URLSearchParams(urlObj.search);
-    
-    // Check if the page was opened via protocol
-    const protocolAction = params.get('protocol');
-    const openInApp = params.get('openInApp');
-    const action = params.get('action');
-    const path = params.get('path');
-    
-    if (protocolAction) {
-      console.log('Protocol action received:', protocolAction);
+    try {
+      const urlObj = new URL(url);
+      const params = new URLSearchParams(urlObj.search);
       
-      // Handle web+marketnotes:// protocol actions
-      switch (protocolAction) {
-        case 'install':
-          toast.info('Installation requested via protocol', {
-            description: 'Initializing installation process...'
+      // Check if the page was opened via protocol
+      const protocolAction = params.get('protocol');
+      const openInApp = params.get('openInApp');
+      const action = params.get('action');
+      const path = params.get('path');
+      
+      if (protocolAction) {
+        console.log('Protocol action received:', protocolAction);
+        
+        // Handle web+marketnotes:// protocol actions
+        switch (protocolAction) {
+          case 'install':
+            toast.info('Installation requested via protocol', {
+              description: 'Initializing installation process...'
+            });
+            
+            // Notify service worker to handle installation
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'GITHUB_SYNC_INSTALL',
+                installMethod: 'protocol'
+              });
+            }
+            break;
+            
+          case 'open':
+            toast.success('Opening application via protocol');
+            break;
+            
+          default:
+            console.log('Unknown protocol action:', protocolAction);
+        }
+        
+        // Remove the query parameters
+        navigate(urlObj.pathname);
+      }
+      
+      if (action) {
+        console.log('GitHub action received:', action);
+        
+        // Handle github-app:// protocol actions
+        if (action === 'install') {
+          toast.info('GitHub installation requested', {
+            description: 'Initializing GitHub-based installation...'
           });
           
-          // Notify service worker to handle installation
+          // Trigger GitHub installation process
           if (navigator.serviceWorker && navigator.serviceWorker.controller) {
             navigator.serviceWorker.controller.postMessage({
               type: 'GITHUB_SYNC_INSTALL',
-              installMethod: 'protocol'
+              installMethod: 'github-protocol'
             });
           }
-          break;
-          
-        case 'open':
-          toast.success('Opening application via protocol');
-          break;
-          
-        default:
-          console.log('Unknown protocol action:', protocolAction);
-      }
-      
-      // Remove the query parameters
-      navigate(urlObj.pathname);
-    }
-    
-    if (action) {
-      console.log('GitHub action received:', action);
-      
-      // Handle github-app:// protocol actions
-      if (action === 'install') {
-        toast.info('GitHub installation requested', {
-          description: 'Initializing GitHub-based installation...'
-        });
-        
-        // Trigger GitHub installation process
-        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-          navigator.serviceWorker.controller.postMessage({
-            type: 'GITHUB_SYNC_INSTALL',
-            installMethod: 'github-protocol'
-          });
         }
+        
+        // Remove the query parameters
+        navigate(urlObj.pathname);
       }
       
-      // Remove the query parameters
-      navigate(urlObj.pathname);
-    }
-    
-    if (openInApp === 'true') {
-      console.log('Open in app request received');
-      // We're already in the app, so just navigate to the path if provided
-      if (path) {
-        navigate(path);
-      } else {
-        navigate('/');
+      if (openInApp === 'true') {
+        console.log('Open in app request received');
+        // We're already in the app, so just navigate to the path if provided
+        if (path) {
+          navigate(path);
+        } else {
+          navigate('/');
+        }
+        
+        // Notify the user that the app is open
+        toast.success('App opened successfully', {
+          description: 'You are now using the installed application'
+        });
       }
-      
-      // Notify the user that the app is open
-      toast.success('App opened successfully', {
-        description: 'You are now using the installed application'
-      });
+    } catch (error) {
+      console.error('Error handling protocol activation:', error);
     }
   }, [navigate]);
 
