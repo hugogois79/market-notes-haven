@@ -1,4 +1,3 @@
-
 import Sidebar from "@/components/Sidebar";
 import { useState, ReactNode, useEffect } from "react";
 import UserProfileButton from "@/components/UserProfileButton";
@@ -82,7 +81,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         <header className="h-14 px-4 border-b flex items-center justify-between">
           <div className="flex items-center gap-2">
             <InstallPWA />
-            <InstallButton variant="default" size="sm" showText={true} />
+            {/* Removed Install Button */}
           </div>
           <div className="flex items-center gap-2">
             <HeaderInstallButton />
