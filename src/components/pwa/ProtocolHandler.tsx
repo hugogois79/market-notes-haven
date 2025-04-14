@@ -1,16 +1,17 @@
 
 import React, { useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import { useProtocolHandler } from "@/hooks/use-protocol-handler";
 
 const ProtocolHandler = () => {
-  const location = useLocation();
-  const { handleProtocolActivation } = useProtocolHandler();
-
   useEffect(() => {
-    // Handle any protocol parameters that might be in the URL
-    handleProtocolActivation(window.location.href);
-  }, [handleProtocolActivation, location]);
+    // Simplified protocol handling without router dependencies
+    console.log('Protocol handler mounted');
+    
+    // Basic URL handling without router integration
+    const url = window.location.href;
+    if (url.includes('protocol=') || url.includes('openInApp=')) {
+      console.log('Protocol URL detected:', url);
+    }
+  }, []);
 
   return null; // This component doesn't render anything
 };

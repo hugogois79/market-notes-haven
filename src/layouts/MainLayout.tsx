@@ -1,11 +1,8 @@
 import Sidebar from "@/components/Sidebar";
 import { useState, ReactNode, useEffect } from "react";
 import UserProfileButton from "@/components/UserProfileButton";
-import InstallPWA from "@/components/InstallPWA";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
-import HeaderInstallButton from "@/components/pwa/HeaderInstallButton";
-import InstallButton from "@/components/pwa/InstallButton";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -31,26 +28,10 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
+        // Register service worker for basic offline functionality
         navigator.serviceWorker.register('/service-worker.js')
           .then(registration => {
             console.log('Service worker registered:', registration);
-            
-            registration.addEventListener('updatefound', () => {
-              const newWorker = registration.installing;
-              if (newWorker) {
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    toast.info('App update available. Refresh to update.', {
-                      action: {
-                        label: 'Update',
-                        onClick: () => window.location.reload()
-                      },
-                      duration: 10000
-                    });
-                  }
-                });
-              }
-            });
           })
           .catch(err => {
             console.error('Service worker registration failed:', err);
@@ -80,11 +61,9 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       }`}>
         <header className="h-14 px-4 border-b flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <InstallPWA />
-            {/* Removed Install Button */}
+            {/* PWA installation components removed */}
           </div>
           <div className="flex items-center gap-2">
-            <HeaderInstallButton />
             <UserProfileButton />
           </div>
         </header>
