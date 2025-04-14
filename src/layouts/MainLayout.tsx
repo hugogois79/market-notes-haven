@@ -61,7 +61,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       }`}>
         <header className="h-14 px-4 border-b flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {/* PWA installation components removed */}
+            
           </div>
           <div className="flex items-center gap-2">
             <UserProfileButton />
