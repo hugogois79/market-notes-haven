@@ -1,12 +1,11 @@
 
 import React, { useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useProtocolHandler } from "@/hooks/use-protocol-handler";
 
 const ProtocolHandler = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { handleProtocolActivation } = useProtocolHandler(navigate);
+  const { handleProtocolActivation } = useProtocolHandler();
 
   useEffect(() => {
     // Handle any protocol parameters that might be in the URL

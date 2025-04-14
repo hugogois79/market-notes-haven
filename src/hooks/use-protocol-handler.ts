@@ -1,10 +1,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
-import { NavigateFunction } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { usePwaInstall } from '@/hooks/use-pwa-install';
 
-export function useProtocolHandler(navigate?: NavigateFunction) {
+export function useProtocolHandler() {
+  const navigate = useNavigate();
   const { isInstalled } = usePwaInstall();
   const [showBanner, setShowBanner] = useState(false);
 
@@ -47,12 +48,7 @@ export function useProtocolHandler(navigate?: NavigateFunction) {
       }
       
       // Remove the query parameters
-      if (navigate) {
-        navigate(urlObj.pathname);
-      } else {
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, '', newUrl);
-      }
+      navigate(urlObj.pathname);
     }
     
     if (action) {
@@ -74,15 +70,10 @@ export function useProtocolHandler(navigate?: NavigateFunction) {
       }
       
       // Remove the query parameters
-      if (navigate) {
-        navigate(urlObj.pathname);
-      } else {
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, '', newUrl);
-      }
+      navigate(urlObj.pathname);
     }
     
-    if (openInApp === 'true' && navigate) {
+    if (openInApp === 'true') {
       console.log('Open in app request received');
       // We're already in the app, so just navigate to the path if provided
       if (path) {
@@ -95,10 +86,6 @@ export function useProtocolHandler(navigate?: NavigateFunction) {
       toast.success('App opened successfully', {
         description: 'You are now using the installed application'
       });
-      
-      // Remove the query parameters
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, '', newUrl);
     }
   }, [navigate]);
 
