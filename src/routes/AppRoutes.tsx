@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import { useNotes } from "@/contexts/NotesContext";
 import MainLayout from "@/layouts/MainLayout";
@@ -22,6 +22,10 @@ const AppRoutes = () => {
   // We can get notes and loading state from context, but we don't need to pass them as props anymore
   // Each component will use the useNotes() hook directly to access this data
   const { handleSaveNote, handleDeleteNote } = useNotes();
+
+  useEffect(() => {
+    console.log("AppRoutes mounted");
+  }, []);
 
   // Function to wrap content with layout for authenticated pages
   const withLayout = (component: React.ReactNode) => (

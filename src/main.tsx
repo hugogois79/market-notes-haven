@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -30,13 +29,11 @@ if (!rootElement) {
 // Using a single instance of createRoot
 const root = createRoot(rootElement);
 
-// Rendering with BrowserRouter as the outermost router component
+// Rendering without BrowserRouter here, it will be moved to AppContent.tsx
 root.render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <App />
     </QueryClientProvider>
   </React.StrictMode>
 );

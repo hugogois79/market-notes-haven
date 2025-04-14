@@ -1,5 +1,5 @@
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader } from "lucide-react";
@@ -10,6 +10,10 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
+
+  useEffect(() => {
+    console.log("ProtectedRoute", { user, loading });
+  }, [user, loading]);
 
   if (loading) {
     return (
