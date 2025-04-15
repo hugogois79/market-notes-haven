@@ -1,17 +1,8 @@
 
-import React from "react";
-import { useForm } from "react-hook-form";
-import { TaoNote, TaoValidator } from "@/services/taoValidatorService";
-import { TaoSubnet } from "@/services/taoSubnetService";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import React, { useState, useEffect } from "react";
+import { TaoValidator, TaoSubnet, TaoNote } from "@/services/taoValidatorService";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -20,172 +11,131 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 interface NoteFormProps {
+  validators: TaoValidator[];
+  subnets: TaoSubnet[];
   validator?: TaoValidator;
   subnet?: TaoSubnet;
   note?: TaoNote;
-  validators: TaoValidator[];
-  subnets: TaoSubnet[];
-  onSubmit: (data: Omit<TaoNote, "id" | "created_at" | "updated_at">) => void;
+  onSubmit: (data: Omit<TaoNote, "id" | "created_at" | "updated_at">) => Promise<void>;
   onCancel: () => void;
 }
 
-type FormValues = Omit<TaoNote, "id" | "created_at" | "updated_at">;
-
 const NoteForm: React.FC<NoteFormProps> = ({
+  validators,
+  subnets,
   validator,
   subnet,
   note,
-  validators,
-  subnets,
   onSubmit,
   onCancel,
 }) => {
-  const form = useForm<FormValues>({
-    defaultValues: note
-      ? {
-          title: note.title,
-          content: note.content || "",
-          validator_id: note.validator_id,
-          subnet_id: note.subnet_id,
-        }
-      : {
-          title: "",
-          content: "",
-          validator_id: validator?.id || null,
-          subnet_id: subnet?.id || null,
-        },
-  });
+  const [validatorId, setValidatorId] = useState<string | undefined>(
+    validator ? validator.id : note?.validator_id
+  );
+  const [subnetId, setSubnetId] = useState<string | undefined>(
+    subnet ? subnet.id.toString() : note?.subnet_id ? String(note.subnet_id) : undefined
+  );
+  const [title, setTitle] = useState<string>(note?.title || "");
+  const [content, setContent] = useState<string>(note?.content || "");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (values: FormValues) => {
-    // Convert empty strings to null for optional fields
-    const validatorId = values.validator_id === "" ? null : values.validator_id;
-    const subnetId = values.subnet_id === "" ? null : values.subnet_id;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    onSubmit({
-      ...values,
-      validator_id: validatorId,
-      subnet_id: subnetId as number | null,
-    });
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        validator_id: validatorId,
+        subnet_id: subnetId ? parseInt(subnetId) : undefined,
+        title,
+        content,
+      });
+    } catch (error) {
+      console.error("Error submitting note:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Title</FormLabel>
-              <FormControl>
-                <Input placeholder="Note title" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="title">Title</Label>
+        <Input
+          id="title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Note title"
+          required
         />
+      </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {!validator && (
-            <FormField
-              control={form.control}
-              name="validator_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Linked Validator (Optional)</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(value === "null" ? null : value)}
-                    defaultValue={field.value !== null ? field.value.toString() : "null"}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select validator" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="null">None</SelectItem>
-                      {validators.map((validator) => (
-                        <SelectItem key={validator.id} value={validator.id}>
-                          {validator.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
+      <div className="space-y-2">
+        <Label htmlFor="validator">Linked Validator (Optional)</Label>
+        <Select 
+          value={validatorId} 
+          onValueChange={setValidatorId}
+          disabled={!!validator}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select validator" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">None</SelectItem>
+            {validators.map((v) => (
+              <SelectItem key={v.id} value={v.id}>
+                {v.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-          {!subnet && (
-            <FormField
-              control={form.control}
-              name="subnet_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Linked Subnet (Optional)</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      if (value === "null") {
-                        field.onChange(null);
-                      } else {
-                        field.onChange(parseInt(value, 10));
-                      }
-                    }}
-                    defaultValue={field.value !== null ? field.value.toString() : "null"}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select subnet" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="null">None</SelectItem>
-                      {subnets.map((subnet) => (
-                        <SelectItem key={subnet.id} value={subnet.id.toString()}>
-                          {subnet.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor="subnet">Linked Subnet (Optional)</Label>
+        <Select 
+          value={subnetId} 
+          onValueChange={setSubnetId}
+          disabled={!!subnet}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select subnet" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">None</SelectItem>
+            {subnets.map((s) => (
+              <SelectItem key={s.id} value={s.id.toString()}>
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-        <FormField
-          control={form.control}
-          name="content"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Content</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Note content"
-                  {...field}
-                  rows={8}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <Label htmlFor="content">Content</Label>
+        <Textarea
+          id="content"
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          rows={8}
+          placeholder="Note content"
+          required
         />
+      </div>
 
-        <div className="flex justify-end space-x-2 pt-4">
-          <Button variant="outline" onClick={onCancel} type="button">
-            Cancel
-          </Button>
-          <Button type="submit">
-            {note ? "Update Note" : "Create Note"}
-          </Button>
-        </div>
-      </form>
-    </Form>
+      <div className="flex justify-end space-x-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Saving..." : note ? "Update Note" : "Create Note"}
+        </Button>
+      </div>
+    </form>
   );
 };
 

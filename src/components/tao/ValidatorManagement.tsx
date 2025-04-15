@@ -36,7 +36,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { PlusCircle, Users, Table2, Clock, LayoutGrid, Database } from "lucide-react";
+import { PlusCircle, Users, Table2, Clock, LayoutGrid, Database, StickyNote, Layers } from "lucide-react";
 import ValidatorsList from "./ValidatorsList";
 import SubnetsOverview from "./SubnetsOverview";
 import ContactTimeline from "./ContactTimeline";
@@ -45,8 +45,12 @@ import MondayCRMView from "./MondayCRMView";
 import ValidatorForm from "./ValidatorForm";
 import ContactLogForm from "./ContactLogForm";
 import NoteForm from "./NoteForm";
+import TaoNotesTab from "./TaoNotesTab";
+import { useNotes } from "@/contexts/NotesContext";
+import { useNavigate } from "react-router-dom";
 
 const ValidatorManagement: React.FC = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("monday-crm");
   
   // Dialogs state
@@ -60,6 +64,9 @@ const ValidatorManagement: React.FC = () => {
   const [selectedContactLog, setSelectedContactLog] = useState<TaoContactLog | undefined>();
   const [selectedNote, setSelectedNote] = useState<TaoNote | undefined>();
   const [selectedSubnet, setSelectedSubnet] = useState<TaoSubnet | undefined>();
+  
+  // Get notes from the main app context
+  const { refetch: refetchAppNotes } = useNotes();
   
   // Fetch validators data
   const {
@@ -201,10 +208,13 @@ const ValidatorManagement: React.FC = () => {
 
   // Handle adding a new note
   const handleAddNote = (validator?: TaoValidator, subnet?: TaoSubnet) => {
-    setSelectedValidator(validator);
-    setSelectedSubnet(subnet);
-    setSelectedNote(undefined);
-    setNoteFormOpen(true);
+    if (validator) {
+      // Navigate to the editor with TAO tag and validator name in title
+      navigate(`/editor/new?category=TAO&tags=TAO&title=${encodeURIComponent(`${validator.name} Note`)}`);
+    } else {
+      // Navigate to the editor with just the TAO tag
+      navigate("/editor/new?category=TAO&tags=TAO");
+    }
   };
 
   // Handle submitting validator form
@@ -320,6 +330,7 @@ const ValidatorManagement: React.FC = () => {
     refetchContactLogs();
     refetchNotes();
     refetchSubnets();
+    refetchAppNotes();
   };
 
   // Loading state for the whole page
@@ -340,7 +351,7 @@ const ValidatorManagement: React.FC = () => {
             Add Contact Log
           </Button>
           <Button variant="outline" onClick={() => handleAddNote()}>
-            <PlusCircle className="h-4 w-4 mr-2" />
+            <StickyNote className="h-4 w-4 mr-2" />
             Add Note
           </Button>
         </div>
@@ -372,6 +383,10 @@ const ValidatorManagement: React.FC = () => {
             <TabsTrigger value="crm-pipeline" className="py-3">
               <LayoutGrid className="mr-2 h-4 w-4" />
               CRM Pipeline
+            </TabsTrigger>
+            <TabsTrigger value="notes" className="py-3">
+              <StickyNote className="mr-2 h-4 w-4" />
+              Notes
             </TabsTrigger>
           </TabsList>
         </div>
@@ -460,6 +475,10 @@ const ValidatorManagement: React.FC = () => {
             />
           )}
         </TabsContent>
+
+        <TabsContent value="notes" className="pt-6">
+          <TaoNotesTab validatorNames={validatorNames} />
+        </TabsContent>
       </Tabs>
 
       {/* Validator Form Dialog */}
@@ -492,26 +511,6 @@ const ValidatorManagement: React.FC = () => {
             contactLog={selectedContactLog}
             onSubmit={handleContactLogFormSubmit}
             onCancel={() => setContactLogFormOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Note Form Dialog */}
-      <Dialog open={noteFormOpen} onOpenChange={setNoteFormOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedNote ? "Edit Note" : "Add New Note"}
-            </DialogTitle>
-          </DialogHeader>
-          <NoteForm
-            validator={selectedValidator}
-            subnet={selectedSubnet}
-            note={selectedNote}
-            validators={validators}
-            subnets={subnets}
-            onSubmit={handleNoteFormSubmit}
-            onCancel={() => setNoteFormOpen(false)}
           />
         </DialogContent>
       </Dialog>

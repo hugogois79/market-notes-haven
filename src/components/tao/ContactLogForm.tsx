@@ -1,17 +1,8 @@
 
-import React from "react";
-import { useForm } from "react-hook-form";
-import { TaoContactLog, TaoValidator } from "@/services/taoValidatorService";
-import { TaoSubnet } from "@/services/taoSubnetService";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import React, { useState, useEffect } from "react";
+import { TaoValidator, TaoSubnet, TaoContactLog } from "@/services/taoValidatorService";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -20,18 +11,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Calendar } from "lucide-react";
 import { format } from "date-fns";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface ContactLogFormProps {
   validator?: TaoValidator;
   subnets: TaoSubnet[];
   contactLog?: TaoContactLog;
-  onSubmit: (data: Omit<TaoContactLog, "id" | "created_at" | "updated_at">) => void;
+  onSubmit: (data: Omit<TaoContactLog, "id" | "created_at" | "updated_at">) => Promise<void>;
   onCancel: () => void;
 }
-
-type FormValues = Omit<TaoContactLog, "id" | "created_at" | "updated_at">;
 
 const ContactLogForm: React.FC<ContactLogFormProps> = ({
   validator,
@@ -40,189 +36,157 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
   onSubmit,
   onCancel,
 }) => {
-  const today = format(new Date(), "yyyy-MM-dd");
+  const [validatorId, setValidatorId] = useState<string | undefined>(
+    validator ? validator.id : contactLog?.validator_id
+  );
+  const [subnetId, setSubnetId] = useState<string | undefined>(
+    contactLog?.subnet_id ? String(contactLog.subnet_id) : undefined
+  );
+  const [date, setDate] = useState<Date>(
+    contactLog?.contact_date ? new Date(contactLog.contact_date) : new Date()
+  );
+  const [method, setMethod] = useState<string>(contactLog?.method || "Email");
+  const [summary, setSummary] = useState<string>(contactLog?.summary || "");
+  const [nextSteps, setNextSteps] = useState<string>(contactLog?.next_steps || "");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
-  const form = useForm<FormValues>({
-    defaultValues: contactLog
-      ? {
-          validator_id: contactLog.validator_id,
-          subnet_id: contactLog.subnet_id,
-          contact_date: format(new Date(contactLog.contact_date), "yyyy-MM-dd"),
-          method: contactLog.method,
-          summary: contactLog.summary || "",
-          next_steps: contactLog.next_steps || "",
-          linked_note_id: contactLog.linked_note_id,
-        }
-      : {
-          validator_id: validator?.id || "",
-          subnet_id: null,
-          contact_date: today,
-          method: "Email",
-          summary: "",
-          next_steps: "",
-          linked_note_id: null,
-        },
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validatorId) return;
 
-  const handleSubmit = (values: FormValues) => {
-    // Convert empty strings to null for optional fields
-    const subnetId = values.subnet_id === "" ? null : values.subnet_id;
-    
-    onSubmit({
-      ...values,
-      subnet_id: subnetId,
-    });
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        validator_id: validatorId,
+        subnet_id: subnetId ? parseInt(subnetId) : undefined,
+        contact_date: format(date, "yyyy-MM-dd"),
+        method,
+        summary,
+        next_steps: nextSteps || undefined,
+      });
+    } catch (error) {
+      console.error("Error submitting contact log:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
+  const contactMethods = ["Email", "Call", "Meeting", "Telegram", "Discord", "Other"];
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        {!validator && (
-          <FormField
-            control={form.control}
-            name="validator_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Validator</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Validator ID"
-                    {...field}
-                    disabled={contactLog !== undefined}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="validator">Validator</Label>
+        <Select
+          value={validatorId}
+          onValueChange={setValidatorId}
+          disabled={!!validator || !!contactLog}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select validator" />
+          </SelectTrigger>
+          <SelectContent>
+            {validator && (
+              <SelectItem value={validator.id}>{validator.name}</SelectItem>
             )}
-          />
-        )}
+          </SelectContent>
+        </Select>
+      </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <FormField
-            control={form.control}
-            name="contact_date"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Contact Date</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      <div className="space-y-2">
+        <Label htmlFor="subnet">Subnet (Optional)</Label>
+        <Select value={subnetId} onValueChange={setSubnetId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select subnet" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">None</SelectItem>
+            {subnets.map((subnet) => (
+              <SelectItem key={subnet.id} value={subnet.id.toString()}>
+                {subnet.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-          <FormField
-            control={form.control}
-            name="method"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Contact Method</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select method" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="Email">Email</SelectItem>
-                    <SelectItem value="Telegram">Telegram</SelectItem>
-                    <SelectItem value="Call">Call</SelectItem>
-                    <SelectItem value="DM">DM</SelectItem>
-                    <SelectItem value="Zoom">Zoom</SelectItem>
-                    <SelectItem value="In Person">In Person</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      <div className="space-y-2">
+        <Label htmlFor="date">Contact Date</Label>
+        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full justify-start text-left font-normal"
+            >
+              <Calendar className="mr-2 h-4 w-4" />
+              {format(date, "PPP")}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <CalendarComponent
+              mode="single"
+              selected={date}
+              onSelect={(newDate) => {
+                if (newDate) {
+                  setDate(newDate);
+                  setCalendarOpen(false);
+                }
+              }}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
 
-          <FormField
-            control={form.control}
-            name="subnet_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Related Subnet (Optional)</FormLabel>
-                <Select
-                  onValueChange={(value) => {
-                    if (value === "null") {
-                      field.onChange(null);
-                    } else {
-                      field.onChange(parseInt(value, 10));
-                    }
-                  }}
-                  defaultValue={field.value !== null ? field.value.toString() : "null"}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select subnet" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="null">None</SelectItem>
-                    {subnets.map((subnet) => (
-                      <SelectItem key={subnet.id} value={subnet.id.toString()}>
-                        {subnet.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor="method">Contact Method</Label>
+        <Select value={method} onValueChange={setMethod}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {contactMethods.map((m) => (
+              <SelectItem key={m} value={m}>
+                {m}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-        <FormField
-          control={form.control}
-          name="summary"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Summary</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Describe what was discussed during the contact"
-                  {...field}
-                  rows={3}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <Label htmlFor="summary">Summary</Label>
+        <Textarea
+          id="summary"
+          value={summary}
+          onChange={(e) => setSummary(e.target.value)}
+          rows={3}
+          placeholder="What was discussed during this contact?"
+          required
         />
+      </div>
 
-        <FormField
-          control={form.control}
-          name="next_steps"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Next Steps</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Describe any follow-up actions or next steps"
-                  {...field}
-                  rows={2}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <Label htmlFor="nextSteps">Next Steps</Label>
+        <Textarea
+          id="nextSteps"
+          value={nextSteps}
+          onChange={(e) => setNextSteps(e.target.value)}
+          rows={2}
+          placeholder="What are the next steps after this interaction?"
         />
+      </div>
 
-        <div className="flex justify-end space-x-2 pt-4">
-          <Button variant="outline" onClick={onCancel} type="button">
-            Cancel
-          </Button>
-          <Button type="submit">
-            {contactLog ? "Update Contact Log" : "Add Contact Log"}
-          </Button>
-        </div>
-      </form>
-    </Form>
+      <div className="flex justify-end space-x-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Saving..." : contactLog ? "Update Log" : "Save Log"}
+        </Button>
+      </div>
+    </form>
   );
 };
 

@@ -47,6 +47,17 @@ export const createEmptyNote = (): Note => ({
   updatedAt: new Date(),
 });
 
+// Create a new TAO-related note
+export const createTaoNote = (validatorName?: string): Note => ({
+  id: Date.now().toString(),
+  title: validatorName ? `${validatorName} Note` : "Untitled TAO Note",
+  content: "",
+  tags: ["TAO"],
+  category: "TAO",
+  createdAt: new Date(),
+  updatedAt: new Date(),
+});
+
 // Search notes by query
 export const searchNotes = (notes: Note[], query: string): Note[] => {
   const searchTerm = query.toLowerCase().trim();
@@ -74,6 +85,17 @@ export const filterNotesByTags = (notes: Note[], tags: string[]): Note[] => {
   return notes.filter((note) => {
     return tags.some((tag) => note.tags.includes(tag));
   });
+};
+
+// Filter notes by token
+export const filterNotesByToken = (notes: Note[], tokenSymbol: string): Note[] => {
+  if (!tokenSymbol) return notes;
+  return notes.filter((note) => note.tags.includes(tokenSymbol));
+};
+
+// Get TAO-related notes
+export const getTaoNotes = (notes: Note[]): Note[] => {
+  return notes.filter((note) => note.tags.includes("TAO") || note.category === "TAO");
 };
 
 // Get all unique categories from notes
