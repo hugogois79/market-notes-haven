@@ -32,6 +32,7 @@ export const SidebarFooter = ({ isExpanded, isMobile, onMobileClose }: SidebarFo
         onClick={() => isMobile && onMobileClose()}
         className={cn(
           "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-secondary-foreground hover:bg-secondary-foreground/10 hover:text-brand",
+          "text-[#9F9EA1]", // Lighter silver color from context
           !isExpanded && "justify-center px-2"
         )}
         title={!isExpanded ? "Settings" : ""}
