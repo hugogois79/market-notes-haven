@@ -894,6 +894,112 @@ export type Database = {
         }
         Relationships: []
       }
+      tao_contact_logs: {
+        Row: {
+          contact_date: string
+          created_at: string
+          id: string
+          linked_note_id: string | null
+          method: string | null
+          next_steps: string | null
+          subnet_id: number | null
+          summary: string | null
+          updated_at: string
+          validator_id: string | null
+        }
+        Insert: {
+          contact_date?: string
+          created_at?: string
+          id?: string
+          linked_note_id?: string | null
+          method?: string | null
+          next_steps?: string | null
+          subnet_id?: number | null
+          summary?: string | null
+          updated_at?: string
+          validator_id?: string | null
+        }
+        Update: {
+          contact_date?: string
+          created_at?: string
+          id?: string
+          linked_note_id?: string | null
+          method?: string | null
+          next_steps?: string | null
+          subnet_id?: number | null
+          summary?: string | null
+          updated_at?: string
+          validator_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_linked_note"
+            columns: ["linked_note_id"]
+            isOneToOne: false
+            referencedRelation: "tao_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tao_contact_logs_subnet_id_fkey"
+            columns: ["subnet_id"]
+            isOneToOne: false
+            referencedRelation: "tao_subnets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tao_contact_logs_validator_id_fkey"
+            columns: ["validator_id"]
+            isOneToOne: false
+            referencedRelation: "tao_validators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tao_notes: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          subnet_id: number | null
+          title: string
+          updated_at: string
+          validator_id: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          subnet_id?: number | null
+          title: string
+          updated_at?: string
+          validator_id?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          subnet_id?: number | null
+          title?: string
+          updated_at?: string
+          validator_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tao_notes_subnet_id_fkey"
+            columns: ["subnet_id"]
+            isOneToOne: false
+            referencedRelation: "tao_subnets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tao_notes_validator_id_fkey"
+            columns: ["validator_id"]
+            isOneToOne: false
+            referencedRelation: "tao_validators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tao_subnets: {
         Row: {
           created_at: string
@@ -927,6 +1033,81 @@ export type Database = {
           neurons?: number
           tier?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      tao_validator_subnets: {
+        Row: {
+          created_at: string
+          id: string
+          subnet_id: number | null
+          validator_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          subnet_id?: number | null
+          validator_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          subnet_id?: number | null
+          validator_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tao_validator_subnets_subnet_id_fkey"
+            columns: ["subnet_id"]
+            isOneToOne: false
+            referencedRelation: "tao_subnets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tao_validator_subnets_validator_id_fkey"
+            columns: ["validator_id"]
+            isOneToOne: false
+            referencedRelation: "tao_validators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tao_validators: {
+        Row: {
+          created_at: string
+          crm_stage: string | null
+          email: string | null
+          id: string
+          linkedin: string | null
+          name: string
+          priority: string | null
+          telegram: string | null
+          updated_at: string
+          wallet_address: string | null
+        }
+        Insert: {
+          created_at?: string
+          crm_stage?: string | null
+          email?: string | null
+          id?: string
+          linkedin?: string | null
+          name: string
+          priority?: string | null
+          telegram?: string | null
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Update: {
+          created_at?: string
+          crm_stage?: string | null
+          email?: string | null
+          id?: string
+          linkedin?: string | null
+          name?: string
+          priority?: string | null
+          telegram?: string | null
+          updated_at?: string
+          wallet_address?: string | null
         }
         Relationships: []
       }

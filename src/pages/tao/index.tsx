@@ -7,7 +7,9 @@ import {
   Globe, 
   Layers, 
   LineChart,
-  PieChart, 
+  PieChart,
+  Users,
+  Database,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { 
@@ -20,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { fetchTaoSubnets, TaoSubnet } from "@/services/taoSubnetService";
 import { useQuery } from "@tanstack/react-query";
+import ValidatorManagement from "@/components/tao/ValidatorManagement";
 
 const TAOPage = () => {
   const location = useLocation();
@@ -81,6 +84,10 @@ const TAOPage = () => {
             <TabsTrigger value="validators" className="py-3">
               <Globe className="mr-2 h-4 w-4" />
               Validators
+            </TabsTrigger>
+            <TabsTrigger value="management" className="py-3">
+              <Database className="mr-2 h-4 w-4" />
+              Management
             </TabsTrigger>
           </TabsList>
         </div>
@@ -334,6 +341,10 @@ const TAOPage = () => {
               </TableBody>
             </Table>
           </div>
+        </TabsContent>
+
+        <TabsContent value="management" className="pt-6">
+          <ValidatorManagement />
         </TabsContent>
       </Tabs>
     </div>
