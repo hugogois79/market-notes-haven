@@ -97,8 +97,8 @@ const NoteForm: React.FC<NoteFormProps> = ({
                 <FormItem>
                   <FormLabel>Linked Validator (Optional)</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value?.toString() || undefined}
+                    onValueChange={(value) => field.onChange(value === "null" ? null : value)}
+                    defaultValue={field.value !== null ? field.value.toString() : "null"}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -128,8 +128,14 @@ const NoteForm: React.FC<NoteFormProps> = ({
                 <FormItem>
                   <FormLabel>Linked Subnet (Optional)</FormLabel>
                   <Select
-                    onValueChange={(value) => field.onChange(value === "null" ? null : parseInt(value, 10))}
-                    defaultValue={field.value?.toString() || undefined}
+                    onValueChange={(value) => {
+                      if (value === "null") {
+                        field.onChange(null);
+                      } else {
+                        field.onChange(parseInt(value, 10));
+                      }
+                    }}
+                    defaultValue={field.value !== null ? field.value.toString() : "null"}
                   >
                     <FormControl>
                       <SelectTrigger>

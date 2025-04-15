@@ -36,17 +36,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { PlusCircle, Users, Table2, Clock, LayoutGrid } from "lucide-react";
+import { PlusCircle, Users, Table2, Clock, LayoutGrid, Database } from "lucide-react";
 import ValidatorsList from "./ValidatorsList";
 import SubnetsOverview from "./SubnetsOverview";
 import ContactTimeline from "./ContactTimeline";
 import CRMPipeline from "./CRMPipeline";
+import MondayCRMView from "./MondayCRMView";
 import ValidatorForm from "./ValidatorForm";
 import ContactLogForm from "./ContactLogForm";
 import NoteForm from "./NoteForm";
 
 const ValidatorManagement: React.FC = () => {
-  const [activeTab, setActiveTab] = useState("validators-list");
+  const [activeTab, setActiveTab] = useState("monday-crm");
   
   // Dialogs state
   const [validatorFormOpen, setValidatorFormOpen] = useState(false);
@@ -58,6 +59,7 @@ const ValidatorManagement: React.FC = () => {
   const [selectedValidator, setSelectedValidator] = useState<TaoValidator | undefined>();
   const [selectedContactLog, setSelectedContactLog] = useState<TaoContactLog | undefined>();
   const [selectedNote, setSelectedNote] = useState<TaoNote | undefined>();
+  const [selectedSubnet, setSelectedSubnet] = useState<TaoSubnet | undefined>();
   
   // Fetch validators data
   const {
@@ -73,6 +75,7 @@ const ValidatorManagement: React.FC = () => {
   const {
     data: subnets = [],
     isLoading: isLoadingSubnets,
+    refetch: refetchSubnets,
   } = useQuery({
     queryKey: ["tao-subnets"],
     queryFn: fetchTaoSubnets,
@@ -199,6 +202,7 @@ const ValidatorManagement: React.FC = () => {
   // Handle adding a new note
   const handleAddNote = (validator?: TaoValidator, subnet?: TaoSubnet) => {
     setSelectedValidator(validator);
+    setSelectedSubnet(subnet);
     setSelectedNote(undefined);
     setNoteFormOpen(true);
   };
@@ -300,13 +304,22 @@ const ValidatorManagement: React.FC = () => {
   };
 
   const handleViewSubnet = (subnet: TaoSubnet) => {
-    // For now, we don't have a detailed view for subnets
+    setSelectedSubnet(subnet);
+    // Here we could navigate to a subnet detail view or open a dialog
     toast.info(`Viewing subnet: ${subnet.name}`);
   };
 
   const handleAddValidatorToSubnet = (subnet: TaoSubnet) => {
     // For now, we just log this action
     toast.info(`Add validator to subnet: ${subnet.name}`);
+  };
+
+  // Function to refresh all data
+  const refreshAllData = () => {
+    refetchValidators();
+    refetchContactLogs();
+    refetchNotes();
+    refetchSubnets();
   };
 
   // Loading state for the whole page
@@ -340,6 +353,10 @@ const ValidatorManagement: React.FC = () => {
       >
         <div className="border-b">
           <TabsList className="w-full justify-start h-auto">
+            <TabsTrigger value="monday-crm" className="py-3">
+              <Database className="mr-2 h-4 w-4" />
+              CRM Dashboard
+            </TabsTrigger>
             <TabsTrigger value="validators-list" className="py-3">
               <Table2 className="mr-2 h-4 w-4" />
               Validators List
@@ -358,6 +375,30 @@ const ValidatorManagement: React.FC = () => {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="monday-crm" className="pt-4">
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <p>Loading data...</p>
+            </div>
+          ) : (
+            <MondayCRMView
+              validators={validators}
+              subnets={subnets}
+              contactLogs={contactLogs}
+              notes={notes}
+              validatorsBySubnet={validatorsBySubnet}
+              validatorNames={validatorNames}
+              subnetNames={subnetNames}
+              onAddValidator={handleAddValidator}
+              onEditValidator={handleEditValidator}
+              onAddContactLog={handleAddContactLog}
+              onAddNote={handleAddNote}
+              onViewContactLog={handleViewContactLog}
+              onRefreshData={refreshAllData}
+            />
+          )}
+        </TabsContent>
 
         <TabsContent value="validators-list" className="pt-6">
           {isLoading ? (
@@ -465,6 +506,7 @@ const ValidatorManagement: React.FC = () => {
           </DialogHeader>
           <NoteForm
             validator={selectedValidator}
+            subnet={selectedSubnet}
             note={selectedNote}
             validators={validators}
             subnets={subnets}

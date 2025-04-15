@@ -148,8 +148,14 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
               <FormItem>
                 <FormLabel>Related Subnet (Optional)</FormLabel>
                 <Select
-                  onValueChange={(value) => field.onChange(value ? parseInt(value, 10) : null)}
-                  defaultValue={field.value?.toString() || undefined}
+                  onValueChange={(value) => {
+                    if (value === "null") {
+                      field.onChange(null);
+                    } else {
+                      field.onChange(parseInt(value, 10));
+                    }
+                  }}
+                  defaultValue={field.value !== null ? field.value.toString() : "null"}
                 >
                   <FormControl>
                     <SelectTrigger>
