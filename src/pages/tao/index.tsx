@@ -69,6 +69,9 @@ const TAOPage = () => {
   // Get subnet count
   const subnetCount = hasLiveData && taoStats ? taoStats.subnets.length : topSubnets.length;
 
+  // Determine error state (convert Error object to boolean)
+  const hasError = !!taoStatsError;
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Page Header */}
@@ -103,7 +106,7 @@ const TAOPage = () => {
           <TaoSubnetsTable
             subnets={topSubnets}
             isLoading={isLoadingTaoStats || isLoadingDbSubnets}
-            error={!!taoStatsError}
+            error={hasError}
             hasLiveData={hasLiveData}
           />
         </TabsContent>
@@ -138,7 +141,7 @@ const TAOPage = () => {
               <TaoSubnetsTable
                 subnets={hasLiveData && taoStats ? taoStats.subnets : dbSubnets}
                 isLoading={isLoadingTaoStats || isLoadingDbSubnets}
-                error={!!taoStatsError}
+                error={hasError}
                 title="All Subnets"
                 hasLiveData={hasLiveData}
               />
