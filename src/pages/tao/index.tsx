@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { 
   BarChart3, 
@@ -18,16 +18,26 @@ import {
   TableBody, 
   TableCell 
 } from "@/components/ui/table";
+import { fetchTaoSubnets, TaoSubnet } from "@/services/taoSubnetService";
+import { useQuery } from "@tanstack/react-query";
 
 const TAOPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
 
+  const { data: subnets = [], isLoading } = useQuery({
+    queryKey: ['tao-subnets'],
+    queryFn: fetchTaoSubnets
+  });
+
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     navigate(`/tao/${value === "overview" ? "" : value}`);
   };
+
+  // Get top subnets for overview
+  const topSubnets = subnets.slice(0, 5);
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -100,7 +110,7 @@ const TAOPage = () => {
                 <h3 className="text-lg font-medium">Active Subnets</h3>
                 <Layers className="text-brand h-5 w-5" />
               </div>
-              <p className="text-3xl font-bold">32</p>
+              <p className="text-3xl font-bold">{subnets.length}</p>
               <p className="text-sm text-blue-500 mt-2">+3 (30d)</p>
             </div>
           </div>
@@ -108,34 +118,39 @@ const TAOPage = () => {
           <div className="mt-8">
             <h3 className="text-xl font-semibold mb-4">Top Subnets</h3>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Rank</TableHead>
-                    <TableHead>Subnet</TableHead>
-                    <TableHead>Neurons</TableHead>
-                    <TableHead>Emission</TableHead>
-                    <TableHead>Incentive</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {[
-                    { rank: 1, name: "Subnet 1", neurons: 256, emission: "0.25τ/day", incentive: "3.45%" },
-                    { rank: 2, name: "Subnet 2", neurons: 128, emission: "0.18τ/day", incentive: "2.87%" },
-                    { rank: 3, name: "Subnet 3", neurons: 92, emission: "0.15τ/day", incentive: "2.21%" },
-                    { rank: 4, name: "Subnet 4", neurons: 64, emission: "0.12τ/day", incentive: "1.93%" },
-                    { rank: 5, name: "Subnet 5", neurons: 48, emission: "0.09τ/day", incentive: "1.45%" },
-                  ].map((subnet) => (
-                    <TableRow key={subnet.rank}>
-                      <TableCell>{subnet.rank}</TableCell>
-                      <TableCell className="font-medium">{subnet.name}</TableCell>
-                      <TableCell>{subnet.neurons}</TableCell>
-                      <TableCell>{subnet.emission}</TableCell>
-                      <TableCell>{subnet.incentive}</TableCell>
+              {isLoading ? (
+                <div className="p-6 text-center">Loading subnet data...</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Rank</TableHead>
+                      <TableHead>Subnet</TableHead>
+                      <TableHead>Tier</TableHead>
+                      <TableHead>Neurons</TableHead>
+                      <TableHead>Emission</TableHead>
+                      <TableHead>Incentive</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {topSubnets.map((subnet, index) => (
+                      <TableRow key={subnet.id}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell className="font-medium">{subnet.name}</TableCell>
+                        <TableCell>Tier {subnet.tier}</TableCell>
+                        <TableCell>{subnet.neurons}</TableCell>
+                        <TableCell>{subnet.emission}</TableCell>
+                        <TableCell>{subnet.incentive}</TableCell>
+                      </TableRow>
+                    ))}
+                    {topSubnets.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center">No subnet data available</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </div>
           </div>
         </TabsContent>
@@ -241,37 +256,41 @@ const TAOPage = () => {
 
         <TabsContent value="subnets" className="pt-6">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Neurons</TableHead>
-                  <TableHead>Emission</TableHead>
-                  <TableHead>Creator</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {[
-                  { id: 1, name: "Subnet 1", description: "AI Language Models", neurons: 256, emission: "0.25τ/day", creator: "0x123...abc" },
-                  { id: 2, name: "Subnet 2", description: "Cybersecurity", neurons: 128, emission: "0.18τ/day", creator: "0x456...def" },
-                  { id: 3, name: "Subnet 3", description: "Video Processing", neurons: 92, emission: "0.15τ/day", creator: "0x789...ghi" },
-                  { id: 4, name: "Subnet 4", description: "Data Storage", neurons: 64, emission: "0.12τ/day", creator: "0xabc...123" },
-                  { id: 5, name: "Subnet 5", description: "IoT Networks", neurons: 48, emission: "0.09τ/day", creator: "0xdef...456" },
-                  { id: 6, name: "Subnet 6", description: "Prediction Markets", neurons: 32, emission: "0.06τ/day", creator: "0xghi...789" },
-                ].map((subnet) => (
-                  <TableRow key={subnet.id}>
-                    <TableCell>{subnet.id}</TableCell>
-                    <TableCell className="font-medium">{subnet.name}</TableCell>
-                    <TableCell>{subnet.description}</TableCell>
-                    <TableCell>{subnet.neurons}</TableCell>
-                    <TableCell>{subnet.emission}</TableCell>
-                    <TableCell className="font-mono text-xs">{subnet.creator}</TableCell>
+            {isLoading ? (
+              <div className="p-6 text-center">Loading subnet data...</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Tier</TableHead>
+                    <TableHead>Neurons</TableHead>
+                    <TableHead>Emission</TableHead>
+                    <TableHead>Incentive</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {subnets.map((subnet) => (
+                    <TableRow key={subnet.id}>
+                      <TableCell>{subnet.id}</TableCell>
+                      <TableCell className="font-medium">{subnet.name}</TableCell>
+                      <TableCell>{subnet.description}</TableCell>
+                      <TableCell>Tier {subnet.tier}</TableCell>
+                      <TableCell>{subnet.neurons}</TableCell>
+                      <TableCell>{subnet.emission}</TableCell>
+                      <TableCell>{subnet.incentive}</TableCell>
+                    </TableRow>
+                  ))}
+                  {subnets.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center">No subnet data available</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </div>
         </TabsContent>
 

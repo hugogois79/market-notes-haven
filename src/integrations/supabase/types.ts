@@ -894,6 +894,42 @@ export type Database = {
         }
         Relationships: []
       }
+      tao_subnets: {
+        Row: {
+          created_at: string
+          description: string | null
+          emission: string
+          id: number
+          incentive: string
+          name: string
+          neurons: number
+          tier: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          emission: string
+          id?: number
+          incentive: string
+          name: string
+          neurons: number
+          tier: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          emission?: string
+          id?: number
+          incentive?: string
+          name?: string
+          neurons?: number
+          tier?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       todos: {
         Row: {
           created_at: string | null
