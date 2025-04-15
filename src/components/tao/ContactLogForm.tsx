@@ -148,8 +148,8 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
               <FormItem>
                 <FormLabel>Related Subnet (Optional)</FormLabel>
                 <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value?.toString() || ""}
+                  onValueChange={(value) => field.onChange(value ? parseInt(value, 10) : null)}
+                  defaultValue={field.value?.toString() || undefined}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -157,7 +157,7 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="null">None</SelectItem>
                     {subnets.map((subnet) => (
                       <SelectItem key={subnet.id} value={subnet.id.toString()}>
                         {subnet.name}

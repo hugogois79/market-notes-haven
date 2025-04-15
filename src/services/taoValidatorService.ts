@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface TaoValidator {
@@ -57,7 +56,7 @@ export const fetchValidators = async (): Promise<TaoValidator[]> => {
       return [];
     }
 
-    return data || [];
+    return (data || []) as TaoValidator[];
   } catch (error) {
     console.error('Error fetching validators:', error);
     return [];
@@ -78,7 +77,7 @@ export const fetchValidatorById = async (id: string): Promise<TaoValidator | nul
       return null;
     }
 
-    return data;
+    return data as TaoValidator;
   } catch (error) {
     console.error('Error fetching validator:', error);
     return null;
@@ -99,7 +98,7 @@ export const createValidator = async (validator: Omit<TaoValidator, 'id' | 'crea
       return null;
     }
 
-    return data;
+    return data as TaoValidator;
   } catch (error) {
     console.error('Error creating validator:', error);
     return null;
@@ -121,7 +120,7 @@ export const updateValidator = async (id: string, updates: Partial<TaoValidator>
       return null;
     }
 
-    return data;
+    return data as TaoValidator;
   } catch (error) {
     console.error('Error updating validator:', error);
     return null;
@@ -161,7 +160,7 @@ export const fetchContactLogs = async (): Promise<TaoContactLog[]> => {
       return [];
     }
 
-    return data || [];
+    return (data || []) as TaoContactLog[];
   } catch (error) {
     console.error('Error fetching contact logs:', error);
     return [];
@@ -182,7 +181,7 @@ export const createContactLog = async (contactLog: Omit<TaoContactLog, 'id' | 'c
       return null;
     }
 
-    return data;
+    return data as TaoContactLog;
   } catch (error) {
     console.error('Error creating contact log:', error);
     return null;
@@ -203,7 +202,7 @@ export const fetchContactLogsByValidator = async (validatorId: string): Promise<
       return [];
     }
 
-    return data || [];
+    return (data || []) as TaoContactLog[];
   } catch (error) {
     console.error('Error fetching contact logs:', error);
     return [];
@@ -244,7 +243,7 @@ export const createTaoNote = async (note: Omit<TaoNote, 'id' | 'created_at' | 'u
       return null;
     }
 
-    return data;
+    return data as TaoNote;
   } catch (error) {
     console.error('Error creating note:', error);
     return null;

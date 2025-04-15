@@ -98,7 +98,7 @@ const NoteForm: React.FC<NoteFormProps> = ({
                   <FormLabel>Linked Validator (Optional)</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value?.toString() || ""}
+                    defaultValue={field.value?.toString() || undefined}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -106,7 +106,7 @@ const NoteForm: React.FC<NoteFormProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="null">None</SelectItem>
                       {validators.map((validator) => (
                         <SelectItem key={validator.id} value={validator.id}>
                           {validator.name}
@@ -128,8 +128,8 @@ const NoteForm: React.FC<NoteFormProps> = ({
                 <FormItem>
                   <FormLabel>Linked Subnet (Optional)</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value?.toString() || ""}
+                    onValueChange={(value) => field.onChange(value === "null" ? null : parseInt(value, 10))}
+                    defaultValue={field.value?.toString() || undefined}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -137,7 +137,7 @@ const NoteForm: React.FC<NoteFormProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="null">None</SelectItem>
                       {subnets.map((subnet) => (
                         <SelectItem key={subnet.id} value={subnet.id.toString()}>
                           {subnet.name}
