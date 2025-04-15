@@ -28,9 +28,11 @@ const TAOPage = () => {
     queryKey: ['tao-subnets'],
     queryFn: fetchTaoSubnets,
     retry: 1,
-    onError: (error) => {
-      console.error("Error fetching subnet data from database:", error);
-      toast.error("Could not load subnet data from database");
+    onSettled: (data, error) => {
+      if (error) {
+        console.error("Error fetching subnet data from database:", error);
+        toast.error("Could not load subnet data from database");
+      }
     }
   });
 
@@ -63,7 +65,7 @@ const TAOPage = () => {
     dbSubnets.slice(0, 5);
 
   // Get subnet count
-  const subnetCount = hasLiveData ? taoStats.subnets.length : topSubnets.length;
+  const subnetCount = hasLiveData && taoStats ? taoStats.subnets.length : topSubnets.length;
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -90,7 +92,7 @@ const TAOPage = () => {
         <TabsContent value="overview" className="pt-6">
           {/* Stat Cards */}
           <TaoStatCards 
-            taoStats={taoStats} 
+            taoStats={taoStats || undefined} 
             subnetCount={subnetCount}
             isMockData={isMockData}
           />
@@ -99,7 +101,7 @@ const TAOPage = () => {
           <TaoSubnetsTable
             subnets={topSubnets}
             isLoading={isLoadingTaoStats || isLoadingDbSubnets}
-            error={taoStatsError}
+            error={!!taoStatsError}
             hasLiveData={hasLiveData}
           />
         </TabsContent>
@@ -132,9 +134,9 @@ const TAOPage = () => {
             </CardHeader>
             <CardContent className="p-0">
               <TaoSubnetsTable
-                subnets={hasLiveData ? taoStats.subnets : dbSubnets}
+                subnets={hasLiveData && taoStats ? taoStats.subnets : dbSubnets}
                 isLoading={isLoadingTaoStats || isLoadingDbSubnets}
-                error={taoStatsError}
+                error={!!taoStatsError}
                 title="All Subnets"
                 hasLiveData={hasLiveData}
               />

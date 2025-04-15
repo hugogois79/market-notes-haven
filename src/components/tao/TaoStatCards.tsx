@@ -31,7 +31,7 @@ const TaoStatCards: React.FC<TaoStatCardsProps> = ({
     }
   };
 
-  const hasLiveData = !!taoStats;
+  const hasLiveData = !!taoStats && !isMockData;
 
   const renderDemoTag = () => {
     if (!isMockData) return null;
@@ -63,9 +63,9 @@ const TaoStatCards: React.FC<TaoStatCardsProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <div className="text-2xl font-bold">
-                {hasLiveData ? `$${taoStats.price.toFixed(2)}` : '$--.--.--'}
+                {hasLiveData && taoStats ? `$${taoStats.price.toFixed(2)}` : '$--.--.--'}
               </div>
-              {hasLiveData && taoStats.price_change_percentage_24h && (
+              {hasLiveData && taoStats?.price_change_percentage_24h && (
                 <div className={`flex items-center text-xs ${
                   (taoStats.price_change_percentage_24h || 0) >= 0 
                     ? 'text-green-500' 
@@ -94,7 +94,7 @@ const TaoStatCards: React.FC<TaoStatCardsProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <div className="text-2xl font-bold">
-                {hasLiveData ? formatNumber(taoStats.market_cap) : '$-.--B'}
+                {hasLiveData && taoStats ? formatNumber(taoStats.market_cap) : '$-.--B'}
               </div>
               {renderDemoTag()}
             </div>

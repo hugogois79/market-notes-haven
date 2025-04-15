@@ -162,9 +162,11 @@ export const useTaoStats = (refreshInterval = 5 * 60 * 1000) => {
     refetchInterval: refreshInterval,
     staleTime: refreshInterval - 1000,
     retry: 1,
-    onError: (err) => {
-      console.error("Error fetching TAO stats:", err);
-      toast.error("Unable to fetch live TAO data. Using cached data instead.");
+    onSettled: (data, error) => {
+      if (error) {
+        console.error("Error fetching TAO stats:", error);
+        toast.error("Unable to fetch live TAO data. Using cached data instead.");
+      }
     }
   });
   
