@@ -62,8 +62,8 @@ const TaoExportTab: React.FC = () => {
           </p>
           <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-x-auto text-sm">
 {`- TAO Stats Update ({{timestamp}}) #[[TAO Update]]
-  - Price (USD):: ${{price_value}}
-  - Market Cap (USD):: ${{market_cap_value}}
+  - Price (USD):: $\{{price_value}}
+  - Market Cap (USD):: $\{{market_cap_value}}
   - Subnets:
     - {{name}}
       - ID:: {{netuid}}
