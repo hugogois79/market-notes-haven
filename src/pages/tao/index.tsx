@@ -28,10 +28,12 @@ const TAOPage = () => {
     queryKey: ['tao-subnets'],
     queryFn: fetchTaoSubnets,
     retry: 1,
-    onSettled: (data, error) => {
-      if (error) {
-        console.error("Error fetching subnet data from database:", error);
-        toast.error("Could not load subnet data from database");
+    meta: {
+      onSettled: (data, error) => {
+        if (error) {
+          console.error("Error fetching subnet data from database:", error);
+          toast.error("Could not load subnet data from database");
+        }
       }
     }
   });
@@ -92,7 +94,7 @@ const TAOPage = () => {
         <TabsContent value="overview" className="pt-6">
           {/* Stat Cards */}
           <TaoStatCards 
-            taoStats={taoStats || undefined} 
+            taoStats={taoStats} 
             subnetCount={subnetCount}
             isMockData={isMockData}
           />

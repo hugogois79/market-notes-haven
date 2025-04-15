@@ -6,7 +6,7 @@ import TaoStatsExport from './TaoStatsExport';
 import TaoStatsUpdateComponent from './TaoStatsUpdate';
 
 const TaoExportTab: React.FC = () => {
-  const { taoStats, isLoading, error, refreshTaoStats } = useTaoStats();
+  const { taoStats, isLoading, error, refreshTaoStats, isMockData } = useTaoStats();
   
   if (isLoading) {
     return (
