@@ -1,4 +1,3 @@
-
 import { Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -10,7 +9,6 @@ import {
   Folder,
   Banknote,
   User,
-  CircleDot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -66,10 +64,14 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       path: "/crypto/dashboard",
     },
     {
-      title: "TAO",
+      title: "Bittensor TAO",
       icon: (
-        <div className="flex items-center justify-center bg-black rounded-full w-5 h-5">
-          <span className="text-white font-bold text-xs">T</span>
+        <div className="flex items-center justify-center rounded-full w-5 h-5">
+          <img 
+            src="/lovable-uploads/5bace84a-516c-4734-a925-c14b4b49b2a3.png" 
+            alt="Bittensor TAO" 
+            className="w-full h-full object-contain"
+          />
         </div>
       ),
       path: "/tao",

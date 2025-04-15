@@ -8,7 +8,6 @@ import {
   Layers, 
   LineChart,
   PieChart, 
-  Gem
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { 
@@ -33,11 +32,15 @@ const TAOPage = () => {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center space-x-4">
-        <div className="flex items-center justify-center bg-black rounded-full w-10 h-10">
-          <span className="text-white font-bold text-xl">T</span>
+        <div className="flex items-center justify-center rounded-full w-10 h-10">
+          <img 
+            src="/lovable-uploads/5bace84a-516c-4734-a925-c14b4b49b2a3.png" 
+            alt="Bittensor TAO" 
+            className="w-full h-full object-contain"
+          />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">TAO Network</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Bittensor TAO Network</h1>
           <p className="text-muted-foreground">Bittensor ($TAO) Network Analytics</p>
         </div>
       </div>
