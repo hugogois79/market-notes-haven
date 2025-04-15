@@ -36,6 +36,8 @@ export interface TaoStatsUpdate {
   timestamp: string;
   price: number;
   market_cap: number;
+  price_change_percentage_24h?: number;
+  volume_24h?: number;
   subnets: TaoSubnetInfo[];
 }
 
@@ -104,6 +106,8 @@ export const fetchTaoStatsUpdate = async (): Promise<TaoStatsUpdate> => {
       timestamp: new Date().toISOString(),
       price: globalStats.price,
       market_cap: globalStats.market_cap,
+      price_change_percentage_24h: globalStats.price_change_percentage_24h,
+      volume_24h: globalStats.volume_24h,
       subnets
     };
   } catch (error) {
