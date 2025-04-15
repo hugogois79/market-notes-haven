@@ -45,7 +45,7 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
   const [date, setDate] = useState<Date>(
     contactLog?.contact_date ? new Date(contactLog.contact_date) : new Date()
   );
-  const [method, setMethod] = useState<string>(contactLog?.method || "Email");
+  const [method, setMethod] = useState<TaoContactLog['method']>(contactLog?.method || "Email");
   const [summary, setSummary] = useState<string>(contactLog?.summary || "");
   const [nextSteps, setNextSteps] = useState<string>(contactLog?.next_steps || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,7 +72,7 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
     }
   };
 
-  const contactMethods = ["Email", "Call", "Meeting", "Telegram", "Discord", "Other"];
+  const contactMethods: TaoContactLog['method'][] = ["Email", "Call", "Meeting", "Telegram", "Discord", "Other"];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">

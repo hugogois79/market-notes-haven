@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface TaoValidator {
@@ -9,6 +10,18 @@ export interface TaoValidator {
   linkedin: string | null;
   crm_stage: 'Prospect' | 'Contacted' | 'Follow-up' | 'Negotiation' | 'Active' | 'Inactive';
   priority: 'High' | 'Medium' | 'Low';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaoSubnet {
+  id: number;
+  name: string;
+  description: string | null;
+  tier: number;
+  neurons: number;
+  emission: string;
+  incentive: string;
   created_at: string;
   updated_at: string;
 }
@@ -25,7 +38,7 @@ export interface TaoContactLog {
   validator_id: string;
   subnet_id: number | null;
   contact_date: string;
-  method: 'Email' | 'Telegram' | 'Call' | 'DM' | 'Zoom' | 'In Person';
+  method: 'Email' | 'Telegram' | 'Call' | 'DM' | 'Zoom' | 'In Person' | 'Meeting' | 'Discord' | 'Other';
   summary: string | null;
   next_steps: string | null;
   linked_note_id: string | null;
