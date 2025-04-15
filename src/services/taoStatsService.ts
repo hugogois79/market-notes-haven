@@ -162,12 +162,12 @@ export const useTaoStats = (refreshInterval = 5 * 60 * 1000) => {
     refetchInterval: refreshInterval,
     staleTime: refreshInterval - 1000,
     retry: 1,
-    meta: {
-      onSettled: (data, error) => {
-        if (error) {
-          console.error("Error fetching TAO stats:", error);
-          toast.error("Unable to fetch live TAO data. Using cached data instead.");
-        }
+    gcTime: 60 * 60 * 1000, // 1 hour
+    // Update: React Query v5 onSettled is now part of options object
+    onSettled: (data, error) => {
+      if (error) {
+        console.error("Error fetching TAO stats:", error);
+        toast.error("Unable to fetch live TAO data. Using cached data instead.");
       }
     }
   });

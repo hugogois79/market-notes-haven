@@ -70,7 +70,7 @@ const TAOPage = () => {
   const subnetCount = hasLiveData && taoStats ? taoStats.subnets.length : topSubnets.length;
 
   // Determine error state (convert Error object to boolean)
-  const hasError = !!taoStatsError;
+  const hasError = taoStatsError ? true : false;
 
   return (
     <div className="container mx-auto py-6 space-y-6">
