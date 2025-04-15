@@ -10,6 +10,7 @@ import {
   Folder,
   Banknote,
   User,
+  CircleDot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -65,6 +66,15 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       path: "/crypto/dashboard",
     },
     {
+      title: "TAO",
+      icon: (
+        <div className="flex items-center justify-center bg-black rounded-full w-5 h-5">
+          <span className="text-white font-bold text-xs">T</span>
+        </div>
+      ),
+      path: "/tao",
+    },
+    {
       title: "Analytics",
       icon: <LineChart size={20} />,
       path: "/analytics",
@@ -87,7 +97,7 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors",
                 !isExpanded && "justify-center px-2",
-                location.pathname === item.path
+                location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
                   ? "bg-brand/20 text-brand font-medium"
                   : "text-white hover:bg-white/10 hover:text-brand"
               )}

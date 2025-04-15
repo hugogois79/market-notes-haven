@@ -17,6 +17,8 @@ import TokensPage from "@/pages/tokens";
 import TokenDetail from "@/pages/tokens/[id]";
 import CryptoDashboard from "@/pages/crypto/Dashboard";
 import Profile from "@/pages/Profile";
+import TAOPage from "@/pages/tao";
+import TAOLayout from "@/pages/tao/layout";
 
 const AppRoutes = () => {
   // We can get notes and loading state from context, but we don't need to pass them as props anymore
@@ -117,6 +119,16 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             {withLayout(<Profile />)}
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tao/*"
+        element={
+          <ProtectedRoute>
+            {withLayout(
+              <TAOPage />
+            )}
           </ProtectedRoute>
         }
       />
