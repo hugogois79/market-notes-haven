@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from "react";
-import { TaoValidator, TaoSubnet, TaoContactLog } from "@/services/taoValidatorService";
+import { TaoValidator, TaoContactLog } from "@/services/taoValidatorService";
+import { TaoSubnet } from "@/services/taoValidatorService";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -59,11 +60,12 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
     try {
       await onSubmit({
         validator_id: validatorId,
-        subnet_id: subnetId ? parseInt(subnetId) : undefined,
+        subnet_id: subnetId ? parseInt(subnetId) : null,
         contact_date: format(date, "yyyy-MM-dd"),
         method,
         summary,
-        next_steps: nextSteps || undefined,
+        next_steps: nextSteps || null,
+        linked_note_id: null
       });
     } catch (error) {
       console.error("Error submitting contact log:", error);
@@ -141,7 +143,10 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
 
       <div className="space-y-2">
         <Label htmlFor="method">Contact Method</Label>
-        <Select value={method} onValueChange={setMethod}>
+        <Select 
+          value={method} 
+          onValueChange={(value: TaoContactLog['method']) => setMethod(value)}
+        >
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>

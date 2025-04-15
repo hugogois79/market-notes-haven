@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { 
@@ -10,6 +9,10 @@ import {
   PieChart,
   Users,
   Database,
+  RefreshCw,
+  ArrowUp,
+  ArrowDown,
+  FileDown,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { 
@@ -20,42 +23,97 @@ import {
   TableBody, 
   TableCell 
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import { fetchTaoSubnets, TaoSubnet } from "@/services/taoSubnetService";
+import { useTaoStats, TaoSubnetInfo } from "@/services/taoStatsService";
 import { useQuery } from "@tanstack/react-query";
 import ValidatorManagement from "@/components/tao/ValidatorManagement";
+import TaoExportTab from "@/components/tao/TaoExportTab";
 
 const TAOPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
 
-  const { data: subnets = [], isLoading } = useQuery({
+  // Fetch static subnet data from database
+  const { data: dbSubnets = [], isLoading: isLoadingDbSubnets } = useQuery({
     queryKey: ['tao-subnets'],
     queryFn: fetchTaoSubnets
   });
+
+  // Fetch live TAO stats with 5-minute refresh interval
+  const { taoStats, isLoading: isLoadingTaoStats, error: taoStatsError, refreshTaoStats } = 
+    useTaoStats(5 * 60 * 1000); // 5 minutes in milliseconds
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     navigate(`/tao/${value === "overview" ? "" : value}`);
   };
 
-  // Get top subnets for overview
-  const topSubnets = subnets.slice(0, 5);
+  // Handle manual refresh
+  const handleRefreshStats = () => {
+    refreshTaoStats();
+    toast.success("Refreshing TAO network data...");
+  };
+
+  // Format large numbers
+  const formatNumber = (num: number | undefined, decimals = 2): string => {
+    if (num === undefined) return 'N/A';
+    
+    if (num >= 1000000000) {
+      return `$${(num / 1000000000).toFixed(decimals)}B`;
+    } else if (num >= 1000000) {
+      return `$${(num / 1000000).toFixed(decimals)}M`;
+    } else if (num >= 1000) {
+      return `$${(num / 1000).toFixed(decimals)}K`;
+    } else {
+      return `$${num.toFixed(decimals)}`;
+    }
+  };
+
+  // Format timestamp
+  const formatTimestamp = (timestamp: string | undefined): string => {
+    if (!timestamp) return 'N/A';
+    const date = new Date(timestamp);
+    return date.toLocaleString();
+  };
+
+  // Determine if we have live data
+  const hasLiveData = !!taoStats;
+  
+  // Get subnets to display
+  const topSubnets = taoStats?.subnets ? 
+    [...taoStats.subnets].sort((a, b) => b.neurons - a.neurons).slice(0, 5) : 
+    dbSubnets.slice(0, 5);
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center space-x-4">
-        <div className="flex items-center justify-center rounded-full w-10 h-10">
-          <img 
-            src="/lovable-uploads/5bace84a-516c-4734-a925-c14b4b49b2a3.png" 
-            alt="Bittensor TAO" 
-            className="w-full h-full object-contain"
-          />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-center rounded-full w-10 h-10">
+            <img 
+              src="/lovable-uploads/5bace84a-516c-4734-a925-c14b4b49b2a3.png" 
+              alt="Bittensor TAO" 
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Bittensor TAO Network</h1>
+            <p className="text-muted-foreground">
+              {hasLiveData ? 
+                `Last updated: ${formatTimestamp(taoStats.timestamp)}` : 
+                'Live data dashboard'}
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Bittensor TAO Network</h1>
-          <p className="text-muted-foreground">Bittensor ($TAO) Network Analytics</p>
-        </div>
+        
+        <Button onClick={handleRefreshStats} disabled={isLoadingTaoStats} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh Data
+        </Button>
       </div>
 
       <Tabs 
@@ -85,6 +143,10 @@ const TAOPage = () => {
               <Globe className="mr-2 h-4 w-4" />
               Validators
             </TabsTrigger>
+            <TabsTrigger value="export" className="py-3">
+              <FileDown className="mr-2 h-4 w-4" />
+              Export
+            </TabsTrigger>
             <TabsTrigger value="management" className="py-3">
               <Database className="mr-2 h-4 w-4" />
               Management
@@ -94,111 +156,163 @@ const TAOPage = () => {
 
         <TabsContent value="overview" className="pt-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium">TAO Price</h3>
-                <CircleDollarSign className="text-brand h-5 w-5" />
-              </div>
-              <p className="text-3xl font-bold">$56.78</p>
-              <p className="text-sm text-green-500 mt-2">+2.4% (24h)</p>
-            </div>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">TAO Price</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold">
+                      {hasLiveData ? `$${taoStats.price.toFixed(2)}` : '$--.--.--'}
+                    </div>
+                    {hasLiveData && taoStats.price_change_percentage_24h && (
+                      <div className={`flex items-center text-xs ${
+                        (taoStats.price_change_percentage_24h || 0) >= 0 
+                          ? 'text-green-500' 
+                          : 'text-red-500'
+                      }`}>
+                        {(taoStats.price_change_percentage_24h || 0) >= 0 ? (
+                          <ArrowUp className="h-3 w-3 mr-1" />
+                        ) : (
+                          <ArrowDown className="h-3 w-3 mr-1" />
+                        )}
+                        {Math.abs((taoStats.price_change_percentage_24h || 0)).toFixed(2)}% (24h)
+                      </div>
+                    )}
+                  </div>
+                  <CircleDollarSign className="text-brand h-8 w-8 opacity-20" />
+                </div>
+              </CardContent>
+            </Card>
             
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium">Market Cap</h3>
-                <PieChart className="text-brand h-5 w-5" />
-              </div>
-              <p className="text-3xl font-bold">$1.28B</p>
-              <p className="text-sm text-green-500 mt-2">+1.8% (24h)</p>
-            </div>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Market Cap</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="text-2xl font-bold">
+                    {hasLiveData ? formatNumber(taoStats.market_cap) : '$-.--B'}
+                  </div>
+                  <PieChart className="text-brand h-8 w-8 opacity-20" />
+                </div>
+              </CardContent>
+            </Card>
             
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium">Active Subnets</h3>
-                <Layers className="text-brand h-5 w-5" />
-              </div>
-              <p className="text-3xl font-bold">{subnets.length}</p>
-              <p className="text-sm text-blue-500 mt-2">+3 (30d)</p>
-            </div>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Active Subnets</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="text-2xl font-bold">
+                    {hasLiveData ? taoStats.subnets.length : topSubnets.length}
+                  </div>
+                  <Layers className="text-brand h-8 w-8 opacity-20" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="mt-8">
-            <h3 className="text-xl font-semibold mb-4">Top Subnets</h3>
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-              {isLoading ? (
-                <div className="p-6 text-center">Loading subnet data...</div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Rank</TableHead>
-                      <TableHead>Subnet</TableHead>
-                      <TableHead>Tier</TableHead>
-                      <TableHead>Neurons</TableHead>
-                      <TableHead>Emission</TableHead>
-                      <TableHead>Incentive</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {topSubnets.map((subnet, index) => (
-                      <TableRow key={subnet.id}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell className="font-medium">{subnet.name}</TableCell>
-                        <TableCell>Tier {subnet.tier}</TableCell>
-                        <TableCell>{subnet.neurons}</TableCell>
-                        <TableCell>{subnet.emission}</TableCell>
-                        <TableCell>{subnet.incentive}</TableCell>
-                      </TableRow>
-                    ))}
-                    {topSubnets.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center">No subnet data available</TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold">Top Subnets</h3>
+              {hasLiveData && (
+                <Badge variant="outline" className="ml-2">
+                  Live Data
+                </Badge>
               )}
             </div>
+            
+            <Card>
+              <CardContent className="p-0">
+                {isLoadingTaoStats || isLoadingDbSubnets ? (
+                  <div className="p-6 text-center">Loading subnet data...</div>
+                ) : taoStatsError ? (
+                  <div className="p-6 text-center text-red-500">
+                    Error loading data. Please try refreshing.
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Subnet</TableHead>
+                        <TableHead className="text-right">Neurons</TableHead>
+                        <TableHead className="text-right">Emission (τ/day)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {topSubnets.length > 0 ? (
+                        topSubnets.map((subnet) => (
+                          <TableRow key={
+                            'netuid' in subnet ? subnet.netuid : subnet.id
+                          }>
+                            <TableCell>
+                              {'netuid' in subnet ? subnet.netuid : subnet.id}
+                            </TableCell>
+                            <TableCell className="font-medium">{subnet.name}</TableCell>
+                            <TableCell className="text-right">{subnet.neurons}</TableCell>
+                            <TableCell className="text-right">
+                              {'emission' in subnet ? 
+                                subnet.emission.toFixed(4) : subnet.emission}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center">
+                            No subnet data available
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
         <TabsContent value="stats" className="pt-6">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">TAO Network Statistics</h2>
-            <p className="text-muted-foreground mb-6">
-              Comprehensive statistics about the TAO network performance, validators, and subnets.
-            </p>
-            <div className="space-y-2">
-              <div className="flex justify-between py-2 border-b">
-                <span>Total Supply</span>
-                <span className="font-medium">21,000,000 τ</span>
+          <Card>
+            <CardHeader>
+              <CardTitle>TAO Network Statistics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex justify-between py-2 border-b">
+                  <span>Total Supply</span>
+                  <span className="font-medium">21,000,000 τ</span>
+                </div>
+                <div className="flex justify-between py-2 border-b">
+                  <span>Circulating Supply</span>
+                  <span className="font-medium">12,468,782 τ</span>
+                </div>
+                <div className="flex justify-between py-2 border-b">
+                  <span>Total Validators</span>
+                  <span className="font-medium">512</span>
+                </div>
+                <div className="flex justify-between py-2 border-b">
+                  <span>Active Validators</span>
+                  <span className="font-medium">487</span>
+                </div>
+                <div className="flex justify-between py-2 border-b">
+                  <span>Network Emission</span>
+                  <span className="font-medium">36 τ/day</span>
+                </div>
+                <div className="flex justify-between py-2 border-b">
+                  <span>Block Time</span>
+                  <span className="font-medium">12 seconds</span>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span>Stake Ratio</span>
+                  <span className="font-medium">76.4%</span>
+                </div>
               </div>
-              <div className="flex justify-between py-2 border-b">
-                <span>Circulating Supply</span>
-                <span className="font-medium">12,468,782 τ</span>
-              </div>
-              <div className="flex justify-between py-2 border-b">
-                <span>Total Validators</span>
-                <span className="font-medium">512</span>
-              </div>
-              <div className="flex justify-between py-2 border-b">
-                <span>Active Validators</span>
-                <span className="font-medium">487</span>
-              </div>
-              <div className="flex justify-between py-2 border-b">
-                <span>Network Emission</span>
-                <span className="font-medium">36 τ/day</span>
-              </div>
-              <div className="flex justify-between py-2 border-b">
-                <span>Block Time</span>
-                <span className="font-medium">12 seconds</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span>Stake Ratio</span>
-                <span className="font-medium">76.4%</span>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="marketcap" className="pt-6">
@@ -261,46 +375,6 @@ const TAOPage = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="subnets" className="pt-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            {isLoading ? (
-              <div className="p-6 text-center">Loading subnet data...</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Tier</TableHead>
-                    <TableHead>Neurons</TableHead>
-                    <TableHead>Emission</TableHead>
-                    <TableHead>Incentive</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {subnets.map((subnet) => (
-                    <TableRow key={subnet.id}>
-                      <TableCell>{subnet.id}</TableCell>
-                      <TableCell className="font-medium">{subnet.name}</TableCell>
-                      <TableCell>{subnet.description}</TableCell>
-                      <TableCell>Tier {subnet.tier}</TableCell>
-                      <TableCell>{subnet.neurons}</TableCell>
-                      <TableCell>{subnet.emission}</TableCell>
-                      <TableCell>{subnet.incentive}</TableCell>
-                    </TableRow>
-                  ))}
-                  {subnets.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center">No subnet data available</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </div>
-        </TabsContent>
-
         <TabsContent value="validators" className="pt-6">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
             <Table>
@@ -341,6 +415,67 @@ const TAOPage = () => {
               </TableBody>
             </Table>
           </div>
+        </TabsContent>
+
+        <TabsContent value="subnets" className="pt-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle>Subnets Overview</CardTitle>
+              {hasLiveData && (
+                <Badge variant="outline">
+                  Live Data
+                </Badge>
+              )}
+            </CardHeader>
+            <CardContent className="p-0">
+              {isLoadingTaoStats || isLoadingDbSubnets ? (
+                <div className="p-6 text-center">Loading subnet data...</div>
+              ) : taoStatsError ? (
+                <div className="p-6 text-center text-red-500">
+                  Error loading data. Please try refreshing.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Neurons</TableHead>
+                      <TableHead>Emission (τ/day)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(hasLiveData ? taoStats.subnets : dbSubnets).map((subnet) => (
+                      <TableRow key={
+                        'netuid' in subnet ? subnet.netuid : subnet.id
+                      }>
+                        <TableCell>
+                          {'netuid' in subnet ? subnet.netuid : subnet.id}
+                        </TableCell>
+                        <TableCell className="font-medium">{subnet.name}</TableCell>
+                        <TableCell>{subnet.neurons}</TableCell>
+                        <TableCell>
+                          {'emission' in subnet ? 
+                            subnet.emission.toFixed(4) : subnet.emission}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(hasLiveData ? taoStats.subnets.length : dbSubnets.length) === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center">
+                          No subnet data available
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="export" className="pt-6">
+          <TaoExportTab />
         </TabsContent>
 
         <TabsContent value="management" className="pt-6">
