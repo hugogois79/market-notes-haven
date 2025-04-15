@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { fetchTaoSubnets } from "@/services/taoSubnetService";
@@ -20,19 +20,28 @@ import ValidatorManagement from "@/components/tao/ValidatorManagement";
 import TaoExportTab from "@/components/tao/TaoExportTab";
 
 const TAOPage = () => {
-  const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
 
   // Fetch static subnet data from database
   const { data: dbSubnets = [], isLoading: isLoadingDbSubnets } = useQuery({
     queryKey: ['tao-subnets'],
-    queryFn: fetchTaoSubnets
+    queryFn: fetchTaoSubnets,
+    retry: 1,
+    onError: (error) => {
+      console.error("Error fetching subnet data from database:", error);
+      toast.error("Could not load subnet data from database");
+    }
   });
 
   // Fetch live TAO stats with 5-minute refresh interval
-  const { taoStats, isLoading: isLoadingTaoStats, error: taoStatsError, refreshTaoStats } = 
-    useTaoStats(5 * 60 * 1000); // 5 minutes in milliseconds
+  const { 
+    taoStats, 
+    isLoading: isLoadingTaoStats, 
+    error: taoStatsError, 
+    refreshTaoStats,
+    isMockData
+  } = useTaoStats(5 * 60 * 1000); // 5 minutes in milliseconds
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -42,11 +51,11 @@ const TAOPage = () => {
   // Handle manual refresh
   const handleRefreshStats = () => {
     refreshTaoStats();
-    toast.success("Refreshing TAO network data...");
+    toast.info("Refreshing TAO network data...");
   };
 
   // Determine if we have live data
-  const hasLiveData = !!taoStats;
+  const hasLiveData = !!taoStats && !isMockData;
   
   // Get subnets to display
   const topSubnets = taoStats?.subnets ? 
@@ -63,6 +72,7 @@ const TAOPage = () => {
         timestamp={taoStats?.timestamp}
         isLoading={isLoadingTaoStats}
         onRefresh={handleRefreshStats}
+        isMockData={isMockData}
       />
 
       {/* Navigation Tabs */}
@@ -82,6 +92,7 @@ const TAOPage = () => {
           <TaoStatCards 
             taoStats={taoStats} 
             subnetCount={subnetCount}
+            isMockData={isMockData}
           />
 
           {/* Subnets Table */}

@@ -1,15 +1,21 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CircleDollarSign, Layers, PieChart, ArrowUp, ArrowDown } from "lucide-react";
+import { CircleDollarSign, Layers, PieChart, ArrowUp, ArrowDown, AlertCircle } from "lucide-react";
 import { TaoStatsUpdate } from "@/services/taoStatsService";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TaoStatCardsProps {
   taoStats?: TaoStatsUpdate;
   subnetCount: number;
+  isMockData?: boolean;
 }
 
-const TaoStatCards: React.FC<TaoStatCardsProps> = ({ taoStats, subnetCount }) => {
+const TaoStatCards: React.FC<TaoStatCardsProps> = ({ 
+  taoStats, 
+  subnetCount,
+  isMockData = false
+}) => {
   // Format large numbers
   const formatNumber = (num: number | undefined, decimals = 2): string => {
     if (num === undefined) return 'N/A';
@@ -26,6 +32,26 @@ const TaoStatCards: React.FC<TaoStatCardsProps> = ({ taoStats, subnetCount }) =>
   };
 
   const hasLiveData = !!taoStats;
+
+  const renderDemoTag = () => {
+    if (!isMockData) return null;
+    
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="text-xs flex items-center text-amber-600 mt-1">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              Demo Data
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>This is example data. API connection unavailable.</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
 
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -53,6 +79,7 @@ const TaoStatCards: React.FC<TaoStatCardsProps> = ({ taoStats, subnetCount }) =>
                   {Math.abs((taoStats.price_change_percentage_24h || 0)).toFixed(2)}% (24h)
                 </div>
               )}
+              {renderDemoTag()}
             </div>
             <CircleDollarSign className="text-brand h-8 w-8 opacity-20" />
           </div>
@@ -65,8 +92,11 @@ const TaoStatCards: React.FC<TaoStatCardsProps> = ({ taoStats, subnetCount }) =>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
-            <div className="text-2xl font-bold">
-              {hasLiveData ? formatNumber(taoStats.market_cap) : '$-.--B'}
+            <div>
+              <div className="text-2xl font-bold">
+                {hasLiveData ? formatNumber(taoStats.market_cap) : '$-.--B'}
+              </div>
+              {renderDemoTag()}
             </div>
             <PieChart className="text-brand h-8 w-8 opacity-20" />
           </div>
@@ -79,8 +109,11 @@ const TaoStatCards: React.FC<TaoStatCardsProps> = ({ taoStats, subnetCount }) =>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
-            <div className="text-2xl font-bold">
-              {subnetCount}
+            <div>
+              <div className="text-2xl font-bold">
+                {subnetCount}
+              </div>
+              {renderDemoTag()}
             </div>
             <Layers className="text-brand h-8 w-8 opacity-20" />
           </div>

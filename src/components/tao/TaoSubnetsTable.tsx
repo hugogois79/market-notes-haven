@@ -21,6 +21,14 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
   title = "Top Subnets",
   hasLiveData
 }) => {
+  // Helper function to safely format emission values
+  const formatEmission = (emission: string | number): string => {
+    if (typeof emission === 'number') {
+      return emission.toFixed(4);
+    }
+    return String(emission);
+  };
+
   return (
     <div className="mt-8">
       <div className="flex items-center justify-between mb-4">
@@ -62,8 +70,7 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
                       <TableCell className="font-medium">{subnet.name}</TableCell>
                       <TableCell className="text-right">{subnet.neurons}</TableCell>
                       <TableCell className="text-right">
-                        {'emission' in subnet ? 
-                          subnet.emission.toFixed(4) : subnet.emission}
+                        {formatEmission(subnet.emission)}
                       </TableCell>
                     </TableRow>
                   ))
