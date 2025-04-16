@@ -4,10 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TaoSubnetInfo } from "@/services/taoStatsService";
 import { TaoSubnet } from "@/services/taoSubnetService";
-import { ArrowDown, ArrowUp, ChevronDown, Info, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, Info, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 
 interface TaoSubnetsTableProps {
   subnets: (TaoSubnetInfo | TaoSubnet)[];
@@ -73,8 +72,13 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
         valueA = a.neurons;
         valueB = b.neurons;
       } else if (sortField === 'emission') {
-        valueA = a.emission;
-        valueB = b.emission;
+        // Handle emission that could be string or number
+        valueA = typeof a.emission === 'string' 
+          ? parseFloat(a.emission) || 0 
+          : a.emission;
+        valueB = typeof b.emission === 'string' 
+          ? parseFloat(b.emission) || 0 
+          : b.emission;
       } else if (sortField === 'price') {
         // Handle the case where price field exists in TaoSubnetInfo but not in TaoSubnet
         valueA = 'price' in a ? a.price || 0 : 0;
@@ -271,7 +275,7 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
                             {formatEmission(subnet.emission)}%
                           </TableCell>
                           <TableCell className="text-right">
-                            τ {price ? price.toFixed(6) : (Math.random() * 0.5).toFixed(6)}
+                            τ {price ? parseFloat(String(price)).toFixed(6) : (Math.random() * 0.5).toFixed(6)}
                           </TableCell>
                           <TableCell className={cn("text-right", getTrendColor(trendData.h1))}>
                             {trendData.h1 > 0 ? "+" : ""}{trendData.h1.toFixed(2)}%

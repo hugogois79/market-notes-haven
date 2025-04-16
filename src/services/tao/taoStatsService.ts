@@ -8,10 +8,14 @@ import { MOCK_TAO_STATS } from './mockData';
  */
 export const fetchTaoStatsUpdate = async (useMockOnFailure = true): Promise<TaoStatsUpdate> => {
   try {
+    console.log('Fetching TAO stats update...');
     const [globalStats, subnets] = await Promise.all([
       fetchTaoGlobalStats(),
       fetchTaoSubnets()
     ]);
+    
+    console.log('Received global stats:', globalStats);
+    console.log('Received subnets data:', subnets);
     
     return {
       timestamp: new Date().toISOString(),

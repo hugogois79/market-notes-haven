@@ -3,6 +3,7 @@ import { API_HEADERS, GLOBAL_STATS_URL, SUBNETS_URL } from './apiConfig';
 import { TaoGlobalStats, TaoSubnetInfo } from './types';
 import { fetchTaoPriceFromCoinGecko } from './coinGeckoClient';
 import { MOCK_TAO_STATS } from './mockData';
+import { SUBNET_NAME_MAPPING } from './subnetMapping';
 
 /**
  * Fetch global TAO stats, attempting CoinGecko first, then TaoStats API
@@ -52,106 +53,6 @@ export const fetchTaoGlobalStats = async (): Promise<TaoGlobalStats> => {
 };
 
 /**
- * Complete mapping of known subnet IDs to their real names
- * Updated with the latest data from taostats.io
- */
-const SUBNET_NAME_MAPPING: Record<number, string> = {
-  0: "Root",
-  1: "Alpha",
-  2: "Beta",
-  3: "Gamma",
-  4: "Delta",
-  5: "Epsilon",
-  6: "Core Validator",
-  7: "Attestation",
-  8: "Proprietary Trading Network",
-  9: "NOVA",
-  10: "Training",
-  11: "Polkadot",
-  12: "Cardano",
-  13: "Copilot",
-  14: "Avalanche",
-  15: "Vector",
-  16: "PGN",
-  17: "Stability",
-  18: "Zeus",
-  19: "Storyteller",
-  20: "Lens",
-  21: "SFT",
-  22: "Miner",
-  23: "Mirror",
-  24: "Chess",
-  25: "Heuristics",
-  26: "Hyperparameter",
-  27: "Tokenomics",
-  28: "Information",
-  29: "Cryptography",
-  30: "Metric",
-  31: "Archive",
-  32: "Generator",
-  33: "Recommender",
-  34: "BNB",
-  35: "Astar",
-  36: "Identity",
-  37: "Oracle",
-  38: "GMP",
-  39: "Anomaly",
-  40: "Searcher",
-  41: "Astronomy",
-  42: "Performance",
-  43: "Web",
-  44: "Weather",
-  45: "Autonomy",
-  46: "Finance",
-  47: "Solana",
-  48: "Moderation",
-  49: "Auto",
-  50: "Gradients",
-  51: "Cellium",
-  52: "Audio",
-  53: "Imaging",
-  54: "Chutes",
-  55: "Ethics",
-  56: "Question",
-  57: "Medicine",
-  58: "Cosmology",
-  59: "Multichain",
-  60: "Pixel",
-  61: "Research",
-  62: "Yuma",
-  63: "Logistics",
-  64: "Pattern",
-  65: "Realism",
-  66: "Foresight",
-  67: "Validation",
-  68: "Reinforcement",
-  69: "Gaming",
-  70: "Compute",
-  71: "Tarjan",
-  72: "Probability",
-  73: "Ethereum",
-  74: "Translation",
-  75: "Substrate",
-  76: "Prompting",
-  77: "Math",
-  78: "Staking",
-  79: "Molecule",
-  80: "Visual Language",
-  81: "Text",
-  82: "Decision",
-  83: "Templars",
-  84: "Understanding",
-  85: "Improvement",
-  86: "Simulation",
-  87: "Design",
-  88: "Cortex",
-  89: "Human",
-  90: "Vision",
-  91: "Nineteen.ai",
-  92: "Energy"
-};
-
-/**
  * Fetch subnets information with real names
  */
 export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
@@ -170,6 +71,7 @@ export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
     const data = await response.json();
     console.log('TAO subnets API response:', data);
     
+    // Process and map the data
     return data.map((subnet: any) => {
       // Get the real subnet name if available, otherwise use the mapping
       let subnetName = subnet.name;
@@ -181,16 +83,17 @@ export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
         subnetName = SUBNET_NAME_MAPPING[subnet.netuid] || `Subnet ${subnet.netuid}`;
       }
       
+      // Make sure all required fields have valid values
       return {
-        netuid: subnet.netuid,
+        netuid: subnet.netuid || 0,
         name: subnetName,
         neurons: subnet.neurons || 0,
-        emission: subnet.emission || 0,
-        description: subnet.description || '',
+        emission: parseFloat(subnet.emission) || 0,
+        description: subnet.description || `${subnetName} subnet for the TAO network`,
         tempo: subnet.tempo || 0,
         incentive: subnet.incentive || 0,
         // Add price-related fields that might be available in the API
-        price: subnet.price || 0,
+        price: typeof subnet.price === 'number' ? subnet.price : parseFloat(subnet.price) || 0,
         market_cap: subnet.market_cap || 0,
         volume_24h: subnet.volume_24h || 0,
         price_change_1h: subnet.price_change_1h || 0,
@@ -211,6 +114,3 @@ export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
     });
   }
 };
-
-// Export the subnet name mapping for use in other files
-export { SUBNET_NAME_MAPPING };
