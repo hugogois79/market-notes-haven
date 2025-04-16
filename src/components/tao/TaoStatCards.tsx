@@ -63,9 +63,11 @@ const TaoStatCards: React.FC<TaoStatCardsProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <div className="text-2xl font-bold">
-                {hasLiveData && taoStats ? `$${taoStats.price.toFixed(2)}` : '$--.--.--'}
+                {hasLiveData && taoStats && typeof taoStats.price === 'number' 
+                  ? `$${taoStats.price.toFixed(2)}` 
+                  : '$--.--.--'}
               </div>
-              {hasLiveData && taoStats?.price_change_percentage_24h && (
+              {hasLiveData && taoStats?.price_change_percentage_24h !== undefined && (
                 <div className={`flex items-center text-xs ${
                   (taoStats.price_change_percentage_24h || 0) >= 0 
                     ? 'text-green-500' 
