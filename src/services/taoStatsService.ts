@@ -1,7 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-// API configuration
+// Use CoinGecko API as an alternative source for TAO price data
+const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3';
+const BITTENSOR_ID = 'bittensor'; // CoinGecko ID for Bittensor
+
+// API configuration for original API (keeping as fallback)
 const API_KEY = 'tao-a29151e1-e395-4ed0-ae18-376839738c0c:bcebc240';
 const API_HEADERS = {
   'Authorization': API_KEY,
@@ -57,30 +61,71 @@ const MOCK_TAO_STATS: TaoStatsUpdate = {
   ]
 };
 
+// Fetch TAO price data from CoinGecko
+const fetchTaoPriceFromCoinGecko = async (): Promise<{
+  price: number;
+  market_cap: number;
+  price_change_percentage_24h?: number;
+  volume_24h?: number;
+}> => {
+  try {
+    const response = await fetch(
+      `${COINGECKO_API_URL}/coins/${BITTENSOR_ID}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false`
+    );
+
+    if (!response.ok) {
+      throw new Error(`CoinGecko API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    return {
+      price: data.market_data.current_price.usd || 0,
+      market_cap: data.market_data.market_cap.usd || 0,
+      price_change_percentage_24h: data.market_data.price_change_percentage_24h,
+      volume_24h: data.market_data.total_volume.usd
+    };
+  } catch (error) {
+    console.error('Error fetching TAO price from CoinGecko:', error);
+    throw error;
+  }
+};
+
 // Fetch global TAO stats
 export const fetchTaoGlobalStats = async (): Promise<TaoGlobalStats> => {
   try {
-    const response = await fetch(GLOBAL_STATS_URL, {
-      headers: API_HEADERS,
-      mode: 'cors',
-    });
-    
-    if (!response.ok) {
-      console.error(`API error: ${response.status}`);
-      throw new Error(`API error: ${response.status}`);
+    // First try CoinGecko
+    try {
+      const coinGeckoData = await fetchTaoPriceFromCoinGecko();
+      return {
+        ...coinGeckoData,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (coinGeckoError) {
+      console.warn('CoinGecko API failed, trying primary API:', coinGeckoError);
+      
+      // If CoinGecko fails, try the original API
+      const response = await fetch(GLOBAL_STATS_URL, {
+        headers: API_HEADERS,
+        mode: 'cors',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Primary API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return {
+        price: data.price,
+        market_cap: data.market_cap,
+        timestamp: new Date().toISOString(),
+        volume_24h: data.volume_24h,
+        price_change_24h: data.price_change_24h,
+        price_change_percentage_24h: data.price_change_percentage_24h,
+      };
     }
-    
-    const data = await response.json();
-    return {
-      price: data.price,
-      market_cap: data.market_cap,
-      timestamp: new Date().toISOString(),
-      volume_24h: data.volume_24h,
-      price_change_24h: data.price_change_24h,
-      price_change_percentage_24h: data.price_change_percentage_24h,
-    };
   } catch (error) {
-    console.error('Error fetching TAO global stats:', error);
+    console.error('All TAO price APIs failed:', error);
     return {
       price: MOCK_TAO_STATS.price,
       market_cap: MOCK_TAO_STATS.market_cap,
@@ -158,7 +203,7 @@ export const useTaoStats = (refreshInterval = 5 * 60 * 1000) => {
     queryFn: () => fetchTaoStatsUpdate(true), // Use mock data on failure
     refetchInterval: refreshInterval,
     staleTime: refreshInterval - 1000,
-    retry: 1,
+    retry: 2, // Increased retries
     gcTime: 60 * 60 * 1000, // 1 hour
     meta: {
       onError: (error: any) => {
@@ -179,6 +224,6 @@ export const useTaoStats = (refreshInterval = 5 * 60 * 1000) => {
     isLoading,
     error,
     refreshTaoStats,
-    isMockData: !data && error
+    isMockData: !data && !!error
   };
 };
