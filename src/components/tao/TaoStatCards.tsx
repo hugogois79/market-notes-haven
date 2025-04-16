@@ -78,7 +78,7 @@ const TaoStatCards: React.FC<TaoStatCardsProps> = ({
                   ) : (
                     <ArrowDown className="h-3 w-3 mr-1" />
                   )}
-                  {Math.abs((taoStats.price_change_percentage_24h || 0)).toFixed(2)}% (24h)
+                  {Math.abs((taoStats?.price_change_percentage_24h || 0)).toFixed(2)}% (24h)
                 </div>
               )}
               {renderDemoTag()}
