@@ -26,6 +26,11 @@ const TaoStatsUpdateComponent: React.FC<TaoStatsUpdateProps> = ({
     }
   };
 
+  // Get just the top 5 subnets by neuron count
+  const topSubnets = [...stats.subnets]
+    .sort((a, b) => b.neurons - a.neurons)
+    .slice(0, 5);
+
   return (
     <Card className="w-full">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -54,9 +59,9 @@ const TaoStatsUpdateComponent: React.FC<TaoStatsUpdateProps> = ({
         </div>
         
         <div className="space-y-2">
-          <div className="text-sm text-muted-foreground">Subnets:</div>
+          <div className="text-sm text-muted-foreground">Top Subnets:</div>
           <div className="border rounded-md divide-y">
-            {stats.subnets.map((subnet) => (
+            {topSubnets.map((subnet) => (
               <div key={subnet.netuid} className="p-3">
                 <div className="font-medium">{subnet.name}</div>
                 <div className="grid grid-cols-3 gap-2 mt-1 text-sm">
@@ -67,12 +72,19 @@ const TaoStatsUpdateComponent: React.FC<TaoStatsUpdateProps> = ({
                     <span className="text-muted-foreground">Neurons:</span> {subnet.neurons}
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Emission:</span> {subnet.emission.toFixed(4)} τ/day
+                    <span className="text-muted-foreground">Emission:</span> {typeof subnet.emission === 'number' ? subnet.emission.toFixed(4) : subnet.emission} τ/day
                   </div>
                 </div>
               </div>
             ))}
           </div>
+        </div>
+        
+        <div className="text-sm text-muted-foreground mt-2">
+          <p>Total Subnets: {stats.subnets.length}</p>
+          {stats.volume_24h && (
+            <p>24h Volume: ${stats.volume_24h.toLocaleString()}</p>
+          )}
         </div>
       </CardContent>
     </Card>

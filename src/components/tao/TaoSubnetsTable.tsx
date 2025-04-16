@@ -7,6 +7,7 @@ import { TaoSubnet } from "@/services/taoSubnetService";
 import { ArrowDown, ArrowUp, ChevronDown, Info, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 interface TaoSubnetsTableProps {
   subnets: (TaoSubnetInfo | TaoSubnet)[];
@@ -16,7 +17,7 @@ interface TaoSubnetsTableProps {
   hasLiveData: boolean;
 }
 
-type SortField = 'name' | 'netuid' | 'neurons' | 'emission' | null;
+type SortField = 'name' | 'netuid' | 'neurons' | 'emission' | 'price' | 'market_cap' | 'volume_24h' | null;
 type SortDirection = 'asc' | 'desc';
 
 const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
@@ -74,6 +75,16 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
       } else if (sortField === 'emission') {
         valueA = a.emission;
         valueB = b.emission;
+      } else if (sortField === 'price') {
+        // Handle the case where price field exists in TaoSubnetInfo but not in TaoSubnet
+        valueA = 'price' in a ? a.price || 0 : 0;
+        valueB = 'price' in b ? b.price || 0 : 0;
+      } else if (sortField === 'market_cap') {
+        valueA = 'market_cap' in a ? a.market_cap || 0 : 0;
+        valueB = 'market_cap' in b ? b.market_cap || 0 : 0;
+      } else if (sortField === 'volume_24h') {
+        valueA = 'volume_24h' in a ? a.volume_24h || 0 : 0;
+        valueB = 'volume_24h' in b ? b.volume_24h || 0 : 0;
       }
 
       if (typeof valueA === 'string' && typeof valueB === 'string') {
@@ -98,9 +109,18 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
     return "text-gray-500";
   };
 
-  // Generate consistent trend data based on netuid
-  const generateTrendData = (netuid: number) => {
+  // Get trend data from the subnet object if available, otherwise generate deterministic data
+  const getTrendData = (subnet: TaoSubnetInfo | TaoSubnet) => {
+    if ('price_change_1h' in subnet && 'price_change_24h' in subnet && 'price_change_7d' in subnet) {
+      return {
+        h1: subnet.price_change_1h || 0,
+        h24: subnet.price_change_24h || 0,
+        w1: subnet.price_change_7d || 0
+      };
+    }
+    
     // Create deterministic but varied trend data based on netuid
+    const netuid = 'netuid' in subnet ? subnet.netuid : (subnet.id as number);
     const seed = netuid % 5;
     
     const trendSets = [
@@ -115,14 +135,21 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
   };
 
   // Get subnet code for display
-  const getSubnetCode = (subnet: TaoSubnetInfo | TaoSubnet): string => {
-    const id = 'netuid' in subnet ? subnet.netuid : subnet.id;
-    return String(id);
+  const getSubnetId = (subnet: TaoSubnetInfo | TaoSubnet): number => {
+    return 'netuid' in subnet ? subnet.netuid : subnet.id as number;
   };
   
   // Get first letter of subnet name for the icon
   const getSubnetIconLetter = (name: string): string => {
     return name.charAt(0).toUpperCase();
+  };
+
+  // Format market cap and volume for display
+  const formatValue = (value: number | undefined): string => {
+    if (value === undefined) return 'τ --';
+    if (value >= 1000000) return `τ ${(value / 1000000).toFixed(2)}M`;
+    if (value >= 1000) return `τ ${(value / 1000).toFixed(2)}K`;
+    return `τ ${value.toFixed(2)}`;
   };
   
   return (
@@ -164,28 +191,45 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
                     </TableHead>
                     <TableHead 
                       className="text-right font-medium cursor-pointer"
+                      onClick={() => handleSort('neurons')}
+                    >
+                      <div className="flex items-center justify-end">
+                        Neurons {renderSortIndicator('neurons')}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer"
                       onClick={() => handleSort('emission')}
                     >
                       <div className="flex items-center justify-end">
                         Emission {renderSortIndicator('emission')}
                       </div>
                     </TableHead>
-                    <TableHead className="text-right font-medium">
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer"
+                      onClick={() => handleSort('price')}
+                    >
                       <div className="flex items-center justify-end">
-                        Price <ChevronDown className="h-4 w-4 ml-1" />
+                        Price {renderSortIndicator('price')}
                       </div>
                     </TableHead>
                     <TableHead className="text-right font-medium">1H</TableHead>
                     <TableHead className="text-right font-medium">24H</TableHead>
                     <TableHead className="text-right font-medium">1W</TableHead>
-                    <TableHead className="text-right font-medium">
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer"
+                      onClick={() => handleSort('market_cap')}
+                    >
                       <div className="flex items-center justify-end">
-                        Market Cap <Info className="h-4 w-4 ml-1 text-gray-400" />
+                        Market Cap {renderSortIndicator('market_cap')} <Info className="h-4 w-4 ml-1 text-gray-400" />
                       </div>
                     </TableHead>
-                    <TableHead className="text-right font-medium">
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer"
+                      onClick={() => handleSort('volume_24h')}
+                    >
                       <div className="flex items-center justify-end">
-                        Volume (24h) <Info className="h-4 w-4 ml-1 text-gray-400" />
+                        Volume (24h) {renderSortIndicator('volume_24h')} <Info className="h-4 w-4 ml-1 text-gray-400" />
                       </div>
                     </TableHead>
                   </TableRow>
@@ -193,9 +237,11 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
                 <TableBody>
                   {filteredAndSortedSubnets.length > 0 ? (
                     filteredAndSortedSubnets.map((subnet, index) => {
-                      const netuid = 'netuid' in subnet ? subnet.netuid : subnet.id;
-                      const subnetCode = getSubnetCode(subnet);
-                      const trendData = generateTrendData(netuid);
+                      const netuid = getSubnetId(subnet);
+                      const trendData = getTrendData(subnet);
+                      const price = 'price' in subnet ? subnet.price : 0;
+                      const marketCap = 'market_cap' in subnet ? subnet.market_cap : 0;
+                      const volume = 'volume_24h' in subnet ? subnet.volume_24h : 0;
                       
                       return (
                         <TableRow 
@@ -213,16 +259,19 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
                               <div>
                                 <div className="font-medium">{subnet.name}</div>
                                 <div className="text-xs text-gray-500">
-                                  {subnetCode}
+                                  {netuid}
                                 </div>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
+                            {subnet.neurons}
+                          </TableCell>
+                          <TableCell className="text-right">
                             {formatEmission(subnet.emission)}%
                           </TableCell>
                           <TableCell className="text-right">
-                            τ {(Math.random() * 0.5).toFixed(6)}
+                            τ {price ? price.toFixed(6) : (Math.random() * 0.5).toFixed(6)}
                           </TableCell>
                           <TableCell className={cn("text-right", getTrendColor(trendData.h1))}>
                             {trendData.h1 > 0 ? "+" : ""}{trendData.h1.toFixed(2)}%
@@ -234,10 +283,10 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
                             {trendData.w1 > 0 ? "+" : ""}{trendData.w1.toFixed(2)}%
                           </TableCell>
                           <TableCell className="text-right">
-                            τ {(Math.random() * 300 + 10).toFixed(2)}K
+                            {formatValue(marketCap)}
                           </TableCell>
                           <TableCell className="text-right">
-                            τ {(Math.random() * 100 + 5).toFixed(2)}K
+                            {formatValue(volume)}
                           </TableCell>
                         </TableRow>
                       );
