@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { fetchTaoSubnets } from "@/services/taoSubnetService";
-import { useTaoStats } from "@/services/taoStatsService";
+import { useTaoStats, TaoStatsUpdate } from "@/services/taoStatsService";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
@@ -62,7 +62,7 @@ const TAOPage = () => {
   const hasLiveData = !!taoStats && !isMockData;
   
   // Get subnets to display
-  const topSubnets = taoStats?.subnets ? 
+  const topSubnets = taoStats && taoStats.subnets ? 
     [...taoStats.subnets].sort((a, b) => b.neurons - a.neurons).slice(0, 5) : 
     dbSubnets.slice(0, 5);
 
@@ -97,7 +97,7 @@ const TAOPage = () => {
         <TabsContent value="overview" className="pt-6">
           {/* Stat Cards */}
           <TaoStatCards 
-            taoStats={taoStats} 
+            taoStats={taoStats as TaoStatsUpdate} 
             subnetCount={subnetCount}
             isMockData={isMockData}
           />
