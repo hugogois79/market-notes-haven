@@ -68,7 +68,7 @@ const TaoExportTab: React.FC = () => {
     - {{name}}
       - ID:: {{netuid}}
       - Neuron Count:: {{neurons}}
-      - Emission Rate:: {{emission}} TAO/day`}
+      - Emission Rate:: {{emission}} τ/day`}
           </pre>
         </CardContent>
       </Card>
