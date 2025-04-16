@@ -8,7 +8,6 @@ import {
   Layers, 
   LineChart,
   Database,
-  FileDown,
 } from "lucide-react";
 
 interface TaoNavigationProps {
@@ -39,10 +38,6 @@ const TaoNavigation: React.FC<TaoNavigationProps> = ({ activeTab, onTabChange })
         <TabsTrigger value="validators" className="py-3">
           <Globe className="mr-2 h-4 w-4" />
           Validators
-        </TabsTrigger>
-        <TabsTrigger value="export" className="py-3">
-          <FileDown className="mr-2 h-4 w-4" />
-          Export
         </TabsTrigger>
         <TabsTrigger value="management" className="py-3">
           <Database className="mr-2 h-4 w-4" />

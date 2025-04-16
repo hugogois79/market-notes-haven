@@ -17,7 +17,6 @@ import TaoStatsTabContent from "@/components/tao/TaoStatsTabContent";
 import TaoMarketCapTabContent from "@/components/tao/TaoMarketCapTabContent";
 import TaoValidatorsTabContent from "@/components/tao/TaoValidatorsTabContent";
 import ValidatorManagement from "@/components/tao/ValidatorManagement";
-import TaoExportTab from "@/components/tao/TaoExportTab";
 
 const TAOPage = () => {
   const navigate = useNavigate();
@@ -147,11 +146,6 @@ const TAOPage = () => {
               />
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* Export Tab */}
-        <TabsContent value="export" className="pt-6">
-          <TaoExportTab />
         </TabsContent>
 
         {/* Management Tab */}
