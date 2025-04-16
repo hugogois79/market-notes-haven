@@ -53,6 +53,33 @@ const TaoStatCards: React.FC<TaoStatCardsProps> = ({
     );
   };
 
+  const renderPrice = () => {
+    if (!hasLiveData || !taoStats || typeof taoStats.price !== 'number') {
+      return '$--.--.--';
+    }
+    return `$${taoStats.price.toFixed(2)}`;
+  };
+
+  const renderPriceChange = () => {
+    if (!hasLiveData || !taoStats || taoStats.price_change_percentage_24h === undefined) {
+      return null;
+    }
+    
+    const changeValue = taoStats.price_change_percentage_24h;
+    const isPositive = (changeValue || 0) >= 0;
+    
+    return (
+      <div className={`flex items-center text-xs ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+        {isPositive ? (
+          <ArrowUp className="h-3 w-3 mr-1" />
+        ) : (
+          <ArrowDown className="h-3 w-3 mr-1" />
+        )}
+        {Math.abs(changeValue || 0).toFixed(2)}% (24h)
+      </div>
+    );
+  };
+
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       <Card>
@@ -63,24 +90,9 @@ const TaoStatCards: React.FC<TaoStatCardsProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <div className="text-2xl font-bold">
-                {hasLiveData && taoStats && typeof taoStats.price === 'number' 
-                  ? `$${taoStats.price.toFixed(2)}` 
-                  : '$--.--.--'}
+                {renderPrice()}
               </div>
-              {hasLiveData && taoStats?.price_change_percentage_24h !== undefined && (
-                <div className={`flex items-center text-xs ${
-                  (taoStats.price_change_percentage_24h || 0) >= 0 
-                    ? 'text-green-500' 
-                    : 'text-red-500'
-                }`}>
-                  {(taoStats.price_change_percentage_24h || 0) >= 0 ? (
-                    <ArrowUp className="h-3 w-3 mr-1" />
-                  ) : (
-                    <ArrowDown className="h-3 w-3 mr-1" />
-                  )}
-                  {Math.abs((taoStats?.price_change_percentage_24h || 0)).toFixed(2)}% (24h)
-                </div>
-              )}
+              {renderPriceChange()}
               {renderDemoTag()}
             </div>
             <CircleDollarSign className="text-brand h-8 w-8 opacity-20" />
