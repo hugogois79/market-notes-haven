@@ -66,11 +66,12 @@ const TaoExportTab: React.FC = () => {
   - Market Cap (USD):: $${taoStats.market_cap.toLocaleString()}
   - Subnets:
     - Total Subnets:: ${taoStats.subnets.length}
-    - ${taoStats.subnets.map(subnet => `
+    - ${taoStats.subnets.slice(0, 5).map(subnet => `
     - ${subnet.name}
       - ID:: ${subnet.netuid}
       - Neuron Count:: ${subnet.neurons}
-      - Emission Rate:: ${subnet.emission.toFixed(4)} τ/day`).join('\n')}`}
+      - Emission Rate:: ${subnet.emission.toFixed(4)} τ/day`).join('\n')}
+    - ... and ${taoStats.subnets.length - 5} more subnets`}
           </pre>
         </CardContent>
       </Card>
@@ -79,4 +80,3 @@ const TaoExportTab: React.FC = () => {
 };
 
 export default TaoExportTab;
-

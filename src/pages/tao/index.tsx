@@ -67,7 +67,7 @@ const TAOPage = () => {
     dbSubnets.slice(0, 5);
 
   // Get subnet count
-  const subnetCount = hasLiveData && taoStats ? taoStats.subnets.length : topSubnets.length;
+  const subnetCount = hasLiveData && taoStats ? taoStats.subnets.length : 92;
 
   // Determine error state (convert Error object to boolean)
   const hasError = !!taoStatsError;

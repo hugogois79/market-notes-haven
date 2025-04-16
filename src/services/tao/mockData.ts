@@ -6,15 +6,16 @@ import { TaoStatsUpdate } from './types';
  */
 export const MOCK_TAO_STATS: TaoStatsUpdate = {
   timestamp: new Date().toISOString(),
-  price: 56.78,
-  market_cap: 1284653430,
-  price_change_percentage_24h: 2.45,
-  volume_24h: 78432562,
-  subnets: [
-    { netuid: 1, name: "Subnet Alpha", neurons: 128, emission: 8.5642 },
-    { netuid: 2, name: "Subnet Beta", neurons: 96, emission: 6.2431 },
-    { netuid: 3, name: "Subnet Gamma", neurons: 76, emission: 4.8732 },
-    { netuid: 4, name: "Subnet Delta", neurons: 64, emission: 3.9845 },
-    { netuid: 5, name: "Subnet Epsilon", neurons: 48, emission: 2.7621 }
-  ]
+  price: 228.28,
+  market_cap: 1970000000, // $1.97B
+  price_change_percentage_24h: -1.03,
+  volume_24h: 81390000, // $81.39M
+  subnets: Array(92).fill(0).map((_, index) => ({
+    netuid: index + 1,
+    name: index < 5 ? 
+      ["Subnet Alpha", "Subnet Beta", "Subnet Gamma", "Subnet Delta", "Subnet Epsilon"][index] : 
+      `Subnet ${index + 1}`,
+    neurons: Math.floor(Math.random() * 200) + 20,
+    emission: parseFloat((Math.random() * 10).toFixed(4))
+  }))
 };
