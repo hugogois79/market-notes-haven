@@ -1,4 +1,3 @@
-
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -82,7 +81,6 @@ export const fetchTaoGlobalStats = async (): Promise<TaoGlobalStats> => {
     };
   } catch (error) {
     console.error('Error fetching TAO global stats:', error);
-    // Return mock data instead of throwing
     return {
       price: MOCK_TAO_STATS.price,
       market_cap: MOCK_TAO_STATS.market_cap,
@@ -118,7 +116,6 @@ export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
     }));
   } catch (error) {
     console.error('Error fetching TAO subnets:', error);
-    // Return mock data instead of throwing
     return MOCK_TAO_STATS.subnets;
   }
 };
@@ -164,11 +161,9 @@ export const useTaoStats = (refreshInterval = 5 * 60 * 1000) => {
     retry: 1,
     gcTime: 60 * 60 * 1000, // 1 hour
     meta: {
-      onSettled: (data: any, error: any) => {
-        if (error) {
-          console.error("Error fetching TAO stats:", error);
-          toast.error("Unable to fetch live TAO data. Using cached data instead.");
-        }
+      onError: (error: any) => {
+        console.error("Error fetching TAO stats:", error);
+        toast.error("Unable to fetch live TAO data. Using cached data instead.");
       }
     }
   });
