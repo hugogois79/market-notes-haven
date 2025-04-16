@@ -128,7 +128,7 @@ const TAOPage = () => {
 
         {/* Subnets Tab */}
         <TabsContent value="subnets" className="pt-6">
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle>Subnets Overview</CardTitle>
               {hasLiveData && (
