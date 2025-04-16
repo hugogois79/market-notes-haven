@@ -61,14 +61,16 @@ const TaoExportTab: React.FC = () => {
             The exported data follows the Tana node format as requested, with the following structure:
           </p>
           <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-x-auto text-sm">
-{`- TAO Stats Update ({{timestamp}}) #[[TAO Update]]
-  - Price (USD):: ${{price}}
-  - Market Cap (USD):: ${{market_cap}}
+{`- TAO Stats Update (${taoStats.timestamp}) #[[TAO Update]]
+  - Price (USD):: $${taoStats.price.toFixed(2)}
+  - Market Cap (USD):: $${taoStats.market_cap.toLocaleString()}
   - Subnets:
-    - {{name}}
-      - ID:: {{netuid}}
-      - Neuron Count:: {{neurons}}
-      - Emission Rate:: {{emission}} τ/day`}
+    - Total Subnets:: ${taoStats.subnets.length}
+    - ${taoStats.subnets.map(subnet => `
+    - ${subnet.name}
+      - ID:: ${subnet.netuid}
+      - Neuron Count:: ${subnet.neurons}
+      - Emission Rate:: ${subnet.emission.toFixed(4)} τ/day`).join('\n')}`}
           </pre>
         </CardContent>
       </Card>
@@ -77,3 +79,4 @@ const TaoExportTab: React.FC = () => {
 };
 
 export default TaoExportTab;
+
