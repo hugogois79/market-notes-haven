@@ -98,16 +98,31 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
     return "text-gray-500";
   };
 
-  // Generate mock trend data for demonstration
-  const generateTrendData = (index: number) => {
-    const trends = [
+  // Generate consistent trend data based on netuid
+  const generateTrendData = (netuid: number) => {
+    // Create deterministic but varied trend data based on netuid
+    const seed = netuid % 5;
+    
+    const trendSets = [
       { h1: 0.28, h24: 12.87, w1: 59.44 },
       { h1: -4.50, h24: -11.57, w1: 14.54 },
       { h1: -1.94, h24: -8.67, w1: 4.95 },
       { h1: -8.05, h24: -27.29, w1: 25.40 },
       { h1: -1.31, h24: -13.06, w1: 23.91 },
     ];
-    return trends[index % trends.length];
+    
+    return trendSets[seed];
+  };
+
+  // Get subnet code for display
+  const getSubnetCode = (subnet: TaoSubnetInfo | TaoSubnet): string => {
+    const id = 'netuid' in subnet ? subnet.netuid : subnet.id;
+    return String(id);
+  };
+  
+  // Get first letter of subnet name for the icon
+  const getSubnetIconLetter = (name: string): string => {
+    return name.charAt(0).toUpperCase();
   };
   
   return (
@@ -178,12 +193,13 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
                 <TableBody>
                   {filteredAndSortedSubnets.length > 0 ? (
                     filteredAndSortedSubnets.map((subnet, index) => {
-                      const id = 'netuid' in subnet ? subnet.netuid : subnet.id;
-                      const trendData = generateTrendData(index);
+                      const netuid = 'netuid' in subnet ? subnet.netuid : subnet.id;
+                      const subnetCode = getSubnetCode(subnet);
+                      const trendData = generateTrendData(netuid);
                       
                       return (
                         <TableRow 
-                          key={id}
+                          key={netuid}
                           className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                         >
                           <TableCell className="text-center font-medium text-gray-500">
@@ -192,12 +208,12 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
                           <TableCell>
                             <div className="flex items-center">
                               <div className="w-8 h-8 mr-3 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                                {subnet.name.charAt(0).toUpperCase()}
+                                {getSubnetIconLetter(subnet.name)}
                               </div>
                               <div>
                                 <div className="font-medium">{subnet.name}</div>
                                 <div className="text-xs text-gray-500">
-                                  {id}
+                                  {subnetCode}
                                 </div>
                               </div>
                             </div>

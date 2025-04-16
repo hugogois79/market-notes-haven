@@ -52,6 +52,25 @@ export const fetchTaoGlobalStats = async (): Promise<TaoGlobalStats> => {
 };
 
 /**
+ * Mapping of known subnet IDs to their real names
+ * Based on data from taostats.io
+ */
+const SUBNET_NAME_MAPPING: Record<number, string> = {
+  1: "Alpha",
+  6: "Core Validator",
+  7: "Attestation",
+  18: "Zeus",
+  19: "Storyteller",
+  22: "Miner",
+  62: "Yuma",
+  63: "Logistics",
+  81: "Text",
+  85: "Improvement",
+  88: "Cortex",
+  // Add more as they become known
+};
+
+/**
  * Fetch subnets information
  */
 export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
@@ -67,17 +86,35 @@ export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
     }
     
     const data = await response.json();
-    return data.map((subnet: any) => ({
-      netuid: subnet.netuid,
-      name: subnet.name,
-      neurons: subnet.neurons,
-      emission: subnet.emission,
-      description: subnet.description,
-      tempo: subnet.tempo,
-      incentive: subnet.incentive
-    }));
+    
+    return data.map((subnet: any) => {
+      // Get the real subnet name if available, otherwise use the generic name
+      let subnetName = subnet.name;
+      
+      // If the API doesn't provide a name or it's generic, use our mapping
+      if (!subnetName || subnetName.toLowerCase().includes('subnet')) {
+        subnetName = SUBNET_NAME_MAPPING[subnet.netuid] || `Subnet ${subnet.netuid}`;
+      }
+      
+      return {
+        netuid: subnet.netuid,
+        name: subnetName,
+        neurons: subnet.neurons,
+        emission: subnet.emission,
+        description: subnet.description,
+        tempo: subnet.tempo,
+        incentive: subnet.incentive
+      };
+    });
   } catch (error) {
     console.error('Error fetching TAO subnets:', error);
-    return MOCK_TAO_STATS.subnets;
+    
+    // If the API fails, use our mock data but with real subnet names where possible
+    return MOCK_TAO_STATS.subnets.map(subnet => {
+      return {
+        ...subnet,
+        name: SUBNET_NAME_MAPPING[subnet.netuid] || `Subnet ${subnet.netuid}`
+      };
+    });
   }
 };
