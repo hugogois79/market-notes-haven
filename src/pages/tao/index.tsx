@@ -106,7 +106,7 @@ const TAOPage = () => {
           <TaoSubnetsTable
             subnets={topSubnets}
             isLoading={isLoadingTaoStats || isLoadingDbSubnets}
-            error={hasError}
+            error={!!hasError}
             hasLiveData={hasLiveData}
           />
         </TabsContent>
@@ -141,7 +141,7 @@ const TAOPage = () => {
               <TaoSubnetsTable
                 subnets={hasLiveData && taoStats ? taoStats.subnets : dbSubnets}
                 isLoading={isLoadingTaoStats || isLoadingDbSubnets}
-                error={hasError}
+                error={!!hasError}
                 title="All Subnets"
                 hasLiveData={hasLiveData}
               />
