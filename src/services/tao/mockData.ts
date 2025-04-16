@@ -1,6 +1,6 @@
 
 import { TaoStatsUpdate } from './types';
-import { SUBNET_NAME_MAPPING } from './taoStatsClient';
+import { SUBNET_NAME_MAPPING } from './subnetMapping';
 
 /**
  * Mock data for fallback when API fails
