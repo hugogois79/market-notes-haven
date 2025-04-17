@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { TaoValidator } from "@/services/taoValidatorService";
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import StageColumn from "./crm/StageColumn";
@@ -24,16 +24,19 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
 }) => {
   // Group validators by CRM stage
   const validatorsByStage = groupValidatorsByStage(validators);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Handle drag end event
   const handleDragEnd = (result: DropResult) => {
+    setIsDragging(false);
     const { destination, source, draggableId } = result;
 
-    // If there's no destination or the item was dropped back to its original position
+    // If there's no destination, the item was dropped outside droppable areas
     if (!destination) {
       return;
     }
     
+    // If the item was dropped back to its original position
     if (destination.droppableId === source.droppableId && 
         destination.index === source.index) {
       return;
@@ -50,8 +53,12 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
     }
   };
 
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+
   return (
-    <DragDropContext onDragEnd={handleDragEnd}>
+    <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
       <div className="overflow-x-auto pb-4">
         <div className="grid grid-cols-6 gap-4" style={{ minWidth: "1200px" }}>
           {crmStages.map((stage) => (
@@ -64,6 +71,7 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
               getAvailableStages={getAvailableStages}
               onView={onView}
               onMoveStage={onMoveStage}
+              isDragging={isDragging}
             />
           ))}
         </div>

@@ -13,6 +13,7 @@ interface StageColumnProps {
   getAvailableStages: (currentStage: TaoValidator["crm_stage"]) => TaoValidator["crm_stage"][];
   onView: (validator: TaoValidator) => void;
   onMoveStage: (validator: TaoValidator, newStage: TaoValidator["crm_stage"]) => void;
+  isDragging?: boolean;
 }
 
 const StageColumn: React.FC<StageColumnProps> = ({
@@ -23,6 +24,7 @@ const StageColumn: React.FC<StageColumnProps> = ({
   getAvailableStages,
   onView,
   onMoveStage,
+  isDragging = false,
 }) => {
   return (
     <div className="flex flex-col h-full">
@@ -42,7 +44,7 @@ const StageColumn: React.FC<StageColumnProps> = ({
               snapshot.isDraggingOver 
                 ? 'bg-gray-100 dark:bg-gray-700/50' 
                 : 'bg-gray-50 dark:bg-gray-800/50'
-            }`}
+            } ${isDragging ? 'border-2 border-dashed border-gray-300' : ''}`}
           >
             <div className="space-y-2">
               {validators.map((validator, index) => (
