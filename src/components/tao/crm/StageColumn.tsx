@@ -33,7 +33,7 @@ const StageColumn: React.FC<StageColumnProps> = ({
         </div>
       </div>
       
-      <Droppable droppableId={stage} key={stage}>
+      <Droppable droppableId={stage}>
         {(provided, snapshot) => (
           <div 
             ref={provided.innerRef}

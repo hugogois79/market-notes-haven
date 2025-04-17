@@ -30,9 +30,12 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
     const { destination, source, draggableId } = result;
 
     // If there's no destination or the item was dropped back to its original position
-    if (!destination || 
-        (destination.droppableId === source.droppableId && 
-         destination.index === source.index)) {
+    if (!destination) {
+      return;
+    }
+    
+    if (destination.droppableId === source.droppableId && 
+        destination.index === source.index) {
       return;
     }
 

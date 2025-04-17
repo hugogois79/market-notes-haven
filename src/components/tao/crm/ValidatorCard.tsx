@@ -36,11 +36,7 @@ const ValidatorCard: React.FC<ValidatorCardProps> = ({
   getPriorityColor,
 }) => {
   return (
-    <Draggable 
-      key={validator.id} 
-      draggableId={validator.id} 
-      index={index}
-    >
+    <Draggable draggableId={validator.id} index={index}>
       {(provided, snapshot) => (
         <div
           ref={provided.innerRef}
