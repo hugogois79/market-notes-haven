@@ -7,7 +7,8 @@ export const useKeyboardShortcuts = (
   editorRef: RefObject<HTMLDivElement>,
   execCommand: (command: string, value?: string) => void,
   formatTableCells: (alignment: string) => void,
-  yellowUnderlineText?: () => void
+  yellowUnderlineText?: () => void,
+  highlightText?: () => void
 ) => {
   // Setup keyboard shortcuts for text formatting
   useEffect(() => {
@@ -103,7 +104,12 @@ export const useKeyboardShortcuts = (
           case 'h': // Highlight text
           case 'H':
             e.preventDefault();
-            document.execCommand('backColor', false, '#FEF7CD');
+            console.log('Alt+H pressed - applying highlight');
+            if (highlightText) {
+              highlightText();
+            } else {
+              document.execCommand('backColor', false, '#FEF7CD');
+            }
             break;
           
           // Yellow underline shortcut (Alt+Y)
@@ -148,5 +154,5 @@ export const useKeyboardShortcuts = (
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [editorRef, execCommand, formatTableCells, yellowUnderlineText]);
+  }, [editorRef, execCommand, formatTableCells, yellowUnderlineText, highlightText]);
 };

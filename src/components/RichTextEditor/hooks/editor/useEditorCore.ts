@@ -178,7 +178,7 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
   }, [editorRef, handlePaste]);
 
   // Add keyboard shortcuts
-  useKeyboardShortcuts(editorRef, execCommand, formatTableCells, yellowUnderlineText);
+  useKeyboardShortcuts(editorRef, execCommand, formatTableCells, yellowUnderlineText, highlightText);
 
   return {
     execCommand,
