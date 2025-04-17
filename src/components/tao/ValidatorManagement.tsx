@@ -1,53 +1,28 @@
 
-import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState } from "react";
 import {
-  fetchValidators,
-  fetchContactLogs,
-  fetchTaoNotes,
-  fetchSubnetsByValidator,
-  fetchValidatorsBySubnet,
   createValidator,
   updateValidator,
-  deleteValidator,
   createContactLog,
   createTaoNote,
   TaoValidator,
   TaoContactLog,
   TaoNote,
 } from "@/services/taoValidatorService";
-import { fetchTaoSubnets, TaoSubnet } from "@/services/taoSubnetService";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { TaoSubnet } from "@/services/taoSubnetService";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { PlusCircle, Users, Table2, Clock, LayoutGrid, Database, StickyNote, Layers } from "lucide-react";
 import ValidatorsList from "./ValidatorsList";
 import SubnetsOverview from "./SubnetsOverview";
 import ContactTimeline from "./ContactTimeline";
 import CRMPipeline from "./CRMPipeline";
 import MondayCRMView from "./MondayCRMView";
-import ValidatorForm from "./ValidatorForm";
-import ContactLogForm from "./ContactLogForm";
-import NoteForm from "./NoteForm";
 import TaoNotesTab from "./TaoNotesTab";
-import { useNotes } from "@/contexts/NotesContext";
 import { useNavigate } from "react-router-dom";
+import { useValidatorData } from "@/hooks/useValidatorData";
+import ValidatorDialogs from "./ValidatorDialogs";
+import ValidatorManagementHeader from "./ValidatorManagementHeader";
+import ValidatorManagementTabs from "./ValidatorManagementTabs";
 
 const ValidatorManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -65,89 +40,20 @@ const ValidatorManagement: React.FC = () => {
   const [selectedNote, setSelectedNote] = useState<TaoNote | undefined>();
   const [selectedSubnet, setSelectedSubnet] = useState<TaoSubnet | undefined>();
   
-  // Get notes from the main app context
-  const { refetch: refetchAppNotes } = useNotes();
-  
-  // Fetch validators data
+  // Get data from our custom hook
   const {
-    data: validators = [],
-    isLoading: isLoadingValidators,
-    refetch: refetchValidators,
-  } = useQuery({
-    queryKey: ["tao-validators"],
-    queryFn: fetchValidators,
-  });
-
-  // Fetch subnets data
-  const {
-    data: subnets = [],
-    isLoading: isLoadingSubnets,
-    refetch: refetchSubnets,
-  } = useQuery({
-    queryKey: ["tao-subnets"],
-    queryFn: fetchTaoSubnets,
-  });
-
-  // Fetch contact logs
-  const {
-    data: contactLogs = [],
-    isLoading: isLoadingContactLogs,
-    refetch: refetchContactLogs,
-  } = useQuery({
-    queryKey: ["tao-contact-logs"],
-    queryFn: fetchContactLogs,
-  });
-
-  // Fetch notes
-  const {
-    data: notes = [],
-    isLoading: isLoadingNotes,
-    refetch: refetchNotes,
-  } = useQuery({
-    queryKey: ["tao-notes"],
-    queryFn: fetchTaoNotes,
-  });
-
-  // Create mappings for subnet-validator relationships
-  const [validatorsBySubnet, setValidatorsBySubnet] = useState<Record<number, string[]>>({});
-  
-  // Create a mapping of validator IDs to names for easier reference
-  const validatorNames = validators.reduce<Record<string, string>>(
-    (acc, validator) => {
-      acc[validator.id] = validator.name;
-      return acc;
-    },
-    {}
-  );
-
-  // Create a mapping of subnet IDs to names for easier reference
-  const subnetNames = subnets.reduce<Record<number, string>>(
-    (acc, subnet) => {
-      acc[subnet.id] = subnet.name;
-      return acc;
-    },
-    {}
-  );
-
-  // Load subnet-validator relationships
-  useEffect(() => {
-    const fetchSubnetValidators = async () => {
-      const subnetValidatorMap: Record<number, string[]> = {};
-      
-      await Promise.all(
-        subnets.map(async (subnet) => {
-          const validatorIds = await fetchValidatorsBySubnet(subnet.id);
-          subnetValidatorMap[subnet.id] = validatorIds;
-        })
-      );
-      
-      setValidatorsBySubnet(subnetValidatorMap);
-    };
-
-    if (subnets.length > 0) {
-      fetchSubnetValidators();
-    }
-  }, [subnets]);
+    validators,
+    subnets,
+    contactLogs,
+    notes,
+    validatorsBySubnet,
+    validatorNames,
+    subnetNames,
+    isLoading,
+    refetchValidators,
+    refetchContactLogs,
+    refreshAllData
+  } = useValidatorData();
 
   // Handle adding a new validator
   const handleAddValidator = () => {
@@ -165,26 +71,6 @@ const ValidatorManagement: React.FC = () => {
   const handleDeleteValidator = (validator: TaoValidator) => {
     setSelectedValidator(validator);
     setDeleteDialogOpen(true);
-  };
-
-  // Handle confirming validator deletion
-  const confirmDeleteValidator = async () => {
-    if (!selectedValidator) return;
-    
-    try {
-      const success = await deleteValidator(selectedValidator.id);
-      if (success) {
-        toast.success("Validator deleted successfully");
-        refetchValidators();
-      } else {
-        toast.error("Failed to delete validator");
-      }
-    } catch (error) {
-      console.error("Error deleting validator:", error);
-      toast.error("An error occurred while deleting the validator");
-    }
-    
-    setDeleteDialogOpen(false);
   };
 
   // Handle viewing a validator's details
@@ -282,7 +168,7 @@ const ValidatorManagement: React.FC = () => {
       const created = await createTaoNote(data);
       if (created) {
         toast.success("Note added successfully");
-        refetchNotes();
+        refreshAllData();
       } else {
         toast.error("Failed to add note");
       }
@@ -324,72 +210,25 @@ const ValidatorManagement: React.FC = () => {
     toast.info(`Add validator to subnet: ${subnet.name}`);
   };
 
-  // Function to refresh all data
-  const refreshAllData = () => {
-    refetchValidators();
-    refetchContactLogs();
-    refetchNotes();
-    refetchSubnets();
-    refetchAppNotes();
-  };
-
-  // Loading state for the whole page
-  const isLoading =
-    isLoadingValidators || isLoadingSubnets || isLoadingContactLogs || isLoadingNotes;
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Validator Management</h2>
-        <div className="flex gap-2">
-          <Button onClick={handleAddValidator}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add Validator
-          </Button>
-          <Button variant="outline" onClick={() => handleAddContactLog()}>
-            <Clock className="h-4 w-4 mr-2" />
-            Add Contact Log
-          </Button>
-          <Button variant="outline" onClick={() => handleAddNote()}>
-            <StickyNote className="h-4 w-4 mr-2" />
-            Add Note
-          </Button>
-        </div>
-      </div>
+      {/* Header with action buttons */}
+      <ValidatorManagementHeader 
+        onAddValidator={handleAddValidator}
+        onAddContactLog={() => handleAddContactLog()}
+        onAddNote={() => handleAddNote()}
+      />
 
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
         className="w-full"
       >
-        <div className="border-b">
-          <TabsList className="w-full justify-start h-auto">
-            <TabsTrigger value="monday-crm" className="py-3">
-              <Database className="mr-2 h-4 w-4" />
-              CRM Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="validators-list" className="py-3">
-              <Table2 className="mr-2 h-4 w-4" />
-              Validators List
-            </TabsTrigger>
-            <TabsTrigger value="subnets-overview" className="py-3">
-              <Users className="mr-2 h-4 w-4" />
-              Subnets Overview
-            </TabsTrigger>
-            <TabsTrigger value="contact-timeline" className="py-3">
-              <Clock className="mr-2 h-4 w-4" />
-              Contact Timeline
-            </TabsTrigger>
-            <TabsTrigger value="crm-pipeline" className="py-3">
-              <LayoutGrid className="mr-2 h-4 w-4" />
-              CRM Pipeline
-            </TabsTrigger>
-            <TabsTrigger value="notes" className="py-3">
-              <StickyNote className="mr-2 h-4 w-4" />
-              Notes
-            </TabsTrigger>
-          </TabsList>
-        </div>
+        {/* Tabs navigation */}
+        <ValidatorManagementTabs 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+        />
 
         <TabsContent value="monday-crm" className="pt-4">
           {isLoading ? (
@@ -481,62 +320,25 @@ const ValidatorManagement: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Validator Form Dialog */}
-      <Dialog open={validatorFormOpen} onOpenChange={setValidatorFormOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedValidator ? "Edit Validator" : "Add New Validator"}
-            </DialogTitle>
-          </DialogHeader>
-          <ValidatorForm
-            validator={selectedValidator}
-            onSubmit={handleValidatorFormSubmit}
-            onCancel={() => setValidatorFormOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Contact Log Form Dialog */}
-      <Dialog open={contactLogFormOpen} onOpenChange={setContactLogFormOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedContactLog ? "View Contact Log" : "Add Contact Log"}
-            </DialogTitle>
-          </DialogHeader>
-          <ContactLogForm
-            validator={selectedValidator}
-            subnets={subnets}
-            contactLog={selectedContactLog}
-            onSubmit={handleContactLogFormSubmit}
-            onCancel={() => setContactLogFormOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Validator Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the validator{" "}
-              <strong>{selectedValidator?.name}</strong> and all associated data.
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDeleteValidator}
-              className="bg-red-600 text-white hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Dialogs for forms and confirmations */}
+      <ValidatorDialogs
+        validatorFormOpen={validatorFormOpen}
+        setValidatorFormOpen={setValidatorFormOpen}
+        contactLogFormOpen={contactLogFormOpen}
+        setContactLogFormOpen={setContactLogFormOpen}
+        noteFormOpen={noteFormOpen}
+        setNoteFormOpen={setNoteFormOpen}
+        deleteDialogOpen={deleteDialogOpen}
+        setDeleteDialogOpen={setDeleteDialogOpen}
+        selectedValidator={selectedValidator}
+        selectedContactLog={selectedContactLog}
+        selectedNote={selectedNote}
+        subnets={subnets}
+        onValidatorFormSubmit={handleValidatorFormSubmit}
+        onContactLogFormSubmit={handleContactLogFormSubmit}
+        onNoteFormSubmit={handleNoteFormSubmit}
+        refetchValidators={refetchValidators}
+      />
     </div>
   );
 };
