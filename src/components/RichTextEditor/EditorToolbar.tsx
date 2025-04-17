@@ -20,6 +20,7 @@ interface EditorToolbarProps {
   highlightText?: () => void;
   boldText?: () => void;
   underlineText?: () => void;
+  yellowUnderlineText?: () => void;
   hasConclusion?: boolean;
   category?: string;
   className?: string;
@@ -33,6 +34,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
   highlightText,
   boldText,
   underlineText,
+  yellowUnderlineText,
   hasConclusion = true,
   category = "General",
   className = ""
@@ -74,6 +76,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         italicText={() => execCommand('italic')}
         underlineText={underlineText}
         highlightText={highlightText}
+        yellowUnderlineText={yellowUnderlineText}
       />
       
       <ToolbarDivider />

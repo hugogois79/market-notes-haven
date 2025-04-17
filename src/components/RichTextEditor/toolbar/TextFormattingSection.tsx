@@ -12,6 +12,7 @@ interface TextFormattingSectionProps {
   highlightText?: () => void;
   boldText?: () => void;
   italicText?: () => void;
+  yellowUnderlineText?: () => void;
 }
 
 const TextFormattingSection: React.FC<TextFormattingSectionProps> = ({
@@ -21,7 +22,8 @@ const TextFormattingSection: React.FC<TextFormattingSectionProps> = ({
   formatStrikethrough,
   highlightText,
   boldText,
-  italicText
+  italicText,
+  yellowUnderlineText
 }) => {
   const handleBold = () => {
     if (formatBold) formatBold();
@@ -45,16 +47,28 @@ const TextFormattingSection: React.FC<TextFormattingSectionProps> = ({
     if (highlightText) highlightText();
   };
 
+  const handleYellowUnderline = () => {
+    if (yellowUnderlineText) yellowUnderlineText();
+  };
+
   return (
     <div className="flex items-center gap-0.5">
-      <ToolbarButton icon={Bold} onClick={handleBold} tooltip="Bold (Ctrl+B)" />
-      <ToolbarButton icon={Italic} onClick={handleItalic} tooltip="Italic (Ctrl+I)" />
-      <ToolbarButton icon={Underline} onClick={handleUnderline} tooltip="Underline (Ctrl+U)" />
+      <ToolbarButton icon={Bold} onClick={handleBold} tooltip="Bold (Alt+B)" />
+      <ToolbarButton icon={Italic} onClick={handleItalic} tooltip="Italic (Alt+I)" />
+      <ToolbarButton icon={Underline} onClick={handleUnderline} tooltip="Underline (Alt+U)" />
       {formatStrikethrough && (
         <ToolbarButton icon={Strikethrough} onClick={handleStrikethrough} tooltip="Strikethrough" />
       )}
       {highlightText && (
-        <ToolbarButton icon={Highlighter} onClick={handleHighlight} tooltip="Highlight Text" />
+        <ToolbarButton icon={Highlighter} onClick={handleHighlight} tooltip="Highlight Text (Alt+H)" />
+      )}
+      {yellowUnderlineText && (
+        <ToolbarButton 
+          icon={Underline} 
+          onClick={handleYellowUnderline} 
+          tooltip="Yellow Underline (Alt+Y)" 
+          className="text-orange-500" 
+        />
       )}
     </div>
   );

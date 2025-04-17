@@ -16,6 +16,7 @@ export const useTabState = (
     highlightText,
     boldText,
     underlineText,
+    yellowUnderlineText,
     processCheckboxes
   } = useEditor(editorRef, hasConclusion);
   
@@ -63,6 +64,7 @@ export const useTabState = (
     highlightText,
     boldText,
     underlineText,
+    yellowUnderlineText,
     processCheckboxes
   };
 };

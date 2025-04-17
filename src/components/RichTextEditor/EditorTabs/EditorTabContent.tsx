@@ -19,7 +19,8 @@ const EditorTabContent: React.FC<TabContentProps> = ({
   insertVerticalSeparator,
   highlightText,
   boldText,
-  underlineText
+  underlineText,
+  yellowUnderlineText
 }) => {
   // Create wrapper functions for alignment actions to avoid passing arguments directly
   const handleAlignLeft = () => {
@@ -48,6 +49,7 @@ const EditorTabContent: React.FC<TabContentProps> = ({
           highlightText={highlightText}
           boldText={boldText}
           underlineText={underlineText}
+          yellowUnderlineText={yellowUnderlineText}
           hasConclusion={hasConclusion}
           category={category}
           className="py-0.5"

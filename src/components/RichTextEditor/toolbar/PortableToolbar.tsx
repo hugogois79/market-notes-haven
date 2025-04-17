@@ -27,6 +27,7 @@ interface PortableToolbarProps {
   insertVerticalSeparator?: () => void;
   highlightText?: () => void;
   underlineText?: () => void;
+  yellowUnderlineText?: () => void;
   formatNormalText?: () => void;
   className?: string;
   variant?: 'default' | 'floating' | 'inline' | 'fixed';
@@ -53,6 +54,7 @@ const PortableToolbar: React.FC<PortableToolbarProps> = ({
   insertVerticalSeparator,
   highlightText,
   underlineText,
+  yellowUnderlineText,
   formatNormalText,
   className = "",
   variant = 'default',
@@ -139,6 +141,7 @@ const PortableToolbar: React.FC<PortableToolbarProps> = ({
             underlineText={underlineText}
             formatStrikethrough={formatStrikethrough}
             highlightText={highlightText}
+            yellowUnderlineText={yellowUnderlineText}
           />
           
           <ToolbarDivider />

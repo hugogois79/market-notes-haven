@@ -67,9 +67,49 @@ export const useTextStyles = (editorRef: RefObject<HTMLDivElement>) => {
     }
   }, [editorRef]);
   
+  const yellowUnderlineText = useCallback(() => {
+    if (!editorRef.current) return;
+    
+    // Focus on the editor first
+    editorRef.current.focus();
+    
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+
+    const range = selection.getRangeAt(0);
+    
+    // Check if there's actual text selected
+    if (range.collapsed) {
+      // No text selected, do nothing
+      return;
+    }
+    
+    // Create a span with yellow underline
+    const span = document.createElement('span');
+    span.style.borderBottom = '2px solid #F97316'; // Bright orange underline
+    span.style.paddingBottom = '2px';
+    
+    // Extract the selected content
+    const fragment = range.extractContents();
+    span.appendChild(fragment);
+    
+    // Insert the newly styled span
+    range.insertNode(span);
+    
+    // Collapse the selection after our inserted span
+    selection.collapseToEnd();
+    
+    // Trigger an input event to ensure changes are registered
+    if (editorRef.current) {
+      const inputEvent = new Event('input', { bubbles: true });
+      editorRef.current.dispatchEvent(inputEvent);
+    }
+  }, [editorRef]);
+  
   return {
     boldText,
     underlineText,
-    highlightText
+    highlightText,
+    yellowUnderlineText
   };
 };

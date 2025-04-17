@@ -144,6 +144,14 @@ const ContentStyles = () => {
           background-color: #d1d5db;
           margin: 0;
         }
+        
+        /* Custom yellow underline style */
+        .editor-content span[style*="border-bottom: 2px solid #F97316"] {
+          text-decoration: none;
+          display: inline;
+          padding-bottom: 0px;
+          border-bottom: 2px solid #F97316;
+        }
       `}
     </style>
   );

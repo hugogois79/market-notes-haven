@@ -7,6 +7,7 @@ export interface ToolbarPlacementProps {
   boldText?: () => void;
   underlineText?: () => void;
   highlightText?: () => void;
+  yellowUnderlineText?: () => void;
   execCommand: (command: string, value?: string) => void;
   formatTableCells: (alignment: string) => void;
   insertVerticalSeparator: () => void;
@@ -20,6 +21,7 @@ const ToolbarPlacement: React.FC<ToolbarPlacementProps> = ({
   boldText,
   underlineText,
   highlightText,
+  yellowUnderlineText,
   execCommand,
   formatTableCells,
   insertVerticalSeparator,
@@ -79,6 +81,7 @@ const ToolbarPlacement: React.FC<ToolbarPlacementProps> = ({
       insertVerticalSeparator={insertVerticalSeparator}
       highlightText={highlightText || (() => execCommand('backColor', '#FEF7CD'))}
       underlineText={underlineText || (() => execCommand('underline'))}
+      yellowUnderlineText={yellowUnderlineText}
       formatNormalText={formatNormalText}
       position={position}
       variant={variant}

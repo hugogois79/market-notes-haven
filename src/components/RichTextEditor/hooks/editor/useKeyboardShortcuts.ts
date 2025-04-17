@@ -6,7 +6,8 @@ import { createSeparator } from '../formatting/formatters/separatorFormatters';
 export const useKeyboardShortcuts = (
   editorRef: RefObject<HTMLDivElement>,
   execCommand: (command: string, value?: string) => void,
-  formatTableCells: (alignment: string) => void
+  formatTableCells: (alignment: string) => void,
+  yellowUnderlineText?: () => void
 ) => {
   // Setup keyboard shortcuts for text formatting
   useEffect(() => {
@@ -105,6 +106,16 @@ export const useKeyboardShortcuts = (
             document.execCommand('backColor', false, '#FEF7CD');
             break;
           
+          // Yellow underline shortcut (Alt+Y)
+          case 'y': // Yellow underline
+          case 'Y':
+            e.preventDefault();
+            console.log('Alt+Y pressed - applying yellow underline');
+            if (yellowUnderlineText) {
+              yellowUnderlineText();
+            }
+            break;
+          
           // Add separator shortcut
           case 's': // Separator
           case 'S':
@@ -137,5 +148,5 @@ export const useKeyboardShortcuts = (
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [editorRef, execCommand, formatTableCells]);
+  }, [editorRef, execCommand, formatTableCells, yellowUnderlineText]);
 };

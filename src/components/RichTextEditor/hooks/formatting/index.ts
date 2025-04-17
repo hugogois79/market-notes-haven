@@ -11,7 +11,7 @@ import { applyHeadingFormatting, applyListFormatting } from './formatters';
  */
 export const useTextFormatting = (editorRef: RefObject<HTMLDivElement>) => {
   const execCommandBase = useExecCommand(editorRef);
-  const { boldText, underlineText, highlightText } = useTextStyles(editorRef);
+  const { boldText, underlineText, highlightText, yellowUnderlineText } = useTextStyles(editorRef);
   const { formatTableCells } = useAlignmentFormatting(editorRef);
   const { insertVerticalSeparator } = useElementInsert(editorRef);
   
@@ -54,7 +54,8 @@ export const useTextFormatting = (editorRef: RefObject<HTMLDivElement>) => {
     insertVerticalSeparator,
     highlightText,
     boldText,
-    underlineText
+    underlineText,
+    yellowUnderlineText
   };
 };
 

@@ -7,6 +7,7 @@ interface FloatingToolbarWrapperProps {
   boldText: (() => void) | null;
   underlineText: (() => void) | null;
   highlightText: (() => void) | null;
+  yellowUnderlineText?: (() => void) | null;
   execCommand: (command: string, value?: string) => void;
   formatTableCells: (alignment: string) => void;
   insertVerticalSeparator: () => void;
@@ -21,6 +22,7 @@ const FloatingToolbarWrapper: React.FC<FloatingToolbarWrapperProps> = ({
   boldText,
   underlineText,
   highlightText,
+  yellowUnderlineText,
   execCommand,
   formatTableCells,
   insertVerticalSeparator,
@@ -84,6 +86,7 @@ const FloatingToolbarWrapper: React.FC<FloatingToolbarWrapperProps> = ({
       insertVerticalSeparator={insertVerticalSeparator}
       highlightText={highlightText || (() => execCommand('backColor', '#FEF7CD'))}
       underlineText={underlineText || (() => execCommand('underline'))}
+      yellowUnderlineText={yellowUnderlineText || null}
       formatNormalText={formatNormalText}
       position={position}
       variant={variant}
