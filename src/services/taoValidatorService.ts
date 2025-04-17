@@ -1,5 +1,8 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
+import { toast as uiToast } from "@/components/ui/use-toast";
+// Import the correct toast from sonner which has the error method
+import { toast } from "sonner";
 
 export interface TaoValidator {
   id: string;
