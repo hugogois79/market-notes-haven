@@ -120,6 +120,11 @@ const ValidatorCard: React.FC<ValidatorCardProps> = ({
                   )}
                 </div>
               </div>
+              {validator.wallet_address && (
+                <div className="mt-2 text-xs text-muted-foreground truncate" title={validator.wallet_address}>
+                  {validator.wallet_address.substring(0, 10)}...{validator.wallet_address.substring(validator.wallet_address.length - 6)}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

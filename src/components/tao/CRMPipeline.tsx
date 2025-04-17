@@ -10,17 +10,20 @@ import {
   getAvailableStages,
   groupValidatorsByStage
 } from "./crm/crmUtils";
+import { toast } from "sonner";
 
 interface CRMPipelineProps {
   validators: TaoValidator[];
   onView: (validator: TaoValidator) => void;
   onMoveStage: (validator: TaoValidator, newStage: TaoValidator["crm_stage"]) => void;
+  onAddValidator?: () => void;
 }
 
 const CRMPipeline: React.FC<CRMPipelineProps> = ({
   validators,
   onView,
   onMoveStage,
+  onAddValidator,
 }) => {
   // Group validators by CRM stage
   const validatorsByStage = groupValidatorsByStage(validators);
@@ -47,7 +50,8 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
     // Find the validator that was dragged
     const validator = validators.find(v => v.id === draggableId);
     if (!validator) {
-      console.log("Validator not found with ID:", draggableId);
+      console.error("Validator not found with ID:", draggableId);
+      toast.error("Error: Validator not found");
       return;
     }
 
@@ -55,6 +59,7 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
     if (destination.droppableId !== source.droppableId) {
       console.log(`Moving ${validator.name} from ${source.droppableId} to ${destination.droppableId}`);
       onMoveStage(validator, destination.droppableId as TaoValidator["crm_stage"]);
+      toast.success(`Moved ${validator.name} to ${destination.droppableId}`);
     } else {
       console.log(`Reordering within the same column: ${source.droppableId}`);
       // Note: If you want to implement ordering within columns, you would handle that here
@@ -80,6 +85,7 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
               getAvailableStages={getAvailableStages}
               onView={onView}
               onMoveStage={onMoveStage}
+              onAddValidator={onAddValidator}
               isDragging={isDragging}
             />
           ))}

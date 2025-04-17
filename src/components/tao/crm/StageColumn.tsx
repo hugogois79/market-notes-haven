@@ -4,6 +4,7 @@ import { Droppable } from 'react-beautiful-dnd';
 import ValidatorCard from "./ValidatorCard";
 import { Button } from "@/components/ui/button";
 import { TaoValidator } from "@/services/taoValidatorService";
+import { Plus } from "lucide-react";
 
 interface StageColumnProps {
   stage: TaoValidator["crm_stage"];
@@ -13,6 +14,7 @@ interface StageColumnProps {
   getAvailableStages: (currentStage: TaoValidator["crm_stage"]) => TaoValidator["crm_stage"][];
   onView: (validator: TaoValidator) => void;
   onMoveStage: (validator: TaoValidator, newStage: TaoValidator["crm_stage"]) => void;
+  onAddValidator?: () => void;
   isDragging?: boolean;
 }
 
@@ -24,6 +26,7 @@ const StageColumn: React.FC<StageColumnProps> = ({
   getAvailableStages,
   onView,
   onMoveStage,
+  onAddValidator,
   isDragging = false,
 }) => {
   return (
@@ -71,8 +74,9 @@ const StageColumn: React.FC<StageColumnProps> = ({
                   variant="ghost" 
                   className="w-full border border-dashed border-gray-300 hover:border-gray-400 text-muted-foreground"
                   size="sm"
+                  onClick={onAddValidator}
                 >
-                  + Add Validator
+                  <Plus className="h-4 w-4 mr-1" /> Add Validator
                 </Button>
               </div>
             </div>
