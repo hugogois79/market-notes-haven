@@ -103,7 +103,10 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
     if (!validator) return;
 
     // Move the validator to the new stage
-    onMoveStage(validator, destination.droppableId as TaoValidator["crm_stage"]);
+    if (destination.droppableId !== source.droppableId) {
+      console.log(`Moving ${validator.name} from ${source.droppableId} to ${destination.droppableId}`);
+      onMoveStage(validator, destination.droppableId as TaoValidator["crm_stage"]);
+    }
   };
 
   return (
@@ -119,7 +122,7 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
                 </div>
               </div>
               
-              <Droppable droppableId={stage}>
+              <Droppable droppableId={stage} key={stage}>
                 {(provided, snapshot) => (
                   <div 
                     ref={provided.innerRef}

@@ -186,6 +186,7 @@ const ValidatorManagement: React.FC = () => {
     newStage: TaoValidator["crm_stage"]
   ) => {
     try {
+      console.log(`Moving validator ${validator.name} to stage ${newStage}`);
       const updated = await updateValidator(validator.id, { crm_stage: newStage });
       if (updated) {
         toast.success(`Moved ${validator.name} to ${newStage}`);

@@ -15,27 +15,51 @@ const ValidatorManagementTabs: React.FC<ValidatorManagementTabsProps> = ({
   return (
     <div className="border-b">
       <TabsList className="w-full justify-start h-auto">
-        <TabsTrigger value="monday-crm" className="py-3">
+        <TabsTrigger 
+          value="monday-crm" 
+          className="py-3"
+          onClick={() => setActiveTab("monday-crm")}
+        >
           <Database className="mr-2 h-4 w-4" />
           CRM Dashboard
         </TabsTrigger>
-        <TabsTrigger value="validators-list" className="py-3">
+        <TabsTrigger 
+          value="validators-list" 
+          className="py-3"
+          onClick={() => setActiveTab("validators-list")}
+        >
           <Table2 className="mr-2 h-4 w-4" />
           Validators List
         </TabsTrigger>
-        <TabsTrigger value="subnets-overview" className="py-3">
+        <TabsTrigger 
+          value="subnets-overview" 
+          className="py-3"
+          onClick={() => setActiveTab("subnets-overview")}
+        >
           <Users className="mr-2 h-4 w-4" />
           Subnets Overview
         </TabsTrigger>
-        <TabsTrigger value="contact-timeline" className="py-3">
+        <TabsTrigger 
+          value="contact-timeline" 
+          className="py-3"
+          onClick={() => setActiveTab("contact-timeline")}
+        >
           <Clock className="mr-2 h-4 w-4" />
           Contact Timeline
         </TabsTrigger>
-        <TabsTrigger value="crm-pipeline" className="py-3">
+        <TabsTrigger 
+          value="crm-pipeline" 
+          className="py-3"
+          onClick={() => setActiveTab("crm-pipeline")}
+        >
           <LayoutGrid className="mr-2 h-4 w-4" />
           CRM Pipeline
         </TabsTrigger>
-        <TabsTrigger value="notes" className="py-3">
+        <TabsTrigger 
+          value="notes" 
+          className="py-3"
+          onClick={() => setActiveTab("notes")}
+        >
           <StickyNote className="mr-2 h-4 w-4" />
           Notes
         </TabsTrigger>
