@@ -41,12 +41,12 @@ const ValidatorCard: React.FC<ValidatorCardProps> = ({
         <div
           ref={provided.innerRef}
           {...provided.draggableProps}
-          className={`${snapshot.isDragging ? 'opacity-75' : ''}`}
+          className={`${snapshot.isDragging ? 'opacity-75 z-50' : ''}`}
         >
-          <Card className={`shadow-sm ${snapshot.isDragging ? 'ring-2 ring-primary' : ''}`}>
+          <Card className={`shadow-sm transition-all ${snapshot.isDragging ? 'ring-2 ring-primary' : ''}`}>
             <CardHeader className="p-3 flex flex-row items-center">
-              <div {...provided.dragHandleProps} className="mr-2 cursor-grab">
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              <div {...provided.dragHandleProps} className="mr-2 cursor-grab active:cursor-grabbing">
+                <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground" />
               </div>
               <div className="flex justify-between items-start flex-1">
                 <CardTitle className="text-base">{validator.name}</CardTitle>

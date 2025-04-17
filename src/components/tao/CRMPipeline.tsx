@@ -33,27 +33,36 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
 
     // If there's no destination, the item was dropped outside droppable areas
     if (!destination) {
+      console.log("No destination - dropped outside droppable area");
       return;
     }
     
     // If the item was dropped back to its original position
     if (destination.droppableId === source.droppableId && 
         destination.index === source.index) {
+      console.log("Dropped in same position - no changes");
       return;
     }
 
     // Find the validator that was dragged
     const validator = validators.find(v => v.id === draggableId);
-    if (!validator) return;
+    if (!validator) {
+      console.log("Validator not found with ID:", draggableId);
+      return;
+    }
 
     // Move the validator to the new stage
     if (destination.droppableId !== source.droppableId) {
       console.log(`Moving ${validator.name} from ${source.droppableId} to ${destination.droppableId}`);
       onMoveStage(validator, destination.droppableId as TaoValidator["crm_stage"]);
+    } else {
+      console.log(`Reordering within the same column: ${source.droppableId}`);
+      // Note: If you want to implement ordering within columns, you would handle that here
     }
   };
 
   const handleDragStart = () => {
+    console.log("Drag started");
     setIsDragging(true);
   };
 

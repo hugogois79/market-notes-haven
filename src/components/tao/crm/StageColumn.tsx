@@ -40,9 +40,9 @@ const StageColumn: React.FC<StageColumnProps> = ({
           <div 
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`flex-1 rounded-b-md p-2 min-h-[calc(100vh-320px)] ${
+            className={`flex-1 rounded-b-md p-2 min-h-[calc(100vh-320px)] transition-colors duration-200 ${
               snapshot.isDraggingOver 
-                ? 'bg-gray-100 dark:bg-gray-700/50' 
+                ? 'bg-gray-100 dark:bg-gray-700/50 border-2 border-primary/50' 
                 : 'bg-gray-50 dark:bg-gray-800/50'
             } ${isDragging ? 'border-2 border-dashed border-gray-300' : ''}`}
           >
