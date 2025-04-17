@@ -29,6 +29,7 @@ export interface TabContentProps {
   highlightText: () => void;
   boldText: () => void;
   underlineText: () => void;
+  yellowUnderlineText: () => void;
 }
 
 export interface AttachmentTabContentProps {

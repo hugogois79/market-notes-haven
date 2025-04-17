@@ -30,7 +30,8 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
     insertVerticalSeparator,
     highlightText,
     boldText,
-    underlineText
+    underlineText,
+    yellowUnderlineText
   } = useTabState(activeTab, hasConclusion);
   
   // Handle cursor placement for empty content
@@ -75,6 +76,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
             highlightText={highlightText}
             boldText={boldText}
             underlineText={underlineText}
+            yellowUnderlineText={yellowUnderlineText}
           />
         </TabsContent>
         
@@ -95,6 +97,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
             boldText={boldText}
             underlineText={underlineText}
             highlightText={highlightText}
+            yellowUnderlineText={yellowUnderlineText}
             execCommand={execCommand}
             formatTableCells={formatTableCells}
             insertVerticalSeparator={insertVerticalSeparator}
@@ -109,6 +112,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
             boldText={boldText}
             underlineText={underlineText}
             highlightText={highlightText}
+            yellowUnderlineText={yellowUnderlineText}
             execCommand={execCommand}
             formatTableCells={formatTableCells}
             insertVerticalSeparator={insertVerticalSeparator}

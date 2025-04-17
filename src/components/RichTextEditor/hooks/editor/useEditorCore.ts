@@ -160,7 +160,8 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
     insertVerticalSeparator, 
     highlightText,
     boldText,
-    underlineText
+    underlineText,
+    yellowUnderlineText
   } = useTextFormatting(editorRef);
 
   // Setup paste event handler
@@ -177,7 +178,7 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
   }, [editorRef, handlePaste]);
 
   // Add keyboard shortcuts
-  useKeyboardShortcuts(editorRef, execCommand, formatTableCells);
+  useKeyboardShortcuts(editorRef, execCommand, formatTableCells, yellowUnderlineText);
 
   return {
     execCommand,
@@ -186,6 +187,7 @@ export const useEditor = (editorRef: RefObject<HTMLDivElement>, hasConclusion = 
     highlightText,
     boldText,
     underlineText,
+    yellowUnderlineText,
     processCheckboxes
   };
 };
