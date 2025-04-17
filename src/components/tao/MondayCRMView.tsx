@@ -1,10 +1,10 @@
-
 import React, { useState } from "react";
 import { 
   TaoValidator,
   TaoContactLog,
   TaoNote,
   deleteValidator,
+  updateValidatorStage,
   updateValidator
 } from "@/services/taoValidatorService";
 import { TaoSubnet } from "@/services/taoSubnetService";
@@ -129,7 +129,7 @@ const MondayCRMView: React.FC<MondayCRMViewProps> = ({
 
   const handleUpdateValidatorStage = async (validator: TaoValidator, newStage: TaoValidator["crm_stage"]) => {
     try {
-      const result = await updateValidator(validator.id, { crm_stage: newStage });
+      const result = await updateValidatorStage(validator.id, newStage);
       if (result) {
         toast.success(`Updated ${validator.name} to "${newStage}" stage`);
         onRefreshData();
@@ -609,7 +609,6 @@ const MondayCRMView: React.FC<MondayCRMViewProps> = ({
           </Accordion>
         </div>
       ) : (
-        // Kanban board view
         <div className="flex overflow-x-auto pb-4 pt-2 space-x-4">
           {Object.entries(validatorsByStage).map(([stage, validators]) => (
             <div key={stage} className="flex-shrink-0 w-[320px]">

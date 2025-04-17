@@ -66,12 +66,14 @@ export const fetchValidators = async (): Promise<TaoValidator[]> => {
 
     if (error) {
       console.error('Error fetching validators:', error);
+      toast.error('Failed to load validators');
       return [];
     }
 
     return (data || []) as TaoValidator[];
   } catch (error) {
     console.error('Error fetching validators:', error);
+    toast.error('An unexpected error occurred');
     return [];
   }
 };
@@ -121,6 +123,7 @@ export const createValidator = async (validator: Omit<TaoValidator, 'id' | 'crea
 // Update a validator
 export const updateValidator = async (id: string, updates: Partial<TaoValidator>): Promise<TaoValidator | null> => {
   try {
+    // First, update the validator
     const { error: updateError } = await supabase
       .from('tao_validators')
       .update(updates)
@@ -128,9 +131,11 @@ export const updateValidator = async (id: string, updates: Partial<TaoValidator>
 
     if (updateError) {
       console.error('Error updating validator:', updateError);
+      toast.error(`Failed to update validator: ${updateError.message}`);
       return null;
     }
 
+    // Then fetch the updated validator to return
     const { data: updatedData, error: fetchError } = await supabase
       .from('tao_validators')
       .select('*')
@@ -139,12 +144,50 @@ export const updateValidator = async (id: string, updates: Partial<TaoValidator>
 
     if (fetchError) {
       console.error('Error fetching updated validator:', fetchError);
+      toast.error('Validator was updated but could not retrieve the updated data');
       return null;
     }
 
     return updatedData as TaoValidator;
   } catch (error) {
     console.error('Error updating validator:', error);
+    toast.error('An unexpected error occurred while updating the validator');
+    return null;
+  }
+};
+
+// Move a validator to a different CRM stage
+export const updateValidatorStage = async (id: string, newStage: TaoValidator["crm_stage"]): Promise<TaoValidator | null> => {
+  try {
+    // Update the validator's stage
+    const { error: updateError } = await supabase
+      .from('tao_validators')
+      .update({ crm_stage: newStage })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error(`Error moving validator to ${newStage} stage:`, updateError);
+      toast.error(`Failed to update stage: ${updateError.message}`);
+      return null;
+    }
+
+    // Fetch the updated validator
+    const { data: updatedValidator, error: fetchError } = await supabase
+      .from('tao_validators')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching updated validator:', fetchError);
+      toast.error('Stage was updated but could not retrieve the updated data');
+      return null;
+    }
+
+    return updatedValidator as TaoValidator;
+  } catch (error) {
+    console.error('Error updating validator stage:', error);
+    toast.error('An unexpected error occurred while updating the stage');
     return null;
   }
 };

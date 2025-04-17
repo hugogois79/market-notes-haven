@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { TaoValidator } from "@/services/taoValidatorService";
+import { TaoValidator, updateValidatorStage } from "@/services/taoValidatorService";
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import StageColumn from "./crm/StageColumn";
 import { 
@@ -30,7 +30,7 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
   const [isDragging, setIsDragging] = useState(false);
 
   // Handle drag end event
-  const handleDragEnd = (result: DropResult) => {
+  const handleDragEnd = async (result: DropResult) => {
     setIsDragging(false);
     const { destination, source, draggableId } = result;
 
@@ -57,9 +57,24 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
 
     // Move the validator to the new stage
     if (destination.droppableId !== source.droppableId) {
-      console.log(`Moving ${validator.name} from ${source.droppableId} to ${destination.droppableId}`);
-      onMoveStage(validator, destination.droppableId as TaoValidator["crm_stage"]);
-      toast.success(`Moved ${validator.name} to ${destination.droppableId}`);
+      const newStage = destination.droppableId as TaoValidator["crm_stage"];
+      console.log(`Moving ${validator.name} from ${source.droppableId} to ${newStage}`);
+      
+      try {
+        // Call our more reliable function for stage updates
+        const updatedValidator = await updateValidatorStage(validator.id, newStage);
+        
+        if (updatedValidator) {
+          toast.success(`Moved ${validator.name} to ${newStage}`);
+          // Call the parent handler to refresh data
+          onMoveStage(validator, newStage);
+        } else {
+          toast.error(`Failed to move ${validator.name} to ${newStage}`);
+        }
+      } catch (error) {
+        console.error("Error during drag and drop stage change:", error);
+        toast.error("An error occurred while updating the stage");
+      }
     } else {
       console.log(`Reordering within the same column: ${source.droppableId}`);
       // Note: If you want to implement ordering within columns, you would handle that here
