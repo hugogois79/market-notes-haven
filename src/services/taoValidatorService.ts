@@ -1,5 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
 
 export interface TaoValidator {
   id: string;
@@ -121,19 +121,28 @@ export const createValidator = async (validator: Omit<TaoValidator, 'id' | 'crea
 // Update a validator
 export const updateValidator = async (id: string, updates: Partial<TaoValidator>): Promise<TaoValidator | null> => {
   try {
-    const { data, error } = await supabase
+    const { error: updateError } = await supabase
       .from('tao_validators')
       .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
+      .eq('id', id);
 
-    if (error) {
-      console.error('Error updating validator:', error);
+    if (updateError) {
+      console.error('Error updating validator:', updateError);
       return null;
     }
 
-    return data as TaoValidator;
+    const { data: updatedData, error: fetchError } = await supabase
+      .from('tao_validators')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching updated validator:', fetchError);
+      return null;
+    }
+
+    return updatedData as TaoValidator;
   } catch (error) {
     console.error('Error updating validator:', error);
     return null;
