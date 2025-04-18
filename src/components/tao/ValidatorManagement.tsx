@@ -274,6 +274,7 @@ const ValidatorManagement: React.FC = () => {
               onAddNote={handleAddNote}
               onViewContactLog={handleViewContactLog}
               onRefreshData={refreshAllData}
+              onViewSubnet={handleViewSubnet}
             />
           )}
         </TabsContent>
