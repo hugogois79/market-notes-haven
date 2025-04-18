@@ -51,6 +51,7 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
       const newStage = destination.droppableId as TaoValidator["crm_stage"];
       console.log(`Moving ${validator.name} to ${newStage} stage`);
       onMoveStage(validator, newStage);
+      toast.success(`Moved ${validator.name} to ${newStage}`);
     }
   };
 

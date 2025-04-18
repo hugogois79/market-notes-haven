@@ -1,10 +1,12 @@
+
 import React from "react";
 
 /**
  * Styles for the editor content, applied globally to ensure consistent appearance
  */
 const ContentStyles = () => (
-  <style jsx global>{`
+  <style dangerouslySetInnerHTML={{
+    __html: `
     .editor-content {
       line-height: 1.3;
       font-size: 14px;
@@ -157,7 +159,8 @@ const ContentStyles = () => (
       border-radius: 0.375rem;
       border: 1px solid #e2e8f0;
     }
-  `}</style>
+    `
+  }} />
 );
 
 export default ContentStyles;
