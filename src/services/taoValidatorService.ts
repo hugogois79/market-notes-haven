@@ -164,7 +164,7 @@ export const updateValidatorStage = async (id: string, newStage: TaoValidator["c
   try {
     console.log(`updateValidatorStage called for ID ${id} with new stage ${newStage}`);
     
-    // First perform the update
+    // Perform the update operation
     const { error: updateError } = await supabase
       .from('tao_validators')
       .update({ crm_stage: newStage })
@@ -176,7 +176,7 @@ export const updateValidatorStage = async (id: string, newStage: TaoValidator["c
       return null;
     }
 
-    // Then fetch the updated validator to return
+    // Fetch the updated validator to return
     const { data, error: fetchError } = await supabase
       .from('tao_validators')
       .select('*')

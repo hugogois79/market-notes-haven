@@ -67,7 +67,7 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
         if (updatedValidator) {
           toast.success(`Moved ${validator.name} to ${newStage}`);
           // Call the parent handler to refresh data
-          onMoveStage(validator, newStage);
+          onMoveStage({...validator, crm_stage: newStage}, newStage);
         } else {
           toast.error(`Failed to move ${validator.name} to ${newStage}`);
         }

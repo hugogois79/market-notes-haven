@@ -187,11 +187,17 @@ const ValidatorManagement: React.FC = () => {
     try {
       console.log(`Moving validator ${validator.name} to stage ${newStage}`);
       const updated = await updateValidator(validator.id, { crm_stage: newStage });
+      
       if (updated) {
         toast.success(`Moved ${validator.name} to ${newStage}`);
         refetchValidators();
       } else {
         toast.error("Failed to update validator stage");
+        const directUpdate = await updateValidatorStage(validator.id, newStage);
+        if (directUpdate) {
+          toast.success(`Moved ${validator.name} to ${newStage}`);
+          refetchValidators();
+        }
       }
     } catch (error) {
       console.error("Error updating validator stage:", error);
@@ -311,6 +317,7 @@ const ValidatorManagement: React.FC = () => {
               validators={validators}
               onView={handleViewValidator}
               onMoveStage={handleMoveValidatorStage}
+              onAddValidator={handleAddValidator}
             />
           )}
         </TabsContent>
