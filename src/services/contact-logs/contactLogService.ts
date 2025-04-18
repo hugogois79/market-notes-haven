@@ -15,7 +15,11 @@ export const fetchContactLogs = async (): Promise<TaoContactLog[]> => {
       return [];
     }
 
-    return data || [];
+    // Cast the data to ensure it matches the TaoContactLog type
+    return (data || []).map(log => ({
+      ...log,
+      method: log.method as TaoContactLog['method']
+    }));
   } catch (error) {
     console.error('Error fetching contact logs:', error);
     return [];
@@ -35,7 +39,11 @@ export const createContactLog = async (contactLog: Omit<TaoContactLog, 'id' | 'c
       return null;
     }
 
-    return data;
+    // Cast the data to ensure it matches the TaoContactLog type
+    return data ? {
+      ...data,
+      method: data.method as TaoContactLog['method']
+    } : null;
   } catch (error) {
     console.error('Error creating contact log:', error);
     return null;
@@ -55,7 +63,11 @@ export const fetchContactLogsByValidator = async (validatorId: string): Promise<
       return [];
     }
 
-    return data || [];
+    // Cast the data to ensure it matches the TaoContactLog type
+    return (data || []).map(log => ({
+      ...log,
+      method: log.method as TaoContactLog['method']
+    }));
   } catch (error) {
     console.error('Error fetching contact logs:', error);
     return [];

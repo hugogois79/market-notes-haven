@@ -16,7 +16,12 @@ export const fetchValidators = async (): Promise<TaoValidator[]> => {
       return [];
     }
 
-    return data || [];
+    // Cast the data to ensure it matches the TaoValidator type
+    return (data || []).map(validator => ({
+      ...validator,
+      crm_stage: validator.crm_stage as TaoValidator["crm_stage"],
+      priority: validator.priority as TaoValidator["priority"]
+    }));
   } catch (error) {
     console.error('Error fetching validators:', error);
     toast.error('An unexpected error occurred');
@@ -37,7 +42,12 @@ export const fetchValidatorById = async (id: string): Promise<TaoValidator | nul
       return null;
     }
 
-    return data;
+    // Cast the data to ensure it matches the TaoValidator type
+    return data ? {
+      ...data,
+      crm_stage: data.crm_stage as TaoValidator["crm_stage"],
+      priority: data.priority as TaoValidator["priority"]
+    } : null;
   } catch (error) {
     console.error('Error fetching validator:', error);
     return null;
@@ -57,7 +67,12 @@ export const createValidator = async (validator: Omit<TaoValidator, 'id' | 'crea
       return null;
     }
 
-    return data;
+    // Cast the data to ensure it matches the TaoValidator type
+    return data ? {
+      ...data,
+      crm_stage: data.crm_stage as TaoValidator["crm_stage"],
+      priority: data.priority as TaoValidator["priority"]
+    } : null;
   } catch (error) {
     console.error('Error creating validator:', error);
     return null;
@@ -89,7 +104,12 @@ export const updateValidator = async (id: string, updates: Partial<TaoValidator>
       return null;
     }
 
-    return updatedData;
+    // Cast the data to ensure it matches the TaoValidator type
+    return updatedData ? {
+      ...updatedData,
+      crm_stage: updatedData.crm_stage as TaoValidator["crm_stage"],
+      priority: updatedData.priority as TaoValidator["priority"]
+    } : null;
   } catch (error) {
     console.error('Error updating validator:', error);
     toast.error('An unexpected error occurred while updating the validator');
@@ -125,7 +145,12 @@ export const updateValidatorStage = async (id: string, newStage: TaoValidator["c
     }
 
     console.log('Stage updated successfully:', data);
-    return data;
+    // Cast the data to ensure it matches the TaoValidator type
+    return data ? {
+      ...data,
+      crm_stage: data.crm_stage as TaoValidator["crm_stage"],
+      priority: data.priority as TaoValidator["priority"]
+    } : null;
   } catch (error) {
     console.error('Error updating validator stage:', error);
     toast.error('An unexpected error occurred while updating the stage');
