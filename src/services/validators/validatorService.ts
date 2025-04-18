@@ -21,7 +21,7 @@ export const fetchValidators = async (): Promise<TaoValidator[]> => {
       ...validator,
       crm_stage: validator.crm_stage as TaoValidator["crm_stage"],
       priority: validator.priority as TaoValidator["priority"],
-      organization_type: validator.organization_type || 'Validator' // Default to 'Validator' if not set
+      organization_type: validator.organization_type as TaoValidator["organization_type"]
     }));
   } catch (error) {
     console.error('Error fetching validators:', error);
@@ -48,7 +48,7 @@ export const fetchValidatorById = async (id: string): Promise<TaoValidator | nul
       ...data,
       crm_stage: data.crm_stage as TaoValidator["crm_stage"],
       priority: data.priority as TaoValidator["priority"],
-      organization_type: data.organization_type || 'Validator' // Default to 'Validator' if not set
+      organization_type: data.organization_type as TaoValidator["organization_type"]
     } : null;
   } catch (error) {
     console.error('Error fetching validator:', error);
@@ -74,7 +74,7 @@ export const createValidator = async (validator: Omit<TaoValidator, 'id' | 'crea
       ...data,
       crm_stage: data.crm_stage as TaoValidator["crm_stage"],
       priority: data.priority as TaoValidator["priority"],
-      organization_type: data.organization_type || 'Validator' // Default to 'Validator' if not set
+      organization_type: data.organization_type as TaoValidator["organization_type"]
     } : null;
   } catch (error) {
     console.error('Error creating validator:', error);
@@ -122,7 +122,7 @@ export const updateValidator = async (id: string, updates: Partial<TaoValidator>
       ...updatedData,
       crm_stage: updatedData.crm_stage as TaoValidator["crm_stage"],
       priority: updatedData.priority as TaoValidator["priority"],
-      organization_type: updatedData.organization_type || 'Validator' // Default to 'Validator' if not set
+      organization_type: updatedData.organization_type as TaoValidator["organization_type"]
     } : null;
   } catch (error) {
     console.error('Error updating validator:', error);

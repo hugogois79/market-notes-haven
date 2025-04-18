@@ -1080,6 +1080,7 @@ export type Database = {
           id: string
           linkedin: string | null
           name: string
+          organization_type: string
           priority: string | null
           telegram: string | null
           updated_at: string
@@ -1092,6 +1093,7 @@ export type Database = {
           id?: string
           linkedin?: string | null
           name: string
+          organization_type?: string
           priority?: string | null
           telegram?: string | null
           updated_at?: string
@@ -1104,6 +1106,7 @@ export type Database = {
           id?: string
           linkedin?: string | null
           name?: string
+          organization_type?: string
           priority?: string | null
           telegram?: string | null
           updated_at?: string
