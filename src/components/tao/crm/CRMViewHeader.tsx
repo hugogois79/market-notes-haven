@@ -2,7 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, UserPlus, Users, LayoutGrid } from "lucide-react";
+import { Search, Filter, UserPlus, Table, KanbanSquare } from "lucide-react";
 
 interface CRMViewHeaderProps {
   selectedView: "main" | "kanban";
@@ -26,16 +26,18 @@ const CRMViewHeader: React.FC<CRMViewHeaderProps> = ({
           variant={selectedView === "main" ? "default" : "outline"} 
           size="sm"
           onClick={() => setSelectedView("main")}
+          className="gap-2"
         >
-          <Users className="h-4 w-4 mr-2" />
+          <Table className="h-4 w-4" />
           Main Table
         </Button>
         <Button 
           variant={selectedView === "kanban" ? "default" : "outline"} 
           size="sm"
           onClick={() => setSelectedView("kanban")}
+          className="gap-2"
         >
-          <LayoutGrid className="h-4 w-4 mr-2" />
+          <KanbanSquare className="h-4 w-4" />
           Kanban
         </Button>
       </div>
@@ -49,12 +51,12 @@ const CRMViewHeader: React.FC<CRMViewHeaderProps> = ({
             onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
-        <Button variant="outline" size="sm">
-          <Filter className="h-4 w-4 mr-2" />
+        <Button variant="outline" size="sm" className="gap-2">
+          <Filter className="h-4 w-4" />
           Filter
         </Button>
-        <Button onClick={onAddValidator} size="sm">
-          <UserPlus className="h-4 w-4 mr-2" />
+        <Button onClick={onAddValidator} size="sm" className="gap-2">
+          <UserPlus className="h-4 w-4" />
           Add Validator
         </Button>
       </div>
