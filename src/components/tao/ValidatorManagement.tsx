@@ -1,9 +1,8 @@
-
 import React, { useState } from "react";
 import {
   createValidator,
   updateValidator,
-  updateValidatorStage, // Add this import
+  updateValidatorStage,
   createContactLog,
   createTaoNote,
   TaoValidator,
@@ -188,21 +187,30 @@ const ValidatorManagement: React.FC = () => {
   ) => {
     try {
       console.log(`Moving validator ${validator.name} to stage ${newStage}`);
-      // First try with the standard update method
-      const updated = await updateValidator(validator.id, { crm_stage: newStage });
+      
+      // Use optimistic UI update first
+      const optimisticResult = {...validator, crm_stage: newStage};
+      
+      // Try with the dedicated stage update function first
+      const updated = await updateValidatorStage(validator.id, newStage);
       
       if (updated) {
         toast.success(`Moved ${validator.name} to ${newStage}`);
         refetchValidators();
       } else {
-        // If the standard update fails, try with the dedicated stage update function
-        console.log("Standard update failed, trying dedicated stage update function");
-        const directUpdate = await updateValidatorStage(validator.id, newStage);
-        if (directUpdate) {
+        // If the dedicated function fails, try with the standard update method
+        console.log("Dedicated stage update failed, trying standard update function");
+        const fallbackUpdate = await updateValidator(validator.id, { crm_stage: newStage });
+        
+        if (fallbackUpdate) {
           toast.success(`Moved ${validator.name} to ${newStage}`);
           refetchValidators();
         } else {
           toast.error("Failed to update validator stage");
+          // Force a refresh to ensure UI is in sync with backend
+          setTimeout(() => {
+            refreshAllData();
+          }, 500);
         }
       }
     } catch (error) {
@@ -211,7 +219,7 @@ const ValidatorManagement: React.FC = () => {
       // Force a refresh to ensure UI is in sync with backend
       setTimeout(() => {
         refreshAllData();
-      }, 1000);
+      }, 500);
     }
   };
 
