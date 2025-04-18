@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { TaoValidator } from "./types";
 import { toast } from "sonner";
@@ -19,7 +20,8 @@ export const fetchValidators = async (): Promise<TaoValidator[]> => {
     return (data || []).map(validator => ({
       ...validator,
       crm_stage: validator.crm_stage as TaoValidator["crm_stage"],
-      priority: validator.priority as TaoValidator["priority"]
+      priority: validator.priority as TaoValidator["priority"],
+      organization_type: validator.organization_type || 'Validator' // Default to 'Validator' if not set
     }));
   } catch (error) {
     console.error('Error fetching validators:', error);
@@ -45,7 +47,8 @@ export const fetchValidatorById = async (id: string): Promise<TaoValidator | nul
     return data ? {
       ...data,
       crm_stage: data.crm_stage as TaoValidator["crm_stage"],
-      priority: data.priority as TaoValidator["priority"]
+      priority: data.priority as TaoValidator["priority"],
+      organization_type: data.organization_type || 'Validator' // Default to 'Validator' if not set
     } : null;
   } catch (error) {
     console.error('Error fetching validator:', error);
@@ -70,7 +73,8 @@ export const createValidator = async (validator: Omit<TaoValidator, 'id' | 'crea
     return data ? {
       ...data,
       crm_stage: data.crm_stage as TaoValidator["crm_stage"],
-      priority: data.priority as TaoValidator["priority"]
+      priority: data.priority as TaoValidator["priority"],
+      organization_type: data.organization_type || 'Validator' // Default to 'Validator' if not set
     } : null;
   } catch (error) {
     console.error('Error creating validator:', error);
@@ -117,7 +121,8 @@ export const updateValidator = async (id: string, updates: Partial<TaoValidator>
     return updatedData ? {
       ...updatedData,
       crm_stage: updatedData.crm_stage as TaoValidator["crm_stage"],
-      priority: updatedData.priority as TaoValidator["priority"]
+      priority: updatedData.priority as TaoValidator["priority"],
+      organization_type: updatedData.organization_type || 'Validator' // Default to 'Validator' if not set
     } : null;
   } catch (error) {
     console.error('Error updating validator:', error);

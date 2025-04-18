@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { organizationTypes } from "../tao/crm/crmUtils";
 
 interface ValidatorFormProps {
   validator?: TaoValidator;
@@ -43,6 +44,7 @@ const ValidatorForm: React.FC<ValidatorFormProps> = ({
           linkedin: validator.linkedin || "",
           crm_stage: validator.crm_stage,
           priority: validator.priority,
+          organization_type: validator.organization_type,
         }
       : {
           name: "",
@@ -52,6 +54,7 @@ const ValidatorForm: React.FC<ValidatorFormProps> = ({
           linkedin: "",
           crm_stage: "Prospect",
           priority: "Medium",
+          organization_type: "Validator",
         },
   });
 
@@ -69,8 +72,36 @@ const ValidatorForm: React.FC<ValidatorFormProps> = ({
             <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
-                <Input placeholder="Validator name" {...field} />
+                <Input placeholder="Organization name" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="organization_type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Organization Type</FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                defaultValue={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {organizationTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -196,7 +227,7 @@ const ValidatorForm: React.FC<ValidatorFormProps> = ({
             Cancel
           </Button>
           <Button type="submit">
-            {validator ? "Update Validator" : "Create Validator"}
+            {validator ? "Update Organization" : "Create Organization"}
           </Button>
         </div>
       </form>
