@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState } from "react";
 import ToolbarButton from "./ToolbarButton";
 import { Link, Image, Table, Text, SeparatorHorizontal, CheckSquare, List, ListOrdered } from "lucide-react";
 import ImageUploader from "../components/ImageUploader";
@@ -31,7 +30,7 @@ const InsertSection: React.FC<InsertSectionProps> = ({
   formatUnorderedList,
   formatOrderedList
 }) => {
-  const [imageDialogOpen, setImageDialogOpen] = React.useState(false);
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
   
   const handleInsertTable = () => {
     if (insertTable) {
