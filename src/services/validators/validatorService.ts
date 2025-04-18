@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { TaoValidator } from "./types";
 import { toast } from "sonner";
@@ -83,8 +82,8 @@ export const updateValidator = async (id: string, updates: Partial<TaoValidator>
   try {
     console.log(`Updating validator ${id} with:`, updates);
     
-    // Add a small delay to ensure database consistency
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Add a longer delay to ensure database consistency
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     const { error: updateError } = await supabase
       .from('tao_validators')
@@ -97,8 +96,8 @@ export const updateValidator = async (id: string, updates: Partial<TaoValidator>
       return null;
     }
 
-    // Add a small delay before fetching to ensure consistency
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Add a longer delay before fetching to ensure consistency
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     const { data: updatedData, error: fetchError } = await supabase
       .from('tao_validators')
@@ -131,44 +130,8 @@ export const updateValidatorStage = async (id: string, newStage: TaoValidator["c
   try {
     console.log(`updateValidatorStage called for ID ${id} with new stage ${newStage}`);
     
-    // Add a delay to ensure database consistency
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const { error: updateError } = await supabase
-      .from('tao_validators')
-      .update({ crm_stage: newStage })
-      .eq('id', id);
-
-    if (updateError) {
-      console.error(`Error moving validator to ${newStage} stage:`, updateError);
-      toast.error(`Failed to update stage: ${updateError.message}`);
-      return null;
-    }
-
-    // Add a small delay before fetching to ensure consistency
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const { data, error: fetchError } = await supabase
-      .from('tao_validators')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (fetchError) {
-      console.error(`Error fetching updated validator:`, fetchError);
-      toast.error(`Stage was updated but could not retrieve the updated data`);
-      // Return a partial object to indicate success
-      return { id, crm_stage: newStage } as TaoValidator;
-    }
-
-    console.log('Stage updated successfully:', data);
-    
-    // Cast the data to ensure it matches the TaoValidator type
-    return data ? {
-      ...data,
-      crm_stage: data.crm_stage as TaoValidator["crm_stage"],
-      priority: data.priority as TaoValidator["priority"]
-    } : null;
+    // Force a full update with explicit stage change
+    return await updateValidator(id, { crm_stage: newStage });
   } catch (error) {
     console.error('Error updating validator stage:', error);
     toast.error('An unexpected error occurred while updating the stage');

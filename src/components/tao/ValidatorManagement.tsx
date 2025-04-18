@@ -188,12 +188,20 @@ const ValidatorManagement: React.FC = () => {
     try {
       console.log(`Moving validator ${validator.name} from ${validator.crm_stage} to ${newStage}`);
       
+      // Show loading indicator
+      toast.loading(`Updating ${validator.name} to ${newStage} stage...`);
+      
       // First try with the dedicated stage update function
       const result = await updateValidatorStage(validator.id, newStage);
       
       if (result) {
         toast.success(`Moved ${validator.name} to ${newStage}`);
-        await refetchValidators(); // Make sure to await the refetch
+        
+        // Force a complete data refresh with delay to ensure database consistency
+        setTimeout(async () => {
+          await refreshAllData();
+          console.log("Data refreshed after stage update");
+        }, 1000);
       } else {
         // If the dedicated function fails, try with the standard update method
         console.log("Dedicated stage update failed, trying standard update function");
@@ -201,7 +209,12 @@ const ValidatorManagement: React.FC = () => {
         
         if (fallbackUpdate) {
           toast.success(`Moved ${validator.name} to ${newStage}`);
-          await refetchValidators(); // Make sure to await the refetch
+          
+          // Force a complete data refresh with delay
+          setTimeout(async () => {
+            await refreshAllData();
+            console.log("Data refreshed after fallback update");
+          }, 1000);
         } else {
           toast.error("Failed to update validator stage");
           // Force a refresh to ensure UI is in sync with backend

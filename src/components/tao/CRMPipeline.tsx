@@ -49,13 +49,20 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
     // Move the validator to the new stage
     if (destination.droppableId !== source.droppableId) {
       const newStage = destination.droppableId as TaoValidator["crm_stage"];
-      console.log(`Moving ${validator.name} from ${validator.crm_stage} to ${newStage} stage`);
+      const oldStage = validator.crm_stage;
+      
+      console.log(`Moving ${validator.name} from ${oldStage} to ${newStage} stage`);
       
       try {
-        // Call the onMoveStage handler with await to ensure it completes
+        // Show loading toast
+        const loadingToast = toast.loading(`Moving ${validator.name} to ${newStage}...`);
+        
+        // Call the onMoveStage handler and wait for it to complete
         await onMoveStage(validator, newStage);
         
-        // Toast is handled by the parent component
+        // Dismiss loading toast and show success
+        toast.dismiss(loadingToast);
+        toast.success(`Moved ${validator.name} to ${newStage} stage`);
       } catch (error) {
         console.error("Error moving validator:", error);
         toast.error(`Failed to move ${validator.name} to ${newStage}`);
