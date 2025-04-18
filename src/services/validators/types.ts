@@ -1,5 +1,6 @@
 
 import { TaoSubnet } from "../subnets/types";
+import { OrganizationType } from "@/components/tao/crm/crmUtils";
 
 export interface TaoValidator {
   id: string;
@@ -10,6 +11,7 @@ export interface TaoValidator {
   linkedin: string | null;
   crm_stage: 'Prospect' | 'Contacted' | 'Follow-up' | 'Negotiation' | 'Active' | 'Inactive';
   priority: 'High' | 'Medium' | 'Low';
+  organization_type: OrganizationType;
   created_at: string;
   updated_at: string;
 }

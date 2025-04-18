@@ -3,7 +3,7 @@ import React from "react";
 import { Droppable } from "react-beautiful-dnd";
 import { TaoValidator, TaoContactLog } from "@/services/taoValidatorService";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import KanbanCard from "./KanbanCard";
 
 interface KanbanColumnProps {
@@ -69,7 +69,8 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
               className="w-full mt-2 border border-dashed border-gray-300 hover:border-gray-400 text-muted-foreground h-10"
               onClick={onAddValidator}
             >
-              <Plus className="h-4 w-4 mr-1" /> Add Validator
+              <Users className="h-4 w-4 mr-1" />
+              Add Organization
             </Button>
           </div>
         )}

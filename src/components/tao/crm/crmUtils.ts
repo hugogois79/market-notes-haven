@@ -1,4 +1,3 @@
-
 import { TaoValidator } from "@/services/taoValidatorService";
 
 // Define the CRM stages in the order they should appear
@@ -62,3 +61,14 @@ export const groupValidatorsByStage = (
     return acc;
   }, {} as Record<TaoValidator["crm_stage"], TaoValidator[]>);
 };
+
+export type OrganizationType = 'Validator' | 'Subnet' | 'Venture Capital' | 'Investor' | 'Trader' | 'Other';
+
+export const organizationTypes: OrganizationType[] = [
+  'Validator',
+  'Subnet',
+  'Venture Capital',
+  'Investor',
+  'Trader',
+  'Other'
+];

@@ -2,7 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, UserPlus, Table, KanbanSquare } from "lucide-react";
+import { Search, Filter, Users, Table, KanbanSquare } from "lucide-react";
 
 interface CRMViewHeaderProps {
   selectedView: "main" | "kanban";
@@ -45,7 +45,7 @@ const CRMViewHeader: React.FC<CRMViewHeaderProps> = ({
         <div className="relative">
           <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-gray-500" />
           <Input
-            placeholder="Search validators, subnets..."
+            placeholder="Search organizations, subnets..."
             className="pl-9 w-[280px]"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -56,8 +56,8 @@ const CRMViewHeader: React.FC<CRMViewHeaderProps> = ({
           Filter
         </Button>
         <Button onClick={onAddValidator} size="sm" className="gap-2">
-          <UserPlus className="h-4 w-4" />
-          Add Validator
+          <Users className="h-4 w-4" />
+          Add Organization
         </Button>
       </div>
     </div>
