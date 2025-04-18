@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState } from "react";
 import { TaoValidator } from "@/services/taoValidatorService";
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import StageColumn from "./crm/StageColumn";
@@ -25,6 +24,14 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
   onMoveStage,
   onAddValidator,
 }) => {
+  // Keep track of validators for optimistic updates
+  const [localValidators, setLocalValidators] = useState<TaoValidator[]>(validators);
+
+  // Update local state when props change
+  React.useEffect(() => {
+    setLocalValidators(validators);
+  }, [validators]);
+
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
@@ -40,7 +47,7 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
     }
 
     // Find the validator that was dragged
-    const validator = validators.find(v => v.id === draggableId);
+    const validator = localValidators.find(v => v.id === draggableId);
     if (!validator) {
       console.error("Validator not found:", draggableId);
       return;
@@ -54,6 +61,12 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
       console.log(`Moving ${validator.name} from ${oldStage} to ${newStage} stage`);
       
       try {
+        // Update local state first for immediate UI feedback
+        const updatedValidators = localValidators.map(v => 
+          v.id === validator.id ? { ...v, crm_stage: newStage } : v
+        );
+        setLocalValidators(updatedValidators);
+        
         // Show loading toast
         const loadingToast = toast.loading(`Moving ${validator.name} to ${newStage}...`);
         
@@ -66,11 +79,14 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
       } catch (error) {
         console.error("Error moving validator:", error);
         toast.error(`Failed to move ${validator.name} to ${newStage}`);
+        
+        // Reset local state to match props on error
+        setLocalValidators(validators);
       }
     }
   };
 
-  const validatorsByStage = groupValidatorsByStage(validators);
+  const validatorsByStage = groupValidatorsByStage(localValidators);
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>

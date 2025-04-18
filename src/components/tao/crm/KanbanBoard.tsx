@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { TaoValidator, TaoContactLog, updateValidatorStage } from "@/services/taoValidatorService";
 import { Card } from "@/components/ui/card";
@@ -35,9 +35,17 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onAddNote,
   onRefreshData,
 }) => {
+  // Track local state for optimistic UI updates
+  const [localValidators, setLocalValidators] = useState<TaoValidator[]>([]);
+  
+  // Initialize local state from props
+  useEffect(() => {
+    setLocalValidators(validators);
+  }, [validators]);
+
   // Group validators by their CRM stage
   const validatorsByStage = crmStages.reduce<Record<string, TaoValidator[]>>((acc, stage) => {
-    acc[stage] = validators.filter(v => v.crm_stage === stage);
+    acc[stage] = localValidators.filter(v => v.crm_stage === stage);
     return acc;
   }, {} as Record<string, TaoValidator[]>);
 
@@ -63,8 +71,11 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
     // If moved to a different stage
     if (destination.droppableId !== source.droppableId) {
-      const validator = validators.find(v => v.id === draggableId);
-      if (!validator) return;
+      const validator = localValidators.find(v => v.id === draggableId);
+      if (!validator) {
+        console.error("Validator not found for ID:", draggableId);
+        return;
+      }
 
       const newStage = destination.droppableId as TaoValidator["crm_stage"];
       const oldStage = validator.crm_stage;
@@ -72,10 +83,16 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       try {
         console.log(`Moving validator ${validator.name} from ${oldStage} to ${newStage}`);
         
+        // Update local state first for optimistic UI update
+        const updatedValidators = localValidators.map(v => 
+          v.id === validator.id ? { ...v, crm_stage: newStage } : v
+        );
+        setLocalValidators(updatedValidators);
+        
         // Show loading toast
         const loadingToast = toast.loading(`Moving ${validator.name} to ${newStage}...`);
         
-        // First update the database
+        // Update the database
         const result = await updateValidatorStage(validator.id, newStage);
         
         if (result) {
@@ -83,8 +100,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
           toast.dismiss(loadingToast);
           toast.success(`Moved ${validator.name} to ${newStage} stage`);
           
-          // Force a complete refresh to synchronize UI with database
-          // Use a longer timeout to ensure the database has settled
+          // Force a complete refresh after a delay
           setTimeout(() => {
             console.log("Refreshing data after stage update");
             onRefreshData();
@@ -93,12 +109,18 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
           toast.dismiss(loadingToast);
           toast.error("Failed to update validator stage");
           
+          // Reset local state on failure
+          setLocalValidators(validators);
+          
           // Force refresh to show correct data
           onRefreshData();
         }
       } catch (error) {
         console.error("Error moving validator:", error);
         toast.error("An error occurred while moving the validator");
+        
+        // Reset local state on error
+        setLocalValidators(validators);
         onRefreshData();
       }
     }
@@ -133,7 +155,12 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     const recentContacts = getRecentContactLogs(validator.id);
                     
                     return (
-                      <Draggable key={validator.id} draggableId={validator.id} index={index}>
+                      <Draggable 
+                        key={validator.id} 
+                        draggableId={validator.id} 
+                        index={index}
+                        isDragDisabled={false}
+                      >
                         {(provided, snapshot) => (
                           <div
                             ref={provided.innerRef}
