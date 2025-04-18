@@ -36,14 +36,14 @@ const ValidatorCard: React.FC<ValidatorCardProps> = ({
   getPriorityColor,
 }) => {
   return (
-    <Draggable draggableId={validator.id} index={index}>
+    <Draggable draggableId={validator.id} index={index} key={validator.id}>
       {(provided, snapshot) => (
         <div
           ref={provided.innerRef}
           {...provided.draggableProps}
           className={`${snapshot.isDragging ? 'opacity-75 z-50' : ''}`}
         >
-          <Card className={`shadow-sm transition-all ${snapshot.isDragging ? 'ring-2 ring-primary' : ''}`}>
+          <Card className={`shadow-sm transition-all mb-2 ${snapshot.isDragging ? 'ring-2 ring-primary' : ''}`}>
             <CardHeader className="p-3 flex flex-row items-center">
               <div {...provided.dragHandleProps} className="mr-2 cursor-grab active:cursor-grabbing">
                 <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground" />

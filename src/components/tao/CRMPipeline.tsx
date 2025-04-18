@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TaoValidator, updateValidatorStage } from "@/services/taoValidatorService";
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import StageColumn from "./crm/StageColumn";
@@ -26,8 +26,13 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
   onAddValidator,
 }) => {
   // Group validators by CRM stage
-  const validatorsByStage = groupValidatorsByStage(validators);
+  const [validatorsByStage, setValidatorsByStage] = useState<Record<string, TaoValidator[]>>({});
   const [isDragging, setIsDragging] = useState(false);
+
+  // Update validatorsByStage when validators prop changes
+  useEffect(() => {
+    setValidatorsByStage(groupValidatorsByStage(validators));
+  }, [validators]);
 
   // Handle drag end event
   const handleDragEnd = async (result: DropResult) => {

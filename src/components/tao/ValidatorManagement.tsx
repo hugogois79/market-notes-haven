@@ -188,22 +188,30 @@ const ValidatorManagement: React.FC = () => {
   ) => {
     try {
       console.log(`Moving validator ${validator.name} to stage ${newStage}`);
+      // First try with the standard update method
       const updated = await updateValidator(validator.id, { crm_stage: newStage });
       
       if (updated) {
         toast.success(`Moved ${validator.name} to ${newStage}`);
         refetchValidators();
       } else {
-        toast.error("Failed to update validator stage");
+        // If the standard update fails, try with the dedicated stage update function
+        console.log("Standard update failed, trying dedicated stage update function");
         const directUpdate = await updateValidatorStage(validator.id, newStage);
         if (directUpdate) {
           toast.success(`Moved ${validator.name} to ${newStage}`);
           refetchValidators();
+        } else {
+          toast.error("Failed to update validator stage");
         }
       }
     } catch (error) {
       console.error("Error updating validator stage:", error);
       toast.error("An error occurred while updating the validator stage");
+      // Force a refresh to ensure UI is in sync with backend
+      setTimeout(() => {
+        refreshAllData();
+      }, 1000);
     }
   };
 
