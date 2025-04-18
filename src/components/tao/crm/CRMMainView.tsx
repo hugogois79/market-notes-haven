@@ -21,6 +21,7 @@ interface CRMMainViewProps {
   onViewContactLog: (log: TaoContactLog) => void;
   onRefreshData: () => void;
   onAddValidator: () => void;
+  onViewSubnet?: (subnet: TaoSubnet) => void;
 }
 
 const CRMMainView: React.FC<CRMMainViewProps> = ({
@@ -39,6 +40,7 @@ const CRMMainView: React.FC<CRMMainViewProps> = ({
   onViewContactLog,
   onRefreshData,
   onAddValidator,
+  onViewSubnet,
 }) => {
   return (
     <div className="space-y-6">
@@ -65,6 +67,7 @@ const CRMMainView: React.FC<CRMMainViewProps> = ({
           validatorNames={validatorNames}
           validators={validators}
           onAddNote={onAddNote}
+          onViewSubnet={onViewSubnet}
         />
       </Accordion>
     </div>

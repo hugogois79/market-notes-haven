@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   AccordionItem,
@@ -23,6 +24,7 @@ interface SubnetsTableSectionProps {
   validatorNames: Record<string, string>;
   validators: TaoValidator[];
   onAddNote: (validator?: TaoValidator, subnet?: TaoSubnet) => void;
+  onViewSubnet?: (subnet: TaoSubnet) => void;
 }
 
 const SubnetsTableSection: React.FC<SubnetsTableSectionProps> = ({
@@ -30,6 +32,7 @@ const SubnetsTableSection: React.FC<SubnetsTableSectionProps> = ({
   validatorsBySubnet,
   validatorNames,
   onAddNote,
+  onViewSubnet,
 }) => {
   return (
     <AccordionItem value="subnets" className="border-b-0">
@@ -114,10 +117,12 @@ const SubnetsTableSection: React.FC<SubnetsTableSectionProps> = ({
                                   <FileText className="h-4 w-4 mr-2" />
                                   Add Note
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <ExternalLink className="h-4 w-4 mr-2" />
-                                  View Details
-                                </DropdownMenuItem>
+                                {onViewSubnet && (
+                                  <DropdownMenuItem onClick={() => onViewSubnet(subnet)}>
+                                    <ExternalLink className="h-4 w-4 mr-2" />
+                                    View Details
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>

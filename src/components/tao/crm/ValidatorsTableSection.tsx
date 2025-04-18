@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   AccordionItem,
@@ -9,7 +10,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { Users, Plus, Mail, MessageCircle, FileText, Edit, Clock, Trash2, MoreHorizontal } from "lucide-react";
+import { Users, Plus, Mail, MessageCircle, FileText, Edit, Clock, Trash2, MoreHorizontal, Phone } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,8 +18,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { TaoValidator, TaoContactLog, TaoNote } from "@/services/taoValidatorService";
-import { deleteValidator, updateValidatorStage, updateValidatorPriority } from "@/services/taoValidatorService";
+import { TaoValidator, TaoContactLog, TaoNote, deleteValidator, updateValidatorStage, updateValidator } from "@/services/taoValidatorService";
 import { toast } from "sonner";
 import { getStageColor, getPriorityColor } from "./crmUtils";
 
@@ -93,7 +93,7 @@ const ValidatorsTableSection: React.FC<ValidatorsTableSectionProps> = ({
 
   const handleUpdateValidatorPriority = async (validator: TaoValidator, newPriority: TaoValidator["priority"]) => {
     try {
-      const result = await updateValidatorPriority(validator.id, { priority: newPriority });
+      const result = await updateValidator(validator.id, { priority: newPriority });
       if (result) {
         toast.success(`Updated ${validator.name} to "${newPriority}" priority`);
         onRefreshData();

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { TaoValidator, TaoSubnet, TaoContactLog, TaoNote } from "@/services/taoValidatorService";
 import CRMViewHeader from "./crm/CRMViewHeader";
@@ -240,6 +241,7 @@ const MondayCRMView: React.FC<MondayCRMViewProps> = ({
           onViewContactLog={onViewContactLog}
           onRefreshData={onRefreshData}
           onAddValidator={onAddValidator}
+          onViewSubnet={onViewSubnet}
         />
       ) : (
         renderKanbanView()
