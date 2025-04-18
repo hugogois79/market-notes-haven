@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast as uiToast } from "@/components/ui/use-toast";
 // Import the correct toast from sonner which has the error method
@@ -159,35 +158,27 @@ export const updateValidator = async (id: string, updates: Partial<TaoValidator>
   }
 };
 
-// Move a validator to a different CRM stage
+// Move a validator to a different CRM stage - This is a dedicated function for stage updates
 export const updateValidatorStage = async (id: string, newStage: TaoValidator["crm_stage"]): Promise<TaoValidator | null> => {
   try {
-    // Update the validator's stage
-    const { error: updateError } = await supabase
+    console.log(`updateValidatorStage called for ID ${id} with new stage ${newStage}`);
+    
+    // Update the validator's stage directly
+    const { data, error } = await supabase
       .from('tao_validators')
       .update({ crm_stage: newStage })
-      .eq('id', id);
-
-    if (updateError) {
-      console.error(`Error moving validator to ${newStage} stage:`, updateError);
-      toast.error(`Failed to update stage: ${updateError.message}`);
-      return null;
-    }
-
-    // Fetch the updated validator
-    const { data: updatedValidator, error: fetchError } = await supabase
-      .from('tao_validators')
-      .select('*')
       .eq('id', id)
+      .select()
       .single();
 
-    if (fetchError) {
-      console.error('Error fetching updated validator:', fetchError);
-      toast.error('Stage was updated but could not retrieve the updated data');
+    if (error) {
+      console.error(`Error moving validator to ${newStage} stage:`, error);
+      toast.error(`Failed to update stage: ${error.message}`);
       return null;
     }
 
-    return updatedValidator as TaoValidator;
+    console.log('Stage updated successfully:', data);
+    return data as TaoValidator;
   } catch (error) {
     console.error('Error updating validator stage:', error);
     toast.error('An unexpected error occurred while updating the stage');
