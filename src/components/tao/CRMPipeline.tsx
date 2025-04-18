@@ -66,19 +66,30 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
       console.log(`Moving ${validator.name} from ${source.droppableId} to ${newStage}`);
       
       try {
-        // Call the service function to update the stage
-        const updatedValidator = await updateValidatorStage(validator.id, newStage);
+        // Optimistically update the UI first
+        const updatedValidatorsByStage = {...validatorsByStage};
         
-        if (updatedValidator) {
-          toast.success(`Moved ${validator.name} to ${newStage}`);
-          // Call the parent handler to refresh data
-          onMoveStage({...validator, crm_stage: newStage}, newStage);
-        } else {
-          toast.error(`Failed to move ${validator.name} to ${newStage}`);
+        // Remove from source stage
+        updatedValidatorsByStage[source.droppableId] = updatedValidatorsByStage[source.droppableId]
+          .filter(v => v.id !== validator.id);
+        
+        // Add to destination stage
+        const updatedValidator = {...validator, crm_stage: newStage};
+        if (!updatedValidatorsByStage[newStage]) {
+          updatedValidatorsByStage[newStage] = [];
         }
+        updatedValidatorsByStage[newStage].push(updatedValidator);
+        
+        // Update the state
+        setValidatorsByStage(updatedValidatorsByStage);
+        
+        // Call the parent handler to persist the change
+        onMoveStage(validator, newStage);
       } catch (error) {
         console.error("Error during drag and drop stage change:", error);
         toast.error("An error occurred while updating the stage");
+        // Revert to original state on error by re-grouping the validators
+        setValidatorsByStage(groupValidatorsByStage(validators));
       }
     } else {
       console.log(`Reordering within the same column: ${source.droppableId}`);

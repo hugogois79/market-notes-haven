@@ -47,7 +47,7 @@ const StageColumn: React.FC<StageColumnProps> = ({
               snapshot.isDraggingOver 
                 ? 'bg-gray-100 dark:bg-gray-700/50 border-2 border-primary/50' 
                 : 'bg-gray-50 dark:bg-gray-800/50'
-            } ${isDragging ? 'border-2 border-dashed border-gray-300' : ''}`}
+            } ${isDragging && !snapshot.isDraggingOver ? 'border-2 border-dashed border-gray-300' : ''}`}
           >
             <div className="space-y-2">
               {validators.map((validator, index) => (
