@@ -1,4 +1,3 @@
-
 import { Note } from "@/types";
 import { formatDate } from "./formatUtils";
 import { getPrintStyles } from "./printStyles";
@@ -25,7 +24,8 @@ export const generatePrintHtml = (note: Note): string => {
   
   // Check if this is a vacation note
   const isVacationNote = note.category === 'Vacations' || note.category === 'Vacation';
-  
+  const vacationBodyClass = isVacationNote ? 'vacation-print' : '';
+
   // Extract conclusion if it exists
   let conclusionHtml = '';
   let contentWithoutConclusion = processedContent;
@@ -128,9 +128,6 @@ export const generatePrintHtml = (note: Note): string => {
   
   // Get print styles
   const printStyles = getPrintStyles();
-  
-  // Additional styles for vacation notes
-  const vacationBodyClass = isVacationNote ? 'vacation-print' : '';
   
   // Create the complete HTML document for printing with wrapper class for justified content
   return `
