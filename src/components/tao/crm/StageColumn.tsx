@@ -15,7 +15,6 @@ interface StageColumnProps {
   onView: (validator: TaoValidator) => void;
   onMoveStage: (validator: TaoValidator, newStage: TaoValidator["crm_stage"]) => void;
   onAddValidator?: () => void;
-  isDragging?: boolean;
 }
 
 const StageColumn: React.FC<StageColumnProps> = ({
@@ -27,7 +26,6 @@ const StageColumn: React.FC<StageColumnProps> = ({
   onView,
   onMoveStage,
   onAddValidator,
-  isDragging = false,
 }) => {
   return (
     <div className="flex flex-col h-full">
@@ -43,43 +41,38 @@ const StageColumn: React.FC<StageColumnProps> = ({
           <div 
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`flex-1 rounded-b-md p-2 min-h-[calc(100vh-320px)] transition-colors duration-200 ${
+            className={`flex-1 rounded-b-md p-2 min-h-[calc(100vh-320px)] space-y-2 ${
               snapshot.isDraggingOver 
-                ? 'bg-gray-100 dark:bg-gray-700/50 border-2 border-primary/50' 
+                ? 'bg-gray-100 dark:bg-gray-700/50' 
                 : 'bg-gray-50 dark:bg-gray-800/50'
-            } ${isDragging && !snapshot.isDraggingOver ? 'border-2 border-dashed border-gray-300' : ''}`}
+            }`}
           >
-            <div className="space-y-2">
-              {validators.map((validator, index) => (
-                <ValidatorCard
-                  key={validator.id}
-                  validator={validator}
-                  index={index}
-                  onView={onView}
-                  onMoveStage={onMoveStage}
-                  getAvailableStages={getAvailableStages}
-                  getPriorityColor={getPriorityColor}
-                />
-              ))}
-              {provided.placeholder}
+            {validators.map((validator, index) => (
+              <ValidatorCard
+                key={validator.id}
+                validator={validator}
+                index={index}
+                onView={onView}
+                onMoveStage={onMoveStage}
+                getAvailableStages={getAvailableStages}
+                getPriorityColor={getPriorityColor}
+              />
+            ))}
+            {provided.placeholder}
 
-              {validators.length === 0 && (
-                <div className="text-center text-muted-foreground text-sm py-4">
-                  No validators
-                </div>
-              )}
-
-              <div className="mt-2">
-                <Button 
-                  variant="ghost" 
-                  className="w-full border border-dashed border-gray-300 hover:border-gray-400 text-muted-foreground"
-                  size="sm"
-                  onClick={onAddValidator}
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Add Validator
-                </Button>
+            {validators.length === 0 && (
+              <div className="text-center text-muted-foreground text-sm py-4">
+                No validators
               </div>
-            </div>
+            )}
+
+            <Button 
+              variant="ghost" 
+              className="w-full border border-dashed border-gray-300 hover:border-gray-400 text-muted-foreground"
+              onClick={onAddValidator}
+            >
+              <Plus className="h-4 w-4 mr-1" /> Add Validator
+            </Button>
           </div>
         )}
       </Droppable>

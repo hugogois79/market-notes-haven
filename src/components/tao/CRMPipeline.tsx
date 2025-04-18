@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { TaoValidator, updateValidatorStage } from "@/services/taoValidatorService";
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import StageColumn from "./crm/StageColumn";
@@ -25,102 +25,53 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
   onMoveStage,
   onAddValidator,
 }) => {
-  // Group validators by CRM stage
-  const [validatorsByStage, setValidatorsByStage] = useState<Record<string, TaoValidator[]>>({});
-  const [isDragging, setIsDragging] = useState(false);
-
-  // Update validatorsByStage when validators prop changes
-  useEffect(() => {
-    setValidatorsByStage(groupValidatorsByStage(validators));
-  }, [validators]);
-
-  // Handle drag end event
   const handleDragEnd = async (result: DropResult) => {
-    setIsDragging(false);
     const { destination, source, draggableId } = result;
 
-    // If there's no destination, the item was dropped outside droppable areas
-    if (!destination) {
-      console.log("No destination - dropped outside droppable area");
-      return;
-    }
-    
-    // If the item was dropped back to its original position
-    if (destination.droppableId === source.droppableId && 
-        destination.index === source.index) {
-      console.log("Dropped in same position - no changes");
+    // Return if dropped outside any droppable
+    if (!destination) return;
+
+    // Return if dropped in the same position
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
       return;
     }
 
     // Find the validator that was dragged
     const validator = validators.find(v => v.id === draggableId);
     if (!validator) {
-      console.error("Validator not found with ID:", draggableId);
-      toast.error("Error: Validator not found");
+      console.error("Validator not found:", draggableId);
       return;
     }
 
     // Move the validator to the new stage
     if (destination.droppableId !== source.droppableId) {
       const newStage = destination.droppableId as TaoValidator["crm_stage"];
-      console.log(`Moving ${validator.name} from ${source.droppableId} to ${newStage}`);
-      
-      try {
-        // Optimistically update the UI first
-        const updatedValidatorsByStage = {...validatorsByStage};
-        
-        // Remove from source stage
-        updatedValidatorsByStage[source.droppableId] = updatedValidatorsByStage[source.droppableId]
-          .filter(v => v.id !== validator.id);
-        
-        // Add to destination stage
-        const updatedValidator = {...validator, crm_stage: newStage};
-        if (!updatedValidatorsByStage[newStage]) {
-          updatedValidatorsByStage[newStage] = [];
-        }
-        updatedValidatorsByStage[newStage].push(updatedValidator);
-        
-        // Update the state
-        setValidatorsByStage(updatedValidatorsByStage);
-        
-        // Call the parent handler to persist the change
-        onMoveStage(validator, newStage);
-      } catch (error) {
-        console.error("Error during drag and drop stage change:", error);
-        toast.error("An error occurred while updating the stage");
-        // Revert to original state on error by re-grouping the validators
-        setValidatorsByStage(groupValidatorsByStage(validators));
-      }
-    } else {
-      console.log(`Reordering within the same column: ${source.droppableId}`);
-      // Note: If you want to implement ordering within columns, you would handle that here
+      console.log(`Moving ${validator.name} to ${newStage} stage`);
+      onMoveStage(validator, newStage);
     }
   };
 
-  const handleDragStart = () => {
-    console.log("Drag started");
-    setIsDragging(true);
-  };
+  const validatorsByStage = groupValidatorsByStage(validators);
 
   return (
-    <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
-      <div className="overflow-x-auto pb-4">
-        <div className="grid grid-cols-6 gap-4" style={{ minWidth: "1200px" }}>
-          {crmStages.map((stage) => (
-            <StageColumn
-              key={stage}
-              stage={stage}
-              validators={validatorsByStage[stage] || []}
-              getStageColor={getStageColor}
-              getPriorityColor={getPriorityColor}
-              getAvailableStages={getAvailableStages}
-              onView={onView}
-              onMoveStage={onMoveStage}
-              onAddValidator={onAddValidator}
-              isDragging={isDragging}
-            />
-          ))}
-        </div>
+    <DragDropContext onDragEnd={handleDragEnd}>
+      <div className="grid grid-cols-6 gap-4 min-w-[1200px]">
+        {crmStages.map((stage) => (
+          <StageColumn
+            key={stage}
+            stage={stage}
+            validators={validatorsByStage[stage] || []}
+            getStageColor={getStageColor}
+            getPriorityColor={getPriorityColor}
+            getAvailableStages={getAvailableStages}
+            onView={onView}
+            onMoveStage={onMoveStage}
+            onAddValidator={onAddValidator}
+          />
+        ))}
       </div>
     </DragDropContext>
   );
