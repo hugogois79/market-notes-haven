@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast as uiToast } from "@/components/ui/use-toast";
 // Import the correct toast from sonner which has the error method
@@ -163,18 +164,30 @@ export const updateValidatorStage = async (id: string, newStage: TaoValidator["c
   try {
     console.log(`updateValidatorStage called for ID ${id} with new stage ${newStage}`);
     
-    // Update the validator's stage directly
-    const { data, error } = await supabase
+    // First perform the update
+    const { error: updateError } = await supabase
       .from('tao_validators')
       .update({ crm_stage: newStage })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error(`Error moving validator to ${newStage} stage:`, updateError);
+      toast.error(`Failed to update stage: ${updateError.message}`);
+      return null;
+    }
+
+    // Then fetch the updated validator to return
+    const { data, error: fetchError } = await supabase
+      .from('tao_validators')
+      .select('*')
       .eq('id', id)
-      .select()
       .single();
 
-    if (error) {
-      console.error(`Error moving validator to ${newStage} stage:`, error);
-      toast.error(`Failed to update stage: ${error.message}`);
-      return null;
+    if (fetchError) {
+      console.error(`Error fetching updated validator:`, fetchError);
+      toast.error(`Stage was updated but could not retrieve the updated data`);
+      // Even if we can't fetch, the update was successful
+      return { id, crm_stage: newStage } as TaoValidator;
     }
 
     console.log('Stage updated successfully:', data);

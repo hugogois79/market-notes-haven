@@ -61,7 +61,7 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
       console.log(`Moving ${validator.name} from ${source.droppableId} to ${newStage}`);
       
       try {
-        // Call the direct service function for more reliability
+        // Call the service function to update the stage
         const updatedValidator = await updateValidatorStage(validator.id, newStage);
         
         if (updatedValidator) {
