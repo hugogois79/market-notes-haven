@@ -67,8 +67,11 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       if (!validator) return;
 
       const newStage = destination.droppableId as TaoValidator["crm_stage"];
+      const oldStage = validator.crm_stage;
       
       try {
+        console.log(`Moving validator ${validator.name} from ${oldStage} to ${newStage}`);
+        
         // First update the UI optimistically
         const updatedValidators = validators.map(v => 
           v.id === draggableId ? { ...v, crm_stage: newStage } : v
@@ -79,7 +82,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
         
         if (result) {
           toast.success(`Moved ${validator.name} to ${newStage} stage`);
-          onRefreshData();
+          setTimeout(() => onRefreshData(), 300); // Refresh after a short delay to allow the database to update
         } else {
           toast.error("Failed to update validator stage");
           // Force refresh to show correct data

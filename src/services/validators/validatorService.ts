@@ -81,6 +81,8 @@ export const createValidator = async (validator: Omit<TaoValidator, 'id' | 'crea
 
 export const updateValidator = async (id: string, updates: Partial<TaoValidator>): Promise<TaoValidator | null> => {
   try {
+    console.log(`Updating validator ${id} with:`, updates);
+    
     const { error: updateError } = await supabase
       .from('tao_validators')
       .update(updates)
@@ -104,6 +106,8 @@ export const updateValidator = async (id: string, updates: Partial<TaoValidator>
       return null;
     }
 
+    console.log('Validator updated successfully:', updatedData);
+    
     // Cast the data to ensure it matches the TaoValidator type
     return updatedData ? {
       ...updatedData,
@@ -121,6 +125,9 @@ export const updateValidatorStage = async (id: string, newStage: TaoValidator["c
   try {
     console.log(`updateValidatorStage called for ID ${id} with new stage ${newStage}`);
     
+    // Add a delay to ensure database consistency
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     const { error: updateError } = await supabase
       .from('tao_validators')
       .update({ crm_stage: newStage })
@@ -132,6 +139,9 @@ export const updateValidatorStage = async (id: string, newStage: TaoValidator["c
       return null;
     }
 
+    // Add a small delay before fetching to ensure consistency
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     const { data, error: fetchError } = await supabase
       .from('tao_validators')
       .select('*')
@@ -145,6 +155,7 @@ export const updateValidatorStage = async (id: string, newStage: TaoValidator["c
     }
 
     console.log('Stage updated successfully:', data);
+    
     // Cast the data to ensure it matches the TaoValidator type
     return data ? {
       ...data,

@@ -186,17 +186,14 @@ const ValidatorManagement: React.FC = () => {
     newStage: TaoValidator["crm_stage"]
   ) => {
     try {
-      console.log(`Moving validator ${validator.name} to stage ${newStage}`);
+      console.log(`Moving validator ${validator.name} from ${validator.crm_stage} to ${newStage}`);
       
-      // Use optimistic UI update first
-      const optimisticResult = {...validator, crm_stage: newStage};
+      // First try with the dedicated stage update function
+      const result = await updateValidatorStage(validator.id, newStage);
       
-      // Try with the dedicated stage update function first
-      const updated = await updateValidatorStage(validator.id, newStage);
-      
-      if (updated) {
+      if (result) {
         toast.success(`Moved ${validator.name} to ${newStage}`);
-        refetchValidators();
+        await refetchValidators(); // Make sure to await the refetch
       } else {
         // If the dedicated function fails, try with the standard update method
         console.log("Dedicated stage update failed, trying standard update function");
@@ -204,22 +201,18 @@ const ValidatorManagement: React.FC = () => {
         
         if (fallbackUpdate) {
           toast.success(`Moved ${validator.name} to ${newStage}`);
-          refetchValidators();
+          await refetchValidators(); // Make sure to await the refetch
         } else {
           toast.error("Failed to update validator stage");
           // Force a refresh to ensure UI is in sync with backend
-          setTimeout(() => {
-            refreshAllData();
-          }, 500);
+          await refreshAllData();
         }
       }
     } catch (error) {
       console.error("Error updating validator stage:", error);
       toast.error("An error occurred while updating the validator stage");
       // Force a refresh to ensure UI is in sync with backend
-      setTimeout(() => {
-        refreshAllData();
-      }, 500);
+      await refreshAllData();
     }
   };
 
