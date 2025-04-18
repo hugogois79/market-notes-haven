@@ -15,19 +15,19 @@ export const crmStages: TaoValidator["crm_stage"][] = [
 export const getStageColor = (stage: TaoValidator["crm_stage"]): string => {
   switch (stage) {
     case "Prospect":
-      return "bg-blue-500";
+      return "bg-blue-500 text-white";
     case "Contacted":
-      return "bg-purple-500";
+      return "bg-purple-500 text-white";
     case "Follow-up":
-      return "bg-yellow-500";
+      return "bg-yellow-500 text-white";
     case "Negotiation":
-      return "bg-orange-500";
+      return "bg-orange-500 text-white";
     case "Active":
-      return "bg-green-500";
+      return "bg-green-500 text-white";
     case "Inactive":
-      return "bg-gray-500";
+      return "bg-gray-500 text-white";
     default:
-      return "bg-gray-400";
+      return "bg-gray-400 text-white";
   }
 };
 

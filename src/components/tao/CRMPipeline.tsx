@@ -52,10 +52,10 @@ const CRMPipeline: React.FC<CRMPipelineProps> = ({
       console.log(`Moving ${validator.name} from ${validator.crm_stage} to ${newStage} stage`);
       
       try {
-        // Call the onMoveStage handler (which should update the database)
+        // Call the onMoveStage handler with await to ensure it completes
         await onMoveStage(validator, newStage);
         
-        // Toast is now handled in the parent component after successful update
+        // Toast is handled by the parent component
       } catch (error) {
         console.error("Error moving validator:", error);
         toast.error(`Failed to move ${validator.name} to ${newStage}`);

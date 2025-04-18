@@ -83,6 +83,9 @@ export const updateValidator = async (id: string, updates: Partial<TaoValidator>
   try {
     console.log(`Updating validator ${id} with:`, updates);
     
+    // Add a small delay to ensure database consistency
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     const { error: updateError } = await supabase
       .from('tao_validators')
       .update(updates)
@@ -94,6 +97,9 @@ export const updateValidator = async (id: string, updates: Partial<TaoValidator>
       return null;
     }
 
+    // Add a small delay before fetching to ensure consistency
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     const { data: updatedData, error: fetchError } = await supabase
       .from('tao_validators')
       .select('*')
@@ -126,7 +132,7 @@ export const updateValidatorStage = async (id: string, newStage: TaoValidator["c
     console.log(`updateValidatorStage called for ID ${id} with new stage ${newStage}`);
     
     // Add a delay to ensure database consistency
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     const { error: updateError } = await supabase
       .from('tao_validators')
@@ -140,7 +146,7 @@ export const updateValidatorStage = async (id: string, newStage: TaoValidator["c
     }
 
     // Add a small delay before fetching to ensure consistency
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     const { data, error: fetchError } = await supabase
       .from('tao_validators')
@@ -151,6 +157,7 @@ export const updateValidatorStage = async (id: string, newStage: TaoValidator["c
     if (fetchError) {
       console.error(`Error fetching updated validator:`, fetchError);
       toast.error(`Stage was updated but could not retrieve the updated data`);
+      // Return a partial object to indicate success
       return { id, crm_stage: newStage } as TaoValidator;
     }
 

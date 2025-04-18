@@ -72,17 +72,21 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       try {
         console.log(`Moving validator ${validator.name} from ${oldStage} to ${newStage}`);
         
+        // Show loading toast
+        toast.loading(`Moving ${validator.name} to ${newStage}...`);
+        
         // First update the UI optimistically
         const updatedValidators = validators.map(v => 
           v.id === draggableId ? { ...v, crm_stage: newStage } : v
         );
         
-        // Then make the API call
+        // Then make the API call with longer timeouts
         const result = await updateValidatorStage(validator.id, newStage);
         
         if (result) {
           toast.success(`Moved ${validator.name} to ${newStage} stage`);
-          setTimeout(() => onRefreshData(), 300); // Refresh after a short delay to allow the database to update
+          // Refresh after a short delay to allow the database to update fully
+          setTimeout(() => onRefreshData(), 500);
         } else {
           toast.error("Failed to update validator stage");
           // Force refresh to show correct data
