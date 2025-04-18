@@ -25,6 +25,20 @@ export const getPrintMediaStyles = (): string => {
         font-weight: normal;
       }
       
+      /* Vacation-specific print styles with reduced font sizes */
+      body.vacation-print {
+        font-size: 9pt !important;  // Slightly larger than normal, but smaller than previous version
+      }
+      
+      .vacation-print .print-content {
+        font-size: 9pt !important;  // Reduced from previous 10pt
+      }
+      
+      .vacation-print .print-content p {
+        font-size: 9pt !important;  // Reduced from previous 10pt
+        margin-bottom: 0.2rem !important;
+      }
+      
       /* Reset font weight for all elements by default */
       *, body, div, p, span, td, th, li, ul, ol {
         font-weight: normal;
@@ -241,7 +255,7 @@ export const getPrintMediaStyles = (): string => {
       
       /* Vacation-specific print styles */
       body.vacation-print {
-        font-size: 10pt !important;
+        font-size: 9pt !important;  // Slightly larger than normal, but smaller than previous version
       }
       
       .vacation-print .print-title {
@@ -266,11 +280,11 @@ export const getPrintMediaStyles = (): string => {
       }
       
       .vacation-print .print-content {
-        font-size: 10pt !important;
+        font-size: 9pt !important;  // Reduced from previous 10pt
       }
       
       .vacation-print .print-content p {
-        font-size: 10pt !important;
+        font-size: 9pt !important;  // Reduced from previous 10pt
         text-align: center !important;
         margin-bottom: 0.2rem !important;
       }
