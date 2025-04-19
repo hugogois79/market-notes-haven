@@ -12,17 +12,33 @@ import TemplateManagement from "./components/TemplateManagement";
 const FollowUpSequencesPage = () => {
   const [activeTab, setActiveTab] = useState("builder");
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
   };
 
+  const handleRefresh = () => {
+    setIsLoading(true);
+    // Simulate refresh
+    setTimeout(() => setIsLoading(false), 1000);
+  };
+
   return (
     <div className="container mx-auto py-6 max-w-7xl">
       <TaoPageHeader 
-        title="Follow-Up Sequences" 
-        subtitle="Build and manage automated communication sequences for blockchain stakeholders"
+        timestamp={new Date().toISOString()}
+        isLoading={isLoading}
+        onRefresh={handleRefresh}
+        isMockData={false}
       />
+      
+      <div className="mt-4">
+        <h1 className="text-2xl font-bold">Follow-Up Sequences</h1>
+        <p className="text-muted-foreground">
+          Build and manage automated communication sequences for blockchain stakeholders
+        </p>
+      </div>
 
       <TaoNavigation activeTab="follow-up-sequences" onTabChange={() => {}} />
 
