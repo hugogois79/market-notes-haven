@@ -10,7 +10,8 @@ import {
   Database,
   Activity,
   Users,
-  TrendingUp
+  TrendingUp,
+  MessageSquare
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -32,6 +33,8 @@ const TaoNavigation: React.FC<TaoNavigationProps> = ({ activeTab, onTabChange })
       navigate('/tao/validator-relationship-management');
     } else if (value === 'investor-opportunities') {
       navigate('/tao/investor-opportunities');
+    } else if (value === 'follow-up-sequences') {
+      navigate('/tao/follow-up-sequences');
     } else if (value === 'overview') {
       navigate('/tao');
     } else {
@@ -77,6 +80,10 @@ const TaoNavigation: React.FC<TaoNavigationProps> = ({ activeTab, onTabChange })
         <TabsTrigger value="investor-opportunities" className="py-3" onClick={() => handleTabChange('investor-opportunities')}>
           <TrendingUp className="mr-2 h-4 w-4" />
           Investor Opportunities
+        </TabsTrigger>
+        <TabsTrigger value="follow-up-sequences" className="py-3" onClick={() => handleTabChange('follow-up-sequences')}>
+          <MessageSquare className="mr-2 h-4 w-4" />
+          Follow-Up Sequences
         </TabsTrigger>
       </TabsList>
     </div>

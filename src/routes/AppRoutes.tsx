@@ -26,6 +26,7 @@ import TAODashboard from "@/pages/tao/index";
 import TAOPerformance from "@/pages/tao/performance";
 import TAOValidatorRelationshipManagement from "@/pages/tao/validator-relationship-management";
 import InvestorOpportunitiesPage from "@/pages/tao/investor-opportunities";
+import FollowUpSequencesPage from "@/pages/tao/follow-up-sequences";
 import { Note } from "@/types";
 
 const AppRoutes = () => {
@@ -132,6 +133,10 @@ const AppRoutes = () => {
             <Route
               path="investor-opportunities"
               element={<InvestorOpportunitiesPage />}
+            />
+            <Route
+              path="follow-up-sequences"
+              element={<FollowUpSequencesPage />}
             />
           </Route>
           
