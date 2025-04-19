@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -214,7 +213,7 @@ const AlertConfigPanel: React.FC<AlertConfigPanelProps> = ({
                     <Switch
                       checked={metric.enabled}
                       onCheckedChange={(checked) => onUpdateCustomMetric(metric.id, { enabled: checked })}
-                      size="sm"
+                      className="scale-75"
                     />
                     <span className="font-medium">{metric.name}</span>
                   </div>

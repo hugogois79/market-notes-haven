@@ -1,4 +1,5 @@
 
+import React, { useState, useEffect, useCallback } from 'react';
 import { API_HEADERS, SUBNETS_URL } from './apiConfig';
 import { SubnetPerformance, TaoSubnetInfo } from './types';
 import { MOCK_TAO_STATS } from './mockData';
@@ -108,12 +109,12 @@ const generateMockPerformanceData = (netuid: number): SubnetPerformance => {
  * Hook to use subnet performance data with automatic refreshing
  */
 export const useSubnetPerformance = (refreshInterval = 30 * 60 * 1000) => {
-  const [performanceData, setPerformanceData] = React.useState<TaoSubnetInfo[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<Error | null>(null);
-  const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
+  const [performanceData, setPerformanceData] = useState<TaoSubnetInfo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
-  const fetchData = React.useCallback(async () => {
+  const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
       const data = await fetchSubnetPerformance();
@@ -129,7 +130,7 @@ export const useSubnetPerformance = (refreshInterval = 30 * 60 * 1000) => {
   }, []);
   
   // Initial fetch
-  React.useEffect(() => {
+  useEffect(() => {
     fetchData();
     
     // Set up interval for automatic refreshing

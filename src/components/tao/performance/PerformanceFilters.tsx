@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -102,6 +102,49 @@ const PerformanceFilters: React.FC<PerformanceFiltersProps> = ({
     updateFilters(resetState);
   };
 
+  // Custom checkbox component that supports visual indeterminate state
+  const IndeterminateCheckbox = ({ id, checked, indeterminate, onCheckedChange, label, description }: {
+    id: string;
+    checked: boolean;
+    indeterminate: boolean;
+    onCheckedChange: (checked: boolean) => void;
+    label: string;
+    description: string;
+  }) => {
+    const checkboxRef = useRef<HTMLButtonElement>(null);
+    
+    useEffect(() => {
+      if (checkboxRef.current) {
+        // Use DOM API to set the indeterminate state
+        checkboxRef.current.dataset.state = indeterminate ? 'indeterminate' : checked ? 'checked' : 'unchecked';
+        checkboxRef.current.ariaChecked = indeterminate ? 'mixed' : checked ? 'true' : 'false';
+      }
+    }, [checked, indeterminate]);
+    
+    return (
+      <div className="flex items-start space-x-2">
+        <Checkbox
+          id={id}
+          checked={checked}
+          ref={checkboxRef}
+          onCheckedChange={(value) => onCheckedChange(!!value)}
+          className={indeterminate ? "data-[state=checked]:bg-primary/50" : ""}
+        />
+        <div className="grid gap-1.5 leading-none">
+          <label
+            htmlFor={id}
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            {label}
+          </label>
+          <p className="text-xs text-muted-foreground">
+            {description}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Filter Subnets</h3>
@@ -112,25 +155,15 @@ const PerformanceFilters: React.FC<PerformanceFiltersProps> = ({
           
           <div className="space-y-2">
             {subnetGroups.map(group => (
-              <div key={group.id} className="flex items-start space-x-2">
-                <Checkbox
-                  id={`group-${group.id}`}
-                  checked={isGroupSelected(group.netuids)}
-                  onCheckedChange={(checked) => handleSubnetGroupChange(!!checked, group.netuids)}
-                  indeterminate={isGroupIndeterminate(group.netuids)}
-                />
-                <div className="grid gap-1.5 leading-none">
-                  <label
-                    htmlFor={`group-${group.id}`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    {group.name}
-                  </label>
-                  <p className="text-xs text-muted-foreground">
-                    {group.netuids.length} subnets
-                  </p>
-                </div>
-              </div>
+              <IndeterminateCheckbox
+                key={group.id}
+                id={`group-${group.id}`}
+                checked={isGroupSelected(group.netuids)}
+                indeterminate={isGroupIndeterminate(group.netuids)}
+                onCheckedChange={(checked) => handleSubnetGroupChange(checked, group.netuids)}
+                label={group.name}
+                description={`${group.netuids.length} subnets`}
+              />
             ))}
           </div>
         </div>

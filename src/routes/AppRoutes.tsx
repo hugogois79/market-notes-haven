@@ -21,7 +21,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/auth" element={<Auth />} />
       
-      <Route element={<MainLayout />}>
+      <Route element={<MainLayout children={undefined} />}>
         <Route index element={<Index />} />
         
         <Route path="/categories" element={
@@ -56,7 +56,7 @@ const AppRoutes = () => {
         
         <Route path="/notes/:id" element={
           <ProtectedRoute>
-            <Editor />
+            <Editor onSaveNote={() => {}} onDeleteNote={() => {}} />
           </ProtectedRoute>
         } />
         

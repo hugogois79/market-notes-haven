@@ -14,6 +14,16 @@ interface SubnetComparisonChartProps {
   performanceThreshold: number;
 }
 
+// Custom type for chart data
+interface ChartDataItem {
+  name: string;
+  emissions: number;
+  validators: number;
+  stake: number;
+  performance: number;
+  barColor: string;
+}
+
 const SubnetComparisonChart: React.FC<SubnetComparisonChartProps> = ({
   performanceData,
   isLoading,
@@ -126,6 +136,11 @@ const SubnetComparisonChart: React.FC<SubnetComparisonChartProps> = ({
     return value.toFixed(2);
   };
 
+  // Fixed bar colors map for each bar
+  const getBarFill = (entry: ChartDataItem) => {
+    return entry.barColor;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -161,7 +176,9 @@ const SubnetComparisonChart: React.FC<SubnetComparisonChartProps> = ({
                 <Bar 
                   dataKey={sortBy} 
                   name={sortBy}
-                  fill={(data) => data.barColor}
+                  fill="#8B5CF6" // Default fill color
+                  stroke="#8B5CF6" // Default stroke color
+                  fillOpacity={0.8}
                   radius={[0, 4, 4, 0]}
                 />
               </BarChart>
