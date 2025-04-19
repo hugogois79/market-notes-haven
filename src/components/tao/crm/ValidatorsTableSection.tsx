@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   AccordionItem,
@@ -8,18 +9,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
-import { Users, Plus, Mail, MessageCircle, FileText, Edit, Clock, Trash2, MoreHorizontal, Phone } from "lucide-react";
+import { Users, Plus, Mail, MessageCircle } from "lucide-react";
+import { TaoValidator, TaoContactLog, TaoNote, deleteValidator, updateValidatorStage, updateValidator } from "@/services/taoValidatorService";
+import { toast } from "sonner";
+import { getStageColor } from "./crmUtils";
+import { ValidatorActions } from "./components/ValidatorActions";
+import { RecentContacts } from "./components/RecentContacts";
+import { RecentNotes } from "./components/RecentNotes";
+import { useValidatorData } from "./hooks/useValidatorData";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { TaoValidator, TaoContactLog, TaoNote, deleteValidator, updateValidatorStage, updateValidator } from "@/services/taoValidatorService";
-import { toast } from "sonner";
-import { getStageColor, getPriorityColor } from "./crmUtils";
 
 interface ValidatorsTableSectionProps {
   validators: TaoValidator[];
@@ -40,23 +43,9 @@ const ValidatorsTableSection: React.FC<ValidatorsTableSectionProps> = ({
   onEditValidator,
   onAddContactLog,
   onAddNote,
-  onViewContactLog,
   onRefreshData,
-  onAddValidator,
 }) => {
-  const getContactLogsByValidator = (validatorId: string) => {
-    return contactLogs
-      .filter(log => log.validator_id === validatorId)
-      .sort((a, b) => new Date(b.contact_date).getTime() - new Date(a.contact_date).getTime())
-      .slice(0, 3);
-  };
-
-  const getNotesByValidator = (validatorId: string) => {
-    return notes
-      .filter(note => note.validator_id === validatorId)
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-      .slice(0, 2);
-  };
+  const { getContactLogsByValidator, getNotesByValidator } = useValidatorData(contactLogs, notes);
 
   const handleDeleteValidator = async (validator: TaoValidator) => {
     if (window.confirm(`Are you sure you want to delete validator "${validator.name}"?`)) {
@@ -102,19 +91,6 @@ const ValidatorsTableSection: React.FC<ValidatorsTableSectionProps> = ({
     } catch (error) {
       console.error("Error updating validator priority:", error);
       toast.error("An error occurred while updating");
-    }
-  };
-
-  const getMethodIcon = (method: TaoContactLog["method"]) => {
-    switch (method) {
-      case "Email":
-        return <Mail className="h-4 w-4" />;
-      case "Telegram":
-        return <MessageCircle className="h-4 w-4" />;
-      case "Call":
-        return <Phone className="h-4 w-4" />;
-      default:
-        return <MessageCircle className="h-4 w-4" />;
     }
   };
 
@@ -190,155 +166,58 @@ const ValidatorsTableSection: React.FC<ValidatorsTableSectionProps> = ({
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
-                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Discovery")}>
-                                Discovery
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Discussion")}>
-                                Discussion
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Planning")}>
-                                Planning
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Implementation")}>
-                                Implementation
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Relationship")}>
-                                Relationship
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Dormant")}>
-                                Dormant
-                              </DropdownMenuItem>
+                              {["Discovery", "Discussion", "Planning", "Implementation", "Relationship", "Dormant"].map((stage) => (
+                                <DropdownMenuItem 
+                                  key={stage}
+                                  onClick={() => handleUpdateValidatorStage(validator, stage as TaoValidator["crm_stage"])}
+                                >
+                                  {stage}
+                                </DropdownMenuItem>
+                              ))}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className={`px-3 py-1 h-auto text-xs ${getPriorityColor(validator.priority)}`}>
+                              <Button variant="ghost" className={`px-3 py-1 h-auto text-xs`}>
                                 {validator.priority}
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
-                              <DropdownMenuItem onClick={() => handleUpdateValidatorPriority(validator, "High")}>
-                                High
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateValidatorPriority(validator, "Medium")}>
-                                Medium
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateValidatorPriority(validator, "Low")}>
-                                Low
-                              </DropdownMenuItem>
+                              {["High", "Medium", "Low"].map((priority) => (
+                                <DropdownMenuItem 
+                                  key={priority}
+                                  onClick={() => handleUpdateValidatorPriority(validator, priority as TaoValidator["priority"])}
+                                >
+                                  {priority}
+                                </DropdownMenuItem>
+                              ))}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
                         <TableCell>
-                          {recentContacts.length > 0 ? (
-                            <div className="space-y-2">
-                              {recentContacts.map(contact => (
-                                <div key={contact.id} className="flex items-start">
-                                  <div className="flex-shrink-0 mr-2 mt-0.5">
-                                    {getMethodIcon(contact.method)}
-                                  </div>
-                                  <div className="text-sm">
-                                    <div className="font-medium">{format(new Date(contact.contact_date), "MMM d, yyyy")}</div>
-                                    <div className="text-muted-foreground line-clamp-1">
-                                      {contact.summary || "No summary"}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-xs h-6 mt-1"
-                                onClick={() => onAddContactLog(validator)}
-                              >
-                                <Plus className="h-3 w-3 mr-1" />
-                                Add contact
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs"
-                              onClick={() => onAddContactLog(validator)}
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Add first contact
-                            </Button>
-                          )}
+                          <RecentContacts
+                            contacts={recentContacts}
+                            validator={validator}
+                            onAddContact={onAddContactLog}
+                          />
                         </TableCell>
                         <TableCell>
-                          {recentNotes.length > 0 ? (
-                            <div className="space-y-2">
-                              {recentNotes.map(note => (
-                                <div key={note.id} className="flex items-start">
-                                  <div className="flex-shrink-0 mr-2 mt-0.5">
-                                    <FileText className="h-4 w-4" />
-                                  </div>
-                                  <div className="text-sm">
-                                    <div className="font-medium line-clamp-1">{note.title}</div>
-                                    <div className="text-muted-foreground line-clamp-1">
-                                      {note.content?.substring(0, 50) || "No content"}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-xs h-6 mt-1"
-                                onClick={() => onAddNote(validator)}
-                              >
-                                <Plus className="h-3 w-3 mr-1" />
-                                Add note
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs"
-                              onClick={() => onAddNote(validator)}
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Add first note
-                            </Button>
-                          )}
+                          <RecentNotes
+                            notes={recentNotes}
+                            validator={validator}
+                            onAddNote={onAddNote}
+                          />
                         </TableCell>
                         <TableCell>
-                          <div className="flex justify-end">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => onEditValidator(validator)}>
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => onAddContactLog(validator)}>
-                                  <Clock className="h-4 w-4 mr-2" />
-                                  Add Contact Log
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => onAddNote(validator)}>
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  Add Note
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem 
-                                  onClick={() => handleDeleteValidator(validator)}
-                                  className="text-red-600 focus:text-red-600"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
+                          <ValidatorActions
+                            validator={validator}
+                            onEditValidator={onEditValidator}
+                            onAddContactLog={onAddContactLog}
+                            onAddNote={onAddNote}
+                            onDeleteValidator={handleDeleteValidator}
+                          />
                         </TableCell>
                       </TableRow>
                     );
