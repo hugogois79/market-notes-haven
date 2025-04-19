@@ -15,6 +15,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import TAOPage from "@/pages/tao";
 import TAOLayout from "@/pages/tao/layout";
 import PerformanceDashboard from "@/pages/tao/performance";
+import ValidatorRelationshipManagement from "@/pages/tao/validator-relationship-management";
 import { useNotes } from "@/contexts/NotesContext";
 
 const AppRoutes = () => {
@@ -90,6 +91,7 @@ const AppRoutes = () => {
         <Route path="/tao" element={<TAOLayout />}>
           <Route index element={<TAOPage />} />
           <Route path="performance" element={<PerformanceDashboard />} />
+          <Route path="validator-relationship-management" element={<ValidatorRelationshipManagement />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />

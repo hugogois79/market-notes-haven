@@ -8,7 +8,8 @@ import {
   Layers, 
   LineChart,
   Database,
-  Activity
+  Activity,
+  Users
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -26,6 +27,8 @@ const TaoNavigation: React.FC<TaoNavigationProps> = ({ activeTab, onTabChange })
     // Navigate to the appropriate route
     if (value === 'performance') {
       navigate('/tao/performance');
+    } else if (value === 'validator-relationship-management') {
+      navigate('/tao/validator-relationship-management');
     } else if (value === 'overview') {
       navigate('/tao');
     } else {
@@ -63,6 +66,10 @@ const TaoNavigation: React.FC<TaoNavigationProps> = ({ activeTab, onTabChange })
         <TabsTrigger value="management" className="py-3" onClick={() => handleTabChange('management')}>
           <Database className="mr-2 h-4 w-4" />
           Management
+        </TabsTrigger>
+        <TabsTrigger value="validator-relationship-management" className="py-3" onClick={() => handleTabChange('validator-relationship-management')}>
+          <Users className="mr-2 h-4 w-4" />
+          Validator CRM
         </TabsTrigger>
       </TabsList>
     </div>
