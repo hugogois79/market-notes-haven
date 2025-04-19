@@ -26,17 +26,19 @@ import TAODashboard from "@/pages/tao/index";
 import TAOPerformance from "@/pages/tao/performance";
 import TAOValidatorRelationshipManagement from "@/pages/tao/validator-relationship-management";
 import InvestorOpportunitiesPage from "@/pages/tao/investor-opportunities";
+import { Note } from "@/types";
 
 const AppRoutes = () => {
-  // Create dummy props for Editor component to satisfy TypeScript
+  // Create proper props for Editor component to satisfy TypeScript
   const editorProps = {
-    onSaveNote: () => {
-      console.log("Save note called from route");
-      return Promise.resolve();
+    onSaveNote: (note: Note): Promise<Note | null> => {
+      console.log("Save note called from route", note);
+      // Return the same note to satisfy the Promise<Note | null> return type
+      return Promise.resolve(note);
     },
-    onDeleteNote: () => {
-      console.log("Delete note called from route");
-      return Promise.resolve();
+    onDeleteNote: (noteId: string): Promise<boolean> => {
+      console.log("Delete note called from route", noteId);
+      return Promise.resolve(true);
     }
   };
 
