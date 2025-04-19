@@ -396,13 +396,13 @@ The TAO Network Team`,
               <CardFooter className="border-t px-6 py-4">
                 <div className="text-xs text-muted-foreground">
                   <p className="mb-1">Available variables:</p>
-                  <code>{{`{{validator.name}}`}}</code>,{' '}
-                  <code>{{`{{validator.crm_stage}}`}}</code>,{' '}
-                  <code>{{`{{validator.email}}`}}</code>,{' '}
-                  <code>{{`{{stake}}`}}</code>,{' '}
-                  <code>{{`{{delegators}}`}}</code>,{' '}
-                  <code>{{`{{subnet.name}}`}}</code>,{' '}
-                  <code>{{`{{subnet.id}}`}}</code>
+                  <code>{"{{validator.name}}"}</code>,{' '}
+                  <code>{"{{validator.crm_stage}}"}</code>,{' '}
+                  <code>{"{{validator.email}}"}</code>,{' '}
+                  <code>{"{{stake}}"}</code>,{' '}
+                  <code>{"{{delegators}}"}</code>,{' '}
+                  <code>{"{{subnet.name}}"}</code>,{' '}
+                  <code>{"{{subnet.id}}"}</code>
                 </div>
               </CardFooter>
             )}
