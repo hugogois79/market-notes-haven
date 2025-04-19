@@ -57,7 +57,15 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } />
         
+        {/* Updated to handle both /notes/:id and /editor/:id routes */}
         <Route path="/notes/:id" element={
+          <ProtectedRoute>
+            <Editor onSaveNote={handleSaveNote} onDeleteNote={handleDeleteNote} />
+          </ProtectedRoute>
+        } />
+        
+        {/* Add a redirect from /editor/:id to /notes/:id for compatibility */}
+        <Route path="/editor/:id" element={
           <ProtectedRoute>
             <Editor onSaveNote={handleSaveNote} onDeleteNote={handleDeleteNote} />
           </ProtectedRoute>
