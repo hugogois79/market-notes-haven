@@ -15,8 +15,11 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import TAOPage from "@/pages/tao";
 import TAOLayout from "@/pages/tao/layout";
 import PerformanceDashboard from "@/pages/tao/performance";
+import { useNotes } from "@/contexts/NotesContext";
 
 const AppRoutes = () => {
+  const { handleSaveNote, handleDeleteNote } = useNotes();
+  
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />
@@ -56,7 +59,7 @@ const AppRoutes = () => {
         
         <Route path="/notes/:id" element={
           <ProtectedRoute>
-            <Editor onSaveNote={() => {}} onDeleteNote={() => {}} />
+            <Editor onSaveNote={handleSaveNote} onDeleteNote={handleDeleteNote} />
           </ProtectedRoute>
         } />
         
