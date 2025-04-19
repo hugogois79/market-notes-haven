@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   AccordionItem,
@@ -191,23 +190,23 @@ const ValidatorsTableSection: React.FC<ValidatorsTableSectionProps> = ({
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
-                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Prospect")}>
-                                Prospect
+                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Discovery")}>
+                                Discovery
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Contacted")}>
-                                Contacted
+                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Discussion")}>
+                                Discussion
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Follow-up")}>
-                                Follow-up
+                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Planning")}>
+                                Planning
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Negotiation")}>
-                                Negotiation
+                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Implementation")}>
+                                Implementation
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Active")}>
-                                Active
+                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Relationship")}>
+                                Relationship
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Inactive")}>
-                                Inactive
+                              <DropdownMenuItem onClick={() => handleUpdateValidatorStage(validator, "Dormant")}>
+                                Dormant
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

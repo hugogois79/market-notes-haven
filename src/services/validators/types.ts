@@ -9,7 +9,7 @@ export interface TaoValidator {
   email: string | null;
   telegram: string | null;
   linkedin: string | null;
-  crm_stage: 'Prospect' | 'Contacted' | 'Follow-up' | 'Negotiation' | 'Active' | 'Inactive';
+  crm_stage: 'Discovery' | 'Discussion' | 'Planning' | 'Implementation' | 'Relationship' | 'Dormant';
   priority: 'High' | 'Medium' | 'Low';
   organization_type: OrganizationType;
   created_at: string;

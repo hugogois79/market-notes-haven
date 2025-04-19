@@ -1,3 +1,4 @@
+
 import { TaoValidator } from "@/services/taoValidatorService";
 
 // Define the CRM stages in the order they should appear
@@ -27,6 +28,20 @@ export const getStageColor = (stage: TaoValidator["crm_stage"]): string => {
       return "bg-gray-500 text-white";
     default:
       return "bg-gray-400 text-white";
+  }
+};
+
+// Get the color for each priority level
+export const getPriorityColor = (priority: TaoValidator["priority"]): string => {
+  switch (priority) {
+    case "High":
+      return "bg-red-100 text-red-800 hover:bg-red-200";
+    case "Medium":
+      return "bg-orange-100 text-orange-800 hover:bg-orange-200";
+    case "Low":
+      return "bg-green-100 text-green-800 hover:bg-green-200";
+    default:
+      return "bg-gray-100 text-gray-800 hover:bg-gray-200";
   }
 };
 
