@@ -102,7 +102,7 @@ const ContentPersonalization: React.FC<ContentPersonalizationProps> = ({ form })
                 <Input placeholder="Enter email subject" {...field} />
               </FormControl>
               <FormDescription>
-                You can use personalization fields like {{validator.name}}
+                You can use personalization fields like {"{"}{"{"} validator.name {"}"}{"}"} 
               </FormDescription>
               <FormMessage />
             </FormItem>
