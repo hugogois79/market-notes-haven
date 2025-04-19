@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Mail, MessageSquare, Calendar } from "lucide-react";
 
 interface TimePerformanceData {
@@ -26,7 +26,7 @@ export const TimePerformanceChart = ({ data }: TimePerformanceChartProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent className="h-[300px]">
-        <div className="w-full h-full">
+        <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}
             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
@@ -49,7 +49,7 @@ export const TimePerformanceChart = ({ data }: TimePerformanceChartProps) => {
             <Line type="monotone" dataKey="message" stroke="#00C49F" />
             <Line type="monotone" dataKey="calendar" stroke="#FFBB28" />
           </LineChart>
-        </div>
+        </ResponsiveContainer>
       </CardContent>
     </Card>
   );

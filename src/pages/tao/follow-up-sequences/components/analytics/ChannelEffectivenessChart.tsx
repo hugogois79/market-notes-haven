@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Mail, MessageSquare, Calendar } from "lucide-react";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
@@ -23,8 +23,8 @@ export const ChannelEffectivenessChart = ({ data }: ChannelEffectivenessChartPro
       </CardDescription>
     </CardHeader>
     <CardContent className="h-[300px]">
-      <div className="w-full h-full">
-        <PieChart width={400} height={300}>
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
           <Pie
             data={data}
             cx="50%"
@@ -34,6 +34,7 @@ export const ChannelEffectivenessChart = ({ data }: ChannelEffectivenessChartPro
             fill="#8884d8"
             paddingAngle={2}
             dataKey="value"
+            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
           >
             {data.map((_, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -51,7 +52,7 @@ export const ChannelEffectivenessChart = ({ data }: ChannelEffectivenessChartPro
             )}
           />
         </PieChart>
-      </div>
+      </ResponsiveContainer>
     </CardContent>
   </Card>
 );
