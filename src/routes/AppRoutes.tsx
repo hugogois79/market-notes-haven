@@ -1,138 +1,72 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { Routes, Route } from "react-router-dom";
-import { useNotes } from "@/contexts/NotesContext";
-import MainLayout from "@/layouts/MainLayout";
-import ProtectedRoute from "@/components/ProtectedRoute";
-
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
-import Settings from "@/pages/Settings";
-import Notes from "@/pages/Notes";
 import Auth from "@/pages/Auth";
-import Editor from "@/pages/Editor";
 import Categories from "@/pages/Categories";
+import Notes from "@/pages/Notes";
 import Tags from "@/pages/Tags";
-import TokensPage from "@/pages/tokens";
-import TokenDetail from "@/pages/tokens/[id]";
-import CryptoDashboard from "@/pages/crypto/Dashboard";
 import Profile from "@/pages/Profile";
+import Settings from "@/pages/Settings";
+import Editor from "@/pages/Editor";
+import MainLayout from "@/layouts/MainLayout";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import TAOPage from "@/pages/tao";
 import TAOLayout from "@/pages/tao/layout";
+import PerformanceDashboard from "@/pages/tao/performance";
 
 const AppRoutes = () => {
-  // We can get notes and loading state from context, but we don't need to pass them as props anymore
-  // Each component will use the useNotes() hook directly to access this data
-  const { handleSaveNote, handleDeleteNote } = useNotes();
-
-  useEffect(() => {
-    console.log("AppRoutes mounted");
-  }, []);
-
-  // Function to wrap content with layout for authenticated pages
-  const withLayout = (component: React.ReactNode) => (
-    <MainLayout>{component}</MainLayout>
-  );
-
   return (
     <Routes>
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            {withLayout(<Index />)}
-          </ProtectedRoute>
-        }
-      />
       <Route path="/auth" element={<Auth />} />
-      <Route
-        path="/notes"
-        element={
+      
+      <Route element={<MainLayout />}>
+        <Route index element={<Index />} />
+        
+        <Route path="/categories" element={
           <ProtectedRoute>
-            {withLayout(<Notes />)}
+            <Categories />
           </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/editor/:noteId"
-        element={
+        } />
+        
+        <Route path="/notes" element={
           <ProtectedRoute>
-            {withLayout(
-              <Editor 
-                onSaveNote={handleSaveNote} 
-                onDeleteNote={handleDeleteNote} 
-              />
-            )}
+            <Notes />
           </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/categories"
-        element={
+        } />
+        
+        <Route path="/tags" element={
           <ProtectedRoute>
-            {withLayout(<Categories />)}
+            <Tags />
           </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/tags"
-        element={
+        } />
+        
+        <Route path="/profile" element={
           <ProtectedRoute>
-            {withLayout(<Tags />)}
+            <Profile />
           </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
+        } />
+        
+        <Route path="/settings" element={
           <ProtectedRoute>
-            {withLayout(<Settings />)}
+            <Settings />
           </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/tokens"
-        element={
+        } />
+        
+        <Route path="/notes/:id" element={
           <ProtectedRoute>
-            {withLayout(<TokensPage />)}
+            <Editor />
           </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/tokens/:id"
-        element={
-          <ProtectedRoute>
-            {withLayout(<TokenDetail />)}
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/crypto/dashboard"
-        element={
-          <ProtectedRoute>
-            {withLayout(<CryptoDashboard />)}
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute>
-            {withLayout(<Profile />)}
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/tao/*"
-        element={
-          <ProtectedRoute>
-            {withLayout(
-              <TAOPage />
-            )}
-          </ProtectedRoute>
-        }
-      />
-      <Route path="*" element={<NotFound />} />
+        } />
+        
+        <Route path="/tao" element={<TAOLayout />}>
+          <Route index element={<TAOPage />} />
+          <Route path="performance" element={<PerformanceDashboard />} />
+        </Route>
+
+        <Route path="*" element={<NotFound />} />
+      </Route>
     </Routes>
   );
 };
