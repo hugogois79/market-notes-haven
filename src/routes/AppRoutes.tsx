@@ -1,102 +1,132 @@
 
 import React from "react";
-import { Routes, Route, Outlet, Navigate } from "react-router-dom";
-import Index from "@/pages/Index";
-import NotFound from "@/pages/NotFound";
-import Auth from "@/pages/Auth";
-import Categories from "@/pages/Categories";
-import Notes from "@/pages/Notes";
-import Tags from "@/pages/Tags";
-import Profile from "@/pages/Profile";
-import Settings from "@/pages/Settings";
-import Editor from "@/pages/Editor";
+import { Route, Routes } from "react-router-dom";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "sonner";
+
 import MainLayout from "@/layouts/MainLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import TAOPage from "@/pages/tao";
+
+import Notes from "@/pages/Notes";
+import Categories from "@/pages/Categories";
+import Tags from "@/pages/Tags";
+import Auth from "@/pages/Auth";
+import Profile from "@/pages/Profile";
+import NotFound from "@/pages/NotFound";
+import Settings from "@/pages/Settings";
+import Editor from "@/pages/Editor";
+import Index from "@/pages/Index";
+import TokensDashboard from "@/pages/tokens";
+import TokenDetail from "@/pages/tokens/[id]";
+import CryptoDashboard from "@/pages/crypto/Dashboard";
+
+// TAO-specific routes
 import TAOLayout from "@/pages/tao/layout";
-import PerformanceDashboard from "@/pages/tao/performance";
-import ValidatorRelationshipManagement from "@/pages/tao/validator-relationship-management";
-import { useNotes } from "@/contexts/NotesContext";
+import TAODashboard from "@/pages/tao/index";
+import TAOPerformance from "@/pages/tao/performance";
+import TAOValidatorRelationshipManagement from "@/pages/tao/validator-relationship-management";
+import InvestorOpportunitiesPage from "@/pages/tao/investor-opportunities";
 
 const AppRoutes = () => {
-  const { handleSaveNote, handleDeleteNote, notes } = useNotes();
-  
   return (
-    <Routes>
-      <Route path="/auth" element={<Auth />} />
-      
-      <Route element={<MainLayout>{<Outlet />}</MainLayout>}>
-        <Route index element={<Index />} />
-        
-        <Route path="/categories" element={
-          <ProtectedRoute>
-            <Categories />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/notes" element={
-          <ProtectedRoute>
-            <Notes />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/tags" element={
-          <ProtectedRoute>
-            <Tags />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/profile" element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/settings" element={
-          <ProtectedRoute>
-            <Settings />
-          </ProtectedRoute>
-        } />
-        
-        {/* Updated route for notes/:id that handles note not found */}
-        <Route path="/notes/:id" element={
-          <ProtectedRoute>
-            <Editor 
-              onSaveNote={handleSaveNote} 
-              onDeleteNote={handleDeleteNote} 
+    <>
+      <Routes>
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Index />} />
+          <Route path="auth" element={<Auth />} />
+          <Route
+            path="notes"
+            element={
+              <ProtectedRoute>
+                <Notes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="categories"
+            element={
+              <ProtectedRoute>
+                <Categories />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="tags"
+            element={
+              <ProtectedRoute>
+                <Tags />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="editor/:id"
+            element={
+              <ProtectedRoute>
+                <Editor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="tokens"
+            element={
+              <ProtectedRoute>
+                <TokensDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="tokens/:id"
+            element={
+              <ProtectedRoute>
+                <TokenDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="crypto/dashboard"
+            element={
+              <ProtectedRoute>
+                <CryptoDashboard />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* TAO Routes */}
+          <Route path="tao" element={<TAOLayout />}>
+            <Route index element={<TAODashboard />} />
+            <Route path="performance" element={<TAOPerformance />} />
+            <Route
+              path="validator-relationship-management"
+              element={<TAOValidatorRelationshipManagement />}
             />
-          </ProtectedRoute>
-        } />
-        
-        {/* Route for editor/:id with same component */}
-        <Route path="/editor/:id" element={
-          <ProtectedRoute>
-            <Editor 
-              onSaveNote={handleSaveNote} 
-              onDeleteNote={handleDeleteNote} 
+            <Route
+              path="investor-opportunities"
+              element={<InvestorOpportunitiesPage />}
             />
-          </ProtectedRoute>
-        } />
-        
-        {/* New route for creating notes */}
-        <Route path="/editor/new" element={
-          <ProtectedRoute>
-            <Editor 
-              onSaveNote={handleSaveNote} 
-              onDeleteNote={handleDeleteNote} 
-            />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/tao" element={<TAOLayout />}>
-          <Route index element={<TAOPage />} />
-          <Route path="performance" element={<PerformanceDashboard />} />
-          <Route path="validator-relationship-management" element={<ValidatorRelationshipManagement />} />
+          </Route>
+          
+          <Route path="*" element={<NotFound />} />
         </Route>
-
-        <Route path="*" element={<NotFound />} />
-      </Route>
-    </Routes>
+      </Routes>
+      <Toaster />
+      <SonnerToaster position="top-right" />
+    </>
   );
 };
 
