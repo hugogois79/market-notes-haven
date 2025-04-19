@@ -1,10 +1,9 @@
 
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
-import { Note, Token, Tag } from "@/types";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useParams, useLocation } from "react-router-dom";
+import { Note, Tag, Token } from "@/types";
 import { getTokensForNote } from "@/services/tokenService";
-import { fetchTags, getTagsForNote } from "@/services/tag";
-import { useParams, useNavigate } from "react-router-dom";
+import { fetchTags } from "@/services/supabaseService";
 
 interface UseNoteDataProps {
   notes: Note[];
@@ -12,199 +11,133 @@ interface UseNoteDataProps {
 }
 
 export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
-  const { noteId } = useParams<{ noteId: string }>();
-  const navigate = useNavigate();
-  const [currentNote, setCurrentNote] = useState<Note | undefined>(undefined);
-  const [isNewNote, setIsNewNote] = useState(false);
+  const { id } = useParams();
+  const location = useLocation();
+  const isNewNote = id === 'new' || location.pathname === '/editor/new';
+  
+  const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [linkedTokens, setLinkedTokens] = useState<Token[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
-  const [tagCategories, setTagCategories] = useState<string[]>([]);
-  const [isLoadingTags, setIsLoadingTags] = useState(false);
-  const [isLoadingTokens, setIsLoadingTokens] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const loadTokensAndTags = async () => {
-      setIsLoadingTags(true);
-      
-      try {
-        const tags = await fetchTags();
-        console.log("Loaded tags:", tags);
-        setAllTags(tags);
-        
-        // Extract unique categories from tags
-        const categories = new Set<string>();
-        tags.forEach(tag => {
-          if (tag.category) {
-            categories.add(tag.category);
-          }
-          if (tag.categories && Array.isArray(tag.categories)) {
-            tag.categories.forEach(cat => {
-              if (cat) categories.add(cat);
-            });
-          }
-        });
-        setTagCategories(Array.from(categories).sort());
-      } catch (error) {
-        console.error("Error loading tags:", error);
-      } finally {
-        setIsLoadingTags(false);
-      }
-    };
+  // Create empty note template for new notes
+  const createEmptyNote = useCallback(() => {
+    // Check for query parameters
+    const queryParams = new URLSearchParams(location.search);
+    const title = queryParams.get('title') || "Untitled Note";
+    const category = queryParams.get('category') || "General";
+    const tagString = queryParams.get('tags');
+    const tags = tagString ? tagString.split(',') : [];
     
-    loadTokensAndTags();
-  }, []);
-
-  useEffect(() => {
-    console.log("Editor: noteId =", noteId);
-    console.log("Notes available:", notes.length);
-    
-    if (noteId === "new") {
-      console.log("Setting up new note");
-      setIsNewNote(true);
-      const newNoteTemplate: Note = {
-        id: "temp-" + Date.now().toString(),
-        title: "Untitled Note",
-        content: "",
-        summary: "",
-        tags: [],
-        category: "General",
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      setCurrentNote(newNoteTemplate);
-      setLinkedTokens([]);
-    } else if (notes.length > 0) {
-      const foundNote = notes.find(note => note.id === noteId);
-      console.log("Found note:", foundNote);
-      
-      if (foundNote) {
-        console.log('Loaded note content:', foundNote.content);
-        console.log('Loaded note category:', foundNote.category);
-        setCurrentNote(foundNote);
-        setIsNewNote(false);
-        
-        const fetchLinkedTokens = async () => {
-          try {
-            setIsLoadingTokens(true);
-            const tokens = await getTokensForNote(foundNote.id);
-            console.log("Fetched linked tokens:", tokens);
-            setLinkedTokens(tokens);
-          } catch (error) {
-            console.error("Error fetching linked tokens:", error);
-          } finally {
-            setIsLoadingTokens(false);
-          }
-        };
-        
-        fetchLinkedTokens();
-        
-        if (!foundNote.id.startsWith('temp-')) {
-          const fetchTagsForNote = async () => {
-            try {
-              setIsLoadingTags(true);
-              const noteTags = await getTagsForNote(foundNote.id);
-              console.log("Fetched tags for note:", noteTags);
-              
-              if (noteTags.length > 0) {
-                foundNote.tags = noteTags.map(tag => tag.id);
-                setCurrentNote({...foundNote});
-              }
-            } catch (error) {
-              console.error("Error fetching tags for note:", error);
-            } finally {
-              setIsLoadingTags(false);
-            }
-          };
-          
-          fetchTagsForNote();
-        }
-      } else {
-        toast.error("Note not found");
-        navigate("/notes");
-      }
-    }
-  }, [noteId, notes, navigate]);
-
-  const handleSave = async (updatedFields: Partial<Note>): Promise<void> => {
-    if (!currentNote) return;
-    
-    console.log('Updating note with fields:', updatedFields);
-    
-    const updatedNote: Note = {
-      ...currentNote,
-      ...updatedFields,
+    return {
+      id: `temp-${Date.now()}`,
+      title,
+      content: "",
+      tags,
+      category,
+      createdAt: new Date(),
       updatedAt: new Date()
     };
-    
-    if (updatedFields.tokens) {
-      setLinkedTokens(updatedFields.tokens);
-      console.log('Setting linked tokens:', updatedFields.tokens);
-    }
-    
-    if (updatedFields.title !== undefined) {
-      setCurrentNote(prevNote => {
-        if (!prevNote) return updatedNote;
-        return { ...prevNote, title: updatedFields.title || "" };
-      });
-    }
-    
-    if (updatedFields.category !== undefined) {
-      setCurrentNote(prevNote => {
-        if (!prevNote) return updatedNote;
-        return { ...prevNote, category: updatedFields.category || "General" };
-      });
-    }
-    
-    if (updatedFields.tags !== undefined) {
-      setCurrentNote(prevNote => {
-        if (!prevNote) return updatedNote;
-        return { ...prevNote, tags: updatedFields.tags || [] };
-      });
-    }
-    
-    const savedNote = await onSaveNote(updatedNote);
-    
-    if (savedNote) {
-      console.log('Note saved successfully');
-      console.log('Saved category:', savedNote.category);
-      
-      if (isNewNote) {
-        navigate(`/editor/${savedNote.id}`, { replace: true });
-        setIsNewNote(false);
-      }
-      
-      setCurrentNote(savedNote);
-    } else {
-      console.error('Failed to save note');
-      toast.error("Failed to save note");
-    }
-  };
+  }, [location.search]);
 
-  // Filter tags that match the current note category
-  const getTagsFilteredByCategory = (category: string | null = null) => {
-    if (!category || !allTags) return allTags;
+  // Find the current note from the notes array or create a new one
+  useEffect(() => {
+    if (notes.length === 0) {
+      return;
+    }
+
+    setIsLoading(true);
     
-    return allTags.filter(tag => {
-      // Check the main category field
-      if (tag.category === category) return true;
-      
-      // Check the categories array if it exists
-      if (tag.categories && Array.isArray(tag.categories)) {
-        return tag.categories.includes(category);
+    if (isNewNote) {
+      const emptyNote = createEmptyNote();
+      setCurrentNote(emptyNote);
+    } else if (id) {
+      const foundNote = notes.find(note => note.id === id);
+      setCurrentNote(foundNote || null);
+    }
+    
+    setIsLoading(false);
+  }, [notes, id, isNewNote, createEmptyNote]);
+
+  // Load tokens linked to the current note
+  useEffect(() => {
+    const loadTokens = async () => {
+      if (!currentNote || !currentNote.id || currentNote.id.toString().startsWith('temp-')) {
+        setLinkedTokens([]);
+        return;
       }
+
+      try {
+        const tokens = await getTokensForNote(currentNote.id);
+        setLinkedTokens(tokens);
+      } catch (error) {
+        console.error("Error loading tokens:", error);
+        setLinkedTokens([]);
+      }
+    };
+
+    loadTokens();
+  }, [currentNote]);
+
+  // Load all available tags
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        const tags = await fetchTags();
+        setAllTags(tags);
+      } catch (error) {
+        console.error("Error loading tags:", error);
+        setAllTags([]);
+      }
+    };
+
+    loadTags();
+  }, []);
+
+  // Get tags filtered by the specified category
+  const getTagsFilteredByCategory = useCallback(
+    (category: string | null) => {
+      if (!category) return allTags;
       
-      return false;
-    });
-  };
+      return allTags.filter(tag => {
+        if (!tag.category && !tag.categories) return false;
+        if (tag.category === category) return true;
+        if (tag.categories && tag.categories.includes(category)) return true;
+        return false;
+      });
+    },
+    [allTags]
+  );
+
+  // Save note changes
+  const handleSave = useCallback(
+    async (updatedFields: Partial<Note>) => {
+      if (!currentNote) return;
+
+      const updatedNote = {
+        ...currentNote,
+        ...updatedFields,
+        updatedAt: new Date()
+      };
+
+      try {
+        const savedNote = await onSaveNote(updatedNote);
+        if (savedNote) {
+          setCurrentNote(savedNote);
+        }
+      } catch (error) {
+        console.error("Error saving note:", error);
+      }
+    },
+    [currentNote, onSaveNote]
+  );
 
   return {
     currentNote,
     isNewNote,
+    isLoading,
     linkedTokens,
     allTags,
-    tagCategories,
-    isLoadingTags,
-    isLoadingTokens,
     handleSave,
     getTagsFilteredByCategory
   };

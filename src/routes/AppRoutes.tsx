@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Routes, Route, Outlet } from "react-router-dom";
+import { Routes, Route, Outlet, Navigate } from "react-router-dom";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
 import Auth from "@/pages/Auth";
@@ -18,7 +18,7 @@ import PerformanceDashboard from "@/pages/tao/performance";
 import { useNotes } from "@/contexts/NotesContext";
 
 const AppRoutes = () => {
-  const { handleSaveNote, handleDeleteNote } = useNotes();
+  const { handleSaveNote, handleDeleteNote, notes } = useNotes();
   
   return (
     <Routes>
@@ -57,17 +57,33 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } />
         
-        {/* Updated to handle both /notes/:id and /editor/:id routes */}
+        {/* Updated route for notes/:id that handles note not found */}
         <Route path="/notes/:id" element={
           <ProtectedRoute>
-            <Editor onSaveNote={handleSaveNote} onDeleteNote={handleDeleteNote} />
+            <Editor 
+              onSaveNote={handleSaveNote} 
+              onDeleteNote={handleDeleteNote} 
+            />
           </ProtectedRoute>
         } />
         
-        {/* Add a redirect from /editor/:id to /notes/:id for compatibility */}
+        {/* Route for editor/:id with same component */}
         <Route path="/editor/:id" element={
           <ProtectedRoute>
-            <Editor onSaveNote={handleSaveNote} onDeleteNote={handleDeleteNote} />
+            <Editor 
+              onSaveNote={handleSaveNote} 
+              onDeleteNote={handleDeleteNote} 
+            />
+          </ProtectedRoute>
+        } />
+        
+        {/* New route for creating notes */}
+        <Route path="/editor/new" element={
+          <ProtectedRoute>
+            <Editor 
+              onSaveNote={handleSaveNote} 
+              onDeleteNote={handleDeleteNote} 
+            />
           </ProtectedRoute>
         } />
         
