@@ -7,7 +7,7 @@ import {
   fetchContactLogs
 } from "@/services/taoValidatorService";
 import { toast } from "sonner";
-import { TaoSubnet } from "@/services/tao/types";
+import { TaoSubnet } from "@/services/subnets/types";
 import { fetchSubnetsByValidator, fetchValidatorsBySubnet } from "@/services/subnets/subnetService";
 import { fetchTaoSubnets } from "@/services/taoSubnetService";
 import { 

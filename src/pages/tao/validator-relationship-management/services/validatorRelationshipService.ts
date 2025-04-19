@@ -1,6 +1,6 @@
 
 import { TaoValidator } from "@/services/validators/types";
-import { TaoSubnet } from "@/services/tao/types";
+import { TaoSubnet } from "@/services/subnets/types";
 import { ValidatorMetrics, StakeHistory, CollaborationOpportunity } from "../hooks/useValidatorRelationshipData";
 
 // This service would normally connect to backend APIs

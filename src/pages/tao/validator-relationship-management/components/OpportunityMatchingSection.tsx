@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TaoValidator } from "@/services/validators/types";
-import { TaoSubnet } from "@/services/tao/types";
+import { TaoSubnet } from "@/services/subnets/types";
 import { CollaborationOpportunity } from "../hooks/useValidatorRelationshipData";
 import { ExternalLink, Check } from "lucide-react";
 

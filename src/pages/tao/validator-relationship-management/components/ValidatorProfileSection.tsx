@@ -26,7 +26,7 @@ import {
   Area
 } from "recharts";
 import { TaoValidator } from "@/services/validators/types";
-import { TaoSubnet } from "@/services/tao/types";
+import { TaoSubnet } from "@/services/subnets/types";
 import { TaoContactLog } from "@/services/contact-logs/types";
 import { ValidatorMetrics } from "../hooks/useValidatorRelationshipData";
 import { Badge } from "@/components/ui/badge";
