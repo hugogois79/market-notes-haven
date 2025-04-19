@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useForm } from "react-hook-form";
 import { TaoValidator } from "@/services/taoValidatorService";
@@ -52,7 +51,7 @@ const ValidatorForm: React.FC<ValidatorFormProps> = ({
           email: "",
           telegram: "",
           linkedin: "",
-          crm_stage: "Prospect",
+          crm_stage: "Discovery", // Updated default stage
           priority: "Medium",
           organization_type: "Validator",
         },
@@ -182,12 +181,12 @@ const ValidatorForm: React.FC<ValidatorFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="Prospect">Prospect</SelectItem>
-                    <SelectItem value="Contacted">Contacted</SelectItem>
-                    <SelectItem value="Follow-up">Follow-up</SelectItem>
-                    <SelectItem value="Negotiation">Negotiation</SelectItem>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
+                    <SelectItem value="Discovery">Discovery</SelectItem>
+                    <SelectItem value="Discussion">Discussion</SelectItem>
+                    <SelectItem value="Planning">Planning</SelectItem>
+                    <SelectItem value="Implementation">Implementation</SelectItem>
+                    <SelectItem value="Relationship">Relationship</SelectItem>
+                    <SelectItem value="Dormant">Dormant</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
