@@ -28,10 +28,22 @@ import TAOValidatorRelationshipManagement from "@/pages/tao/validator-relationsh
 import InvestorOpportunitiesPage from "@/pages/tao/investor-opportunities";
 
 const AppRoutes = () => {
+  // Create dummy props for Editor component to satisfy TypeScript
+  const editorProps = {
+    onSaveNote: () => {
+      console.log("Save note called from route");
+      return Promise.resolve();
+    },
+    onDeleteNote: () => {
+      console.log("Delete note called from route");
+      return Promise.resolve();
+    }
+  };
+
   return (
     <>
       <Routes>
-        <Route path="/" element={<MainLayout />}>
+        <Route path="/" element={<MainLayout><Index /></MainLayout>}>
           <Route index element={<Index />} />
           <Route path="auth" element={<Auth />} />
           <Route
@@ -78,7 +90,7 @@ const AppRoutes = () => {
             path="editor/:id"
             element={
               <ProtectedRoute>
-                <Editor />
+                <Editor {...editorProps} />
               </ProtectedRoute>
             }
           />

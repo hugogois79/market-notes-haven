@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Card,
@@ -126,9 +125,18 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
 
   const handleSavePreference = async (data: z.infer<typeof preferencesSchema>) => {
     try {
+      // Ensure all required properties are provided with non-optional values
       const preference: InvestmentPreference = {
-        ...data,
         id: selectedPreference?.id || `pref${Date.now()}`,
+        name: data.name,
+        subnetTypes: data.subnetTypes,
+        technicalFocus: data.technicalFocus,
+        stagePreferences: data.stagePreferences,
+        minTicketSize: data.minTicketSize,
+        maxTicketSize: data.maxTicketSize,
+        requiresCoInvestment: data.requiresCoInvestment,
+        decisionTimelineDays: data.decisionTimelineDays,
+        riskTolerance: data.riskTolerance,
         createdAt: selectedPreference?.createdAt || new Date(),
         updatedAt: new Date()
       };

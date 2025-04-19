@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Card,
@@ -29,7 +28,8 @@ import {
   Cell,
   LineChart,
   Line,
-  Legend
+  Legend,
+  TooltipProps
 } from "recharts";
 import { Investment } from "../types";
 import { ArrowDown, ArrowUp, TrendingUp } from "lucide-react";
@@ -64,7 +64,20 @@ const PortfolioManagementDashboard: React.FC<PortfolioManagementDashboardProps> 
     }
   };
 
-  // Mock data for performance chart
+  const tooltipFormatter = (value: any) => {
+    if (typeof value === 'number') {
+      return `${(value * 100).toFixed(2)}%`;
+    }
+    return value;
+  };
+
+  const yAxisTickFormatter = (value: any) => {
+    if (typeof value === 'number') {
+      return `${(value * 100).toFixed(0)}%`;
+    }
+    return value;
+  };
+
   const performanceData = [
     { month: 'Jan', value: 100 },
     { month: 'Feb', value: 105 },
@@ -79,7 +92,6 @@ const PortfolioManagementDashboard: React.FC<PortfolioManagementDashboardProps> 
 
   return (
     <div className="space-y-6">
-      {/* Portfolio Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="pb-2">
@@ -143,9 +155,7 @@ const PortfolioManagementDashboard: React.FC<PortfolioManagementDashboardProps> 
         </Card>
       </div>
       
-      {/* Portfolio Analysis */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Diversification Chart */}
         <Card>
           <CardHeader>
             <CardTitle>Portfolio Diversification</CardTitle>
@@ -166,13 +176,23 @@ const PortfolioManagementDashboard: React.FC<PortfolioManagementDashboardProps> 
                     fill="#8884d8"
                     dataKey="percentage"
                     nameKey="category"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => {
+                      if (typeof percent === 'number') {
+                        return `${name}: ${(percent * 100).toFixed(0)}%`;
+                      }
+                      return `${name}: ${percent}%`;
+                    }}
                   >
                     {(portfolioAnalytics?.diversification || []).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => `${value.toFixed(2)}%`} />
+                  <Tooltip formatter={(value) => {
+                    if (typeof value === 'number') {
+                      return `${value.toFixed(2)}%`;
+                    }
+                    return value;
+                  }} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -180,7 +200,6 @@ const PortfolioManagementDashboard: React.FC<PortfolioManagementDashboardProps> 
           </CardContent>
         </Card>
         
-        {/* Performance by Stage */}
         <Card>
           <CardHeader>
             <CardTitle>Performance by Stage</CardTitle>
@@ -197,8 +216,8 @@ const PortfolioManagementDashboard: React.FC<PortfolioManagementDashboardProps> 
                 >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="stage" />
-                  <YAxis tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} />
-                  <Tooltip formatter={(value) => `${(value * 100).toFixed(2)}%`} />
+                  <YAxis tickFormatter={yAxisTickFormatter} />
+                  <Tooltip formatter={tooltipFormatter} />
                   <Bar dataKey="roi" fill="#8884d8">
                     {(portfolioAnalytics?.performanceByStage || []).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -211,7 +230,6 @@ const PortfolioManagementDashboard: React.FC<PortfolioManagementDashboardProps> 
         </Card>
       </div>
       
-      {/* Investments Table */}
       <Card>
         <CardHeader>
           <CardTitle>Current Investments</CardTitle>
