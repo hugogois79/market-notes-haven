@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Outlet } from "react-router-dom";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
 import Auth from "@/pages/Auth";
@@ -24,7 +24,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/auth" element={<Auth />} />
       
-      <Route element={<MainLayout children={undefined} />}>
+      <Route element={<MainLayout>{<Outlet />}</MainLayout>}>
         <Route index element={<Index />} />
         
         <Route path="/categories" element={
