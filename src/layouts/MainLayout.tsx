@@ -3,10 +3,10 @@ import Sidebar from "@/components/Sidebar";
 import { useState, ReactNode, useEffect } from "react";
 import UserProfileButton from "@/components/UserProfileButton";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { toast } from "sonner";
+import { Outlet } from "react-router-dom";
 
 interface MainLayoutProps {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 const MainLayout = ({ children }: MainLayoutProps) => {
@@ -47,7 +47,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         </header>
         
         <main className="flex-1 overflow-auto">
-          {children}
+          {children || <Outlet />}
         </main>
       </div>
     </div>
