@@ -83,6 +83,7 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
         console.log("Note deleted successfully");
         setNotes(prev => prev.filter(note => note.id !== noteId));
         refetch();
+        return true;
       }
       
       return success;

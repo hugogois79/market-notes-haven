@@ -27,21 +27,10 @@ import TAOPerformance from "@/pages/tao/performance";
 import TAOValidatorRelationshipManagement from "@/pages/tao/validator-relationship-management";
 import InvestorOpportunitiesPage from "@/pages/tao/investor-opportunities";
 import FollowUpSequencesPage from "@/pages/tao/follow-up-sequences";
-import { Note } from "@/types";
+import { useNotes } from "@/contexts/NotesContext";
 
 const AppRoutes = () => {
-  // Create proper props for Editor component to satisfy TypeScript
-  const editorProps = {
-    onSaveNote: (note: Note): Promise<Note | null> => {
-      console.log("Save note called from route", note);
-      // Return the same note to satisfy the Promise<Note | null> return type
-      return Promise.resolve(note);
-    },
-    onDeleteNote: (noteId: string): Promise<boolean> => {
-      console.log("Delete note called from route", noteId);
-      return Promise.resolve(true);
-    }
-  };
+  const { handleSaveNote, handleDeleteNote } = useNotes();
 
   return (
     <>
@@ -93,7 +82,10 @@ const AppRoutes = () => {
             path="editor/new"
             element={
               <ProtectedRoute>
-                <Editor {...editorProps} />
+                <Editor 
+                  onSaveNote={handleSaveNote} 
+                  onDeleteNote={handleDeleteNote} 
+                />
               </ProtectedRoute>
             }
           />
@@ -101,7 +93,10 @@ const AppRoutes = () => {
             path="editor/:id"
             element={
               <ProtectedRoute>
-                <Editor {...editorProps} />
+                <Editor 
+                  onSaveNote={handleSaveNote} 
+                  onDeleteNote={handleDeleteNote} 
+                />
               </ProtectedRoute>
             }
           />

@@ -40,13 +40,11 @@ const NoteActions: React.FC<NoteActionsProps> = ({
     try {
       const success = await onDeleteNote(currentNote.id);
       
-      if (success) {
-        toast.success("Note deleted successfully");
-        navigate("/notes");
-      } else {
+      if (!success) {
         toast.error("Failed to delete note");
       }
     } catch (error) {
+      console.error("Error deleting note:", error);
       toast.error("Failed to delete note");
     }
   };

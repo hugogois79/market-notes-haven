@@ -19,7 +19,7 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { notes, handleSaveNote } = useNotes();
+  const { notes, handleSaveNote, handleDeleteNote } = useNotes();
   const isNewNote = id === 'new' || location.pathname === '/editor/new';
   
   const {
@@ -84,12 +84,17 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
   const handleDeleteWithLoading = async (noteId: string): Promise<boolean> => {
     setIsDeleting(true);
     try {
-      const result = await onDeleteNote(noteId);
+      const deleteFunction = handleDeleteNote || onDeleteNote;
+      const result = await deleteFunction(noteId);
       if (result) {
         navigate('/notes');
         toast.success("Note deleted successfully");
       }
       return result;
+    } catch (error) {
+      console.error("Error deleting note:", error);
+      toast.error("Failed to delete note");
+      return false;
     } finally {
       setIsDeleting(false);
     }
