@@ -90,6 +90,14 @@ const AppRoutes = () => {
             }
           />
           <Route
+            path="editor/new"
+            element={
+              <ProtectedRoute>
+                <Editor {...editorProps} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="editor/:id"
             element={
               <ProtectedRoute>
