@@ -19,7 +19,7 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { notes } = useNotes();
+  const { notes, handleSaveNote } = useNotes();
   const isNewNote = id === 'new' || location.pathname === '/editor/new';
   
   const {
@@ -29,11 +29,12 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
     allTags,
     handleSave,
     getTagsFilteredByCategory
-  } = useNoteData({ notes, onSaveNote });
+  } = useNoteData({ notes, onSaveNote: handleSaveNote || onSaveNote });
 
   // Handle creating a new note from URL params
   useEffect(() => {
     if (isNewNote && !currentNote) {
+      console.log("Creating new note from URL params");
       // Check for query parameters to pre-fill the note
       const queryParams = new URLSearchParams(location.search);
       const title = queryParams.get('title') || "Untitled Note";
@@ -51,14 +52,20 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
       };
       
       // Create and navigate to the new note
-      onSaveNote(newNote).then(savedNote => {
+      const saveFunction = handleSaveNote || onSaveNote;
+      saveFunction(newNote).then(savedNote => {
         if (savedNote) {
-          navigate(`/notes/${savedNote.id}`, { replace: true });
+          console.log("New note created with ID:", savedNote.id);
+          // Navigate directly to the editor path with the new ID
+          navigate(`/editor/${savedNote.id}`, { replace: true });
           toast.success("New note created");
+        } else {
+          console.error("Failed to create new note");
+          toast.error("Failed to create new note");
         }
       });
     }
-  }, [isNewNote, currentNote, location.search, onSaveNote, navigate]);
+  }, [isNewNote, currentNote, location.search, onSaveNote, handleSaveNote, navigate]);
 
   // Check if note exists
   useEffect(() => {
@@ -67,6 +74,7 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
       setNotFound(!noteExists);
       
       if (!noteExists) {
+        console.error("Note not found with ID:", id);
         toast.error("Note not found");
       }
     }
@@ -106,7 +114,7 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
   }
 
   // Show a loading state if we're still waiting for notes to load
-  if (!currentNote && notes.length === 0) {
+  if (!currentNote && notes.length === 0 && !isNewNote) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
@@ -127,9 +135,17 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
       />
       
       {/* Editor */}
-      {currentNote && (
+      {(currentNote || isNewNote) && (
         <NoteEditor 
-          currentNote={currentNote}
+          currentNote={currentNote || {
+            id: `temp-${Date.now()}`,
+            title: "Untitled Note",
+            content: "",
+            tags: [],
+            category: "General",
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }}
           onSave={handleSave}
           linkedTokens={linkedTokens}
           allTags={allTags}

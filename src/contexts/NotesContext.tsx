@@ -38,6 +38,8 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
 
   const handleSaveNote = async (note: Note) => {
     try {
+      console.log("Saving note:", note);
+      
       if (note.id.toString().startsWith('temp-')) {
         console.log("Creating new note with content:", note.content);
         const newNote = await createNote({
