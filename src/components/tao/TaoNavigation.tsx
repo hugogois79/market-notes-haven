@@ -46,48 +46,50 @@ const TaoNavigation: React.FC<TaoNavigationProps> = ({ activeTab, onTabChange })
 
   return (
     <div className="border-b">
-      <TabsList className="w-full justify-start h-auto overflow-x-auto">
-        <TabsTrigger value="overview" className="py-3" onClick={() => handleTabChange('overview')}>
-          <BarChart3 className="mr-2 h-4 w-4" />
-          Overview
-        </TabsTrigger>
-        <TabsTrigger value="stats" className="py-3" onClick={() => handleTabChange('stats')}>
-          <LineChart className="mr-2 h-4 w-4" />
-          TAO Stats
-        </TabsTrigger>
-        <TabsTrigger value="marketcap" className="py-3" onClick={() => handleTabChange('marketcap')}>
-          <CircleDollarSign className="mr-2 h-4 w-4" />
-          Market Cap
-        </TabsTrigger>
-        <TabsTrigger value="subnets" className="py-3" onClick={() => handleTabChange('subnets')}>
-          <Layers className="mr-2 h-4 w-4" />
-          Subnets
-        </TabsTrigger>
-        <TabsTrigger value="validators" className="py-3" onClick={() => handleTabChange('validators')}>
-          <Globe className="mr-2 h-4 w-4" />
-          Validators
-        </TabsTrigger>
-        <TabsTrigger value="performance" className="py-3" onClick={() => handleTabChange('performance')}>
-          <Activity className="mr-2 h-4 w-4" />
-          Performance
-        </TabsTrigger>
-        <TabsTrigger value="management" className="py-3" onClick={() => handleTabChange('management')}>
-          <Database className="mr-2 h-4 w-4" />
-          Management
-        </TabsTrigger>
-        <TabsTrigger value="validator-relationship-management" className="py-3" onClick={() => handleTabChange('validator-relationship-management')}>
-          <Users className="mr-2 h-4 w-4" />
-          Validator CRM
-        </TabsTrigger>
-        <TabsTrigger value="investor-opportunities" className="py-3" onClick={() => handleTabChange('investor-opportunities')}>
-          <TrendingUp className="mr-2 h-4 w-4" />
-          Investor Opportunities
-        </TabsTrigger>
-        <TabsTrigger value="follow-up-sequences" className="py-3" onClick={() => handleTabChange('follow-up-sequences')}>
-          <MessageSquare className="mr-2 h-4 w-4" />
-          Follow-Up Sequences
-        </TabsTrigger>
-      </TabsList>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <TabsList className="w-full justify-start h-auto overflow-x-auto">
+          <TabsTrigger value="overview" className="py-3">
+            <BarChart3 className="mr-2 h-4 w-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="stats" className="py-3">
+            <LineChart className="mr-2 h-4 w-4" />
+            TAO Stats
+          </TabsTrigger>
+          <TabsTrigger value="marketcap" className="py-3">
+            <CircleDollarSign className="mr-2 h-4 w-4" />
+            Market Cap
+          </TabsTrigger>
+          <TabsTrigger value="subnets" className="py-3">
+            <Layers className="mr-2 h-4 w-4" />
+            Subnets
+          </TabsTrigger>
+          <TabsTrigger value="validators" className="py-3">
+            <Globe className="mr-2 h-4 w-4" />
+            Validators
+          </TabsTrigger>
+          <TabsTrigger value="performance" className="py-3">
+            <Activity className="mr-2 h-4 w-4" />
+            Performance
+          </TabsTrigger>
+          <TabsTrigger value="management" className="py-3">
+            <Database className="mr-2 h-4 w-4" />
+            Management
+          </TabsTrigger>
+          <TabsTrigger value="validator-relationship-management" className="py-3">
+            <Users className="mr-2 h-4 w-4" />
+            Validator CRM
+          </TabsTrigger>
+          <TabsTrigger value="investor-opportunities" className="py-3">
+            <TrendingUp className="mr-2 h-4 w-4" />
+            Investor Opportunities
+          </TabsTrigger>
+          <TabsTrigger value="follow-up-sequences" className="py-3">
+            <MessageSquare className="mr-2 h-4 w-4" />
+            Follow-Up Sequences
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
     </div>
   );
 };
