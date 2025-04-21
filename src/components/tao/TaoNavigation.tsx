@@ -35,6 +35,8 @@ const TaoNavigation: React.FC<TaoNavigationProps> = ({ activeTab, onTabChange })
       navigate('/tao/investor-opportunities');
     } else if (value === 'follow-up-sequences') {
       navigate('/tao/follow-up-sequences');
+    } else if (value === 'management') {
+      navigate('/tao/management');
     } else if (value === 'overview') {
       navigate('/tao');
     } else {

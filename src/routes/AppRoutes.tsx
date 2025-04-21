@@ -24,6 +24,7 @@ import CryptoDashboard from "@/pages/crypto/Dashboard";
 import TAOLayout from "@/pages/tao/layout";
 import TAODashboard from "@/pages/tao/index";
 import TAOPerformance from "@/pages/tao/performance";
+import TAOManagement from "@/pages/tao/management";
 import TAOValidatorRelationshipManagement from "@/pages/tao/validator-relationship-management";
 import InvestorOpportunitiesPage from "@/pages/tao/investor-opportunities";
 import FollowUpSequencesPage from "@/pages/tao/follow-up-sequences";
@@ -129,6 +130,7 @@ const AppRoutes = () => {
           <Route path="tao" element={<TAOLayout />}>
             <Route index element={<TAODashboard />} />
             <Route path="performance" element={<TAOPerformance />} />
+            <Route path="management" element={<TAOManagement />} />
             <Route
               path="validator-relationship-management"
               element={<TAOValidatorRelationshipManagement />}
