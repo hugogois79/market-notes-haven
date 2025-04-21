@@ -9,10 +9,24 @@ import { Database, Settings, Users, Server, Shield } from "lucide-react";
 
 const TAOManagement = () => {
   const [activeTab, setActiveTab] = useState("management");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleRefresh = () => {
+    setIsLoading(true);
+    // Simulate refresh
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+  };
 
   return (
     <div className="space-y-6">
-      <TaoPageHeader title="TAO Management" description="Manage TAO network settings, validators, and resources" />
+      <TaoPageHeader 
+        timestamp={new Date().toISOString()} 
+        isLoading={isLoading} 
+        onRefresh={handleRefresh} 
+        isMockData={true}
+      />
       
       <TaoNavigation activeTab={activeTab} onTabChange={setActiveTab} />
       
