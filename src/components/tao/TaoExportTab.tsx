@@ -70,7 +70,7 @@ const TaoExportTab: React.FC = () => {
     - ${subnet.name}
       - ID:: ${subnet.netuid}
       - Neuron Count:: ${subnet.neurons}
-      - Emission Rate:: ${subnet.emission.toFixed(4)} τ/day`).join('\n')}
+      - Emission Rate:: ${typeof subnet.emission === 'number' ? subnet.emission.toFixed(4) : subnet.emission} τ/day`).join('\n')}
     - ... and ${taoStats.subnets.length - 5} more subnets`}
           </pre>
         </CardContent>

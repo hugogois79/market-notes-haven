@@ -35,7 +35,13 @@ export const generateTaoStatsTanaMarkdown = (stats: TaoStatsUpdate): string => {
       markdown += `    - ${subnet.name}\n`;
       markdown += `      - ID:: ${subnet.netuid}\n`;
       markdown += `      - Neuron Count:: ${subnet.neurons}\n`;
-      markdown += `      - Emission Rate:: ${subnet.emission.toFixed(4)} τ/day\n`;
+      
+      // Handle emission which can be a string or a number
+      const emissionValue = typeof subnet.emission === 'number' 
+        ? `${subnet.emission.toFixed(4)} τ/day` 
+        : subnet.emission;
+      
+      markdown += `      - Emission Rate:: ${emissionValue}\n`;
     });
     
     return markdown;
