@@ -46,80 +46,87 @@ const SubnetsOverview: React.FC<SubnetsOverviewProps> = ({
 
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {subnets.map((subnet) => (
-        <Card key={subnet.id} className="overflow-hidden">
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-start">
-              <div>
-                <Badge className={`${getTierColor(subnet.tier)} mb-2 border-0`}>
-                  Tier {subnet.tier}
-                </Badge>
-                <CardTitle>{subnet.name}</CardTitle>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onViewSubnet(subnet)}
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
-            </div>
-            <CardDescription>
-              {subnet.description || "No description available"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm space-y-3">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Neurons:</span>
-                <span className="font-medium">{subnet.neurons}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Emission:</span>
-                <span className="font-medium">{subnet.emission}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Incentive:</span>
-                <span className="font-medium">{subnet.incentive}</span>
-              </div>
-              
-              <div className="mt-4 pt-3 border-t">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium flex items-center">
-                    <Users className="h-4 w-4 mr-1" /> Validators
-                  </span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => onAddValidator(subnet)}
-                  >
-                    <PlusCircle className="h-4 w-4" />
-                  </Button>
+      {subnets.map((subnet) => {
+        const subnetId = typeof subnet.id === 'string' ? parseInt(subnet.id, 10) : subnet.id;
+        return (
+          <Card key={subnet.id} className="overflow-hidden">
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  {subnet.tier && (
+                    <Badge className={`${getTierColor(subnet.tier)} mb-2 border-0`}>
+                      Tier {subnet.tier}
+                    </Badge>
+                  )}
+                  <CardTitle>{subnet.name}</CardTitle>
                 </div>
-                
-                {validatorsBySubnet[subnet.id]?.length > 0 ? (
-                  <div className="space-y-1">
-                    {validatorsBySubnet[subnet.id].slice(0, 3).map((validatorId) => (
-                      <div key={validatorId} className="text-sm">
-                        {validatorNames[validatorId] || "Unknown Validator"}
-                      </div>
-                    ))}
-                    {validatorsBySubnet[subnet.id].length > 3 && (
-                      <div className="text-sm text-muted-foreground">
-                        +{validatorsBySubnet[subnet.id].length - 3} more
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground italic">
-                    No validators linked
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onViewSubnet(subnet)}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </div>
+              <CardDescription>
+                {subnet.description || "No description available"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Neurons:</span>
+                  <span className="font-medium">{subnet.neurons}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Emission:</span>
+                  <span className="font-medium">{subnet.emission}</span>
+                </div>
+                {subnet.incentive && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Incentive:</span>
+                    <span className="font-medium">{subnet.incentive}</span>
                   </div>
                 )}
+                
+                <div className="mt-4 pt-3 border-t">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium flex items-center">
+                      <Users className="h-4 w-4 mr-1" /> Validators
+                    </span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => onAddValidator(subnet)}
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {validatorsBySubnet[subnetId]?.length > 0 ? (
+                    <div className="space-y-1">
+                      {validatorsBySubnet[subnetId].slice(0, 3).map((validatorId) => (
+                        <div key={validatorId} className="text-sm">
+                          {validatorNames[validatorId] || "Unknown Validator"}
+                        </div>
+                      ))}
+                      {validatorsBySubnet[subnetId].length > 3 && (
+                        <div className="text-sm text-muted-foreground">
+                          +{validatorsBySubnet[subnetId].length - 3} more
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground italic">
+                      No validators linked
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 };

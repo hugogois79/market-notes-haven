@@ -64,8 +64,9 @@ export function useValidatorData() {
       
       await Promise.all(
         subnets.map(async (subnet) => {
-          const validatorIds = await fetchValidatorsBySubnet(subnet.id);
-          subnetValidatorMap[subnet.id] = validatorIds;
+          const subnetId = typeof subnet.id === 'string' ? parseInt(subnet.id, 10) : subnet.id;
+          const validatorIds = await fetchValidatorsBySubnet(subnetId);
+          subnetValidatorMap[subnetId] = validatorIds;
         })
       );
       
@@ -89,7 +90,8 @@ export function useValidatorData() {
   // Create a mapping of subnet IDs to names for easier reference
   const subnetNames = subnets.reduce<Record<number, string>>(
     (acc, subnet) => {
-      acc[subnet.id] = subnet.name;
+      const subnetId = typeof subnet.id === 'string' ? parseInt(subnet.id, 10) : subnet.id;
+      acc[subnetId] = subnet.name;
       return acc;
     },
     {}

@@ -5,8 +5,12 @@ export interface TaoSubnet {
   id: number | string;
   name: string;
   neurons: number;
-  emission: string | number;
+  emission: string;  // Change back to just string to match database
   description?: string;
+  tier: number;
+  incentive: string;
+  created_at?: string;
+  updated_at?: string;
   api_endpoint?: string;
   api_docs_url?: string;
   api_version?: string;
@@ -49,10 +53,16 @@ export const fetchTaoSubnet = async (id: number): Promise<TaoSubnet | null> => {
 
 export const updateTaoSubnet = async (subnet: Partial<TaoSubnet> & { id: number | string }): Promise<TaoSubnet | null> => {
   try {
+    // Ensure emission is always a string to match the database column type
+    const subnetToUpdate = {
+      ...subnet,
+      emission: subnet.emission ? String(subnet.emission) : undefined
+    };
+
     const { data, error } = await supabase
       .from('tao_subnets')
-      .update(subnet)
-      .eq('id', subnet.id)
+      .update(subnetToUpdate)
+      .eq('id', typeof subnet.id === 'string' ? parseInt(subnet.id, 10) : subnet.id)
       .select()
       .single();
 
@@ -65,11 +75,17 @@ export const updateTaoSubnet = async (subnet: Partial<TaoSubnet> & { id: number 
   }
 };
 
-export const createTaoSubnet = async (subnet: Omit<TaoSubnet, 'id'>): Promise<TaoSubnet | null> => {
+export const createTaoSubnet = async (subnet: Omit<TaoSubnet, 'id' | 'created_at' | 'updated_at'>): Promise<TaoSubnet | null> => {
   try {
+    // Ensure emission is always a string to match the database column type
+    const subnetToCreate = {
+      ...subnet,
+      emission: String(subnet.emission)
+    };
+
     const { data, error } = await supabase
       .from('tao_subnets')
-      .insert(subnet)
+      .insert(subnetToCreate)
       .select()
       .single();
 

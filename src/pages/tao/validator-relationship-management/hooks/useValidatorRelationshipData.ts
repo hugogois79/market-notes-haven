@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
@@ -7,9 +6,10 @@ import {
   fetchContactLogs
 } from "@/services/taoValidatorService";
 import { toast } from "sonner";
-import { TaoSubnet } from "@/services/subnets/types";
+import { TaoSubnet as SubnetType } from "@/services/subnets/types";
 import { fetchSubnetsByValidator, fetchValidatorsBySubnet } from "@/services/subnets/subnetService";
 import { fetchTaoSubnets } from "@/services/taoSubnetService";
+import { adaptArrayToSubnetTypes } from "@/utils/subnetTypeAdapter";
 import { 
   fetchValidatorMetrics,
   fetchValidatorStakeHistory,
@@ -45,12 +45,11 @@ export interface CollaborationOpportunity {
 export function useValidatorRelationshipData() {
   const [selectedValidator, setSelectedValidator] = useState<TaoValidator | null>(null);
   const [validatorMetrics, setValidatorMetrics] = useState<ValidatorMetrics | null>(null);
-  const [validatorSubnets, setValidatorSubnets] = useState<TaoSubnet[]>([]);
+  const [validatorSubnets, setValidatorSubnets] = useState<SubnetType[]>([]);
   const [validatorStakeHistory, setValidatorStakeHistory] = useState<StakeHistory[]>([]);
-  const [recommendedSubnets, setRecommendedSubnets] = useState<TaoSubnet[]>([]);
+  const [recommendedSubnets, setRecommendedSubnets] = useState<SubnetType[]>([]);
   const [collaborationOpportunities, setCollaborationOpportunities] = useState<CollaborationOpportunity[]>([]);
 
-  // Fetch validators
   const {
     data: validators = [],
     isLoading: isLoadingValidators,
@@ -60,9 +59,8 @@ export function useValidatorRelationshipData() {
     queryFn: fetchValidators,
   });
 
-  // Fetch subnets
   const {
-    data: subnets = [],
+    data: rawSubnets = [],
     isLoading: isLoadingSubnets,
     refetch: refetchSubnets,
   } = useQuery({
@@ -70,7 +68,8 @@ export function useValidatorRelationshipData() {
     queryFn: fetchTaoSubnets,
   });
 
-  // Fetch contact logs
+  const subnets = adaptArrayToSubnetTypes(rawSubnets);
+
   const {
     data: contactLogs = [],
     isLoading: isLoadingContactLogs,
@@ -80,33 +79,30 @@ export function useValidatorRelationshipData() {
     queryFn: fetchContactLogs,
   });
 
-  // Filter contact logs for selected validator
   const validatorCommunication = contactLogs.filter(
     log => selectedValidator && log.validator_id === selectedValidator.id
   );
 
-  // Load validator-specific data when a validator is selected
   useEffect(() => {
     const loadValidatorData = async () => {
       if (!selectedValidator) return;
       
       try {
-        // Fetch validator metrics
         const metrics = await fetchValidatorMetrics(selectedValidator.id);
         setValidatorMetrics(metrics);
         
-        // Fetch validator stake history
         const stakeHistory = await fetchValidatorStakeHistory(selectedValidator.id);
         setValidatorStakeHistory(stakeHistory);
         
-        // Fetch validator subnets
         const subnetIds = await fetchSubnetsByValidator(selectedValidator.id);
-        const validatorSubnetList = subnets.filter(subnet => 
-          subnetIds.includes(subnet.id)
-        );
+        const rawValidatorSubnetList = rawSubnets.filter(subnet => {
+          const subnetId = typeof subnet.id === 'string' ? parseInt(subnet.id, 10) : subnet.id;
+          return subnetIds.includes(subnetId);
+        });
+        
+        const validatorSubnetList = adaptArrayToSubnetTypes(rawValidatorSubnetList);
         setValidatorSubnets(validatorSubnetList);
         
-        // Generate recommended subnets
         const recommended = await generateRecommendedSubnets(
           selectedValidator, 
           subnets,
@@ -114,7 +110,6 @@ export function useValidatorRelationshipData() {
         );
         setRecommendedSubnets(recommended);
         
-        // Generate collaboration opportunities
         const opportunities = await generateCollaborationOpportunities(
           selectedValidator,
           validators,
@@ -129,16 +124,14 @@ export function useValidatorRelationshipData() {
     };
 
     loadValidatorData();
-  }, [selectedValidator, subnets, validators]);
+  }, [selectedValidator, rawSubnets, validators, subnets]);
 
-  // Refresh all data
   const refreshData = useCallback(() => {
     refetchValidators();
     refetchSubnets();
     refetchContactLogs();
     
     if (selectedValidator) {
-      // Re-fetch the current validator to get latest data
       fetchValidators().then(updatedValidators => {
         const refreshedValidator = updatedValidators.find(v => v.id === selectedValidator.id);
         if (refreshedValidator) {

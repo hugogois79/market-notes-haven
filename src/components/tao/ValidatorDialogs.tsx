@@ -40,7 +40,7 @@ interface ValidatorDialogsProps {
   selectedValidator: TaoValidator | undefined;
   selectedContactLog: TaoContactLog | undefined;
   selectedNote: TaoNote | undefined;
-  subnets: TaoSubnet[];
+  subnets: TaoSubnet[]; // Changed to use the imported type
   onValidatorFormSubmit: (data: Omit<TaoValidator, "id" | "created_at" | "updated_at">) => Promise<void>;
   onContactLogFormSubmit: (data: Omit<TaoContactLog, "id" | "created_at" | "updated_at">) => Promise<void>;
   onNoteFormSubmit: (data: Omit<TaoNote, "id" | "created_at" | "updated_at">) => Promise<void>;

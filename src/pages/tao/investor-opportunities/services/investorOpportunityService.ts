@@ -1,9 +1,9 @@
-
 import { InvestmentPreference, SubnetProject, Investment, OpportunityMatch, InvestorMeeting, InvestorAlert, RiskAssessment } from "../types";
-import { TaoSubnet } from "@/services/subnets/types";
+import { TaoSubnet as SubnetType } from "@/services/subnets/types";
 import { TaoValidator } from "@/services/validators/types";
 import { fetchTaoSubnets } from "@/services/taoSubnetService";
 import { fetchValidators } from "@/services/taoValidatorService";
+import { adaptArrayToSubnetTypes } from "@/utils/subnetTypeAdapter";
 
 // Mock investment preferences
 let investmentPreferences: InvestmentPreference[] = [{
@@ -23,7 +23,8 @@ let investmentPreferences: InvestmentPreference[] = [{
 
 // Mock subnet projects
 const generateMockProjects = async (): Promise<SubnetProject[]> => {
-  const subnets = await fetchTaoSubnets();
+  const rawSubnets = await fetchTaoSubnets();
+  const subnets = adaptArrayToSubnetTypes(rawSubnets);
   const validators = await fetchValidators();
   
   return [
