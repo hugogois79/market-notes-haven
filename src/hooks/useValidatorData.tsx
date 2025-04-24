@@ -12,6 +12,8 @@ import {
 import { fetchTaoSubnets, TaoSubnet } from "@/services/taoSubnetService";
 import { useState, useEffect } from "react";
 import { useNotes } from "@/contexts/NotesContext";
+import { adaptArrayToSubnetTypes } from "@/utils/subnetTypeAdapter";
+import { TaoSubnet as TaoSubnetTypes } from "@/services/subnets/types";
 
 export function useValidatorData() {
   const { refetch: refetchAppNotes } = useNotes();
@@ -29,13 +31,16 @@ export function useValidatorData() {
 
   // Fetch subnets data
   const {
-    data: subnets = [],
+    data: rawSubnets = [],
     isLoading: isLoadingSubnets,
     refetch: refetchSubnets,
   } = useQuery({
     queryKey: ["tao-subnets"],
     queryFn: fetchTaoSubnets,
   });
+
+  // Convert the subnets to the correct type
+  const subnets: TaoSubnetTypes[] = adaptArrayToSubnetTypes(rawSubnets);
 
   // Fetch contact logs
   const {
@@ -64,7 +69,7 @@ export function useValidatorData() {
       
       await Promise.all(
         subnets.map(async (subnet) => {
-          const subnetId = typeof subnet.id === 'string' ? parseInt(subnet.id, 10) : subnet.id;
+          const subnetId = subnet.id;
           const validatorIds = await fetchValidatorsBySubnet(subnetId);
           subnetValidatorMap[subnetId] = validatorIds;
         })
@@ -90,8 +95,7 @@ export function useValidatorData() {
   // Create a mapping of subnet IDs to names for easier reference
   const subnetNames = subnets.reduce<Record<number, string>>(
     (acc, subnet) => {
-      const subnetId = typeof subnet.id === 'string' ? parseInt(subnet.id, 10) : subnet.id;
-      acc[subnetId] = subnet.name;
+      acc[subnet.id] = subnet.name;
       return acc;
     },
     {}

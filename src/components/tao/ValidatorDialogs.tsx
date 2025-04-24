@@ -6,7 +6,9 @@ import {
   TaoNote,
   deleteValidator,
 } from "@/services/taoValidatorService";
-import { TaoSubnet } from "@/services/taoSubnetService";
+import { TaoSubnet as TaoSubnetService } from "@/services/taoSubnetService"; 
+import { TaoSubnet } from "@/services/subnets/types";
+import { adaptArrayToSubnetTypes } from "@/utils/subnetTypeAdapter";
 import {
   Dialog,
   DialogContent,
@@ -40,7 +42,7 @@ interface ValidatorDialogsProps {
   selectedValidator: TaoValidator | undefined;
   selectedContactLog: TaoContactLog | undefined;
   selectedNote: TaoNote | undefined;
-  subnets: TaoSubnet[]; // Changed to use the imported type
+  subnets: TaoSubnetService[]; // The incoming type is from taoSubnetService
   onValidatorFormSubmit: (data: Omit<TaoValidator, "id" | "created_at" | "updated_at">) => Promise<void>;
   onContactLogFormSubmit: (data: Omit<TaoContactLog, "id" | "created_at" | "updated_at">) => Promise<void>;
   onNoteFormSubmit: (data: Omit<TaoNote, "id" | "created_at" | "updated_at">) => Promise<void>;
@@ -59,12 +61,15 @@ const ValidatorDialogs: React.FC<ValidatorDialogsProps> = ({
   selectedValidator,
   selectedContactLog,
   selectedNote,
-  subnets,
+  subnets: rawSubnets,
   onValidatorFormSubmit,
   onContactLogFormSubmit,
   onNoteFormSubmit,
   refetchValidators,
 }) => {
+  // Convert the subnets to the expected type
+  const subnets: TaoSubnet[] = adaptArrayToSubnetTypes(rawSubnets);
+  
   // Handle confirming validator deletion
   const confirmDeleteValidator = async () => {
     if (!selectedValidator) return;

@@ -59,10 +59,16 @@ export const updateTaoSubnet = async (subnet: Partial<TaoSubnet> & { id: number 
       emission: subnet.emission ? String(subnet.emission) : undefined
     };
 
+    // Extract ID for the eq filter
+    const id = typeof subnet.id === 'string' ? parseInt(subnet.id, 10) : subnet.id;
+    
+    // Remove id from the update object
+    const { id: _, ...updateData } = subnetToUpdate;
+
     const { data, error } = await supabase
       .from('tao_subnets')
-      .update(subnetToUpdate)
-      .eq('id', typeof subnet.id === 'string' ? parseInt(subnet.id, 10) : subnet.id)
+      .update(updateData)
+      .eq('id', id)
       .select()
       .single();
 
@@ -75,7 +81,7 @@ export const updateTaoSubnet = async (subnet: Partial<TaoSubnet> & { id: number 
   }
 };
 
-export const createTaoSubnet = async (subnet: Omit<TaoSubnet, 'id' | 'created_at' | 'updated_at'>): Promise<TaoSubnet | null> => {
+export const createTaoSubnet = async (subnet: Omit<TaoSubnet, "id" | "created_at" | "updated_at">): Promise<TaoSubnet | null> => {
   try {
     // Ensure emission is always a string to match the database column type
     const subnetToCreate = {
