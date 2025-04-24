@@ -18,7 +18,7 @@ export interface TaoSubnetInfo {
   netuid: number;
   name: string;
   neurons: number;
-  emission: number | string;  // Updated to allow both number and string
+  emission: number | string;
   description?: string;
   tempo?: number;
   incentive?: number;
@@ -29,6 +29,12 @@ export interface TaoSubnetInfo {
   price_change_1h?: number;
   price_change_24h?: number;
   price_change_7d?: number;
+  // API information fields
+  api_endpoint?: string;
+  api_docs_url?: string;
+  api_version?: string;
+  last_api_check?: string;
+  api_status?: string;
   // Performance data
   performance?: SubnetPerformance;
 }

@@ -1002,33 +1002,48 @@ export type Database = {
       }
       tao_subnets: {
         Row: {
+          api_docs_url: string | null
+          api_endpoint: string | null
+          api_status: string | null
+          api_version: string | null
           created_at: string
           description: string | null
           emission: string
           id: number
           incentive: string
+          last_api_check: string | null
           name: string
           neurons: number
           tier: number
           updated_at: string
         }
         Insert: {
+          api_docs_url?: string | null
+          api_endpoint?: string | null
+          api_status?: string | null
+          api_version?: string | null
           created_at?: string
           description?: string | null
           emission: string
           id?: number
           incentive: string
+          last_api_check?: string | null
           name: string
           neurons: number
           tier: number
           updated_at?: string
         }
         Update: {
+          api_docs_url?: string | null
+          api_endpoint?: string | null
+          api_status?: string | null
+          api_version?: string | null
           created_at?: string
           description?: string | null
           emission?: string
           id?: number
           incentive?: string
+          last_api_check?: string | null
           name?: string
           neurons?: number
           tier?: number

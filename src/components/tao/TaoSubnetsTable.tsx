@@ -3,9 +3,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TaoSubnetInfo } from "@/services/taoStatsService";
 import { TaoSubnet } from "@/services/taoSubnetService";
-import { ArrowDown, ArrowUp, Info, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, Info, Search, Globe, FileText, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TaoSubnetsTableProps {
   subnets: (TaoSubnetInfo | TaoSubnet)[];
@@ -15,7 +17,7 @@ interface TaoSubnetsTableProps {
   hasLiveData: boolean;
 }
 
-type SortField = 'name' | 'netuid' | 'neurons' | 'emission' | 'price' | 'market_cap' | 'volume_24h' | null;
+type SortField = 'name' | 'netuid' | 'neurons' | 'emission' | 'price' | 'market_cap' | 'volume_24h' | 'api_status' | null;
 type SortDirection = 'asc' | 'desc';
 
 const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
@@ -29,7 +31,6 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Helper function to safely format emission values
   const formatEmission = (emission: string | number): string => {
     if (typeof emission === 'number') {
       return emission.toFixed(4);
@@ -46,7 +47,6 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
     }
   };
 
-  // Filter and sort subnets
   const filteredAndSortedSubnets = [...subnets]
     .filter(subnet => {
       if (!searchQuery) return true;
@@ -86,6 +86,9 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
       } else if (sortField === 'volume_24h') {
         valueA = 'volume_24h' in a ? a.volume_24h || 0 : 0;
         valueB = 'volume_24h' in b ? b.volume_24h || 0 : 0;
+      } else if (sortField === 'api_status') {
+        valueA = a.api_status;
+        valueB = b.api_status;
       }
 
       if (typeof valueA === 'string' && typeof valueB === 'string') {
@@ -97,20 +100,17 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
       return sortDirection === 'asc' ? valueA - valueB : valueB - valueA;
     });
 
-  // Helper for rendering sort indicator
   const renderSortIndicator = (field: SortField) => {
     if (sortField !== field) return null;
     return sortDirection === 'asc' ? <ArrowUp className="h-4 w-4 ml-1" /> : <ArrowDown className="h-4 w-4 ml-1" />;
   };
 
-  // Function to determine text color based on value trend
   const getTrendColor = (value: number) => {
     if (value > 0) return "text-emerald-500";
     if (value < 0) return "text-red-500";
     return "text-gray-500";
   };
 
-  // Get trend data from the subnet object if available, otherwise generate deterministic data
   const getTrendData = (subnet: TaoSubnetInfo | TaoSubnet) => {
     if ('price_change_1h' in subnet && 'price_change_24h' in subnet && 'price_change_7d' in subnet) {
       return {
@@ -134,24 +134,34 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
     return trendSets[seed];
   };
 
-  // Get subnet code for display
   const getSubnetId = (subnet: TaoSubnetInfo | TaoSubnet): number => {
     return 'netuid' in subnet ? subnet.netuid : subnet.id as number;
   };
   
-  // Get first letter of subnet name for the icon
   const getSubnetIconLetter = (name: string): string => {
     return name.charAt(0).toUpperCase();
   };
 
-  // Format market cap and volume for display
   const formatValue = (value: number | undefined): string => {
     if (value === undefined) return 'τ --';
     if (value >= 1000000) return `τ ${(value / 1000000).toFixed(2)}M`;
     if (value >= 1000) return `τ ${(value / 1000).toFixed(2)}K`;
     return `τ ${value.toFixed(2)}`;
   };
-  
+
+  const getApiStatusColor = (status?: string) => {
+    switch (status?.toLowerCase()) {
+      case 'active':
+        return 'text-green-500';
+      case 'inactive':
+        return 'text-red-500';
+      case 'degraded':
+        return 'text-yellow-500';
+      default:
+        return 'text-gray-400';
+    }
+  };
+
   return (
     <div className="mt-4">
       <div className="flex items-center justify-between mb-4">
@@ -232,6 +242,12 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
                         Volume (24h) {renderSortIndicator('volume_24h')} <Info className="h-4 w-4 ml-1 text-gray-400" />
                       </div>
                     </TableHead>
+                    <TableHead className="text-right font-medium cursor-pointer"
+                      onClick={() => handleSort('api_status')}>
+                      <div className="flex items-center justify-end">
+                        API Status {renderSortIndicator('api_status')}
+                      </div>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -287,6 +303,47 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
                           </TableCell>
                           <TableCell className="text-right">
                             {formatValue(volume)}
+                          </TableCell>
+                          <TableCell className="text-right space-x-2">
+                            {subnet.api_endpoint && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => window.open(subnet.api_endpoint, '_blank')}
+                                  >
+                                    <Globe className={cn(
+                                      "h-4 w-4",
+                                      getApiStatusColor(subnet.api_status)
+                                    )} />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>API Status: {subnet.api_status || 'Unknown'}</p>
+                                  <p>Last Check: {subnet.last_api_check ? new Date(subnet.last_api_check).toLocaleString() : 'Never'}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {subnet.api_docs_url && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => window.open(subnet.api_docs_url, '_blank')}
+                              >
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {subnet.api_version && (
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Activity className="h-4 w-4 text-gray-500" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  API Version: {subnet.api_version}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
