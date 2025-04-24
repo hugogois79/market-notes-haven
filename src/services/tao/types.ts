@@ -18,7 +18,7 @@ export interface TaoSubnetInfo {
   netuid: number;
   name: string;
   neurons: number;
-  emission: number;
+  emission: number | string;  // Updated to allow both number and string
   description?: string;
   tempo?: number;
   incentive?: number;

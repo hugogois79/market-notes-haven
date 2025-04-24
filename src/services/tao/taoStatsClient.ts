@@ -1,4 +1,3 @@
-
 import { API_HEADERS, GLOBAL_STATS_URL, SUBNETS_URL } from './apiConfig';
 import { TaoGlobalStats, TaoSubnetInfo } from './types';
 import { fetchTaoPriceFromCoinGecko } from './coinGeckoClient';
@@ -78,17 +77,19 @@ export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
       
       // If the API doesn't provide a meaningful name or it's generic, use our mapping
       if (!subnetName || 
-          subnetName.toLowerCase().includes('subnet') || 
-          subnetName.toLowerCase() === 'unknown') {
+          (typeof subnetName === 'string' && subnetName.toLowerCase().includes('subnet')) || 
+          (typeof subnetName === 'string' && subnetName.toLowerCase() === 'unknown')) {
         subnetName = SUBNET_NAME_MAPPING[subnet.netuid] || `Subnet ${subnet.netuid}`;
       }
       
       // Format emission properly
-      let emissionValue = subnet.emission;
-      if (typeof emissionValue === 'number') {
-        emissionValue = `${emissionValue.toFixed(4)}τ/day`;
-      } else if (typeof emissionValue === 'string' && !emissionValue.includes('τ')) {
-        emissionValue = `${emissionValue}τ/day`;
+      let emission = subnet.emission;
+      
+      // Add τ/day suffix only if it's a string that doesn't already include it
+      if (typeof emission === 'string' && !emission.includes('τ')) {
+        emission = `${emission}τ/day`;
+      } else if (typeof emission === 'number') {
+        emission = `${emission.toFixed(4)}τ/day`;
       }
       
       // Make sure all required fields have valid values
@@ -96,7 +97,7 @@ export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
         netuid: subnet.netuid || 0,
         name: subnetName,
         neurons: subnet.neurons || 0,
-        emission: emissionValue,
+        emission: emission,
         description: subnet.description || `${subnetName} subnet for the TAO network`,
         tempo: subnet.tempo || 0,
         incentive: subnet.incentive || 0,
@@ -118,17 +119,18 @@ export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
       const subnetName = SUBNET_NAME_MAPPING[subnet.netuid] || `Subnet ${subnet.netuid}`;
       
       // Format emission properly for mock data too
-      let emissionValue = subnet.emission;
-      if (typeof emissionValue === 'number') {
-        emissionValue = `${emissionValue.toFixed(4)}τ/day`;
-      } else if (typeof emissionValue === 'string' && !emissionValue.includes('τ')) {
-        emissionValue = `${emissionValue}τ/day`;
+      let emission = subnet.emission;
+      
+      if (typeof emission === 'string' && !emission.includes('τ')) {
+        emission = `${emission}τ/day`;
+      } else if (typeof emission === 'number') {
+        emission = `${emission.toFixed(4)}τ/day`;
       }
       
       return {
         ...subnet,
         name: subnetName,
-        emission: emissionValue
+        emission: emission
       };
     });
   }

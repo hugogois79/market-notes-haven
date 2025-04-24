@@ -17,7 +17,7 @@ export const MOCK_TAO_STATS: TaoStatsUpdate = {
     // Use the real subnet names from the mapping or generate a default
     const name = SUBNET_NAME_MAPPING[netuid] || `Subnet ${netuid}`;
     
-    // Create a realistic emission value
+    // Create a realistic emission value and convert to string with τ/day suffix
     const emissionValue = parseFloat((Math.random() * 10).toFixed(4));
     const emission = `${emissionValue}τ/day`;
     
