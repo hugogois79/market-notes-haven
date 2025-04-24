@@ -87,8 +87,8 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
         valueA = 'volume_24h' in a ? a.volume_24h || 0 : 0;
         valueB = 'volume_24h' in b ? b.volume_24h || 0 : 0;
       } else if (sortField === 'api_status') {
-        valueA = a.api_status;
-        valueB = b.api_status;
+        valueA = a.api_status || 'unknown';
+        valueB = b.api_status || 'unknown';
       }
 
       if (typeof valueA === 'string' && typeof valueB === 'string') {
@@ -135,7 +135,7 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
   };
 
   const getSubnetId = (subnet: TaoSubnetInfo | TaoSubnet): number => {
-    return 'netuid' in subnet ? subnet.netuid : subnet.id as number;
+    return 'netuid' in subnet ? subnet.netuid : (subnet.id as number);
   };
   
   const getSubnetIconLetter = (name: string): string => {
