@@ -17,11 +17,15 @@ export const MOCK_TAO_STATS: TaoStatsUpdate = {
     // Use the real subnet names from the mapping or generate a default
     const name = SUBNET_NAME_MAPPING[netuid] || `Subnet ${netuid}`;
     
+    // Create a realistic emission value
+    const emissionValue = parseFloat((Math.random() * 10).toFixed(4));
+    const emission = `${emissionValue}τ/day`;
+    
     return {
       netuid,
       name,
       neurons: Math.floor(Math.random() * 200) + 20,
-      emission: parseFloat((Math.random() * 10).toFixed(4)),
+      emission,
       description: `${name} subnet for the TAO network`,
       tempo: Math.floor(Math.random() * 100),
       incentive: Math.floor(Math.random() * 1000),

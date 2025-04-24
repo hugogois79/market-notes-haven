@@ -83,12 +83,20 @@ export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
         subnetName = SUBNET_NAME_MAPPING[subnet.netuid] || `Subnet ${subnet.netuid}`;
       }
       
+      // Format emission properly
+      let emissionValue = subnet.emission;
+      if (typeof emissionValue === 'number') {
+        emissionValue = `${emissionValue.toFixed(4)}τ/day`;
+      } else if (typeof emissionValue === 'string' && !emissionValue.includes('τ')) {
+        emissionValue = `${emissionValue}τ/day`;
+      }
+      
       // Make sure all required fields have valid values
       return {
         netuid: subnet.netuid || 0,
         name: subnetName,
         neurons: subnet.neurons || 0,
-        emission: parseFloat(subnet.emission) || 0,
+        emission: emissionValue,
         description: subnet.description || `${subnetName} subnet for the TAO network`,
         tempo: subnet.tempo || 0,
         incentive: subnet.incentive || 0,
@@ -107,9 +115,20 @@ export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
     // If the API fails, use our mock data but with real subnet names
     console.log('Using mock subnet data with real names');
     return MOCK_TAO_STATS.subnets.map(subnet => {
+      const subnetName = SUBNET_NAME_MAPPING[subnet.netuid] || `Subnet ${subnet.netuid}`;
+      
+      // Format emission properly for mock data too
+      let emissionValue = subnet.emission;
+      if (typeof emissionValue === 'number') {
+        emissionValue = `${emissionValue.toFixed(4)}τ/day`;
+      } else if (typeof emissionValue === 'string' && !emissionValue.includes('τ')) {
+        emissionValue = `${emissionValue}τ/day`;
+      }
+      
       return {
         ...subnet,
-        name: SUBNET_NAME_MAPPING[subnet.netuid] || `Subnet ${subnet.netuid}`
+        name: subnetName,
+        emission: emissionValue
       };
     });
   }
