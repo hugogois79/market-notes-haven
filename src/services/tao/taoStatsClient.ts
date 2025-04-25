@@ -1,3 +1,4 @@
+
 import { API_HEADERS, GLOBAL_STATS_URL, SUBNETS_URL } from './apiConfig';
 import { TaoGlobalStats, TaoSubnetInfo } from './types';
 import { fetchTaoPriceFromCoinGecko } from './coinGeckoClient';
@@ -57,6 +58,9 @@ export const fetchTaoGlobalStats = async (): Promise<TaoGlobalStats> => {
 export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
   try {
     console.log('Fetching TAO subnets from API...');
+    console.log('Using API URL:', SUBNETS_URL);
+    console.log('With headers:', API_HEADERS);
+    
     const response = await fetch(SUBNETS_URL, {
       headers: API_HEADERS,
       mode: 'cors',
@@ -64,7 +68,7 @@ export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
     
     if (!response.ok) {
       console.error(`API error: ${response.status}`);
-      throw new Error(`API error: ${response.status}`);
+      throw new Error(`API error: ${response.status} - ${await response.text()}`);
     }
     
     const data = await response.json();

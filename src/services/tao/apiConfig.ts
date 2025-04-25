@@ -11,8 +11,8 @@ export const API_HEADERS = {
 };
 
 // TaoStats API endpoints
-export const GLOBAL_STATS_URL = 'https://api.taostats.io/api/stats/latest/v1';
-export const SUBNETS_URL = 'https://api.taostats.io/api/subnet/v1';
+export const GLOBAL_STATS_URL = 'https://api.taostats.io/v1/stats/latest';
+export const SUBNETS_URL = 'https://api.taostats.io/v1/subnets';
 
 // CoinGecko API configuration
 export const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3';

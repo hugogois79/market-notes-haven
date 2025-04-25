@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 interface TaoSubnetsTableProps {
   subnets: (TaoSubnetInfo | TaoSubnet)[];
@@ -165,7 +167,19 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
   return (
     <div className="mt-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-semibold">{title}</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-xl font-semibold">{title}</h3>
+          {!hasLiveData && (
+            <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-50">
+              Mock Data
+            </Badge>
+          )}
+          {hasLiveData && (
+            <Badge variant="outline" className="border-green-500 text-green-700 bg-green-50">
+              Live Data
+            </Badge>
+          )}
+        </div>
         <div className="relative w-72">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
           <Input
@@ -183,7 +197,12 @@ const TaoSubnetsTable: React.FC<TaoSubnetsTableProps> = ({
             <div className="p-6 text-center">Loading subnet data...</div>
           ) : error ? (
             <div className="p-6 text-center text-red-500">
-              Error loading data. Please try refreshing.
+              Error loading data: {String(error)}
+              <div className="mt-2">
+                <Button variant="outline" onClick={() => window.location.reload()}>
+                  Retry
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">

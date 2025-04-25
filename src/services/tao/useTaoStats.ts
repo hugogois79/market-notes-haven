@@ -1,43 +1,59 @@
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { TaoStatsUpdate } from './types';
-import { fetchTaoStatsUpdate } from './taoStatsService';
-import { MOCK_TAO_STATS } from './mockData';
+import { useState, useEffect } from 'react';
+import { fetchTaoStatsUpdate, TaoStatsUpdate } from './taoStatsService';
 
-/**
- * Custom hook for live-updating TAO stats
- */
-export const useTaoStats = (refreshInterval = 5 * 60 * 1000) => {
-  const queryClient = useQueryClient();
-  
-  // Set up automatic refetching
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['tao-stats-update'],
-    queryFn: () => fetchTaoStatsUpdate(true), // Use mock data on failure
-    refetchInterval: refreshInterval,
-    staleTime: refreshInterval - 1000,
-    retry: 2, // Increased retries
-    gcTime: 60 * 60 * 1000, // 1 hour
-    meta: {
-      onError: (error: any) => {
-        console.error("Error fetching TAO stats:", error);
-        toast.error("Unable to fetch live TAO data. Using cached data instead.");
-      }
+export function useTaoStats(refreshInterval = 300000) { // Default 5min refresh interval
+  const [taoStats, setTaoStats] = useState<TaoStatsUpdate | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [isMockData, setIsMockData] = useState<boolean>(false);
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
+
+  const refreshTaoStats = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      console.log('Refreshing TAO stats data...');
+      
+      const stats = await fetchTaoStatsUpdate();
+      
+      // Check if we're using mock data by seeing if our timestamp matches
+      // the current time vs. the timestamp in the mock data
+      const currentTime = new Date().getTime();
+      const dataTime = new Date(stats.timestamp).getTime();
+      const isUsingMockData = Math.abs(currentTime - dataTime) > 60000; // More than a minute difference
+      
+      setTaoStats(stats);
+      setIsMockData(isUsingMockData);
+      setLastRefreshTime(new Date());
+      console.log('TAO stats refreshed successfully');
+      console.log('Using mock data:', isUsingMockData);
+      
+    } catch (err) {
+      console.error('Error refreshing TAO stats:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch TAO stats'));
+      setIsMockData(true);
+    } finally {
+      setIsLoading(false);
     }
-  });
-  
-  // Function to manually refresh the data
-  const refreshTaoStats = () => {
-    toast.info("Refreshing TAO network data...");
-    queryClient.invalidateQueries({ queryKey: ['tao-stats-update'] });
   };
-  
+
+  useEffect(() => {
+    refreshTaoStats();
+    
+    const intervalId = setInterval(() => {
+      refreshTaoStats();
+    }, refreshInterval);
+    
+    return () => clearInterval(intervalId);
+  }, [refreshInterval]);
+
   return {
-    taoStats: data || MOCK_TAO_STATS, // Provide mock data as fallback
+    taoStats,
     isLoading,
     error,
     refreshTaoStats,
-    isMockData: !data && !!error
+    isMockData,
+    lastRefreshTime
   };
-};
+}
