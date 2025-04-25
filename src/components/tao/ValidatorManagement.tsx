@@ -1,14 +1,6 @@
-import React, { useState } from "react";
-import {
-  createValidator,
-  updateValidator,
-  updateValidatorStage,
-  createContactLog,
-  createTaoNote,
-  TaoValidator,
-  TaoContactLog,
-  TaoNote,
-} from "@/services/taoValidatorService";
+
+import React from "react";
+import { TaoValidator, TaoContactLog, TaoNote } from "@/services/taoValidatorService";
 import { TaoSubnet } from "@/services/taoSubnetService";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -18,29 +10,15 @@ import ContactTimeline from "./ContactTimeline";
 import CRMPipeline from "./CRMPipeline";
 import MondayCRMView from "./MondayCRMView";
 import TaoNotesTab from "./TaoNotesTab";
-import { useNavigate } from "react-router-dom";
-import { useValidatorData } from "@/hooks/useValidatorData";
 import ValidatorDialogs from "./ValidatorDialogs";
 import ValidatorManagementHeader from "./ValidatorManagementHeader";
 import ValidatorManagementTabs from "./ValidatorManagementTabs";
+import { useValidatorData } from "@/hooks/useValidatorData";
+import { useValidatorManagementState } from "@/hooks/useValidatorManagementState";
+import { useValidatorActions } from "@/hooks/useValidatorActions";
 
 const ValidatorManagement: React.FC = () => {
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("monday-crm");
-  
-  // Dialogs state
-  const [validatorFormOpen, setValidatorFormOpen] = useState(false);
-  const [contactLogFormOpen, setContactLogFormOpen] = useState(false);
-  const [noteFormOpen, setNoteFormOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  
-  // Selected items for forms/dialogs
-  const [selectedValidator, setSelectedValidator] = useState<TaoValidator | undefined>();
-  const [selectedContactLog, setSelectedContactLog] = useState<TaoContactLog | undefined>();
-  const [selectedNote, setSelectedNote] = useState<TaoNote | undefined>();
-  const [selectedSubnet, setSelectedSubnet] = useState<TaoSubnet | undefined>();
-  
-  // Get data from our custom hook
+  // Get data from our custom hooks
   const {
     validators,
     subnets,
@@ -54,6 +32,44 @@ const ValidatorManagement: React.FC = () => {
     refetchContactLogs,
     refreshAllData
   } = useValidatorData();
+
+  // Get state management from our custom hook
+  const {
+    activeTab,
+    setActiveTab,
+    validatorFormOpen,
+    setValidatorFormOpen,
+    contactLogFormOpen,
+    setContactLogFormOpen,
+    noteFormOpen,
+    setNoteFormOpen,
+    deleteDialogOpen,
+    setDeleteDialogOpen,
+    selectedValidator,
+    setSelectedValidator,
+    selectedContactLog,
+    setSelectedContactLog,
+    selectedNote,
+    setSelectedNote,
+    selectedSubnet,
+    setSelectedSubnet
+  } = useValidatorManagementState();
+
+  // Get actions from our custom hook
+  const {
+    handleValidatorFormSubmit,
+    handleContactLogFormSubmit,
+    handleNoteFormSubmit,
+    handleMoveValidatorStage,
+    handleAddNote
+  } = useValidatorActions(
+    refreshAllData,
+    refetchValidators,
+    refetchContactLogs,
+    setValidatorFormOpen,
+    setContactLogFormOpen,
+    setNoteFormOpen
+  );
 
   // Handle adding a new validator
   const handleAddValidator = () => {
@@ -75,7 +91,6 @@ const ValidatorManagement: React.FC = () => {
 
   // Handle viewing a validator's details
   const handleViewValidator = (validator: TaoValidator) => {
-    // For now, this just redirects to the edit form
     handleEditValidator(validator);
   };
 
@@ -92,157 +107,17 @@ const ValidatorManagement: React.FC = () => {
     setContactLogFormOpen(true);
   };
 
-  // Handle adding a new note
-  const handleAddNote = (validator?: TaoValidator, subnet?: TaoSubnet) => {
-    if (validator) {
-      // Navigate to the editor with TAO tag and validator name in title
-      navigate(`/editor/new?category=TAO&tags=TAO&title=${encodeURIComponent(`${validator.name} Note`)}`);
-    } else {
-      // Navigate to the editor with just the TAO tag
-      navigate("/editor/new?category=TAO&tags=TAO");
-    }
-  };
-
-  // Handle submitting validator form
-  const handleValidatorFormSubmit = async (
-    data: Omit<TaoValidator, "id" | "created_at" | "updated_at">
-  ) => {
-    try {
-      if (selectedValidator) {
-        // Update existing validator
-        const updated = await updateValidator(selectedValidator.id, data);
-        if (updated) {
-          toast.success("Validator updated successfully");
-          refetchValidators();
-        } else {
-          toast.error("Failed to update validator");
-        }
-      } else {
-        // Create new validator
-        const created = await createValidator(data);
-        if (created) {
-          toast.success("Validator created successfully");
-          refetchValidators();
-        } else {
-          toast.error("Failed to create validator");
-        }
-      }
-      
-      setValidatorFormOpen(false);
-    } catch (error) {
-      console.error("Error saving validator:", error);
-      toast.error("An error occurred while saving the validator");
-    }
-  };
-
-  // Handle submitting contact log form
-  const handleContactLogFormSubmit = async (
-    data: Omit<TaoContactLog, "id" | "created_at" | "updated_at">
-  ) => {
-    try {
-      // Currently only supporting creation, not updates
-      const created = await createContactLog(data);
-      if (created) {
-        toast.success("Contact log added successfully");
-        refetchContactLogs();
-        
-        // Refresh validators in case CRM stage was updated by the trigger
-        refetchValidators();
-      } else {
-        toast.error("Failed to add contact log");
-      }
-      
-      setContactLogFormOpen(false);
-    } catch (error) {
-      console.error("Error adding contact log:", error);
-      toast.error("An error occurred while adding the contact log");
-    }
-  };
-
-  // Handle submitting note form
-  const handleNoteFormSubmit = async (
-    data: Omit<TaoNote, "id" | "created_at" | "updated_at">
-  ) => {
-    try {
-      // Currently only supporting creation, not updates
-      const created = await createTaoNote(data);
-      if (created) {
-        toast.success("Note added successfully");
-        refreshAllData();
-      } else {
-        toast.error("Failed to add note");
-      }
-      
-      setNoteFormOpen(false);
-    } catch (error) {
-      console.error("Error adding note:", error);
-      toast.error("An error occurred while adding the note");
-    }
-  };
-
-  // Handle moving a validator to a different CRM stage
-  const handleMoveValidatorStage = async (
-    validator: TaoValidator,
-    newStage: TaoValidator["crm_stage"]
-  ) => {
-    try {
-      console.log(`Moving validator ${validator.name} from ${validator.crm_stage} to ${newStage}`);
-      
-      // Show loading indicator
-      toast.loading(`Updating ${validator.name} to ${newStage} stage...`);
-      
-      // First try with the dedicated stage update function
-      const result = await updateValidatorStage(validator.id, newStage);
-      
-      if (result) {
-        toast.success(`Moved ${validator.name} to ${newStage}`);
-        
-        // Force a complete data refresh with delay to ensure database consistency
-        setTimeout(async () => {
-          await refreshAllData();
-          console.log("Data refreshed after stage update");
-        }, 1000);
-      } else {
-        // If the dedicated function fails, try with the standard update method
-        console.log("Dedicated stage update failed, trying standard update function");
-        const fallbackUpdate = await updateValidator(validator.id, { crm_stage: newStage });
-        
-        if (fallbackUpdate) {
-          toast.success(`Moved ${validator.name} to ${newStage}`);
-          
-          // Force a complete data refresh with delay
-          setTimeout(async () => {
-            await refreshAllData();
-            console.log("Data refreshed after fallback update");
-          }, 1000);
-        } else {
-          toast.error("Failed to update validator stage");
-          // Force a refresh to ensure UI is in sync with backend
-          await refreshAllData();
-        }
-      }
-    } catch (error) {
-      console.error("Error updating validator stage:", error);
-      toast.error("An error occurred while updating the validator stage");
-      // Force a refresh to ensure UI is in sync with backend
-      await refreshAllData();
-    }
-  };
-
   const handleViewSubnet = (subnet: TaoSubnet) => {
     setSelectedSubnet(subnet);
-    // Here we could navigate to a subnet detail view or open a dialog
     toast.info(`Viewing subnet: ${subnet.name}`);
   };
 
   const handleAddValidatorToSubnet = (subnet: TaoSubnet) => {
-    // For now, we just log this action
     toast.info(`Add validator to subnet: ${subnet.name}`);
   };
 
   return (
     <div className="space-y-6">
-      {/* Header with action buttons */}
       <ValidatorManagementHeader 
         onAddValidator={handleAddValidator}
         onAddContactLog={() => handleAddContactLog()}
@@ -254,7 +129,6 @@ const ValidatorManagement: React.FC = () => {
         onValueChange={setActiveTab}
         className="w-full"
       >
-        {/* Tabs navigation */}
         <ValidatorManagementTabs 
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
@@ -352,7 +226,6 @@ const ValidatorManagement: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Dialogs for forms and confirmations */}
       <ValidatorDialogs
         validatorFormOpen={validatorFormOpen}
         setValidatorFormOpen={setValidatorFormOpen}
