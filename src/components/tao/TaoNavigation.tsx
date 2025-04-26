@@ -2,10 +2,15 @@
 import React from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  BarChart3,
+  BarChart3, 
+  CircleDollarSign, 
+  Globe, 
+  Layers, 
+  LineChart,
+  Database,
   Activity,
   Users,
-  Settings,
+  TrendingUp,
   MessageSquare
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -25,14 +30,17 @@ const TaoNavigation: React.FC<TaoNavigationProps> = ({ activeTab, onTabChange })
       case 'performance':
         navigate('/tao/performance');
         break;
+      case 'validator-relationship-management':
+        navigate('/tao/validator-relationship-management');
+        break;
+      case 'investor-opportunities':
+        navigate('/tao/investor-opportunities');
+        break;
+      case 'follow-up-sequences':
+        navigate('/tao/follow-up-sequences');
+        break;
       case 'management':
         navigate('/tao/management');
-        break;
-      case 'validators':
-        navigate('/tao/validators');
-        break;
-      case 'follow-up':
-        navigate('/tao/follow-up-sequences');
         break;
       default:
         navigate('/tao');
@@ -47,21 +55,41 @@ const TaoNavigation: React.FC<TaoNavigationProps> = ({ activeTab, onTabChange })
             <BarChart3 className="h-4 w-4" />
             Overview
           </TabsTrigger>
+          <TabsTrigger value="stats" className="flex items-center gap-2">
+            <LineChart className="h-4 w-4" />
+            TAO Stats
+          </TabsTrigger>
+          <TabsTrigger value="marketcap" className="flex items-center gap-2">
+            <CircleDollarSign className="h-4 w-4" />
+            Market Cap
+          </TabsTrigger>
+          <TabsTrigger value="subnets" className="flex items-center gap-2">
+            <Layers className="h-4 w-4" />
+            Subnets
+          </TabsTrigger>
+          <TabsTrigger value="validators" className="flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            Validators
+          </TabsTrigger>
           <TabsTrigger value="performance" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
             Performance
           </TabsTrigger>
-          <TabsTrigger value="validators" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Validators
-          </TabsTrigger>
           <TabsTrigger value="management" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
+            <Database className="h-4 w-4" />
             Management
           </TabsTrigger>
-          <TabsTrigger value="follow-up" className="flex items-center gap-2">
+          <TabsTrigger value="validator-relationship-management" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Validator CRM
+          </TabsTrigger>
+          <TabsTrigger value="investor-opportunities" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Investor Opportunities
+          </TabsTrigger>
+          <TabsTrigger value="follow-up-sequences" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
-            Follow-Up
+            Follow-Up Sequences
           </TabsTrigger>
         </TabsList>
       </Tabs>
