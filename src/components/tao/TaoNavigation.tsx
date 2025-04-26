@@ -30,6 +30,10 @@ const TaoNavigation: React.FC<TaoNavigationProps> = ({ activeTab, onTabChange })
       case 'performance':
         navigate('/tao/performance');
         break;
+      case 'validators':
+        // When clicking Validators tab, navigate directly to the page with Kanban view
+        navigate('/tao/validators', { state: { initialTab: 'monday-crm', initialView: 'kanban' } });
+        break;
       case 'validator-relationship-management':
         navigate('/tao/validator-relationship-management');
         break;

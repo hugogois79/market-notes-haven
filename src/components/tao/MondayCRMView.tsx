@@ -1,10 +1,11 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TaoValidator, TaoSubnet, TaoContactLog, TaoNote } from "@/services/taoValidatorService";
 import CRMViewHeader from "./crm/CRMViewHeader";
 import CRMMainView from "./crm/CRMMainView";
 import { useFilteredCRMData } from "@/hooks/useFilteredCRMData";
 import KanbanBoard from "./crm/KanbanBoard";
+import { useLocation } from "react-router-dom";
 
 interface MondayCRMViewProps {
   validators: TaoValidator[];
@@ -39,10 +40,19 @@ const MondayCRMView: React.FC<MondayCRMViewProps> = ({
   onViewContactLog,
   onRefreshData,
 }) => {
-  const [selectedView, setSelectedView] = useState<"main" | "kanban">("main");
+  const location = useLocation();
+  const initialView = location.state?.initialView === "kanban" ? "kanban" : "main";
+  const [selectedView, setSelectedView] = useState<"main" | "kanban">(initialView);
   const [expandedGroups, setExpandedGroups] = useState<string[]>(["validators", "subnets"]);
   
   const { searchTerm, setSearchTerm, filteredValidators, filteredSubnets } = useFilteredCRMData(validators, subnets);
+
+  // Update view if navigation state changes
+  useEffect(() => {
+    if (location.state?.initialView === "kanban") {
+      setSelectedView("kanban");
+    }
+  }, [location.state]);
 
   return (
     <div className="space-y-6">

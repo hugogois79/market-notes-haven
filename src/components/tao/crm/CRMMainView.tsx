@@ -1,6 +1,6 @@
 
 import React from "react";
-import KanbanBoard from "./kanban/KanbanBoard";
+import KanbanBoard from "./KanbanBoard";
 import { TaoValidator, TaoSubnet, TaoContactLog, TaoNote } from "@/services/taoValidatorService";
 
 interface CRMMainViewProps {
