@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -73,8 +73,8 @@ const TAOManagement: React.FC = () => {
         onTabChange={handleTabChange}
       />
 
-      {/* Tab Content */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {/* Wrap TabsContent components with a Tabs component */}
+      <Tabs value={activeTab} className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <TabsContent value="resources" className="mt-0 col-span-full">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <NetworkResourcesCard />
@@ -104,7 +104,7 @@ const TAOManagement: React.FC = () => {
             <ConfigurationCard />
           </div>
         </TabsContent>
-      </div>
+      </Tabs>
     </div>
   );
 };
