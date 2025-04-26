@@ -1,7 +1,9 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import ValidatorProfileSection from "./components/ValidatorProfileSection";
 import StakeManagementPanel from "./components/StakeManagementPanel";
 import OpportunityMatchingSection from "./components/OpportunityMatchingSection";
@@ -12,6 +14,7 @@ import { useValidatorRelationshipData } from "./hooks/useValidatorRelationshipDa
 import { Loader2 } from "lucide-react";
 
 const ValidatorRelationshipManagement: React.FC = () => {
+  const navigate = useNavigate();
   const [selectedTab, setSelectedTab] = useState("profile");
   const { 
     validators,
@@ -27,6 +30,10 @@ const ValidatorRelationshipManagement: React.FC = () => {
     refreshData
   } = useValidatorRelationshipData();
 
+  const handleGoBack = () => {
+    navigate(-1);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -39,16 +46,25 @@ const ValidatorRelationshipManagement: React.FC = () => {
   return (
     <div className="container py-6 space-y-6">
       <header className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Validator Relationship Management</h1>
-          <p className="text-muted-foreground">
-            Manage validator profiles, stake, opportunities and communications
-          </p>
+        <div className="flex items-center space-x-4">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={handleGoBack}
+            className="mr-4"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Validator Relationship Management</h1>
+            <p className="text-muted-foreground">
+              Manage validator profiles, stake, opportunities and communications
+            </p>
+          </div>
         </div>
       </header>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-        {/* Validator selector sidebar */}
         <div className="md:col-span-1">
           <Card>
             <CardHeader className="pb-2">
@@ -64,7 +80,6 @@ const ValidatorRelationshipManagement: React.FC = () => {
           </Card>
         </div>
 
-        {/* Main content area */}
         <div className="md:col-span-3">
           {selectedValidator ? (
             <Card>
