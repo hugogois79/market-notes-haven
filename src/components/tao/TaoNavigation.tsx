@@ -59,18 +59,6 @@ const TaoNavigation: React.FC<TaoNavigationProps> = ({ activeTab, onTabChange })
             <BarChart3 className="h-4 w-4" />
             Overview
           </TabsTrigger>
-          <TabsTrigger value="stats" className="flex items-center gap-2">
-            <LineChart className="h-4 w-4" />
-            TAO Stats
-          </TabsTrigger>
-          <TabsTrigger value="marketcap" className="flex items-center gap-2">
-            <CircleDollarSign className="h-4 w-4" />
-            Market Cap
-          </TabsTrigger>
-          <TabsTrigger value="subnets" className="flex items-center gap-2">
-            <Layers className="h-4 w-4" />
-            Subnets
-          </TabsTrigger>
           <TabsTrigger value="validators" className="flex items-center gap-2">
             <Globe className="h-4 w-4" />
             Validators

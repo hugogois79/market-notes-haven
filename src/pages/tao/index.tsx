@@ -1,7 +1,6 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { fetchTaoSubnets } from "@/services/taoSubnetService";
 import { useTaoStats, TaoStatsUpdate } from "@/services/taoStatsService";
@@ -12,11 +11,9 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import TaoPageHeader from "@/components/tao/TaoPageHeader";
 import TaoNavigation from "@/components/tao/TaoNavigation";
 import TaoStatCards from "@/components/tao/TaoStatCards";
-import TaoSubnetsTable from "@/components/tao/TaoSubnetsTable";
 import TaoStatsTabContent from "@/components/tao/TaoStatsTabContent";
 import TaoMarketCapTabContent from "@/components/tao/TaoMarketCapTabContent";
-import TaoValidatorsTabContent from "@/components/tao/TaoValidatorsTabContent";
-import ValidatorManagement from "@/components/tao/ValidatorManagement";
+import TaoSubnetsTable from "@/components/tao/TaoSubnetsTable";
 
 const TAOPage = () => {
   const navigate = useNavigate();
@@ -82,77 +79,78 @@ const TAOPage = () => {
       />
 
       {/* Navigation Tabs */}
-      <Tabs 
-        defaultValue={activeTab} 
-        onValueChange={handleTabChange}
-        className="w-full"
-      >
-        <TaoNavigation 
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
+      <TaoNavigation 
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
+
+      {/* Overview Tab */}
+      <TabsContent value="overview" className="pt-6">
+        {/* Stat Cards */}
+        <TaoStatCards 
+          taoStats={taoStats as TaoStatsUpdate} 
+          subnetCount={subnetCount}
+          isMockData={isMockData}
         />
+        
+        <div className="grid gap-6 mt-6 md:grid-cols-2">
+          <TaoStatsTabContent />
+          <TaoMarketCapTabContent />
+        </div>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="pt-6">
-          {/* Stat Cards */}
-          <TaoStatCards 
-            taoStats={taoStats as TaoStatsUpdate} 
-            subnetCount={subnetCount}
-            isMockData={isMockData}
-          />
-
-          {/* Subnets Table */}
+        {/* Subnets Table */}
+        <div className="mt-6">
           <TaoSubnetsTable
             subnets={topSubnets}
             isLoading={isLoadingTaoStats || isLoadingDbSubnets}
-            error={!!hasError}
+            error={hasError}
             hasLiveData={hasLiveData}
           />
-        </TabsContent>
+        </div>
+      </TabsContent>
 
-        {/* Stats Tab */}
-        <TabsContent value="stats" className="pt-6">
-          <TaoStatsTabContent />
-        </TabsContent>
+      {/* Stats Tab */}
+      <TabsContent value="stats" className="pt-6">
+        <TaoStatsTabContent />
+      </TabsContent>
 
-        {/* Market Cap Tab */}
-        <TabsContent value="marketcap" className="pt-6">
-          <TaoMarketCapTabContent />
-        </TabsContent>
+      {/* Market Cap Tab */}
+      <TabsContent value="marketcap" className="pt-6">
+        <TaoMarketCapTabContent />
+      </TabsContent>
 
-        {/* Validators Tab */}
-        <TabsContent value="validators" className="pt-6">
-          <TaoValidatorsTabContent />
-        </TabsContent>
+      {/* Validators Tab */}
+      <TabsContent value="validators" className="pt-6">
+        <TaoValidatorsTabContent />
+      </TabsContent>
 
-        {/* Subnets Tab */}
-        <TabsContent value="subnets" className="pt-6">
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle>Subnets Overview</CardTitle>
-              {hasLiveData && (
-                <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
-                  Live Data
-                </span>
-              )}
-            </CardHeader>
-            <CardContent className="p-0">
-              <TaoSubnetsTable
-                subnets={hasLiveData && taoStats ? taoStats.subnets : dbSubnets}
-                isLoading={isLoadingTaoStats || isLoadingDbSubnets}
-                error={!!hasError}
-                title="All Subnets"
-                hasLiveData={hasLiveData}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+      {/* Subnets Tab */}
+      <TabsContent value="subnets" className="pt-6">
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle>Subnets Overview</CardTitle>
+            {hasLiveData && (
+              <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium">
+                Live Data
+              </span>
+            )}
+          </CardHeader>
+          <CardContent className="p-0">
+            <TaoSubnetsTable
+              subnets={hasLiveData && taoStats ? taoStats.subnets : dbSubnets}
+              isLoading={isLoadingTaoStats || isLoadingDbSubnets}
+              error={!!hasError}
+              title="All Subnets"
+              hasLiveData={hasLiveData}
+            />
+          </CardContent>
+        </Card>
+      </TabsContent>
 
-        {/* Management Tab */}
-        <TabsContent value="management" className="pt-6">
-          <ValidatorManagement />
-        </TabsContent>
-      </Tabs>
+      {/* Management Tab */}
+      <TabsContent value="management" className="pt-6">
+        <ValidatorManagement />
+      </TabsContent>
     </div>
   );
 };
