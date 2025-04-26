@@ -2,9 +2,20 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users } from "lucide-react";
+import { Users, KanbanSquare } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const ValidatorManagementCard = () => {
+  const navigate = useNavigate();
+
+  const handleManageValidators = () => {
+    navigate("/tao/validators");
+  };
+
+  const handleGoToKanban = () => {
+    navigate("/tao/validators", { state: { initialTab: "monday-crm", initialView: "kanban" } });
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -33,9 +44,13 @@ const ValidatorManagementCard = () => {
             <span className="font-medium text-blue-600">3</span>
           </div>
           
-          <div className="pt-2">
-            <Button variant="outline" size="sm" className="w-full">
+          <div className="pt-2 space-y-2">
+            <Button variant="outline" size="sm" className="w-full" onClick={handleManageValidators}>
               Manage Validators
+            </Button>
+            <Button variant="outline" size="sm" className="w-full flex items-center justify-center gap-2" onClick={handleGoToKanban}>
+              <KanbanSquare className="h-4 w-4" />
+              CRM Kanban Board
             </Button>
           </div>
         </div>
