@@ -1,6 +1,7 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { fetchTaoSubnets } from "@/services/taoSubnetService";
 import { useTaoStats, TaoStatsUpdate } from "@/services/taoStatsService";
@@ -14,6 +15,8 @@ import TaoStatCards from "@/components/tao/TaoStatCards";
 import TaoStatsTabContent from "@/components/tao/TaoStatsTabContent";
 import TaoMarketCapTabContent from "@/components/tao/TaoMarketCapTabContent";
 import TaoSubnetsTable from "@/components/tao/TaoSubnetsTable";
+import TaoValidatorsTabContent from "@/components/tao/TaoValidatorsTabContent";
+import ValidatorManagement from "@/components/tao/ValidatorManagement";
 
 const TAOPage = () => {
   const navigate = useNavigate();
