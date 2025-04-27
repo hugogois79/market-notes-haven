@@ -2,10 +2,10 @@
 import React from "react";
 import { DragDropContext, DropResult } from "react-beautiful-dnd";
 import { TaoValidator, TaoContactLog, updateValidatorStage } from "@/services/taoValidatorService";
-import { crmStages, getStageColor } from "../crmUtils";
+import { crmStages } from "../crmUtils";
 import { toast } from "sonner";
 import KanbanColumn from "./KanbanColumn";
-import { useKanbanState } from "./useKanbanState";
+import { useKanbanState } from "@/hooks/useKanbanState";
 
 interface KanbanBoardProps {
   validators: TaoValidator[];
@@ -46,26 +46,18 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
     if (!destination) return;
 
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
+    if (destination.droppableId === source.droppableId && destination.index === source.index) {
       return;
     }
 
     if (destination.droppableId !== source.droppableId) {
       const validator = localValidators.find(v => v.id === draggableId);
-      if (!validator) {
-        console.error("Validator not found:", draggableId);
-        return;
-      }
+      if (!validator) return;
 
       const newStage = destination.droppableId as TaoValidator["crm_stage"];
       const oldStage = validator.crm_stage;
       
       try {
-        console.log(`Moving validator ${validator.name} from ${oldStage} to ${newStage}`);
-        
         // Update local state first for optimistic UI update
         const updatedValidators = localValidators.map(v => 
           v.id === validator.id ? { ...v, crm_stage: newStage } : v
@@ -81,27 +73,16 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
         if (result) {
           toast.dismiss(loadingToast);
           toast.success(`Moved ${validator.name} to ${newStage} stage`);
-          
-          // Force a complete refresh after a delay
-          setTimeout(() => {
-            console.log("Refreshing data after stage update");
-            onRefreshData();
-          }, 1000);
+          setTimeout(() => onRefreshData(), 1000);
         } else {
           toast.dismiss(loadingToast);
           toast.error("Failed to update validator stage");
-          
-          // Reset local state on failure
           setLocalValidators(validators);
-          
-          // Force refresh to show correct data
           onRefreshData();
         }
       } catch (error) {
         console.error("Error moving validator:", error);
         toast.error("An error occurred while moving the validator");
-        
-        // Reset local state on error
         setLocalValidators(validators);
         onRefreshData();
       }

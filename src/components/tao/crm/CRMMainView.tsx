@@ -1,7 +1,7 @@
 
 import React from "react";
-import KanbanBoard from "./KanbanBoard";
 import { TaoValidator, TaoSubnet, TaoContactLog, TaoNote } from "@/services/taoValidatorService";
+import KanbanBoard from "./kanban/KanbanBoard";
 
 interface CRMMainViewProps {
   expandedGroups: string[];
@@ -23,33 +23,26 @@ interface CRMMainViewProps {
 }
 
 const CRMMainView: React.FC<CRMMainViewProps> = ({
-  expandedGroups,
-  setExpandedGroups,
   validators,
-  subnets,
   contactLogs,
-  notes,
-  validatorsBySubnet,
-  validatorNames,
-  subnetNames,
   onEditValidator,
   onAddValidator,
   onAddContactLog,
   onAddNote,
-  onViewContactLog,
   onRefreshData,
-  onViewSubnet,
 }) => {
   return (
-    <KanbanBoard 
-      validators={validators}
-      contactLogs={contactLogs}
-      onEditValidator={onEditValidator}
-      onAddValidator={onAddValidator}
-      onAddContactLog={onAddContactLog}
-      onAddNote={onAddNote}
-      onRefreshData={onRefreshData}
-    />
+    <div className="overflow-x-auto">
+      <KanbanBoard 
+        validators={validators}
+        contactLogs={contactLogs}
+        onEditValidator={onEditValidator}
+        onAddValidator={onAddValidator}
+        onAddContactLog={onAddContactLog}
+        onAddNote={onAddNote}
+        onRefreshData={onRefreshData}
+      />
+    </div>
   );
 };
 
