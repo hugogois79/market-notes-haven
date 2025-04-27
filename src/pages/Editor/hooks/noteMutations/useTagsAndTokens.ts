@@ -18,10 +18,11 @@ export const useTagsAndTokens = (currentNote: Note) => {
             return tag as Tag;
           }
           
-          // At this point we know tag is a non-null value that can be converted to string
+          // Now TypeScript knows tag can't be null or undefined
+          const tagString = String(tag);
           return { 
-            id: String(tag), 
-            name: String(tag) 
+            id: tagString, 
+            name: tagString 
           };
         });
       
@@ -56,4 +57,3 @@ export const useTagsAndTokens = (currentNote: Note) => {
     handleTokensChange
   };
 };
-
