@@ -23,7 +23,8 @@ export const useTagsAndTokens = (currentNote: Note) => {
         }
         
         // Otherwise, create a basic Tag object from the ID
-        return { id: tagId, name: tagId };
+        // Ensure tagId is converted to string to avoid any null/undefined issues
+        return { id: String(tagId), name: String(tagId) };
       });
       
       setLinkedTags(tagObjects);
