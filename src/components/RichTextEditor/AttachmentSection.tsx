@@ -1,9 +1,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Upload, Trash2, ExternalLink, Image, FileText, Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import EmptyState from './Attachments/EmptyState';
+import FileList from './Attachments/FileList';
 
 interface AttachmentSectionProps {
   noteId: string;
@@ -12,11 +12,11 @@ interface AttachmentSectionProps {
   onAttachmentChange: (url: string | null) => void;
 }
 
-const AttachmentSection: React.FC<AttachmentSectionProps> = ({ 
-  noteId, 
-  attachmentUrl, 
+const AttachmentSection: React.FC<AttachmentSectionProps> = ({
+  noteId,
+  attachmentUrl,
   attachments: initialAttachments = [],
-  onAttachmentChange 
+  onAttachmentChange
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [attachments, setAttachments] = useState<string[]>([]);
@@ -48,12 +48,10 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
           continue;
         }
         
-        // Create a safe filename by removing special characters and spaces
+        // Create safe filename
         const fileExt = file.name.split('.').pop();
         const baseFileName = file.name.replace(/\.[^/.]+$/, '');
         const safeFileName = `${baseFileName.replace(/[^\w-]/g, '_')}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-        
-        console.log('Uploading file to Supabase storage...', safeFileName);
         
         const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) {
@@ -73,13 +71,9 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
           continue;
         }
         
-        console.log('File uploaded successfully:', data);
-        
         const { data: urlData } = supabase.storage
           .from('note_attachments')
           .getPublicUrl(`public/${userData.user.id}/${safeFileName}`);
-        
-        console.log('File public URL:', urlData);
         
         uploadedUrls.push(urlData.publicUrl);
       }
@@ -87,13 +81,7 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
       if (uploadedUrls.length > 0) {
         const updatedAttachments = [...attachments, ...uploadedUrls];
         setAttachments(updatedAttachments);
-        
-        // Update parent component with all attachments
         onAttachmentChange(updatedAttachments[0]); // Send first URL for backward compatibility
-        
-        // Save all attachments to the note
-        console.log('Updated attachments list:', updatedAttachments);
-        
         toast.success(`${uploadedUrls.length} file(s) uploaded successfully`);
       }
     } catch (error) {
@@ -110,36 +98,12 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
   const handleRemoveAttachment = (urlToRemove: string) => {
     const updatedAttachments = attachments.filter(url => url !== urlToRemove);
     setAttachments(updatedAttachments);
-    
-    // Update parent component with all attachments
-    // Use the first attachment as the primary attachment URL for backward compatibility
     onAttachmentChange(updatedAttachments.length > 0 ? updatedAttachments[0] : null);
-    
     toast.success("Attachment removed");
   };
 
   const triggerFileUpload = () => {
     fileInputRef.current?.click();
-  };
-
-  const getFileType = (url: string): 'image' | 'document' => {
-    const extension = url.split('.').pop()?.toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(extension || '')) {
-      return 'image';
-    }
-    return 'document';
-  };
-
-  const getFileName = (url: string): string => {
-    try {
-      const urlWithoutParams = url.split('?')[0];
-      const parts = urlWithoutParams.split('/');
-      const lastPart = parts[parts.length - 1];
-      return decodeURIComponent(lastPart);
-    } catch (error) {
-      console.error("Error extracting filename:", error);
-      return "attachment";
-    }
   };
 
   return (
@@ -155,99 +119,17 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
       />
       
       {attachments.length === 0 ? (
-        <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-8 bg-gray-50">
-          <p className="text-muted-foreground mb-4">Upload files to attach to this note</p>
-          <Button
-            variant="outline"
-            onClick={triggerFileUpload}
-            disabled={isUploading}
-            className="gap-2"
-          >
-            {isUploading ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <Upload size={16} />
-                Upload Files
-              </>
-            )}
-          </Button>
-        </div>
+        <EmptyState
+          isUploading={isUploading}
+          onUploadClick={triggerFileUpload}
+        />
       ) : (
-        <div className="border rounded-lg p-4 space-y-3">
-          <div className="space-y-2">
-            {attachments.map((url, index) => (
-              <div key={`${url}-${index}`} className="border rounded-lg p-3">
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-2">
-                    {getFileType(url) === 'image' ? (
-                      <Image size={20} className="text-blue-500" />
-                    ) : (
-                      <FileText size={20} className="text-blue-500" />
-                    )}
-                    <span className="text-sm font-medium truncate max-w-[180px]">
-                      {getFileName(url)}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => window.open(url, '_blank')}
-                      title="Open file"
-                    >
-                      <ExternalLink size={16} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => handleRemoveAttachment(url)}
-                      title="Remove attachment"
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </div>
-                </div>
-                
-                {getFileType(url) === 'image' && (
-                  <div className="mt-2">
-                    <img 
-                      src={url} 
-                      alt="Attachment preview" 
-                      className="max-w-full rounded border" 
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          
-          <div className="mt-4 flex justify-center">
-            <Button
-              variant="outline"
-              onClick={triggerFileUpload}
-              disabled={isUploading}
-              className="gap-2"
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Plus size={16} />
-                  Add More Files
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
+        <FileList
+          attachments={attachments}
+          isUploading={isUploading}
+          onRemoveAttachment={handleRemoveAttachment}
+          onUploadClick={triggerFileUpload}
+        />
       )}
     </div>
   );
