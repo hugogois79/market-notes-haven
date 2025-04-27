@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { TaoValidator, TaoContactLog } from "@/services/taoValidatorService";
 import { TaoSubnet } from "@/services/taoSubnetService";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "lucide-react";
+import { Calendar, Upload, Loader2, Paperclip, X } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
@@ -22,6 +22,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { toast } from "sonner";
+import { uploadContactLogAttachment } from "@/services/contact-logs/contactLogService";
 
 interface ContactLogFormProps {
   validator?: TaoValidator;
@@ -50,8 +51,33 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
   const [method, setMethod] = useState<TaoContactLog['method']>(contactLog?.method || "Email");
   const [summary, setSummary] = useState<string>(contactLog?.summary || "");
   const [nextSteps, setNextSteps] = useState<string>(contactLog?.next_steps || "");
+  const [attachmentUrl, setAttachmentUrl] = useState<string | null>(contactLog?.attachment_url || null);
+  const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !validatorId) return;
+
+    setIsUploading(true);
+    try {
+      const url = await uploadContactLogAttachment(validatorId, file);
+      if (url) {
+        setAttachmentUrl(url);
+        toast.success("File uploaded successfully");
+      }
+    } catch (error) {
+      console.error("File upload error:", error);
+      toast.error("Failed to upload file");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +96,8 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
         method,
         summary,
         next_steps: nextSteps || null,
-        linked_note_id: null
+        linked_note_id: null,
+        attachment_url: attachmentUrl
       };
       
       console.log("Submitting contact log:", contactData);
@@ -85,6 +112,11 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
   };
 
   const contactMethods: TaoContactLog['method'][] = ["Email", "Call", "Meeting", "Telegram", "Discord", "Other"];
+
+  const removeAttachment = () => {
+    setAttachmentUrl(null);
+    toast.success("Attachment removed");
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -191,6 +223,57 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
           rows={2}
           placeholder="What are the next steps after this interaction?"
         />
+      </div>
+
+      {/* Attachment Section */}
+      <div className="space-y-2">
+        <Label>Attachment</Label>
+        <input 
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+        />
+
+        {!attachmentUrl ? (
+          <Button 
+            type="button"
+            variant="outline" 
+            className="w-full flex items-center justify-center gap-2" 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="h-4 w-4" />
+                Upload Attachment
+              </>
+            )}
+          </Button>
+        ) : (
+          <div className="border rounded-md p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 overflow-hidden">
+              <Paperclip className="h-4 w-4 flex-shrink-0" />
+              <span className="text-sm truncate">
+                {new URL(attachmentUrl).pathname.split('/').pop()}
+              </span>
+            </div>
+            <Button 
+              type="button" 
+              size="sm" 
+              variant="ghost" 
+              className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+              onClick={removeAttachment}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end space-x-2">

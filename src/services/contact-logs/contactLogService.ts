@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { TaoContactLog } from "./types";
 import { toast } from "sonner";
@@ -50,7 +49,7 @@ export const createContactLog = async (contactLog: Omit<TaoContactLog, 'id' | 'c
       summary: contactLog.summary,
       next_steps: contactLog.next_steps || null,
       linked_note_id: contactLog.linked_note_id || null,
-      attachment_url: contactLog.attachment_url || null // Add support for attachments
+      attachment_url: contactLog.attachment_url || null
     };
 
     console.log("Submitting cleaned data:", cleanedContactLog);
@@ -106,7 +105,7 @@ export const fetchContactLogsByValidator = async (validatorId: string): Promise<
   }
 };
 
-// New function to handle file uploads for contact logs
+// Upload function for contact log attachments
 export const uploadContactLogAttachment = async (
   validatorId: string, 
   file: File
@@ -131,7 +130,7 @@ export const uploadContactLogAttachment = async (
     
     // Upload to Supabase storage
     const { error: uploadError } = await supabase.storage
-      .from('note_attachments') // Using the same bucket for simplicity
+      .from('note_attachments')
       .upload(filePath, file, {
         cacheControl: '3600',
         upsert: true

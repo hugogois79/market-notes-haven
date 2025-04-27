@@ -10,4 +10,5 @@ export interface TaoContactLog {
   linked_note_id: string | null;
   created_at: string;
   updated_at: string;
+  attachment_url: string | null;
 }
