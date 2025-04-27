@@ -11,4 +11,5 @@ export interface TaoContactLog {
   created_at: string;
   updated_at: string;
   attachment_url: string | null;
+  attachments: string[]; // Add support for multiple attachments
 }
