@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Note, Tag, Token } from "@/types";
 
 export const useTagsAndTokens = (currentNote: Note) => {
-  // Convert tag IDs to Tag objects if needed
   const [linkedTags, setLinkedTags] = useState<Tag[]>([]);
   const [linkedTokens, setLinkedTokens] = useState<Token[]>([]);
   
@@ -11,21 +10,17 @@ export const useTagsAndTokens = (currentNote: Note) => {
     // Tags may be stored as IDs in the note, but we need to work with Tag objects
     // This is a simplified approach; in a real app, you might fetch the tag objects from a service
     if (currentNote.tags) {
-      const tagObjects = currentNote.tags.map(tagId => {
-        // If tagId is null or undefined, create a fallback tag
-        if (tagId === null || tagId === undefined) {
-          return { id: "unknown", name: "Unknown Tag" };
-        }
-        
-        // If it's already a Tag object, return it
-        if (typeof tagId === 'object' && tagId !== null && 'id' in tagId) {
-          return tagId as Tag;
-        }
-        
-        // Otherwise, create a basic Tag object from the ID
-        // Ensure tagId is converted to string to avoid any null/undefined issues
-        return { id: String(tagId), name: String(tagId) };
-      });
+      const tagObjects = currentNote.tags
+        .filter((tagId): tagId is string => tagId !== null && tagId !== undefined)
+        .map(tagId => {
+          // If it's already a Tag object, return it
+          if (typeof tagId === 'object' && tagId !== null && 'id' in tagId) {
+            return tagId as Tag;
+          }
+          
+          // Otherwise, create a basic Tag object from the ID
+          return { id: String(tagId), name: String(tagId) };
+        });
       
       setLinkedTags(tagObjects);
     }
