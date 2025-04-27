@@ -1,9 +1,8 @@
 
-import { useState, useEffect } from "react";
-import { Note, TradeInfo, Tag, Token } from "@/types";
-import { toast } from "sonner";
-import { linkTagToNote, unlinkTagFromNote } from "@/services/tag";
-import { linkTokenToNote, unlinkTokenFromNote } from "@/services/tokenService";
+import { Note, Tag, Token, TradeInfo } from "@/types";
+import { useAttachments } from "./noteMutations/useAttachments";
+import { useBasicNoteFields } from "./noteMutations/useBasicNoteFields";
+import { useSaveNote } from "./noteMutations/useSaveNote";
 
 interface UseNoteMutationsProps {
   currentNote: Note;
@@ -11,271 +10,45 @@ interface UseNoteMutationsProps {
 }
 
 export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps) => {
-  const [isSaving, setIsSaving] = useState(false);
-  const [pendingChanges, setPendingChanges] = useState<Partial<Note>>({});
-  const [localTitle, setLocalTitle] = useState(currentNote.title);
-  const [localCategory, setLocalCategory] = useState(currentNote.category || "General");
-  const [linkedTags, setLinkedTags] = useState<Tag[]>([]);
-  const [localTradeInfo, setLocalTradeInfo] = useState<TradeInfo | undefined>(currentNote.tradeInfo);
-  const [hasConclusion, setHasConclusion] = useState<boolean>(currentNote.hasConclusion !== false);
-  const [summaryState, setSummaryState] = useState<string>(currentNote.summary || "");
-  const [attachments, setAttachments] = useState<string[]>(
-    currentNote.attachments || 
-    (currentNote.attachment_url ? [currentNote.attachment_url] : [])
-  );
-
-  // Update attachments when currentNote changes
-  useEffect(() => {
-    const newAttachments = currentNote.attachments || 
-      (currentNote.attachment_url ? [currentNote.attachment_url] : []);
-    
-    console.log("Updating attachments from currentNote:", newAttachments);
-    setAttachments(newAttachments);
-  }, [currentNote]);
+  const { attachments, handleAttachmentChange } = useAttachments(currentNote);
   
-  const handleTitleChange = (title: string) => {
-    console.log("NoteEditor: Title changing to:", title);
-    setLocalTitle(title);
-    setPendingChanges(prev => ({ ...prev, title }));
-  };
+  const {
+    localTitle,
+    localCategory,
+    localTradeInfo,
+    hasConclusion,
+    summaryState,
+    handleTitleChange,
+    handleCategoryChange,
+    handleTradeInfoChange,
+    handleSummaryGenerated
+  } = useBasicNoteFields(currentNote);
 
-  const handleContentChange = (content: string) => {
-    setPendingChanges({ ...pendingChanges, content });
-  };
-
-  const handleCategoryChange = (category: string) => {
-    console.log("NoteEditor: Category changing to:", category);
-    setLocalCategory(category);
-    setPendingChanges({ ...pendingChanges, category });
-    
-    const updatedChanges = { ...pendingChanges, category };
-    handleSaveWithChanges(updatedChanges, true);
-  };
-
-  const handleSummaryGenerated = (summary: string, detectedHasConclusion?: boolean) => {
-    console.log("Summary generated:", summary);
-    console.log("Has conclusion:", detectedHasConclusion);
-    
-    setSummaryState(summary);
-    
-    if (detectedHasConclusion !== undefined) {
-      setHasConclusion(detectedHasConclusion);
-      setPendingChanges({ 
-        ...pendingChanges, 
-        summary,
-        hasConclusion: detectedHasConclusion 
-      });
-    } else {
-      setPendingChanges({ ...pendingChanges, summary });
-    }
-    
-    const updatedChanges = detectedHasConclusion !== undefined 
-      ? { ...pendingChanges, summary, hasConclusion: detectedHasConclusion }
-      : { ...pendingChanges, summary };
-    
-    handleSaveWithChanges(updatedChanges, false);
-  };
-
-  const handleTradeInfoChange = (tradeInfo: TradeInfo) => {
-    console.log("Trade info changed:", tradeInfo);
-    setLocalTradeInfo(tradeInfo);
-    setPendingChanges({ ...pendingChanges, tradeInfo });
-    
-    const updatedChanges = { ...pendingChanges, tradeInfo };
-    handleSaveWithChanges(updatedChanges, true);
-  };
-
-  const handleTagsChange = async (tags: Tag[]) => {
-    console.log("Tag changed:", tags);
-    setLinkedTags(tags);
-    
-    if (currentNote.id && !currentNote.id.startsWith('temp-')) {
-      const currentTagIds = currentNote.tags || [];
-      const newTagIds = tags.map(tag => tag.id);
-      
-      const tagsToAdd = newTagIds.filter(id => !currentTagIds.includes(id));
-      const tagsToRemove = currentTagIds.filter(id => !newTagIds.includes(id));
-      
-      for (const tagId of tagsToAdd) {
-        try {
-          await linkTagToNote(currentNote.id, tagId);
-        } catch (error) {
-          console.error(`Error linking tag ${tagId}:`, error);
-        }
-      }
-      
-      for (const tagId of tagsToRemove) {
-        try {
-          await unlinkTagFromNote(currentNote.id, tagId);
-        } catch (error) {
-          console.error(`Error unlinking tag ${tagId}:`, error);
-        }
-      }
-    }
-    
-    setPendingChanges({ ...pendingChanges, tags: tags.map(tag => tag.id) });
-  };
-
-  const handleTokensChange = async (tokens: Token[]) => {
-    console.log("Tokens changed in NoteEditor:", tokens);
-    
-    if (currentNote.id && !currentNote.id.startsWith('temp-')) {
-      const currentTokenIds = currentNote.tokens?.map(token => token.id) || [];
-      const newTokenIds = tokens.map(token => token.id);
-      
-      console.log("Current token IDs:", currentTokenIds);
-      console.log("New token IDs:", newTokenIds);
-      
-      const tokensToAdd = newTokenIds.filter(id => !currentTokenIds.includes(id));
-      const tokensToRemove = currentTokenIds.filter(id => !newTokenIds.includes(id));
-      
-      console.log("Tokens to add:", tokensToAdd);
-      console.log("Tokens to remove:", tokensToRemove);
-      
-      for (const tokenId of tokensToAdd) {
-        try {
-          console.log(`Linking token ${tokenId} to note ${currentNote.id}`);
-          const success = await linkTokenToNote(currentNote.id, tokenId);
-          if (!success) {
-            toast.error(`Failed to link token: ${tokenId}`);
-          }
-        } catch (error) {
-          console.error(`Error linking token ${tokenId}:`, error);
-        }
-      }
-      
-      for (const tokenId of tokensToRemove) {
-        try {
-          console.log(`Unlinking token ${tokenId} from note ${currentNote.id}`);
-          const success = await unlinkTokenFromNote(currentNote.id, tokenId);
-          if (!success) {
-            toast.error(`Failed to unlink token: ${tokenId}`);
-          }
-        } catch (error) {
-          console.error(`Error unlinking token ${tokenId}:`, error);
-        }
-      }
-    }
-    
-    setPendingChanges(prev => ({ ...prev }));
-    
-    if (tokens.length > 0) {
-      handleManualSave();
-    }
-  };
-
-  const handleAttachmentChange = (attachmentData: string | null) => {
-    try {
-      console.log("handleAttachmentChange received:", attachmentData);
-      
-      if (attachmentData) {
-        try {
-          // Try to parse as JSON array
-          const parsedAttachments = JSON.parse(attachmentData);
-          console.log("Parsed attachments:", parsedAttachments);
-          
-          if (Array.isArray(parsedAttachments)) {
-            setAttachments(parsedAttachments);
-            setPendingChanges({ 
-              ...pendingChanges, 
-              attachment_url: parsedAttachments[0] || null, // For backward compatibility
-              attachments: parsedAttachments 
-            });
-            console.log("Updated attachments array:", parsedAttachments);
-          } else {
-            // Handle single string
-            setAttachments([attachmentData]);
-            setPendingChanges({
-              ...pendingChanges,
-              attachment_url: attachmentData,
-              attachments: [attachmentData]
-            });
-            console.log("Updated single attachment:", attachmentData);
-          }
-        } catch (e) {
-          // Not valid JSON, treat as single attachment
-          setAttachments([attachmentData]);
-          setPendingChanges({
-            ...pendingChanges,
-            attachment_url: attachmentData,
-            attachments: [attachmentData]
-          });
-          console.log("Updated attachment (single string):", attachmentData);
-        }
-      } else {
-        // Clear attachments
-        setAttachments([]);
-        setPendingChanges({ 
-          ...pendingChanges, 
-          attachment_url: null, 
-          attachments: [] 
-        });
-        console.log("Cleared attachments");
-      }
-      
-      // Trigger a save to ensure attachments are persisted immediately
-      handleManualSave();
-    } catch (error) {
-      console.error("Error handling attachment change:", error);
-    }
-  };
-
-  const handleSaveWithChanges = async (changes: Partial<Note>, isAutoSave = false) => {
-    setIsSaving(true);
-    
-    try {
-      // Ensure we're including attachments in the save
-      const updatedChanges = {
-        ...changes,
-        summary: changes.summary !== undefined ? changes.summary : summaryState,
-        attachments: attachments,
-        attachment_url: attachments.length > 0 ? attachments[0] : null
-      };
-      
-      console.log("Saving changes:", updatedChanges);
-      await onSave(updatedChanges);
-      setPendingChanges({});
-      
-      if (!isAutoSave) {
-        toast.success("Note saved successfully");
-      }
-    } catch (error) {
-      toast.error("Failed to save note");
-      console.error("Error saving note:", error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleManualSave = async () => {
-    const updatedChanges = {
-      ...pendingChanges,
-      summary: pendingChanges.summary !== undefined ? pendingChanges.summary : summaryState,
-      attachments: attachments,
-      attachment_url: attachments.length > 0 ? attachments[0] : null // For backward compatibility
-    };
-    
-    console.log("Manual save with changes:", updatedChanges);
-    await handleSaveWithChanges(updatedChanges, false);
-  };
+  const {
+    isSaving,
+    pendingChanges,
+    handleSaveWithChanges,
+    handleManualSave,
+    handleContentChange
+  } = useSaveNote({ onSave });
 
   return {
+    // State
     isSaving,
     pendingChanges,
     localTitle,
     localCategory,
-    linkedTags,
     localTradeInfo,
     hasConclusion,
     summaryState,
     attachments,
+
+    // Handlers
     handleTitleChange,
     handleContentChange,
     handleCategoryChange,
     handleSummaryGenerated,
     handleTradeInfoChange,
-    handleTagsChange,
-    handleTokensChange,
     handleAttachmentChange,
     handleSaveWithChanges,
     handleManualSave
