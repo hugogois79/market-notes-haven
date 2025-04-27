@@ -97,7 +97,8 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
         summary,
         next_steps: nextSteps || null,
         linked_note_id: null,
-        attachment_url: attachmentUrl
+        attachment_url: attachmentUrl,
+        attachments: attachmentUrl ? [attachmentUrl] : [] // Include attachments array property
       };
       
       console.log("Submitting contact log:", contactData);
