@@ -1,7 +1,7 @@
 
 import React from "react";
 import { TaoValidator, TaoContactLog } from "@/services/taoValidatorService";
-import { crmStages } from "../../crmUtils";
+import { crmStages, getStageColor } from "@/components/tao/crm/crmUtils";
 import KanbanColumn from "../KanbanColumn";
 
 interface KanbanGridProps {
@@ -31,6 +31,7 @@ export const KanbanGrid: React.FC<KanbanGridProps> = ({
           stage={stage}
           validators={validatorsByStage[stage] || []}
           contactLogs={contactLogs}
+          stageColor={getStageColor(stage)}
           onEditValidator={onEditValidator}
           onAddContactLog={onAddContactLog}
           onAddNote={onAddNote}
