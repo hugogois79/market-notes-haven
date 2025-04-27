@@ -19,7 +19,7 @@ export const fetchContactLogs = async (): Promise<TaoContactLog[]> => {
       ...log,
       method: log.method as TaoContactLog['method'],
       attachment_url: log.attachment_url || null,
-      attachments: log.attachments || [] // Handle existing attachments
+      attachments: log.attachments || []
     }));
   } catch (error) {
     console.error('Error fetching contact logs:', error);
@@ -32,24 +32,21 @@ export const uploadContactLogAttachment = async (
   file: File
 ): Promise<string | null> => {
   try {
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+    if (file.size > 10 * 1024 * 1024) {
       toast.error("File is too large. Maximum size is 10MB.");
       return null;
     }
     
-    // Get user auth status
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) {
       toast.error("You must be logged in to upload files");
       return null;
     }
     
-    // Create a unique filename
     const fileExt = file.name.split('.').pop();
     const fileName = `contact_log_${validatorId}_${Date.now()}.${fileExt}`;
     const filePath = `public/${userData.user.id}/${fileName}`;
     
-    // Upload to Supabase storage
     const { error: uploadError } = await supabase.storage
       .from('note_attachments')
       .upload(filePath, file, {
@@ -63,7 +60,6 @@ export const uploadContactLogAttachment = async (
       return null;
     }
     
-    // Get the public URL
     const { data: urlData } = supabase.storage
       .from('note_attachments')
       .getPublicUrl(filePath);
@@ -80,7 +76,6 @@ export const createContactLog = async (contactLog: Omit<TaoContactLog, 'id' | 'c
   try {
     console.log("Creating contact log with data:", contactLog);
     
-    // Validate data before submitting
     if (!contactLog.validator_id) {
       console.error('Error creating contact log: Missing validator_id');
       toast.error("Validator ID is required");
@@ -88,10 +83,9 @@ export const createContactLog = async (contactLog: Omit<TaoContactLog, 'id' | 'c
     }
     
     if (!contactLog.method) {
-      contactLog.method = "Email"; // Set default method if not provided
+      contactLog.method = "Email";
     }
 
-    // Ensure null values are properly handled
     const cleanedContactLog = {
       validator_id: contactLog.validator_id,
       subnet_id: contactLog.subnet_id || null,

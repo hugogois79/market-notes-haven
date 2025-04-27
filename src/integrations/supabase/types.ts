@@ -896,6 +896,8 @@ export type Database = {
       }
       tao_contact_logs: {
         Row: {
+          attachment_url: string | null
+          attachments: string[] | null
           contact_date: string
           created_at: string
           id: string
@@ -908,6 +910,8 @@ export type Database = {
           validator_id: string | null
         }
         Insert: {
+          attachment_url?: string | null
+          attachments?: string[] | null
           contact_date?: string
           created_at?: string
           id?: string
@@ -920,6 +924,8 @@ export type Database = {
           validator_id?: string | null
         }
         Update: {
+          attachment_url?: string | null
+          attachments?: string[] | null
           contact_date?: string
           created_at?: string
           id?: string
