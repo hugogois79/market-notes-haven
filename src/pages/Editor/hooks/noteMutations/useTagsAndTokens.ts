@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Note, Tag, Token } from "@/types";
 
@@ -19,9 +20,7 @@ export const useTagsAndTokens = (currentNote: Note) => {
             return tag as Tag;
           }
           
-          // Otherwise, create a basic Tag object from the ID
-          // Convert to string to ensure we don't have any type issues
-          // At this point tag is definitely not null or undefined due to our filter
+          // Create a basic Tag object from the ID
           const tagId = String(tag);
           return { id: tagId, name: tagId };
         });
