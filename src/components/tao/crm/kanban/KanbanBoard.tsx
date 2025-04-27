@@ -2,7 +2,7 @@
 import React from "react";
 import { DragDropContext, DropResult } from "react-beautiful-dnd";
 import { TaoValidator, TaoContactLog, updateValidatorStage } from "@/services/taoValidatorService";
-import { crmStages } from "../crmUtils";
+import { crmStages, getStageColor } from "../crmUtils";
 import { toast } from "sonner";
 import KanbanColumn from "./KanbanColumn";
 import { useKanbanState } from "@/hooks/useKanbanState";
