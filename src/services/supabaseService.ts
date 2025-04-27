@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Note, TradeInfo } from "@/types";
 import { Json } from "@/integrations/supabase/types";
@@ -14,6 +15,7 @@ export interface DbNote {
   updated_at: string;
   user_id: string | null;
   attachment_url: string | null;
+  attachments: string[] | null; // Added attachments array field
   trade_info: Json | null; // Changed from TradeInfo to Json for Supabase compatibility
   has_conclusion: boolean | null;
 }
