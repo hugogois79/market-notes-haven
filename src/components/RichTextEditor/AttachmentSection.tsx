@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, Trash2, ExternalLink, Image, FileText } from 'lucide-react';
+import { Upload, Trash2, ExternalLink, Image, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -16,7 +17,13 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
   onAttachmentChange 
 }) => {
   const [isUploading, setIsUploading] = useState(false);
+  const [localAttachmentUrl, setLocalAttachmentUrl] = useState<string | null>(attachmentUrl || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Update local state when prop changes
+  useEffect(() => {
+    setLocalAttachmentUrl(attachmentUrl || null);
+  }, [attachmentUrl]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -66,7 +73,9 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
       console.log('File public URL:', urlData);
       
       // Update the note with the attachment URL
-      onAttachmentChange(urlData.publicUrl);
+      const fileUrl = urlData.publicUrl;
+      onAttachmentChange(fileUrl);
+      setLocalAttachmentUrl(fileUrl);
       toast.success("File uploaded successfully");
     } catch (error) {
       console.error("Error uploading file:", error);
@@ -83,6 +92,7 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
   const handleRemoveAttachment = () => {
     // We're just removing the reference to the file, not deleting it from storage
     onAttachmentChange(null);
+    setLocalAttachmentUrl(null);
     toast.success("Attachment removed");
   };
 
@@ -93,6 +103,12 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
       return 'image';
     }
     return 'document';
+  };
+  
+  // Extract filename from URL
+  const getFileName = (url: string): string => {
+    const pathParts = url.split('/');
+    return pathParts[pathParts.length - 1] || 'attachment';
   };
 
   return (
@@ -106,7 +122,7 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
         onChange={handleUpload}
       />
       
-      {!attachmentUrl ? (
+      {!localAttachmentUrl ? (
         <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-8 bg-gray-50">
           <p className="text-muted-foreground mb-4">Upload a file to attach to this note</p>
           <Button
@@ -115,21 +131,30 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
             disabled={isUploading}
             className="gap-2"
           >
-            <Upload size={16} />
-            {isUploading ? 'Uploading...' : 'Upload File'}
+            {isUploading ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload size={16} />
+                Upload File
+              </>
+            )}
           </Button>
         </div>
       ) : (
         <div className="border rounded-lg p-4">
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-2">
-              {getFileType(attachmentUrl) === 'image' ? (
+              {getFileType(localAttachmentUrl) === 'image' ? (
                 <Image size={20} className="text-blue-500" />
               ) : (
                 <FileText size={20} className="text-blue-500" />
               )}
               <span className="text-sm font-medium">
-                {attachmentUrl.split('/').pop()}
+                {getFileName(localAttachmentUrl)}
               </span>
             </div>
             <div className="flex gap-2">
@@ -137,7 +162,7 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
                 variant="ghost"
                 size="sm"
                 className="h-8 w-8 p-0"
-                onClick={() => window.open(attachmentUrl, '_blank')}
+                onClick={() => window.open(localAttachmentUrl, '_blank')}
                 title="Open file"
               >
                 <ExternalLink size={16} />
@@ -154,10 +179,10 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
             </div>
           </div>
           
-          {getFileType(attachmentUrl) === 'image' && (
+          {getFileType(localAttachmentUrl) === 'image' && (
             <div className="mt-2">
               <img 
-                src={attachmentUrl} 
+                src={localAttachmentUrl} 
                 alt="Attachment preview" 
                 className="max-w-full rounded border" 
               />
@@ -172,8 +197,17 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
               disabled={isUploading}
               className="w-full gap-2"
             >
-              <Upload size={16} />
-              {isUploading ? 'Uploading...' : 'Replace File'}
+              {isUploading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload size={16} />
+                  Replace File
+                </>
+              )}
             </Button>
           </div>
         </div>

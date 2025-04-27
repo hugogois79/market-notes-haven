@@ -33,6 +33,7 @@ export const createContactLog = async (contactLog: Omit<TaoContactLog, 'id' | 'c
     // Validate data before submitting
     if (!contactLog.validator_id) {
       console.error('Error creating contact log: Missing validator_id');
+      toast.error("Validator ID is required");
       return null;
     }
     
@@ -48,7 +49,8 @@ export const createContactLog = async (contactLog: Omit<TaoContactLog, 'id' | 'c
       method: contactLog.method,
       summary: contactLog.summary,
       next_steps: contactLog.next_steps || null,
-      linked_note_id: contactLog.linked_note_id || null
+      linked_note_id: contactLog.linked_note_id || null,
+      attachment_url: contactLog.attachment_url || null // Add support for attachments
     };
 
     console.log("Submitting cleaned data:", cleanedContactLog);
@@ -101,5 +103,55 @@ export const fetchContactLogsByValidator = async (validatorId: string): Promise<
   } catch (error) {
     console.error('Error fetching contact logs:', error);
     return [];
+  }
+};
+
+// New function to handle file uploads for contact logs
+export const uploadContactLogAttachment = async (
+  validatorId: string, 
+  file: File
+): Promise<string | null> => {
+  try {
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      toast.error("File is too large. Maximum size is 10MB.");
+      return null;
+    }
+    
+    // Get user auth status
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+      toast.error("You must be logged in to upload files");
+      return null;
+    }
+    
+    // Create a unique filename
+    const fileExt = file.name.split('.').pop();
+    const fileName = `contact_log_${validatorId}_${Date.now()}.${fileExt}`;
+    const filePath = `public/${userData.user.id}/${fileName}`;
+    
+    // Upload to Supabase storage
+    const { error: uploadError } = await supabase.storage
+      .from('note_attachments') // Using the same bucket for simplicity
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true
+      });
+    
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      toast.error("Failed to upload file");
+      return null;
+    }
+    
+    // Get the public URL
+    const { data: urlData } = supabase.storage
+      .from('note_attachments')
+      .getPublicUrl(filePath);
+    
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    toast.error("Failed to upload attachment");
+    return null;
   }
 };
