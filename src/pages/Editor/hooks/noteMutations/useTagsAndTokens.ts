@@ -8,8 +8,6 @@ export const useTagsAndTokens = (currentNote: Note) => {
   
   // Initialize with current note's tags and tokens
   useEffect(() => {
-    // Tags may be stored as IDs in the note, but we need to work with Tag objects
-    // This is a simplified approach; in a real app, you might fetch the tag objects from a service
     if (currentNote.tags) {
       // Filter out null/undefined tags first, then map to Tag objects
       const tagObjects = currentNote.tags
@@ -20,15 +18,16 @@ export const useTagsAndTokens = (currentNote: Note) => {
             return tag as Tag;
           }
           
-          // Create a basic Tag object from the ID
-          const tagId = String(tag);
-          return { id: tagId, name: tagId };
+          // At this point we know tag is a non-null value that can be converted to string
+          return { 
+            id: String(tag), 
+            name: String(tag) 
+          };
         });
       
       setLinkedTags(tagObjects);
     }
     
-    // Similar approach for tokens
     if (currentNote.tokens) {
       setLinkedTokens(currentNote.tokens);
     }
@@ -57,3 +56,4 @@ export const useTagsAndTokens = (currentNote: Note) => {
     handleTokensChange
   };
 };
+
