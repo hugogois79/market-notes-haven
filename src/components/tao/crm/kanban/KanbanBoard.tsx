@@ -1,11 +1,11 @@
 
 import React from "react";
-import { DragDropContext, DropResult } from "react-beautiful-dnd";
-import { TaoValidator, TaoContactLog, updateValidatorStage } from "@/services/taoValidatorService";
-import { crmStages, getStageColor } from "../crmUtils";
-import { toast } from "sonner";
-import KanbanColumn from "./KanbanColumn";
+import { DragDropContext } from "react-beautiful-dnd";
+import { TaoValidator, TaoContactLog } from "@/services/taoValidatorService";
+import { crmStages } from "../crmUtils";
 import { useKanbanState } from "@/hooks/useKanbanState";
+import { useKanbanDragAndDrop } from "./hooks/useKanbanDragAndDrop";
+import { KanbanGrid } from "./components/KanbanGrid";
 
 interface KanbanBoardProps {
   validators: TaoValidator[];
@@ -27,6 +27,11 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onRefreshData,
 }) => {
   const { localValidators, setLocalValidators } = useKanbanState(validators);
+  const { handleDragEnd } = useKanbanDragAndDrop({
+    localValidators,
+    setLocalValidators,
+    onRefreshData,
+  });
 
   const getRecentContactLogs = (validatorId: string) => {
     return contactLogs
@@ -41,72 +46,17 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     return acc;
   }, {} as Record<string, TaoValidator[]>);
 
-  const handleDragEnd = async (result: DropResult) => {
-    const { destination, source, draggableId } = result;
-
-    if (!destination) return;
-
-    if (destination.droppableId === source.droppableId && destination.index === source.index) {
-      return;
-    }
-
-    if (destination.droppableId !== source.droppableId) {
-      const validator = localValidators.find(v => v.id === draggableId);
-      if (!validator) return;
-
-      const newStage = destination.droppableId as TaoValidator["crm_stage"];
-      const oldStage = validator.crm_stage;
-      
-      try {
-        // Update local state first for optimistic UI update
-        const updatedValidators = localValidators.map(v => 
-          v.id === validator.id ? { ...v, crm_stage: newStage } : v
-        );
-        setLocalValidators(updatedValidators);
-        
-        // Show loading toast
-        const loadingToast = toast.loading(`Moving ${validator.name} to ${newStage}...`);
-        
-        // Update the database
-        const result = await updateValidatorStage(validator.id, newStage);
-        
-        if (result) {
-          toast.dismiss(loadingToast);
-          toast.success(`Moved ${validator.name} to ${newStage} stage`);
-          setTimeout(() => onRefreshData(), 1000);
-        } else {
-          toast.dismiss(loadingToast);
-          toast.error("Failed to update validator stage");
-          setLocalValidators(validators);
-          onRefreshData();
-        }
-      } catch (error) {
-        console.error("Error moving validator:", error);
-        toast.error("An error occurred while moving the validator");
-        setLocalValidators(validators);
-        onRefreshData();
-      }
-    }
-  };
-
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-6 gap-4 overflow-x-auto pb-6 min-w-[1200px]">
-        {crmStages.map((stage) => (
-          <KanbanColumn
-            key={stage}
-            stage={stage}
-            validators={validatorsByStage[stage] || []}
-            contactLogs={contactLogs}
-            stageColor={getStageColor(stage)}
-            onEditValidator={onEditValidator}
-            onAddContactLog={onAddContactLog}
-            onAddNote={onAddNote}
-            onAddValidator={onAddValidator}
-            getRecentContactLogs={getRecentContactLogs}
-          />
-        ))}
-      </div>
+      <KanbanGrid
+        validatorsByStage={validatorsByStage}
+        contactLogs={contactLogs}
+        onEditValidator={onEditValidator}
+        onAddContactLog={onAddContactLog}
+        onAddNote={onAddNote}
+        onAddValidator={onAddValidator}
+        getRecentContactLogs={getRecentContactLogs}
+      />
     </DragDropContext>
   );
 };
