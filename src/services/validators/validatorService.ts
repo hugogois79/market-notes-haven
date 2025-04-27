@@ -58,16 +58,43 @@ export const fetchValidatorById = async (id: string): Promise<TaoValidator | nul
 
 export const createValidator = async (validator: Omit<TaoValidator, 'id' | 'created_at' | 'updated_at'>): Promise<TaoValidator | null> => {
   try {
+    console.log("Creating validator with data:", validator);
+    
+    // Validate essential fields
+    if (!validator.name) {
+      console.error('Error creating validator: Missing name');
+      toast.error('Validator name is required');
+      return null;
+    }
+
+    // Ensure proper defaults for required fields
+    const cleanedValidator = {
+      name: validator.name,
+      organization_type: validator.organization_type || 'Validator',
+      wallet_address: validator.wallet_address || null,
+      email: validator.email || null,
+      telegram: validator.telegram || null,
+      linkedin: validator.linkedin || null,
+      crm_stage: validator.crm_stage || 'Discovery',
+      priority: validator.priority || 'Medium'
+    };
+
+    console.log("Submitting cleaned validator data:", cleanedValidator);
+    
     const { data, error } = await supabase
       .from('tao_validators')
-      .insert([validator])
+      .insert([cleanedValidator])
       .select()
       .single();
 
     if (error) {
       console.error('Error creating validator:', error);
+      toast.error(`Failed to create validator: ${error.message}`);
       return null;
     }
+
+    console.log("Validator created successfully:", data);
+    toast.success("Validator created successfully");
 
     // Cast the data to ensure it matches the TaoValidator type
     return data ? {
@@ -78,6 +105,7 @@ export const createValidator = async (validator: Omit<TaoValidator, 'id' | 'crea
     } : null;
   } catch (error) {
     console.error('Error creating validator:', error);
+    toast.error('An unexpected error occurred while creating the validator');
     return null;
   }
 };

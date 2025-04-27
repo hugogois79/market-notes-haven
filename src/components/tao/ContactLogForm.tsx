@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { TaoValidator, TaoContactLog } from "@/services/taoValidatorService";
-import { TaoSubnet } from "@/services/taoValidatorService";
+import { TaoSubnet } from "@/services/taoSubnetService";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +21,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { toast } from "sonner";
 
 interface ContactLogFormProps {
   validator?: TaoValidator;
@@ -54,11 +55,15 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validatorId) return;
+    if (!validatorId) {
+      toast.error("Please select a validator");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      await onSubmit({
+      // Format the data properly for submission
+      const contactData = {
         validator_id: validatorId,
         subnet_id: subnetId ? parseInt(subnetId) : null,
         contact_date: format(date, "yyyy-MM-dd"),
@@ -66,9 +71,14 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
         summary,
         next_steps: nextSteps || null,
         linked_note_id: null
-      });
+      };
+      
+      console.log("Submitting contact log:", contactData);
+      await onSubmit(contactData);
+      toast.success("Contact log saved successfully");
     } catch (error) {
       console.error("Error submitting contact log:", error);
+      toast.error("Failed to save contact log");
     } finally {
       setIsSubmitting(false);
     }
