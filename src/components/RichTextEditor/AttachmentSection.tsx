@@ -1,7 +1,6 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, Trash2, ExternalLink, Image, FileText, Loader2 } from 'lucide-react';
+import { Upload, Trash2, ExternalLink, Image, FileText, Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -96,6 +95,10 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
     toast.success("Attachment removed");
   };
 
+  const triggerFileUpload = () => {
+    fileInputRef.current?.click();
+  };
+
   // Determine file type from URL or extension
   const getFileType = (url: string): 'image' | 'document' => {
     const extension = url.split('.').pop()?.toLowerCase();
@@ -127,7 +130,7 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
           <p className="text-muted-foreground mb-4">Upload a file to attach to this note</p>
           <Button
             variant="outline"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={triggerFileUpload}
             disabled={isUploading}
             className="gap-2"
           >
@@ -189,13 +192,13 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
             </div>
           )}
           
-          <div className="mt-4">
+          <div className="mt-4 flex space-x-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={triggerFileUpload}
               disabled={isUploading}
-              className="w-full gap-2"
+              className="gap-2 flex-1"
             >
               {isUploading ? (
                 <>
@@ -208,6 +211,22 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
                   Replace File
                 </>
               )}
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                // Keep the current file and open file picker to add a new one
+                setLocalAttachmentUrl(null);
+                // Use setTimeout to ensure state updates before triggering click
+                setTimeout(() => triggerFileUpload(), 0);
+              }}
+              disabled={isUploading}
+              className="gap-2"
+            >
+              <Plus size={16} />
+              Add New File
             </Button>
           </div>
         </div>
