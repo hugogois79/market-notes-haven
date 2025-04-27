@@ -48,10 +48,12 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
           continue;
         }
         
+        // Create a safe filename by removing special characters and spaces
         const fileExt = file.name.split('.').pop();
-        const fileName = `${file.name.replace(/\.[^/.]+$/, '')}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+        const baseFileName = file.name.replace(/\.[^/.]+$/, '');
+        const safeFileName = `${baseFileName.replace(/[^\w-]/g, '_')}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
         
-        console.log('Uploading file to Supabase storage...', fileName);
+        console.log('Uploading file to Supabase storage...', safeFileName);
         
         const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) {
@@ -60,7 +62,7 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
         
         const { data, error } = await supabase.storage
           .from('note_attachments')
-          .upload(`public/${userData.user.id}/${fileName}`, file, {
+          .upload(`public/${userData.user.id}/${safeFileName}`, file, {
             cacheControl: '3600',
             upsert: true
           });
@@ -75,7 +77,7 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
         
         const { data: urlData } = supabase.storage
           .from('note_attachments')
-          .getPublicUrl(`public/${userData.user.id}/${fileName}`);
+          .getPublicUrl(`public/${userData.user.id}/${safeFileName}`);
         
         console.log('File public URL:', urlData);
         

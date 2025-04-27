@@ -479,9 +479,11 @@ export const uploadNoteAttachment = async (file: File, noteId: string): Promise<
       return null;
     }
     
-    // Create a unique file path using the noteId and original filename
+    // Create a safe filename by removing special characters and spaces
     const fileExt = file.name.split('.').pop();
-    const filePath = `${userId}/${noteId}/${Date.now()}.${fileExt}`;
+    const baseFileName = file.name.replace(/\.[^/.]+$/, '');
+    const safeFileName = `${baseFileName.replace(/[^\w-]/g, '_')}-${Date.now()}.${fileExt}`;
+    const filePath = `${userId}/${noteId}/${safeFileName}`;
     
     const { data, error } = await supabase.storage
       .from('note_attachments')
