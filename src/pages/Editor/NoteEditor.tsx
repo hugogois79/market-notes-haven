@@ -35,7 +35,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     handleTagsChange,
     handleTokensChange,
     handleAttachmentChange,
-    handleManualSave
+    handleManualSave,
+    attachments
   } = useNoteMutations({ currentNote, onSave });
 
   const [availableTags, setAvailableTags] = React.useState<Tag[]>(allTags);
@@ -79,6 +80,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       hasConclusion={hasConclusion}
       summaryState={summaryState}
       availableTags={availableTags}
+      attachments={attachments}
       onTitleChange={handleTitleChange}
       onContentChange={handleContentChange}
       onCategoryChange={handleCategoryChange}

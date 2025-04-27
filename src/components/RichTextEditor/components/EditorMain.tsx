@@ -31,6 +31,7 @@ interface EditorMainProps {
   isLoadingTokens: boolean;
   noteId: string;
   attachment_url?: string;
+  attachments?: string[];
   onAttachmentChange?: (url: string | null) => void;
   category: string;
   onCategoryChange: (category: string) => void;
@@ -68,6 +69,7 @@ const EditorMain: React.FC<EditorMainProps> = ({
   isLoadingTokens,
   noteId,
   attachment_url,
+  attachments = [],
   onAttachmentChange = () => {},
   category,
   onCategoryChange,
@@ -139,6 +141,7 @@ const EditorMain: React.FC<EditorMainProps> = ({
                 onAutoSave={handleAutoSave}
                 noteId={noteId}
                 attachment_url={attachment_url}
+                attachments={attachments}
                 onAttachmentChange={onAttachmentChange}
                 hasConclusion={hasConclusion}
                 category={category}

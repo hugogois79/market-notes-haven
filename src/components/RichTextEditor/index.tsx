@@ -17,6 +17,7 @@ interface RichTextEditorProps {
   onTokensChange?: (tokens: Token[]) => void;
   noteId?: string;
   attachment_url?: string;
+  attachments?: string[];
   onAttachmentChange?: (url: string | null) => void;
   category: string;
   onCategoryChange: (category: string) => void;
@@ -43,6 +44,7 @@ const RichTextEditor = ({
   onTokensChange = () => {},
   noteId = "",
   attachment_url,
+  attachments = [],
   onAttachmentChange = () => {},
   category,
   onCategoryChange,
@@ -70,6 +72,7 @@ const RichTextEditor = ({
       createdAt: new Date(),
       updatedAt: new Date(),
       attachment_url: attachment_url,
+      attachments: attachments,
       tradeInfo: tradeInfo
     });
   };
@@ -138,6 +141,7 @@ const RichTextEditor = ({
       isLoadingTokens={isLoadingTokens}
       noteId={noteId}
       attachment_url={attachment_url}
+      attachments={attachments}
       onAttachmentChange={onAttachmentChange}
       category={category}
       onCategoryChange={onCategoryChange}

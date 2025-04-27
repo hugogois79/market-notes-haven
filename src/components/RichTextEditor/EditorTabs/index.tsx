@@ -15,6 +15,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
   onAutoSave = () => {},
   noteId = "",
   attachment_url,
+  attachments = [],
   onAttachmentChange = () => {},
   hasConclusion = true,
   category = "General",
@@ -84,6 +85,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
           <AttachmentTabContent
             noteId={noteId}
             attachmentUrl={attachment_url}
+            attachments={attachments}
             onAttachmentChange={onAttachmentChange}
           />
         </TabsContent>
