@@ -29,9 +29,13 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({
       const uploadPromises = files.map(file => uploadContactLogAttachment(validatorId, file));
       const urls = await Promise.all(uploadPromises);
       
+      // Filter out any failed uploads (null values)
       const successfulUploads = urls.filter((url): url is string => url !== null);
+      
       if (successfulUploads.length > 0) {
-        onAttachmentsChange([...attachments, ...successfulUploads]);
+        // Create a new array with existing attachments and add the new ones
+        const updatedAttachments = [...attachments, ...successfulUploads];
+        onAttachmentsChange(updatedAttachments);
         toast.success(`${successfulUploads.length} file(s) uploaded successfully`);
       }
     } catch (error) {
@@ -39,6 +43,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({
       toast.error("Failed to upload files");
     } finally {
       setIsUploading(false);
+      // Clear the file input to allow selecting the same files again
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }

@@ -43,7 +43,7 @@ export const useContactLogForm = ({ validator, contactLog, onSubmit }: UseContac
         summary,
         next_steps: nextSteps || null,
         linked_note_id: null,
-        attachment_url: attachments[0] || null,
+        attachment_url: attachments.length > 0 ? attachments[0] : null,
         attachments
       };
       
