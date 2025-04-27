@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Upload, Trash2, ExternalLink, Image, FileText } from 'lucide-react';
@@ -44,10 +43,9 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
         throw new Error('User not authenticated');
       }
       
-      // Upload to Supabase storage - make sure we're using the correct bucket format
-      // Note: Bucket names in Supabase URLs might include spaces, but in code we should use the exact bucket name
+      // Upload to Supabase storage using the correct bucket name
       const { data, error } = await supabase.storage
-        .from('Note Attachments')
+        .from('note_attachments')
         .upload(`public/${userData.user.id}/${fileName}`, file, {
           cacheControl: '3600',
           upsert: true
@@ -60,9 +58,9 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
       
       console.log('File uploaded successfully:', data);
       
-      // Get the public URL - make sure we're using the correct bucket format
+      // Get the public URL
       const { data: urlData } = supabase.storage
-        .from('Note Attachments')
+        .from('note_attachments')
         .getPublicUrl(`public/${userData.user.id}/${fileName}`);
       
       console.log('File public URL:', urlData);
