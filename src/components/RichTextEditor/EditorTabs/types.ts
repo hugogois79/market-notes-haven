@@ -8,6 +8,7 @@ export interface EditorTabsProps {
   onAutoSave?: () => void;
   noteId?: string;
   attachment_url?: string;
+  attachments?: string[];
   onAttachmentChange?: (url: string | null) => void;
   hasConclusion?: boolean;
   category?: string;
@@ -35,5 +36,6 @@ export interface TabContentProps {
 export interface AttachmentTabContentProps {
   noteId: string;
   attachmentUrl?: string;
+  attachments?: string[];
   onAttachmentChange: (url: string | null) => void;
 }

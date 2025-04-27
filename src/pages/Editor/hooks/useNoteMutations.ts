@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Note, TradeInfo, Tag, Token } from "@/types";
 import { toast } from "sonner";
@@ -161,9 +162,11 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
         setAttachments(newAttachments);
         setPendingChanges({ 
           ...pendingChanges, 
-          attachment_url: url,
+          attachment_url: url,  // For backward compatibility
           attachments: newAttachments 
         });
+        
+        console.log("Updated attachments:", newAttachments);
       }
     } else {
       setAttachments([]);
@@ -173,16 +176,21 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
         attachments: [] 
       });
     }
+    
+    // Trigger a save to ensure attachments are persisted immediately
+    handleManualSave();
   };
 
   const handleSaveWithChanges = async (changes: Partial<Note>, isAutoSave = false) => {
     setIsSaving(true);
     
     try {
+      // Ensure we're including attachments in the save
       const updatedChanges = {
         ...changes,
         summary: changes.summary !== undefined ? changes.summary : summaryState,
-        attachments: attachments
+        attachments: attachments,
+        attachment_url: attachments.length > 0 ? attachments[0] : undefined // For backward compatibility
       };
       
       console.log("Saving changes:", updatedChanges);
@@ -204,9 +212,11 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     const updatedChanges = {
       ...pendingChanges,
       summary: pendingChanges.summary !== undefined ? pendingChanges.summary : summaryState,
-      attachments: attachments
+      attachments: attachments,
+      attachment_url: attachments.length > 0 ? attachments[0] : undefined // For backward compatibility
     };
     
+    console.log("Manual save with changes:", updatedChanges);
     await handleSaveWithChanges(updatedChanges, false);
   };
 

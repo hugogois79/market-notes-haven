@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Upload, Trash2, ExternalLink, Image, FileText, Loader2, Plus, FileIcon } from 'lucide-react';
@@ -7,12 +8,14 @@ import { supabase } from '@/integrations/supabase/client';
 interface AttachmentSectionProps {
   noteId: string;
   attachmentUrl?: string | null;
+  attachments?: string[];
   onAttachmentChange: (url: string | null) => void;
 }
 
 const AttachmentSection: React.FC<AttachmentSectionProps> = ({ 
   noteId, 
   attachmentUrl, 
+  attachments: initialAttachments = [],
   onAttachmentChange 
 }) => {
   const [isUploading, setIsUploading] = useState(false);
@@ -20,12 +23,15 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (attachmentUrl) {
+    // Initialize with attachments prop if provided, else use attachmentUrl
+    if (initialAttachments && initialAttachments.length > 0) {
+      setAttachments(initialAttachments);
+    } else if (attachmentUrl) {
       setAttachments(attachmentUrl ? [attachmentUrl] : []);
     } else {
       setAttachments([]);
     }
-  }, [attachmentUrl]);
+  }, [attachmentUrl, initialAttachments]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -43,7 +49,7 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
         }
         
         const fileExt = file.name.split('.').pop();
-        const fileName = `${noteId}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+        const fileName = `${file.name.replace(/\.[^/.]+$/, '')}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
         
         console.log('Uploading file to Supabase storage...', fileName);
         
@@ -80,6 +86,8 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
         const updatedAttachments = [...attachments, ...uploadedUrls];
         setAttachments(updatedAttachments);
         
+        // Update parent component with all attachments
+        // Use the first attachment as the primary attachment URL for backward compatibility
         onAttachmentChange(updatedAttachments[0]);
         
         toast.success(`${uploadedUrls.length} file(s) uploaded successfully`);
@@ -99,6 +107,8 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
     const updatedAttachments = attachments.filter(url => url !== urlToRemove);
     setAttachments(updatedAttachments);
     
+    // Update parent component with all attachments
+    // Use the first attachment as the primary attachment URL for backward compatibility
     onAttachmentChange(updatedAttachments.length > 0 ? updatedAttachments[0] : null);
     
     toast.success("Attachment removed");

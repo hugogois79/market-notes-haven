@@ -18,6 +18,7 @@ interface NoteEditorCoreProps {
   hasConclusion: boolean;
   summaryState: string;
   availableTags: Tag[];
+  attachments: string[];
   onTitleChange: (title: string) => void;
   onContentChange: (content: string) => void;
   onCategoryChange: (category: string) => void;
@@ -41,6 +42,7 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
   hasConclusion,
   summaryState,
   availableTags,
+  attachments,
   onTitleChange,
   onContentChange,
   onCategoryChange,
@@ -63,6 +65,7 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
         onTokensChange={onTokensChange}
         noteId={currentNote.id}
         attachment_url={currentNote.attachment_url}
+        attachments={attachments}
         onAttachmentChange={onAttachmentChange}
         onSave={async () => await onSave({})} // Empty save for auto-save
         autoSave={false} // Keep auto-save disabled
