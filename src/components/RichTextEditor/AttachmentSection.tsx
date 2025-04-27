@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, Trash2, ExternalLink, Image, FileText, Loader2, Plus, FileIcon } from 'lucide-react';
+import { Upload, Trash2, ExternalLink, Image, FileText, Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -89,8 +89,10 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
         setAttachments(updatedAttachments);
         
         // Update parent component with all attachments
-        // Use the first attachment as the primary attachment URL for backward compatibility
-        onAttachmentChange(updatedAttachments[0]);
+        onAttachmentChange(updatedAttachments[0]); // Send first URL for backward compatibility
+        
+        // Save all attachments to the note
+        console.log('Updated attachments list:', updatedAttachments);
         
         toast.success(`${uploadedUrls.length} file(s) uploaded successfully`);
       }

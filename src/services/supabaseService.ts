@@ -55,6 +55,7 @@ export const dbNoteToNote = (dbNote: DbNote): Note => ({
   createdAt: new Date(dbNote.created_at),
   updatedAt: new Date(dbNote.updated_at),
   attachment_url: dbNote.attachment_url || undefined,
+  attachments: dbNote.attachments || (dbNote.attachment_url ? [dbNote.attachment_url] : []), // Handle attachments array
   tradeInfo: jsonToTradeInfo(dbNote.trade_info), // Convert JSON to TradeInfo
   hasConclusion: dbNote.has_conclusion, // Include hasConclusion field
 });
@@ -69,6 +70,7 @@ export const noteToDbNote = (note: Note): Omit<DbNote, 'created_at' | 'updated_a
   category: note.category,
   user_id: null, // Will be set by the service
   attachment_url: note.attachment_url || null,
+  attachments: note.attachments || [],  // Add attachments array to database
   trade_info: tradeInfoToJson(note.tradeInfo), // Convert TradeInfo to JSON
   has_conclusion: note.hasConclusion || null, // Add the has_conclusion field
 });
@@ -142,6 +144,7 @@ export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedA
       category: note.category || "General",
       user_id: userId,
       attachment_url: note.attachment_url || null,
+      attachments: note.attachments || [], // Include all attachments
       trade_info: tradeInfoToJson(note.tradeInfo), // Convert TradeInfo to JSON
     };
 
@@ -172,6 +175,7 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
 
     console.log('Updating note with content:', note.content);
     console.log('Updating note with summary:', note.summary);
+    console.log('Updating note with attachments:', note.attachments);
 
     // Only generate a new summary if one wasn't explicitly provided and content has changed
     let summaryToSave = note.summary;
@@ -195,7 +199,8 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
         category: note.category || "General",
         updated_at: new Date().toISOString(),
         user_id: userId,
-        attachment_url: note.attachment_url || null,
+        attachment_url: note.attachments && note.attachments.length > 0 ? note.attachments[0] : null, // For backward compatibility
+        attachments: note.attachments || [], // Include all attachments
         trade_info: tradeInfoToJson(note.tradeInfo), // Convert TradeInfo to JSON
         has_conclusion: note.hasConclusion
       })
