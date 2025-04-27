@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Note, TradeInfo, Tag, Token } from "@/types";
 import { toast } from "sonner";
 import { linkTagToNote, unlinkTagFromNote } from "@/services/tag";
@@ -23,6 +23,14 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     currentNote.attachments || 
     (currentNote.attachment_url ? [currentNote.attachment_url] : [])
   );
+
+  // Update attachments when currentNote changes
+  useEffect(() => {
+    setAttachments(
+      currentNote.attachments || 
+      (currentNote.attachment_url ? [currentNote.attachment_url] : [])
+    );
+  }, [currentNote]);
   
   const handleTitleChange = (title: string) => {
     console.log("NoteEditor: Title changing to:", title);
@@ -155,30 +163,56 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     }
   };
 
-  const handleAttachmentChange = (url: string | null) => {
-    if (url) {
-      if (!attachments.includes(url)) {
-        const newAttachments = [...attachments, url];
-        setAttachments(newAttachments);
+  const handleAttachmentChange = (attachmentData: string | null) => {
+    try {
+      if (attachmentData) {
+        // Try to parse as JSON array
+        try {
+          const parsedAttachments = JSON.parse(attachmentData);
+          if (Array.isArray(parsedAttachments)) {
+            setAttachments(parsedAttachments);
+            setPendingChanges({ 
+              ...pendingChanges, 
+              attachment_url: parsedAttachments[0],  // For backward compatibility
+              attachments: parsedAttachments 
+            });
+            console.log("Updated attachments array:", parsedAttachments);
+          } else {
+            // Handle single string
+            setAttachments([attachmentData]);
+            setPendingChanges({
+              ...pendingChanges,
+              attachment_url: attachmentData,
+              attachments: [attachmentData]
+            });
+            console.log("Updated attachment:", attachmentData);
+          }
+        } catch (e) {
+          // Not valid JSON, treat as single attachment
+          setAttachments([attachmentData]);
+          setPendingChanges({
+            ...pendingChanges,
+            attachment_url: attachmentData,
+            attachments: [attachmentData]
+          });
+          console.log("Updated attachment (single string):", attachmentData);
+        }
+      } else {
+        // Clear attachments
+        setAttachments([]);
         setPendingChanges({ 
           ...pendingChanges, 
-          attachment_url: url,  // For backward compatibility
-          attachments: newAttachments 
+          attachment_url: undefined, 
+          attachments: [] 
         });
-        
-        console.log("Updated attachments:", newAttachments);
+        console.log("Cleared attachments");
       }
-    } else {
-      setAttachments([]);
-      setPendingChanges({ 
-        ...pendingChanges, 
-        attachment_url: undefined, 
-        attachments: [] 
-      });
+      
+      // Trigger a save to ensure attachments are persisted immediately
+      handleManualSave();
+    } catch (error) {
+      console.error("Error handling attachment change:", error);
     }
-    
-    // Trigger a save to ensure attachments are persisted immediately
-    handleManualSave();
   };
 
   const handleSaveWithChanges = async (changes: Partial<Note>, isAutoSave = false) => {

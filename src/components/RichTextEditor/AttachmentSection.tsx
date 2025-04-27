@@ -22,16 +22,14 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
   const [attachments, setAttachments] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Initialize attachments state from props
   useEffect(() => {
-    // Initialize with attachments prop if provided, else use attachmentUrl
     if (initialAttachments && initialAttachments.length > 0) {
       setAttachments(initialAttachments);
     } else if (attachmentUrl) {
-      setAttachments(attachmentUrl ? [attachmentUrl] : []);
-    } else {
-      setAttachments([]);
+      setAttachments([attachmentUrl]);
     }
-  }, [attachmentUrl, initialAttachments]);
+  }, [initialAttachments, attachmentUrl]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -79,9 +77,13 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
       }
       
       if (uploadedUrls.length > 0) {
+        // Update local attachments state with new URLs
         const updatedAttachments = [...attachments, ...uploadedUrls];
         setAttachments(updatedAttachments);
-        onAttachmentChange(updatedAttachments[0]); // Send first URL for backward compatibility
+        
+        // Notify parent component about the change - pass all attachments
+        onAttachmentChange(JSON.stringify(updatedAttachments));
+        
         toast.success(`${uploadedUrls.length} file(s) uploaded successfully`);
       }
     } catch (error) {
@@ -98,7 +100,14 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
   const handleRemoveAttachment = (urlToRemove: string) => {
     const updatedAttachments = attachments.filter(url => url !== urlToRemove);
     setAttachments(updatedAttachments);
-    onAttachmentChange(updatedAttachments.length > 0 ? updatedAttachments[0] : null);
+    
+    // Notify parent component about the change - pass all attachments or null if empty
+    if (updatedAttachments.length > 0) {
+      onAttachmentChange(JSON.stringify(updatedAttachments));
+    } else {
+      onAttachmentChange(null);
+    }
+    
     toast.success("Attachment removed");
   };
 

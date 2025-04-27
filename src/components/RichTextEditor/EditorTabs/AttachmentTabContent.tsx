@@ -9,11 +9,14 @@ const AttachmentTabContent: React.FC<AttachmentTabContentProps> = ({
   attachments,
   onAttachmentChange
 }) => {
+  // Ensure we're using proper attachments array
+  const attachmentsList = attachments || (attachmentUrl ? [attachmentUrl] : []);
+  
   return (
     <AttachmentSection 
       noteId={noteId}
       attachmentUrl={attachmentUrl}
-      attachments={attachments}
+      attachments={attachmentsList}
       onAttachmentChange={onAttachmentChange}
     />
   );
