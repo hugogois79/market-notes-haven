@@ -3,6 +3,7 @@ import { Note, Tag, Token, TradeInfo } from "@/types";
 import { useAttachments } from "./noteMutations/useAttachments";
 import { useBasicNoteFields } from "./noteMutations/useBasicNoteFields";
 import { useSaveNote } from "./noteMutations/useSaveNote";
+import { useTagsAndTokens } from "./noteMutations/useTagsAndTokens";
 
 interface UseNoteMutationsProps {
   currentNote: Note;
@@ -25,6 +26,13 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
   } = useBasicNoteFields(currentNote);
 
   const {
+    linkedTags,
+    linkedTokens,
+    handleTagsChange,
+    handleTokensChange
+  } = useTagsAndTokens(currentNote);
+
+  const {
     isSaving,
     pendingChanges,
     handleSaveWithChanges,
@@ -42,6 +50,8 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     hasConclusion,
     summaryState,
     attachments,
+    linkedTags,
+    linkedTokens,
 
     // Handlers
     handleTitleChange,
@@ -51,6 +61,8 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     handleTradeInfoChange,
     handleAttachmentChange,
     handleSaveWithChanges,
-    handleManualSave
+    handleManualSave,
+    handleTagsChange,
+    handleTokensChange
   };
 };

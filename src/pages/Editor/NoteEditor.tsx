@@ -43,18 +43,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
 
   // Update local state when currentNote changes
   useEffect(() => {
-    // Convert tag IDs to tag objects
-    const getTagObjects = () => {
-      if (!currentNote.tags || !Array.isArray(currentNote.tags)) {
-        return [];
-      }
-      
-      return currentNote.tags.map(tagId => {
-        const foundTag = allTags.find(t => t.id === tagId);
-        return foundTag || { id: tagId, name: tagId };
-      });
-    };
-    
     // Update available tags based on category
     if (getTagsFilteredByCategory) {
       const filteredTags = getTagsFilteredByCategory(currentNote.category || null);
