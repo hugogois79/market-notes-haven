@@ -2,7 +2,7 @@
 import React, { useRef, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Upload, Trash2, Paperclip, Loader2, X } from "lucide-react";
+import { Upload, Trash2, Paperclip, Loader2, X, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { uploadContactLogAttachment } from "@/services/contact-logs/contactLogService";
 
@@ -55,6 +55,10 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({
     toast.success("Attachment removed");
   };
 
+  const addMoreFiles = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <div className="space-y-2">
       <Label>Attachments</Label>
@@ -87,28 +91,55 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({
           </div>
         ))}
         
-        <Button 
-          type="button"
-          variant="outline" 
-          className="w-full flex items-center justify-center gap-2" 
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-        >
-          {isUploading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Uploading...
-            </>
+        <div className="flex gap-2">
+          {attachments.length === 0 ? (
+            <Button 
+              type="button"
+              variant="outline" 
+              className="w-full flex items-center justify-center gap-2" 
+              onClick={addMoreFiles}
+              disabled={isUploading}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4" />
+                  Upload Files
+                </>
+              )}
+            </Button>
           ) : (
             <>
-              <Upload className="h-4 w-4" />
-              {attachments.length === 0 ? 'Upload Files' : 'Add More Files'}
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={addMoreFiles}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add More Files
+                  </>
+                )}
+              </Button>
             </>
           )}
-        </Button>
+        </div>
       </div>
     </div>
   );
 };
 
 export default AttachmentsSection;
+
