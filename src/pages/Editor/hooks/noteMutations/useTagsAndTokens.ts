@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Note, Tag, Token } from "@/types";
 
@@ -22,9 +21,8 @@ export const useTagsAndTokens = (currentNote: Note) => {
           
           // Otherwise, create a basic Tag object from the ID
           // Convert to string to ensure we don't have any type issues
-          // We've already filtered out null/undefined values, but TypeScript still needs reassurance
-          const safeTag = tag ?? ''; // Use nullish coalescing to handle any remaining null/undefined
-          const tagId = String(safeTag);
+          // At this point tag is definitely not null or undefined due to our filter
+          const tagId = String(tag);
           return { id: tagId, name: tagId };
         });
       
