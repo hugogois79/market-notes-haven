@@ -1,6 +1,7 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, Trash2, ExternalLink, Image, FileText, Loader2, Plus } from 'lucide-react';
+import { Upload, Trash2, ExternalLink, Image, FileText, Loader2, Plus, FileIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -16,66 +17,85 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
   onAttachmentChange 
 }) => {
   const [isUploading, setIsUploading] = useState(false);
-  const [localAttachmentUrl, setLocalAttachmentUrl] = useState<string | null>(attachmentUrl || null);
+  const [attachments, setAttachments] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Update local state when prop changes
   useEffect(() => {
-    setLocalAttachmentUrl(attachmentUrl || null);
+    if (attachmentUrl) {
+      setAttachments(attachmentUrl ? [attachmentUrl] : []);
+    } else {
+      setAttachments([]);
+    }
   }, [attachmentUrl]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    // Validate file size (limit to 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("File is too large. Maximum size is 10MB.");
-      return;
-    }
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
     
     setIsUploading(true);
     
     try {
-      // Create a unique filename to prevent collisions
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${noteId}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const uploadedUrls: string[] = [];
       
-      console.log('Uploading file to Supabase storage...', fileName);
-      
-      // Get user auth status
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) {
-        throw new Error('User not authenticated');
+      // Process each file sequentially
+      for (const file of files) {
+        // Validate file size (limit to 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`File ${file.name} is too large. Maximum size is 10MB.`);
+          continue;
+        }
+        
+        // Create a unique filename to prevent collisions
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${noteId}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+        
+        console.log('Uploading file to Supabase storage...', fileName);
+        
+        // Get user auth status
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) {
+          throw new Error('User not authenticated');
+        }
+        
+        // Upload to Supabase storage using the correct bucket name
+        const { data, error } = await supabase.storage
+          .from('note_attachments')
+          .upload(`public/${userData.user.id}/${fileName}`, file, {
+            cacheControl: '3600',
+            upsert: true
+          });
+        
+        if (error) {
+          console.error('Upload error:', error);
+          toast.error(`Failed to upload ${file.name}: ${error.message}`);
+          continue;
+        }
+        
+        console.log('File uploaded successfully:', data);
+        
+        // Get the public URL
+        const { data: urlData } = supabase.storage
+          .from('note_attachments')
+          .getPublicUrl(`public/${userData.user.id}/${fileName}`);
+        
+        console.log('File public URL:', urlData);
+        
+        // Add the file URL to our list
+        uploadedUrls.push(urlData.publicUrl);
       }
       
-      // Upload to Supabase storage using the correct bucket name
-      const { data, error } = await supabase.storage
-        .from('note_attachments')
-        .upload(`public/${userData.user.id}/${fileName}`, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-      
-      if (error) {
-        console.error('Upload error:', error);
-        throw error;
+      if (uploadedUrls.length > 0) {
+        // Update attachments array with new URLs
+        const updatedAttachments = [...attachments, ...uploadedUrls];
+        setAttachments(updatedAttachments);
+        
+        // Update the parent with the first URL (for backward compatibility)
+        // This will need to be updated later to support multiple attachments
+        onAttachmentChange(updatedAttachments[0]);
+        
+        toast.success(`${uploadedUrls.length} file(s) uploaded successfully`);
       }
-      
-      console.log('File uploaded successfully:', data);
-      
-      // Get the public URL
-      const { data: urlData } = supabase.storage
-        .from('note_attachments')
-        .getPublicUrl(`public/${userData.user.id}/${fileName}`);
-      
-      console.log('File public URL:', urlData);
-      
-      // Update the note with the attachment URL
-      const fileUrl = urlData.publicUrl;
-      onAttachmentChange(fileUrl);
-      setLocalAttachmentUrl(fileUrl);
-      toast.success("File uploaded successfully");
     } catch (error) {
       console.error("Error uploading file:", error);
       toast.error("Failed to upload file. Please check your connection and try again.");
@@ -88,10 +108,14 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
     }
   };
 
-  const handleRemoveAttachment = () => {
-    // We're just removing the reference to the file, not deleting it from storage
-    onAttachmentChange(null);
-    setLocalAttachmentUrl(null);
+  const handleRemoveAttachment = (urlToRemove: string) => {
+    // Remove the specified attachment
+    const updatedAttachments = attachments.filter(url => url !== urlToRemove);
+    setAttachments(updatedAttachments);
+    
+    // Update the parent with the first URL or null if empty
+    onAttachmentChange(updatedAttachments.length > 0 ? updatedAttachments[0] : null);
+    
     toast.success("Attachment removed");
   };
 
@@ -123,11 +147,12 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
         ref={fileInputRef}
         className="hidden" 
         onChange={handleUpload}
+        multiple
       />
       
-      {!localAttachmentUrl ? (
+      {attachments.length === 0 ? (
         <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-8 bg-gray-50">
-          <p className="text-muted-foreground mb-4">Upload a file to attach to this note</p>
+          <p className="text-muted-foreground mb-4">Upload files to attach to this note</p>
           <Button
             variant="outline"
             onClick={triggerFileUpload}
@@ -142,63 +167,70 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
             ) : (
               <>
                 <Upload size={16} />
-                Upload File
+                Upload Files
               </>
             )}
           </Button>
         </div>
       ) : (
-        <div className="border rounded-lg p-4">
-          <div className="flex justify-between items-center mb-3">
-            <div className="flex items-center gap-2">
-              {getFileType(localAttachmentUrl) === 'image' ? (
-                <Image size={20} className="text-blue-500" />
-              ) : (
-                <FileText size={20} className="text-blue-500" />
-              )}
-              <span className="text-sm font-medium">
-                {getFileName(localAttachmentUrl)}
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => window.open(localAttachmentUrl, '_blank')}
-                title="Open file"
-              >
-                <ExternalLink size={16} />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                onClick={handleRemoveAttachment}
-                title="Remove attachment"
-              >
-                <Trash2 size={16} />
-              </Button>
-            </div>
+        <div className="border rounded-lg p-4 space-y-3">
+          {/* List of attachments */}
+          <div className="space-y-2">
+            {attachments.map((url, index) => (
+              <div key={`${url}-${index}`} className="border rounded-lg p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2">
+                    {getFileType(url) === 'image' ? (
+                      <Image size={20} className="text-blue-500" />
+                    ) : (
+                      <FileText size={20} className="text-blue-500" />
+                    )}
+                    <span className="text-sm font-medium truncate max-w-[180px]">
+                      {getFileName(url)}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => window.open(url, '_blank')}
+                      title="Open file"
+                    >
+                      <ExternalLink size={16} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => handleRemoveAttachment(url)}
+                      title="Remove attachment"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                </div>
+                
+                {getFileType(url) === 'image' && (
+                  <div className="mt-2">
+                    <img 
+                      src={url} 
+                      alt="Attachment preview" 
+                      className="max-w-full rounded border" 
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
           
-          {getFileType(localAttachmentUrl) === 'image' && (
-            <div className="mt-2">
-              <img 
-                src={localAttachmentUrl} 
-                alt="Attachment preview" 
-                className="max-w-full rounded border" 
-              />
-            </div>
-          )}
-          
-          <div className="mt-4 flex space-x-2">
+          {/* Upload more files button */}
+          <div className="mt-4 flex justify-center">
             <Button
               variant="outline"
-              size="sm"
               onClick={triggerFileUpload}
               disabled={isUploading}
-              className="gap-2 flex-1"
+              className="gap-2"
             >
               {isUploading ? (
                 <>
@@ -207,26 +239,10 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
                 </>
               ) : (
                 <>
-                  <Upload size={16} />
-                  Replace File
+                  <Plus size={16} />
+                  Add More Files
                 </>
               )}
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                // Keep the current file and open file picker to add a new one
-                setLocalAttachmentUrl(null);
-                // Use setTimeout to ensure state updates before triggering click
-                setTimeout(() => triggerFileUpload(), 0);
-              }}
-              disabled={isUploading}
-              className="gap-2"
-            >
-              <Plus size={16} />
-              Add New File
             </Button>
           </div>
         </div>

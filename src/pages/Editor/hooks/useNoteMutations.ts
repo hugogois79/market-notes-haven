@@ -19,6 +19,10 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
   const [localTradeInfo, setLocalTradeInfo] = useState<TradeInfo | undefined>(currentNote.tradeInfo);
   const [hasConclusion, setHasConclusion] = useState<boolean>(currentNote.hasConclusion !== false);
   const [summaryState, setSummaryState] = useState<string>(currentNote.summary || "");
+  const [attachments, setAttachments] = useState<string[]>(
+    currentNote.attachments || 
+    (currentNote.attachment_url ? [currentNote.attachment_url] : [])
+  );
   
   // Handle title change
   const handleTitleChange = (title: string) => {
@@ -178,7 +182,30 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
 
   // Handle attachment changes
   const handleAttachmentChange = (url: string | null) => {
+    // Update the attachment_url for backward compatibility
     setPendingChanges({ ...pendingChanges, attachment_url: url || undefined });
+    
+    // Update the attachments array
+    if (url) {
+      // If we're adding a URL that's not already in the attachments array
+      if (!attachments.includes(url)) {
+        const newAttachments = [...attachments, url];
+        setAttachments(newAttachments);
+        setPendingChanges({ 
+          ...pendingChanges, 
+          attachment_url: url, 
+          attachments: newAttachments 
+        });
+      }
+    } else {
+      // If we're removing all attachments
+      setAttachments([]);
+      setPendingChanges({ 
+        ...pendingChanges, 
+        attachment_url: undefined, 
+        attachments: [] 
+      });
+    }
   };
 
   // Save function with specific changes
@@ -189,7 +216,8 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
       // Always include summary in the changes to prevent it from being lost
       const updatedChanges = {
         ...changes,
-        summary: changes.summary !== undefined ? changes.summary : summaryState
+        summary: changes.summary !== undefined ? changes.summary : summaryState,
+        attachments: attachments
       };
       
       console.log("Saving changes:", updatedChanges);
@@ -212,7 +240,8 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     // Always include the summary in the save
     const updatedChanges = {
       ...pendingChanges,
-      summary: pendingChanges.summary !== undefined ? pendingChanges.summary : summaryState
+      summary: pendingChanges.summary !== undefined ? pendingChanges.summary : summaryState,
+      attachments: attachments
     };
     
     await handleSaveWithChanges(updatedChanges, false);
@@ -227,6 +256,7 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     localTradeInfo,
     hasConclusion,
     summaryState,
+    attachments,
     handleTitleChange,
     handleContentChange,
     handleCategoryChange,
