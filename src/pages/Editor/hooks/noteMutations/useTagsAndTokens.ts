@@ -13,7 +13,7 @@ export const useTagsAndTokens = (currentNote: Note) => {
     if (currentNote.tags) {
       // Filter out null/undefined tags first, then map to Tag objects
       const tagObjects = currentNote.tags
-        .filter((tag): tag is (string | Tag) => tag !== null && tag !== undefined)
+        .filter((tag): tag is NonNullable<typeof tag> => tag !== null && tag !== undefined)
         .map(tag => {
           // If it's already a Tag object, return it
           if (typeof tag === 'object' && tag !== null && 'id' in tag) {
