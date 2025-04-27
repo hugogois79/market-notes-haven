@@ -22,7 +22,7 @@ export const useTagsAndTokens = (currentNote: Note) => {
           
           // Otherwise, create a basic Tag object from the ID
           // Convert to string to ensure we don't have any type issues
-          const tagId = String(tag);
+          const tagId = String(tag || '');
           return { id: tagId, name: tagId };
         });
       
