@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -58,11 +57,12 @@ export interface Note {
   content: string;
   summary?: string;
   tags: string[];
-  tokens?: Token[]; // Explicitly defined here
+  tokens?: Token[];
   category: string;
   createdAt: Date;
   updatedAt: Date;
   attachment_url?: string;
+  attachments?: string[];
   tradeInfo?: TradeInfo;
   hasConclusion?: boolean;
   tradingSettlementNotes?: TradingSettlementNote[];

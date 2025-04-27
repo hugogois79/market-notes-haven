@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Upload, Trash2, ExternalLink, Image, FileText, Loader2, Plus, FileIcon } from 'lucide-react';
@@ -20,7 +19,6 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
   const [attachments, setAttachments] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Update local state when prop changes
   useEffect(() => {
     if (attachmentUrl) {
       setAttachments(attachmentUrl ? [attachmentUrl] : []);
@@ -38,27 +36,22 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
     try {
       const uploadedUrls: string[] = [];
       
-      // Process each file sequentially
       for (const file of files) {
-        // Validate file size (limit to 10MB)
         if (file.size > 10 * 1024 * 1024) {
           toast.error(`File ${file.name} is too large. Maximum size is 10MB.`);
           continue;
         }
         
-        // Create a unique filename to prevent collisions
         const fileExt = file.name.split('.').pop();
         const fileName = `${noteId}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
         
         console.log('Uploading file to Supabase storage...', fileName);
         
-        // Get user auth status
         const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) {
           throw new Error('User not authenticated');
         }
         
-        // Upload to Supabase storage using the correct bucket name
         const { data, error } = await supabase.storage
           .from('note_attachments')
           .upload(`public/${userData.user.id}/${fileName}`, file, {
@@ -74,24 +67,19 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
         
         console.log('File uploaded successfully:', data);
         
-        // Get the public URL
         const { data: urlData } = supabase.storage
           .from('note_attachments')
           .getPublicUrl(`public/${userData.user.id}/${fileName}`);
         
         console.log('File public URL:', urlData);
         
-        // Add the file URL to our list
         uploadedUrls.push(urlData.publicUrl);
       }
       
       if (uploadedUrls.length > 0) {
-        // Update attachments array with new URLs
         const updatedAttachments = [...attachments, ...uploadedUrls];
         setAttachments(updatedAttachments);
         
-        // Update the parent with the first URL (for backward compatibility)
-        // This will need to be updated later to support multiple attachments
         onAttachmentChange(updatedAttachments[0]);
         
         toast.success(`${uploadedUrls.length} file(s) uploaded successfully`);
@@ -101,7 +89,6 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
       toast.error("Failed to upload file. Please check your connection and try again.");
     } finally {
       setIsUploading(false);
-      // Reset the file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -109,11 +96,9 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
   };
 
   const handleRemoveAttachment = (urlToRemove: string) => {
-    // Remove the specified attachment
     const updatedAttachments = attachments.filter(url => url !== urlToRemove);
     setAttachments(updatedAttachments);
     
-    // Update the parent with the first URL or null if empty
     onAttachmentChange(updatedAttachments.length > 0 ? updatedAttachments[0] : null);
     
     toast.success("Attachment removed");
@@ -123,7 +108,6 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
     fileInputRef.current?.click();
   };
 
-  // Determine file type from URL or extension
   const getFileType = (url: string): 'image' | 'document' => {
     const extension = url.split('.').pop()?.toLowerCase();
     if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(extension || '')) {
@@ -131,11 +115,17 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
     }
     return 'document';
   };
-  
-  // Extract filename from URL
+
   const getFileName = (url: string): string => {
-    const pathParts = url.split('/');
-    return pathParts[pathParts.length - 1] || 'attachment';
+    try {
+      const urlWithoutParams = url.split('?')[0];
+      const parts = urlWithoutParams.split('/');
+      const lastPart = parts[parts.length - 1];
+      return decodeURIComponent(lastPart);
+    } catch (error) {
+      console.error("Error extracting filename:", error);
+      return "attachment";
+    }
   };
 
   return (
@@ -174,7 +164,6 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
         </div>
       ) : (
         <div className="border rounded-lg p-4 space-y-3">
-          {/* List of attachments */}
           <div className="space-y-2">
             {attachments.map((url, index) => (
               <div key={`${url}-${index}`} className="border rounded-lg p-3">
@@ -224,7 +213,6 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
             ))}
           </div>
           
-          {/* Upload more files button */}
           <div className="mt-4 flex justify-center">
             <Button
               variant="outline"
