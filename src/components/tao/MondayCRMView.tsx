@@ -4,7 +4,7 @@ import { TaoValidator, TaoSubnet, TaoContactLog, TaoNote } from "@/services/taoV
 import CRMViewHeader from "./crm/CRMViewHeader";
 import CRMMainView from "./crm/CRMMainView";
 import { useFilteredCRMData } from "@/hooks/useFilteredCRMData";
-import KanbanBoard from "./crm/KanbanBoard";
+import KanbanBoard from "./crm/kanban/KanbanBoard";
 import { useLocation } from "react-router-dom";
 
 interface MondayCRMViewProps {
@@ -22,6 +22,7 @@ interface MondayCRMViewProps {
   onAddNote: (validator?: TaoValidator, subnet?: TaoSubnet) => void;
   onViewContactLog: (contactLog: TaoContactLog) => void;
   onRefreshData: () => void;
+  initialView?: "main" | "kanban";
 }
 
 const MondayCRMView: React.FC<MondayCRMViewProps> = ({
@@ -39,9 +40,9 @@ const MondayCRMView: React.FC<MondayCRMViewProps> = ({
   onAddNote,
   onViewContactLog,
   onRefreshData,
+  initialView = "main"
 }) => {
   const location = useLocation();
-  const initialView = location.state?.initialView === "kanban" ? "kanban" : "main";
   const [selectedView, setSelectedView] = useState<"main" | "kanban">(initialView);
   const [expandedGroups, setExpandedGroups] = useState<string[]>(["validators", "subnets"]);
   
@@ -49,10 +50,17 @@ const MondayCRMView: React.FC<MondayCRMViewProps> = ({
 
   // Update view if navigation state changes
   useEffect(() => {
-    if (location.state?.initialView === "kanban") {
-      setSelectedView("kanban");
+    if (location.state?.initialView) {
+      setSelectedView(location.state.initialView);
     }
   }, [location.state]);
+
+  // Also update view if initialView prop changes
+  useEffect(() => {
+    if (initialView) {
+      setSelectedView(initialView);
+    }
+  }, [initialView]);
 
   return (
     <div className="space-y-6">

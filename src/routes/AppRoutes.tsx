@@ -25,6 +25,7 @@ import TAOLayout from "@/pages/tao/layout";
 import TAODashboard from "@/pages/tao/index";
 import TAOPerformance from "@/pages/tao/performance";
 import TAOManagement from "@/pages/tao/management";
+import TAOValidatorManagement from "@/pages/tao/validators"; // Add import for the validators page
 import TAOValidatorRelationshipManagement from "@/pages/tao/validator-relationship-management";
 import InvestorOpportunitiesPage from "@/pages/tao/investor-opportunities";
 import FollowUpSequencesPage from "@/pages/tao/follow-up-sequences";
@@ -131,6 +132,7 @@ const AppRoutes = () => {
             <Route index element={<TAODashboard />} />
             <Route path="performance" element={<TAOPerformance />} />
             <Route path="management" element={<TAOManagement />} />
+            <Route path="validators" element={<TAOValidatorManagement />} /> {/* Add route for validators page */}
             <Route
               path="validator-relationship-management"
               element={<TAOValidatorRelationshipManagement />}

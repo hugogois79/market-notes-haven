@@ -1,4 +1,3 @@
-
 import React from "react";
 import { TaoValidator, TaoContactLog, TaoNote } from "@/services/taoValidatorService";
 import { TaoSubnet } from "@/services/taoSubnetService";
@@ -17,7 +16,15 @@ import { useValidatorData } from "@/hooks/useValidatorData";
 import { useValidatorManagementState } from "@/hooks/useValidatorManagementState";
 import { useValidatorActions } from "@/hooks/useValidatorActions";
 
-const ValidatorManagement: React.FC = () => {
+interface ValidatorManagementProps {
+  initialTab?: string;
+  initialView?: "main" | "kanban";
+}
+
+const ValidatorManagement: React.FC<ValidatorManagementProps> = ({ 
+  initialTab = "monday-crm", 
+  initialView = "main" 
+}) => {
   // Get data from our custom hooks
   const {
     validators,
@@ -33,7 +40,7 @@ const ValidatorManagement: React.FC = () => {
     refreshAllData
   } = useValidatorData();
 
-  // Get state management from our custom hook
+  // Get state management from our custom hook with initial values from props
   const {
     activeTab,
     setActiveTab,
@@ -53,7 +60,7 @@ const ValidatorManagement: React.FC = () => {
     setSelectedNote,
     selectedSubnet,
     setSelectedSubnet
-  } = useValidatorManagementState();
+  } = useValidatorManagementState(initialTab);
 
   // Get actions from our custom hook
   const {
@@ -155,6 +162,7 @@ const ValidatorManagement: React.FC = () => {
               onViewContactLog={handleViewContactLog}
               onRefreshData={refreshAllData}
               onViewSubnet={handleViewSubnet}
+              initialView={initialView}
             />
           )}
         </TabsContent>

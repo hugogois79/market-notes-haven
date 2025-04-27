@@ -5,9 +5,9 @@ import { TaoSubnet } from "@/services/taoSubnetService";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
-export function useValidatorManagementState() {
+export function useValidatorManagementState(initialTab: string = "monday-crm") {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<string>("monday-crm");
+  const [activeTab, setActiveTab] = useState<string>(initialTab);
   
   // Dialogs state
   const [validatorFormOpen, setValidatorFormOpen] = useState(false);
