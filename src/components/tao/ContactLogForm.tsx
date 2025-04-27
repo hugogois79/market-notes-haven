@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { TaoValidator, TaoContactLog } from "@/services/taoValidatorService";
 import { TaoSubnet } from "@/services/taoSubnetService";
@@ -52,25 +51,29 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
   const [summary, setSummary] = useState<string>(contactLog?.summary || "");
   const [nextSteps, setNextSteps] = useState<string>(contactLog?.next_steps || "");
   const [attachmentUrl, setAttachmentUrl] = useState<string | null>(contactLog?.attachment_url || null);
+  const [attachments, setAttachments] = useState<string[]>(contactLog?.attachments || []);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !validatorId) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0 || !validatorId) return;
 
     setIsUploading(true);
     try {
-      const url = await uploadContactLogAttachment(validatorId, file);
-      if (url) {
-        setAttachmentUrl(url);
-        toast.success("File uploaded successfully");
+      const uploadPromises = files.map(file => uploadContactLogAttachment(validatorId, file));
+      const urls = await Promise.all(uploadPromises);
+      
+      const successfulUploads = urls.filter((url): url is string => url !== null);
+      if (successfulUploads.length > 0) {
+        setAttachments(prev => [...prev, ...successfulUploads]);
+        toast.success(`${successfulUploads.length} file(s) uploaded successfully`);
       }
     } catch (error) {
       console.error("File upload error:", error);
-      toast.error("Failed to upload file");
+      toast.error("Failed to upload files");
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -88,7 +91,6 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
 
     setIsSubmitting(true);
     try {
-      // Format the data properly for submission
       const contactData = {
         validator_id: validatorId,
         subnet_id: subnetId ? parseInt(subnetId) : null,
@@ -97,8 +99,8 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
         summary,
         next_steps: nextSteps || null,
         linked_note_id: null,
-        attachment_url: attachmentUrl,
-        attachments: attachmentUrl ? [attachmentUrl] : [] // Include attachments array property
+        attachment_url: attachments[0] || null,
+        attachments
       };
       
       console.log("Submitting contact log:", contactData);
@@ -114,8 +116,8 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
 
   const contactMethods: TaoContactLog['method'][] = ["Email", "Call", "Meeting", "Telegram", "Discord", "Other"];
 
-  const removeAttachment = () => {
-    setAttachmentUrl(null);
+  const removeAttachment = (urlToRemove: string) => {
+    setAttachments(prev => prev.filter(url => url !== urlToRemove));
     toast.success("Attachment removed");
   };
 
@@ -226,17 +228,18 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
         />
       </div>
 
-      {/* Attachment Section */}
+      {/* Attachments Section */}
       <div className="space-y-2">
-        <Label>Attachment</Label>
+        <Label>Attachments</Label>
         <input 
           type="file"
           ref={fileInputRef}
           onChange={handleFileChange}
           className="hidden"
+          multiple
         />
 
-        {!attachmentUrl ? (
+        {attachments.length === 0 ? (
           <Button 
             type="button"
             variant="outline" 
@@ -252,26 +255,50 @@ const ContactLogForm: React.FC<ContactLogFormProps> = ({
             ) : (
               <>
                 <Upload className="h-4 w-4" />
-                Upload Attachment
+                Upload Attachments
               </>
             )}
           </Button>
         ) : (
-          <div className="border rounded-md p-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 overflow-hidden">
-              <Paperclip className="h-4 w-4 flex-shrink-0" />
-              <span className="text-sm truncate">
-                {new URL(attachmentUrl).pathname.split('/').pop()}
-              </span>
-            </div>
+          <div className="space-y-2">
+            {attachments.map((url, index) => (
+              <div key={url} className="border rounded-md p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <Paperclip className="h-4 w-4 flex-shrink-0" />
+                  <span className="text-sm truncate">
+                    {new URL(url).pathname.split('/').pop()}
+                  </span>
+                </div>
+                <Button 
+                  type="button" 
+                  size="sm" 
+                  variant="ghost" 
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                  onClick={() => removeAttachment(url)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            
             <Button 
-              type="button" 
-              size="sm" 
-              variant="ghost" 
-              className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
-              onClick={removeAttachment}
+              type="button"
+              variant="outline" 
+              className="w-full flex items-center justify-center gap-2 mt-2" 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
             >
-              <X className="h-4 w-4" />
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4" />
+                  Add More Attachments
+                </>
+              )}
             </Button>
           </div>
         )}
