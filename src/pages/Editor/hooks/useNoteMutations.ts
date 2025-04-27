@@ -26,10 +26,11 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
 
   // Update attachments when currentNote changes
   useEffect(() => {
-    setAttachments(
-      currentNote.attachments || 
-      (currentNote.attachment_url ? [currentNote.attachment_url] : [])
-    );
+    const newAttachments = currentNote.attachments || 
+      (currentNote.attachment_url ? [currentNote.attachment_url] : []);
+    
+    console.log("Updating attachments from currentNote:", newAttachments);
+    setAttachments(newAttachments);
   }, [currentNote]);
   
   const handleTitleChange = (title: string) => {
@@ -165,15 +166,19 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
 
   const handleAttachmentChange = (attachmentData: string | null) => {
     try {
+      console.log("handleAttachmentChange received:", attachmentData);
+      
       if (attachmentData) {
-        // Try to parse as JSON array
         try {
+          // Try to parse as JSON array
           const parsedAttachments = JSON.parse(attachmentData);
+          console.log("Parsed attachments:", parsedAttachments);
+          
           if (Array.isArray(parsedAttachments)) {
             setAttachments(parsedAttachments);
             setPendingChanges({ 
               ...pendingChanges, 
-              attachment_url: parsedAttachments[0],  // For backward compatibility
+              attachment_url: parsedAttachments[0] || null, // For backward compatibility
               attachments: parsedAttachments 
             });
             console.log("Updated attachments array:", parsedAttachments);
@@ -185,7 +190,7 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
               attachment_url: attachmentData,
               attachments: [attachmentData]
             });
-            console.log("Updated attachment:", attachmentData);
+            console.log("Updated single attachment:", attachmentData);
           }
         } catch (e) {
           // Not valid JSON, treat as single attachment
@@ -202,7 +207,7 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
         setAttachments([]);
         setPendingChanges({ 
           ...pendingChanges, 
-          attachment_url: undefined, 
+          attachment_url: null, 
           attachments: [] 
         });
         console.log("Cleared attachments");
@@ -224,7 +229,7 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
         ...changes,
         summary: changes.summary !== undefined ? changes.summary : summaryState,
         attachments: attachments,
-        attachment_url: attachments.length > 0 ? attachments[0] : undefined // For backward compatibility
+        attachment_url: attachments.length > 0 ? attachments[0] : null
       };
       
       console.log("Saving changes:", updatedChanges);
@@ -247,7 +252,7 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
       ...pendingChanges,
       summary: pendingChanges.summary !== undefined ? pendingChanges.summary : summaryState,
       attachments: attachments,
-      attachment_url: attachments.length > 0 ? attachments[0] : undefined // For backward compatibility
+      attachment_url: attachments.length > 0 ? attachments[0] : null // For backward compatibility
     };
     
     console.log("Manual save with changes:", updatedChanges);

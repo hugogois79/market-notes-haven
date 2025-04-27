@@ -21,7 +21,7 @@ const FileList: React.FC<FileListProps> = ({
       <div className="space-y-2">
         {attachments.map((url, index) => (
           <FilePreview
-            key={`${index}-${url.substring(url.lastIndexOf('/') + 1)}`}
+            key={`file-${index}-${url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('/') + 8)}`}
             url={url}
             onRemove={() => onRemoveAttachment(url)}
           />

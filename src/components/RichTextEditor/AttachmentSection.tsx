@@ -24,10 +24,13 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
 
   // Initialize attachments state from props
   useEffect(() => {
+    // Convert to array if single string or use initialAttachments
     if (initialAttachments && initialAttachments.length > 0) {
       setAttachments(initialAttachments);
     } else if (attachmentUrl) {
       setAttachments([attachmentUrl]);
+    } else {
+      setAttachments([]);
     }
   }, [initialAttachments, attachmentUrl]);
 
@@ -77,11 +80,11 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
       }
       
       if (uploadedUrls.length > 0) {
-        // Update local attachments state with new URLs
+        // Combine existing attachments with new ones
         const updatedAttachments = [...attachments, ...uploadedUrls];
         setAttachments(updatedAttachments);
         
-        // Notify parent component about the change - pass all attachments
+        // Send all attachments as a JSON string to parent
         onAttachmentChange(JSON.stringify(updatedAttachments));
         
         toast.success(`${uploadedUrls.length} file(s) uploaded successfully`);
@@ -98,10 +101,11 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
   };
 
   const handleRemoveAttachment = (urlToRemove: string) => {
+    // Filter out the removed attachment
     const updatedAttachments = attachments.filter(url => url !== urlToRemove);
     setAttachments(updatedAttachments);
     
-    // Notify parent component about the change - pass all attachments or null if empty
+    // Send updated attachments list to parent or null if empty
     if (updatedAttachments.length > 0) {
       onAttachmentChange(JSON.stringify(updatedAttachments));
     } else {
