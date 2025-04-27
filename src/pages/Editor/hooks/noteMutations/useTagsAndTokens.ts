@@ -10,16 +10,19 @@ export const useTagsAndTokens = (currentNote: Note) => {
     // Tags may be stored as IDs in the note, but we need to work with Tag objects
     // This is a simplified approach; in a real app, you might fetch the tag objects from a service
     if (currentNote.tags) {
+      // Filter out null/undefined tags first, then map to Tag objects
       const tagObjects = currentNote.tags
-        .filter((tagId): tagId is string => tagId !== null && tagId !== undefined)
-        .map(tagId => {
+        .filter((tag): tag is string | object => tag !== null && tag !== undefined)
+        .map(tag => {
           // If it's already a Tag object, return it
-          if (typeof tagId === 'object' && tagId !== null && 'id' in tagId) {
-            return tagId as Tag;
+          if (typeof tag === 'object' && tag !== null && 'id' in tag) {
+            return tag as Tag;
           }
           
           // Otherwise, create a basic Tag object from the ID
-          return { id: String(tagId), name: String(tagId) };
+          // Convert to string to ensure we don't have any type issues
+          const tagId = String(tag);
+          return { id: tagId, name: tagId };
         });
       
       setLinkedTags(tagObjects);
