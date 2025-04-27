@@ -12,10 +12,16 @@ export const useTagsAndTokens = (currentNote: Note) => {
     // This is a simplified approach; in a real app, you might fetch the tag objects from a service
     if (currentNote.tags) {
       const tagObjects = currentNote.tags.map(tagId => {
+        // If tagId is null or undefined, create a fallback tag
+        if (tagId === null || tagId === undefined) {
+          return { id: "unknown", name: "Unknown Tag" };
+        }
+        
         // If it's already a Tag object, return it
         if (typeof tagId === 'object' && tagId !== null && 'id' in tagId) {
           return tagId as Tag;
         }
+        
         // Otherwise, create a basic Tag object from the ID
         return { id: tagId, name: tagId };
       });
