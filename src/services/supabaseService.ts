@@ -191,6 +191,11 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
       console.log('Using provided summary:', summaryToSave);
     }
 
+    // Ensure attachments array doesn't exceed 20 items
+    const attachments = note.attachments && Array.isArray(note.attachments) 
+      ? note.attachments.slice(0, 20) 
+      : (note.attachment_url ? [note.attachment_url] : []);
+
     const { data, error } = await supabase
       .from('notes')
       .update({
@@ -201,8 +206,8 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
         category: note.category || "General",
         updated_at: new Date().toISOString(),
         user_id: userId,
-        attachment_url: note.attachments && note.attachments.length > 0 ? note.attachments[0] : null, // For backward compatibility
-        attachments: note.attachments || [], // Include all attachments
+        attachment_url: attachments.length > 0 ? attachments[0] : null, // For backward compatibility
+        attachments: attachments, // Include all attachments (up to 20)
         trade_info: tradeInfoToJson(note.tradeInfo), // Convert TradeInfo to JSON
         has_conclusion: note.hasConclusion
       })

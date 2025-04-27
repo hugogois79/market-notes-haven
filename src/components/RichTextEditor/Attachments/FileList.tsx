@@ -7,7 +7,7 @@ interface FileListProps {
   attachments: string[];
   isUploading: boolean;
   onRemoveAttachment: (url: string) => void;
-  onUploadClick: () => void;
+  onUploadClick?: () => void;
 }
 
 const FileList: React.FC<FileListProps> = ({
@@ -28,13 +28,15 @@ const FileList: React.FC<FileListProps> = ({
         ))}
       </div>
       
-      <div className="mt-4 flex justify-center">
-        <UploadButton 
-          isUploading={isUploading} 
-          onClick={onUploadClick}
-          variant="secondary"
-        />
-      </div>
+      {onUploadClick && (
+        <div className="mt-4 flex justify-center">
+          <UploadButton 
+            isUploading={isUploading} 
+            onClick={onUploadClick}
+            variant="secondary"
+          />
+        </div>
+      )}
     </div>
   );
 };

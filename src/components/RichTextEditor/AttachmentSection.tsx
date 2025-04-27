@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +10,8 @@ interface AttachmentSectionProps {
   attachments?: string[];
   onAttachmentChange: (url: string | null) => void;
 }
+
+const MAX_ATTACHMENTS = 20;
 
 const AttachmentSection: React.FC<AttachmentSectionProps> = ({
   noteId,
@@ -37,6 +38,24 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
+    
+    // Check if adding these files would exceed the limit
+    if (attachments.length + files.length > MAX_ATTACHMENTS) {
+      toast.error(`You can only attach up to ${MAX_ATTACHMENTS} files per note. Please remove some files first.`);
+      
+      // If we already have the maximum number of files, don't proceed
+      if (attachments.length >= MAX_ATTACHMENTS) {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
+      
+      // Otherwise, only process files up to the limit
+      const remainingSlots = MAX_ATTACHMENTS - attachments.length;
+      files.splice(remainingSlots);
+      toast.info(`Only uploading ${remainingSlots} more file(s) to stay within the ${MAX_ATTACHMENTS} file limit.`);
+    }
     
     setIsUploading(true);
     
@@ -121,7 +140,14 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-md font-medium">Attachments</h3>
+      <div className="flex justify-between items-center">
+        <h3 className="text-md font-medium">Attachments</h3>
+        {attachments.length >= MAX_ATTACHMENTS && (
+          <span className="text-xs text-orange-500">
+            Maximum {MAX_ATTACHMENTS} files reached
+          </span>
+        )}
+      </div>
       
       <input 
         type="file" 
@@ -141,8 +167,14 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
           attachments={attachments}
           isUploading={isUploading}
           onRemoveAttachment={handleRemoveAttachment}
-          onUploadClick={triggerFileUpload}
+          onUploadClick={attachments.length < MAX_ATTACHMENTS ? triggerFileUpload : undefined}
         />
+      )}
+      
+      {attachments.length > 0 && attachments.length < MAX_ATTACHMENTS && (
+        <div className="text-xs text-gray-500 mt-2">
+          {attachments.length} of {MAX_ATTACHMENTS} files attached
+        </div>
       )}
     </div>
   );
