@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Note, Tag, Token } from "@/types";
 
@@ -10,19 +9,18 @@ export const useTagsAndTokens = (currentNote: Note) => {
   useEffect(() => {
     if (currentNote.tags) {
       const tagObjects = currentNote.tags
-        // First filter out null/undefined tags using a type predicate
-        .filter((tag): tag is NonNullable<typeof tag> => tag !== null && tag !== undefined)
+        // Filter out null/undefined tags and ensure type safety
+        .filter((tag): tag is string => tag !== null && tag !== undefined)
         .map(tag => {
           // If it's already a Tag object, return it
           if (typeof tag === 'object' && tag !== null && 'id' in tag) {
             return tag as Tag;
           }
           
-          // Now TypeScript knows tag can't be null or undefined
-          const tagString = String(tag);
+          // Now we know tag is a string and not null
           return { 
-            id: tagString, 
-            name: tagString 
+            id: tag, 
+            name: tag 
           };
         });
       
