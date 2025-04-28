@@ -10,6 +10,7 @@ export const useTagsAndTokens = (currentNote: Note) => {
   useEffect(() => {
     if (currentNote.tags) {
       const tagObjects = currentNote.tags
+        // First filter out null/undefined tags using a type predicate
         .filter((tag): tag is NonNullable<typeof tag> => tag !== null && tag !== undefined)
         .map(tag => {
           // If it's already a Tag object, return it
