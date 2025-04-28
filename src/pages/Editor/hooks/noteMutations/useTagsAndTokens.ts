@@ -17,15 +17,15 @@ export const useTagsAndTokens = (currentNote: Note) => {
       
       // Step 2: Map to Tag objects
       const tagObjects = nonNullTags.map(tag => {
-        // Handle Tag objects
-        if (typeof tag === 'object' && 'id' in tag && tag !== null) {
+        // Handle Tag objects - make sure tag is not null before checking properties
+        if (tag !== null && typeof tag === 'object' && 'id' in tag) {
           return tag as Tag;
         }
         
-        // Handle string tags
+        // Handle string tags - ensure tag is converted to string to avoid null issues
         return { 
-          id: String(tag), 
-          name: String(tag) 
+          id: tag !== null ? String(tag) : "", 
+          name: tag !== null ? String(tag) : "" 
         };
       });
       
