@@ -10,11 +10,12 @@ export const useTagsAndTokens = (currentNote: Note) => {
   useEffect(() => {
     if (currentNote.tags) {
       const tagObjects = currentNote.tags
-        // First ensure we have valid tag values and narrow the type
+        // First filter out null/undefined values
+        .filter((tag): tag is string | Tag | null | undefined => true)
         .filter((tag): tag is string | Tag => tag !== null && tag !== undefined)
         .map(tag => {
           // If it's already a Tag object, return it
-          if (typeof tag === 'object' && 'id' in tag) {
+          if (typeof tag === 'object' && tag !== null && 'id' in tag) {
             return tag as Tag;
           }
           
