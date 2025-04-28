@@ -23,9 +23,13 @@ export const useTagsAndTokens = (currentNote: Note) => {
         }
         
         // Handle string tags - ensure tag is converted to string to avoid null issues
+        // We've already filtered out null values above, but TypeScript still needs reassurance
+        const tagId = String(tag || "");
+        const tagName = String(tag || "");
+        
         return { 
-          id: tag !== null ? String(tag) : "", 
-          name: tag !== null ? String(tag) : "" 
+          id: tagId, 
+          name: tagName 
         };
       });
       
