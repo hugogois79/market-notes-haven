@@ -18,18 +18,17 @@ export const useTagsAndTokens = (currentNote: Note) => {
       // Step 2: Map to Tag objects
       const tagObjects = nonNullTags.map(tag => {
         // Handle Tag objects - make sure tag is not null before checking properties
-        if (tag !== null && typeof tag === 'object' && 'id' in tag) {
+        if (typeof tag === 'object' && tag !== null && 'id' in tag) {
           return tag as Tag;
         }
         
         // Handle string tags - ensure tag is converted to string to avoid null issues
-        // We've already filtered out null values above, but TypeScript still needs reassurance
-        const tagId = String(tag || "");
-        const tagName = String(tag || "");
+        // We've already filtered out null values above, but TypeScript still needs explicit handling
+        const tagValue = String(tag || "");
         
         return { 
-          id: tagId, 
-          name: tagName 
+          id: tagValue, 
+          name: tagValue 
         };
       });
       
