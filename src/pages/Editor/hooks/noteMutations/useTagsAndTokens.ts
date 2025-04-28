@@ -17,8 +17,8 @@ export const useTagsAndTokens = (currentNote: Note) => {
       
       // Step 2: Map to Tag objects
       const tagObjects = nonNullTags.map(tag => {
-        // If it's already a Tag object, return it
-        if (typeof tag === 'object' && tag !== null && 'id' in tag) {
+        // If it's already a Tag object and not null, return it
+        if (tag !== null && typeof tag === 'object' && 'id' in tag) {
           return tag as Tag;
         }
         
