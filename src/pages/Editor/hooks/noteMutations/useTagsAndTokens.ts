@@ -9,22 +9,25 @@ export const useTagsAndTokens = (currentNote: Note) => {
   // Initialize with current note's tags and tokens
   useEffect(() => {
     if (currentNote.tags) {
-      const tagObjects = currentNote.tags
-        // First filter out null/undefined values
-        .filter((tag): tag is string | Tag | null | undefined => true)
-        .filter((tag): tag is string | Tag => tag !== null && tag !== undefined)
-        .map(tag => {
-          // If it's already a Tag object, return it
-          if (typeof tag === 'object' && tag !== null && 'id' in tag) {
-            return tag as Tag;
-          }
-          
-          // At this point tag must be a string
-          return { 
-            id: tag, 
-            name: tag 
-          };
-        });
+      // Process tags in steps to ensure type safety
+      // Step 1: Filter out null/undefined values without changing the type
+      const nonNullTags = currentNote.tags.filter((tag): tag is NonNullable<typeof tag> => 
+        tag !== null && tag !== undefined
+      );
+      
+      // Step 2: Map to Tag objects
+      const tagObjects = nonNullTags.map(tag => {
+        // If it's already a Tag object, return it
+        if (typeof tag === 'object' && 'id' in tag) {
+          return tag as Tag;
+        }
+        
+        // At this point tag must be a string
+        return { 
+          id: tag, 
+          name: tag 
+        };
+      });
       
       setLinkedTags(tagObjects);
     }
