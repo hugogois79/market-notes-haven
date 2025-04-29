@@ -23,8 +23,8 @@ export const useTagsAndTokens = (currentNote: Note) => {
         }
         
         // For string or other primitive types, create a safe string value
-        // Use nullish coalescing to ensure we never have null/undefined
-        const safeTagValue = String(tag ?? "");
+        // We know tag is not null or undefined here due to our filter above
+        const safeTagValue = String(tag);
         
         return { 
           id: safeTagValue, 
