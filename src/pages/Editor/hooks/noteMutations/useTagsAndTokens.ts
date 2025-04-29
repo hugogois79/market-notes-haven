@@ -15,17 +15,17 @@ export const useTagsAndTokens = (currentNote: Note) => {
         tag !== null && tag !== undefined
       );
       
-      // Step 2: Map to Tag objects
+      // Step 2: Map to Tag objects with proper null safety
       const tagObjects = nonNullTags.map(tag => {
-        // Handle Tag objects - make sure tag is not null before checking properties
+        // Handle Tag objects
         if (typeof tag === 'object' && tag !== null && 'id' in tag) {
           return tag as Tag;
         }
         
-        // For string tags, create a safe string value first
+        // For string or other primitive types, create a safe string value
+        // Use nullish coalescing to ensure we never have null/undefined
         const safeTagValue = String(tag ?? "");
         
-        // Then create a tag object with the safe string
         return { 
           id: safeTagValue, 
           name: safeTagValue 
