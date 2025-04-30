@@ -96,5 +96,17 @@ export const SUBNET_NAME_MAPPING: Record<number, string> = {
   89: "Human",
   90: "Vision",
   91: "Nineteen.ai",
-  92: "Energy"
+  92: "Energy",
+  93: "Harmony",
+  94: "Insight",
+  95: "Quantum",
+  96: "Analysis",
+  97: "Security",
+  98: "Nexus",
+  99: "Guardian",
+  100: "Vision Plus",
+  101: "Augmented Text",
+  102: "Neural Dynamics",
+  103: "Synthetic Data",
+  104: "Reasoning"
 };

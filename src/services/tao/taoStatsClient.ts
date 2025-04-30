@@ -53,7 +53,7 @@ export const fetchTaoGlobalStats = async (): Promise<TaoGlobalStats> => {
 };
 
 /**
- * Fetch subnets information with real names
+ * Fetch subnets information with real names and detailed data
  */
 export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
   try {
@@ -64,6 +64,7 @@ export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
     const response = await fetch(SUBNETS_URL, {
       headers: API_HEADERS,
       mode: 'cors',
+      cache: 'no-cache', // Force fresh data
     });
     
     if (!response.ok) {
@@ -78,12 +79,13 @@ export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
     return data.map((subnet: any) => {
       // Get the real subnet name if available, otherwise use the mapping
       let subnetName = subnet.name;
+      const netuid = typeof subnet.netuid === 'number' ? subnet.netuid : parseInt(subnet.netuid, 10);
       
       // If the API doesn't provide a meaningful name or it's generic, use our mapping
       if (!subnetName || 
           (typeof subnetName === 'string' && subnetName.toLowerCase().includes('subnet')) || 
           (typeof subnetName === 'string' && subnetName.toLowerCase() === 'unknown')) {
-        subnetName = SUBNET_NAME_MAPPING[subnet.netuid] || `Subnet ${subnet.netuid}`;
+        subnetName = SUBNET_NAME_MAPPING[netuid] || `Subnet ${netuid}`;
       }
       
       // Format emission properly
@@ -96,9 +98,16 @@ export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
         emission = `${emission.toFixed(4)}τ/day`;
       }
       
+      // Extract API information if available
+      const apiEndpoint = subnet.api_endpoint || null;
+      const apiDocsUrl = subnet.api_docs_url || null;
+      const apiVersion = subnet.api_version || null;
+      const lastApiCheck = subnet.last_api_check || new Date().toISOString();
+      const apiStatus = subnet.api_status || 'unknown';
+      
       // Make sure all required fields have valid values
       return {
-        netuid: subnet.netuid || 0,
+        netuid,
         name: subnetName,
         neurons: subnet.neurons || 0,
         emission: emission,
@@ -111,7 +120,13 @@ export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
         volume_24h: subnet.volume_24h || 0,
         price_change_1h: subnet.price_change_1h || 0,
         price_change_24h: subnet.price_change_24h || 0,
-        price_change_7d: subnet.price_change_7d || 0
+        price_change_7d: subnet.price_change_7d || 0,
+        // API information fields
+        api_endpoint: apiEndpoint,
+        api_docs_url: apiDocsUrl,
+        api_version: apiVersion,
+        last_api_check: lastApiCheck,
+        api_status: apiStatus
       };
     });
   } catch (error) {
@@ -120,7 +135,8 @@ export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
     // If the API fails, use our mock data but with real subnet names
     console.log('Using mock subnet data with real names');
     return MOCK_TAO_STATS.subnets.map(subnet => {
-      const subnetName = SUBNET_NAME_MAPPING[subnet.netuid] || `Subnet ${subnet.netuid}`;
+      const netuid = typeof subnet.netuid === 'number' ? subnet.netuid : parseInt(subnet.netuid, 10);
+      const subnetName = SUBNET_NAME_MAPPING[netuid] || `Subnet ${netuid}`;
       
       // Format emission properly for mock data too
       let emission = subnet.emission;

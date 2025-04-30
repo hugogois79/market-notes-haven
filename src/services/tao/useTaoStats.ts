@@ -1,6 +1,7 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchTaoStatsUpdate, TaoStatsUpdate } from './taoStatsService';
+import { toast } from 'sonner';
 
 export function useTaoStats(refreshInterval = 300000) { // Default 5min refresh interval
   const [taoStats, setTaoStats] = useState<TaoStatsUpdate | null>(null);
@@ -8,51 +9,80 @@ export function useTaoStats(refreshInterval = 300000) { // Default 5min refresh 
   const [error, setError] = useState<Error | null>(null);
   const [isMockData, setIsMockData] = useState<boolean>(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-  const refreshTaoStats = async () => {
+  const refreshTaoStats = useCallback(async (showToast = true) => {
+    if (isRefreshing) return;
+    
     try {
-      setIsLoading(true);
+      setIsRefreshing(true);
+      if (isLoading === false) {
+        setIsLoading(true);
+      }
       setError(null);
-      console.log('Refreshing TAO stats data...');
+      
+      if (showToast) {
+        console.log('Refreshing TAO stats data...');
+      }
       
       const stats = await fetchTaoStatsUpdate();
       
-      // Check if we're using mock data by seeing if our timestamp matches
-      // the current time vs. the timestamp in the mock data
+      // Check if we're using mock data by comparing timestamps
       const currentTime = new Date().getTime();
       const dataTime = new Date(stats.timestamp).getTime();
       const isUsingMockData = Math.abs(currentTime - dataTime) > 60000; // More than a minute difference
       
+      // Validate subnets data
+      if (!stats.subnets || stats.subnets.length === 0) {
+        console.warn('Received empty subnets array from API');
+      }
+      
       setTaoStats(stats);
       setIsMockData(isUsingMockData);
       setLastRefreshTime(new Date());
-      console.log('TAO stats refreshed successfully');
-      console.log('Using mock data:', isUsingMockData);
+      
+      if (showToast) {
+        console.log('TAO stats refreshed successfully');
+        console.log('Using mock data:', isUsingMockData);
+      }
       
     } catch (err) {
       console.error('Error refreshing TAO stats:', err);
       setError(err instanceof Error ? err : new Error('Failed to fetch TAO stats'));
       setIsMockData(true);
+      
+      if (showToast) {
+        toast.error('Failed to refresh TAO network data');
+      }
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  };
+  }, [isLoading, isRefreshing]);
+
+  // Manual refresh function that shows feedback
+  const manualRefresh = useCallback(() => {
+    toast.info('Refreshing TAO network data...');
+    return refreshTaoStats(true);
+  }, [refreshTaoStats]);
 
   useEffect(() => {
-    refreshTaoStats();
+    // Initial load
+    refreshTaoStats(false);
     
+    // Set up interval for periodic refresh
     const intervalId = setInterval(() => {
-      refreshTaoStats();
+      refreshTaoStats(false);
     }, refreshInterval);
     
     return () => clearInterval(intervalId);
-  }, [refreshInterval]);
+  }, [refreshInterval, refreshTaoStats]);
 
   return {
     taoStats,
     isLoading,
     error,
-    refreshTaoStats,
+    refreshTaoStats: manualRefresh,
     isMockData,
     lastRefreshTime
   };
