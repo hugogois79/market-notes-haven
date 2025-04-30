@@ -23,7 +23,7 @@ export const useTagsAndTokens = (currentNote: Note) => {
         }
         
         // For string or other primitive types, create a safe string value
-        // We know tag is not null or undefined here due to our filter above
+        // We know tag cannot be null or undefined here due to our filter above
         const safeTagValue = String(tag);
         
         return { 
