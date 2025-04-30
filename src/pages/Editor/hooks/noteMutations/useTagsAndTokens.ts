@@ -10,7 +10,7 @@ export const useTagsAndTokens = (currentNote: Note) => {
   useEffect(() => {
     if (currentNote.tags) {
       // Process tags in steps to ensure type safety
-      // Step 1: Filter out null/undefined values without changing the type
+      // Step 1: Filter out null/undefined values with a proper type predicate
       const nonNullTags = currentNote.tags.filter((tag): tag is NonNullable<typeof tag> => 
         tag !== null && tag !== undefined
       );
