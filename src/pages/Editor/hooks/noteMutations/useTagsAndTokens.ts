@@ -1,64 +1,93 @@
+import { useState, useCallback } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Tag } from '@/types';
+import { createNoteTag, deleteNoteTag } from '@/services/noteTagsService';
+import { toast } from 'sonner';
 
-import { useState, useEffect } from "react";
-import { Note, Tag, Token } from "@/types";
+interface UseTagsAndTokensProps {
+  noteId?: number;
+  initialTags?: Tag[];
+}
 
-export const useTagsAndTokens = (currentNote: Note) => {
-  const [linkedTags, setLinkedTags] = useState<Tag[]>([]);
-  const [linkedTokens, setLinkedTokens] = useState<Token[]>([]);
-  
-  // Initialize with current note's tags and tokens
-  useEffect(() => {
-    if (currentNote.tags) {
-      // Process tags in steps to ensure type safety
-      // Step 1: Filter out null/undefined values with a proper type predicate
-      const nonNullTags = currentNote.tags.filter((tag): tag is NonNullable<typeof tag> => 
-        tag !== null && tag !== undefined
-      );
+// Add a type guard to check if a value is not null or undefined
+function isNotNullOrUndefined<T>(value: T | null | undefined): value is T {
+  return value !== null && value !== undefined;
+}
+
+export const useTagsAndTokens = ({ noteId, initialTags = [] }: UseTagsAndTokensProps = {}) => {
+  const [tags, setTags] = useState<Tag[]>(initialTags);
+  const queryClient = useQueryClient();
+
+  const { mutate: createTagMutation, isPending: isCreatingTag } = useMutation({
+    mutationFn: createNoteTag,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['note-tags', noteId] });
+      toast.success('Tag created successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to create tag: ${error.message}`);
+    },
+  });
+
+  const { mutate: deleteTagMutation, isPending: isDeletingTag } = useMutation({
+    mutationFn: deleteNoteTag,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['note-tags', noteId] });
+      toast.success('Tag deleted successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete tag: ${error.message}`);
+    },
+  });
+
+  const handleTagsChange = useCallback(
+    (newTags: (Tag | string)[] = []) => {
+      // Filter out null or undefined values first
+      const validTags = newTags.filter(isNotNullOrUndefined);
       
-      // Step 2: Map to Tag objects with proper null safety
-      const tagObjects = nonNullTags.map(tag => {
-        // Handle Tag objects
-        if (typeof tag === 'object' && tag !== null && 'id' in tag) {
-          return tag as Tag;
+      // Then map to Tag objects, handling both Tag objects and primitive strings
+      const formattedTags = validTags.map((tag) => {
+        if (typeof tag === 'string') {
+          return { name: tag };
         }
-        
-        // For string or other primitive types, create a Tag object
-        const safeTagValue = String(tag);
-        
-        return { 
-          id: safeTagValue, 
-          name: safeTagValue 
-        };
+        return tag;
       });
       
-      setLinkedTags(tagObjects);
-    }
-    
-    if (currentNote.tokens) {
-      setLinkedTokens(currentNote.tokens);
-    }
-  }, [currentNote]);
+      setTags(formattedTags);
+    },
+    []
+  );
 
-  const handleTagsChange = (tags: Tag[]) => {
-    console.log("Tags changed:", tags);
-    setLinkedTags(tags);
-    
-    // Extract tag IDs for the note object
-    const tagIds = tags.map(tag => tag.id);
-    return { tags: tagIds };
-  };
+  const addTag = useCallback(
+    async (tagName: string) => {
+      if (!noteId) {
+        toast.error('Note ID is required to add a tag.');
+        return;
+      }
 
-  const handleTokensChange = (tokens: Token[]) => {
-    console.log("Tokens changed:", tokens);
-    setLinkedTokens(tokens);
-    
-    return { tokens };
-  };
+      createTagMutation({ noteId, tagName });
+    },
+    [createTagMutation, noteId]
+  );
+
+  const removeTag = useCallback(
+    async (tagId: number) => {
+      if (!noteId) {
+        toast.error('Note ID is required to remove a tag.');
+        return;
+      }
+
+      deleteTagMutation({ noteId, tagId });
+    },
+    [deleteTagMutation, noteId]
+  );
 
   return {
-    linkedTags,
-    linkedTokens,
+    tags,
     handleTagsChange,
-    handleTokensChange
+    addTag,
+    removeTag,
+    isCreatingTag,
+    isDeletingTag,
   };
 };
