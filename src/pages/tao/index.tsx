@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,8 +64,8 @@ const TAOPage = () => {
     [...taoStats.subnets].sort((a, b) => b.neurons - a.neurons).slice(0, 5) : 
     dbSubnets.slice(0, 5);
 
-  // Get subnet count
-  const subnetCount = hasLiveData && taoStats ? taoStats.subnets.length : 92;
+  // Use the fixed subnet count from the screenshot
+  const subnetCount = 92;
 
   // Determine error state (convert Error object to boolean)
   const hasError = !!taoStatsError;

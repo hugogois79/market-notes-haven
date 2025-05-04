@@ -1,7 +1,8 @@
+
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tag } from '@/types';
-import { createNoteTag, deleteNoteTag } from '@/services/noteTagsService';
+import { createNoteTag, deleteNoteTag, getNoteTags } from '@/services/noteTagsService';
 import { toast } from 'sonner';
 
 interface UseTagsAndTokensProps {
@@ -20,11 +21,11 @@ export const useTagsAndTokens = ({ noteId, initialTags = [] }: UseTagsAndTokensP
 
   const { mutate: createTagMutation, isPending: isCreatingTag } = useMutation({
     mutationFn: createNoteTag,
-    onSuccess: () => {
+    onSuccess: (newTag) => {
       queryClient.invalidateQueries({ queryKey: ['note-tags', noteId] });
       toast.success('Tag created successfully');
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error(`Failed to create tag: ${error.message}`);
     },
   });
@@ -35,7 +36,7 @@ export const useTagsAndTokens = ({ noteId, initialTags = [] }: UseTagsAndTokensP
       queryClient.invalidateQueries({ queryKey: ['note-tags', noteId] });
       toast.success('Tag deleted successfully');
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error(`Failed to delete tag: ${error.message}`);
     },
   });
@@ -46,11 +47,12 @@ export const useTagsAndTokens = ({ noteId, initialTags = [] }: UseTagsAndTokensP
       const validTags = newTags.filter(isNotNullOrUndefined);
       
       // Then map to Tag objects, handling both Tag objects and primitive strings
+      // We need to ensure all objects conform to the Tag interface
       const formattedTags = validTags.map((tag) => {
         if (typeof tag === 'string') {
-          return { name: tag };
+          return { id: -1, name: tag } as Tag; // Temporary ID, will be replaced when saved
         }
-        return tag;
+        return tag as Tag;
       });
       
       setTags(formattedTags);
