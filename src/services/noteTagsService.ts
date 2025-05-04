@@ -4,7 +4,7 @@ import { Tag } from '@/types';
 import { toast } from 'sonner';
 
 // Create a note-tag association
-export const createNoteTag = async ({ noteId, tagName }: { noteId: number, tagName: string }) => {
+export const createNoteTag = async ({ noteId, tagName }: { noteId: string, tagName: string }) => {
   try {
     // First check if tag already exists
     const { data: existingTag, error: tagSearchError } = await supabase
@@ -38,7 +38,7 @@ export const createNoteTag = async ({ noteId, tagName }: { noteId: number, tagNa
     
     // Create note-tag association
     const { error: associationError } = await supabase
-      .from('note_tags')
+      .from('notes_tags')
       .insert({ note_id: noteId, tag_id: tagId });
       
     if (associationError) {
@@ -53,10 +53,10 @@ export const createNoteTag = async ({ noteId, tagName }: { noteId: number, tagNa
 };
 
 // Delete a note-tag association
-export const deleteNoteTag = async ({ noteId, tagId }: { noteId: number, tagId: number }) => {
+export const deleteNoteTag = async ({ noteId, tagId }: { noteId: string, tagId: string }) => {
   try {
     const { error } = await supabase
-      .from('note_tags')
+      .from('notes_tags')
       .delete()
       .match({ note_id: noteId, tag_id: tagId });
       
@@ -72,11 +72,11 @@ export const deleteNoteTag = async ({ noteId, tagId }: { noteId: number, tagId: 
 };
 
 // Get all tags for a note
-export const getNoteTags = async (noteId: number): Promise<Tag[]> => {
+export const getNoteTags = async (noteId: string): Promise<Tag[]> => {
   try {
     const { data, error } = await supabase
-      .from('note_tags')
-      .select('tags:tag_id(id, name)')
+      .from('notes_tags')
+      .select('tags:tag_id(id, name, category, categories)')
       .eq('note_id', noteId);
       
     if (error) {

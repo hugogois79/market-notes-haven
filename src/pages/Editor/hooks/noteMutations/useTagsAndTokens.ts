@@ -6,7 +6,7 @@ import { createNoteTag, deleteNoteTag, getNoteTags } from '@/services/noteTagsSe
 import { toast } from 'sonner';
 
 interface UseTagsAndTokensProps {
-  noteId?: number;
+  noteId?: string;
   initialTags?: Tag[];
 }
 
@@ -50,7 +50,7 @@ export const useTagsAndTokens = ({ noteId, initialTags = [] }: UseTagsAndTokensP
       // We need to ensure all objects conform to the Tag interface
       const formattedTags = validTags.map((tag) => {
         if (typeof tag === 'string') {
-          return { id: -1, name: tag } as Tag; // Temporary ID, will be replaced when saved
+          return { id: `-1-${tag}`, name: tag } as Tag; // Temporary ID, will be replaced when saved
         }
         return tag as Tag;
       });
@@ -73,7 +73,7 @@ export const useTagsAndTokens = ({ noteId, initialTags = [] }: UseTagsAndTokensP
   );
 
   const removeTag = useCallback(
-    async (tagId: number) => {
+    async (tagId: string) => {
       if (!noteId) {
         toast.error('Note ID is required to remove a tag.');
         return;
