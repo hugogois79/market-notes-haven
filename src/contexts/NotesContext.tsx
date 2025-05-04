@@ -40,36 +40,45 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
     try {
       console.log("Saving note:", note);
       
+      // Ensure attachments is always an array
+      const noteWithValidAttachments = {
+        ...note,
+        attachments: Array.isArray(note.attachments) ? note.attachments : []
+      };
+      
       if (note.id.toString().startsWith('temp-')) {
-        console.log("Creating new note with content:", note.content);
+        console.log("Creating new note with content:", noteWithValidAttachments.content);
         const newNote = await createNote({
-          title: note.title,
-          content: note.content,
-          tags: note.tags,
-          category: note.category,
+          title: noteWithValidAttachments.title,
+          content: noteWithValidAttachments.content,
+          tags: noteWithValidAttachments.tags,
+          category: noteWithValidAttachments.category,
+          attachments: noteWithValidAttachments.attachments,
+          hasConclusion: noteWithValidAttachments.hasConclusion
         });
         
         if (newNote) {
           console.log("New note created:", newNote.id);
           setNotes(prev => [newNote, ...prev]);
-          refetch();
+          await refetch();
           return newNote;
         }
       } else {
-        console.log("Updating note:", note.id);
-        const updatedNote = await updateNote(note);
+        console.log("Updating note:", noteWithValidAttachments.id);
+        const updatedNote = await updateNote(noteWithValidAttachments);
         
         if (updatedNote) {
           console.log("Note updated:", updatedNote.id);
           setNotes(prev => 
             prev.map(n => n.id === updatedNote.id ? updatedNote : n)
           );
-          refetch();
+          await refetch();
           return updatedNote;
         }
       }
     } catch (error) {
       console.error("Error saving note:", error);
+      throw error;
     }
     return null;
   };
@@ -82,7 +91,7 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
       if (success) {
         console.log("Note deleted successfully");
         setNotes(prev => prev.filter(note => note.id !== noteId));
-        refetch();
+        await refetch();
         return true;
       }
       

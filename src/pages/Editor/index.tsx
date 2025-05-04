@@ -18,7 +18,7 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { notes, handleSaveNote, handleDeleteNote } = useNotes();
+  const { notes, handleSaveNote, handleDeleteNote, refetch } = useNotes();
   const isNewNote = id === 'new' || location.pathname === '/editor/new';
   
   const {
@@ -58,14 +58,18 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
           console.log("New note created with ID:", savedNote.id);
           // Navigate directly to the editor path with the new ID
           navigate(`/editor/${savedNote.id}`, { replace: true });
-          toast.success("New note created");
+          // Explicitly refetch notes to update the list
+          if (refetch) refetch();
         } else {
           console.error("Failed to create new note");
           toast.error("Failed to create new note");
         }
+      }).catch(error => {
+        console.error("Error creating note:", error);
+        toast.error("Error creating note: " + (error.message || "Unknown error"));
       });
     }
-  }, [isNewNote, currentNote, location.search, onSaveNote, handleSaveNote, navigate]);
+  }, [isNewNote, currentNote, location.search, onSaveNote, handleSaveNote, navigate, refetch]);
 
   // Check if note exists
   useEffect(() => {
@@ -80,6 +84,22 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
     }
   }, [notes, id, isNewNote]);
 
+  // Enhanced save handler that ensures refetch after save
+  const handleEnhancedSave = async (updatedFields: Partial<Note>) => {
+    try {
+      const result = await handleSave(updatedFields);
+      // Explicitly refetch notes to update the list
+      if (refetch) {
+        console.log("Refetching notes after save");
+        refetch();
+      }
+      return result;
+    } catch (error) {
+      console.error("Error in enhanced save:", error);
+      throw error;
+    }
+  };
+
   // Handle deleting the note with loading state
   const handleDeleteWithLoading = async (noteId: string): Promise<boolean> => {
     setIsDeleting(true);
@@ -89,6 +109,8 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
       if (result) {
         navigate('/notes');
         toast.success("Note deleted successfully");
+        // Explicitly refetch notes to update the list
+        if (refetch) refetch();
       }
       return result;
     } catch (error) {
@@ -152,7 +174,7 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
             updatedAt: new Date(),
             attachments: [] // Initialize with empty attachments array
           }}
-          onSave={handleSave}
+          onSave={handleEnhancedSave}
           linkedTokens={linkedTokens}
           allTags={allTags}
           getTagsFilteredByCategory={getTagsFilteredByCategory}

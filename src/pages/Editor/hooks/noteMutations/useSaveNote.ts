@@ -12,15 +12,20 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
   const [pendingChanges, setPendingChanges] = useState<Partial<Note>>({});
 
   const handleSaveWithChanges = async (changes: Partial<Note>, isAutoSave = false) => {
+    if (isSaving) return; // Prevent multiple simultaneous save operations
+    
     setIsSaving(true);
     
     try {
       // Ensure we're sending valid data types for all fields
-      // Make sure attachments is properly formatted as an array
+      // Make sure tags is an array
       const validatedChanges = {
         ...changes,
-        attachments: changes.attachments || [],
+        attachments: Array.isArray(changes.attachments) ? changes.attachments : [],
+        tags: Array.isArray(changes.tags) ? changes.tags : (changes.tags ? [changes.tags] : []),
       };
+      
+      console.log("Saving note with validated changes:", validatedChanges);
       
       await onSave(validatedChanges);
       setPendingChanges({});
