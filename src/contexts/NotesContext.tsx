@@ -40,6 +40,11 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
     try {
       console.log("Saving note:", note);
       
+      // Find the existing note in state for merging if it's an update
+      const existingNote = note.id.toString().startsWith('temp-') 
+        ? null 
+        : notes.find(n => n.id === note.id);
+      
       // Process tags to ensure consistent format
       const processedTags = Array.isArray(note.tags) 
         ? note.tags.map(tag => {
@@ -50,15 +55,19 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
             // Handle Tag objects properly
             return (tag as Tag).name || (tag as Tag).id || String(tag);
           })
-        : [];
+        : existingNote?.tags || [];
+      
+      // Ensure we preserve title if not explicitly changed
+      const title = note.title || existingNote?.title || "Untitled Note";
       
       // Ensure attachments is always an array
       const noteWithValidFields = {
-        ...note,
-        title: note.title || "Untitled Note", // Ensure title is never empty
-        content: note.content || "",
-        tags: processedTags,
-        attachments: Array.isArray(note.attachments) ? note.attachments : []
+        ...existingNote, // Keep existing values
+        ...note, // Apply updates
+        title: title, // Ensure title is preserved
+        content: note.content !== undefined ? note.content : existingNote?.content || "",
+        tags: processedTags, // Ensure tags are preserved and processed
+        attachments: Array.isArray(note.attachments) ? note.attachments : existingNote?.attachments || []
       };
       
       if (note.id.toString().startsWith('temp-')) {
@@ -80,6 +89,7 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
         }
       } else {
         console.log("Updating note:", noteWithValidFields.id, "with title:", noteWithValidFields.title);
+        console.log("Tags being saved:", noteWithValidFields.tags);
         const updatedNote = await updateNote(noteWithValidFields);
         
         if (updatedNote) {

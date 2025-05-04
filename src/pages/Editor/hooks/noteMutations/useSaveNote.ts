@@ -36,7 +36,15 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
       console.log("Saving note with validated changes:", validatedChanges);
       
       await onSave(validatedChanges);
-      setPendingChanges({});
+      
+      // Clear pending changes that were just saved
+      setPendingChanges(prev => {
+        const updated = {...prev};
+        Object.keys(changes).forEach(key => {
+          delete updated[key as keyof Note];
+        });
+        return updated;
+      });
       
       if (!isAutoSave) {
         toast.success("Note saved successfully");
