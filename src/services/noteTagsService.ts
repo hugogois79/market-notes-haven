@@ -93,7 +93,7 @@ export const getNoteTags = async (noteId: string): Promise<Tag[]> => {
     const tagIds = noteTagsData.map(item => item.tag_id);
     
     // Get tag details from the tags table
-    // Only select fields we know exist in the tags table
+    // Only select fields that definitely exist in the tags table
     const { data: tagsData, error: tagsError } = await supabase
       .from('tags')
       .select('id, name, category')

@@ -32,7 +32,17 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     handleTokensChange
   } = useTagsAndTokens({
     noteId: currentNote.id,
-    initialTags: currentNote.tags?.map(tag => typeof tag === 'string' ? { id: tag, name: tag } : tag) as Tag[] || []
+    initialTags: currentNote.tags?.map(tag => {
+      // Handle both string and Tag object formats
+      if (typeof tag === 'string') {
+        return { id: tag, name: tag, category: null, categories: [] };
+      }
+      // Ensure the tag objects have the required properties
+      return {
+        ...tag,
+        categories: []
+      };
+    }) as Tag[] || []
   });
 
   const {

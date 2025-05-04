@@ -15,8 +15,27 @@ function isNotNullOrUndefined<T>(value: T | null | undefined): value is T {
   return value !== null && value !== undefined;
 }
 
+// Ensure we have a complete Tag object with all required properties
+function ensureCompleteTag(tag: Partial<Tag> | string): Tag {
+  if (typeof tag === 'string') {
+    return { 
+      id: `-1-${tag}`, 
+      name: tag,
+      category: null, 
+      categories: [] 
+    };
+  }
+  
+  return {
+    id: tag.id || `-1-${tag.name}`,
+    name: tag.name || '',
+    category: tag.category || null,
+    categories: tag.categories || []
+  };
+}
+
 export const useTagsAndTokens = ({ noteId, initialTags = [] }: UseTagsAndTokensProps = {}) => {
-  const [tags, setTags] = useState<Tag[]>(initialTags);
+  const [tags, setTags] = useState<Tag[]>(initialTags.map(tag => ensureCompleteTag(tag)));
   const queryClient = useQueryClient();
 
   const { mutate: createTagMutation, isPending: isCreatingTag } = useMutation({
@@ -47,13 +66,8 @@ export const useTagsAndTokens = ({ noteId, initialTags = [] }: UseTagsAndTokensP
       const validTags = newTags.filter(isNotNullOrUndefined);
       
       // Then map to Tag objects, handling both Tag objects and primitive strings
-      // We need to ensure all objects conform to the Tag interface
-      const formattedTags = validTags.map((tag) => {
-        if (typeof tag === 'string') {
-          return { id: `-1-${tag}`, name: tag } as Tag; // Temporary ID, will be replaced when saved
-        }
-        return tag as Tag;
-      });
+      // Ensure all objects conform to the Tag interface
+      const formattedTags = validTags.map(tag => ensureCompleteTag(tag));
       
       setTags(formattedTags);
     },
