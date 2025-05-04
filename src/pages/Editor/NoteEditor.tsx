@@ -12,6 +12,11 @@ interface NoteEditorProps {
   getTagsFilteredByCategory?: (category: string | null) => Tag[];
 }
 
+interface SummaryState {
+  summary: string;
+  hasConclusion: boolean;
+}
+
 const NoteEditor: React.FC<NoteEditorProps> = ({ 
   currentNote, 
   onSave, 
@@ -41,6 +46,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
 
   const [availableTags, setAvailableTags] = React.useState<Tag[]>(allTags);
 
+  // Process summary state to ensure it's always the correct type
+  const processedSummaryState: SummaryState = typeof summaryState === 'string' 
+    ? { summary: summaryState, hasConclusion: hasConclusion }
+    : summaryState || { summary: currentNote.summary || "", hasConclusion: hasConclusion };
+
   // Update local state when currentNote changes
   useEffect(() => {
     // Update available tags based on category
@@ -66,7 +76,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       localCategory={localCategory}
       localTradeInfo={localTradeInfo}
       hasConclusion={hasConclusion}
-      summaryState={summaryState || { summary: currentNote.summary || "", hasConclusion: hasConclusion }}
+      summaryState={processedSummaryState}
       availableTags={availableTags}
       attachments={attachments}
       onTitleChange={handleTitleChange}

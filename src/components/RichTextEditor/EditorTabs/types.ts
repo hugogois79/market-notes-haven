@@ -23,7 +23,7 @@ export interface TabContentProps {
   onAutoSave?: () => void;
   hasConclusion?: boolean;
   category?: string;
-  handleContainerClick?: () => void;
+  handleContainerClick?: (e: React.MouseEvent) => void;
   execCommand?: (command: string, value?: string) => void;
   formatTableCells?: (alignment: 'left' | 'center' | 'right') => void;
   insertVerticalSeparator?: () => void;

@@ -2,12 +2,20 @@
 import { useState } from "react";
 import { Note, TradeInfo } from "@/types";
 
+interface SummaryState {
+  summary: string;
+  hasConclusion: boolean;
+}
+
 export const useBasicNoteFields = (currentNote: Note) => {
   const [localTitle, setLocalTitle] = useState(currentNote.title);
   const [localCategory, setLocalCategory] = useState(currentNote.category || "General");
   const [localTradeInfo, setLocalTradeInfo] = useState<TradeInfo | undefined>(currentNote.tradeInfo);
   const [hasConclusion, setHasConclusion] = useState<boolean>(currentNote.hasConclusion !== false);
-  const [summaryState, setSummaryState] = useState<string>(currentNote.summary || "");
+  const [summaryState, setSummaryState] = useState<SummaryState>({
+    summary: currentNote.summary || "",
+    hasConclusion: currentNote.hasConclusion !== false
+  });
 
   const handleTitleChange = (title: string) => {
     console.log("NoteEditor: Title changing to:", title);
@@ -31,13 +39,21 @@ export const useBasicNoteFields = (currentNote: Note) => {
     console.log("Summary generated:", summary);
     console.log("Has conclusion:", detectedHasConclusion);
     
-    setSummaryState(summary);
+    const newSummaryState: SummaryState = {
+      summary,
+      hasConclusion: detectedHasConclusion !== undefined ? detectedHasConclusion : hasConclusion
+    };
     
-    const updates: Partial<Note> = { summary };
+    setSummaryState(newSummaryState);
+    
     if (detectedHasConclusion !== undefined) {
       setHasConclusion(detectedHasConclusion);
-      updates.hasConclusion = detectedHasConclusion;
     }
+    
+    const updates: Partial<Note> = { 
+      summary,
+      hasConclusion: newSummaryState.hasConclusion
+    };
     
     return updates;
   };

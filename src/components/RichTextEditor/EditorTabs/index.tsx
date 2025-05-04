@@ -60,7 +60,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
         <TabsContent 
           value="editor" 
           className="mt-0 p-0 flex-1 overflow-hidden flex flex-col"
-          onClick={handleContainerClick}
+          onClick={(e) => handleContainerClick(e)}
         >
           <EditorTabContent
             editorRef={editorRef}
