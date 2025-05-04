@@ -30,7 +30,10 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     linkedTokens,
     handleTagsChange,
     handleTokensChange
-  } = useTagsAndTokens(currentNote);
+  } = useTagsAndTokens({
+    noteId: currentNote.id,
+    initialTags: currentNote.tags?.map(tag => typeof tag === 'string' ? { id: tag, name: tag } : tag) as Tag[] || []
+  });
 
   const {
     isSaving,

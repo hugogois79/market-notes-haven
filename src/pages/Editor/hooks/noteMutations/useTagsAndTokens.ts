@@ -86,7 +86,10 @@ export const useTagsAndTokens = ({ noteId, initialTags = [] }: UseTagsAndTokensP
 
   return {
     tags,
+    linkedTags: tags, // Alias for backward compatibility
+    linkedTokens: [], // Returning empty array for now as token handling seems to be in a different module
     handleTagsChange,
+    handleTokensChange: () => {}, // Empty function for now
     addTag,
     removeTag,
     isCreatingTag,
