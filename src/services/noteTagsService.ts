@@ -74,17 +74,41 @@ export const deleteNoteTag = async ({ noteId, tagId }: { noteId: string, tagId: 
 // Get all tags for a note
 export const getNoteTags = async (noteId: string): Promise<Tag[]> => {
   try {
-    const { data, error } = await supabase
+    // Query the notes_tags junction table to get tag IDs
+    const { data: noteTagsData, error: noteTagsError } = await supabase
       .from('notes_tags')
-      .select('tags:tag_id(id, name, category, categories)')
+      .select('tag_id')
       .eq('note_id', noteId);
       
-    if (error) {
-      throw new Error(`Error fetching note tags: ${error.message}`);
+    if (noteTagsError) {
+      throw new Error(`Error fetching note tags: ${noteTagsError.message}`);
     }
     
-    // Extract tags from the nested structure
-    return data.map(item => item.tags as Tag) || [];
+    // If no tags are associated with the note, return empty array
+    if (!noteTagsData || noteTagsData.length === 0) {
+      return [];
+    }
+    
+    // Extract tag IDs
+    const tagIds = noteTagsData.map(item => item.tag_id);
+    
+    // Get tag details from the tags table
+    const { data: tagsData, error: tagsError } = await supabase
+      .from('tags')
+      .select('id, name, category, categories')
+      .in('id', tagIds);
+    
+    if (tagsError) {
+      throw new Error(`Error fetching tags details: ${tagsError.message}`);
+    }
+    
+    // Map the data to Tag objects, ensuring proper type safety
+    return tagsData.map(tag => ({
+      id: tag.id,
+      name: tag.name,
+      category: tag.category,
+      categories: tag.categories
+    })) || [];
   } catch (error) {
     console.error('Error in getNoteTags:', error);
     toast.error('Failed to fetch tags');
