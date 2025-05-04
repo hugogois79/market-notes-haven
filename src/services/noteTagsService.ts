@@ -112,7 +112,7 @@ export const getNoteTags = async (noteId: string): Promise<Tag[]> => {
       id: tag.id,
       name: tag.name,
       category: tag.category,
-      categories: tag.categories || [] // Provide default empty array if categories is undefined
+      categories: [] // Add empty categories array as required by the Tag interface
     }));
   } catch (error) {
     console.error('Error in getNoteTags:', error);
