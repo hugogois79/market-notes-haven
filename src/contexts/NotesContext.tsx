@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchNotes, createNote, updateNote, deleteNote } from "@/services/supabaseService";
-import { Note } from "@/types";
+import { Note, Tag } from "@/types";
 
 interface NotesContextType {
   notes: Note[];
@@ -42,7 +42,14 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
       
       // Process tags to ensure consistent format
       const processedTags = Array.isArray(note.tags) 
-        ? note.tags.map(tag => typeof tag === 'string' ? tag : tag.name || tag.id || String(tag))
+        ? note.tags.map(tag => {
+            // Check if tag is string or Tag object
+            if (typeof tag === 'string') {
+              return tag;
+            } 
+            // Handle Tag objects properly
+            return (tag as Tag).name || (tag as Tag).id || String(tag);
+          })
         : [];
       
       // Ensure attachments is always an array
