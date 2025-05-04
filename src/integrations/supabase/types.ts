@@ -466,9 +466,11 @@ export type Database = {
       notes: {
         Row: {
           attachment_url: string | null
+          attachments: string[] | null
           category: string | null
           content: string | null
           created_at: string | null
+          has_conclusion: boolean | null
           id: string
           summary: string | null
           tags: string[] | null
@@ -479,9 +481,11 @@ export type Database = {
         }
         Insert: {
           attachment_url?: string | null
+          attachments?: string[] | null
           category?: string | null
           content?: string | null
           created_at?: string | null
+          has_conclusion?: boolean | null
           id?: string
           summary?: string | null
           tags?: string[] | null
@@ -492,9 +496,11 @@ export type Database = {
         }
         Update: {
           attachment_url?: string | null
+          attachments?: string[] | null
           category?: string | null
           content?: string | null
           created_at?: string | null
+          has_conclusion?: boolean | null
           id?: string
           summary?: string | null
           tags?: string[] | null

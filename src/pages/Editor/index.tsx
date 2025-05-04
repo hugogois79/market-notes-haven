@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Note } from "@/types";
@@ -48,7 +47,8 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
         tags,
         category,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        attachments: [] // Initialize with empty attachments array
       };
       
       // Create and navigate to the new note
@@ -149,7 +149,8 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
             tags: [],
             category: "General",
             createdAt: new Date(),
-            updatedAt: new Date()
+            updatedAt: new Date(),
+            attachments: [] // Initialize with empty attachments array
           }}
           onSave={handleSave}
           linkedTokens={linkedTokens}

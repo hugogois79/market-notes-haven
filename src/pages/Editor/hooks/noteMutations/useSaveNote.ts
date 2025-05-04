@@ -15,15 +15,22 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
     setIsSaving(true);
     
     try {
-      await onSave(changes);
+      // Ensure we're sending valid data types for all fields
+      // Make sure attachments is properly formatted as an array
+      const validatedChanges = {
+        ...changes,
+        attachments: changes.attachments || [],
+      };
+      
+      await onSave(validatedChanges);
       setPendingChanges({});
       
       if (!isAutoSave) {
         toast.success("Note saved successfully");
       }
     } catch (error) {
-      toast.error("Failed to save note");
       console.error("Error saving note:", error);
+      toast.error("Failed to save note");
     } finally {
       setIsSaving(false);
     }
