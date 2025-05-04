@@ -93,13 +93,18 @@ export const getNoteTags = async (noteId: string): Promise<Tag[]> => {
     const tagIds = noteTagsData.map(item => item.tag_id);
     
     // Get tag details from the tags table
+    // Only select fields we know exist in the tags table
     const { data: tagsData, error: tagsError } = await supabase
       .from('tags')
-      .select('id, name, category, categories')
+      .select('id, name, category')
       .in('id', tagIds);
     
     if (tagsError) {
       throw new Error(`Error fetching tags details: ${tagsError.message}`);
+    }
+    
+    if (!tagsData) {
+      return [];
     }
     
     // Map the data to Tag objects, ensuring proper type safety
@@ -107,8 +112,8 @@ export const getNoteTags = async (noteId: string): Promise<Tag[]> => {
       id: tag.id,
       name: tag.name,
       category: tag.category,
-      categories: tag.categories
-    })) || [];
+      categories: tag.categories || [] // Provide default empty array if categories is undefined
+    }));
   } catch (error) {
     console.error('Error in getNoteTags:', error);
     toast.error('Failed to fetch tags');
