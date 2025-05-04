@@ -1,4 +1,3 @@
-
 import { Note, Tag, Token, TradeInfo } from "@/types";
 import { useAttachments } from "./noteMutations/useAttachments";
 import { useBasicNoteFields } from "./noteMutations/useBasicNoteFields";
@@ -38,8 +37,11 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
         return { id: tag, name: tag, category: null, categories: [] };
       }
       // Ensure the tag objects have the required properties
+      // Make sure 'tag' is treated as an object before using spread operator
       return {
-        ...tag,
+        id: typeof tag === 'object' && tag !== null ? tag.id : '',
+        name: typeof tag === 'object' && tag !== null ? tag.name : '',
+        category: typeof tag === 'object' && tag !== null ? tag.category : null,
         categories: []
       };
     }) as Tag[] || []
