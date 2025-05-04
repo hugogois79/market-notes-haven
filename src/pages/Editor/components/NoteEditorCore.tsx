@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from "react";
 import { Note, Tag, Token, TradeInfo } from "@/types";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -8,7 +9,7 @@ interface NoteEditorCoreProps {
   onSave: (updatedFields: Partial<Note>) => Promise<void>;
   linkedTokens: Token[];
   linkedTags: Tag[];
-  onTagsChange: (tags: Tag[] | string[]) => void;
+  onTagsChange: (tags: Tag[]) => void;
   onTokensChange: (tokens: Token[]) => void;
   isSaving: boolean;
   handleManualSave: () => void;
@@ -86,7 +87,14 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
       onTagsChange([...linkedTags, newTag]);
     } else {
       // If tag doesn't exist, create a new one
-      onTagsChange([...linkedTags, tagInput]);
+      // Convert string to Tag object before adding
+      const newTagObject: Tag = {
+        id: tagInput,
+        name: tagInput,
+        category: null,
+        categories: []
+      };
+      onTagsChange([...linkedTags, newTagObject]);
     }
     setTagInput("");
   };
@@ -117,8 +125,8 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
   const handleTokenSelect = (token: string | Token) => {
     const tokenId = typeof token === 'string' ? token : token.id;
     const newToken = linkedTokens.find((linkedToken) => linkedToken.id === tokenId);
-    if (!newToken) {
-      onTokensChange([...linkedTokens, token as Token]);
+    if (!newToken && typeof token !== 'string') {
+      onTokensChange([...linkedTokens, token]);
     }
   };
 
@@ -158,6 +166,7 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
       isSaving={isSaving}
       lastSaved={lastSaved}
       handleManualSave={handleManualSave}
+      handleAutoSave={handleAutoSave}
       summary={currentNote.summary}
       onSummaryGenerated={onSummaryGenerated}
       tradeInfo={localTradeInfo}
