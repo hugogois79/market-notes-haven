@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -103,8 +104,12 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
         const updatedAttachments = [...attachments, ...uploadedUrls];
         setAttachments(updatedAttachments);
         
-        // Send all attachments as a JSON string to parent
-        onAttachmentChange(JSON.stringify(updatedAttachments));
+        // This is critical - we need to stringify the array
+        const attachmentsJson = JSON.stringify(updatedAttachments);
+        console.log("Sending attachments to parent:", attachmentsJson);
+        
+        // Send all attachments to parent
+        onAttachmentChange(attachmentsJson);
         
         toast.success(`${uploadedUrls.length} file(s) uploaded successfully`);
       }
@@ -124,7 +129,7 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
     const updatedAttachments = attachments.filter(url => url !== urlToRemove);
     setAttachments(updatedAttachments);
     
-    // Send updated attachments list to parent or null if empty
+    // Important: Send as JSON string for consistent handling
     if (updatedAttachments.length > 0) {
       onAttachmentChange(JSON.stringify(updatedAttachments));
     } else {

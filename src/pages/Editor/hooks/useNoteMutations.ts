@@ -79,6 +79,19 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     handleSaveWithChanges({ tags: processedTags }, false);
   };
 
+  // Handle attachment change and save immediately
+  const handleAttachmentChangeAndSave = (attachmentData: string | null) => {
+    const result = handleAttachmentChange(attachmentData);
+    if (result) {
+      console.log("Saving attachment change:", result);
+      // Save both attachment_url and attachments array
+      handleSaveWithChanges({
+        attachment_url: result.attachment_url,
+        attachments: result.attachments
+      }, false);
+    }
+  };
+
   return {
     // State
     isSaving,
@@ -98,7 +111,7 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     handleCategoryChange,
     handleSummaryGenerated,
     handleTradeInfoChange,
-    handleAttachmentChange,
+    handleAttachmentChange: handleAttachmentChangeAndSave,
     handleSaveWithChanges,
     handleManualSave,
     handleTagsChange: handleTagsChangeAndSave,

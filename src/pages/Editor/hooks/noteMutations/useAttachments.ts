@@ -22,6 +22,7 @@ export const useAttachments = (currentNote: { attachments?: string[], attachment
     try {
       if (attachmentData) {
         try {
+          // Try to parse as JSON first (for multiple attachments)
           const parsedAttachments = JSON.parse(attachmentData);
           if (Array.isArray(parsedAttachments)) {
             // Check if we're exceeding the 20 file limit
@@ -36,20 +37,15 @@ export const useAttachments = (currentNote: { attachments?: string[], attachment
             }
             
             setAttachments(parsedAttachments);
+            console.log("Attachment data saved as array:", parsedAttachments);
             return {
               attachment_url: parsedAttachments[0] || null,
               attachments: parsedAttachments
             };
-          } else {
-            // Single attachment URL
-            setAttachments([attachmentData]);
-            return {
-              attachment_url: attachmentData,
-              attachments: [attachmentData]
-            };
-          }
+          } 
         } catch (e) {
-          // Handle case where attachmentData is a raw URL string
+          // If parsing fails, treat as a single attachment URL
+          console.log("Treating as single attachment URL:", attachmentData);
           setAttachments([attachmentData]);
           return {
             attachment_url: attachmentData,
@@ -58,6 +54,7 @@ export const useAttachments = (currentNote: { attachments?: string[], attachment
         }
       } else {
         // No attachments
+        console.log("No attachments to save");
         setAttachments([]);
         return {
           attachment_url: null,

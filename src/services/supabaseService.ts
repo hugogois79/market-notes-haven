@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Note, TradeInfo } from "@/types";
 import { Json } from "@/integrations/supabase/types";
@@ -191,10 +190,12 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
       console.log('Using provided summary:', summaryToSave);
     }
 
-    // Ensure attachments array doesn't exceed 20 items
+    // Ensure attachments array is properly formatted
     const attachments = note.attachments && Array.isArray(note.attachments) 
-      ? note.attachments.slice(0, 20) 
+      ? note.attachments.slice(0, 20) // Limit to 20 items
       : (note.attachment_url ? [note.attachment_url] : []);
+
+    console.log('Saving attachments:', attachments);
 
     const { data, error } = await supabase
       .from('notes')

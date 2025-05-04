@@ -25,12 +25,13 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
     
     try {
       // Ensure we're sending valid data types for all fields
-      // Make sure tags is an array
       const validatedChanges = {
         ...changes,
         title: changes.title || undefined, // Ensure title is passed through if provided
-        attachments: Array.isArray(changes.attachments) ? changes.attachments : (changes.attachments ? [changes.attachments] : undefined),
-        tags: Array.isArray(changes.tags) ? changes.tags : (changes.tags ? [changes.tags] : undefined),
+        // Important: Ensure attachments are properly processed
+        attachments: changes.attachments !== undefined ? 
+          (Array.isArray(changes.attachments) ? changes.attachments : 
+            (changes.attachments ? [changes.attachments] : [])) : undefined,
       };
       
       console.log("Saving note with validated changes:", validatedChanges);
