@@ -54,8 +54,30 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     pendingChanges,
     handleSaveWithChanges,
     handleManualSave,
-    handleContentChange
+    handleContentChange,
+    handleTitleChange: handleTitleChangeInSave
   } = useSaveNote({ onSave });
+
+  // Override title change to ensure it's saved immediately
+  const handleTitleChangeAndSave = (title: string) => {
+    handleTitleChange(title);
+    handleTitleChangeInSave(title);
+    // Immediately save title changes
+    handleSaveWithChanges({ title }, false);
+  };
+
+  // Override tags change to ensure they're saved immediately
+  const handleTagsChangeAndSave = (tags: Tag[] | string[]) => {
+    handleTagsChange(tags);
+    
+    // Process tags to match format expected by API
+    const processedTags = tags.map(tag => 
+      typeof tag === 'string' ? tag : tag.name || tag.id || String(tag)
+    );
+    
+    // Immediately save tag changes
+    handleSaveWithChanges({ tags: processedTags }, false);
+  };
 
   return {
     // State
@@ -71,7 +93,7 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     linkedTokens,
 
     // Handlers
-    handleTitleChange,
+    handleTitleChange: handleTitleChangeAndSave,
     handleContentChange,
     handleCategoryChange,
     handleSummaryGenerated,
@@ -79,7 +101,7 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     handleAttachmentChange,
     handleSaveWithChanges,
     handleManualSave,
-    handleTagsChange,
+    handleTagsChange: handleTagsChangeAndSave,
     handleTokensChange
   };
 };

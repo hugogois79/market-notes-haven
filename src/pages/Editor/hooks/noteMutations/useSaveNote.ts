@@ -14,6 +14,13 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
   const handleSaveWithChanges = async (changes: Partial<Note>, isAutoSave = false) => {
     if (isSaving) return; // Prevent multiple simultaneous save operations
     
+    // Don't save if there are no changes
+    if (Object.keys(changes).length === 0) {
+      console.log("No changes to save");
+      return;
+    }
+    
+    console.log("Saving changes:", changes);
     setIsSaving(true);
     
     try {
@@ -21,8 +28,9 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
       // Make sure tags is an array
       const validatedChanges = {
         ...changes,
-        attachments: Array.isArray(changes.attachments) ? changes.attachments : [],
-        tags: Array.isArray(changes.tags) ? changes.tags : (changes.tags ? [changes.tags] : []),
+        title: changes.title || undefined, // Ensure title is passed through if provided
+        attachments: Array.isArray(changes.attachments) ? changes.attachments : (changes.attachments ? [changes.attachments] : undefined),
+        tags: Array.isArray(changes.tags) ? changes.tags : (changes.tags ? [changes.tags] : undefined),
       };
       
       console.log("Saving note with validated changes:", validatedChanges);
@@ -49,12 +57,17 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
   const handleContentChange = (content: string) => {
     setPendingChanges(prev => ({ ...prev, content }));
   };
+  
+  const handleTitleChange = (title: string) => {
+    setPendingChanges(prev => ({ ...prev, title }));
+  };
 
   return {
     isSaving,
     pendingChanges,
     handleSaveWithChanges,
     handleManualSave,
-    handleContentChange
+    handleContentChange,
+    handleTitleChange
   };
 };

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Note } from "@/types";
@@ -84,14 +85,21 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
     }
   }, [notes, id, isNewNote]);
 
-  // Enhanced save handler that ensures refetch after save
+  // Enhanced save handler that ensures refetch after save and properly handles title changes
   const handleEnhancedSave = async (updatedFields: Partial<Note>) => {
     try {
+      console.log("Enhanced save called with fields:", updatedFields);
+      
+      // Make sure we immediately save title changes
+      if (updatedFields.title || updatedFields.tags) {
+        console.log("Title or tags changed, saving immediately");
+      }
+      
       const result = await handleSave(updatedFields);
-      // Explicitly refetch notes to update the list
+      // Always refetch notes to update the list
       if (refetch) {
         console.log("Refetching notes after save");
-        refetch();
+        await refetch();
       }
       return result;
     } catch (error) {
@@ -110,7 +118,7 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
         navigate('/notes');
         toast.success("Note deleted successfully");
         // Explicitly refetch notes to update the list
-        if (refetch) refetch();
+        if (refetch) await refetch();
       }
       return result;
     } catch (error) {

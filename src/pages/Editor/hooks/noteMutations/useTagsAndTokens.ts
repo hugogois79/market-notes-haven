@@ -62,6 +62,8 @@ export const useTagsAndTokens = ({ noteId, initialTags = [] }: UseTagsAndTokensP
 
   const handleTagsChange = useCallback(
     (newTags: (Tag | string)[] = []) => {
+      console.log("handleTagsChange called with:", newTags);
+      
       // Filter out null or undefined values first
       const validTags = newTags.filter(isNotNullOrUndefined);
       
@@ -69,7 +71,10 @@ export const useTagsAndTokens = ({ noteId, initialTags = [] }: UseTagsAndTokensP
       // Ensure all objects conform to the Tag interface
       const formattedTags = validTags.map(tag => ensureCompleteTag(tag));
       
+      console.log("Setting tags to:", formattedTags);
       setTags(formattedTags);
+      
+      return formattedTags;
     },
     []
   );
@@ -81,19 +86,30 @@ export const useTagsAndTokens = ({ noteId, initialTags = [] }: UseTagsAndTokensP
         return;
       }
 
+      console.log("Adding tag:", tagName, "to note:", noteId);
       createTagMutation({ noteId, tagName });
+      
+      // Add tag to local state immediately for responsive UI
+      const newTag = ensureCompleteTag(tagName);
+      setTags(prev => [...prev, newTag]);
     },
     [createTagMutation, noteId]
   );
 
   const removeTag = useCallback(
-    async (tagId: string) => {
+    async (tagIdOrName: string) => {
       if (!noteId) {
         toast.error('Note ID is required to remove a tag.');
         return;
       }
 
-      deleteTagMutation({ noteId, tagId });
+      console.log("Removing tag:", tagIdOrName, "from note:", noteId);
+      deleteTagMutation({ noteId, tagId: tagIdOrName });
+      
+      // Remove tag from local state immediately for responsive UI
+      setTags(prev => prev.filter(tag => 
+        tag.id !== tagIdOrName && tag.name !== tagIdOrName
+      ));
     },
     [deleteTagMutation, noteId]
   );

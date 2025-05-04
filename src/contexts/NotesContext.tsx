@@ -40,21 +40,29 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
     try {
       console.log("Saving note:", note);
       
+      // Process tags to ensure consistent format
+      const processedTags = Array.isArray(note.tags) 
+        ? note.tags.map(tag => typeof tag === 'string' ? tag : tag.name || tag.id || String(tag))
+        : [];
+      
       // Ensure attachments is always an array
-      const noteWithValidAttachments = {
+      const noteWithValidFields = {
         ...note,
+        title: note.title || "Untitled Note", // Ensure title is never empty
+        content: note.content || "",
+        tags: processedTags,
         attachments: Array.isArray(note.attachments) ? note.attachments : []
       };
       
       if (note.id.toString().startsWith('temp-')) {
-        console.log("Creating new note with content:", noteWithValidAttachments.content);
+        console.log("Creating new note with content:", noteWithValidFields.content);
         const newNote = await createNote({
-          title: noteWithValidAttachments.title,
-          content: noteWithValidAttachments.content,
-          tags: noteWithValidAttachments.tags,
-          category: noteWithValidAttachments.category,
-          attachments: noteWithValidAttachments.attachments,
-          hasConclusion: noteWithValidAttachments.hasConclusion
+          title: noteWithValidFields.title,
+          content: noteWithValidFields.content,
+          tags: noteWithValidFields.tags,
+          category: noteWithValidFields.category,
+          attachments: noteWithValidFields.attachments,
+          hasConclusion: noteWithValidFields.hasConclusion
         });
         
         if (newNote) {
@@ -64,8 +72,8 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
           return newNote;
         }
       } else {
-        console.log("Updating note:", noteWithValidAttachments.id);
-        const updatedNote = await updateNote(noteWithValidAttachments);
+        console.log("Updating note:", noteWithValidFields.id, "with title:", noteWithValidFields.title);
+        const updatedNote = await updateNote(noteWithValidFields);
         
         if (updatedNote) {
           console.log("Note updated:", updatedNote.id);
