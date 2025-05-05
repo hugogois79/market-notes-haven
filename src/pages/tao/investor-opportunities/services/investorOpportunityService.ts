@@ -379,60 +379,7 @@ export const fetchInvestments = async (): Promise<Investment[]> => {
     return [];
   }
   
-  // If no investments, insert mock data
-  if (!data || data.length === 0) {
-    const mockInvestments = await generateMockInvestments();
-    return mockInvestments;
-  }
-  
   return data.map(inv => mapDbToInvestment(inv));
-};
-
-// Generate and insert mock investments for initial setup
-const generateMockInvestments = async (): Promise<Investment[]> => {
-  const projects = await fetchSubnetProjects();
-  
-  const mockInvestments = [
-    {
-      id: "inv1",
-      projectId: projects[0]?.id || "proj1",
-      amount: 200000,
-      date: new Date(2023, 4, 10),
-      status: "deployed" as const,
-      notes: "Initial investment with option for follow-on"
-    },
-    {
-      id: "inv2",
-      projectId: projects[2]?.id || "proj3",
-      amount: 350000,
-      date: new Date(2023, 1, 20),
-      status: "deployed" as const,
-      returns: {
-        amount: 70000,
-        roi: 0.2
-      },
-      notes: "Performing well, considering increasing position"
-    }
-  ];
-  
-  // Insert mock investments to database
-  try {
-    for (const inv of mockInvestments) {
-      const dbInvestment = mapInvestmentToDb(inv);
-      
-      const { error } = await supabase
-        .from('investments')
-        .insert(dbInvestment);
-      
-      if (error) {
-        console.error("Error inserting mock investment:", error);
-      }
-    }
-  } catch (error) {
-    console.error("Error populating mock investments:", error);
-  }
-  
-  return mockInvestments;
 };
 
 // Add new investment to Supabase

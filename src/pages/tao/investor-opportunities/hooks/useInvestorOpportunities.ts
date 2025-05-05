@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -157,14 +156,16 @@ export function useInvestorOpportunities() {
   }, [refetchPreferences]);
 
   // Add/update investment
-  const saveInvestment = useCallback(async (investment: Omit<Investment, "id"> | Investment) => {
+  const saveInvestment = useCallback(async (investment: Partial<Investment>) => {
     try {
       let result;
-      if ("id" in investment) {
-        result = await updateInvestment(investment);
+      if ("id" in investment && investment.id) {
+        console.log("Updating existing investment:", investment);
+        result = await updateInvestment(investment as Investment);
         toast.success("Investment updated successfully");
       } else {
-        result = await addInvestment(investment);
+        console.log("Adding new investment:", investment);
+        result = await addInvestment(investment as Omit<Investment, "id">);
         toast.success("Investment added successfully");
       }
       refetchInvestments();
