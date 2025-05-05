@@ -7,6 +7,154 @@ import { fetchValidators } from "@/services/taoValidatorService";
 import { adaptArrayToSubnetTypes } from "@/utils/subnetTypeAdapter";
 import { supabase } from "@/integrations/supabase/client";
 
+// Helper function to map database fields to frontend types for InvestmentPreference
+function mapDbToInvestmentPreference(data: any): InvestmentPreference {
+  return {
+    id: data.id,
+    name: data.name,
+    subnetTypes: data.subnet_types || [],
+    technicalFocus: data.technical_focus || [],
+    stagePreferences: data.stage_preferences || [],
+    minTicketSize: data.min_ticket_size,
+    maxTicketSize: data.max_ticket_size,
+    requiresCoInvestment: data.requires_co_investment,
+    decisionTimelineDays: data.decision_timeline_days,
+    riskTolerance: data.risk_tolerance,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at)
+  };
+}
+
+// Helper function to map frontend types to database fields for InvestmentPreference
+function mapInvestmentPreferenceToDb(preference: InvestmentPreference) {
+  return {
+    id: preference.id,
+    name: preference.name,
+    subnet_types: preference.subnetTypes,
+    technical_focus: preference.technicalFocus,
+    stage_preferences: preference.stagePreferences,
+    min_ticket_size: preference.minTicketSize,
+    max_ticket_size: preference.maxTicketSize,
+    requires_co_investment: preference.requiresCoInvestment,
+    decision_timeline_days: preference.decisionTimelineDays,
+    risk_tolerance: preference.riskTolerance,
+    updated_at: new Date()
+  };
+}
+
+// Helper function to map database fields to frontend types for SubnetProject
+function mapDbToSubnetProject(data: any): SubnetProject {
+  return {
+    id: data.id,
+    name: data.name,
+    subnetId: data.subnet_id,
+    description: data.description || "",
+    stage: data.stage,
+    fundingTarget: data.funding_target,
+    currentFunding: data.current_funding,
+    technicalAreas: data.technical_areas || [],
+    leadValidators: [],
+    riskAssessment: data.risk_assessment || {
+      technical: 5,
+      market: 5,
+      team: 5,
+      regulatory: 5,
+      overall: 5,
+      notes: ""
+    },
+    roi: data.roi || {
+      projected: 0,
+      timeframeMonths: 12
+    },
+    createdAt: new Date(data.created_at),
+    launchDate: data.launch_date ? new Date(data.launch_date) : undefined
+  };
+}
+
+// Helper function to map frontend types to database fields for SubnetProject
+function mapSubnetProjectToDb(project: SubnetProject) {
+  return {
+    id: project.id,
+    name: project.name,
+    subnet_id: project.subnetId,
+    description: project.description,
+    stage: project.stage,
+    funding_target: project.fundingTarget,
+    current_funding: project.currentFunding,
+    technical_areas: project.technicalAreas,
+    risk_assessment: project.riskAssessment,
+    roi: project.roi,
+    created_at: project.createdAt,
+    launch_date: project.launchDate
+  };
+}
+
+// Helper function to map database fields to frontend types for Investment
+function mapDbToInvestment(data: any, project?: SubnetProject): Investment {
+  return {
+    id: data.id,
+    projectId: data.project_id,
+    project: project || (data.project ? mapDbToSubnetProject(data.project) : undefined),
+    amount: data.amount,
+    date: new Date(data.date),
+    status: data.status,
+    returns: data.returns,
+    notes: data.notes
+  };
+}
+
+// Helper function to map frontend types to database fields for Investment
+function mapInvestmentToDb(investment: Investment) {
+  return {
+    id: investment.id,
+    project_id: investment.projectId,
+    amount: investment.amount,
+    date: investment.date,
+    status: investment.status,
+    returns: investment.returns,
+    notes: investment.notes
+  };
+}
+
+// Helper function to map database fields to frontend types for InvestorMeeting
+function mapDbToInvestorMeeting(data: any, project?: SubnetProject): InvestorMeeting {
+  return {
+    id: data.id,
+    projectId: data.project_id,
+    project: project || (data.project ? mapDbToSubnetProject(data.project) : undefined),
+    scheduledDate: new Date(data.scheduled_date),
+    attendees: data.attendees || [],
+    status: data.status,
+    notes: data.notes,
+    followUpDate: data.follow_up_date ? new Date(data.follow_up_date) : undefined
+  };
+}
+
+// Helper function to map frontend types to database fields for InvestorMeeting
+function mapInvestorMeetingToDb(meeting: InvestorMeeting) {
+  return {
+    id: meeting.id,
+    project_id: meeting.projectId,
+    scheduled_date: meeting.scheduledDate,
+    attendees: meeting.attendees,
+    status: meeting.status,
+    notes: meeting.notes,
+    follow_up_date: meeting.followUpDate
+  };
+}
+
+// Helper function to map database fields to frontend types for InvestorAlert
+function mapDbToInvestorAlert(data: any): InvestorAlert {
+  return {
+    id: data.id,
+    type: data.type,
+    projectId: data.project_id,
+    message: data.message,
+    date: new Date(data.date),
+    read: data.read
+  };
+}
+
 // Fetch investment preferences from Supabase
 export const fetchInvestmentPreferences = async (): Promise<InvestmentPreference[]> => {
   const { data, error } = await supabase
@@ -19,19 +167,19 @@ export const fetchInvestmentPreferences = async (): Promise<InvestmentPreference
     return [];
   }
   
-  return data || [];
+  return data.map(mapDbToInvestmentPreference);
 };
 
 // Create or update investment preference in Supabase
 export const updateInvestmentPreference = async (preference: InvestmentPreference): Promise<InvestmentPreference> => {
-  const { id, ...preferenceData } = preference;
+  const dbPreference = mapInvestmentPreferenceToDb(preference);
   
-  if (id) {
+  if (preference.id) {
     // Update existing preference
     const { data, error } = await supabase
       .from('investment_preferences')
-      .update({ ...preferenceData, updated_at: new Date() })
-      .eq('id', id)
+      .update(dbPreference)
+      .eq('id', preference.id)
       .select()
       .single();
     
@@ -40,12 +188,12 @@ export const updateInvestmentPreference = async (preference: InvestmentPreferenc
       throw error;
     }
     
-    return data;
+    return mapDbToInvestmentPreference(data);
   } else {
     // Create new preference
     const { data, error } = await supabase
       .from('investment_preferences')
-      .insert([{ ...preferenceData }])
+      .insert([dbPreference])
       .select()
       .single();
     
@@ -54,7 +202,7 @@ export const updateInvestmentPreference = async (preference: InvestmentPreferenc
       throw error;
     }
     
-    return data;
+    return mapDbToInvestmentPreference(data);
   }
 };
 
@@ -77,7 +225,7 @@ export const fetchSubnetProjects = async (): Promise<SubnetProject[]> => {
     return mockProjects;
   }
   
-  return data;
+  return data.map(mapDbToSubnetProject);
 };
 
 // Generate mock projects for initial setup
@@ -171,22 +319,10 @@ const generateMockProjects = async (): Promise<SubnetProject[]> => {
 const populateMockProjects = async (projects: SubnetProject[]): Promise<void> => {
   try {
     for (const project of projects) {
-      const { data, error } = await supabase
+      const dbProject = mapSubnetProjectToDb(project);
+      const { error } = await supabase
         .from('subnet_projects')
-        .insert([{
-          id: project.id,
-          name: project.name,
-          subnet_id: project.subnetId,
-          description: project.description,
-          stage: project.stage,
-          funding_target: project.fundingTarget,
-          current_funding: project.currentFunding,
-          technical_areas: project.technicalAreas,
-          risk_assessment: project.riskAssessment,
-          roi: project.roi,
-          created_at: project.createdAt,
-          launch_date: project.launchDate
-        }]);
+        .insert([dbProject]);
       
       if (error) {
         console.error("Error inserting mock project:", error);
@@ -210,7 +346,7 @@ export const fetchProjectById = async (id: string): Promise<SubnetProject | null
     return null;
   }
   
-  return data;
+  return mapDbToSubnetProject(data);
 };
 
 // Fetch investments from Supabase
@@ -234,16 +370,7 @@ export const fetchInvestments = async (): Promise<Investment[]> => {
     return mockInvestments;
   }
   
-  return data.map(inv => ({
-    id: inv.id,
-    projectId: inv.project_id,
-    project: inv.project,
-    amount: inv.amount,
-    date: new Date(inv.date),
-    status: inv.status,
-    returns: inv.returns,
-    notes: inv.notes
-  }));
+  return data.map(inv => mapDbToInvestment(inv));
 };
 
 // Generate and insert mock investments for initial setup
@@ -256,7 +383,7 @@ const generateMockInvestments = async (): Promise<Investment[]> => {
       projectId: projects[0]?.id || "proj1",
       amount: 200000,
       date: new Date(2023, 4, 10),
-      status: "deployed",
+      status: "deployed" as const,
       notes: "Initial investment with option for follow-on"
     },
     {
@@ -264,7 +391,7 @@ const generateMockInvestments = async (): Promise<Investment[]> => {
       projectId: projects[2]?.id || "proj3",
       amount: 350000,
       date: new Date(2023, 1, 20),
-      status: "deployed",
+      status: "deployed" as const,
       returns: {
         amount: 70000,
         roi: 0.2
@@ -276,17 +403,19 @@ const generateMockInvestments = async (): Promise<Investment[]> => {
   // Insert mock investments to database
   try {
     for (const inv of mockInvestments) {
+      const dbInvestment = {
+        id: inv.id,
+        project_id: inv.projectId,
+        amount: inv.amount,
+        date: inv.date,
+        status: inv.status,
+        returns: inv.returns,
+        notes: inv.notes
+      };
+      
       const { error } = await supabase
         .from('investments')
-        .insert([{
-          id: inv.id,
-          project_id: inv.projectId,
-          amount: inv.amount,
-          date: inv.date,
-          status: inv.status,
-          returns: inv.returns,
-          notes: inv.notes
-        }]);
+        .insert([dbInvestment]);
       
       if (error) {
         console.error("Error inserting mock investment:", error);
@@ -301,16 +430,18 @@ const generateMockInvestments = async (): Promise<Investment[]> => {
 
 // Add new investment to Supabase
 export const addInvestment = async (investment: Omit<Investment, "id">): Promise<Investment> => {
+  const dbInvestment = {
+    project_id: investment.projectId,
+    amount: investment.amount,
+    date: investment.date,
+    status: investment.status,
+    returns: investment.returns,
+    notes: investment.notes
+  };
+  
   const { data, error } = await supabase
     .from('investments')
-    .insert([{
-      project_id: investment.projectId,
-      amount: investment.amount,
-      date: investment.date,
-      status: investment.status,
-      returns: investment.returns,
-      notes: investment.notes
-    }])
+    .insert([dbInvestment])
     .select()
     .single();
   
@@ -319,29 +450,16 @@ export const addInvestment = async (investment: Omit<Investment, "id">): Promise
     throw error;
   }
   
-  return {
-    id: data.id,
-    projectId: data.project_id,
-    amount: data.amount,
-    date: new Date(data.date),
-    status: data.status,
-    returns: data.returns,
-    notes: data.notes
-  };
+  return mapDbToInvestment(data);
 };
 
 // Update existing investment in Supabase
 export const updateInvestment = async (investment: Investment): Promise<Investment> => {
+  const dbInvestment = mapInvestmentToDb(investment);
+  
   const { data, error } = await supabase
     .from('investments')
-    .update({
-      project_id: investment.projectId,
-      amount: investment.amount,
-      date: investment.date,
-      status: investment.status,
-      returns: investment.returns,
-      notes: investment.notes
-    })
+    .update(dbInvestment)
     .eq('id', investment.id)
     .select()
     .single();
@@ -351,15 +469,7 @@ export const updateInvestment = async (investment: Investment): Promise<Investme
     throw error;
   }
   
-  return {
-    id: data.id,
-    projectId: data.project_id,
-    amount: data.amount,
-    date: new Date(data.date),
-    status: data.status,
-    returns: data.returns,
-    notes: data.notes
-  };
+  return mapDbToInvestment(data);
 };
 
 // Fetch meetings from Supabase
@@ -383,16 +493,7 @@ export const fetchMeetings = async (): Promise<InvestorMeeting[]> => {
     return [mockMeeting];
   }
   
-  return data.map(meeting => ({
-    id: meeting.id,
-    projectId: meeting.project_id,
-    project: meeting.project,
-    scheduledDate: new Date(meeting.scheduled_date),
-    attendees: meeting.attendees,
-    status: meeting.status,
-    notes: meeting.notes,
-    followUpDate: meeting.follow_up_date ? new Date(meeting.follow_up_date) : undefined
-  }));
+  return data.map(meeting => mapDbToInvestorMeeting(meeting));
 };
 
 // Generate and insert mock meeting for initial setup
@@ -410,16 +511,18 @@ const generateMockMeeting = async (): Promise<InvestorMeeting> => {
   
   // Insert mock meeting to database
   try {
+    const dbMeeting = {
+      id: mockMeeting.id,
+      project_id: mockMeeting.projectId,
+      scheduled_date: mockMeeting.scheduledDate,
+      attendees: mockMeeting.attendees,
+      status: mockMeeting.status,
+      notes: mockMeeting.notes
+    };
+    
     const { error } = await supabase
       .from('investor_meetings')
-      .insert([{
-        id: mockMeeting.id,
-        project_id: mockMeeting.projectId,
-        scheduled_date: mockMeeting.scheduledDate,
-        attendees: mockMeeting.attendees,
-        status: mockMeeting.status,
-        notes: mockMeeting.notes
-      }]);
+      .insert([dbMeeting]);
     
     if (error) {
       console.error("Error inserting mock meeting:", error);
@@ -433,16 +536,18 @@ const generateMockMeeting = async (): Promise<InvestorMeeting> => {
 
 // Schedule a new meeting in Supabase
 export const scheduleMeeting = async (meeting: Omit<InvestorMeeting, "id">): Promise<InvestorMeeting> => {
+  const dbMeeting = {
+    project_id: meeting.projectId,
+    scheduled_date: meeting.scheduledDate,
+    attendees: meeting.attendees,
+    status: meeting.status,
+    notes: meeting.notes,
+    follow_up_date: meeting.followUpDate
+  };
+  
   const { data, error } = await supabase
     .from('investor_meetings')
-    .insert([{
-      project_id: meeting.projectId,
-      scheduled_date: meeting.scheduledDate,
-      attendees: meeting.attendees,
-      status: meeting.status,
-      notes: meeting.notes,
-      follow_up_date: meeting.followUpDate
-    }])
+    .insert([dbMeeting])
     .select()
     .single();
   
@@ -451,29 +556,16 @@ export const scheduleMeeting = async (meeting: Omit<InvestorMeeting, "id">): Pro
     throw error;
   }
   
-  return {
-    id: data.id,
-    projectId: data.project_id,
-    scheduledDate: new Date(data.scheduled_date),
-    attendees: data.attendees,
-    status: data.status,
-    notes: data.notes,
-    followUpDate: data.follow_up_date ? new Date(data.follow_up_date) : undefined
-  };
+  return mapDbToInvestorMeeting(data);
 };
 
 // Update existing meeting in Supabase
 export const updateMeeting = async (meeting: InvestorMeeting): Promise<InvestorMeeting> => {
+  const dbMeeting = mapInvestorMeetingToDb(meeting);
+  
   const { data, error } = await supabase
     .from('investor_meetings')
-    .update({
-      project_id: meeting.projectId,
-      scheduled_date: meeting.scheduledDate,
-      attendees: meeting.attendees,
-      status: meeting.status,
-      notes: meeting.notes,
-      follow_up_date: meeting.followUpDate
-    })
+    .update(dbMeeting)
     .eq('id', meeting.id)
     .select()
     .single();
@@ -483,15 +575,7 @@ export const updateMeeting = async (meeting: InvestorMeeting): Promise<InvestorM
     throw error;
   }
   
-  return {
-    id: data.id,
-    projectId: data.project_id,
-    scheduledDate: new Date(data.scheduled_date),
-    attendees: data.attendees,
-    status: data.status,
-    notes: data.notes,
-    followUpDate: data.follow_up_date ? new Date(data.follow_up_date) : undefined
-  };
+  return mapDbToInvestorMeeting(data);
 };
 
 // Fetch alerts from Supabase
@@ -512,14 +596,7 @@ export const fetchAlerts = async (): Promise<InvestorAlert[]> => {
     return mockAlerts;
   }
   
-  return data.map(alert => ({
-    id: alert.id,
-    type: alert.type,
-    projectId: alert.project_id,
-    message: alert.message,
-    date: new Date(alert.date),
-    read: alert.read
-  }));
+  return data.map(alert => mapDbToInvestorAlert(alert));
 };
 
 // Generate and insert mock alerts for initial setup
@@ -548,16 +625,18 @@ const generateMockAlerts = async (): Promise<InvestorAlert[]> => {
   // Insert mock alerts to database
   try {
     for (const alert of mockAlerts) {
+      const dbAlert = {
+        id: alert.id,
+        type: alert.type,
+        project_id: alert.projectId,
+        message: alert.message,
+        date: alert.date,
+        read: alert.read
+      };
+      
       const { error } = await supabase
         .from('investor_alerts')
-        .insert([{
-          id: alert.id,
-          type: alert.type,
-          project_id: alert.projectId,
-          message: alert.message,
-          date: alert.date,
-          read: alert.read
-        }]);
+        .insert([dbAlert]);
       
       if (error) {
         console.error("Error inserting mock alert:", error);
