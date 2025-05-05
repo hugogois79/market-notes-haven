@@ -26,7 +26,10 @@ const InvestmentEditDialog: React.FC<InvestmentEditDialogProps> = ({
   const handleSubmit = async (values: any) => {
     setIsSubmitting(true);
     setError(null);
+    
     try {
+      console.log("Submitting investment values:", values);
+      
       // Format the date value
       const dateObj = new Date(values.date);
       
@@ -40,7 +43,11 @@ const InvestmentEditDialog: React.FC<InvestmentEditDialogProps> = ({
         notes: values.notes,
       };
       
-      await onSave(updatedInvestment);
+      console.log("Processed investment data:", updatedInvestment);
+      
+      const result = await onSave(updatedInvestment);
+      console.log("Save result:", result);
+      
       onOpenChange(false);
       toast.success(`Investment ${investment ? "updated" : "added"} successfully`);
     } catch (error) {

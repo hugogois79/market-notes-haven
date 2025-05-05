@@ -1,4 +1,3 @@
-
 import { InvestmentPreference, SubnetProject, Investment, OpportunityMatch, InvestorMeeting, InvestorAlert, RiskAssessment } from "../types";
 import { TaoSubnet as SubnetType } from "@/services/subnets/types";
 import { TaoValidator } from "@/services/validators/types";
@@ -98,22 +97,34 @@ function mapDbToInvestment(data: any, project?: SubnetProject): Investment {
     amount: data.amount,
     date: new Date(data.date),
     status: data.status,
-    returns: data.returns,
+    returns: data.returns ? (typeof data.returns === 'string' ? JSON.parse(data.returns) : data.returns) : undefined,
     notes: data.notes
   };
 }
 
 // Helper function to map frontend types to database fields for Investment
 function mapInvestmentToDb(investment: Partial<Investment>) {
-  return {
+  // Create the base object with properly cased properties
+  const dbInvestment = {
     id: investment.id,
     project_id: investment.projectId,
     amount: investment.amount,
     date: investment.date ? investment.date.toISOString() : new Date().toISOString(),
     status: investment.status,
-    returns: investment.returns ? JSON.stringify(investment.returns) : null,
     notes: investment.notes
   };
+  
+  // Handle the returns object - ensure it's a JSON string for the database
+  if (investment.returns) {
+    return {
+      ...dbInvestment,
+      returns: typeof investment.returns === 'string' 
+        ? investment.returns 
+        : JSON.stringify(investment.returns)
+    };
+  }
+  
+  return dbInvestment;
 }
 
 // Helper function to map database fields to frontend types for InvestorMeeting
@@ -407,15 +418,7 @@ const generateMockInvestments = async (): Promise<Investment[]> => {
   // Insert mock investments to database
   try {
     for (const inv of mockInvestments) {
-      const dbInvestment = {
-        id: inv.id,
-        project_id: inv.projectId,
-        amount: inv.amount,
-        date: inv.date.toISOString(),
-        status: inv.status,
-        returns: inv.returns,
-        notes: inv.notes
-      };
+      const dbInvestment = mapInvestmentToDb(inv);
       
       const { error } = await supabase
         .from('investments')
@@ -434,10 +437,14 @@ const generateMockInvestments = async (): Promise<Investment[]> => {
 
 // Add new investment to Supabase
 export const addInvestment = async (investment: Omit<Investment, "id">): Promise<Investment> => {
+  console.log("Adding new investment:", investment);
+  
   const dbInvestment = mapInvestmentToDb(investment);
   
   // Remove id field for insert operations
   delete (dbInvestment as any).id;
+  
+  console.log("Prepared DB investment for insert:", dbInvestment);
   
   const { data, error } = await supabase
     .from('investments')
@@ -450,16 +457,20 @@ export const addInvestment = async (investment: Omit<Investment, "id">): Promise
     throw error;
   }
   
+  console.log("Investment added successfully:", data);
   return mapDbToInvestment(data);
 };
 
 // Update existing investment in Supabase
 export const updateInvestment = async (investment: Partial<Investment>): Promise<Investment> => {
+  console.log("Updating investment:", investment);
+  
   if (!investment.id) {
     throw new Error("Investment ID is required for updates");
   }
   
   const dbInvestment = mapInvestmentToDb(investment);
+  console.log("Prepared DB investment for update:", dbInvestment);
   
   const { data, error } = await supabase
     .from('investments')
@@ -473,6 +484,7 @@ export const updateInvestment = async (investment: Partial<Investment>): Promise
     throw error;
   }
   
+  console.log("Investment updated successfully:", data);
   return mapDbToInvestment(data);
 };
 
