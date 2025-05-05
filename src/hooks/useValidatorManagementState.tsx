@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { TaoValidator, TaoContactLog, TaoNote } from "@/services/taoValidatorService";
 import { TaoSubnet } from "@/services/taoSubnetService";
-import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 export function useValidatorManagementState(initialTab: string = "monday-crm") {
