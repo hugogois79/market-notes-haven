@@ -21,9 +21,11 @@ const InvestmentEditDialog: React.FC<InvestmentEditDialogProps> = ({
   onSave,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (values: any) => {
     setIsSubmitting(true);
+    setError(null);
     try {
       // Format the date value
       const dateObj = new Date(values.date);
@@ -32,9 +34,9 @@ const InvestmentEditDialog: React.FC<InvestmentEditDialogProps> = ({
       const updatedInvestment: Partial<Investment> = {
         ...investment,
         projectId: project.id,
-        amount: values.amount,
+        amount: parseFloat(values.amount),
         date: dateObj,
-        status: values.status,
+        status: values.status as "committed" | "pending" | "deployed" | "exited",
         notes: values.notes,
       };
       
@@ -43,6 +45,7 @@ const InvestmentEditDialog: React.FC<InvestmentEditDialogProps> = ({
       toast.success(`Investment ${investment ? "updated" : "added"} successfully`);
     } catch (error) {
       console.error("Error saving investment:", error);
+      setError(`Failed to ${investment ? "update" : "add"} investment. Please try again.`);
       toast.error(`Failed to ${investment ? "update" : "add"} investment`);
     } finally {
       setIsSubmitting(false);
@@ -50,12 +53,18 @@ const InvestmentEditDialog: React.FC<InvestmentEditDialogProps> = ({
   };
 
   const handleCancel = () => {
+    setError(null);
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
+        {error && (
+          <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md mb-4">
+            {error}
+          </div>
+        )}
         <InvestmentForm
           investment={investment}
           project={project}

@@ -104,14 +104,14 @@ function mapDbToInvestment(data: any, project?: SubnetProject): Investment {
 }
 
 // Helper function to map frontend types to database fields for Investment
-function mapInvestmentToDb(investment: Investment) {
+function mapInvestmentToDb(investment: Partial<Investment>) {
   return {
     id: investment.id,
     project_id: investment.projectId,
     amount: investment.amount,
-    date: investment.date.toISOString(),
+    date: investment.date ? investment.date.toISOString() : new Date().toISOString(),
     status: investment.status,
-    returns: investment.returns,
+    returns: investment.returns ? JSON.stringify(investment.returns) : null,
     notes: investment.notes
   };
 }
@@ -434,14 +434,10 @@ const generateMockInvestments = async (): Promise<Investment[]> => {
 
 // Add new investment to Supabase
 export const addInvestment = async (investment: Omit<Investment, "id">): Promise<Investment> => {
-  const dbInvestment = {
-    project_id: investment.projectId,
-    amount: investment.amount,
-    date: investment.date.toISOString(),
-    status: investment.status,
-    returns: investment.returns,
-    notes: investment.notes
-  };
+  const dbInvestment = mapInvestmentToDb(investment);
+  
+  // Remove id field for insert operations
+  delete (dbInvestment as any).id;
   
   const { data, error } = await supabase
     .from('investments')
@@ -458,7 +454,11 @@ export const addInvestment = async (investment: Omit<Investment, "id">): Promise
 };
 
 // Update existing investment in Supabase
-export const updateInvestment = async (investment: Investment): Promise<Investment> => {
+export const updateInvestment = async (investment: Partial<Investment>): Promise<Investment> => {
+  if (!investment.id) {
+    throw new Error("Investment ID is required for updates");
+  }
+  
   const dbInvestment = mapInvestmentToDb(investment);
   
   const { data, error } = await supabase
