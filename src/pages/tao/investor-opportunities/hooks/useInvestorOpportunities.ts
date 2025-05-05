@@ -192,9 +192,9 @@ export function useInvestorOpportunities() {
   }, [refetchInvestments, refetchAnalytics]);
 
   // Schedule a meeting
-  const saveMeeting = useCallback(async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting) => {
+  const saveMeeting = useCallback(async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
     try {
-      let result;
+      let result: InvestorMeeting;
       if ("id" in meeting) {
         result = await updateMeeting(meeting);
         toast.success("Meeting updated successfully");
@@ -202,7 +202,7 @@ export function useInvestorOpportunities() {
         result = await scheduleMeeting(meeting);
         toast.success("Meeting scheduled successfully");
       }
-      refetchMeetings();
+      await refetchMeetings();
       return result;
     } catch (error) {
       console.error("Error scheduling meeting:", error);
