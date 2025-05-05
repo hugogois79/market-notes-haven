@@ -433,6 +433,177 @@ export type Database = {
         }
         Relationships: []
       }
+      investment_preferences: {
+        Row: {
+          created_at: string
+          decision_timeline_days: number
+          id: string
+          max_ticket_size: number
+          min_ticket_size: number
+          name: string
+          requires_co_investment: boolean
+          risk_tolerance: string
+          stage_preferences: string[]
+          subnet_types: string[]
+          technical_focus: string[]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          decision_timeline_days?: number
+          id?: string
+          max_ticket_size: number
+          min_ticket_size: number
+          name: string
+          requires_co_investment?: boolean
+          risk_tolerance: string
+          stage_preferences: string[]
+          subnet_types: string[]
+          technical_focus: string[]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          decision_timeline_days?: number
+          id?: string
+          max_ticket_size?: number
+          min_ticket_size?: number
+          name?: string
+          requires_co_investment?: boolean
+          risk_tolerance?: string
+          stage_preferences?: string[]
+          subnet_types?: string[]
+          technical_focus?: string[]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      investments: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          project_id: string
+          returns: Json | null
+          status: Database["public"]["Enums"]["investment_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          returns?: Json | null
+          status?: Database["public"]["Enums"]["investment_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          returns?: Json | null
+          status?: Database["public"]["Enums"]["investment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "subnet_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      investor_alerts: {
+        Row: {
+          date: string
+          id: string
+          message: string
+          project_id: string | null
+          read: boolean
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          date?: string
+          id?: string
+          message: string
+          project_id?: string | null
+          read?: boolean
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          date?: string
+          id?: string
+          message?: string
+          project_id?: string | null
+          read?: boolean
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investor_alerts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "subnet_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      investor_meetings: {
+        Row: {
+          attendees: string[]
+          created_at: string
+          id: string
+          notes: string | null
+          project_id: string
+          scheduled_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attendees: string[]
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          scheduled_date: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          attendees?: string[]
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          scheduled_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investor_meetings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "subnet_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       news_articles: {
         Row: {
           content: string
@@ -841,6 +1012,54 @@ export type Database = {
           theme?: string | null
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      subnet_projects: {
+        Row: {
+          created_at: string
+          current_funding: number
+          description: string | null
+          funding_target: number
+          id: string
+          launch_date: string | null
+          name: string
+          risk_assessment: Json | null
+          roi: Json | null
+          stage: string
+          subnet_id: number | null
+          technical_areas: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_funding?: number
+          description?: string | null
+          funding_target: number
+          id?: string
+          launch_date?: string | null
+          name: string
+          risk_assessment?: Json | null
+          roi?: Json | null
+          stage: string
+          subnet_id?: number | null
+          technical_areas: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_funding?: number
+          description?: string | null
+          funding_target?: number
+          id?: string
+          launch_date?: string | null
+          name?: string
+          risk_assessment?: Json | null
+          roi?: Json | null
+          stage?: string
+          subnet_id?: number | null
+          technical_areas?: string[]
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1551,6 +1770,7 @@ export type Database = {
     Enums: {
       expense_status: "pending" | "approved" | "rejected"
       file_status: "parsed" | "summarized" | "processed"
+      investment_status: "pending" | "committed" | "deployed" | "exited"
       report_status: "draft" | "submitted" | "approved" | "rejected"
     }
     CompositeTypes: {
@@ -1669,6 +1889,7 @@ export const Constants = {
     Enums: {
       expense_status: ["pending", "approved", "rejected"],
       file_status: ["parsed", "summarized", "processed"],
+      investment_status: ["pending", "committed", "deployed", "exited"],
       report_status: ["draft", "submitted", "approved", "rejected"],
     },
   },

@@ -25,6 +25,7 @@ import {
   InvestorAlert,
   OpportunityMatch
 } from "../types";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useInvestorOpportunities() {
   const [selectedPreference, setSelectedPreference] = useState<InvestmentPreference | null>(null);
@@ -116,6 +117,30 @@ export function useInvestorOpportunities() {
       setSelectedPreference(preferences[0]);
     }
   }, [preferences, selectedPreference]);
+
+  // Listen for real-time updates to investments
+  useEffect(() => {
+    const channel = supabase
+      .channel('db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'investments'
+        },
+        () => {
+          // Refetch investments when they change
+          refetchInvestments();
+          refetchAnalytics();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetchInvestments, refetchAnalytics]);
 
   // Save investment preference
   const saveInvestmentPreference = useCallback(async (preference: InvestmentPreference) => {

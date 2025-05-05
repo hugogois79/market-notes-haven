@@ -1,27 +1,86 @@
+
 import { InvestmentPreference, SubnetProject, Investment, OpportunityMatch, InvestorMeeting, InvestorAlert, RiskAssessment } from "../types";
 import { TaoSubnet as SubnetType } from "@/services/subnets/types";
 import { TaoValidator } from "@/services/validators/types";
 import { fetchTaoSubnets } from "@/services/taoSubnetService";
 import { fetchValidators } from "@/services/taoValidatorService";
 import { adaptArrayToSubnetTypes } from "@/utils/subnetTypeAdapter";
+import { supabase } from "@/integrations/supabase/client";
 
-// Mock investment preferences
-let investmentPreferences: InvestmentPreference[] = [{
-  id: "pref1",
-  name: "Default Investment Strategy",
-  subnetTypes: ["Machine Learning", "Data Storage", "Financial"],
-  technicalFocus: ["NLP", "Computer Vision", "DeFi"],
-  stagePreferences: ["growth", "established"],
-  minTicketSize: 50000,
-  maxTicketSize: 500000,
-  requiresCoInvestment: true,
-  decisionTimelineDays: 14,
-  riskTolerance: "medium",
-  createdAt: new Date(2023, 1, 15),
-  updatedAt: new Date(2023, 5, 20)
-}];
+// Fetch investment preferences from Supabase
+export const fetchInvestmentPreferences = async (): Promise<InvestmentPreference[]> => {
+  const { data, error } = await supabase
+    .from('investment_preferences')
+    .select('*')
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error("Error fetching investment preferences:", error);
+    return [];
+  }
+  
+  return data || [];
+};
 
-// Mock subnet projects
+// Create or update investment preference in Supabase
+export const updateInvestmentPreference = async (preference: InvestmentPreference): Promise<InvestmentPreference> => {
+  const { id, ...preferenceData } = preference;
+  
+  if (id) {
+    // Update existing preference
+    const { data, error } = await supabase
+      .from('investment_preferences')
+      .update({ ...preferenceData, updated_at: new Date() })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error("Error updating investment preference:", error);
+      throw error;
+    }
+    
+    return data;
+  } else {
+    // Create new preference
+    const { data, error } = await supabase
+      .from('investment_preferences')
+      .insert([{ ...preferenceData }])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error("Error creating investment preference:", error);
+      throw error;
+    }
+    
+    return data;
+  }
+};
+
+// Fetch subnet projects with mock data if needed
+export const fetchSubnetProjects = async (): Promise<SubnetProject[]> => {
+  const { data, error } = await supabase
+    .from('subnet_projects')
+    .select('*')
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error("Error fetching subnet projects:", error);
+    return generateMockProjects();
+  }
+  
+  if (!data || data.length === 0) {
+    // If no projects in database, generate and insert mock data
+    const mockProjects = await generateMockProjects();
+    await populateMockProjects(mockProjects);
+    return mockProjects;
+  }
+  
+  return data;
+};
+
+// Generate mock projects for initial setup
 const generateMockProjects = async (): Promise<SubnetProject[]> => {
   const rawSubnets = await fetchTaoSubnets();
   const subnets = adaptArrayToSubnetTypes(rawSubnets);
@@ -108,162 +167,427 @@ const generateMockProjects = async (): Promise<SubnetProject[]> => {
   ];
 };
 
-// Mock portfolio investments
-let investments: Investment[] = [
-  {
-    id: "inv1",
-    projectId: "proj1",
-    amount: 200000,
-    date: new Date(2023, 4, 10),
-    status: "deployed",
-    notes: "Initial investment with option for follow-on"
-  },
-  {
-    id: "inv2",
-    projectId: "proj3",
-    amount: 350000,
-    date: new Date(2023, 1, 20),
-    status: "deployed",
-    returns: {
-      amount: 70000,
-      roi: 0.2
-    },
-    notes: "Performing well, considering increasing position"
+// Add mock projects to database for initial setup
+const populateMockProjects = async (projects: SubnetProject[]): Promise<void> => {
+  try {
+    for (const project of projects) {
+      const { data, error } = await supabase
+        .from('subnet_projects')
+        .insert([{
+          id: project.id,
+          name: project.name,
+          subnet_id: project.subnetId,
+          description: project.description,
+          stage: project.stage,
+          funding_target: project.fundingTarget,
+          current_funding: project.currentFunding,
+          technical_areas: project.technicalAreas,
+          risk_assessment: project.riskAssessment,
+          roi: project.roi,
+          created_at: project.createdAt,
+          launch_date: project.launchDate
+        }]);
+      
+      if (error) {
+        console.error("Error inserting mock project:", error);
+      }
+    }
+  } catch (error) {
+    console.error("Error populating mock projects:", error);
   }
-];
+};
 
-// Mock meetings
-let meetings: InvestorMeeting[] = [
-  {
+// Fetch project by ID
+export const fetchProjectById = async (id: string): Promise<SubnetProject | null> => {
+  const { data, error } = await supabase
+    .from('subnet_projects')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  if (error) {
+    console.error("Error fetching project:", error);
+    return null;
+  }
+  
+  return data;
+};
+
+// Fetch investments from Supabase
+export const fetchInvestments = async (): Promise<Investment[]> => {
+  const { data, error } = await supabase
+    .from('investments')
+    .select(`
+      *,
+      project:project_id (*)
+    `)
+    .order('date', { ascending: false });
+  
+  if (error) {
+    console.error("Error fetching investments:", error);
+    return [];
+  }
+  
+  // If no investments, insert mock data
+  if (!data || data.length === 0) {
+    const mockInvestments = await generateMockInvestments();
+    return mockInvestments;
+  }
+  
+  return data.map(inv => ({
+    id: inv.id,
+    projectId: inv.project_id,
+    project: inv.project,
+    amount: inv.amount,
+    date: new Date(inv.date),
+    status: inv.status,
+    returns: inv.returns,
+    notes: inv.notes
+  }));
+};
+
+// Generate and insert mock investments for initial setup
+const generateMockInvestments = async (): Promise<Investment[]> => {
+  const projects = await fetchSubnetProjects();
+  
+  const mockInvestments = [
+    {
+      id: "inv1",
+      projectId: projects[0]?.id || "proj1",
+      amount: 200000,
+      date: new Date(2023, 4, 10),
+      status: "deployed",
+      notes: "Initial investment with option for follow-on"
+    },
+    {
+      id: "inv2",
+      projectId: projects[2]?.id || "proj3",
+      amount: 350000,
+      date: new Date(2023, 1, 20),
+      status: "deployed",
+      returns: {
+        amount: 70000,
+        roi: 0.2
+      },
+      notes: "Performing well, considering increasing position"
+    }
+  ];
+  
+  // Insert mock investments to database
+  try {
+    for (const inv of mockInvestments) {
+      const { error } = await supabase
+        .from('investments')
+        .insert([{
+          id: inv.id,
+          project_id: inv.projectId,
+          amount: inv.amount,
+          date: inv.date,
+          status: inv.status,
+          returns: inv.returns,
+          notes: inv.notes
+        }]);
+      
+      if (error) {
+        console.error("Error inserting mock investment:", error);
+      }
+    }
+  } catch (error) {
+    console.error("Error populating mock investments:", error);
+  }
+  
+  return mockInvestments;
+};
+
+// Add new investment to Supabase
+export const addInvestment = async (investment: Omit<Investment, "id">): Promise<Investment> => {
+  const { data, error } = await supabase
+    .from('investments')
+    .insert([{
+      project_id: investment.projectId,
+      amount: investment.amount,
+      date: investment.date,
+      status: investment.status,
+      returns: investment.returns,
+      notes: investment.notes
+    }])
+    .select()
+    .single();
+  
+  if (error) {
+    console.error("Error adding investment:", error);
+    throw error;
+  }
+  
+  return {
+    id: data.id,
+    projectId: data.project_id,
+    amount: data.amount,
+    date: new Date(data.date),
+    status: data.status,
+    returns: data.returns,
+    notes: data.notes
+  };
+};
+
+// Update existing investment in Supabase
+export const updateInvestment = async (investment: Investment): Promise<Investment> => {
+  const { data, error } = await supabase
+    .from('investments')
+    .update({
+      project_id: investment.projectId,
+      amount: investment.amount,
+      date: investment.date,
+      status: investment.status,
+      returns: investment.returns,
+      notes: investment.notes
+    })
+    .eq('id', investment.id)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error("Error updating investment:", error);
+    throw error;
+  }
+  
+  return {
+    id: data.id,
+    projectId: data.project_id,
+    amount: data.amount,
+    date: new Date(data.date),
+    status: data.status,
+    returns: data.returns,
+    notes: data.notes
+  };
+};
+
+// Fetch meetings from Supabase
+export const fetchMeetings = async (): Promise<InvestorMeeting[]> => {
+  const { data, error } = await supabase
+    .from('investor_meetings')
+    .select(`
+      *,
+      project:project_id (*)
+    `)
+    .order('scheduled_date', { ascending: true });
+  
+  if (error) {
+    console.error("Error fetching meetings:", error);
+    return [];
+  }
+  
+  if (!data || data.length === 0) {
+    // Insert mock meeting
+    const mockMeeting = await generateMockMeeting();
+    return [mockMeeting];
+  }
+  
+  return data.map(meeting => ({
+    id: meeting.id,
+    projectId: meeting.project_id,
+    project: meeting.project,
+    scheduledDate: new Date(meeting.scheduled_date),
+    attendees: meeting.attendees,
+    status: meeting.status,
+    notes: meeting.notes,
+    followUpDate: meeting.follow_up_date ? new Date(meeting.follow_up_date) : undefined
+  }));
+};
+
+// Generate and insert mock meeting for initial setup
+const generateMockMeeting = async (): Promise<InvestorMeeting> => {
+  const projects = await fetchSubnetProjects();
+  
+  const mockMeeting = {
     id: "meet1",
-    projectId: "proj2",
+    projectId: projects[1]?.id || "proj2",
     scheduledDate: new Date(2023, 7, 15, 14, 0), // Aug 15, 2023, 2:00 PM
     attendees: ["John Doe", "Alice Smith", "Bob Johnson"],
     status: "scheduled",
     notes: "Initial pitch meeting to discuss technical architecture"
-  }
-];
-
-// Mock alerts
-let alerts: InvestorAlert[] = [
-  {
-    id: "alert1",
-    type: "new_opportunity",
-    projectId: "proj2",
-    message: "New opportunity matching your investment criteria: DataStore Subnet",
-    date: new Date(2023, 5, 22),
-    read: false
-  },
-  {
-    id: "alert2",
-    type: "milestone",
-    projectId: "proj1",
-    message: "NeuroNet AI Subnet has reached 50% of funding target",
-    date: new Date(2023, 6, 5),
-    read: true
-  }
-];
-
-// Service API methods
-export const fetchInvestmentPreferences = async (): Promise<InvestmentPreference[]> => {
-  return [...investmentPreferences];
-};
-
-export const updateInvestmentPreference = async (preference: InvestmentPreference): Promise<InvestmentPreference> => {
-  const index = investmentPreferences.findIndex(p => p.id === preference.id);
-  if (index >= 0) {
-    preference.updatedAt = new Date();
-    investmentPreferences[index] = preference;
-    return preference;
+  };
+  
+  // Insert mock meeting to database
+  try {
+    const { error } = await supabase
+      .from('investor_meetings')
+      .insert([{
+        id: mockMeeting.id,
+        project_id: mockMeeting.projectId,
+        scheduled_date: mockMeeting.scheduledDate,
+        attendees: mockMeeting.attendees,
+        status: mockMeeting.status,
+        notes: mockMeeting.notes
+      }]);
+    
+    if (error) {
+      console.error("Error inserting mock meeting:", error);
+    }
+  } catch (error) {
+    console.error("Error creating mock meeting:", error);
   }
   
-  // New preference
-  const newPreference = {
-    ...preference,
-    id: `pref${Date.now()}`,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-  investmentPreferences.push(newPreference);
-  return newPreference;
+  return mockMeeting;
 };
 
-export const fetchSubnetProjects = async (): Promise<SubnetProject[]> => {
-  return await generateMockProjects();
-};
-
-export const fetchProjectById = async (id: string): Promise<SubnetProject | null> => {
-  const projects = await generateMockProjects();
-  return projects.find(p => p.id === id) || null;
-};
-
-export const fetchInvestments = async (): Promise<Investment[]> => {
-  const projects = await generateMockProjects();
-  return investments.map(inv => ({
-    ...inv,
-    project: projects.find(p => p.id === inv.projectId)
-  }));
-};
-
-export const addInvestment = async (investment: Omit<Investment, "id">): Promise<Investment> => {
-  const newInvestment = {
-    ...investment,
-    id: `inv${Date.now()}`
-  };
-  investments.push(newInvestment);
-  return newInvestment;
-};
-
-export const updateInvestment = async (investment: Investment): Promise<Investment> => {
-  const index = investments.findIndex(i => i.id === investment.id);
-  if (index >= 0) {
-    investments[index] = investment;
-    return investment;
-  }
-  throw new Error("Investment not found");
-};
-
-export const fetchMeetings = async (): Promise<InvestorMeeting[]> => {
-  const projects = await generateMockProjects();
-  return meetings.map(meeting => ({
-    ...meeting,
-    project: projects.find(p => p.id === meeting.projectId)
-  }));
-};
-
+// Schedule a new meeting in Supabase
 export const scheduleMeeting = async (meeting: Omit<InvestorMeeting, "id">): Promise<InvestorMeeting> => {
-  const newMeeting = {
-    ...meeting,
-    id: `meet${Date.now()}`
+  const { data, error } = await supabase
+    .from('investor_meetings')
+    .insert([{
+      project_id: meeting.projectId,
+      scheduled_date: meeting.scheduledDate,
+      attendees: meeting.attendees,
+      status: meeting.status,
+      notes: meeting.notes,
+      follow_up_date: meeting.followUpDate
+    }])
+    .select()
+    .single();
+  
+  if (error) {
+    console.error("Error scheduling meeting:", error);
+    throw error;
+  }
+  
+  return {
+    id: data.id,
+    projectId: data.project_id,
+    scheduledDate: new Date(data.scheduled_date),
+    attendees: data.attendees,
+    status: data.status,
+    notes: data.notes,
+    followUpDate: data.follow_up_date ? new Date(data.follow_up_date) : undefined
   };
-  meetings.push(newMeeting);
-  return newMeeting;
 };
 
+// Update existing meeting in Supabase
 export const updateMeeting = async (meeting: InvestorMeeting): Promise<InvestorMeeting> => {
-  const index = meetings.findIndex(m => m.id === meeting.id);
-  if (index >= 0) {
-    meetings[index] = meeting;
-    return meeting;
+  const { data, error } = await supabase
+    .from('investor_meetings')
+    .update({
+      project_id: meeting.projectId,
+      scheduled_date: meeting.scheduledDate,
+      attendees: meeting.attendees,
+      status: meeting.status,
+      notes: meeting.notes,
+      follow_up_date: meeting.followUpDate
+    })
+    .eq('id', meeting.id)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error("Error updating meeting:", error);
+    throw error;
   }
-  throw new Error("Meeting not found");
+  
+  return {
+    id: data.id,
+    projectId: data.project_id,
+    scheduledDate: new Date(data.scheduled_date),
+    attendees: data.attendees,
+    status: data.status,
+    notes: data.notes,
+    followUpDate: data.follow_up_date ? new Date(data.follow_up_date) : undefined
+  };
 };
 
+// Fetch alerts from Supabase
 export const fetchAlerts = async (): Promise<InvestorAlert[]> => {
-  return [...alerts].sort((a, b) => b.date.getTime() - a.date.getTime());
+  const { data, error } = await supabase
+    .from('investor_alerts')
+    .select('*')
+    .order('date', { ascending: false });
+  
+  if (error) {
+    console.error("Error fetching alerts:", error);
+    return [];
+  }
+  
+  if (!data || data.length === 0) {
+    // Insert mock alerts
+    const mockAlerts = await generateMockAlerts();
+    return mockAlerts;
+  }
+  
+  return data.map(alert => ({
+    id: alert.id,
+    type: alert.type,
+    projectId: alert.project_id,
+    message: alert.message,
+    date: new Date(alert.date),
+    read: alert.read
+  }));
 };
 
+// Generate and insert mock alerts for initial setup
+const generateMockAlerts = async (): Promise<InvestorAlert[]> => {
+  const projects = await fetchSubnetProjects();
+  
+  const mockAlerts = [
+    {
+      id: "alert1",
+      type: "new_opportunity",
+      projectId: projects[1]?.id || "proj2",
+      message: "New opportunity matching your investment criteria: DataStore Subnet",
+      date: new Date(2023, 5, 22),
+      read: false
+    },
+    {
+      id: "alert2",
+      type: "milestone",
+      projectId: projects[0]?.id || "proj1",
+      message: "NeuroNet AI Subnet has reached 50% of funding target",
+      date: new Date(2023, 6, 5),
+      read: true
+    }
+  ];
+  
+  // Insert mock alerts to database
+  try {
+    for (const alert of mockAlerts) {
+      const { error } = await supabase
+        .from('investor_alerts')
+        .insert([{
+          id: alert.id,
+          type: alert.type,
+          project_id: alert.projectId,
+          message: alert.message,
+          date: alert.date,
+          read: alert.read
+        }]);
+      
+      if (error) {
+        console.error("Error inserting mock alert:", error);
+      }
+    }
+  } catch (error) {
+    console.error("Error creating mock alerts:", error);
+  }
+  
+  return mockAlerts;
+};
+
+// Mark alert as read in Supabase
 export const markAlertAsRead = async (alertId: string): Promise<void> => {
-  const index = alerts.findIndex(a => a.id === alertId);
-  if (index >= 0) {
-    alerts[index].read = true;
+  const { error } = await supabase
+    .from('investor_alerts')
+    .update({ read: true })
+    .eq('id', alertId);
+  
+  if (error) {
+    console.error("Error marking alert as read:", error);
+    throw error;
   }
 };
 
+// Generate opportunity matches based on preference
 export const generateOpportunityMatches = async (
   preference: InvestmentPreference
 ): Promise<OpportunityMatch[]> => {
-  const projects = await generateMockProjects();
+  const projects = await fetchSubnetProjects();
   
   const matches = projects.map(project => {
     // Calculate match scores based on various criteria
@@ -329,7 +653,7 @@ const calculateOverlap = (arr1: string[], arr2: string[]): number => {
   return intersection.length / Math.max(arr1.length, arr2.length);
 };
 
-// Return portfolio analytics
+// Generate portfolio analytics
 export const generatePortfolioAnalytics = async (): Promise<{
   totalInvested: number;
   totalReturns: number;
