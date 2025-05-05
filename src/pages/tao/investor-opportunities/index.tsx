@@ -118,6 +118,8 @@ const InvestorOpportunitiesPage: React.FC = () => {
             investments={investments}
             portfolioAnalytics={portfolioAnalytics}
             isLoading={isLoading}
+            saveInvestment={saveInvestment}
+            projects={projects}
           />
         </TabsContent>
       </Tabs>

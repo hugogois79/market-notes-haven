@@ -1,10 +1,11 @@
-import React from "react";
+
+import React, { useState } from "react";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from "@/components/ui/card";
 import {
   Table,
@@ -12,10 +13,16 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Edit, Loader2 } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+import { Investment, SubnetProject } from "../types";
 import {
+  PieChart,
+  Pie,
+  Cell,
   BarChart,
   Bar,
   XAxis,
@@ -23,275 +30,252 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
   Legend,
-  TooltipProps
 } from "recharts";
-import { Investment } from "../types";
-import { ArrowDown, ArrowUp, TrendingUp } from "lucide-react";
+import InvestmentEditDialog from "./InvestmentEditDialog";
 
 interface PortfolioManagementDashboardProps {
   investments: Investment[];
-  portfolioAnalytics: {
+  portfolioAnalytics?: {
     totalInvested: number;
     totalReturns: number;
     overallRoi: number;
     diversification: { category: string; percentage: number }[];
     performanceByStage: { stage: string; roi: number }[];
     riskExposure: { risk: string; percentage: number }[];
-  } | undefined;
+  };
   isLoading: boolean;
+  saveInvestment: (investment: Partial<Investment>) => Promise<Investment>;
+  projects: SubnetProject[];
 }
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#8DD1E1'];
 
 const PortfolioManagementDashboard: React.FC<PortfolioManagementDashboardProps> = ({
   investments,
   portfolioAnalytics,
-  isLoading
+  isLoading,
+  saveInvestment,
+  projects,
 }) => {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "committed": return "bg-blue-100 text-blue-800";
-      case "pending": return "bg-yellow-100 text-yellow-800";
-      case "deployed": return "bg-green-100 text-green-800";
-      case "exited": return "bg-purple-100 text-purple-800";
-      default: return "";
-    }
+  const [editInvestment, setEditInvestment] = useState<Investment | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  const handleEditInvestment = (investment: Investment) => {
+    setEditInvestment(investment);
+    setIsEditDialogOpen(true);
   };
 
-  const tooltipFormatter = (value: any) => {
-    if (typeof value === 'number') {
-      return `${(value * 100).toFixed(2)}%`;
-    }
-    return value;
-  };
+  const projectsMap = projects.reduce((acc, project) => {
+    acc[project.id] = project;
+    return acc;
+  }, {} as Record<string, SubnetProject>);
 
-  const yAxisTickFormatter = (value: any) => {
-    if (typeof value === 'number') {
-      return `${(value * 100).toFixed(0)}%`;
-    }
-    return value;
-  };
+  // Set up colors for charts
+  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
-  const performanceData = [
-    { month: 'Jan', value: 100 },
-    { month: 'Feb', value: 105 },
-    { month: 'Mar', value: 110 },
-    { month: 'Apr', value: 108 },
-    { month: 'May', value: 115 },
-    { month: 'Jun', value: 120 },
-    { month: 'Jul', value: 130 },
-    { month: 'Aug', value: 135 },
-    { month: 'Sep', value: 140 },
-  ];
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading portfolio data...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Portfolio Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Invested</CardTitle>
+            <CardTitle className="text-lg">Total Invested</CardTitle>
+            <CardDescription>Across all projects</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              ${portfolioAnalytics?.totalInvested.toLocaleString() || "0"}
+            <div className="text-3xl font-bold">
+              {formatCurrency(portfolioAnalytics?.totalInvested || 0)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <div className="text-sm text-muted-foreground mt-1">
               Across {investments.length} projects
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Returns</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${portfolioAnalytics?.totalReturns.toLocaleString() || "0"}
-            </div>
-            <div className="flex items-center mt-1">
-              {(portfolioAnalytics?.overallRoi || 0) > 0 ? (
-                <div className="text-xs text-green-600 flex items-center">
-                  <ArrowUp className="h-3 w-3 mr-1" />
-                  {((portfolioAnalytics?.overallRoi || 0) * 100).toFixed(2)}% return
-                </div>
-              ) : (
-                <div className="text-xs text-red-600 flex items-center">
-                  <ArrowDown className="h-3 w-3 mr-1" />
-                  {Math.abs((portfolioAnalytics?.overallRoi || 0) * 100).toFixed(2)}% loss
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Performance Trend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-10">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={performanceData}>
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#4f46e5"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex items-center mt-2">
-              <TrendingUp className="h-3 w-3 text-green-600 mr-1" />
-              <span className="text-xs text-green-600">+40% growth ytd</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Portfolio Diversification</CardTitle>
-            <CardDescription>
-              Allocation across different subnet types
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={portfolioAnalytics?.diversification || []}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="percentage"
-                    nameKey="category"
-                    label={({ name, percent }) => {
-                      if (typeof percent === 'number') {
-                        return `${name}: ${(percent * 100).toFixed(0)}%`;
-                      }
-                      return `${name}: ${percent}%`;
-                    }}
-                  >
-                    {(portfolioAnalytics?.diversification || []).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => {
-                    if (typeof value === 'number') {
-                      return `${value.toFixed(2)}%`;
-                    }
-                    return value;
-                  }} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardHeader>
-            <CardTitle>Performance by Stage</CardTitle>
-            <CardDescription>
-              ROI comparison across different project stages
-            </CardDescription>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Total Returns</CardTitle>
+            <CardDescription>From all investments</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={portfolioAnalytics?.performanceByStage || []}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="stage" />
-                  <YAxis tickFormatter={yAxisTickFormatter} />
-                  <Tooltip formatter={tooltipFormatter} />
-                  <Bar dataKey="roi" fill="#8884d8">
-                    {(portfolioAnalytics?.performanceByStage || []).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="text-3xl font-bold">
+              {formatCurrency(portfolioAnalytics?.totalReturns || 0)}
+            </div>
+            <div className="text-sm text-muted-foreground mt-1">
+              <span className={`${(portfolioAnalytics?.overallRoi || 0) > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {((portfolioAnalytics?.overallRoi || 0) * 100).toFixed(2)}% return
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Performance Trend</CardTitle>
+            <CardDescription>Month over month growth</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[80px]">
+            <div className="text-3xl font-bold">
+              <span className="text-green-500">+4.2%</span>
+            </div>
+            <div className="text-sm text-muted-foreground mt-1">
+              Last 30 days
             </div>
           </CardContent>
         </Card>
       </div>
-      
+
+      {/* Portfolio Analytics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Diversification Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Portfolio Diversification</CardTitle>
+            <CardDescription>Allocation across different subnet types</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={portfolioAnalytics?.diversification || []}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={true}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="percentage"
+                  nameKey="category"
+                >
+                  {portfolioAnalytics?.diversification.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => `${value.toFixed(2)}%`} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Performance by Stage Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Performance by Stage</CardTitle>
+            <CardDescription>ROI comparison across different project stages</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={portfolioAnalytics?.performanceByStage || []}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="stage" />
+                <YAxis tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} />
+                <Tooltip formatter={(value) => `${(Number(value) * 100).toFixed(2)}%`} />
+                <Bar dataKey="roi" fill="#00C49F" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Current Investments Table */}
       <Card>
         <CardHeader>
           <CardTitle>Current Investments</CardTitle>
-          <CardDescription>
-            Your current subnet project investments and their performance
-          </CardDescription>
+          <CardDescription>Your current subnet project investments and their performance</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-12">
-              <p>Loading investments...</p>
-            </div>
-          ) : investments.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Project</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Returns</TableHead>
-                  <TableHead>ROI</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {investments.map((investment) => (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Project</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Returns</TableHead>
+                <TableHead>ROI</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {investments.map((investment) => {
+                const project = investment.project || projectsMap[investment.projectId];
+                return (
                   <TableRow key={investment.id}>
                     <TableCell className="font-medium">
-                      {investment.project?.name || "Unknown Project"}
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {investment.project?.stage.charAt(0).toUpperCase() + investment.project?.stage.slice(1)} stage
+                      <div>{project?.name || investment.projectId}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {project?.stage} stage
                       </div>
                     </TableCell>
-                    <TableCell>${investment.amount.toLocaleString()}</TableCell>
-                    <TableCell>{investment.date.toLocaleDateString()}</TableCell>
+                    <TableCell>{formatCurrency(investment.amount)}</TableCell>
+                    <TableCell>{new Date(investment.date).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      <Badge className={getStatusColor(investment.status)}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        investment.status === 'deployed' ? 'bg-green-100 text-green-800' :
+                        investment.status === 'committed' ? 'bg-blue-100 text-blue-800' : 
+                        investment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
                         {investment.status.charAt(0).toUpperCase() + investment.status.slice(1)}
-                      </Badge>
+                      </span>
                     </TableCell>
-                    <TableCell>${investment.returns?.amount.toLocaleString() || "-"}</TableCell>
+                    <TableCell>
+                      {investment.returns ? formatCurrency(investment.returns.amount) : '-'}
+                    </TableCell>
                     <TableCell>
                       {investment.returns ? (
-                        <div className={`font-medium ${investment.returns.roi > 0 ? "text-green-600" : "text-red-600"}`}>
-                          {investment.returns.roi > 0 ? "+" : ""}
+                        <span className={investment.returns.roi > 0 ? 'text-green-600' : 'text-red-600'}>
                           {(investment.returns.roi * 100).toFixed(2)}%
-                        </div>
-                      ) : (
-                        "-"
-                      )}
+                        </span>
+                      ) : '-'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditInvestment(investment)}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-6">
-              <p className="text-muted-foreground">No investments found</p>
-            </div>
-          )}
+                );
+              })}
+              {investments.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                    No investments found
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Investment Dialog */}
+      {editInvestment && projectsMap[editInvestment.projectId] && (
+        <InvestmentEditDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          investment={editInvestment}
+          project={projectsMap[editInvestment.projectId]}
+          onSave={saveInvestment}
+        />
+      )}
     </div>
   );
 };
