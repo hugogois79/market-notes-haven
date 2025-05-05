@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Card,
@@ -16,9 +15,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Loader2 } from "lucide-react";
+import { Edit, Loader2, Calendar } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { Investment, SubnetProject } from "../types";
+import { Investment, SubnetProject, InvestorMeeting } from "../types";
 import {
   PieChart,
   Pie,
@@ -36,6 +35,7 @@ import InvestmentEditDialog from "./InvestmentEditDialog";
 
 interface PortfolioManagementDashboardProps {
   investments: Investment[];
+  meetings: InvestorMeeting[];
   portfolioAnalytics?: {
     totalInvested: number;
     totalReturns: number;
@@ -45,16 +45,21 @@ interface PortfolioManagementDashboardProps {
     riskExposure: { risk: string; percentage: number }[];
   };
   isLoading: boolean;
-  saveInvestment: (investment: Partial<Investment>) => Promise<Investment>;
-  projects: SubnetProject[];
+  onEditInvestment: (investment: Investment) => void;
+  onAddInvestment: (project?: SubnetProject) => void;
+  onScheduleMeeting: (project?: SubnetProject) => void;
+  saveInvestment?: (investment: Partial<Investment>) => Promise<Investment>;
+  projects?: SubnetProject[];
 }
 
 const PortfolioManagementDashboard: React.FC<PortfolioManagementDashboardProps> = ({
   investments,
+  meetings,
   portfolioAnalytics,
   isLoading,
-  saveInvestment,
-  projects,
+  onEditInvestment,
+  onAddInvestment,
+  onScheduleMeeting,
 }) => {
   const [editInvestment, setEditInvestment] = useState<Investment | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -71,6 +76,61 @@ const PortfolioManagementDashboard: React.FC<PortfolioManagementDashboardProps> 
 
   // Set up colors for charts
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
+
+  // Add meetings section to the dashboard
+  const renderMeetingsSection = () => {
+    const upcomingMeetings = meetings
+      .filter(m => m.status === "scheduled")
+      .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime());
+    
+    return (
+      <Card className="mt-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Upcoming Meetings</CardTitle>
+            <CardDescription>Scheduled meetings with project teams</CardDescription>
+          </div>
+          <Button variant="outline" onClick={() => onScheduleMeeting()}>
+            <Calendar className="h-4 w-4 mr-2" />
+            Schedule Meeting
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {upcomingMeetings.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Project</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Attendees</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {upcomingMeetings.slice(0, 5).map((meeting) => (
+                  <TableRow key={meeting.id}>
+                    <TableCell className="font-medium">{meeting.project?.name || meeting.projectId}</TableCell>
+                    <TableCell>{new Date(meeting.scheduledDate).toLocaleDateString()}, {new Date(meeting.scheduledDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</TableCell>
+                    <TableCell>{meeting.attendees.join(", ")}</TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {meeting.status.charAt(0).toUpperCase() + meeting.status.slice(1)}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-6">
+              <Calendar className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-muted-foreground">No upcoming meetings</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -266,16 +326,8 @@ const PortfolioManagementDashboard: React.FC<PortfolioManagementDashboardProps> 
         </CardContent>
       </Card>
 
-      {/* Edit Investment Dialog */}
-      {editInvestment && projectsMap[editInvestment.projectId] && (
-        <InvestmentEditDialog
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          investment={editInvestment}
-          project={projectsMap[editInvestment.projectId]}
-          onSave={saveInvestment}
-        />
-      )}
+      {/* Meetings Section */}
+      {renderMeetingsSection()}
     </div>
   );
 };

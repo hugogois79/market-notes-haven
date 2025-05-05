@@ -8,8 +8,9 @@ import InvestmentForm from "./InvestmentForm";
 interface InvestmentEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  investment?: Investment;
-  project: SubnetProject;
+  investment: Investment | null;
+  project?: SubnetProject;
+  projects?: SubnetProject[];
   onSave: (investment: Partial<Investment>) => Promise<Investment>;
 }
 
@@ -18,6 +19,7 @@ const InvestmentEditDialog: React.FC<InvestmentEditDialogProps> = ({
   onOpenChange,
   investment,
   project,
+  projects,
   onSave,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,7 +38,7 @@ const InvestmentEditDialog: React.FC<InvestmentEditDialogProps> = ({
       // Construct investment object with all fields
       const updatedInvestment: Partial<Investment> = {
         ...investment,
-        projectId: project.id,
+        projectId: project?.id || values.projectId,
         amount: parseFloat(values.amount),
         date: dateObj,
         status: values.status as "committed" | "pending" | "deployed" | "exited",
@@ -75,6 +77,7 @@ const InvestmentEditDialog: React.FC<InvestmentEditDialogProps> = ({
         <InvestmentForm
           investment={investment}
           project={project}
+          projects={projects}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           isSubmitting={isSubmitting}

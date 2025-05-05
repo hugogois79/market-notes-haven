@@ -21,13 +21,17 @@ import { InvestorAlert } from "../types";
 
 interface AlertsSectionProps {
   alerts: InvestorAlert[];
-  onMarkAsRead: (alertId: string) => Promise<void>;
+  unreadCount: number;
+  onMarkRead: (alertId: string) => Promise<void>;
+  onSelectProject: (projectId: string) => void;
   className?: string;
 }
 
 const AlertsSection: React.FC<AlertsSectionProps> = ({
   alerts,
-  onMarkAsRead,
+  unreadCount,
+  onMarkRead,
+  onSelectProject,
   className
 }) => {
   const getAlertIcon = (type: InvestorAlert["type"]) => {
@@ -62,7 +66,7 @@ const AlertsSection: React.FC<AlertsSectionProps> = ({
         <div className="flex justify-between items-center">
           <CardTitle>Alerts & Notifications</CardTitle>
           <Badge variant="outline">
-            {alerts.filter(a => !a.read).length} unread
+            {unreadCount} unread
           </Badge>
         </div>
         <CardDescription>
@@ -93,7 +97,12 @@ const AlertsSection: React.FC<AlertsSectionProps> = ({
                       </Badge>
                     )}
                   </div>
-                  <p className="text-sm mt-1">{alert.message}</p>
+                  <p 
+                    className="text-sm mt-1 cursor-pointer hover:text-blue-500"
+                    onClick={() => alert.projectId && onSelectProject(alert.projectId)}
+                  >
+                    {alert.message}
+                  </p>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-xs text-muted-foreground">
                       {new Date(alert.date).toLocaleDateString()} at {new Date(alert.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -103,7 +112,7 @@ const AlertsSection: React.FC<AlertsSectionProps> = ({
                         variant="ghost"
                         size="sm"
                         className="h-7 text-xs"
-                        onClick={() => onMarkAsRead(alert.id)}
+                        onClick={() => onMarkRead(alert.id)}
                       >
                         <Check className="h-3 w-3 mr-1" />
                         Mark as read

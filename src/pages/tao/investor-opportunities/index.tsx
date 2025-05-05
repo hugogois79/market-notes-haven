@@ -76,6 +76,10 @@ const InvestorOpportunitiesPage = () => {
     setIsSchedulerOpen(true);
   };
 
+  const handleSaveMeeting = async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting) => {
+    return await saveMeeting(meeting);
+  };
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -164,15 +168,15 @@ const InvestorOpportunitiesPage = () => {
         open={isInvestmentDialogOpen}
         onOpenChange={setIsInvestmentDialogOpen}
         investment={editingInvestment}
-        onSave={saveInvestment}
         projects={matchedOpportunities.map(match => match.project)}
+        onSave={saveInvestment}
       />
 
       <MeetingScheduler 
         open={isSchedulerOpen}
         onOpenChange={setIsSchedulerOpen}
         project={selectedProject}
-        onSave={saveMeeting}
+        onSave={handleSaveMeeting}
       />
     </div>
   );
