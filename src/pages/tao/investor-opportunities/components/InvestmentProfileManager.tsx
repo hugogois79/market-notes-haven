@@ -41,6 +41,7 @@ interface InvestmentProfileManagerProps {
   onSelectPreference: (preference: InvestmentPreference) => void;
   onSavePreference: (preference: InvestmentPreference) => Promise<InvestmentPreference>;
   isLoading: boolean;
+  availableSubnets?: Array<{id: string, name: string}>;
 }
 
 const preferencesSchema = z.object({
@@ -60,11 +61,13 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
   selectedPreference,
   onSelectPreference,
   onSavePreference,
-  isLoading
+  isLoading,
+  availableSubnets = []
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [newSubnetType, setNewSubnetType] = useState("");
   const [newTechnicalFocus, setNewTechnicalFocus] = useState("");
+  const [selectedSubnet, setSelectedSubnet] = useState<string>("");
 
   const form = useForm<z.infer<typeof preferencesSchema>>({
     resolver: zodResolver(preferencesSchema),
@@ -150,16 +153,28 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
   };
 
   const addSubnetType = () => {
-    if (!newSubnetType.trim()) return;
-    
-    const currentTypes = form.getValues("subnetTypes");
-    if (currentTypes.includes(newSubnetType.trim())) {
-      toast.error("This subnet type already exists");
-      return;
+    if (selectedSubnet) {
+      const subnet = availableSubnets.find(s => s.id === selectedSubnet);
+      if (!subnet) return;
+      
+      const currentTypes = form.getValues("subnetTypes");
+      if (currentTypes.includes(subnet.name)) {
+        toast.error("This subnet type already exists");
+        return;
+      }
+      
+      form.setValue("subnetTypes", [...currentTypes, subnet.name]);
+      setSelectedSubnet("");
+    } else if (newSubnetType.trim()) {
+      const currentTypes = form.getValues("subnetTypes");
+      if (currentTypes.includes(newSubnetType.trim())) {
+        toast.error("This subnet type already exists");
+        return;
+      }
+      
+      form.setValue("subnetTypes", [...currentTypes, newSubnetType.trim()]);
+      setNewSubnetType("");
     }
-    
-    form.setValue("subnetTypes", [...currentTypes, newSubnetType.trim()]);
-    setNewSubnetType("");
   };
 
   const removeSubnetType = (type: string) => {
@@ -349,15 +364,40 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
                   <div>
                     <FormLabel>Subnet Types</FormLabel>
                     <div className="flex mt-2 mb-2">
-                      <Input
-                        value={newSubnetType}
-                        onChange={(e) => setNewSubnetType(e.target.value)}
-                        placeholder="Add subnet type"
-                        className="mr-2"
-                      />
-                      <Button type="button" onClick={addSubnetType} size="sm">
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                      {availableSubnets.length > 0 ? (
+                        <>
+                          <Select
+                            value={selectedSubnet}
+                            onValueChange={setSelectedSubnet}
+                          >
+                            <SelectTrigger className="w-[200px] mr-2">
+                              <SelectValue placeholder="Select a subnet" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableSubnets.map((subnet) => (
+                                <SelectItem key={subnet.id} value={subnet.id}>
+                                  {subnet.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button type="button" onClick={addSubnetType} size="sm">
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Input
+                            value={newSubnetType}
+                            onChange={(e) => setNewSubnetType(e.target.value)}
+                            placeholder="Add subnet type"
+                            className="mr-2"
+                          />
+                          <Button type="button" onClick={addSubnetType} size="sm">
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {form.watch("subnetTypes").map((type, index) => (

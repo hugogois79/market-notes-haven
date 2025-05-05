@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -25,6 +26,8 @@ import {
   OpportunityMatch
 } from "../types";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchTaoSubnets } from "@/services/taoSubnetService";
+import { adaptArrayToSubnetTypes } from "@/utils/subnetTypeAdapter";
 
 export function useInvestorOpportunities() {
   const [selectedPreference, setSelectedPreference] = useState<InvestmentPreference | null>(null);
@@ -79,6 +82,16 @@ export function useInvestorOpportunities() {
   } = useQuery({
     queryKey: ["investor-alerts"],
     queryFn: fetchAlerts
+  });
+
+  // Fetch available subnets
+  const {
+    data: availableSubnets = [],
+    isLoading: isLoadingSubnets,
+    refetch: refetchSubnets
+  } = useQuery({
+    queryKey: ["tao-subnets"],
+    queryFn: fetchTaoSubnets
   });
 
   // Generate portfolio analytics
@@ -216,6 +229,7 @@ export function useInvestorOpportunities() {
     refetchMeetings();
     refetchAlerts();
     refetchAnalytics();
+    refetchSubnets();
     
     toast.success("Data refreshed");
   }, [
@@ -224,11 +238,18 @@ export function useInvestorOpportunities() {
     refetchInvestments,
     refetchMeetings,
     refetchAlerts,
-    refetchAnalytics
+    refetchAnalytics,
+    refetchSubnets
   ]);
   
   // Get unread alerts count
   const unreadAlertsCount = alerts.filter(alert => !alert.read).length;
+
+  // Transform available subnets for the UI
+  const availableSubnetOptions = availableSubnets.map(subnet => ({
+    id: subnet.id.toString(),
+    name: subnet.name
+  }));
 
   return {
     preferences,
@@ -243,13 +264,15 @@ export function useInvestorOpportunities() {
     portfolioAnalytics,
     selectedProject,
     setSelectedProject,
+    availableSubnets: availableSubnetOptions,
     isLoading: 
       isLoadingPreferences || 
       isLoadingProjects || 
       isLoadingInvestments || 
       isLoadingMeetings || 
       isLoadingAlerts ||
-      isLoadingAnalytics,
+      isLoadingAnalytics ||
+      isLoadingSubnets,
     saveInvestmentPreference,
     saveInvestment,
     saveMeeting,
