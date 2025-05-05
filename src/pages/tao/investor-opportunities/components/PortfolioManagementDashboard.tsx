@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Card,
@@ -31,11 +32,11 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import InvestmentEditDialog from "./InvestmentEditDialog";
 
 interface PortfolioManagementDashboardProps {
   investments: Investment[];
   meetings: InvestorMeeting[];
+  projects?: SubnetProject[];
   portfolioAnalytics?: {
     totalInvested: number;
     totalReturns: number;
@@ -49,12 +50,12 @@ interface PortfolioManagementDashboardProps {
   onAddInvestment: (project?: SubnetProject) => void;
   onScheduleMeeting: (project?: SubnetProject) => void;
   saveInvestment?: (investment: Partial<Investment>) => Promise<Investment>;
-  projects?: SubnetProject[];
 }
 
 const PortfolioManagementDashboard: React.FC<PortfolioManagementDashboardProps> = ({
   investments,
   meetings,
+  projects = [],
   portfolioAnalytics,
   isLoading,
   onEditInvestment,

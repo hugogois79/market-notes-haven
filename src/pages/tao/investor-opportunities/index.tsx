@@ -76,7 +76,7 @@ const InvestorOpportunitiesPage = () => {
     setIsSchedulerOpen(true);
   };
 
-  const handleSaveMeeting = async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting) => {
+  const handleSaveMeeting = async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
     return await saveMeeting(meeting);
   };
 
@@ -156,6 +156,7 @@ const InvestorOpportunitiesPage = () => {
           <PortfolioManagementDashboard 
             investments={investments}
             meetings={meetings}
+            projects={matchedOpportunities.map(match => match.project)}
             onEditInvestment={handleEditInvestment}
             onAddInvestment={handleAddInvestment}
             onScheduleMeeting={handleAddMeeting}
@@ -168,6 +169,7 @@ const InvestorOpportunitiesPage = () => {
         open={isInvestmentDialogOpen}
         onOpenChange={setIsInvestmentDialogOpen}
         investment={editingInvestment}
+        project={selectedProject}
         projects={matchedOpportunities.map(match => match.project)}
         onSave={saveInvestment}
       />
@@ -176,6 +178,7 @@ const InvestorOpportunitiesPage = () => {
         open={isSchedulerOpen}
         onOpenChange={setIsSchedulerOpen}
         project={selectedProject}
+        meetings={meetings}
         onSave={handleSaveMeeting}
       />
     </div>

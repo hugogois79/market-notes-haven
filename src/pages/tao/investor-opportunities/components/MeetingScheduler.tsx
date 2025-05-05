@@ -56,6 +56,7 @@ interface MeetingSchedulerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   project: SubnetProject | null;
+  meetings?: InvestorMeeting[];
   onSave: (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting) => Promise<InvestorMeeting>;
 }
 

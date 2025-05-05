@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Card,
@@ -610,9 +609,11 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
           {/* Meetings Tab */}
           <TabsContent value="meetings">
             <MeetingScheduler
+              open={true}
+              onOpenChange={() => {}}
               project={project}
               meetings={projectMeetings}
-              onScheduleMeeting={onScheduleMeeting}
+              onSave={onScheduleMeeting}
             />
           </TabsContent>
         </Tabs>
