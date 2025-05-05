@@ -13,13 +13,7 @@ const ValidatorManagementCard = () => {
   };
 
   const handleGoToKanban = () => {
-    // Send state parameters to ensure Kanban view is shown
-    navigate("/tao/validators", { 
-      state: { 
-        initialTab: "monday-crm", 
-        initialView: "kanban" 
-      } 
-    });
+    navigate("/tao/validators");
   };
 
   return (

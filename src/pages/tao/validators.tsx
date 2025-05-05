@@ -7,9 +7,9 @@ import ValidatorManagement from "@/components/tao/ValidatorManagement";
 const TAOValidatorManagement: React.FC = () => {
   const location = useLocation();
   
-  // Get the initial state parameters if they exist
+  // Get the initial state parameters if they exist, otherwise use kanban view by default
   const initialTab = location.state?.initialTab || "monday-crm";
-  const initialView = location.state?.initialView || "main";
+  const initialView = location.state?.initialView || "kanban";
 
   return (
     <div className="container mx-auto py-6 space-y-6">

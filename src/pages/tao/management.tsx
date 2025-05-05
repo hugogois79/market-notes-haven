@@ -63,7 +63,7 @@ const TAOManagement: React.FC = () => {
 
   // Navigate to validator CRM with Kanban view
   const handleGoToCRM = () => {
-    navigate('/tao/validators', { state: { initialTab: 'monday-crm', initialView: 'kanban' } });
+    navigate('/tao/validators');
   };
 
   return (

@@ -23,7 +23,7 @@ interface ValidatorManagementProps {
 
 const ValidatorManagement: React.FC<ValidatorManagementProps> = ({ 
   initialTab = "monday-crm", 
-  initialView = "main" 
+  initialView = "kanban" 
 }) => {
   // Get data from our custom hooks
   const {

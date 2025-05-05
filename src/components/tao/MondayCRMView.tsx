@@ -40,7 +40,7 @@ const MondayCRMView: React.FC<MondayCRMViewProps> = ({
   onAddNote,
   onViewContactLog,
   onRefreshData,
-  initialView = "main"
+  initialView = "kanban"
 }) => {
   const location = useLocation();
   const [selectedView, setSelectedView] = useState<"main" | "kanban">(initialView);
