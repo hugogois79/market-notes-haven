@@ -82,8 +82,8 @@ function mapSubnetProjectToDb(project: SubnetProject) {
     funding_target: project.fundingTarget,
     current_funding: project.currentFunding,
     technical_areas: project.technicalAreas,
-    risk_assessment: project.riskAssessment,
-    roi: project.roi,
+    risk_assessment: JSON.stringify(project.riskAssessment), // Convert to JSON string for DB
+    roi: JSON.stringify(project.roi), // Convert to JSON string for DB
     created_at: project.createdAt.toISOString(),
     launch_date: project.launchDate ? project.launchDate.toISOString() : null
   };
@@ -124,7 +124,7 @@ function mapDbToInvestorMeeting(data: any, project?: SubnetProject): InvestorMee
     project: project || (data.project ? mapDbToSubnetProject(data.project) : undefined),
     scheduledDate: new Date(data.scheduled_date),
     attendees: data.attendees || [],
-    status: data.status,
+    status: data.status as "scheduled" | "completed" | "cancelled", // Ensure proper type casting
     notes: data.notes,
     followUpDate: data.follow_up_date ? new Date(data.follow_up_date) : undefined
   };
@@ -147,7 +147,7 @@ function mapInvestorMeetingToDb(meeting: InvestorMeeting) {
 function mapDbToInvestorAlert(data: any): InvestorAlert {
   return {
     id: data.id,
-    type: data.type,
+    type: data.type as "new_opportunity" | "milestone" | "funding_update" | "performance", // Ensure proper type casting
     projectId: data.project_id,
     message: data.message,
     date: new Date(data.date),
@@ -323,9 +323,10 @@ const populateMockProjects = async (projects: SubnetProject[]): Promise<void> =>
   try {
     for (const project of projects) {
       const dbProject = mapSubnetProjectToDb(project);
+      // Insert each project separately
       const { error } = await supabase
         .from('subnet_projects')
-        .insert([dbProject]);
+        .insert(dbProject);
       
       if (error) {
         console.error("Error inserting mock project:", error);
@@ -418,7 +419,7 @@ const generateMockInvestments = async (): Promise<Investment[]> => {
       
       const { error } = await supabase
         .from('investments')
-        .insert([dbInvestment]);
+        .insert(dbInvestment);
       
       if (error) {
         console.error("Error inserting mock investment:", error);
@@ -444,7 +445,7 @@ export const addInvestment = async (investment: Omit<Investment, "id">): Promise
   
   const { data, error } = await supabase
     .from('investments')
-    .insert([dbInvestment])
+    .insert(dbInvestment)
     .select()
     .single();
   
@@ -503,7 +504,7 @@ export const fetchMeetings = async (): Promise<InvestorMeeting[]> => {
 const generateMockMeeting = async (): Promise<InvestorMeeting> => {
   const projects = await fetchSubnetProjects();
   
-  const mockMeeting = {
+  const mockMeeting: InvestorMeeting = {
     id: "meet1",
     projectId: projects[1]?.id || "proj2",
     scheduledDate: new Date(2023, 7, 15, 14, 0), // Aug 15, 2023, 2:00 PM
@@ -525,7 +526,7 @@ const generateMockMeeting = async (): Promise<InvestorMeeting> => {
     
     const { error } = await supabase
       .from('investor_meetings')
-      .insert([dbMeeting]);
+      .insert(dbMeeting);
     
     if (error) {
       console.error("Error inserting mock meeting:", error);
@@ -550,7 +551,7 @@ export const scheduleMeeting = async (meeting: Omit<InvestorMeeting, "id">): Pro
   
   const { data, error } = await supabase
     .from('investor_meetings')
-    .insert([dbMeeting])
+    .insert(dbMeeting)
     .select()
     .single();
   
@@ -606,7 +607,7 @@ export const fetchAlerts = async (): Promise<InvestorAlert[]> => {
 const generateMockAlerts = async (): Promise<InvestorAlert[]> => {
   const projects = await fetchSubnetProjects();
   
-  const mockAlerts = [
+  const mockAlerts: InvestorAlert[] = [
     {
       id: "alert1",
       type: "new_opportunity",
@@ -639,7 +640,7 @@ const generateMockAlerts = async (): Promise<InvestorAlert[]> => {
       
       const { error } = await supabase
         .from('investor_alerts')
-        .insert([dbAlert]);
+        .insert(dbAlert);
       
       if (error) {
         console.error("Error inserting mock alert:", error);
