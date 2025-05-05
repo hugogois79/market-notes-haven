@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { 
   Tabs, 
@@ -77,7 +76,7 @@ const InvestorOpportunitiesPage = () => {
   };
 
   const handleSaveMeeting = async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
-    return await saveMeeting(meeting);
+    return saveMeeting(meeting);
   };
 
   return (
