@@ -38,7 +38,7 @@ function mapInvestmentPreferenceToDb(preference: InvestmentPreference) {
     requires_co_investment: preference.requiresCoInvestment,
     decision_timeline_days: preference.decisionTimelineDays,
     risk_tolerance: preference.riskTolerance,
-    updated_at: new Date()
+    updated_at: new Date().toISOString() // Convert to ISO string for DB
   };
 }
 
@@ -84,8 +84,8 @@ function mapSubnetProjectToDb(project: SubnetProject) {
     technical_areas: project.technicalAreas,
     risk_assessment: project.riskAssessment,
     roi: project.roi,
-    created_at: project.createdAt,
-    launch_date: project.launchDate
+    created_at: project.createdAt.toISOString(),
+    launch_date: project.launchDate ? project.launchDate.toISOString() : null
   };
 }
 
@@ -109,7 +109,7 @@ function mapInvestmentToDb(investment: Investment) {
     id: investment.id,
     project_id: investment.projectId,
     amount: investment.amount,
-    date: investment.date,
+    date: investment.date.toISOString(),
     status: investment.status,
     returns: investment.returns,
     notes: investment.notes
@@ -135,11 +135,11 @@ function mapInvestorMeetingToDb(meeting: InvestorMeeting) {
   return {
     id: meeting.id,
     project_id: meeting.projectId,
-    scheduled_date: meeting.scheduledDate,
+    scheduled_date: meeting.scheduledDate.toISOString(),
     attendees: meeting.attendees,
     status: meeting.status,
     notes: meeting.notes,
-    follow_up_date: meeting.followUpDate
+    follow_up_date: meeting.followUpDate ? meeting.followUpDate.toISOString() : null
   };
 }
 
@@ -193,7 +193,10 @@ export const updateInvestmentPreference = async (preference: InvestmentPreferenc
     // Create new preference
     const { data, error } = await supabase
       .from('investment_preferences')
-      .insert([dbPreference])
+      .insert({
+        ...dbPreference, 
+        created_at: new Date().toISOString()
+      })
       .select()
       .single();
     
@@ -407,7 +410,7 @@ const generateMockInvestments = async (): Promise<Investment[]> => {
         id: inv.id,
         project_id: inv.projectId,
         amount: inv.amount,
-        date: inv.date,
+        date: inv.date.toISOString(),
         status: inv.status,
         returns: inv.returns,
         notes: inv.notes
@@ -433,7 +436,7 @@ export const addInvestment = async (investment: Omit<Investment, "id">): Promise
   const dbInvestment = {
     project_id: investment.projectId,
     amount: investment.amount,
-    date: investment.date,
+    date: investment.date.toISOString(),
     status: investment.status,
     returns: investment.returns,
     notes: investment.notes
@@ -514,7 +517,7 @@ const generateMockMeeting = async (): Promise<InvestorMeeting> => {
     const dbMeeting = {
       id: mockMeeting.id,
       project_id: mockMeeting.projectId,
-      scheduled_date: mockMeeting.scheduledDate,
+      scheduled_date: mockMeeting.scheduledDate.toISOString(),
       attendees: mockMeeting.attendees,
       status: mockMeeting.status,
       notes: mockMeeting.notes
@@ -538,11 +541,11 @@ const generateMockMeeting = async (): Promise<InvestorMeeting> => {
 export const scheduleMeeting = async (meeting: Omit<InvestorMeeting, "id">): Promise<InvestorMeeting> => {
   const dbMeeting = {
     project_id: meeting.projectId,
-    scheduled_date: meeting.scheduledDate,
+    scheduled_date: meeting.scheduledDate.toISOString(),
     attendees: meeting.attendees,
     status: meeting.status,
     notes: meeting.notes,
-    follow_up_date: meeting.followUpDate
+    follow_up_date: meeting.followUpDate ? meeting.followUpDate.toISOString() : null
   };
   
   const { data, error } = await supabase
@@ -630,7 +633,7 @@ const generateMockAlerts = async (): Promise<InvestorAlert[]> => {
         type: alert.type,
         project_id: alert.projectId,
         message: alert.message,
-        date: alert.date,
+        date: alert.date.toISOString(),
         read: alert.read
       };
       
