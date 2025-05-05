@@ -159,7 +159,7 @@ const PortfolioManagementDashboard: React.FC<PortfolioManagementDashboardProps> 
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => `${value.toFixed(2)}%`} />
+                <Tooltip formatter={(value: number) => `${value.toFixed(2)}%`} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -181,7 +181,7 @@ const PortfolioManagementDashboard: React.FC<PortfolioManagementDashboardProps> 
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="stage" />
                 <YAxis tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} />
-                <Tooltip formatter={(value) => `${(Number(value) * 100).toFixed(2)}%`} />
+                <Tooltip formatter={(value: number) => `${(value * 100).toFixed(2)}%`} />
                 <Bar dataKey="roi" fill="#00C49F" />
               </BarChart>
             </ResponsiveContainer>
