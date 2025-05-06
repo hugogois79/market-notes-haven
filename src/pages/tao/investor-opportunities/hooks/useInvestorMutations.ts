@@ -27,21 +27,22 @@ export function useInvestorMutations(refetchCallbacks: {
 }) {
   const { refetchPreferences, refetchInvestments, refetchAnalytics, refetchMeetings, refetchAlerts } = refetchCallbacks;
   
-  // Save investment preference
+  // Save investment preference with improved error handling
   const saveInvestmentPreference = useCallback(async (preference: InvestmentPreference) => {
     try {
+      console.log("Saving investment preference:", preference);
       const updatedPreference = await updateInvestmentPreference(preference);
       toast.success("Investment preference saved successfully");
-      refetchPreferences();
+      await refetchPreferences();
       return updatedPreference;
     } catch (error) {
       console.error("Error saving investment preference:", error);
-      toast.error("Failed to save investment preference");
+      toast.error("Failed to save investment preference. Please check your inputs and try again.");
       throw error;
     }
   }, [refetchPreferences]);
 
-  // Add/update investment
+  // Add/update investment with improved error handling
   const saveInvestment = useCallback(async (investment: Partial<Investment>) => {
     try {
       let result;
@@ -54,17 +55,17 @@ export function useInvestorMutations(refetchCallbacks: {
         result = await addInvestment(investment as Omit<Investment, "id">);
         toast.success("Investment added successfully");
       }
-      refetchInvestments();
-      refetchAnalytics();
+      await refetchInvestments();
+      await refetchAnalytics();
       return result;
     } catch (error) {
       console.error("Error saving investment:", error);
-      toast.error("Failed to save investment");
+      toast.error("Failed to save investment. Please check your inputs and try again.");
       throw error;
     }
   }, [refetchInvestments, refetchAnalytics]);
 
-  // Schedule a meeting
+  // Schedule a meeting with proper error handling
   const saveMeeting = useCallback(async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
     try {
       let result: InvestorMeeting;
@@ -84,7 +85,7 @@ export function useInvestorMutations(refetchCallbacks: {
       return result;
     } catch (error) {
       console.error("Error scheduling meeting:", error);
-      toast.error("Failed to schedule meeting");
+      toast.error("Failed to schedule meeting. Please try again.");
       throw error;
     }
   }, [refetchMeetings]);
@@ -96,6 +97,7 @@ export function useInvestorMutations(refetchCallbacks: {
       refetchAlerts();
     } catch (error) {
       console.error("Error marking alert as read:", error);
+      toast.error("Failed to mark alert as read");
     }
   }, [refetchAlerts]);
 

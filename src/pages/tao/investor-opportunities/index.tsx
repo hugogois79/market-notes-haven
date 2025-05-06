@@ -17,6 +17,7 @@ import AlertsSection from "./components/AlertsSection";
 import InvestmentEditDialog from "./components/InvestmentEditDialog";
 import MeetingScheduler from "./components/meeting-scheduler";
 import { SubnetProject, Investment, InvestorMeeting } from "./types";
+import { toast } from "@/components/ui/use-toast";
 
 const InvestorOpportunitiesPage = () => {
   const [activeTab, setActiveTab] = useState("opportunities");
@@ -76,10 +77,26 @@ const InvestorOpportunitiesPage = () => {
     setIsSchedulerOpen(true);
   };
 
-  // Fix the return type issue by ensuring we explicitly return the Promise
-  const handleSaveMeeting = (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting) => {
-    // Return the Promise from saveMeeting directly
+  // Explicitly return the Promise to fix the TypeScript error
+  const handleSaveMeeting = (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
     return saveMeeting(meeting);
+  };
+
+  // Add a handler to properly handle investment saving with error handling
+  const handleSaveInvestment = async (investment: Partial<Investment>) => {
+    try {
+      const result = await saveInvestment(investment);
+      setIsInvestmentDialogOpen(false);
+      return result;
+    } catch (error) {
+      console.error("Failed to save investment:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save investment. Please try again."
+      });
+      throw error;
+    }
   };
 
   return (
@@ -173,7 +190,7 @@ const InvestorOpportunitiesPage = () => {
         investment={editingInvestment}
         project={selectedProject}
         projects={matchedOpportunities.map(match => match.project)}
-        onSave={saveInvestment}
+        onSave={handleSaveInvestment}
       />
 
       <MeetingScheduler 
