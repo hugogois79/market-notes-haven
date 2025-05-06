@@ -76,9 +76,8 @@ const InvestorOpportunitiesPage = () => {
     setIsSchedulerOpen(true);
   };
 
-  // Explicitly return the Promise from saveMeeting function
+  // Completely rewriting the function as a direct wrapper to ensure proper return type
   const handleSaveMeeting = (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
-    // Must use explicit return statement here to ensure the Promise is returned
     return saveMeeting(meeting);
   };
 
