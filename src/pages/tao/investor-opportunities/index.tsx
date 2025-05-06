@@ -75,7 +75,7 @@ const InvestorOpportunitiesPage = () => {
     setIsSchedulerOpen(true);
   };
 
-  // Fix the handleSaveMeeting function to explicitly return the Promise
+  // Explicitly return the Promise from saveMeeting to fix the type error
   const handleSaveMeeting = async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
     return saveMeeting(meeting);
   };
