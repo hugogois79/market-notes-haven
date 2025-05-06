@@ -1,136 +1,108 @@
 
-import { useCallback } from "react";
-import { toast } from "@/components/ui/use-toast";
-import {
-  updateInvestmentPreference,
-  addInvestment,
-  updateInvestment,
-  scheduleMeeting,
-  updateMeeting,
-  markAlertAsRead
-} from "../services/investorOpportunityService";
-import {
-  InvestmentPreference,
-  Investment,
-  InvestorMeeting,
-} from "../types";
+import { useMutation } from '@tanstack/react-query';
+import { toast } from '@/components/ui/use-toast';
+import { updateInvestmentPreference, updateInvestment, addInvestment, scheduleMeeting, updateMeeting, markAlertAsRead } from '../services/investorOpportunityService';
+import type { Investment, InvestmentPreference, InvestorMeeting } from '../types';
 
-/**
- * Custom hook for investor opportunity mutations
- */
-export function useInvestorMutations(refetchCallbacks: {
-  refetchPreferences: () => Promise<any>;
-  refetchInvestments: () => Promise<any>;
-  refetchAnalytics: () => Promise<any>;
-  refetchMeetings: () => Promise<any>;
-  refetchAlerts: () => Promise<any>;
-}) {
-  const { refetchPreferences, refetchInvestments, refetchAnalytics, refetchMeetings, refetchAlerts } = refetchCallbacks;
-  
-  // Save investment preference with improved error handling
-  const saveInvestmentPreference = useCallback(async (preference: InvestmentPreference) => {
-    try {
-      console.log("Saving investment preference:", preference);
-      const updatedPreference = await updateInvestmentPreference(preference);
+interface UseInvestorMutationsProps {
+  refetchPreferences: () => void;
+  refetchInvestments: () => void;
+  refetchAnalytics: () => void;
+  refetchMeetings: () => void;
+  refetchAlerts: () => void;
+}
+
+export function useInvestorMutations({
+  refetchPreferences,
+  refetchInvestments,
+  refetchAnalytics,
+  refetchMeetings,
+  refetchAlerts
+}: UseInvestorMutationsProps) {
+  // Save investment preference mutation
+  const { mutateAsync: saveInvestmentPreference } = useMutation({
+    mutationFn: (preference: InvestmentPreference) => {
+      return updateInvestmentPreference(preference);
+    },
+    onSuccess: () => {
+      refetchPreferences();
+    },
+    onError: (error) => {
+      console.error('Failed to save investment preference:', error);
       toast({
-        title: "Success",
-        description: "Investment preference saved successfully"
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to save investment preference. Please try again.'
       });
-      await refetchPreferences();
-      return updatedPreference;
-    } catch (error) {
-      console.error("Error saving investment preference:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to save investment preference. Please check your inputs and try again."
-      });
-      throw error;
+      throw error; // Re-throw the error so the component can handle it
     }
-  }, [refetchPreferences]);
+  });
 
-  // Add/update investment with improved error handling
-  const saveInvestment = useCallback(async (investment: Partial<Investment>) => {
-    try {
-      let result;
-      if ("id" in investment && investment.id) {
-        console.log("Updating existing investment:", investment);
-        result = await updateInvestment(investment as Investment);
-        toast({
-          title: "Success",
-          description: "Investment updated successfully"
-        });
+  // Save investment mutation
+  const { mutateAsync: saveInvestment } = useMutation({
+    mutationFn: (investment: Partial<Investment>) => {
+      if (investment.id) {
+        return updateInvestment(investment);
       } else {
-        console.log("Adding new investment:", investment);
-        result = await addInvestment(investment as Omit<Investment, "id">);
-        toast({
-          title: "Success",
-          description: "Investment added successfully"
-        });
+        return addInvestment(investment as Omit<Investment, 'id'>);
       }
-      await refetchInvestments();
-      await refetchAnalytics();
-      return result;
-    } catch (error) {
-      console.error("Error saving investment:", error);
+    },
+    onSuccess: () => {
+      refetchInvestments();
+      refetchAnalytics();
+    },
+    onError: (error) => {
+      console.error('Failed to save investment:', error);
       toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to save investment. Please check your inputs and try again."
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to save investment. Please try again.'
       });
       throw error;
     }
-  }, [refetchInvestments, refetchAnalytics]);
+  });
 
-  // Schedule a meeting with proper error handling
-  const saveMeeting = useCallback(async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
-    try {
-      let result: InvestorMeeting;
-      
-      if ("id" in meeting) {
-        result = await updateMeeting(meeting);
-        toast({
-          title: "Success",
-          description: "Meeting updated successfully"
-        });
+  // Save meeting mutation
+  const { mutateAsync: saveMeeting } = useMutation({
+    mutationFn: (meeting: Omit<InvestorMeeting, 'id'> | InvestorMeeting) => {
+      if ('id' in meeting) {
+        return updateMeeting(meeting);
       } else {
-        result = await scheduleMeeting(meeting);
-        toast({
-          title: "Success",
-          description: "Meeting scheduled successfully"
-        });
+        return scheduleMeeting(meeting);
       }
-      
-      // Make sure we await the refetch operation
-      await refetchMeetings();
-      
-      // Explicitly return the result
-      return result;
-    } catch (error) {
-      console.error("Error scheduling meeting:", error);
+    },
+    onSuccess: () => {
+      refetchMeetings();
+    },
+    onError: (error) => {
+      console.error('Failed to save meeting:', error);
       toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to schedule meeting. Please try again."
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to schedule meeting. Please try again.'
       });
       throw error;
     }
-  }, [refetchMeetings]);
+  });
 
-  // Mark alert as read
-  const markAlertRead = useCallback(async (alertId: string) => {
-    try {
-      await markAlertAsRead(alertId);
+  // Mark alert as read mutation
+  const { mutateAsync: markAlertRead } = useMutation({
+    mutationFn: (alertId: string) => {
+      return markAlertAsRead(alertId);
+    },
+    onSuccess: () => {
       refetchAlerts();
-    } catch (error) {
-      console.error("Error marking alert as read:", error);
+    },
+    onError: (error) => {
+      console.error('Failed to mark alert as read:', error);
       toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to mark alert as read"
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to update alert. Please try again.'
       });
+      throw error;
     }
-  }, [refetchAlerts]);
+  });
 
   return {
     saveInvestmentPreference,

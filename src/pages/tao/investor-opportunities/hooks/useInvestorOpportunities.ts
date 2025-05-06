@@ -59,18 +59,27 @@ export function useInvestorOpportunities() {
 
   // Refresh all data
   const refreshAllData = useCallback(() => {
-    refetchPreferences();
-    refetchProjects();
-    refetchInvestments();
-    refetchMeetings();
-    refetchAlerts();
-    refetchAnalytics();
-    refetchSubnets();
-    
-    toast({
-      title: "Success",
-      description: "Data refreshed"
-    });
+    try {
+      refetchPreferences();
+      refetchProjects();
+      refetchInvestments();
+      refetchMeetings();
+      refetchAlerts();
+      refetchAnalytics();
+      refetchSubnets();
+      
+      toast({
+        title: "Success",
+        description: "Data refreshed"
+      });
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to refresh data. Please try again."
+      });
+    }
   }, [
     refetchPreferences,
     refetchProjects,

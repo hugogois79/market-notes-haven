@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -69,6 +68,7 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
   const [newSubnetType, setNewSubnetType] = useState("");
   const [newTechnicalFocus, setNewTechnicalFocus] = useState("");
   const [selectedSubnet, setSelectedSubnet] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const form = useForm<z.infer<typeof preferencesSchema>>({
     resolver: zodResolver(preferencesSchema),
@@ -96,7 +96,7 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
   });
 
   // Update form when selected preference changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedPreference) {
       form.reset({
         name: selectedPreference.name,
@@ -129,9 +129,20 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
 
   const handleSavePreference = async (data: z.infer<typeof preferencesSchema>) => {
     try {
+      setIsSaving(true);
+      
+      if (data.maxTicketSize < data.minTicketSize) {
+        form.setError("maxTicketSize", {
+          type: "manual",
+          message: "Maximum ticket size must be greater than minimum ticket size"
+        });
+        setIsSaving(false);
+        return;
+      }
+      
       // Ensure all required properties are provided with non-optional values
       const preference: InvestmentPreference = {
-        id: selectedPreference?.id || `pref${Date.now()}`,
+        id: selectedPreference?.id || `pref-${Date.now()}`,
         name: data.name,
         subnetTypes: data.subnetTypes,
         technicalFocus: data.technicalFocus,
@@ -148,8 +159,19 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
       const savedPreference = await onSavePreference(preference);
       onSelectPreference(savedPreference);
       setIsEditing(false);
+      toast({
+        title: "Success",
+        description: "Investment profile saved successfully",
+      });
     } catch (error) {
       console.error("Error saving preference:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save investment preference. Please check your inputs and try again."
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -169,6 +191,7 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
       }
       
       form.setValue("subnetTypes", [...currentTypes, subnet.name]);
+      form.clearErrors("subnetTypes");
       setSelectedSubnet("");
     } else if (newSubnetType.trim()) {
       const currentTypes = form.getValues("subnetTypes");
@@ -182,6 +205,7 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
       }
       
       form.setValue("subnetTypes", [...currentTypes, newSubnetType.trim()]);
+      form.clearErrors("subnetTypes");
       setNewSubnetType("");
     }
   };
@@ -205,6 +229,7 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
     }
     
     form.setValue("technicalFocus", [...currentFocus, newTechnicalFocus.trim()]);
+    form.clearErrors("technicalFocus");
     setNewTechnicalFocus("");
   };
 
@@ -222,6 +247,7 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
       }
     } else {
       form.setValue("stagePreferences", [...currentStages, stage]);
+      form.clearErrors("stagePreferences");
     }
   };
 
@@ -232,10 +258,10 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
           <CardTitle>Investment Profile</CardTitle>
           {!isEditing && (
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} disabled={isLoading}>
                 Edit Profile
               </Button>
-              <Button variant="outline" size="sm" onClick={handleCreatePreference}>
+              <Button variant="outline" size="sm" onClick={handleCreatePreference} disabled={isLoading}>
                 <Plus className="h-4 w-4 mr-2" /> New Profile
               </Button>
             </div>
@@ -541,6 +567,7 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
+                          value={field.value}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -603,8 +630,20 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
                 <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isLoading}>
-                  <Save className="h-4 w-4 mr-2" /> Save Profile
+                <Button type="submit" disabled={isLoading || isSaving}>
+                  {isSaving ? (
+                    <span className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    </span>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" /> Save Profile
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
