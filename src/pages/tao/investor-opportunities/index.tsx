@@ -76,9 +76,10 @@ const InvestorOpportunitiesPage = () => {
     setIsSchedulerOpen(true);
   };
 
-  // Update the handleSaveMeeting function to explicitly return the Promise
+  // Fix the handleSaveMeeting function to ensure it returns a Promise<InvestorMeeting>
   const handleSaveMeeting = async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
-    return await saveMeeting(meeting);
+    // Make sure we're explicitly returning the Promise from saveMeeting
+    return saveMeeting(meeting);
   };
 
   return (
