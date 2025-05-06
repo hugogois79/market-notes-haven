@@ -33,7 +33,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Plus, X, Save, Trash2 } from "lucide-react";
 import { InvestmentPreference } from "../types";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
 
 interface InvestmentProfileManagerProps {
   preferences: InvestmentPreference[];
