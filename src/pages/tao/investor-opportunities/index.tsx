@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { 
   Tabs, 
@@ -5,18 +6,14 @@ import {
   TabsList, 
   TabsTrigger 
 } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
 import { useInvestorOpportunities } from "./hooks/useInvestorOpportunities";
-import InvestmentProfileManager from "./components/InvestmentProfileManager";
-import OpportunityMatchingEngine from "./components/OpportunityMatchingEngine";
-import ProjectDetailView from "./components/ProjectDetailView";
-import PortfolioManagementDashboard from "./components/PortfolioManagementDashboard";
-import AlertsSection from "./components/AlertsSection";
-import InvestmentEditDialog from "./components/InvestmentEditDialog";
-import MeetingScheduler from "./components/meeting-scheduler";
-import { SubnetProject, Investment, InvestorMeeting } from "./types";
+import { SubnetProject, Investment } from "./types";
 import { toast } from "@/components/ui/use-toast";
+import InvestorOpportunitiesHeader from "./components/InvestorOpportunitiesHeader";
+import OpportunitiesTabContent from "./components/OpportunitiesTabContent";
+import PortfolioManagementDashboard from "./components/PortfolioManagementDashboard";
+import InvestorDialogs from "./components/InvestorDialogs";
+import { useInvestmentActions } from "./components/InvestmentActions";
 
 const InvestorOpportunitiesPage = () => {
   const [activeTab, setActiveTab] = useState("opportunities");
@@ -44,14 +41,6 @@ const InvestorOpportunitiesPage = () => {
     refreshAllData
   } = useInvestorOpportunities();
 
-  const handleProjectSelect = (project: SubnetProject) => {
-    setSelectedProject(project);
-  };
-
-  const handleBackToList = () => {
-    setSelectedProject(null);
-  };
-
   const handleAddInvestment = (project?: SubnetProject) => {
     setEditingInvestment(project ? {
       id: "",
@@ -69,55 +58,49 @@ const InvestorOpportunitiesPage = () => {
     setIsInvestmentDialogOpen(true);
   };
 
-  const handleAddMeeting = (project?: SubnetProject) => {
-    if (project) {
-      setSelectedProject(project);
-    }
-    setIsSchedulerOpen(true);
-  };
-
-  // Fix the handleSaveMeeting function to explicitly return the Promise
-  const handleSaveMeeting = (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
-    return saveMeeting(meeting);
-  };
-
-  // Add a handler to properly handle investment saving with error handling
-  const handleSaveInvestment = async (investment: Partial<Investment>) => {
-    try {
-      const result = await saveInvestment(investment);
-      setIsInvestmentDialogOpen(false);
-      return result;
-    } catch (error) {
-      console.error("Failed to save investment:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to save investment. Please try again."
-      });
-      throw error;
-    }
-  };
+  const { 
+    handleProjectSelect, 
+    handleBackToList,
+    handleSaveInvestment,
+    handleSaveMeeting,
+    handleAddMeeting
+  } = useInvestmentActions({
+    onAddInvestment: handleAddInvestment,
+    onEditInvestment: handleEditInvestment,
+    onAddMeeting: (project) => {
+      if (project) {
+        setSelectedProject(project);
+      }
+      setIsSchedulerOpen(true);
+    },
+    saveInvestment: async (investment) => {
+      try {
+        const result = await saveInvestment(investment);
+        setIsInvestmentDialogOpen(false);
+        toast({
+          title: "Success",
+          description: `Investment ${investment.id ? "updated" : "added"} successfully`
+        });
+        return result;
+      } catch (error) {
+        console.error("Failed to save investment:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to save investment. Please try again."
+        });
+        throw error;
+      }
+    },
+    saveMeeting
+  });
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Investor Opportunities</h1>
-          <p className="text-muted-foreground">
-            Manage investment profiles, discover opportunities, and track performance
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={refreshAllData}
-          disabled={isLoading}
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Refresh
-        </Button>
-      </div>
+      <InvestorOpportunitiesHeader 
+        isLoading={isLoading}
+        onRefresh={refreshAllData}
+      />
 
       <Tabs defaultValue="opportunities" value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
@@ -126,48 +109,23 @@ const InvestorOpportunitiesPage = () => {
         </TabsList>
         
         <TabsContent value="opportunities" className="space-y-6">
-          {selectedProject ? (
-            <ProjectDetailView 
-              project={selectedProject}
-              onBackToList={handleBackToList}
-              onAddInvestment={() => handleAddInvestment(selectedProject)}
-              onScheduleMeeting={() => handleAddMeeting(selectedProject)}
-            />
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="col-span-1 md:col-span-3">
-                  <InvestmentProfileManager 
-                    preferences={preferences}
-                    selectedPreference={selectedPreference}
-                    onSelectPreference={setSelectedPreference}
-                    onSavePreference={saveInvestmentPreference}
-                    isLoading={isLoading}
-                    availableSubnets={availableSubnets}
-                  />
-                </div>
-                <div className="col-span-1">
-                  <AlertsSection 
-                    alerts={alerts}
-                    unreadCount={unreadAlertsCount}
-                    onMarkRead={markAlertRead}
-                    onSelectProject={(projectId) => {
-                      const project = matchedOpportunities.find(m => m.project.id === projectId)?.project;
-                      if (project) {
-                        handleProjectSelect(project);
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-              
-              <OpportunityMatchingEngine 
-                matchedOpportunities={matchedOpportunities}
-                isLoading={isLoading}
-                onSelectProject={handleProjectSelect}
-              />
-            </>
-          )}
+          <OpportunitiesTabContent
+            selectedProject={selectedProject}
+            matchedOpportunities={matchedOpportunities}
+            alerts={alerts}
+            unreadAlertsCount={unreadAlertsCount}
+            preferences={preferences}
+            selectedPreference={selectedPreference}
+            availableSubnets={availableSubnets}
+            isLoading={isLoading}
+            onBackToList={() => handleBackToList(setSelectedProject)}
+            onSelectProject={(project) => handleProjectSelect(project, setSelectedProject)}
+            onSelectPreference={setSelectedPreference}
+            onSavePreference={saveInvestmentPreference}
+            onAddInvestment={handleAddInvestment}
+            onScheduleMeeting={handleAddMeeting}
+            onMarkAlertRead={markAlertRead}
+          />
         </TabsContent>
         
         <TabsContent value="portfolio">
@@ -183,21 +141,17 @@ const InvestorOpportunitiesPage = () => {
         </TabsContent>
       </Tabs>
 
-      <InvestmentEditDialog 
-        open={isInvestmentDialogOpen}
-        onOpenChange={setIsInvestmentDialogOpen}
-        investment={editingInvestment}
-        project={selectedProject}
-        projects={matchedOpportunities.map(match => match.project)}
-        onSave={handleSaveInvestment}
-      />
-
-      <MeetingScheduler 
-        open={isSchedulerOpen}
-        onOpenChange={setIsSchedulerOpen}
-        project={selectedProject}
+      <InvestorDialogs
+        isInvestmentDialogOpen={isInvestmentDialogOpen}
+        setIsInvestmentDialogOpen={setIsInvestmentDialogOpen}
+        editingInvestment={editingInvestment}
+        selectedProject={selectedProject}
+        matchedOpportunities={matchedOpportunities}
+        onSaveInvestment={handleSaveInvestment}
+        isSchedulerOpen={isSchedulerOpen}
+        setIsSchedulerOpen={setIsSchedulerOpen}
         meetings={meetings}
-        onSave={handleSaveMeeting}
+        onSaveMeeting={handleSaveMeeting}
       />
     </div>
   );
