@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { 
   Tabs, 
@@ -77,7 +78,7 @@ const InvestorOpportunitiesPage = () => {
 
   // Fix the handleSaveMeeting function to correctly return the Promise
   const handleSaveMeeting = async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
-    // Using return statement to explicitly return the Promise
+    // Explicitly return the Promise returned by saveMeeting
     return saveMeeting(meeting);
   };
 
