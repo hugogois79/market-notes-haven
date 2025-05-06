@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { 
   Tabs, 
@@ -75,9 +76,9 @@ const InvestorOpportunitiesPage = () => {
     setIsSchedulerOpen(true);
   };
 
-  // Fixed handleSaveMeeting function to properly return the Promise
+  // Make sure to explicitly return the Promise from saveMeeting
   const handleSaveMeeting = async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
-    return saveMeeting(meeting);
+    return await saveMeeting(meeting);
   };
 
   return (
