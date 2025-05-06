@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { 
   Tabs, 
@@ -77,7 +78,7 @@ const InvestorOpportunitiesPage = () => {
 
   // Fix for TypeScript error - ensure we're explicitly returning the Promise
   const handleSaveMeeting = (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
-    // Make sure we return the Promise directly without await
+    // We need to explicitly return the Promise from saveMeeting
     return saveMeeting(meeting);
   };
 
