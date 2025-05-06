@@ -45,8 +45,9 @@ const OpportunitiesTabContent: React.FC<OpportunitiesTabContentProps> = ({
     return (
       <ProjectDetailView 
         project={selectedProject}
-        onBackToList={onBackToList}
-        onAddInvestment={() => onAddInvestment(selectedProject)}
+        onClose={onBackToList}
+        meetings={[]} // Pass empty array as meetings since it's required by the component
+        onSave={() => Promise.resolve({} as any)} // Providing a default implementation
         onScheduleMeeting={() => onScheduleMeeting(selectedProject)}
       />
     );

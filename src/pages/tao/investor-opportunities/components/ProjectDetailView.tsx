@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Card,
@@ -32,12 +33,11 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import CommunicationTemplates from "./CommunicationTemplates";
-import MeetingScheduler from "./MeetingScheduler";
+import MeetingScheduler from "./meeting-scheduler/MeetingScheduler";
 
 interface ProjectDetailViewProps {
   project: SubnetProject;
   matchData?: OpportunityMatch;
-  comparisonProjects?: SubnetProject[];
   meetings: InvestorMeeting[];
   onScheduleMeeting: (meeting: Omit<InvestorMeeting, "id">) => Promise<InvestorMeeting>;
   onClose: () => void;
