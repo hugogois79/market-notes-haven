@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { 
   Tabs, 
@@ -76,9 +75,8 @@ const InvestorOpportunitiesPage = () => {
     setIsSchedulerOpen(true);
   };
 
-  // Fix for TypeScript error - ensure we're explicitly returning the Promise
+  // Ensure we're explicitly returning the Promise from saveMeeting
   const handleSaveMeeting = (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
-    // We need to explicitly return the Promise from saveMeeting
     return saveMeeting(meeting);
   };
 
