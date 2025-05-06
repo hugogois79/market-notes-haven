@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Card,
@@ -159,7 +160,11 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
       
       const currentTypes = form.getValues("subnetTypes");
       if (currentTypes.includes(subnet.name)) {
-        toast.error("This subnet type already exists");
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "This subnet type already exists"
+        });
         return;
       }
       
@@ -168,7 +173,11 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
     } else if (newSubnetType.trim()) {
       const currentTypes = form.getValues("subnetTypes");
       if (currentTypes.includes(newSubnetType.trim())) {
-        toast.error("This subnet type already exists");
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "This subnet type already exists"
+        });
         return;
       }
       
@@ -187,7 +196,11 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
     
     const currentFocus = form.getValues("technicalFocus");
     if (currentFocus.includes(newTechnicalFocus.trim())) {
-      toast.error("This technical focus already exists");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "This technical focus already exists"
+      });
       return;
     }
     

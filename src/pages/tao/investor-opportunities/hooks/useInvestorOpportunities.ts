@@ -1,6 +1,7 @@
 
+
 import { useState, useCallback } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
 import { SubnetProject } from "../types";
 import { useInvestorData } from "./useInvestorData";
 import { useInvestorMutations } from "./useInvestorMutations";
@@ -67,7 +68,10 @@ export function useInvestorOpportunities() {
     refetchAnalytics();
     refetchSubnets();
     
-    toast.success("Data refreshed");
+    toast({
+      title: "Success",
+      description: "Data refreshed"
+    });
   }, [
     refetchPreferences,
     refetchProjects,
@@ -103,3 +107,4 @@ export function useInvestorOpportunities() {
     refreshAllData
   };
 }
+
