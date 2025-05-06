@@ -21,8 +21,14 @@ export function useInvestorMutations({
 }: UseInvestorMutationsProps) {
   // Save investment preference mutation
   const { mutateAsync: saveInvestmentPreference, isPending: isSavingPreference } = useMutation({
-    mutationFn: (preference: InvestmentPreference) => {
-      return updateInvestmentPreference(preference);
+    mutationFn: async (preference: InvestmentPreference) => {
+      try {
+        const result = await updateInvestmentPreference(preference);
+        return result;
+      } catch (error) {
+        console.error('Error in saveInvestmentPreference:', error);
+        throw error; // Re-throw to be caught by onError
+      }
     },
     onSuccess: () => {
       refetchPreferences();
@@ -31,12 +37,12 @@ export function useInvestorMutations({
         description: "Investment preference saved successfully"
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Failed to save investment preference:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to save investment preference. Please try again.'
+        description: `Failed to save investment preference: ${error?.message || 'Please try again'}`
       });
       throw error; // Re-throw the error so the component can handle it
     }

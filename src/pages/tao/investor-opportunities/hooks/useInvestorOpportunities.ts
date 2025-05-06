@@ -98,7 +98,22 @@ export function useInvestorOpportunities() {
   const unreadAlertsCount = alerts.filter(alert => !alert.read).length;
 
   // Combine loading states
-  const isLoading = isDataLoading || isSavingPreference || isSavingInvestment || isSavingMeeting || isMarkingAlertRead;
+  const isLoading = isDataLoading || isSavingInvestment || isSavingMeeting || isMarkingAlertRead;
+
+  const handleSaveInvestmentPreference = async (preference: any) => {
+    try {
+      const result = await saveInvestmentPreference(preference);
+      return result;
+    } catch (error) {
+      console.error("Error saving investment preference:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save investment preference. Please try again."
+      });
+      throw error;
+    }
+  };
 
   return {
     preferences,
@@ -116,7 +131,7 @@ export function useInvestorOpportunities() {
     availableSubnets,
     isLoading,
     isSavingPreference,
-    saveInvestmentPreference,
+    saveInvestmentPreference: handleSaveInvestmentPreference,
     saveInvestment,
     saveMeeting,
     markAlertRead,
