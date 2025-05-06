@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Card,
@@ -31,7 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Plus, X, Save, Trash2 } from "lucide-react";
+import { Plus, X, Save, Trash2, Loader2 } from "lucide-react";
 import { InvestmentPreference } from "../types";
 import { toast } from "@/components/ui/use-toast";
 
@@ -41,6 +42,7 @@ interface InvestmentProfileManagerProps {
   onSelectPreference: (preference: InvestmentPreference) => void;
   onSavePreference: (preference: InvestmentPreference) => Promise<InvestmentPreference>;
   isLoading: boolean;
+  isSaving: boolean;
   availableSubnets?: Array<{id: string, name: string}>;
 }
 
@@ -54,6 +56,9 @@ const preferencesSchema = z.object({
   requiresCoInvestment: z.boolean(),
   decisionTimelineDays: z.number().min(1, "Decision timeline must be at least 1 day"),
   riskTolerance: z.enum(["low", "medium", "high"])
+}).refine(data => data.maxTicketSize >= data.minTicketSize, {
+  message: "Maximum ticket size must be greater than minimum ticket size",
+  path: ["maxTicketSize"]
 });
 
 const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
@@ -62,13 +67,13 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
   onSelectPreference,
   onSavePreference,
   isLoading,
+  isSaving,
   availableSubnets = []
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [newSubnetType, setNewSubnetType] = useState("");
   const [newTechnicalFocus, setNewTechnicalFocus] = useState("");
   const [selectedSubnet, setSelectedSubnet] = useState<string>("");
-  const [isSaving, setIsSaving] = useState(false);
 
   const form = useForm<z.infer<typeof preferencesSchema>>({
     resolver: zodResolver(preferencesSchema),
@@ -129,17 +134,6 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
 
   const handleSavePreference = async (data: z.infer<typeof preferencesSchema>) => {
     try {
-      setIsSaving(true);
-      
-      if (data.maxTicketSize < data.minTicketSize) {
-        form.setError("maxTicketSize", {
-          type: "manual",
-          message: "Maximum ticket size must be greater than minimum ticket size"
-        });
-        setIsSaving(false);
-        return;
-      }
-      
       // Ensure all required properties are provided with non-optional values
       const preference: InvestmentPreference = {
         id: selectedPreference?.id || `pref-${Date.now()}`,
@@ -159,19 +153,9 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
       const savedPreference = await onSavePreference(preference);
       onSelectPreference(savedPreference);
       setIsEditing(false);
-      toast({
-        title: "Success",
-        description: "Investment profile saved successfully",
-      });
     } catch (error) {
       console.error("Error saving preference:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to save investment preference. Please check your inputs and try again."
-      });
-    } finally {
-      setIsSaving(false);
+      // Toast notification is handled in the mutation hook
     }
   };
 
@@ -627,16 +611,13 @@ const InvestmentProfileManager: React.FC<InvestmentProfileManagerProps> = ({
               </div>
               
               <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
+                <Button type="button" variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isLoading || isSaving}>
                   {isSaving ? (
                     <span className="flex items-center">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
+                      <Loader2 className="animate-spin mr-2 h-4 w-4" />
                       Saving...
                     </span>
                   ) : (

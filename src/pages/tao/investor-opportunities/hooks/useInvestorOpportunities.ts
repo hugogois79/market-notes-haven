@@ -23,7 +23,7 @@ export function useInvestorOpportunities() {
     alerts,
     availableSubnets,
     portfolioAnalytics,
-    isLoading,
+    isLoading: isDataLoading,
     refetchPreferences,
     refetchProjects,
     refetchInvestments,
@@ -48,7 +48,11 @@ export function useInvestorOpportunities() {
     saveInvestmentPreference,
     saveInvestment,
     saveMeeting,
-    markAlertRead
+    markAlertRead,
+    isSavingPreference,
+    isSavingInvestment,
+    isSavingMeeting,
+    isMarkingAlertRead
   } = useInvestorMutations({
     refetchPreferences,
     refetchInvestments,
@@ -93,6 +97,9 @@ export function useInvestorOpportunities() {
   // Get unread alerts count
   const unreadAlertsCount = alerts.filter(alert => !alert.read).length;
 
+  // Combine loading states
+  const isLoading = isDataLoading || isSavingPreference || isSavingInvestment || isSavingMeeting || isMarkingAlertRead;
+
   return {
     preferences,
     selectedPreference,
@@ -108,6 +115,7 @@ export function useInvestorOpportunities() {
     setSelectedProject,
     availableSubnets,
     isLoading,
+    isSavingPreference,
     saveInvestmentPreference,
     saveInvestment,
     saveMeeting,

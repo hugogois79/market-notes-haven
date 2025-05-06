@@ -15,6 +15,7 @@ interface OpportunitiesTabContentProps {
   selectedPreference: any;
   availableSubnets: any[];
   isLoading: boolean;
+  isSavingPreference: boolean;
   onBackToList: () => void;
   onSelectProject: (project: SubnetProject) => void;
   onSelectPreference: (preference: any) => void;
@@ -33,6 +34,7 @@ const OpportunitiesTabContent: React.FC<OpportunitiesTabContentProps> = ({
   selectedPreference,
   availableSubnets,
   isLoading,
+  isSavingPreference,
   onBackToList,
   onSelectProject,
   onSelectPreference,
@@ -62,6 +64,7 @@ const OpportunitiesTabContent: React.FC<OpportunitiesTabContentProps> = ({
             onSelectPreference={onSelectPreference}
             onSavePreference={onSavePreference}
             isLoading={isLoading}
+            isSaving={isSavingPreference}
             availableSubnets={availableSubnets}
           />
         </div>

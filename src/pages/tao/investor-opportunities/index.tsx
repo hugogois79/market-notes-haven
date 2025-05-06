@@ -34,6 +34,7 @@ const InvestorOpportunitiesPage = () => {
     unreadAlertsCount,
     availableSubnets,
     isLoading,
+    isSavingPreference,
     saveInvestmentPreference,
     saveInvestment,
     saveMeeting,
@@ -120,6 +121,7 @@ const InvestorOpportunitiesPage = () => {
             selectedPreference={selectedPreference}
             availableSubnets={availableSubnets}
             isLoading={isLoading}
+            isSavingPreference={isSavingPreference}
             onBackToList={() => handleBackToList(setSelectedProject)}
             onSelectProject={(project) => handleProjectSelect(project, setSelectedProject)}
             onSelectPreference={setSelectedPreference}

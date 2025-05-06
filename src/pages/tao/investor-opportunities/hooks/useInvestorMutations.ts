@@ -20,12 +20,16 @@ export function useInvestorMutations({
   refetchAlerts
 }: UseInvestorMutationsProps) {
   // Save investment preference mutation
-  const { mutateAsync: saveInvestmentPreference } = useMutation({
+  const { mutateAsync: saveInvestmentPreference, isPending: isSavingPreference } = useMutation({
     mutationFn: (preference: InvestmentPreference) => {
       return updateInvestmentPreference(preference);
     },
     onSuccess: () => {
       refetchPreferences();
+      toast({
+        title: "Success",
+        description: "Investment preference saved successfully"
+      });
     },
     onError: (error) => {
       console.error('Failed to save investment preference:', error);
@@ -39,7 +43,7 @@ export function useInvestorMutations({
   });
 
   // Save investment mutation
-  const { mutateAsync: saveInvestment } = useMutation({
+  const { mutateAsync: saveInvestment, isPending: isSavingInvestment } = useMutation({
     mutationFn: (investment: Partial<Investment>) => {
       if (investment.id) {
         return updateInvestment(investment);
@@ -63,7 +67,7 @@ export function useInvestorMutations({
   });
 
   // Save meeting mutation
-  const { mutateAsync: saveMeeting } = useMutation({
+  const { mutateAsync: saveMeeting, isPending: isSavingMeeting } = useMutation({
     mutationFn: (meeting: Omit<InvestorMeeting, 'id'> | InvestorMeeting) => {
       if ('id' in meeting) {
         return updateMeeting(meeting);
@@ -86,7 +90,7 @@ export function useInvestorMutations({
   });
 
   // Mark alert as read mutation
-  const { mutateAsync: markAlertRead } = useMutation({
+  const { mutateAsync: markAlertRead, isPending: isMarkingAlertRead } = useMutation({
     mutationFn: (alertId: string) => {
       return markAlertAsRead(alertId);
     },
@@ -108,6 +112,10 @@ export function useInvestorMutations({
     saveInvestmentPreference,
     saveInvestment,
     saveMeeting,
-    markAlertRead
+    markAlertRead,
+    isSavingPreference,
+    isSavingInvestment,
+    isSavingMeeting,
+    isMarkingAlertRead
   };
 }
