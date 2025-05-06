@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { 
   Tabs, 
@@ -76,9 +75,10 @@ const InvestorOpportunitiesPage = () => {
     setIsSchedulerOpen(true);
   };
 
-  const handleSaveMeeting = async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
-    // Explicitly return the Promise from saveMeeting to fix TypeScript error
-    return await saveMeeting(meeting);
+  // Fix for TypeScript error - ensure we're explicitly returning the Promise
+  const handleSaveMeeting = (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
+    // Make sure we return the Promise directly without await
+    return saveMeeting(meeting);
   };
 
   return (
