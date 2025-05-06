@@ -1,5 +1,4 @@
 
-
 import { useState, useCallback } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { SubnetProject } from "../types";
@@ -107,4 +106,3 @@ export function useInvestorOpportunities() {
     refreshAllData
   };
 }
-
