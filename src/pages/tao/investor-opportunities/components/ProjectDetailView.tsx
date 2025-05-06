@@ -41,6 +41,7 @@ interface ProjectDetailViewProps {
   meetings: InvestorMeeting[];
   onScheduleMeeting: (meeting: Omit<InvestorMeeting, "id">) => Promise<InvestorMeeting>;
   onClose: () => void;
+  onSave?: () => Promise<any>; // Added onSave as an optional prop
 }
 
 const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
@@ -48,7 +49,8 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
   matchData,
   meetings,
   onScheduleMeeting,
-  onClose
+  onClose,
+  onSave = () => Promise.resolve({}) // Default implementation if not provided
 }) => {
   const [activeTab, setActiveTab] = useState("overview");
   
