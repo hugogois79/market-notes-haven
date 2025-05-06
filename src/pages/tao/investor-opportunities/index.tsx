@@ -76,8 +76,7 @@ const InvestorOpportunitiesPage = () => {
   };
 
   const handleSaveMeeting = async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
-    const result = await saveMeeting(meeting);
-    return result;
+    return saveMeeting(meeting);
   };
 
   return (
