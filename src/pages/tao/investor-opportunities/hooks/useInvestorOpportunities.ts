@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -191,7 +190,7 @@ export function useInvestorOpportunities() {
     }
   }, [refetchInvestments, refetchAnalytics]);
 
-  // Schedule a meeting
+  // Schedule a meeting - ensure it returns Promise<InvestorMeeting>
   const saveMeeting = useCallback(async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
     try {
       let result: InvestorMeeting;
