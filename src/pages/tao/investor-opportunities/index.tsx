@@ -77,7 +77,7 @@ const InvestorOpportunitiesPage = () => {
     setIsSchedulerOpen(true);
   };
 
-  // Explicitly return the Promise to fix the TypeScript error
+  // Fix: Explicitly return the Promise to resolve TypeScript error
   const handleSaveMeeting = (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
     return saveMeeting(meeting);
   };
