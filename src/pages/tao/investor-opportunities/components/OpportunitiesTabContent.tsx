@@ -20,7 +20,7 @@ interface OpportunitiesTabContentProps {
   onSelectPreference: (preference: any) => void;
   onSavePreference: (preference: any) => Promise<any>;
   onAddInvestment: (project?: SubnetProject) => void;
-  onScheduleMeeting: (project?: SubnetProject) => void;
+  onScheduleMeeting: (project?: SubnetProject) => Promise<any>;
   onMarkAlertRead: (alertId: string) => Promise<void>;
 }
 

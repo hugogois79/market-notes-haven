@@ -72,6 +72,8 @@ const InvestorOpportunitiesPage = () => {
         setSelectedProject(project);
       }
       setIsSchedulerOpen(true);
+      // Return a promise to match the expected type
+      return Promise.resolve(null);
     },
     saveInvestment: async (investment) => {
       try {

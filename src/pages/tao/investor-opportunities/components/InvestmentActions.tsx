@@ -5,7 +5,7 @@ import { SubnetProject, Investment, InvestorMeeting } from "../types";
 interface InvestmentActionsProps {
   onAddInvestment: (project?: SubnetProject) => void;
   onEditInvestment: (investment: Investment) => void;
-  onAddMeeting: (project?: SubnetProject) => void;
+  onAddMeeting: (project?: SubnetProject) => Promise<any>;
   saveInvestment: (investment: Partial<Investment>) => Promise<Investment>;
   saveMeeting: (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting) => Promise<InvestorMeeting>;
 }
@@ -34,7 +34,7 @@ export const useInvestmentActions = ({
   };
 
   const handleAddMeeting = (project?: SubnetProject) => {
-    onAddMeeting(project);
+    return onAddMeeting(project);
   };
 
   // Properly handle investment saving with error handling
