@@ -78,8 +78,9 @@ const InvestorOpportunitiesPage = () => {
 
   // Fix the handleSaveMeeting function to ensure it returns a Promise<InvestorMeeting>
   const handleSaveMeeting = async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
-    // Make sure we're explicitly returning the Promise from saveMeeting
-    return saveMeeting(meeting);
+    // Explicitly return the Promise result to ensure TypeScript recognizes the return type
+    const result = await saveMeeting(meeting);
+    return result;
   };
 
   return (
