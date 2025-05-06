@@ -195,6 +195,7 @@ export function useInvestorOpportunities() {
   const saveMeeting = useCallback(async (meeting: Omit<InvestorMeeting, "id"> | InvestorMeeting): Promise<InvestorMeeting> => {
     try {
       let result: InvestorMeeting;
+      
       if ("id" in meeting) {
         result = await updateMeeting(meeting);
         toast.success("Meeting updated successfully");
@@ -202,7 +203,11 @@ export function useInvestorOpportunities() {
         result = await scheduleMeeting(meeting);
         toast.success("Meeting scheduled successfully");
       }
+      
+      // Make sure we await the refetch operation
       await refetchMeetings();
+      
+      // Explicitly return the result
       return result;
     } catch (error) {
       console.error("Error scheduling meeting:", error);
