@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { 
   Tabs, 
@@ -14,7 +15,7 @@ import ProjectDetailView from "./components/ProjectDetailView";
 import PortfolioManagementDashboard from "./components/PortfolioManagementDashboard";
 import AlertsSection from "./components/AlertsSection";
 import InvestmentEditDialog from "./components/InvestmentEditDialog";
-import MeetingScheduler from "./components/MeetingScheduler";
+import MeetingScheduler from "./components/meeting-scheduler";
 import { SubnetProject, Investment, InvestorMeeting } from "./types";
 
 const InvestorOpportunitiesPage = () => {
