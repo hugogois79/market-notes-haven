@@ -70,10 +70,16 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
   const handleTagsChangeAndSave = (tags: Tag[] | string[]) => {
     handleTagsChange(tags);
     
-    // Process tags to match format expected by API
-    const processedTags = tags.map(tag => 
-      typeof tag === 'string' ? tag : tag.name || tag.id || String(tag)
-    );
+    // Process tags to match format expected by API - ensure we're using the correct up-to-date tag names
+    const processedTags = tags.map(tag => {
+      if (typeof tag === 'string') {
+        return tag;
+      }
+      // Make sure we're using the most up-to-date tag name from the tag object
+      return tag.name || tag.id || String(tag);
+    });
+    
+    console.log("Saving tags with latest names:", processedTags);
     
     // Immediately save tag changes
     handleSaveWithChanges({ tags: processedTags }, false);

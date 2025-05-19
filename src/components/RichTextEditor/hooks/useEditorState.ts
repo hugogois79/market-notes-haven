@@ -87,9 +87,10 @@ export function useEditorState({
     
     const tagName = tagInput.trim();
     
+    // Check if tag with this name already exists in initialTags (case insensitive)
     const tagExists = initialTags.some((tag) => 
       typeof tag === 'string' 
-        ? tag === tagName 
+        ? tag.toLowerCase() === tagName.toLowerCase()
         : tag.name.toLowerCase() === tagName.toLowerCase()
     );
     
@@ -97,6 +98,7 @@ export function useEditorState({
       try {
         const tagsToSearch = availableTagsForSelection || fetchedTags;
         
+        // Check if tag exists in available tags (case insensitive)
         const existingTag = tagsToSearch.find(
           tag => tag && tag.name && tag.name.toLowerCase() === tagName.toLowerCase()
         );
@@ -134,6 +136,7 @@ export function useEditorState({
   };
 
   const handleSelectTag = (tag: Tag) => {
+    // Check if tag already exists in initialTags by comparing id (more reliable than name)
     const tagExists = initialTags.some(t => 
       typeof t === 'string' ? t === tag.id : t.id === tag.id
     );

@@ -28,6 +28,10 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
       const validatedChanges = {
         ...changes,
         title: changes.title || undefined, // Ensure title is passed through if provided
+        // Important: Ensure tags are properly processed
+        tags: changes.tags !== undefined ? 
+          (Array.isArray(changes.tags) ? changes.tags : 
+            (changes.tags ? [changes.tags] : [])) : undefined,
         // Important: Ensure attachments are properly processed
         attachments: changes.attachments !== undefined ? 
           (Array.isArray(changes.attachments) ? changes.attachments : 
