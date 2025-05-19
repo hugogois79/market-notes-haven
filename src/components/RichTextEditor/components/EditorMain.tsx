@@ -82,9 +82,14 @@ const EditorMain: React.FC<EditorMainProps> = ({
   tradeInfo,
   onTradeInfoChange = () => {},
   hasConclusion = true,
+  onPrint,
 }) => {
   const isTradingCategory = category === "Trading" || category === "Pair Trading";
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+
+  const handleOpenPrintModal = () => {
+    setIsPrintModalOpen(true);
+  };
 
   return (
     <div className="flex flex-col h-full max-h-[calc(100vh-100px)] overflow-hidden">
@@ -93,12 +98,15 @@ const EditorMain: React.FC<EditorMainProps> = ({
         onTitleChange={onTitleChange}
         category={category}
         onCategoryChange={onCategoryChange}
+        isPrintMode={false}
+        onPrint={handleOpenPrintModal}
       />
       
       <EditorStatusBar 
         isSaving={isSaving}
         lastSaved={lastSaved}
         onSave={handleManualSave}
+        onPrint={handleOpenPrintModal}
       />
       
       <div className="flex flex-col overflow-hidden flex-1 relative">

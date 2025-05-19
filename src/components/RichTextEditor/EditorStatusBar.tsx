@@ -1,7 +1,9 @@
 
 import React from "react";
-import { Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Save, Clock, Printer } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 interface EditorStatusBarProps {
   isSaving: boolean;
@@ -10,27 +12,47 @@ interface EditorStatusBarProps {
   onPrint?: () => void;
 }
 
-const EditorStatusBar = ({ isSaving, lastSaved, onSave }: EditorStatusBarProps) => {
+const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
+  isSaving,
+  lastSaved,
+  onSave,
+  onPrint
+}) => {
   return (
-    <div className="flex items-center justify-between py-2 px-4 bg-background z-20 border-b w-full sticky top-0">
-      <div className="text-sm text-muted-foreground">
-        {isSaving ? (
-          <span className="text-brand">Saving...</span>
-        ) : lastSaved ? (
-          <span>Last saved: {lastSaved.toLocaleTimeString()}</span>
-        ) : null}
+    <div className="flex items-center justify-between py-1 px-2 bg-muted/30 text-xs text-muted-foreground border-t border-b">
+      <div className="flex items-center gap-2">
+        <Clock size={12} />
+        <span>
+          {lastSaved
+            ? `Last saved ${formatDistanceToNow(lastSaved, { addSuffix: true })}`
+            : "Not saved yet"}
+        </span>
+        {isSaving && <span className="text-blue-500 animate-pulse">Saving...</span>}
       </div>
-      
-      <div className="flex items-center gap-2 ml-auto">
+      <div className="flex items-center gap-2">
+        {onPrint && (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs flex items-center gap-1"
+              onClick={onPrint}
+            >
+              <Printer size={12} />
+              Print
+            </Button>
+            <Separator orientation="vertical" className="h-4" />
+          </>
+        )}
         <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs flex items-center gap-1"
           onClick={onSave}
           disabled={isSaving}
-          variant="outline"
-          className="gap-2 whitespace-nowrap"
-          size="sm"
         >
-          <Save size={16} />
-          {isSaving ? "Saving..." : "Save"}
+          <Save size={12} />
+          Save
         </Button>
       </div>
     </div>

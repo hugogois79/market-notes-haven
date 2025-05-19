@@ -3,6 +3,7 @@ import React, { useState, useCallback } from "react";
 import { Note, Tag, Token, TradeInfo } from "@/types";
 import { useDebounce } from "@/hooks/useDebounce";
 import EditorMain from "@/components/RichTextEditor/components/EditorMain";
+import { printNote } from "@/utils/printUtils";
 
 interface NoteEditorCoreProps {
   currentNote: Note;
@@ -78,6 +79,20 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
       console.error("Error auto-saving note:", error);
     }
   }, [content, isSaving, onSave]);
+
+  // Handle printing the note directly
+  const handlePrint = useCallback(() => {
+    printNote({
+      ...currentNote,
+      title: localTitle || "Untitled Note",
+      content: content,
+      category: localCategory,
+      tags: linkedTags.map(tag => typeof tag === 'string' ? tag : tag.id),
+      summary: summaryState?.summary,
+      attachment_url: currentNote.attachment_url,
+      attachments: attachments,
+    });
+  }, [currentNote, localTitle, content, localCategory, linkedTags, summaryState, attachments]);
 
   // Handler for adding a tag
   const handleAddTag = async () => {
@@ -172,6 +187,7 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
       tradeInfo={localTradeInfo}
       onTradeInfoChange={onTradeInfoChange}
       hasConclusion={hasConclusion}
+      onPrint={handlePrint}
     />
   );
 };

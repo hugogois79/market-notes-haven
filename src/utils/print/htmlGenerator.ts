@@ -1,3 +1,4 @@
+
 import { Note } from "@/types";
 import { formatDate } from "./formatUtils";
 import { getPrintStyles } from "./printStyles";
@@ -6,12 +7,15 @@ import { getPrintStyles } from "./printStyles";
  * Generates HTML for the print window
  */
 export const generatePrintHtml = (note: Note): string => {
+  // Ensure the title is not empty
+  const noteTitle = note.title ? note.title.trim() : "Untitled Note";
+  
   // Format created/updated dates
   const createdDate = formatDate(note.createdAt);
   const updatedDate = formatDate(note.updatedAt);
   
   // Format tags
-  const tagsHtml = note.tags.length > 0 
+  const tagsHtml = note.tags && note.tags.length > 0 
     ? `
       <div class="print-tags">
         ${note.tags.map(tag => `<span class="print-tag">${tag}</span>`).join(' ')}
@@ -135,7 +139,7 @@ export const generatePrintHtml = (note: Note): string => {
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>${note.title}</title>
+      <title>${noteTitle}</title>
       ${printStyles}
       <style>
         /* Additional overrides for print */
@@ -170,9 +174,9 @@ export const generatePrintHtml = (note: Note): string => {
     <body class="${vacationBodyClass}">
       <div class="print-wrapper">
         <div class="print-header">
-          <h1 class="print-title">${note.title}</h1>
+          <h1 class="print-title">${noteTitle}</h1>
           <div class="print-meta">
-            <span class="print-category">${note.category}</span>
+            <span class="print-category">${note.category || 'Uncategorized'}</span>
             <span>Created: ${createdDate}</span>
             <span> · </span>
             <span>Updated: ${updatedDate}</span>

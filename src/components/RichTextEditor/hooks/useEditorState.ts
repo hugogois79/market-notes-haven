@@ -88,13 +88,19 @@ export function useEditorState({
     const tagName = tagInput.trim();
     
     // Check if tag with this name already exists in initialTags (case insensitive)
+    // Fixed the TypeScript issue by proper type checking
     const tagExists = initialTags.some((tag) => {
       if (typeof tag === 'string') {
-        // Make sure to handle string tags safely
-        return tag.toLowerCase ? tag.toLowerCase() === tagName.toLowerCase() : tag === tagName;
+        // For string tags, safely handle toLowerCase
+        return typeof tag === 'string' && 
+               typeof tagName === 'string' && 
+               tag.toLowerCase() === tagName.toLowerCase();
       }
       // For Tag objects, ensure name exists before calling toLowerCase
-      return tag.name && tag.name.toLowerCase() === tagName.toLowerCase();
+      return tag.name && 
+             typeof tag.name === 'string' && 
+             typeof tagName === 'string' && 
+             tag.name.toLowerCase() === tagName.toLowerCase();
     });
     
     if (!tagExists) {
@@ -102,9 +108,13 @@ export function useEditorState({
         const tagsToSearch = availableTagsForSelection || fetchedTags;
         
         // Check if tag exists in available tags (case insensitive)
-        const existingTag = tagsToSearch.find(
-          tag => tag && tag.name && tag.name.toLowerCase() === tagName.toLowerCase()
-        );
+        const existingTag = tagsToSearch.find(tag => {
+          return tag && 
+                 tag.name && 
+                 typeof tag.name === 'string' && 
+                 typeof tagName === 'string' && 
+                 tag.name.toLowerCase() === tagName.toLowerCase();
+        });
         
         if (existingTag) {
           onTagsChange([...initialTags, existingTag]);

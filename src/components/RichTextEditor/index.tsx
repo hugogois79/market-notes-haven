@@ -64,9 +64,9 @@ const RichTextEditor = ({
   const handlePrint = () => {
     printNote({
       id: noteId,
-      title: title,
+      title: title || "Untitled Note",
       content: currentContent,
-      category: category,
+      category: category || "General",
       tags: linkedTags.map(tag => typeof tag === 'string' ? tag : tag.id), // Convert Tag objects to tag IDs
       summary: summary,
       createdAt: new Date(),

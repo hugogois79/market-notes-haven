@@ -54,7 +54,10 @@ const NoteActions: React.FC<NoteActionsProps> = ({
     if (!currentNote) return;
     
     try {
-      printNote(currentNote);
+      printNote({
+        ...currentNote,
+        title: currentNote.title || "Untitled Note", // Ensure title is not empty
+      });
       toast.success("Preparing note for printing...");
     } catch (error) {
       toast.error("Failed to print note");

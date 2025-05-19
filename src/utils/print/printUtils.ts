@@ -41,11 +41,15 @@ export const printNote = (noteData: Partial<Note>): void => {
     // Process vacation content to center text and enhance formatting
     normalizedContent = enhanceVacationContent(normalizedContent);
   }
+
+  // Ensure we have a valid title
+  const noteTitle = noteData.title ? noteData.title.trim() : "Untitled Note";
+  console.log("Printing note with title:", noteTitle);
   
   // Create a complete Note object with default values for required properties
   const note: Note = {
     id: "temp-print-id",
-    title: noteData.title || "Untitled Note",
+    title: noteTitle,
     content: normalizedContent,
     tags: noteData.tags || [],
     category: noteData.category || "Uncategorized",
