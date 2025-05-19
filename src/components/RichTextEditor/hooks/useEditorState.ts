@@ -88,11 +88,14 @@ export function useEditorState({
     const tagName = tagInput.trim();
     
     // Check if tag with this name already exists in initialTags (case insensitive)
-    const tagExists = initialTags.some((tag) => 
-      typeof tag === 'string' 
-        ? tag.toLowerCase() === tagName.toLowerCase()
-        : tag.name.toLowerCase() === tagName.toLowerCase()
-    );
+    const tagExists = initialTags.some((tag) => {
+      if (typeof tag === 'string') {
+        // Make sure to handle string tags safely
+        return tag.toLowerCase ? tag.toLowerCase() === tagName.toLowerCase() : tag === tagName;
+      }
+      // For Tag objects, ensure name exists before calling toLowerCase
+      return tag.name && tag.name.toLowerCase() === tagName.toLowerCase();
+    });
     
     if (!tagExists) {
       try {
