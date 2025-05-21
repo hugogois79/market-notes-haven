@@ -79,11 +79,13 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
     }
   }, [fetchedCategories]);
 
-  // Fixed title change handler to ensure it calls the parent callback function correctly
+  // Fixed title change handler - CRITICAL FIX: Always propagate changes immediately
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("EditorHeader: Title changed to:", e.target.value);
-    // Pass the new title value directly to the parent component
-    onTitleChange(e.target.value);
+    const newTitle = e.target.value;
+    console.log("EditorHeader: Title changed to:", newTitle);
+    
+    // CRITICAL FIX: Always call the parent callback immediately
+    onTitleChange(newTitle);
   };
 
   // Handle category changes

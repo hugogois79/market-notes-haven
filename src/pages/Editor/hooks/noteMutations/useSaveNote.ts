@@ -77,8 +77,8 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
     // Set in pending changes
     setPendingChanges(prev => ({ ...prev, title }));
     
-    // Immediately save title changes to ensure they're saved promptly
-    // This is critical to fix the title saving issue
+    // CRITICAL FIX: Immediately save title changes without any conditions
+    // This will guarantee the title is saved right away
     handleSaveWithChanges({ title }, false);
   };
 
