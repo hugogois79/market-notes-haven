@@ -56,17 +56,22 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     handleManualSave,
     handleContentChange,
     handleTitleChange: handleTitleChangeInSave
-  } = useSaveNote({ onSave });
+  } = useSaveNote({ 
+    onSave: async (updatedFields) => {
+      console.log("useNoteMutations: Saving fields to database:", updatedFields);
+      return onSave(updatedFields);
+    }
+  });
 
-  // CRITICAL FIX: Enhanced title change handler to ensure it's saved immediately
+  // CRITICAL FIX: Direct title save handler to ensure it's saved immediately
   const handleTitleChangeAndSave = (title: string) => {
     console.log("useNoteMutations: Title change triggered:", title);
     
     // Update local state
     handleTitleChange(title);
     
-    // CRITICAL FIX: Always save title changes immediately 
-    // This ensures the title is saved to the database
+    // CRITICAL FIX: Always save title changes immediately and directly
+    // This ensures the title is saved to the database without any conditions
     handleTitleChangeInSave(title);
   };
 

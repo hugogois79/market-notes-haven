@@ -91,8 +91,8 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
       console.log("Enhanced save called with fields:", updatedFields);
       
       // Make sure we immediately save title changes
-      if (updatedFields.title || updatedFields.tags) {
-        console.log("Title or tags changed, saving immediately");
+      if (updatedFields.title !== undefined) {
+        console.log("CRITICAL: Title change detected, saving immediately:", updatedFields.title);
       }
       
       const result = await handleSave(updatedFields);

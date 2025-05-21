@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,13 +78,19 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
     }
   }, [fetchedCategories]);
 
-  // Fixed title change handler - CRITICAL FIX: Always propagate changes immediately
+  // CRITICAL FIX: Enhanced title change handler with explicit immediate save
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTitle = e.target.value;
     console.log("EditorHeader: Title changed to:", newTitle);
     
-    // CRITICAL FIX: Always call the parent callback immediately
-    onTitleChange(newTitle);
+    // Directly call the parent callback with the new title value
+    // This is crucial for ensuring the title change is propagated up the component tree
+    if (onTitleChange) {
+      console.log("EditorHeader: Calling onTitleChange with:", newTitle);
+      onTitleChange(newTitle);
+    } else {
+      console.error("EditorHeader: onTitleChange callback is not defined");
+    }
   };
 
   // Handle category changes
