@@ -117,12 +117,19 @@ const RichTextEditor = ({
     handleTokenSelect,
     handleRemoveToken
   } = useTokenHandling(linkedTokens, onTokensChange);
+  
+  // Improved title change handler to ensure it properly updates the parent component
+  const handleEditorTitleChange = (newTitle: string) => {
+    console.log("RichTextEditor: Title change detected:", newTitle);
+    // Make sure we call the hook's handleTitleChange which will in turn call onTitleChange
+    handleTitleChange(newTitle);
+  };
 
   return (
     <EditorMain
       title={title}
       content={content}
-      onTitleChange={handleTitleChange}
+      onTitleChange={handleEditorTitleChange}
       onContentChange={handleContentChange}
       handleContentUpdate={handleContentUpdate}
       currentContent={currentContent}

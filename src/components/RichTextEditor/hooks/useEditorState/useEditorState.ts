@@ -41,6 +41,7 @@ export function useEditorState({
   availableTagsForSelection?: Tag[];
 }) {
   const [currentContent, setCurrentContent] = useState(initialContent);
+  const [currentTitle, setCurrentTitle] = useState(initialTitle);
 
   // Use the custom hooks
   const {
@@ -75,13 +76,17 @@ export function useEditorState({
     onContentChange(currentContent);
   };
 
-  // Title handling - Fixed to properly invoke the onTitleChange function
+  // Title handling - Improved to properly manage state and invoke callbacks
   const handleTitleChange = useCallback((newTitle: string) => {
     console.log("useEditorState: Title change triggered with:", newTitle);
     
-    // Directly invoke the onTitleChange function with the new title
+    // Update local state
+    setCurrentTitle(newTitle);
+    
+    // Directly invoke the onTitleChange callback function with the new title
     onTitleChange(newTitle);
     
+    // Auto-save if enabled
     if (autoSave && onSave) {
       setTimeout(() => {
         onSave();
@@ -96,6 +101,7 @@ export function useEditorState({
     lastSaved,
     setLastSaved,
     currentContent,
+    currentTitle,
     handleContentUpdate,
     handleAutoSave,
     handleManualSave,

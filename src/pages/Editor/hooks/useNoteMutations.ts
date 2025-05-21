@@ -60,10 +60,11 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
 
   // Override title change to ensure it's saved immediately
   const handleTitleChangeAndSave = (title: string) => {
+    console.log("useNoteMutations: Title change triggered:", title);
+    // Update local state
     handleTitleChange(title);
+    // Save title changes immediately
     handleTitleChangeInSave(title);
-    // Immediately save title changes
-    handleSaveWithChanges({ title }, false);
   };
 
   // Override tags change to ensure they're saved immediately
