@@ -94,15 +94,15 @@ export function useEditorState({
       
       if (typeof tag === 'string') {
         // For string tags, ensure both values are strings before comparing
-        const tagLower = tag.toLowerCase?.() || '';
-        const tagNameLower = tagName.toLowerCase?.() || '';
+        const tagLower = typeof tag === 'string' && tag ? tag.toLowerCase() : '';
+        const tagNameLower = typeof tagName === 'string' && tagName ? tagName.toLowerCase() : '';
         return tagLower === tagNameLower;
       }
       
       // For Tag objects with proper type checking
-      if (tag && typeof tag === 'object' && tag.name) {
-        const tagNameLower = typeof tag.name === 'string' ? tag.name.toLowerCase() : '';
-        const inputTagNameLower = typeof tagName === 'string' ? tagName.toLowerCase() : '';
+      if (tag && typeof tag === 'object' && 'name' in tag) {
+        const tagNameLower = tag.name && typeof tag.name === 'string' ? tag.name.toLowerCase() : '';
+        const inputTagNameLower = tagName && typeof tagName === 'string' ? tagName.toLowerCase() : '';
         return tagNameLower === inputTagNameLower;
       }
       
@@ -119,9 +119,9 @@ export function useEditorState({
           if (!tag) return false;
           
           // Then check if it has a name property that's a string
-          if (tag && typeof tag === 'object' && tag.name) {
-            const tagNameLower = typeof tag.name === 'string' ? tag.name.toLowerCase() : '';
-            const inputTagNameLower = typeof tagName === 'string' ? tagName.toLowerCase() : '';
+          if (tag && typeof tag === 'object' && 'name' in tag) {
+            const tagNameLower = tag.name && typeof tag.name === 'string' ? tag.name.toLowerCase() : '';
+            const inputTagNameLower = tagName && typeof tagName === 'string' ? tagName.toLowerCase() : '';
             return tagNameLower === inputTagNameLower;
           }
           
