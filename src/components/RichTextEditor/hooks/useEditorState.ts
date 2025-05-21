@@ -89,18 +89,20 @@ export function useEditorState({
     
     // Check if tag with this name already exists in initialTags (case insensitive)
     const tagExists = initialTags.some((tag) => {
+      // First check if tag is defined
+      if (!tag) return false;
+      
       if (typeof tag === 'string') {
         // For string tags, verify both values are strings before comparing
-        return typeof tag === 'string' && 
-               typeof tagName === 'string' && 
-               tag.toLowerCase() === tagName.toLowerCase();
+        return typeof tagName === 'string' && tag.toLowerCase() === tagName.toLowerCase();
       }
-      // For Tag objects, check if name exists and is a string before comparing
-      return tag && 
-             tag.name && 
-             typeof tag.name === 'string' && 
-             typeof tagName === 'string' && 
-             tag.name.toLowerCase() === tagName.toLowerCase();
+      
+      // For Tag objects with proper type checking
+      if (tag && typeof tag === 'object' && tag.name && typeof tag.name === 'string') {
+        return typeof tagName === 'string' && tag.name.toLowerCase() === tagName.toLowerCase();
+      }
+      
+      return false;
     });
     
     if (!tagExists) {
@@ -109,11 +111,15 @@ export function useEditorState({
         
         // Check if tag exists in available tags (case insensitive)
         const existingTag = tagsToSearch.find(tag => {
-          return tag && 
-                 tag.name && 
-                 typeof tag.name === 'string' && 
-                 typeof tagName === 'string' && 
-                 tag.name.toLowerCase() === tagName.toLowerCase();
+          // First check if tag is defined
+          if (!tag) return false;
+          
+          // Then check if it has a name property that's a string
+          if (tag && typeof tag === 'object' && tag.name && typeof tag.name === 'string') {
+            return typeof tagName === 'string' && tag.name.toLowerCase() === tagName.toLowerCase();
+          }
+          
+          return false;
         });
         
         if (existingTag) {
