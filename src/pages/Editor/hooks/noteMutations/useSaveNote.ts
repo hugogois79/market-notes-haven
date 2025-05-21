@@ -72,7 +72,11 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
   };
   
   const handleTitleChange = (title: string) => {
+    console.log("useSaveNote: Setting pending title change:", title);
     setPendingChanges(prev => ({ ...prev, title }));
+    
+    // Immediately save title changes to ensure they're saved promptly
+    handleSaveWithChanges({ title }, false);
   };
 
   return {

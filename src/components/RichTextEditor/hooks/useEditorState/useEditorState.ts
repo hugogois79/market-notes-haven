@@ -75,9 +75,11 @@ export function useEditorState({
     onContentChange(currentContent);
   };
 
-  // Title handling
+  // Title handling - Fixed to properly invoke the onTitleChange function
   const handleTitleChange = useCallback((newTitle: string) => {
-    console.log("RichTextEditor received title change:", newTitle);
+    console.log("useEditorState: Title change triggered with:", newTitle);
+    
+    // Directly invoke the onTitleChange function with the new title
     onTitleChange(newTitle);
     
     if (autoSave && onSave) {
