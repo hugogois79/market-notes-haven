@@ -16,6 +16,7 @@ interface EditorProps {
 const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [hasCreatedNote, setHasCreatedNote] = useState(false);
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -31,10 +32,12 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
     getTagsFilteredByCategory
   } = useNoteData({ notes, onSaveNote: handleSaveNote || onSaveNote });
 
-  // Handle creating a new note from URL params
+  // Handle creating a new note from URL params - FIXED to prevent duplicate creations
   useEffect(() => {
-    if (isNewNote && !currentNote) {
+    if (isNewNote && !currentNote && !hasCreatedNote && notes.length > 0) {
       console.log("Creating new note from URL params");
+      setHasCreatedNote(true);
+      
       // Check for query parameters to pre-fill the note
       const queryParams = new URLSearchParams(location.search);
       const title = queryParams.get('title') || "Untitled Note";
@@ -49,7 +52,7 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
         category,
         createdAt: new Date(),
         updatedAt: new Date(),
-        attachments: [] // Initialize with empty attachments array
+        attachments: []
       };
       
       // Create and navigate to the new note
@@ -64,13 +67,22 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
         } else {
           console.error("Failed to create new note");
           toast.error("Failed to create new note");
+          setHasCreatedNote(false);
         }
       }).catch(error => {
         console.error("Error creating note:", error);
         toast.error("Error creating note: " + (error.message || "Unknown error"));
+        setHasCreatedNote(false);
       });
     }
-  }, [isNewNote, currentNote, location.search, onSaveNote, handleSaveNote, navigate, refetch]);
+  }, [isNewNote, currentNote, location.search, onSaveNote, handleSaveNote, navigate, refetch, hasCreatedNote, notes.length]);
+
+  // Reset hasCreatedNote when navigating away from new note route
+  useEffect(() => {
+    if (!isNewNote) {
+      setHasCreatedNote(false);
+    }
+  }, [isNewNote]);
 
   // Check if note exists
   useEffect(() => {
@@ -180,7 +192,7 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
             category: "General",
             createdAt: new Date(),
             updatedAt: new Date(),
-            attachments: [] // Initialize with empty attachments array
+            attachments: []
           }}
           onSave={handleEnhancedSave}
           linkedTokens={linkedTokens}

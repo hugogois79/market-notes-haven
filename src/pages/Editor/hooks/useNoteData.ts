@@ -20,7 +20,7 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Create empty note template for new notes
+  // Create empty note template for new notes - but don't create it automatically
   const createEmptyNote = useCallback(() => {
     // Check for query parameters
     const queryParams = new URLSearchParams(location.search);
@@ -40,7 +40,7 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
     };
   }, [location.search]);
 
-  // Find the current note from the notes array or create a new one
+  // Find the current note from the notes array - FIXED to not auto-create
   useEffect(() => {
     if (notes.length === 0) {
       return;
@@ -49,15 +49,15 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
     setIsLoading(true);
     
     if (isNewNote) {
-      const emptyNote = createEmptyNote();
-      setCurrentNote(emptyNote);
+      // For new notes, don't automatically create - let the parent component handle it
+      setCurrentNote(null);
     } else if (id) {
       const foundNote = notes.find(note => note.id === id);
       setCurrentNote(foundNote || null);
     }
     
     setIsLoading(false);
-  }, [notes, id, isNewNote, createEmptyNote]);
+  }, [notes, id, isNewNote]);
 
   // Load tokens linked to the current note
   useEffect(() => {
