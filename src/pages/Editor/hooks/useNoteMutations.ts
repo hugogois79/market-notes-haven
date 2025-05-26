@@ -63,16 +63,28 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     }
   });
 
-  // CRITICAL FIX: Direct title save handler to ensure it's saved immediately
+  // Title change handler to ensure it's saved immediately
   const handleTitleChangeAndSave = (title: string) => {
     console.log("useNoteMutations: Title change triggered:", title);
     
     // Update local state
     handleTitleChange(title);
     
-    // CRITICAL FIX: Always save title changes immediately and directly
-    // This ensures the title is saved to the database without any conditions
+    // Always save title changes immediately and directly
     handleTitleChangeInSave(title);
+  };
+
+  // CRITICAL FIX: Category change handler to ensure it's saved immediately
+  const handleCategoryChangeAndSave = (category: string) => {
+    console.log("useNoteMutations: Category change triggered:", category);
+    
+    // Update local state
+    const newCategory = handleCategoryChange(category);
+    
+    // CRITICAL FIX: Always save category changes immediately and directly
+    // This ensures the category is saved to the database right away
+    console.log("useNoteMutations: Saving category immediately:", newCategory);
+    handleSaveWithChanges({ category: newCategory }, false);
   };
 
   // Override tags change to ensure they're saved immediately
@@ -123,7 +135,7 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     // Handlers
     handleTitleChange: handleTitleChangeAndSave,
     handleContentChange,
-    handleCategoryChange,
+    handleCategoryChange: handleCategoryChangeAndSave,
     handleSummaryGenerated,
     handleTradeInfoChange,
     handleAttachmentChange: handleAttachmentChangeAndSave,

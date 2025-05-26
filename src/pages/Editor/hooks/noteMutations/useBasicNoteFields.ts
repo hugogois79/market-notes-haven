@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Note, TradeInfo } from "@/types";
 
 interface SummaryState {
@@ -8,54 +8,56 @@ interface SummaryState {
 }
 
 export const useBasicNoteFields = (currentNote: Note) => {
-  const [localTitle, setLocalTitle] = useState(currentNote.title);
+  const [localTitle, setLocalTitle] = useState(currentNote.title || "");
   const [localCategory, setLocalCategory] = useState(currentNote.category || "General");
-  const [localTradeInfo, setLocalTradeInfo] = useState<TradeInfo | undefined>(currentNote.tradeInfo);
-  const [hasConclusion, setHasConclusion] = useState<boolean>(currentNote.hasConclusion !== false);
+  const [localTradeInfo, setLocalTradeInfo] = useState<TradeInfo | null>(
+    currentNote.trade_info ? currentNote.trade_info as TradeInfo : null
+  );
+  const [hasConclusion, setHasConclusion] = useState(currentNote.has_conclusion || false);
   const [summaryState, setSummaryState] = useState<SummaryState>({
     summary: currentNote.summary || "",
-    hasConclusion: currentNote.hasConclusion !== false
+    hasConclusion: currentNote.has_conclusion || false
   });
 
+  // Update local state when currentNote changes
+  useEffect(() => {
+    setLocalTitle(currentNote.title || "");
+    setLocalCategory(currentNote.category || "General");
+    setLocalTradeInfo(currentNote.trade_info ? currentNote.trade_info as TradeInfo : null);
+    setHasConclusion(currentNote.has_conclusion || false);
+    setSummaryState({
+      summary: currentNote.summary || "",
+      hasConclusion: currentNote.has_conclusion || false
+    });
+  }, [currentNote]);
+
   const handleTitleChange = (title: string) => {
-    console.log("NoteEditor: Title changing to:", title);
+    console.log("useBasicNoteFields: Title change:", title);
     setLocalTitle(title);
-    return { title };
   };
 
+  // FIXED: Enhanced category change handler with immediate save trigger
   const handleCategoryChange = (category: string) => {
-    console.log("NoteEditor: Category changing to:", category);
+    console.log("useBasicNoteFields: Category change:", category);
     setLocalCategory(category);
-    return { category };
+    
+    // Return the new category value so the parent can save it immediately
+    return category;
   };
 
   const handleTradeInfoChange = (tradeInfo: TradeInfo) => {
-    console.log("Trade info changed:", tradeInfo);
+    console.log("useBasicNoteFields: Trade info change:", tradeInfo);
     setLocalTradeInfo(tradeInfo);
-    return { tradeInfo };
   };
 
-  const handleSummaryGenerated = (summary: string, detectedHasConclusion?: boolean) => {
-    console.log("Summary generated:", summary);
-    console.log("Has conclusion:", detectedHasConclusion);
-    
-    const newSummaryState: SummaryState = {
+  const handleSummaryGenerated = (summary: string, conclusion?: boolean) => {
+    console.log("useBasicNoteFields: Summary generated:", summary);
+    const newHasConclusion = conclusion !== undefined ? conclusion : hasConclusion;
+    setHasConclusion(newHasConclusion);
+    setSummaryState({
       summary,
-      hasConclusion: detectedHasConclusion !== undefined ? detectedHasConclusion : hasConclusion
-    };
-    
-    setSummaryState(newSummaryState);
-    
-    if (detectedHasConclusion !== undefined) {
-      setHasConclusion(detectedHasConclusion);
-    }
-    
-    const updates: Partial<Note> = { 
-      summary,
-      hasConclusion: newSummaryState.hasConclusion
-    };
-    
-    return updates;
+      hasConclusion: newHasConclusion
+    });
   };
 
   return {

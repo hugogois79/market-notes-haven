@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +39,7 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
     "Project",
     "Meeting",
     "Personal",
+    "Legal",
   ]);
 
   // Fetch all unique categories from Supabase
@@ -78,13 +80,11 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
     }
   }, [fetchedCategories]);
 
-  // CRITICAL FIX: Enhanced title change handler with explicit immediate save
+  // Enhanced title change handler with explicit immediate save
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTitle = e.target.value;
     console.log("EditorHeader: Title changed to:", newTitle);
     
-    // Directly call the parent callback with the new title value
-    // This is crucial for ensuring the title change is propagated up the component tree
     if (onTitleChange) {
       console.log("EditorHeader: Calling onTitleChange with:", newTitle);
       onTitleChange(newTitle);
@@ -93,10 +93,17 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
     }
   };
 
-  // Handle category changes
+  // FIXED: Enhanced category change handler with immediate save
   const handleCategoryChange = (value: string) => {
     console.log("EditorHeader: Category changed to:", value);
-    onCategoryChange(value);
+    
+    // Immediately call the parent callback with the new category value
+    if (onCategoryChange) {
+      console.log("EditorHeader: Calling onCategoryChange with:", value);
+      onCategoryChange(value);
+    } else {
+      console.error("EditorHeader: onCategoryChange callback is not defined");
+    }
   };
 
   // Make sure we have a valid category value

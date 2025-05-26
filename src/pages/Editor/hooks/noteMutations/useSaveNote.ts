@@ -27,7 +27,8 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
       // Ensure we're sending valid data types for all fields
       const validatedChanges = {
         ...changes,
-        title: changes.title !== undefined ? changes.title : undefined, // Ensure title is passed through if provided
+        title: changes.title !== undefined ? changes.title : undefined,
+        category: changes.category !== undefined ? changes.category : undefined, // Ensure category is passed through
         // Important: Ensure tags are properly processed
         tags: changes.tags !== undefined ? 
           (Array.isArray(changes.tags) ? changes.tags : 
@@ -54,6 +55,8 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
       if (!isAutoSave) {
         if (changes.title !== undefined) {
           toast.success("Title saved successfully");
+        } else if (changes.category !== undefined) {
+          toast.success("Category saved successfully");
         } else {
           toast.success("Note saved successfully");
         }
@@ -78,14 +81,10 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
   const handleTitleChange = (title: string) => {
     console.log("useSaveNote: Setting title change:", title);
     
-    // Add force debounce flag to ensure it's always saved
-    const titleChange = { title, __forceDebounce: Date.now() };
-    
     // Set in pending changes
     setPendingChanges(prev => ({ ...prev, title }));
     
-    // CRITICAL FIX: Always immediately save title changes
-    // This ensures the title is saved to the database right away
+    // Always immediately save title changes
     handleSaveWithChanges({ title }, false);
   };
 
