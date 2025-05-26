@@ -11,23 +11,23 @@ export const useBasicNoteFields = (currentNote: Note) => {
   const [localTitle, setLocalTitle] = useState(currentNote.title || "");
   const [localCategory, setLocalCategory] = useState(currentNote.category || "General");
   const [localTradeInfo, setLocalTradeInfo] = useState<TradeInfo | null>(
-    currentNote.trade_info ? currentNote.trade_info as TradeInfo : null
+    currentNote.tradeInfo ? currentNote.tradeInfo as TradeInfo : null
   );
-  const [hasConclusion, setHasConclusion] = useState(currentNote.has_conclusion || false);
+  const [hasConclusion, setHasConclusion] = useState(currentNote.hasConclusion || false);
   const [summaryState, setSummaryState] = useState<SummaryState>({
     summary: currentNote.summary || "",
-    hasConclusion: currentNote.has_conclusion || false
+    hasConclusion: currentNote.hasConclusion || false
   });
 
   // Update local state when currentNote changes
   useEffect(() => {
     setLocalTitle(currentNote.title || "");
     setLocalCategory(currentNote.category || "General");
-    setLocalTradeInfo(currentNote.trade_info ? currentNote.trade_info as TradeInfo : null);
-    setHasConclusion(currentNote.has_conclusion || false);
+    setLocalTradeInfo(currentNote.tradeInfo ? currentNote.tradeInfo as TradeInfo : null);
+    setHasConclusion(currentNote.hasConclusion || false);
     setSummaryState({
       summary: currentNote.summary || "",
-      hasConclusion: currentNote.has_conclusion || false
+      hasConclusion: currentNote.hasConclusion || false
     });
   }, [currentNote]);
 
