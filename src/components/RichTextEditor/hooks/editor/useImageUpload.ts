@@ -6,6 +6,8 @@ interface UseImageUploadOptions {
   onError?: (error: Error) => void;
 }
 
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+
 export const useImageUpload = (options?: UseImageUploadOptions) => {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -13,6 +15,13 @@ export const useImageUpload = (options?: UseImageUploadOptions) => {
   const uploadImage = async (file: File): Promise<string> => {
     if (!file) {
       const error = new Error('No file selected');
+      setError(error);
+      options?.onError?.(error);
+      return Promise.reject(error);
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      const error = new Error('File size exceeds 50MB limit');
       setError(error);
       options?.onError?.(error);
       return Promise.reject(error);

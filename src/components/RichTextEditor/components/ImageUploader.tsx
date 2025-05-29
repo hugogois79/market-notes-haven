@@ -5,12 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useImageUpload } from '../hooks/editor/useImageUpload';
+import { toast } from 'sonner';
 
 interface ImageUploaderProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImageInsert: (url: string) => void;
 }
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
 
 const ImageUploader: React.FC<ImageUploaderProps> = ({ open, onOpenChange, onImageInsert }) => {
   const [imageUrl, setImageUrl] = useState('');
@@ -29,6 +32,11 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ open, onOpenChange, onIma
       onImageInsert(imageUrl);
       onOpenChange(false);
     } else if (activeTab === 'upload' && selectedFile) {
+      if (selectedFile.size > MAX_FILE_SIZE) {
+        toast.error('File size exceeds 50MB limit');
+        return;
+      }
+      
       try {
         const url = await uploadImage(selectedFile);
         onImageInsert(url);
@@ -41,7 +49,12 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ open, onOpenChange, onIma
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error('File size exceeds 50MB limit');
+        return;
+      }
+      setSelectedFile(file);
     }
   };
 
@@ -61,7 +74,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ open, onOpenChange, onIma
         <DialogHeader>
           <DialogTitle>Insert Image</DialogTitle>
           <DialogDescription>
-            Add an image to your note
+            Add an image to your note (max 50MB)
           </DialogDescription>
         </DialogHeader>
         
@@ -93,7 +106,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ open, onOpenChange, onIma
             />
             {selectedFile && (
               <div className="mt-2 text-sm text-gray-500">
-                Selected: {selectedFile.name}
+                Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(1)}MB)
               </div>
             )}
             {error && (

@@ -13,6 +13,7 @@ interface AttachmentSectionProps {
 }
 
 const MAX_ATTACHMENTS = 20;
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
 
 const AttachmentSection: React.FC<AttachmentSectionProps> = ({
   noteId,
@@ -64,8 +65,8 @@ const AttachmentSection: React.FC<AttachmentSectionProps> = ({
       const uploadedUrls: string[] = [];
       
       for (const file of files) {
-        if (file.size > 10 * 1024 * 1024) {
-          toast.error(`File ${file.name} is too large. Maximum size is 10MB.`);
+        if (file.size > MAX_FILE_SIZE) {
+          toast.error(`File ${file.name} is too large. Maximum size is 50MB.`);
           continue;
         }
         

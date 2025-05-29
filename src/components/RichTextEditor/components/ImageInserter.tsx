@@ -4,13 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Image as ImageIcon, Upload, Link } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ImageInserterProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImageInsert: (url: string) => void;
 }
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
 
 const ImageInserter: React.FC<ImageInserterProps> = ({ open, onOpenChange, onImageInsert }) => {
   const [imageUrl, setImageUrl] = useState('');
@@ -23,6 +25,11 @@ const ImageInserter: React.FC<ImageInserterProps> = ({ open, onOpenChange, onIma
       onImageInsert(imageUrl);
       onOpenChange(false);
     } else if (activeTab === 'upload' && selectedFile) {
+      if (selectedFile.size > MAX_FILE_SIZE) {
+        toast.error('File size exceeds 50MB limit');
+        return;
+      }
+
       setIsUploading(true);
       try {
         const formData = new FormData();
@@ -42,6 +49,7 @@ const ImageInserter: React.FC<ImageInserterProps> = ({ open, onOpenChange, onIma
         onOpenChange(false);
       } catch (error) {
         console.error('Failed to upload image:', error);
+        toast.error('Failed to upload image');
       } finally {
         setIsUploading(false);
       }
@@ -50,7 +58,12 @@ const ImageInserter: React.FC<ImageInserterProps> = ({ open, onOpenChange, onIma
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error('File size exceeds 50MB limit');
+        return;
+      }
+      setSelectedFile(file);
     }
   };
 
@@ -60,7 +73,7 @@ const ImageInserter: React.FC<ImageInserterProps> = ({ open, onOpenChange, onIma
         <DialogHeader>
           <DialogTitle>Insert Image</DialogTitle>
           <DialogDescription>
-            Add an image to your note by URL or upload
+            Add an image to your note by URL or upload (max 50MB)
           </DialogDescription>
         </DialogHeader>
 
@@ -94,7 +107,7 @@ const ImageInserter: React.FC<ImageInserterProps> = ({ open, onOpenChange, onIma
             />
             {selectedFile && (
               <div className="mt-2 text-sm text-gray-500">
-                Selected: {selectedFile.name}
+                Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(1)}MB)
               </div>
             )}
           </TabsContent>
