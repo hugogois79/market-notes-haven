@@ -76,17 +76,19 @@ export function useEditorState({
     onContentChange(currentContent);
   };
 
-  // Title handling - Improved to properly manage state and invoke callbacks
+  // FIXED: Title handling - maintain local state and don't reset it
   const handleTitleChange = useCallback((newTitle: string) => {
     console.log("useEditorState: Title change triggered with:", newTitle);
     
     // Update local state
     setCurrentTitle(newTitle);
     
-    // Directly invoke the onTitleChange callback function with the new title
-    onTitleChange(newTitle);
+    // Call the parent's title change handler
+    if (onTitleChange) {
+      onTitleChange(newTitle);
+    }
     
-    // Auto-save if enabled
+    // Auto-save if enabled - but don't reset the title state
     if (autoSave && onSave) {
       setTimeout(() => {
         onSave();

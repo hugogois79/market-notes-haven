@@ -60,29 +60,13 @@ const RichTextEditor = ({
   availableTagsForSelection,
 }: RichTextEditorProps) => {
   
-  // Handle direct print for current note
-  const handlePrint = () => {
-    printNote({
-      id: noteId,
-      title: title || "Untitled Note",
-      content: currentContent,
-      category: category || "General",
-      tags: linkedTags.map(tag => typeof tag === 'string' ? tag : tag.id), // Convert Tag objects to tag IDs
-      summary: summary,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      attachment_url: attachment_url,
-      attachments: attachments,
-      tradeInfo: tradeInfo
-    });
-  };
-  
   // Use custom hooks to manage editor state and token handling
   const {
     tagInput,
     setTagInput,
     lastSaved,
     currentContent,
+    currentTitle,
     handleContentUpdate,
     handleAutoSave,
     handleManualSave,
@@ -118,18 +102,28 @@ const RichTextEditor = ({
     handleRemoveToken
   } = useTokenHandling(linkedTokens, onTokensChange);
   
-  // Improved title change handler to ensure it properly updates the parent component
-  const handleEditorTitleChange = (newTitle: string) => {
-    console.log("RichTextEditor: Title change detected:", newTitle);
-    // Make sure we call the hook's handleTitleChange which will in turn call onTitleChange
-    handleTitleChange(newTitle);
+  // Handle direct print for current note
+  const handlePrint = () => {
+    printNote({
+      id: noteId,
+      title: currentTitle || "Untitled Note",
+      content: currentContent,
+      category: category || "General",
+      tags: linkedTags.map(tag => typeof tag === 'string' ? tag : tag.id),
+      summary: summary,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      attachment_url: attachment_url,
+      attachments: attachments,
+      tradeInfo: tradeInfo
+    });
   };
 
   return (
     <EditorMain
-      title={title}
+      title={currentTitle}
       content={content}
-      onTitleChange={handleEditorTitleChange}
+      onTitleChange={handleTitleChange}
       onContentChange={handleContentChange}
       handleContentUpdate={handleContentUpdate}
       currentContent={currentContent}
