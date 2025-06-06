@@ -78,13 +78,13 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
   const handleCategoryChangeAndSave = (category: string) => {
     console.log("useNoteMutations: Category change triggered:", category);
     
-    // Update local state
+    // Update local state first
     const newCategory = handleCategoryChange(category);
     
     // CRITICAL FIX: Always save category changes immediately and directly
     // This ensures the category is saved to the database right away
-    console.log("useNoteMutations: Saving category immediately:", newCategory);
-    handleSaveWithChanges({ category: newCategory }, false);
+    console.log("useNoteMutations: Saving category immediately:", newCategory || category);
+    handleSaveWithChanges({ category: newCategory || category }, false);
   };
 
   // Override tags change to ensure they're saved immediately

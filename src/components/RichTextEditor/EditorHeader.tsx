@@ -93,7 +93,7 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
     }
   };
 
-  // FIXED: Enhanced category change handler with immediate save
+  // CRITICAL FIX: Enhanced category change handler that forces immediate save
   const handleCategoryChange = (value: string) => {
     console.log("EditorHeader: Category changed to:", value);
     
