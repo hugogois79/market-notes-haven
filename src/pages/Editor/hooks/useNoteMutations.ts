@@ -74,17 +74,24 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     handleTitleChangeInSave(title);
   };
 
-  // CRITICAL FIX: Category change handler to ensure it's saved immediately
-  const handleCategoryChangeAndSave = (category: string) => {
+  // CRITICAL FIX: Simplified category change handler that ensures immediate save
+  const handleCategoryChangeAndSave = async (category: string) => {
     console.log("useNoteMutations: Category change triggered:", category);
     
     // Update local state first
-    const newCategory = handleCategoryChange(category);
+    handleCategoryChange(category);
     
-    // CRITICAL FIX: Always save category changes immediately and directly
-    // This ensures the category is saved to the database right away
-    console.log("useNoteMutations: Saving category immediately:", newCategory || category);
-    handleSaveWithChanges({ category: newCategory || category }, false);
+    // CRITICAL FIX: Save category changes immediately with the exact value
+    console.log("useNoteMutations: Saving category immediately:", category);
+    
+    try {
+      await handleSaveWithChanges({ category }, false);
+      console.log("useNoteMutations: Category saved successfully:", category);
+    } catch (error) {
+      console.error("useNoteMutations: Failed to save category:", error);
+      // Revert local state on error
+      handleCategoryChange(currentNote.category || "General");
+    }
   };
 
   // Override tags change to ensure they're saved immediately
