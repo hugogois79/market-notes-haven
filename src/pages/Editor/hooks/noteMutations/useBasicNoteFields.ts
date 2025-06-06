@@ -13,11 +13,11 @@ interface UseBasicNoteFieldsProps {
 export const useBasicNoteFields = (currentNote: Note) => {
   const [localTitle, setLocalTitle] = useState(currentNote.title || "");
   const [localCategory, setLocalCategory] = useState(currentNote.category || "General");
-  const [localTradeInfo, setLocalTradeInfo] = useState<TradeInfo | undefined>(currentNote.trade_info);
-  const [hasConclusion, setHasConclusion] = useState(currentNote.has_conclusion ?? true);
+  const [localTradeInfo, setLocalTradeInfo] = useState<TradeInfo | undefined>(currentNote.tradeInfo);
+  const [hasConclusion, setHasConclusion] = useState(currentNote.hasConclusion ?? true);
   const [summaryState, setSummaryState] = useState({
     summary: currentNote.summary || "",
-    hasConclusion: currentNote.has_conclusion ?? true
+    hasConclusion: currentNote.hasConclusion ?? true
   });
 
   // Update local state when currentNote changes, but preserve user changes
@@ -31,20 +31,20 @@ export const useBasicNoteFields = (currentNote: Note) => {
     // For category, always sync with the database value to reflect saved state
     setLocalCategory(currentNote.category || "General");
     
-    if (currentNote.trade_info !== localTradeInfo) {
-      setLocalTradeInfo(currentNote.trade_info);
+    if (currentNote.tradeInfo !== localTradeInfo) {
+      setLocalTradeInfo(currentNote.tradeInfo);
     }
     
-    if (currentNote.has_conclusion !== hasConclusion) {
-      setHasConclusion(currentNote.has_conclusion ?? true);
+    if (currentNote.hasConclusion !== hasConclusion) {
+      setHasConclusion(currentNote.hasConclusion ?? true);
     }
     
     // Update summary state
     setSummaryState({
       summary: currentNote.summary || "",
-      hasConclusion: currentNote.has_conclusion ?? true
+      hasConclusion: currentNote.hasConclusion ?? true
     });
-  }, [currentNote.id, currentNote.title, currentNote.category, currentNote.trade_info, currentNote.has_conclusion, currentNote.summary]);
+  }, [currentNote.id, currentNote.title, currentNote.category, currentNote.tradeInfo, currentNote.hasConclusion, currentNote.summary]);
 
   const handleTitleChange = (title: string) => {
     console.log("useBasicNoteFields: Title change:", title);
