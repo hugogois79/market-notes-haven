@@ -63,14 +63,15 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     }
   });
 
-  // Title change handler to ensure it's saved immediately
+  // FIXED: Simplified title change handler that ensures immediate save
   const handleTitleChangeAndSave = (title: string) => {
     console.log("useNoteMutations: Title change triggered:", title);
     
     // Update local state
     handleTitleChange(title);
     
-    // Always save title changes immediately and directly
+    // CRITICAL: Save title changes immediately
+    console.log("useNoteMutations: Saving title immediately:", title);
     handleTitleChangeInSave(title);
   };
 

@@ -76,26 +76,19 @@ export function useEditorState({
     onContentChange(currentContent);
   };
 
-  // FIXED: Title handling - maintain local state and don't reset it
+  // FIXED: Title handling - ensure immediate save without resetting local state
   const handleTitleChange = useCallback((newTitle: string) => {
     console.log("useEditorState: Title change triggered with:", newTitle);
     
-    // Update local state
+    // Update local state immediately
     setCurrentTitle(newTitle);
     
-    // Call the parent's title change handler
+    // Call the parent's title change handler immediately for saving
     if (onTitleChange) {
+      console.log("useEditorState: Calling onTitleChange for immediate save");
       onTitleChange(newTitle);
     }
-    
-    // Auto-save if enabled - but don't reset the title state
-    if (autoSave && onSave) {
-      setTimeout(() => {
-        onSave();
-        setLastSaved(new Date());
-      }, 500);
-    }
-  }, [autoSave, onSave, onTitleChange, setLastSaved]);
+  }, [onTitleChange]);
 
   return {
     tagInput,
