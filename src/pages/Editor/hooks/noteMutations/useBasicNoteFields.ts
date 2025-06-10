@@ -20,6 +20,9 @@ export const useBasicNoteFields = (currentNote: Note) => {
     hasConclusion: currentNote.hasConclusion ?? true
   });
 
+  // Track if we're in the middle of a category update to prevent overwrites
+  const [isUpdatingCategory, setIsUpdatingCategory] = useState(false);
+
   // Update local state when currentNote changes, but preserve user changes
   useEffect(() => {
     // Only update if the note actually changed (different ID or significant change)
@@ -28,8 +31,12 @@ export const useBasicNoteFields = (currentNote: Note) => {
       setLocalTitle(currentNote.title || "");
     }
     
-    // For category, always sync with the database value to reflect saved state
-    setLocalCategory(currentNote.category || "General");
+    // For category, only sync if we're not currently updating it
+    // This prevents the race condition where the UI reverts after save
+    if (!isUpdatingCategory && currentNote.category !== localCategory) {
+      console.log("useBasicNoteFields: Syncing category from database:", currentNote.category);
+      setLocalCategory(currentNote.category || "General");
+    }
     
     if (currentNote.tradeInfo !== localTradeInfo) {
       setLocalTradeInfo(currentNote.tradeInfo);
@@ -44,7 +51,7 @@ export const useBasicNoteFields = (currentNote: Note) => {
       summary: currentNote.summary || "",
       hasConclusion: currentNote.hasConclusion ?? true
     });
-  }, [currentNote.id, currentNote.title, currentNote.category, currentNote.tradeInfo, currentNote.hasConclusion, currentNote.summary]);
+  }, [currentNote.id, currentNote.title, currentNote.category, currentNote.tradeInfo, currentNote.hasConclusion, currentNote.summary, isUpdatingCategory]);
 
   const handleTitleChange = (title: string) => {
     console.log("useBasicNoteFields: Title change:", title);
@@ -54,8 +61,18 @@ export const useBasicNoteFields = (currentNote: Note) => {
 
   const handleCategoryChange = (category: string) => {
     console.log("useBasicNoteFields: Category change to:", category);
+    
+    // Set the updating flag to prevent sync from overwriting
+    setIsUpdatingCategory(true);
+    
     // Immediately update local state
     setLocalCategory(category);
+    
+    // Clear the updating flag after a short delay to allow the save to complete
+    setTimeout(() => {
+      setIsUpdatingCategory(false);
+    }, 1000);
+    
     return category;
   };
 
