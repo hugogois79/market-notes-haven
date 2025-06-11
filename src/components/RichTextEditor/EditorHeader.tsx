@@ -80,30 +80,17 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
     }
   }, [fetchedCategories]);
 
-  // Enhanced title change handler with explicit immediate save
+  // Simple title change handler - no auto-save
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTitle = e.target.value;
     console.log("EditorHeader: Title changed to:", newTitle);
-    
-    if (onTitleChange) {
-      console.log("EditorHeader: Calling onTitleChange with:", newTitle);
-      onTitleChange(newTitle);
-    } else {
-      console.error("EditorHeader: onTitleChange callback is not defined");
-    }
+    onTitleChange(newTitle);
   };
 
-  // CRITICAL FIX: Enhanced category change handler that forces immediate save
+  // Simple category change handler - no auto-save
   const handleCategoryChange = (value: string) => {
     console.log("EditorHeader: Category changed to:", value);
-    
-    // Immediately call the parent callback with the new category value
-    if (onCategoryChange) {
-      console.log("EditorHeader: Calling onCategoryChange with:", value);
-      onCategoryChange(value);
-    } else {
-      console.error("EditorHeader: onCategoryChange callback is not defined");
-    }
+    onCategoryChange(value);
   };
 
   // Make sure we have a valid category value

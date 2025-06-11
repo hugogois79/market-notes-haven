@@ -68,15 +68,14 @@ const RichTextEditor = ({
     currentContent,
     currentTitle,
     handleContentUpdate,
-    handleAutoSave,
-    handleManualSave,
     handleContentChange,
     handleTitleChange,
     handleAddTag,
     handleRemoveTag,
     handleSelectTag,
     getAvailableTagsForSelection,
-    isLoadingTags
+    isLoadingTags,
+    handleManualSave
   } = useEditorState({
     initialContent: content,
     initialTitle: title,
@@ -117,6 +116,11 @@ const RichTextEditor = ({
       attachments: attachments,
       tradeInfo: tradeInfo
     });
+  };
+
+  // Simple handler that doesn't auto-save
+  const handleAutoSave = () => {
+    // No auto-save functionality - this is just a placeholder
   };
 
   return (
