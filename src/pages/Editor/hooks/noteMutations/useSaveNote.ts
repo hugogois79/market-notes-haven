@@ -12,9 +12,8 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
   const [pendingChanges, setPendingChanges] = useState<Partial<Note>>({});
 
   const handleSaveWithChanges = async (changes: Partial<Note>, isAutoSave = false) => {
-    if (isSaving) return; // Prevent multiple simultaneous save operations
+    if (isSaving) return;
     
-    // Don't save if there are no changes
     if (Object.keys(changes).length === 0) {
       console.log("No changes to save");
       return;
@@ -24,16 +23,13 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
     setIsSaving(true);
     
     try {
-      // Ensure we're sending valid data types for all fields
       const validatedChanges = {
         ...changes,
         title: changes.title !== undefined ? changes.title : undefined,
-        category: changes.category !== undefined ? changes.category : undefined, // Ensure category is passed through
-        // Important: Ensure tags are properly processed
+        category: changes.category !== undefined ? changes.category : undefined,
         tags: changes.tags !== undefined ? 
           (Array.isArray(changes.tags) ? changes.tags : 
             (changes.tags ? [changes.tags] : [])) : undefined,
-        // Important: Ensure attachments are properly processed
         attachments: changes.attachments !== undefined ? 
           (Array.isArray(changes.attachments) ? changes.attachments : 
             (changes.attachments ? [changes.attachments] : [])) : undefined,
@@ -77,23 +73,12 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
   const handleContentChange = (content: string) => {
     setPendingChanges(prev => ({ ...prev, content }));
   };
-  
-  const handleTitleChange = (title: string) => {
-    console.log("useSaveNote: Setting title change:", title);
-    
-    // Set in pending changes
-    setPendingChanges(prev => ({ ...prev, title }));
-    
-    // Always immediately save title changes
-    handleSaveWithChanges({ title }, false);
-  };
 
   return {
     isSaving,
     pendingChanges,
     handleSaveWithChanges,
     handleManualSave,
-    handleContentChange,
-    handleTitleChange
+    handleContentChange
   };
 };

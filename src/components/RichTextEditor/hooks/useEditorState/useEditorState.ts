@@ -4,7 +4,6 @@ import { Tag, Token, Note, TradeInfo } from "@/types";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { useTags } from "./useTags";
-import { useAutoSave } from "./useAutoSave";
 import { fetchTags } from "@/services/tag";
 
 export function useEditorState({
@@ -42,6 +41,7 @@ export function useEditorState({
 }) {
   const [currentContent, setCurrentContent] = useState(initialContent);
   const [currentTitle, setCurrentTitle] = useState(initialTitle);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   // Use the custom hooks
   const {
@@ -60,13 +60,6 @@ export function useEditorState({
     availableTagsForSelection
   });
 
-  const {
-    lastSaved,
-    setLastSaved,
-    handleAutoSave,
-    handleManualSave
-  } = useAutoSave({ autoSave, onSave });
-
   // Content handling
   const handleContentUpdate = useCallback((newContent: string) => {
     setCurrentContent(newContent);
@@ -76,19 +69,20 @@ export function useEditorState({
     onContentChange(currentContent);
   };
 
-  // FIXED: Title handling - ensure immediate save without resetting local state
+  // Title handling - only update local state, no auto-save
   const handleTitleChange = useCallback((newTitle: string) => {
     console.log("useEditorState: Title change triggered with:", newTitle);
-    
-    // Update local state immediately
     setCurrentTitle(newTitle);
-    
-    // Call the parent's title change handler immediately for saving
-    if (onTitleChange) {
-      console.log("useEditorState: Calling onTitleChange for immediate save");
-      onTitleChange(newTitle);
+  }, []);
+
+  // Manual save handler
+  const handleManualSave = useCallback(() => {
+    if (onSave) {
+      console.log("useEditorState: Manual save triggered");
+      onSave();
+      setLastSaved(new Date());
     }
-  }, [onTitleChange]);
+  }, [onSave]);
 
   return {
     tagInput,
@@ -98,8 +92,6 @@ export function useEditorState({
     currentContent,
     currentTitle,
     handleContentUpdate,
-    handleAutoSave,
-    handleManualSave,
     handleContentChange,
     handleTitleChange,
     handleAddTag,
@@ -107,6 +99,7 @@ export function useEditorState({
     handleSelectTag,
     getAvailableTagsForSelection,
     isLoadingTags,
-    fetchedTags
+    fetchedTags,
+    handleManualSave
   };
 }

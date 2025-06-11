@@ -2,7 +2,6 @@
 import { useState, useCallback } from "react";
 
 export function useAutoSave({
-  autoSave,
   onSave,
 }: {
   autoSave?: boolean;
@@ -10,15 +9,10 @@ export function useAutoSave({
 }) {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
-  const handleAutoSave = useCallback(() => {
-    if (autoSave && onSave) {
-      onSave();
-      setLastSaved(new Date());
-    }
-  }, [autoSave, onSave]);
-
+  // Remove auto-save functionality - only manual save
   const handleManualSave = useCallback(() => {
     if (onSave) {
+      console.log("Manual save triggered");
       onSave();
       setLastSaved(new Date());
     }
@@ -27,7 +21,6 @@ export function useAutoSave({
   return {
     lastSaved,
     setLastSaved,
-    handleAutoSave,
     handleManualSave
   };
 }

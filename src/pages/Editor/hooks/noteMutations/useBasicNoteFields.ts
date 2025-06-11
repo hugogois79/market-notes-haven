@@ -20,23 +20,11 @@ export const useBasicNoteFields = (currentNote: Note) => {
     hasConclusion: currentNote.hasConclusion ?? true
   });
 
-  // Track if we're in the middle of a category update to prevent overwrites
-  const [isUpdatingCategory, setIsUpdatingCategory] = useState(false);
-
-  // Update local state when currentNote changes, but preserve user changes
+  // Update local state when currentNote changes (only sync from database)
   useEffect(() => {
-    // Only update if the note actually changed (different ID or significant change)
-    // Don't override user's current edits
-    if (currentNote.title !== localTitle && !localTitle.startsWith("Untitled")) {
-      setLocalTitle(currentNote.title || "");
-    }
-    
-    // For category, only sync if we're not currently updating it
-    // This prevents the race condition where the UI reverts after save
-    if (!isUpdatingCategory && currentNote.category !== localCategory) {
-      console.log("useBasicNoteFields: Syncing category from database:", currentNote.category);
-      setLocalCategory(currentNote.category || "General");
-    }
+    console.log("useBasicNoteFields: Syncing with database values");
+    setLocalTitle(currentNote.title || "");
+    setLocalCategory(currentNote.category || "General");
     
     if (currentNote.tradeInfo !== localTradeInfo) {
       setLocalTradeInfo(currentNote.tradeInfo);
@@ -51,28 +39,17 @@ export const useBasicNoteFields = (currentNote: Note) => {
       summary: currentNote.summary || "",
       hasConclusion: currentNote.hasConclusion ?? true
     });
-  }, [currentNote.id, currentNote.title, currentNote.category, currentNote.tradeInfo, currentNote.hasConclusion, currentNote.summary, isUpdatingCategory]);
+  }, [currentNote.id, currentNote.title, currentNote.category, currentNote.tradeInfo, currentNote.hasConclusion, currentNote.summary]);
 
   const handleTitleChange = (title: string) => {
-    console.log("useBasicNoteFields: Title change:", title);
+    console.log("useBasicNoteFields: Title change (local only):", title);
     setLocalTitle(title);
     return title;
   };
 
   const handleCategoryChange = (category: string) => {
-    console.log("useBasicNoteFields: Category change to:", category);
-    
-    // Set the updating flag to prevent sync from overwriting
-    setIsUpdatingCategory(true);
-    
-    // Immediately update local state
+    console.log("useBasicNoteFields: Category change (local only):", category);
     setLocalCategory(category);
-    
-    // Clear the updating flag after a short delay to allow the save to complete
-    setTimeout(() => {
-      setIsUpdatingCategory(false);
-    }, 1000);
-    
     return category;
   };
 

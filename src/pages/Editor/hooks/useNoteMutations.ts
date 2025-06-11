@@ -54,8 +54,7 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     pendingChanges,
     handleSaveWithChanges,
     handleManualSave,
-    handleContentChange,
-    handleTitleChange: handleTitleChangeInSave
+    handleContentChange
   } = useSaveNote({ 
     onSave: async (updatedFields) => {
       console.log("useNoteMutations: Saving fields to database:", updatedFields);
@@ -63,54 +62,53 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     }
   });
 
-  // FIXED: Simplified title change handler that ensures immediate save
-  const handleTitleChangeAndSave = (title: string) => {
-    console.log("useNoteMutations: Title change triggered:", title);
-    
-    // Update local state
+  // Simple title change handler - no auto-save
+  const handleTitleChangeOnly = (title: string) => {
+    console.log("useNoteMutations: Title change (no auto-save):", title);
     handleTitleChange(title);
-    
-    // CRITICAL: Save title changes immediately
-    console.log("useNoteMutations: Saving title immediately:", title);
-    handleTitleChangeInSave(title);
   };
 
-  // CRITICAL FIX: Simplified category change handler that ensures immediate save
-  const handleCategoryChangeAndSave = async (category: string) => {
-    console.log("useNoteMutations: Category change triggered:", category);
-    
-    // Update local state first
+  // Simple category change handler - no auto-save
+  const handleCategoryChangeOnly = (category: string) => {
+    console.log("useNoteMutations: Category change (no auto-save):", category);
     handleCategoryChange(category);
+  };
+
+  // Enhanced manual save that includes all current state
+  const handleManualSaveWithCurrentState = async () => {
+    const fieldsToSave: Partial<Note> = {};
     
-    // CRITICAL FIX: Save category changes immediately with the exact value
-    console.log("useNoteMutations: Saving category immediately:", category);
+    // Include title if it has changed
+    if (localTitle !== currentNote.title) {
+      fieldsToSave.title = localTitle;
+    }
     
-    try {
-      await handleSaveWithChanges({ category }, false);
-      console.log("useNoteMutations: Category saved successfully:", category);
-    } catch (error) {
-      console.error("useNoteMutations: Failed to save category:", error);
-      // Revert local state on error
-      handleCategoryChange(currentNote.category || "General");
+    // Include category if it has changed
+    if (localCategory !== currentNote.category) {
+      fieldsToSave.category = localCategory;
+    }
+    
+    // Include any other pending changes
+    Object.assign(fieldsToSave, pendingChanges);
+    
+    if (Object.keys(fieldsToSave).length > 0) {
+      console.log("Manual save with current state:", fieldsToSave);
+      await handleSaveWithChanges(fieldsToSave, false);
     }
   };
 
-  // Override tags change to ensure they're saved immediately
+  // Override tags change to save immediately (since tags are usually intentional actions)
   const handleTagsChangeAndSave = (tags: Tag[] | string[]) => {
     handleTagsChange(tags);
     
-    // Process tags to match format expected by API - ensure we're using the correct up-to-date tag names
     const processedTags = tags.map(tag => {
       if (typeof tag === 'string') {
         return tag;
       }
-      // Make sure we're using the most up-to-date tag name from the tag object
       return tag.name || tag.id || String(tag);
     });
     
-    console.log("Saving tags with latest names:", processedTags);
-    
-    // Immediately save tag changes
+    console.log("Saving tags immediately:", processedTags);
     handleSaveWithChanges({ tags: processedTags }, false);
   };
 
@@ -119,7 +117,6 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     const result = handleAttachmentChange(attachmentData);
     if (result) {
       console.log("Saving attachment change:", result);
-      // Save both attachment_url and attachments array
       handleSaveWithChanges({
         attachment_url: result.attachment_url,
         attachments: result.attachments
@@ -140,15 +137,15 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     linkedTags,
     linkedTokens,
 
-    // Handlers
-    handleTitleChange: handleTitleChangeAndSave,
+    // Handlers - no auto-save for title/category
+    handleTitleChange: handleTitleChangeOnly,
     handleContentChange,
-    handleCategoryChange: handleCategoryChangeAndSave,
+    handleCategoryChange: handleCategoryChangeOnly,
     handleSummaryGenerated,
     handleTradeInfoChange,
     handleAttachmentChange: handleAttachmentChangeAndSave,
     handleSaveWithChanges,
-    handleManualSave,
+    handleManualSave: handleManualSaveWithCurrentState,
     handleTagsChange: handleTagsChangeAndSave,
     handleTokensChange
   };
