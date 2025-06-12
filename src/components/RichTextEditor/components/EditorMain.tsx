@@ -38,7 +38,6 @@ interface EditorMainProps {
   isSaving: boolean;
   lastSaved: Date | null;
   handleManualSave: () => void;
-  handleAutoSave: () => void;
   summary?: string;
   onSummaryGenerated?: (summary: string, hasConclusion?: boolean) => void;
   tradeInfo?: TradeInfo;
@@ -76,7 +75,6 @@ const EditorMain: React.FC<EditorMainProps> = ({
   isSaving,
   lastSaved,
   handleManualSave,
-  handleAutoSave,
   summary = "",
   onSummaryGenerated,
   tradeInfo,
@@ -91,6 +89,12 @@ const EditorMain: React.FC<EditorMainProps> = ({
     setIsPrintModalOpen(true);
   };
 
+  const handlePrintAction = () => {
+    if (onPrint) {
+      onPrint();
+    }
+  };
+
   return (
     <div className="flex flex-col h-full max-h-[calc(100vh-100px)] overflow-hidden">
       <EditorHeader 
@@ -99,14 +103,14 @@ const EditorMain: React.FC<EditorMainProps> = ({
         category={category}
         onCategoryChange={onCategoryChange}
         isPrintMode={false}
-        onPrint={handleOpenPrintModal}
+        onPrint={handlePrintAction}
       />
       
       <EditorStatusBar 
         isSaving={isSaving}
         lastSaved={lastSaved}
         onSave={handleManualSave}
-        onPrint={handleOpenPrintModal}
+        onPrint={handlePrintAction}
       />
       
       <div className="flex flex-col overflow-hidden flex-1 relative">
@@ -146,7 +150,6 @@ const EditorMain: React.FC<EditorMainProps> = ({
                 content={content}
                 onContentChange={onContentChange}
                 onContentUpdate={handleContentUpdate}
-                onAutoSave={handleAutoSave}
                 noteId={noteId}
                 attachment_url={attachment_url}
                 attachments={attachments}

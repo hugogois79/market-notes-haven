@@ -103,10 +103,19 @@ const RichTextEditor = ({
   
   // Handle direct print for current note
   const handlePrint = () => {
+    console.log("Print function called with:", {
+      title: currentTitle || title,
+      content: currentContent || content,
+      category,
+      tags: linkedTags,
+      summary,
+      attachments
+    });
+    
     printNote({
       id: noteId,
-      title: currentTitle || "Untitled Note",
-      content: currentContent,
+      title: currentTitle || title || "Untitled Note",
+      content: currentContent || content,
       category: category || "General",
       tags: linkedTags.map(tag => typeof tag === 'string' ? tag : tag.id),
       summary: summary,
@@ -118,14 +127,9 @@ const RichTextEditor = ({
     });
   };
 
-  // Simple handler that doesn't auto-save
-  const handleAutoSave = () => {
-    // No auto-save functionality - this is just a placeholder
-  };
-
   return (
     <EditorMain
-      title={currentTitle}
+      title={currentTitle || title}
       content={content}
       onTitleChange={handleTitleChange}
       onContentChange={handleContentChange}
@@ -153,7 +157,6 @@ const RichTextEditor = ({
       isSaving={isSaving}
       lastSaved={lastSaved}
       handleManualSave={manualSave || handleManualSave}
-      handleAutoSave={handleAutoSave}
       summary={summary}
       onSummaryGenerated={onSummaryGenerated}
       tradeInfo={tradeInfo}
