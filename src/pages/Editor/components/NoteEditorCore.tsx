@@ -69,17 +69,6 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
     debouncedContentChange(value);
   };
 
-  // Handler for auto-saving
-  const handleAutoSave = useCallback(async () => {
-    if (isSaving) return;
-    try {
-      await onSave({ content });
-      setLastSaved(new Date());
-    } catch (error) {
-      console.error("Error auto-saving note:", error);
-    }
-  }, [content, isSaving, onSave]);
-
   // Handle printing the note directly
   const handlePrint = useCallback(() => {
     printNote({
@@ -181,7 +170,6 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
       isSaving={isSaving}
       lastSaved={lastSaved}
       handleManualSave={handleManualSave}
-      handleAutoSave={handleAutoSave}
       summary={currentNote.summary}
       onSummaryGenerated={onSummaryGenerated}
       tradeInfo={localTradeInfo}
