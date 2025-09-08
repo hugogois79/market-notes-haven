@@ -2,8 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Printer } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -20,7 +18,6 @@ export interface EditorHeaderProps {
   onTitleChange: (title: string) => void;
   onCategoryChange: (category: string) => void;
   isPrintMode?: boolean;
-  onPrint?: () => void;
 }
 
 const EditorHeader: React.FC<EditorHeaderProps> = ({
@@ -28,8 +25,7 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
   category,
   onTitleChange,
   onCategoryChange,
-  isPrintMode = false,
-  onPrint
+  isPrintMode = false
 }) => {
   const [availableCategories, setAvailableCategories] = useState<string[]>([
     "General",
@@ -101,28 +97,18 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
       {isPrintMode ? (
         <h1 className="text-2xl font-bold">{title}</h1>
       ) : (
-        <div className="flex justify-between items-center">
-          <div className="flex-grow">
-            <Label htmlFor="title" className="text-sm font-medium">
-              Title
-            </Label>
-            <Input
-              id="title"
-              value={title || ""}
-              onChange={handleTitleChange}
-              placeholder="Note title"
-              className="text-lg font-medium"
-              autoFocus
-            />
-          </div>
-          {onPrint && (
-            <div className="ml-4">
-              <Button variant="outline" size="sm" onClick={onPrint} className="flex items-center gap-2">
-                <Printer size={16} />
-                Print
-              </Button>
-            </div>
-          )}
+        <div>
+          <Label htmlFor="title" className="text-sm font-medium">
+            Title
+          </Label>
+          <Input
+            id="title"
+            value={title || ""}
+            onChange={handleTitleChange}
+            placeholder="Note title"
+            className="text-lg font-medium"
+            autoFocus
+          />
         </div>
       )}
 

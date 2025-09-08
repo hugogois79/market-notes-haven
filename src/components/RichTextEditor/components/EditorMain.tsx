@@ -103,14 +103,12 @@ const EditorMain: React.FC<EditorMainProps> = ({
         category={category}
         onCategoryChange={onCategoryChange}
         isPrintMode={false}
-        onPrint={handlePrintAction}
       />
       
       <EditorStatusBar 
         isSaving={isSaving}
         lastSaved={lastSaved}
         onSave={handleManualSave}
-        onPrint={handlePrintAction}
       />
       
       <div className="flex flex-col overflow-hidden flex-1 relative">
