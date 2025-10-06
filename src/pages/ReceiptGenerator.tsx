@@ -130,11 +130,19 @@ const ReceiptGenerator = () => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Receipt - Sustainable Yield Capital</title>
+          <title>Receipt</title>
           <style>
             @page {
               size: A4;
               margin: 2cm;
+            }
+            @media print {
+              @page {
+                margin: 0;
+              }
+              body {
+                margin: 2cm;
+              }
             }
             body {
               font-family: Arial, sans-serif;
@@ -224,7 +232,22 @@ const ReceiptGenerator = () => {
 
     printWindow.document.write(printContent);
     printWindow.document.close();
+    
+    // Execute script to remove headers/footers and print
     printWindow.onload = () => {
+      // Remove default browser headers and footers
+      const style = printWindow.document.createElement('style');
+      style.textContent = `
+        @page { 
+          margin: 0; 
+          size: A4;
+        }
+        body { 
+          margin: 2cm; 
+        }
+      `;
+      printWindow.document.head.appendChild(style);
+      
       setTimeout(() => {
         printWindow.print();
       }, 250);
