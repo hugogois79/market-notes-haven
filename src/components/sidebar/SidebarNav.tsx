@@ -55,6 +55,11 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       path: "/tokens",
     },
     {
+      title: "Receipt Generator",
+      icon: <FileText size={20} />,
+      path: "/receipt-generator",
+    },
+    {
       title: "Market Data",
       icon: <TrendingUp size={20} />,
       path: "/market-data",

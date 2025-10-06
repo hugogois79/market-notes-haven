@@ -19,6 +19,7 @@ import Index from "@/pages/Index";
 import TokensDashboard from "@/pages/tokens";
 import TokenDetail from "@/pages/tokens/[id]";
 import CryptoDashboard from "@/pages/crypto/Dashboard";
+import ReceiptGenerator from "@/pages/ReceiptGenerator";
 
 // TAO-specific routes
 import TAOLayout from "@/pages/tao/layout";
@@ -123,6 +124,14 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <CryptoDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="receipt-generator"
+            element={
+              <ProtectedRoute>
+                <ReceiptGenerator />
               </ProtectedRoute>
             }
           />
