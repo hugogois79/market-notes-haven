@@ -132,6 +132,13 @@ CRITICAL RULES:
       .replace(/```html!?/gi, '')
       .replace(/```/g, '')
       .trim();
+    
+    // Remove any company headers that might have been generated
+    formattedReceipt = formattedReceipt
+      .replace(/SUSTAINABLE YIELD.*?(?=<h[123]|<div)/gis, '')
+      .replace(/Dept \d+.*?(?=<h[123]|<div)/gis, '')
+      .replace(/Company (?:Number|Registration Number):.*?(?=<h[123]|<div)/gis, '')
+      .trim();
 
     return new Response(
       JSON.stringify({ formattedReceipt }),
