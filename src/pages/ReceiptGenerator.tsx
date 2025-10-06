@@ -41,6 +41,11 @@ const ReceiptGenerator = () => {
 
       setGeneratedReceipt(data.formattedReceipt);
       toast.success("Receipt formatted successfully!");
+      
+      // Auto-save after generating
+      if (session?.user?.id) {
+        await saveReceipt(data.formattedReceipt);
+      }
     } catch (error) {
       console.error('Error formatting receipt:', error);
       toast.error("Failed to format receipt. Please try again.");
@@ -49,16 +54,8 @@ const ReceiptGenerator = () => {
     }
   };
 
-  const handleSave = async () => {
-    if (!session?.user?.id) {
-      toast.error("You must be logged in to save receipts");
-      return;
-    }
-
-    if (!generatedReceipt) {
-      toast.error("Please generate the receipt first");
-      return;
-    }
+  const saveReceipt = async (formattedContent: string) => {
+    if (!session?.user?.id) return;
 
     setIsSaving(true);
     try {
@@ -73,7 +70,7 @@ const ReceiptGenerator = () => {
       } = {
         user_id: session.user.id,
         raw_content: content,
-        formatted_content: generatedReceipt,
+        formatted_content: formattedContent,
         beneficiary_name: null,
         payment_amount: null,
         payment_date: null,
@@ -109,6 +106,20 @@ const ReceiptGenerator = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSave = async () => {
+    if (!session?.user?.id) {
+      toast.error("You must be logged in to save receipts");
+      return;
+    }
+
+    if (!generatedReceipt) {
+      toast.error("Please generate the receipt first");
+      return;
+    }
+
+    await saveReceipt(generatedReceipt);
   };
 
   const handlePrint = () => {
