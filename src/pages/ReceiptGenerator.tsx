@@ -145,7 +145,7 @@ const ReceiptGenerator = () => {
               }
             }
             body {
-              font-family: Arial, sans-serif;
+              font-family: 'Lato', sans-serif;
               line-height: 1.4;
               color: #000;
               padding: 20px;
