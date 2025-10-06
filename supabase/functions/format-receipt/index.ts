@@ -83,6 +83,15 @@ OUTPUT FORMAT (HTML with inline styles):
     </tbody>
   </table>
   
+  <div style="margin: 20px 0; text-align: left;">
+    <p style="margin: 5px 0;"><strong>Payment Method:</strong> [PAYMENT METHOD]</p>
+    <p style="margin: 5px 0;"><strong>Beneficiary Bank:</strong> [BANK NAME]</p>
+    <p style="margin: 5px 0;"><strong>IBAN:</strong> [IBAN NUMBER]</p>
+    <p style="margin: 5px 0;"><strong>BIC/SWIFT:</strong> [SWIFT CODE]</p>
+    <p style="margin: 5px 0;"><strong>Payment Description:</strong> [DESCRIPTION]</p>
+    <p style="margin: 5px 0;"><strong>Date of Issue:</strong> [DATE]</p>
+  </div>
+  
   [Include any additional relevant information as paragraphs with proper formatting and left alignment]
   
   <div style="margin: 30px 0 0 0; text-align: right;">
@@ -100,6 +109,7 @@ CRITICAL RULES - MUST FOLLOW:
 - Extract ALL information from the provided content accurately
 - Do not invent or assume information that is not present
 - Use the exact HTML table structure shown above
+- CRITICAL: AFTER THE TABLE, include Payment Method, Beneficiary Bank, IBAN, BIC/SWIFT, Payment Description, and Date of Issue aligned to the LEFT (text-align: left)
 - Keep it professional and well-structured`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
