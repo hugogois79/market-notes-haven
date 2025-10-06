@@ -35,6 +35,7 @@ FORMAT INSTRUCTIONS:
 2. Extract beneficiary details (name, position, purpose, etc.)
 3. Extract payment details (date, amount, reference, bank details, etc.)
 4. Format it professionally with clear sections using HTML with inline styles
+5. CRITICAL: Always place beneficiary information aligned to the RIGHT side using text-align: right in inline styles
 
 OUTPUT FORMAT (HTML with inline styles):
 
@@ -43,7 +44,7 @@ OUTPUT FORMAT (HTML with inline styles):
   
   <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0 15px 0;">PAYMENT RECEIPT - [RECEIPT TYPE]</h3>
   
-  <div style="margin: 15px 0;">
+  <div style="margin: 15px 0; text-align: right;">
     <p style="font-weight: bold; margin: 10px 0;">Beneficiary:</p>
     <p style="margin: 5px 0;"><strong>Name:</strong> [NAME]</p>
     <p style="margin: 5px 0;"><strong>Purpose:</strong> [PURPOSE]</p>

@@ -138,6 +138,13 @@ const ReceiptGenerator = () => {
               max-width: 200px;
               margin-bottom: 20px;
             }
+            .payment-number {
+              text-align: right;
+              font-weight: bold;
+              margin: 10px 0;
+              font-size: 12px;
+              color: #333;
+            }
             table {
               border-collapse: collapse;
               width: 100%;
@@ -157,6 +164,10 @@ const ReceiptGenerator = () => {
               font-size: 11px;
               margin: 5px 0;
             }
+            /* Force beneficiary to align right */
+            .formatted-receipt div[style*="Beneficiary"] {
+              text-align: right !important;
+            }
             @media print {
               body {
                 padding: 0;
@@ -175,7 +186,10 @@ const ReceiptGenerator = () => {
             <img src="${sustainableYieldLogo}" alt="Sustainable Yield Capital" class="header-logo" />
           </div>
           <hr style="border: none; border-top: 1px solid #ccc; margin: 0 0 15px 0;" />
-          ${generatedReceipt}
+          ${receiptNumber ? `<div class="payment-number">Payment Number: #${receiptNumber}</div>` : ''}
+          <div class="formatted-receipt">
+            ${generatedReceipt}
+          </div>
         </body>
       </html>
     `;
@@ -305,6 +319,11 @@ const ReceiptGenerator = () => {
                     />
                   </div>
                   <hr className="border-t border-gray-300 mb-6" />
+                  {receiptNumber && (
+                    <div className="text-right font-semibold text-sm mb-4">
+                      Payment Number: #{receiptNumber}
+                    </div>
+                  )}
                   <div 
                     className="formatted-receipt"
                     dangerouslySetInnerHTML={{ __html: generatedReceipt }}
