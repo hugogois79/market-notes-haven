@@ -47,13 +47,13 @@ OUTPUT FORMAT (HTML with inline styles):
 <div style="font-family: 'Lato', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
   <!-- START HERE - Do NOT include ANY company information above this line -->
   
-  <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0 15px 0; text-align: center; text-decoration: underline;">PAYMENT RECEIPT - [RECEIPT TYPE]</h3>
-  
   <div style="margin: 15px 0; text-align: right;">
     <p style="font-weight: bold; margin: 10px 0;">Beneficiary:</p>
     <p style="margin: 5px 0;"><strong>Name:</strong> [NAME]</p>
     [Any other beneficiary identification details like position, if applicable]
   </div>
+  
+  <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0 15px 0; text-align: center; text-decoration: underline;">PAYMENT RECEIPT - [RECEIPT TYPE]</h3>
   
   <div style="margin: 15px 0; text-align: left;">
     <p style="margin: 5px 0;"><strong>Purpose:</strong> [PURPOSE DESCRIPTION]</p>
