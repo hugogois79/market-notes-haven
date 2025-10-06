@@ -13,7 +13,6 @@ import sustainableYieldLogo from "@/assets/sustainable-yield-logo.png";
 const ReceiptGenerator = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
-  const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [generatedReceipt, setGeneratedReceipt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -53,11 +52,6 @@ const ReceiptGenerator = () => {
   const handleSave = async () => {
     if (!session?.user?.id) {
       toast.error("You must be logged in to save receipts");
-      return;
-    }
-
-    if (!title.trim()) {
-      toast.error("Please add a title");
       return;
     }
 
@@ -199,11 +193,9 @@ const ReceiptGenerator = () => {
           </Button>
           <div>
             <h1 className="text-xl font-semibold">Receipt Generator</h1>
-            {receiptNumber && (
-              <p className="text-sm text-muted-foreground">
-                Receipt #{receiptNumber}
-              </p>
-            )}
+            <p className="text-sm text-muted-foreground">
+              Format and print professional receipts using AI
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -217,7 +209,7 @@ const ReceiptGenerator = () => {
           </Button>
           <Button
             onClick={handleSave}
-            disabled={isSaving || !generatedReceipt || !title.trim()}
+            disabled={isSaving || !generatedReceipt}
           >
             {isSaving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -232,17 +224,6 @@ const ReceiptGenerator = () => {
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-5xl mx-auto space-y-6">
-          {/* Title Input */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Title</label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Receipt title..."
-              className="text-lg font-semibold"
-            />
-          </div>
-
           {/* Status Indicator */}
           {!session?.user && (
             <Card className="bg-yellow-50 border-yellow-200 p-4">
@@ -289,7 +270,14 @@ const ReceiptGenerator = () => {
           {/* Generated Receipt Preview */}
           {generatedReceipt && (
             <div>
-              <label className="text-sm font-medium mb-2 block">Formatted Receipt</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium">Formatted Receipt</label>
+                {receiptNumber && (
+                  <div className="text-sm text-muted-foreground">
+                    Receipt Number: <span className="font-semibold">#{receiptNumber}</span>
+                  </div>
+                )}
+              </div>
               <Card className="bg-white shadow-lg">
                 <div className="p-8 relative">
                   <img 
