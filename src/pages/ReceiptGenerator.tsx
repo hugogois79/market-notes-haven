@@ -201,11 +201,18 @@ const ReceiptGenerator = () => {
             .formatted-receipt p:contains("Purpose:") {
               text-align: right !important;
             }
+            /* Force authorized signature to align right */
+            .formatted-receipt > div:last-of-type {
+              text-align: right !important;
+            }
             @media print {
               body {
                 padding: 0;
               }
               .formatted-receipt > div:first-of-type {
+                text-align: right !important;
+              }
+              .formatted-receipt > div:last-of-type {
                 text-align: right !important;
               }
             }

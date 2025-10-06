@@ -35,7 +35,11 @@ FORMAT INSTRUCTIONS:
 2. Extract beneficiary details (name, position, purpose, etc.)
 3. Extract payment details (date, amount, reference, bank details, etc.)
 4. Format it professionally with clear sections using HTML with inline styles
-5. CRITICAL: Always place beneficiary information aligned to the RIGHT side using text-align: right in inline styles
+5. ALIGNMENT RULES:
+   - Beneficiary section (recipient name, position) must be aligned to the RIGHT
+   - Payment details section (payment method, bank details, IBAN, etc.) must be aligned to the LEFT
+   - Authorized Signature must be aligned to the RIGHT
+   - All other content should be left-aligned by default
 
 OUTPUT FORMAT (HTML with inline styles):
 
@@ -74,9 +78,9 @@ OUTPUT FORMAT (HTML with inline styles):
     </tbody>
   </table>
   
-  [Include any additional relevant information as paragraphs with proper formatting]
+  [Include any additional relevant information as paragraphs with proper formatting and left alignment]
   
-  <div style="margin: 30px 0 0 0;">
+  <div style="margin: 30px 0 0 0; text-align: right;">
     <p style="margin: 5px 0;"><strong>Authorized Signature:</strong> ____________________</p>
   </div>
 </div>
