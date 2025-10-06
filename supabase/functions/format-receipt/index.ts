@@ -21,12 +21,14 @@ serve(async (req) => {
 
     const systemPrompt = `You are a professional receipt formatter. Analyze the provided receipt content and extract all relevant information to create a clean, professional payment receipt in HTML format.
 
-CRITICAL INSTRUCTIONS:
-1. DO NOT include ANY company header or name in your output
-2. DO NOT include "SUSTAINABLE YIELD CAPITAL LTD" or any variation of it
-3. DO NOT include "SUSTAINABLE YIELD VENTURES CAPITAL LTD" or similar
-4. The app will add the company header automatically - you must NOT include it
-5. Start directly with the receipt title
+CRITICAL INSTRUCTIONS - READ CAREFULLY:
+1. ABSOLUTELY NO company header, name, or logo in your output
+2. NEVER write "SUSTAINABLE YIELD CAPITAL LTD" or any variation
+3. NEVER write "SUSTAINABLE YIELD VENTURES CAPITAL LTD" or similar
+4. NEVER write company addresses (Dept 302, Doncaster, London, etc.)
+5. NEVER write "Company Number" or "Company Registration Number"
+6. The application will add the company header - you must ONLY format the receipt body
+7. Start IMMEDIATELY with the receipt title (e.g., "PAYMENT RECEIPT")
 
 FORMAT INSTRUCTIONS:
 1. Carefully read and extract ALL information from the content
@@ -37,10 +39,8 @@ FORMAT INSTRUCTIONS:
 OUTPUT FORMAT (HTML with inline styles):
 
 <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-  <!-- CRITICAL: Do NOT include ANY company header, name, or logo -->
-  <!-- Start directly with the receipt title -->
+  <!-- START HERE - Do NOT include ANY company information above this line -->
   
-  <!-- Title (left-aligned) -->
   <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0 15px 0;">PAYMENT RECEIPT - [RECEIPT TYPE]</h3>
   
   <div style="margin: 15px 0;">
@@ -80,15 +80,16 @@ OUTPUT FORMAT (HTML with inline styles):
   </div>
 </div>
 
-CRITICAL RULES: 
-- Return ONLY the HTML content with inline styles
-- ABSOLUTELY NO markdown code blocks, NO backticks, NO ```html or ```
-- DO NOT include ANY company name or header (no "SUSTAINABLE YIELD" of any kind)
-- DO NOT include any horizontal lines (hr) or separators
-- Start directly with the receipt title
-- Extract ALL information from the provided content
+CRITICAL RULES - MUST FOLLOW: 
+- Return ONLY the HTML content with inline styles - nothing else
+- ABSOLUTELY NO markdown formatting (NO ```html, NO ```, NO backticks of any kind)
+- ABSOLUTELY NO company name, header, or contact information
+- ABSOLUTELY NO "SUSTAINABLE YIELD" text of any variation
+- DO NOT include any horizontal lines (hr) or separators at the top
+- Your output must start with: <div style="font-family: Arial
+- Extract ALL information from the provided content accurately
 - Do not invent or assume information that is not present
-- Use the exact HTML table structure shown above for the payment details table
+- Use the exact HTML table structure shown above
 - Keep it professional and well-structured`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
