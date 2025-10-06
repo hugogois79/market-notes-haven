@@ -19,55 +19,87 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    const systemPrompt = `You are a professional receipt formatter. Analyze the provided receipt content and extract all relevant information to create a clean, professional payment receipt.
+    const systemPrompt = `You are a professional receipt formatter. Analyze the provided receipt content and extract all relevant information to create a clean, professional payment receipt in HTML format.
 
 INSTRUCTIONS:
 1. Carefully read and extract ALL information from the content
 2. Identify the company/issuer information (name, address, company number, etc.)
 3. Extract beneficiary details (name, position, purpose, etc.)
 4. Extract payment details (date, amount, reference, bank details, etc.)
-5. Format it professionally with clear sections
+5. Format it professionally with clear sections using HTML with inline styles
 
-OUTPUT FORMAT:
+OUTPUT FORMAT (HTML with inline styles):
 
-[COMPANY NAME]
-[Company Address]
-[Company Registration Details]
+<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
+  <div style="text-align: center; margin-bottom: 20px;">
+    <h2 style="margin: 0; font-size: 18px; font-weight: bold;">[COMPANY NAME]</h2>
+    <p style="margin: 5px 0; font-size: 12px;">[Company Address]</p>
+    <p style="margin: 5px 0; font-size: 12px;">[Company Registration Details]</p>
+  </div>
+  
+  <hr style="border: none; border-top: 1px solid #ccc; margin: 20px 0;" />
+  
+  <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0;">PAYMENT RECEIPT - [RECEIPT TYPE]</h3>
+  
+  <div style="margin: 15px 0;">
+    <p style="font-weight: bold; margin: 10px 0;">Beneficiary:</p>
+    <p style="margin: 5px 0;"><strong>Name:</strong> [NAME]</p>
+    <p style="margin: 5px 0;"><strong>Position:</strong> [POSITION if applicable]</p>
+    <p style="margin: 5px 0;"><strong>Purpose:</strong> [PURPOSE]</p>
+    [Any other relevant beneficiary details as paragraphs]
+  </div>
+  
+  <hr style="border: none; border-top: 1px solid #ccc; margin: 20px 0;" />
+  
+  <h4 style="font-size: 14px; font-weight: bold; margin: 15px 0;">Payment Details</h4>
+  
+  <table style="width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #ccc;">
+    <thead>
+      <tr style="background-color: #f3f4f6;">
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left; font-weight: bold;">PAYMENT DATE</th>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left; font-weight: bold;">REFERENCE NO.</th>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left; font-weight: bold;">AMOUNT SENT</th>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left; font-weight: bold;">AMOUNT RECEIVED</th>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left; font-weight: bold;">PAID BY</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="border: 1px solid #ccc; padding: 8px;">[DATE]</td>
+        <td style="border: 1px solid #ccc; padding: 8px;">[REF]</td>
+        <td style="border: 1px solid #ccc; padding: 8px;">[AMOUNT]</td>
+        <td style="border: 1px solid #ccc; padding: 8px;">[AMOUNT]</td>
+        <td style="border: 1px solid #ccc; padding: 8px;">[COMPANY]</td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <div style="margin: 15px 0;">
+    <p style="margin: 5px 0;">• <strong>Payment Method:</strong> [METHOD]</p>
+    <p style="margin: 5px 0;">• <strong>Beneficiary Bank:</strong> [BANK NAME]</p>
+    <p style="margin: 5px 0;">• <strong>Account Details:</strong> [ACCOUNT INFO]</p>
+    <p style="margin: 5px 0;">• <strong>BIC/SWIFT:</strong> [BIC if available]</p>
+    <p style="margin: 5px 0;">• <strong>Payment Description:</strong> [DESCRIPTION]</p>
+  </div>
+  
+  [Include any additional relevant information as paragraphs]
+  
+  <hr style="border: none; border-top: 1px solid #ccc; margin: 20px 0;" />
+  
+  <div style="margin: 20px 0;">
+    <p style="margin: 5px 0;"><strong>Issued by:</strong> [COMPANY NAME]</p>
+    <p style="margin: 5px 0;"><strong>Date of Issue:</strong> [DATE]</p>
+  </div>
+  
+  <p style="margin: 20px 0;"><strong>Authorized Signature:</strong> ____________________</p>
+</div>
 
----
-
-PAYMENT RECEIPT - [RECEIPT TYPE]
-
-Beneficiary:
-Name: [NAME]
-Position: [POSITION if applicable]
-Purpose: [PURPOSE]
-[Any other relevant beneficiary details]
-
----
-
-Payment Details
-
-| PAYMENT DATE | REFERENCE NO. | AMOUNT SENT | AMOUNT RECEIVED | PAID BY |
-|--------------|---------------|-------------|-----------------|---------|
-| [DATE] | [REF] | [AMOUNT] | [AMOUNT] | [COMPANY] |
-
-• Payment Method: [METHOD]
-• Beneficiary Bank: [BANK NAME]
-• Account Details: [ACCOUNT INFO]
-• BIC/SWIFT: [BIC if available]
-• Payment Description: [DESCRIPTION]
-
-[Include any additional relevant information]
-
----
-
-Issued by: [COMPANY NAME]
-Date of Issue: [DATE]
-
-Authorized Signature: ____________________
-
-IMPORTANT: Extract ALL information from the provided content. Do not invent or assume information that is not present. Keep the format professional and well-structured.`;
+IMPORTANT: 
+- Return ONLY the HTML content with inline styles
+- Extract ALL information from the provided content
+- Do not invent or assume information that is not present
+- Use the exact HTML table structure shown above for the payment details table
+- Keep it professional and well-structured`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
