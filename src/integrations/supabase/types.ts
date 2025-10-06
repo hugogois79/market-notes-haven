@@ -1029,6 +1029,59 @@ export type Database = {
         }
         Relationships: []
       }
+      receipts: {
+        Row: {
+          beneficiary_name: string | null
+          company_id: string | null
+          created_at: string
+          formatted_content: string
+          id: string
+          payment_amount: string | null
+          payment_date: string | null
+          payment_reference: string | null
+          raw_content: string
+          receipt_number: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          beneficiary_name?: string | null
+          company_id?: string | null
+          created_at?: string
+          formatted_content: string
+          id?: string
+          payment_amount?: string | null
+          payment_date?: string | null
+          payment_reference?: string | null
+          raw_content: string
+          receipt_number: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          beneficiary_name?: string | null
+          company_id?: string | null
+          created_at?: string
+          formatted_content?: string
+          id?: string
+          payment_amount?: string | null
+          payment_date?: string | null
+          payment_reference?: string | null
+          raw_content?: string
+          receipt_number?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "receipt_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_expenses: {
         Row: {
           created_at: string
