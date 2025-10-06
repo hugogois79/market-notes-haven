@@ -34,10 +34,8 @@ OUTPUT FORMAT (HTML with inline styles):
   <!-- IMPORTANT: Do NOT include company header (SUSTAINABLE YIELD CAPITAL LTD) or logo in your output -->
   <!-- The header with company info on left and logo on right will be added by the app -->
   
-  <hr style="border: none; border-top: 1px solid #ccc; margin: 20px 0;" />
-  
-  <!-- Centered title -->
-  <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0; text-align: center;">PAYMENT RECEIPT - [RECEIPT TYPE]</h3>
+  <!-- Title (not centered, left-aligned) -->
+  <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0 15px 0;">PAYMENT RECEIPT - [RECEIPT TYPE]</h3>
   
   <div style="margin: 15px 0;">
     <p style="font-weight: bold; margin: 10px 0;">Beneficiary:</p>
@@ -46,9 +44,7 @@ OUTPUT FORMAT (HTML with inline styles):
     [Any other relevant beneficiary details as paragraphs]
   </div>
   
-  <hr style="border: none; border-top: 1px solid #ccc; margin: 20px 0;" />
-  
-  <h4 style="font-size: 14px; font-weight: bold; margin: 15px 0;">Payment Details</h4>
+  <h4 style="font-size: 14px; font-weight: bold; margin: 20px 0 10px 0;">Payment Details</h4>
   
   <table style="width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #ccc;">
     <thead>
@@ -73,9 +69,7 @@ OUTPUT FORMAT (HTML with inline styles):
   
   [Include any additional relevant information as paragraphs with proper formatting]
   
-  <hr style="border: none; border-top: 1px solid #ccc; margin: 20px 0;" />
-  
-  <div style="margin: 20px 0;">
+  <div style="margin: 30px 0 0 0;">
     <p style="margin: 5px 0;"><strong>Authorized Signature:</strong> ____________________</p>
   </div>
 </div>
@@ -83,12 +77,12 @@ OUTPUT FORMAT (HTML with inline styles):
 IMPORTANT: 
 - Return ONLY the HTML content with inline styles, NO markdown code blocks, NO backticks
 - Do NOT include ```html or ``` in your response
+- Do NOT include the company header (SUSTAINABLE YIELD CAPITAL LTD) as it will be added by the app
+- Do NOT include any horizontal lines (hr) or separators
 - Extract ALL information from the provided content
 - Do not invent or assume information that is not present
 - Use the exact HTML table structure shown above for the payment details table
-- Keep it professional and well-structured
-- The title should be centered
-- Company info should be on the right side of the header`;
+- Keep it professional and well-structured`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',

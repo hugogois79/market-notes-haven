@@ -155,7 +155,7 @@ const ReceiptGenerator = () => {
           </style>
         </head>
         <body>
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
             <div style="text-align: left;">
               <h2 style="margin: 0 0 5px 0; font-size: 14px; font-weight: bold;">SUSTAINABLE YIELD CAPITAL LTD</h2>
               <p style="margin: 2px 0; font-size: 11px;">Dept 302, 43 Owston Road Carcroft</p>
@@ -164,6 +164,7 @@ const ReceiptGenerator = () => {
             </div>
             <img src="${sustainableYieldLogo}" alt="Sustainable Yield Capital" class="header-logo" />
           </div>
+          <hr style="border: none; border-top: 1px solid #ccc; margin: 0 0 15px 0;" />
           ${generatedReceipt}
         </body>
       </html>
@@ -280,7 +281,7 @@ const ReceiptGenerator = () => {
               </div>
               <Card className="bg-white shadow-lg">
                 <div className="p-8 relative">
-                  <div className="flex justify-between items-start mb-8">
+                  <div className="flex justify-between items-start mb-6">
                     <div className="text-left">
                       <h2 className="text-lg font-bold mb-1">SUSTAINABLE YIELD CAPITAL LTD</h2>
                       <p className="text-xs mb-0.5">Dept 302, 43 Owston Road Carcroft</p>
@@ -293,6 +294,7 @@ const ReceiptGenerator = () => {
                       className="w-48 h-auto"
                     />
                   </div>
+                  <hr className="border-t border-gray-300 mb-6" />
                   <div 
                     className="formatted-receipt"
                     dangerouslySetInnerHTML={{ __html: generatedReceipt }}
