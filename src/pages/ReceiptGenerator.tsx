@@ -1,24 +1,36 @@
 import { useState } from "react";
-import { FileText, Printer, RotateCcw, Loader2 } from "lucide-react";
+import { ArrowLeft, Printer, Save, Loader2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import sustainableYieldLogo from "@/assets/sustainable-yield-logo.png";
 
 const ReceiptGenerator = () => {
-  const [inputText, setInputText] = useState("");
+  const navigate = useNavigate();
+  const { session } = useAuth();
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
   const [generatedReceipt, setGeneratedReceipt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [receiptNumber, setReceiptNumber] = useState<number | null>(null);
+  const [receiptId, setReceiptId] = useState<string | null>(null);
 
   const handleGenerate = async () => {
-    if (!inputText.trim()) return;
+    if (!content.trim()) {
+      toast.error("Please add some content first");
+      return;
+    }
     
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('format-receipt', {
-        body: { content: inputText }
+        body: { content }
       });
 
       if (error) throw error;
@@ -35,6 +47,73 @@ const ReceiptGenerator = () => {
       toast.error("Failed to format receipt. Please try again.");
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!session?.user?.id) {
+      toast.error("You must be logged in to save receipts");
+      return;
+    }
+
+    if (!title.trim()) {
+      toast.error("Please add a title");
+      return;
+    }
+
+    if (!generatedReceipt) {
+      toast.error("Please generate the receipt first");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const receiptData: {
+        user_id: string;
+        raw_content: string;
+        formatted_content: string;
+        beneficiary_name?: string | null;
+        payment_amount?: string | null;
+        payment_date?: string | null;
+        payment_reference?: string | null;
+      } = {
+        user_id: session.user.id,
+        raw_content: content,
+        formatted_content: generatedReceipt,
+        beneficiary_name: null,
+        payment_amount: null,
+        payment_date: null,
+        payment_reference: null,
+      };
+
+      if (receiptId) {
+        // Update existing receipt
+        const { error } = await supabase
+          .from('receipts')
+          .update(receiptData)
+          .eq('id', receiptId);
+
+        if (error) throw error;
+        toast.success("Receipt updated successfully!");
+      } else {
+        // Create new receipt
+        const { data, error } = await supabase
+          .from('receipts')
+          .insert([receiptData] as any)
+          .select('id, receipt_number')
+          .single();
+
+        if (error) throw error;
+        
+        setReceiptId(data.id);
+        setReceiptNumber(data.receipt_number);
+        toast.success(`Receipt saved with number #${data.receipt_number}`);
+      }
+    } catch (error) {
+      console.error('Error saving receipt:', error);
+      toast.error("Failed to save receipt");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -105,100 +184,139 @@ const ReceiptGenerator = () => {
     };
   };
 
-  const handleClear = () => {
-    setInputText("");
-    setGeneratedReceipt("");
-  };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Receipt Generator</h1>
-        <p className="text-muted-foreground">
-          Format and print professional receipts using AI
-        </p>
+    <div className="flex flex-col h-screen bg-background">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-semibold">Receipt Generator</h1>
+            {receiptNumber && (
+              <p className="text-sm text-muted-foreground">
+                Receipt #{receiptNumber}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handlePrint}
+            disabled={!generatedReceipt}
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            Print
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={isSaving || !generatedReceipt || !title.trim()}
+          >
+            {isSaving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            Save
+          </Button>
+        </div>
       </div>
 
-      <div className="space-y-6">
-        {/* Input Area */}
-        <div className="space-y-4">
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-5xl mx-auto space-y-6">
+          {/* Title Input */}
           <div>
-            <label className="text-sm font-medium mb-2 block">
-              Receipt Content
-            </label>
-            <Textarea
-              placeholder="Paste your receipt text here..."
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              className="min-h-[200px] font-mono text-sm"
+            <label className="text-sm font-medium mb-2 block">Title</label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Receipt title..."
+              className="text-lg font-semibold"
             />
           </div>
 
-          <div className="flex gap-2">
-            <Button
-              onClick={handleGenerate}
-              disabled={!inputText.trim() || isGenerating}
-              className="flex-1"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Generate Receipt
-                </>
-              )}
-            </Button>
-            <Button
-              onClick={handleClear}
-              variant="outline"
-              disabled={!inputText && !generatedReceipt}
-            >
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Clear
-            </Button>
-          </div>
-        </div>
+          {/* Status Indicator */}
+          {!session?.user && (
+            <Card className="bg-yellow-50 border-yellow-200 p-4">
+              <p className="text-sm text-yellow-800">
+                You need to be logged in to save receipts
+              </p>
+            </Card>
+          )}
 
-        {/* Preview Area - Below Input */}
-        {generatedReceipt && (
-          <div className="space-y-4">
+          {/* Content Editor */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium">Receipt Content</label>
+              <Button
+                onClick={handleGenerate}
+                disabled={!content.trim() || isGenerating}
+                size="sm"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Generate Receipt
+                  </>
+                )}
+              </Button>
+            </div>
+            <Card>
+              <div className="p-4">
+                <Textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Paste your receipt information here..."
+                  className="min-h-[300px] font-mono text-sm resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+              </div>
+            </Card>
+          </div>
+
+          {/* Generated Receipt Preview */}
+          {generatedReceipt && (
             <div>
-              <label className="text-sm font-medium mb-2 block">Preview</label>
+              <label className="text-sm font-medium mb-2 block">Formatted Receipt</label>
               <Card className="bg-white shadow-lg">
-                <div className="p-6 relative">
+                <div className="p-8 relative">
                   <img 
                     src={sustainableYieldLogo} 
                     alt="Sustainable Yield Capital" 
-                    className="absolute top-6 right-6 w-48 h-auto"
+                    className="absolute top-8 right-8 w-48 h-auto opacity-90"
                   />
-                  <pre className="whitespace-pre-wrap font-sans text-sm text-black leading-relaxed">
-                    {generatedReceipt}
-                  </pre>
+                  <div 
+                    className="formatted-receipt"
+                    dangerouslySetInnerHTML={{ __html: generatedReceipt }}
+                  />
                 </div>
               </Card>
             </div>
+          )}
 
-            <Button onClick={handlePrint} className="w-full">
-              <Printer className="mr-2 h-4 w-4" />
-              Print to PDF
-            </Button>
-          </div>
-        )}
-
-        {!generatedReceipt && !isGenerating && (
-          <Card className="bg-muted/50">
-            <div className="flex items-center justify-center h-[200px] text-muted-foreground">
-              <div className="text-center">
-                <FileText className="mx-auto h-12 w-12 mb-2 opacity-50" />
-                <p>Your AI-formatted receipt will appear here</p>
+          {!generatedReceipt && content.trim() && (
+            <Card className="bg-muted/30">
+              <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                <div className="text-center">
+                  <FileText className="mx-auto h-12 w-12 mb-2 opacity-50" />
+                  <p>Click "Generate Receipt" to format your content</p>
+                </div>
               </div>
-            </div>
-          </Card>
-        )}
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );
