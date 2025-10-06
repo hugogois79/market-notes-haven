@@ -31,18 +31,8 @@ INSTRUCTIONS:
 OUTPUT FORMAT (HTML with inline styles):
 
 <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-  <!-- Header with company info on the right -->
-  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
-    <div style="flex: 1;">
-      <!-- Logo placeholder - will be added by the app -->
-    </div>
-    <div style="text-align: right; flex: 1;">
-      <h2 style="margin: 0; font-size: 18px; font-weight: bold;">SUSTAINABLE YIELD CAPITAL LTD</h2>
-      <p style="margin: 5px 0; font-size: 12px;">Dept 302, 43 Owston Road Carcroft</p>
-      <p style="margin: 5px 0; font-size: 12px;">Doncaster, DN6 8DA – United Kingdom</p>
-      <p style="margin: 5px 0; font-size: 12px;">Company Number: 15769755</p>
-    </div>
-  </div>
+  <!-- IMPORTANT: Do NOT include company header (SUSTAINABLE YIELD CAPITAL LTD) or logo in your output -->
+  <!-- The header with company info on left and logo on right will be added by the app -->
   
   <hr style="border: none; border-top: 1px solid #ccc; margin: 20px 0;" />
   

@@ -155,7 +155,13 @@ const ReceiptGenerator = () => {
           </style>
         </head>
         <body>
-          <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+            <div style="text-align: left;">
+              <h2 style="margin: 0 0 5px 0; font-size: 14px; font-weight: bold;">SUSTAINABLE YIELD CAPITAL LTD</h2>
+              <p style="margin: 2px 0; font-size: 11px;">Dept 302, 43 Owston Road Carcroft</p>
+              <p style="margin: 2px 0; font-size: 11px;">Doncaster, DN6 8DA – United Kingdom</p>
+              <p style="margin: 2px 0; font-size: 11px;">Company Number: 15769755</p>
+            </div>
             <img src="${sustainableYieldLogo}" alt="Sustainable Yield Capital" class="header-logo" />
           </div>
           ${generatedReceipt}
@@ -274,7 +280,13 @@ const ReceiptGenerator = () => {
               </div>
               <Card className="bg-white shadow-lg">
                 <div className="p-8 relative">
-                  <div className="flex justify-end items-start mb-8">
+                  <div className="flex justify-between items-start mb-8">
+                    <div className="text-left">
+                      <h2 className="text-lg font-bold mb-1">SUSTAINABLE YIELD CAPITAL LTD</h2>
+                      <p className="text-xs mb-0.5">Dept 302, 43 Owston Road Carcroft</p>
+                      <p className="text-xs mb-0.5">Doncaster, DN6 8DA – United Kingdom</p>
+                      <p className="text-xs">Company Number: 15769755</p>
+                    </div>
                     <img 
                       src={sustainableYieldLogo} 
                       alt="Sustainable Yield Capital" 
