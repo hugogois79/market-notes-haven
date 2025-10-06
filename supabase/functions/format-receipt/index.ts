@@ -133,11 +133,19 @@ CRITICAL RULES:
       .replace(/```/g, '')
       .trim();
     
-    // Remove any company headers that might have been generated
+    // Remove any company headers/names that might have been generated (multiple passes)
     formattedReceipt = formattedReceipt
-      .replace(/SUSTAINABLE YIELD.*?(?=<h[123]|<div)/gis, '')
-      .replace(/Dept \d+.*?(?=<h[123]|<div)/gis, '')
-      .replace(/Company (?:Number|Registration Number):.*?(?=<h[123]|<div)/gis, '')
+      .replace(/<h[1-6][^>]*>SUSTAINABLE YIELD[^<]*<\/h[1-6]>/gi, '')
+      .replace(/<p[^>]*>SUSTAINABLE YIELD[^<]*<\/p>/gi, '')
+      .replace(/<div[^>]*>SUSTAINABLE YIELD[^<]*<\/div>/gi, '')
+      .replace(/SUSTAINABLE YIELD[^\n<]*/gi, '')
+      .replace(/<h[1-6][^>]*>Dept \d+[^<]*<\/h[1-6]>/gi, '')
+      .replace(/<p[^>]*>Dept \d+[^<]*<\/p>/gi, '')
+      .replace(/<p[^>]*>Doncaster[^<]*<\/p>/gi, '')
+      .replace(/<p[^>]*>London[^<]*<\/p>/gi, '')
+      .replace(/<p[^>]*>Company (?:Number|Registration Number)[^<]*<\/p>/gi, '')
+      .replace(/Dept \d+[^\n<]*/gi, '')
+      .replace(/Company (?:Number|Registration Number)[^\n<]*/gi, '')
       .trim();
 
     return new Response(

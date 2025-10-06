@@ -127,11 +127,12 @@ const ReceiptGenerator = () => {
             }
             body {
               font-family: Arial, sans-serif;
-              line-height: 1.6;
+              line-height: 1.4;
               color: #000;
               padding: 20px;
               max-width: 800px;
               margin: 0 auto;
+              font-size: 11px;
             }
             .header-logo {
               max-width: 200px;
@@ -141,11 +142,20 @@ const ReceiptGenerator = () => {
               border-collapse: collapse;
               width: 100%;
               margin: 10px 0;
+              font-size: 10px;
             }
             th, td {
               border: 1px solid #ccc;
-              padding: 8px;
+              padding: 6px;
               text-align: left;
+              font-size: 10px;
+            }
+            h3, h4 {
+              font-size: 12px;
+            }
+            p {
+              font-size: 11px;
+              margin: 5px 0;
             }
             @media print {
               body {
@@ -157,10 +167,10 @@ const ReceiptGenerator = () => {
         <body>
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
             <div style="text-align: left;">
-              <h2 style="margin: 0 0 5px 0; font-size: 14px; font-weight: bold;">SUSTAINABLE YIELD CAPITAL LTD</h2>
-              <p style="margin: 2px 0; font-size: 11px;">Dept 302, 43 Owston Road Carcroft</p>
-              <p style="margin: 2px 0; font-size: 11px;">Doncaster, DN6 8DA – United Kingdom</p>
-              <p style="margin: 2px 0; font-size: 11px;">Company Number: 15769755</p>
+              <h2 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">SUSTAINABLE YIELD CAPITAL LTD</h2>
+              <p style="margin: 2px 0; font-size: 10px;">Dept 302, 43 Owston Road Carcroft</p>
+              <p style="margin: 2px 0; font-size: 10px;">Doncaster, DN6 8DA – United Kingdom</p>
+              <p style="margin: 2px 0; font-size: 10px;">Company Number: 15769755</p>
             </div>
             <img src="${sustainableYieldLogo}" alt="Sustainable Yield Capital" class="header-logo" />
           </div>
