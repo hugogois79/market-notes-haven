@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import sustainableYieldLogo from "@/assets/sustainable-yield-logo.png";
+import sustainableYieldLogo from "@/assets/sustainable-yield-logo-new.png";
 
 const ReceiptGenerator = () => {
   const navigate = useNavigate();
