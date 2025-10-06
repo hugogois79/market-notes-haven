@@ -133,17 +133,9 @@ const ReceiptGenerator = () => {
               max-width: 800px;
               margin: 0 auto;
             }
-            .logo {
-              float: right;
+            .header-logo {
               max-width: 200px;
               margin-bottom: 20px;
-            }
-            pre {
-              white-space: pre-wrap;
-              word-wrap: break-word;
-              font-family: Arial, sans-serif;
-              font-size: 11pt;
-              clear: both;
             }
             table {
               border-collapse: collapse;
@@ -163,8 +155,10 @@ const ReceiptGenerator = () => {
           </style>
         </head>
         <body>
-          <img src="${sustainableYieldLogo}" alt="Sustainable Yield Capital" class="logo" />
-          <pre>${generatedReceipt}</pre>
+          <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
+            <img src="${sustainableYieldLogo}" alt="Sustainable Yield Capital" class="header-logo" />
+          </div>
+          ${generatedReceipt}
         </body>
       </html>
     `;
@@ -280,11 +274,13 @@ const ReceiptGenerator = () => {
               </div>
               <Card className="bg-white shadow-lg">
                 <div className="p-8 relative">
-                  <img 
-                    src={sustainableYieldLogo} 
-                    alt="Sustainable Yield Capital" 
-                    className="absolute top-8 right-8 w-48 h-auto opacity-90"
-                  />
+                  <div className="flex justify-between items-start mb-8">
+                    <img 
+                      src={sustainableYieldLogo} 
+                      alt="Sustainable Yield Capital" 
+                      className="w-48 h-auto"
+                    />
+                  </div>
                   <div 
                     className="formatted-receipt"
                     dangerouslySetInnerHTML={{ __html: generatedReceipt }}

@@ -30,21 +30,28 @@ INSTRUCTIONS:
 
 OUTPUT FORMAT (HTML with inline styles):
 
-<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
-  <div style="text-align: center; margin-bottom: 20px;">
-    <h2 style="margin: 0; font-size: 18px; font-weight: bold;">[COMPANY NAME]</h2>
-    <p style="margin: 5px 0; font-size: 12px;">[Company Address]</p>
-    <p style="margin: 5px 0; font-size: 12px;">[Company Registration Details]</p>
+<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+  <!-- Header with company info on the right -->
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
+    <div style="flex: 1;">
+      <!-- Logo placeholder - will be added by the app -->
+    </div>
+    <div style="text-align: right; flex: 1;">
+      <h2 style="margin: 0; font-size: 18px; font-weight: bold;">SUSTAINABLE YIELD CAPITAL LTD</h2>
+      <p style="margin: 5px 0; font-size: 12px;">Dept 302, 43 Owston Road Carcroft</p>
+      <p style="margin: 5px 0; font-size: 12px;">Doncaster, DN6 8DA – United Kingdom</p>
+      <p style="margin: 5px 0; font-size: 12px;">Company Number: 15769755</p>
+    </div>
   </div>
   
   <hr style="border: none; border-top: 1px solid #ccc; margin: 20px 0;" />
   
-  <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0;">PAYMENT RECEIPT - [RECEIPT TYPE]</h3>
+  <!-- Centered title -->
+  <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0; text-align: center;">PAYMENT RECEIPT - [RECEIPT TYPE]</h3>
   
   <div style="margin: 15px 0;">
     <p style="font-weight: bold; margin: 10px 0;">Beneficiary:</p>
     <p style="margin: 5px 0;"><strong>Name:</strong> [NAME]</p>
-    <p style="margin: 5px 0;"><strong>Position:</strong> [POSITION if applicable]</p>
     <p style="margin: 5px 0;"><strong>Purpose:</strong> [PURPOSE]</p>
     [Any other relevant beneficiary details as paragraphs]
   </div>
@@ -74,32 +81,24 @@ OUTPUT FORMAT (HTML with inline styles):
     </tbody>
   </table>
   
-  <div style="margin: 15px 0;">
-    <p style="margin: 5px 0;">• <strong>Payment Method:</strong> [METHOD]</p>
-    <p style="margin: 5px 0;">• <strong>Beneficiary Bank:</strong> [BANK NAME]</p>
-    <p style="margin: 5px 0;">• <strong>Account Details:</strong> [ACCOUNT INFO]</p>
-    <p style="margin: 5px 0;">• <strong>BIC/SWIFT:</strong> [BIC if available]</p>
-    <p style="margin: 5px 0;">• <strong>Payment Description:</strong> [DESCRIPTION]</p>
-  </div>
-  
-  [Include any additional relevant information as paragraphs]
+  [Include any additional relevant information as paragraphs with proper formatting]
   
   <hr style="border: none; border-top: 1px solid #ccc; margin: 20px 0;" />
   
   <div style="margin: 20px 0;">
-    <p style="margin: 5px 0;"><strong>Issued by:</strong> [COMPANY NAME]</p>
-    <p style="margin: 5px 0;"><strong>Date of Issue:</strong> [DATE]</p>
+    <p style="margin: 5px 0;"><strong>Authorized Signature:</strong> ____________________</p>
   </div>
-  
-  <p style="margin: 20px 0;"><strong>Authorized Signature:</strong> ____________________</p>
 </div>
 
 IMPORTANT: 
-- Return ONLY the HTML content with inline styles
+- Return ONLY the HTML content with inline styles, NO markdown code blocks, NO backticks
+- Do NOT include ```html or ``` in your response
 - Extract ALL information from the provided content
 - Do not invent or assume information that is not present
 - Use the exact HTML table structure shown above for the payment details table
-- Keep it professional and well-structured`;
+- Keep it professional and well-structured
+- The title should be centered
+- Company info should be on the right side of the header`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -135,7 +134,10 @@ IMPORTANT:
     }
 
     const data = await response.json();
-    const formattedReceipt = data.choices[0].message.content;
+    let formattedReceipt = data.choices[0].message.content;
+    
+    // Remove markdown code blocks if present
+    formattedReceipt = formattedReceipt.replace(/^```html\n?/i, '').replace(/\n?```$/i, '').trim();
 
     return new Response(
       JSON.stringify({ formattedReceipt }),
