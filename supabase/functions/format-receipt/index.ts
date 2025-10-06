@@ -35,10 +35,11 @@ FORMAT INSTRUCTIONS:
 2. Extract beneficiary details (name, position, purpose, etc.)
 3. Extract payment details (date, amount, reference, bank details, etc.)
 4. Format it professionally with clear sections using HTML with inline styles
-5. ALIGNMENT RULES:
-   - Beneficiary section (recipient name, position) must be aligned to the RIGHT
-   - Payment details section (payment method, bank details, IBAN, etc.) must be aligned to the LEFT
-   - Authorized Signature must be aligned to the RIGHT
+5. ALIGNMENT RULES (CRITICAL):
+   - Beneficiary NAME AND POSITION ONLY: aligned to the RIGHT (text-align: right)
+   - Purpose, Event Preparation: aligned to the LEFT (text-align: left)
+   - Payment details section (payment method, bank details, IBAN, etc.): aligned to the LEFT
+   - Authorized Signature: aligned to the RIGHT
    - All other content should be left-aligned by default
 
 OUTPUT FORMAT (HTML with inline styles):
@@ -51,8 +52,12 @@ OUTPUT FORMAT (HTML with inline styles):
   <div style="margin: 15px 0; text-align: right;">
     <p style="font-weight: bold; margin: 10px 0;">Beneficiary:</p>
     <p style="margin: 5px 0;"><strong>Name:</strong> [NAME]</p>
-    <p style="margin: 5px 0;"><strong>Purpose:</strong> [PURPOSE]</p>
-    [Any other relevant beneficiary details as paragraphs]
+    [Any other beneficiary identification details like position, if applicable]
+  </div>
+  
+  <div style="margin: 15px 0; text-align: left;">
+    <p style="margin: 5px 0;"><strong>Purpose:</strong> [PURPOSE DESCRIPTION]</p>
+    <p style="margin: 5px 0;"><strong>Event Preparation:</strong> [EVENT DETAILS]</p>
   </div>
   
   <h4 style="font-size: 14px; font-weight: bold; margin: 20px 0 10px 0;">Payment Details</h4>
