@@ -133,21 +133,32 @@ CRITICAL RULES - MUST FOLLOW:
     formattedReceipt = formattedReceipt
       .replace(/```html!?/gi, '')
       .replace(/```/g, '')
+      .replace(/`/g, '')
       .trim();
     
-    // Remove any company headers/names that might have been generated (multiple passes)
+    // Remove any company headers/names that might have been generated (multiple aggressive passes)
+    // First pass - remove header blocks
     formattedReceipt = formattedReceipt
-      .replace(/<h[1-6][^>]*>SUSTAINABLE YIELD[^<]*<\/h[1-6]>/gi, '')
-      .replace(/<p[^>]*>SUSTAINABLE YIELD[^<]*<\/p>/gi, '')
-      .replace(/<div[^>]*>SUSTAINABLE YIELD[^<]*<\/div>/gi, '')
-      .replace(/SUSTAINABLE YIELD[^\n<]*/gi, '')
-      .replace(/<h[1-6][^>]*>Dept \d+[^<]*<\/h[1-6]>/gi, '')
-      .replace(/<p[^>]*>Dept \d+[^<]*<\/p>/gi, '')
-      .replace(/<p[^>]*>Doncaster[^<]*<\/p>/gi, '')
-      .replace(/<p[^>]*>London[^<]*<\/p>/gi, '')
-      .replace(/<p[^>]*>Company (?:Number|Registration Number)[^<]*<\/p>/gi, '')
-      .replace(/Dept \d+[^\n<]*/gi, '')
-      .replace(/Company (?:Number|Registration Number)[^\n<]*/gi, '')
+      .replace(/<div[^>]*text-align:\s*center[^>]*>[\s\S]*?SUSTAINABLE YIELD[\s\S]*?<\/div>/gi, '')
+      .replace(/<div[^>]*style="[^"]*text-align:\s*center[^"]*"[^>]*>[\s\S]*?SUSTAINABLE[\s\S]*?<\/div>/gi, '');
+    
+    // Second pass - remove individual elements
+    formattedReceipt = formattedReceipt
+      .replace(/<h[1-6][^>]*>[\s\S]*?SUSTAINABLE YIELD[\s\S]*?<\/h[1-6]>/gi, '')
+      .replace(/<p[^>]*>[\s\S]*?SUSTAINABLE YIELD[\s\S]*?<\/p>/gi, '')
+      .replace(/<p[^>]*>[\s\S]*?Dept\s+\d+[\s\S]*?<\/p>/gi, '')
+      .replace(/<p[^>]*>[\s\S]*?Doncaster[\s\S]*?<\/p>/gi, '')
+      .replace(/<p[^>]*>[\s\S]*?DN6\s+8DA[\s\S]*?<\/p>/gi, '')
+      .replace(/<p[^>]*>[\s\S]*?Company Number[\s\S]*?<\/p>/gi, '')
+      .replace(/<hr[^>]*>/gi, '');
+    
+    // Third pass - remove any remaining text mentions
+    formattedReceipt = formattedReceipt
+      .replace(/SUSTAINABLE YIELD CAPITAL LTD/gi, '')
+      .replace(/SUSTAINABLE YIELD/gi, '')
+      .replace(/Dept \d+, \d+ Owston Road Carcroft/gi, '')
+      .replace(/Doncaster, DN6 8DA[^<\n]*/gi, '')
+      .replace(/Company Number:\s*\d+/gi, '')
       .trim();
 
     return new Response(

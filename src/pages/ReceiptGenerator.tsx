@@ -164,13 +164,30 @@ const ReceiptGenerator = () => {
               font-size: 11px;
               margin: 5px 0;
             }
-            /* Force beneficiary to align right */
-            .formatted-receipt div[style*="Beneficiary"] {
+            /* Hide any duplicate company headers in the AI output */
+            .formatted-receipt h2:first-child,
+            .formatted-receipt h1:first-child {
+              display: none;
+            }
+            /* Force beneficiary section to align right */
+            .formatted-receipt > div:first-of-type {
+              text-align: right !important;
+            }
+            .formatted-receipt div[style*="text-align: right"],
+            .formatted-receipt div:has(p:contains("Beneficiary")) {
+              text-align: right !important;
+            }
+            .formatted-receipt p:contains("Beneficiary"),
+            .formatted-receipt p:contains("Name:"),
+            .formatted-receipt p:contains("Purpose:") {
               text-align: right !important;
             }
             @media print {
               body {
                 padding: 0;
+              }
+              .formatted-receipt > div:first-of-type {
+                text-align: right !important;
               }
             }
           </style>
@@ -327,6 +344,12 @@ const ReceiptGenerator = () => {
                   <div 
                     className="formatted-receipt"
                     dangerouslySetInnerHTML={{ __html: generatedReceipt }}
+                    style={{
+                      // Force right alignment for beneficiary sections
+                      '& > div:first-of-type': {
+                        textAlign: 'right'
+                      }
+                    } as React.CSSProperties}
                   />
                 </div>
               </Card>
