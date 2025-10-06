@@ -21,20 +21,26 @@ serve(async (req) => {
 
     const systemPrompt = `You are a professional receipt formatter. Analyze the provided receipt content and extract all relevant information to create a clean, professional payment receipt in HTML format.
 
-INSTRUCTIONS:
+CRITICAL INSTRUCTIONS:
+1. DO NOT include ANY company header or name in your output
+2. DO NOT include "SUSTAINABLE YIELD CAPITAL LTD" or any variation of it
+3. DO NOT include "SUSTAINABLE YIELD VENTURES CAPITAL LTD" or similar
+4. The app will add the company header automatically - you must NOT include it
+5. Start directly with the receipt title
+
+FORMAT INSTRUCTIONS:
 1. Carefully read and extract ALL information from the content
-2. Identify the company/issuer information (name, address, company number, etc.)
-3. Extract beneficiary details (name, position, purpose, etc.)
-4. Extract payment details (date, amount, reference, bank details, etc.)
-5. Format it professionally with clear sections using HTML with inline styles
+2. Extract beneficiary details (name, position, purpose, etc.)
+3. Extract payment details (date, amount, reference, bank details, etc.)
+4. Format it professionally with clear sections using HTML with inline styles
 
 OUTPUT FORMAT (HTML with inline styles):
 
 <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-  <!-- IMPORTANT: Do NOT include company header (SUSTAINABLE YIELD CAPITAL LTD) or logo in your output -->
-  <!-- The header with company info on left and logo on right will be added by the app -->
+  <!-- CRITICAL: Do NOT include ANY company header, name, or logo -->
+  <!-- Start directly with the receipt title -->
   
-  <!-- Title (not centered, left-aligned) -->
+  <!-- Title (left-aligned) -->
   <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0 15px 0;">PAYMENT RECEIPT - [RECEIPT TYPE]</h3>
   
   <div style="margin: 15px 0;">
@@ -74,11 +80,12 @@ OUTPUT FORMAT (HTML with inline styles):
   </div>
 </div>
 
-IMPORTANT: 
-- Return ONLY the HTML content with inline styles, NO markdown code blocks, NO backticks
-- Do NOT include ```html or ``` in your response
-- Do NOT include the company header (SUSTAINABLE YIELD CAPITAL LTD) as it will be added by the app
-- Do NOT include any horizontal lines (hr) or separators
+CRITICAL RULES: 
+- Return ONLY the HTML content with inline styles
+- ABSOLUTELY NO markdown code blocks, NO backticks, NO ```html or ```
+- DO NOT include ANY company name or header (no "SUSTAINABLE YIELD" of any kind)
+- DO NOT include any horizontal lines (hr) or separators
+- Start directly with the receipt title
 - Extract ALL information from the provided content
 - Do not invent or assume information that is not present
 - Use the exact HTML table structure shown above for the payment details table
@@ -120,8 +127,11 @@ IMPORTANT:
     const data = await response.json();
     let formattedReceipt = data.choices[0].message.content;
     
-    // Remove markdown code blocks if present (including variations like ```html!)
-    formattedReceipt = formattedReceipt.replace(/^```html!?\n?/i, '').replace(/\n?```$/i, '').trim();
+    // Remove markdown code blocks aggressively (any variation)
+    formattedReceipt = formattedReceipt
+      .replace(/```html!?/gi, '')
+      .replace(/```/g, '')
+      .trim();
 
     return new Response(
       JSON.stringify({ formattedReceipt }),
