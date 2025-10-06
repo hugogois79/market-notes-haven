@@ -155,7 +155,7 @@ const ReceiptGenerator = () => {
           </style>
         </head>
         <body>
-          <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
             <img src="${sustainableYieldLogo}" alt="Sustainable Yield Capital" class="header-logo" />
           </div>
           ${generatedReceipt}
@@ -274,7 +274,7 @@ const ReceiptGenerator = () => {
               </div>
               <Card className="bg-white shadow-lg">
                 <div className="p-8 relative">
-                  <div className="flex justify-between items-start mb-8">
+                  <div className="flex justify-end items-start mb-8">
                     <img 
                       src={sustainableYieldLogo} 
                       alt="Sustainable Yield Capital" 

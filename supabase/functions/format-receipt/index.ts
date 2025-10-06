@@ -136,8 +136,8 @@ IMPORTANT:
     const data = await response.json();
     let formattedReceipt = data.choices[0].message.content;
     
-    // Remove markdown code blocks if present
-    formattedReceipt = formattedReceipt.replace(/^```html\n?/i, '').replace(/\n?```$/i, '').trim();
+    // Remove markdown code blocks if present (including variations like ```html!)
+    formattedReceipt = formattedReceipt.replace(/^```html!?\n?/i, '').replace(/\n?```$/i, '').trim();
 
     return new Response(
       JSON.stringify({ formattedReceipt }),
