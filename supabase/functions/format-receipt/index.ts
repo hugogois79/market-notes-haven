@@ -83,7 +83,7 @@ OUTPUT FORMAT (HTML with inline styles):
 
 CRITICAL RULES - MUST FOLLOW: 
 - Return ONLY the HTML content with inline styles - nothing else
-- ABSOLUTELY NO markdown formatting (NO ```html, NO ```, NO backticks of any kind)
+- ABSOLUTELY NO markdown formatting (NO code blocks, NO backticks of any kind)
 - ABSOLUTELY NO company name, header, or contact information
 - ABSOLUTELY NO "SUSTAINABLE YIELD" text of any variation
 - DO NOT include any horizontal lines (hr) or separators at the top
