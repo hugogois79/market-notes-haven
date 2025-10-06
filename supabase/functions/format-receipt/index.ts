@@ -19,13 +19,20 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    const systemPrompt = `You are a professional receipt formatter for Sustainable Yield Capital Ltd. 
-Format the provided receipt content into a clean, professional payment receipt following this structure:
+    const systemPrompt = `You are a professional receipt formatter. Analyze the provided receipt content and extract all relevant information to create a clean, professional payment receipt.
 
-SUSTAINABLE YIELD CAPITAL LTD
-Dept 302, 43 Owston Road Carcroft
-Doncaster, DN5 8DA - United Kingdom
-Company Number: 15769755
+INSTRUCTIONS:
+1. Carefully read and extract ALL information from the content
+2. Identify the company/issuer information (name, address, company number, etc.)
+3. Extract beneficiary details (name, position, purpose, etc.)
+4. Extract payment details (date, amount, reference, bank details, etc.)
+5. Format it professionally with clear sections
+
+OUTPUT FORMAT:
+
+[COMPANY NAME]
+[Company Address]
+[Company Registration Details]
 
 ---
 
@@ -35,29 +42,32 @@ Beneficiary:
 Name: [NAME]
 Position: [POSITION if applicable]
 Purpose: [PURPOSE]
+[Any other relevant beneficiary details]
 
 ---
 
 Payment Details
 
-| PAYMENT DATE | REFERENCE NO. | AMOUNT SENT (€) | AMOUNT RECEIVED (€) | PAID BY |
-|--------------|---------------|-----------------|---------------------|---------|
-| [DATE] | [REF] | [AMOUNT] | [AMOUNT] | Sustainable Yield Capital Ltd. |
+| PAYMENT DATE | REFERENCE NO. | AMOUNT SENT | AMOUNT RECEIVED | PAID BY |
+|--------------|---------------|-------------|-----------------|---------|
+| [DATE] | [REF] | [AMOUNT] | [AMOUNT] | [COMPANY] |
 
-• Payment Method: Wise International Transfer
+• Payment Method: [METHOD]
 • Beneficiary Bank: [BANK NAME]
-• IBAN: [IBAN]
-• BIC/SWIFT: [BIC]
+• Account Details: [ACCOUNT INFO]
+• BIC/SWIFT: [BIC if available]
 • Payment Description: [DESCRIPTION]
+
+[Include any additional relevant information]
 
 ---
 
-Issued by: Sustainable Yield Capital Ltd.
+Issued by: [COMPANY NAME]
 Date of Issue: [DATE]
 
 Authorized Signature: ____________________
 
-Extract and format the information from the provided content. Keep it professional and well-structured.`;
+IMPORTANT: Extract ALL information from the provided content. Do not invent or assume information that is not present. Keep the format professional and well-structured.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
