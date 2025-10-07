@@ -27,7 +27,6 @@ export interface UserProfile {
   avatar_url: string | null;
   bio: string | null;
   type: string | null;
-  role: string | null;
   status: string | null;
   contact_info: string | null;
   created_at: string | null;
@@ -379,7 +378,6 @@ export const updateUserProfile = async (profile: Partial<UserProfile>): Promise<
         avatar_url: profile.avatar_url,
         bio: profile.bio,
         type: profile.type,
-        role: profile.role,
         status: profile.status,
         contact_info: profile.contact_info,
         updated_at: new Date().toISOString(),

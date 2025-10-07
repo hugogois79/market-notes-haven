@@ -246,26 +246,6 @@ const Profile = () => {
                       </div>
                       
                       <div>
-                        <Label htmlFor="role">Role</Label>
-                        <Select 
-                          name="role" 
-                          value={profile.role || "User"} 
-                          onValueChange={(value) => handleSelectChange("role", value)}
-                        >
-                          <SelectTrigger className="mt-1">
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="User">User</SelectItem>
-                            <SelectItem value="Developer">Developer</SelectItem>
-                            <SelectItem value="Investor">Investor</SelectItem>
-                            <SelectItem value="Analyst">Analyst</SelectItem>
-                            <SelectItem value="Admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div>
                         <Label htmlFor="status">Status</Label>
                         <Select 
                           name="status" 

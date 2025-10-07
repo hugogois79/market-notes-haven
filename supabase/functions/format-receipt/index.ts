@@ -39,11 +39,28 @@ CRITICAL INSTRUCTIONS - READ CAREFULLY:
 
 FORMAT INSTRUCTIONS:
 1. Carefully read and extract ALL information from the content
-2. Extract MAXIMUM beneficiary details (name, position, ID number, address, contact, etc.)
-3. Include ALL available beneficiary information - do not omit any details provided
-4. Extract payment details (date, amount, reference, bank details, etc.)
-5. Format it professionally with clear sections using HTML with inline styles
-6. ALIGNMENT RULES (CRITICAL):
+2. BENEFICIARY DETAILS - MAXIMUM EXTRACTION (CRITICAL):
+   Extract EVERY detail about the beneficiary to create a complete profile:
+   - Full legal name (first name, middle names, surname, any suffixes)
+   - Position/Title/Role (e.g., Director, Manager, Consultant, Employee, Contractor)
+   - Professional designation or credentials (if mentioned)
+   - Company affiliation or employer (if working for an organization)
+   - Department or business unit (if applicable)
+   - ID/Passport/Tax identification number (BI, Passaporte, NIF, VAT number, etc.)
+   - Complete residential or business address (street number and name, building/apartment, floor, city, region, postal code, country)
+   - Primary contact information (mobile phone, landline, email address)
+   - Secondary contact information (alternative phone, fax, secondary email)
+   - Bank account details (if provided and relevant)
+   - Relationship to the company/project (employee, contractor, consultant, partner, vendor)
+   - Nationality or citizenship (if mentioned)
+   - Date of birth or age (if provided)
+   - Any other identifying, professional, or personal details mentioned in the content
+   
+   IMPORTANT: Do NOT omit ANY beneficiary information that is available in the content. Include everything provided, even if it seems like a minor detail. The beneficiary section should be as comprehensive and detailed as possible.
+
+3. Extract payment details (date, amount, reference, bank details, etc.)
+4. Format it professionally with clear sections using HTML with inline styles
+5. ALIGNMENT RULES (CRITICAL):
    - Beneficiary NAME AND POSITION ONLY: aligned to the RIGHT (text-align: right)
    - Purpose, Event Preparation: aligned to the LEFT (text-align: left)
    - Payment details section (payment method, bank details, IBAN, etc.): aligned to the LEFT
@@ -58,12 +75,19 @@ EXAMPLE FOR ENGLISH:
   
   <div style="margin: 15px 0; text-align: right;">
     <p style="font-weight: bold; margin: 10px 0;">Beneficiary:</p>
-    <p style="margin: 5px 0;"><strong>Name:</strong> [NAME]</p>
-    <p style="margin: 5px 0;"><strong>Position:</strong> [POSITION]</p>
-    <p style="margin: 5px 0;"><strong>ID/Passport:</strong> [ID NUMBER]</p>
-    <p style="margin: 5px 0;"><strong>Address:</strong> [ADDRESS]</p>
-    <p style="margin: 5px 0;"><strong>Contact:</strong> [CONTACT]</p>
-    [Include ALL available beneficiary details provided in the content]
+    <p style="margin: 5px 0;"><strong>Full Name:</strong> [COMPLETE LEGAL NAME]</p>
+    <p style="margin: 5px 0;"><strong>Position/Title:</strong> [JOB TITLE OR ROLE]</p>
+    <p style="margin: 5px 0;"><strong>Company/Organization:</strong> [EMPLOYER OR AFFILIATION]</p>
+    <p style="margin: 5px 0;"><strong>Department:</strong> [DEPARTMENT IF APPLICABLE]</p>
+    <p style="margin: 5px 0;"><strong>ID/Passport Number:</strong> [IDENTIFICATION NUMBER]</p>
+    <p style="margin: 5px 0;"><strong>Tax/VAT Number:</strong> [TAX ID IF PROVIDED]</p>
+    <p style="margin: 5px 0;"><strong>Address:</strong> [COMPLETE ADDRESS WITH ALL DETAILS - STREET, BUILDING, FLOOR, CITY, POSTAL CODE, COUNTRY]</p>
+    <p style="margin: 5px 0;"><strong>Phone:</strong> [PRIMARY PHONE NUMBER]</p>
+    <p style="margin: 5px 0;"><strong>Alternative Phone:</strong> [SECONDARY PHONE IF PROVIDED]</p>
+    <p style="margin: 5px 0;"><strong>Email:</strong> [EMAIL ADDRESS]</p>
+    <p style="margin: 5px 0;"><strong>Nationality:</strong> [NATIONALITY IF MENTIONED]</p>
+    <p style="margin: 5px 0;"><strong>Relationship:</strong> [RELATIONSHIP TO COMPANY - EMPLOYEE, CONTRACTOR, ETC.]</p>
+    [Include EVERY additional detail about the beneficiary that was provided in the content - omit nothing]
   </div>
   
   <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0 15px 0; text-align: center; text-decoration: underline;">PAYMENT RECEIPT - [RECEIPT TYPE]</h3>
@@ -74,12 +98,19 @@ EXAMPLE FOR PORTUGUESE:
   
   <div style="margin: 15px 0; text-align: right;">
     <p style="font-weight: bold; margin: 10px 0;">Beneficiário:</p>
-    <p style="margin: 5px 0;"><strong>Nome:</strong> [NOME]</p>
-    <p style="margin: 5px 0;"><strong>Cargo:</strong> [CARGO]</p>
-    <p style="margin: 5px 0;"><strong>BI/Passaporte:</strong> [NÚMERO DO BI]</p>
-    <p style="margin: 5px 0;"><strong>Morada:</strong> [MORADA]</p>
-    <p style="margin: 5px 0;"><strong>Contacto:</strong> [CONTACTO]</p>
-    [Incluir TODOS os detalhes do beneficiário disponíveis no conteúdo]
+    <p style="margin: 5px 0;"><strong>Nome Completo:</strong> [NOME LEGAL COMPLETO]</p>
+    <p style="margin: 5px 0;"><strong>Cargo/Título:</strong> [CARGO OU FUNÇÃO]</p>
+    <p style="margin: 5px 0;"><strong>Empresa/Organização:</strong> [EMPREGADOR OU AFILIAÇÃO]</p>
+    <p style="margin: 5px 0;"><strong>Departamento:</strong> [DEPARTAMENTO SE APLICÁVEL]</p>
+    <p style="margin: 5px 0;"><strong>BI/Passaporte:</strong> [NÚMERO DE IDENTIFICAÇÃO]</p>
+    <p style="margin: 5px 0;"><strong>NIF/Número Fiscal:</strong> [NIF SE FORNECIDO]</p>
+    <p style="margin: 5px 0;"><strong>Morada:</strong> [MORADA COMPLETA COM TODOS OS DETALHES - RUA, EDIFÍCIO, ANDAR, CIDADE, CÓDIGO POSTAL, PAÍS]</p>
+    <p style="margin: 5px 0;"><strong>Telefone:</strong> [NÚMERO DE TELEFONE PRINCIPAL]</p>
+    <p style="margin: 5px 0;"><strong>Telefone Alternativo:</strong> [TELEFONE SECUNDÁRIO SE FORNECIDO]</p>
+    <p style="margin: 5px 0;"><strong>Email:</strong> [ENDEREÇO DE EMAIL]</p>
+    <p style="margin: 5px 0;"><strong>Nacionalidade:</strong> [NACIONALIDADE SE MENCIONADA]</p>
+    <p style="margin: 5px 0;"><strong>Relacionamento:</strong> [RELAÇÃO COM A EMPRESA - EMPREGADO, CONTRATADO, ETC.]</p>
+    [Incluir TODOS os detalhes adicionais sobre o beneficiário que foram fornecidos no conteúdo - não omitir nada]
   </div>
   
   <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0 15px 0; text-align: center; text-decoration: underline;">RECIBO DE PAGAMENTO - [TIPO DE RECIBO]</h3>
@@ -181,7 +212,7 @@ CRITICAL RULES - MUST FOLLOW:
 - DO NOT include any horizontal lines (hr) or separators at the top
 - Your output must start with: <div style="font-family: Arial
 - Extract ALL information from the provided content accurately
-- Include MAXIMUM beneficiary information - do not omit any details provided
+- BENEFICIARY INFORMATION: Extract and include EVERY SINGLE detail provided about the beneficiary - omit NOTHING. Be exhaustive and comprehensive in the beneficiary section.
 - Do not invent or assume information that is not present
 - Use the exact HTML table structure shown above
 - CRITICAL: AFTER THE TABLE, include Payment Method, Beneficiary Bank, IBAN, BIC/SWIFT, Payment Description, and Date of Issue aligned to the LEFT (text-align: left)
