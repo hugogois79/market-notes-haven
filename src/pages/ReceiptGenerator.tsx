@@ -4,11 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import sustainableYieldLogo from "@/assets/sustainable-yield-logo-new.png";
+import { PreviousReceipts } from "@/components/ReceiptGenerator/PreviousReceipts";
+import type { Receipt } from "@/services/receiptService";
 
 const ReceiptGenerator = () => {
   const navigate = useNavigate();
@@ -19,6 +22,24 @@ const ReceiptGenerator = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [receiptNumber, setReceiptNumber] = useState<number | null>(null);
   const [receiptId, setReceiptId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("editor");
+
+  const handleLoadReceipt = (receipt: Receipt) => {
+    setContent(receipt.raw_content);
+    setGeneratedReceipt(receipt.formatted_content);
+    setReceiptNumber(receipt.receipt_number);
+    setReceiptId(receipt.id);
+    setActiveTab("editor");
+    toast.success(`Loaded receipt #${receipt.receipt_number}`);
+  };
+
+  const handleNewReceipt = () => {
+    setContent("");
+    setGeneratedReceipt("");
+    setReceiptNumber(null);
+    setReceiptId(null);
+    toast.info("Starting new receipt");
+  };
 
   const handleGenerate = async () => {
     if (!content.trim()) {
@@ -282,6 +303,15 @@ const ReceiptGenerator = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {receiptId && (
+            <Button
+              variant="outline"
+              onClick={handleNewReceipt}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              New Receipt
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={handlePrint}
@@ -306,18 +336,25 @@ const ReceiptGenerator = () => {
 
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-5xl mx-auto space-y-6">
+        <div className="max-w-6xl mx-auto">
           {/* Status Indicator */}
           {!session?.user && (
-            <Card className="bg-yellow-50 border-yellow-200 p-4">
+            <Card className="bg-yellow-50 border-yellow-200 p-4 mb-6">
               <p className="text-sm text-yellow-800">
                 You need to be logged in to save receipts
               </p>
             </Card>
           )}
 
-          {/* Content Editor */}
-          <div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="editor">Receipt Editor</TabsTrigger>
+              <TabsTrigger value="history">Previous Receipts</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="editor" className="space-y-6">
+              {/* Content Editor */}
+              <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium">Receipt Content</label>
               <Button
@@ -393,22 +430,28 @@ const ReceiptGenerator = () => {
                     } as React.CSSProperties}
                   />
                 </div>
-              </Card>
-            </div>
-          )}
-
-          {!generatedReceipt && content.trim() && (
-            <Card className="bg-muted/30">
-              <div className="flex items-center justify-center h-[200px] text-muted-foreground">
-                <div className="text-center">
-                  <FileText className="mx-auto h-12 w-12 mb-2 opacity-50" />
-                  <p>Click "Generate Receipt" to format your content</p>
-                </div>
+                </Card>
               </div>
-            </Card>
-          )}
-        </div>
+            )}
+
+            {!generatedReceipt && content.trim() && (
+              <Card className="bg-muted/30">
+                <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                  <div className="text-center">
+                    <FileText className="mx-auto h-12 w-12 mb-2 opacity-50" />
+                    <p>Click "Generate Receipt" to format your content</p>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="history">
+            <PreviousReceipts onLoadReceipt={handleLoadReceipt} />
+          </TabsContent>
+        </Tabs>
       </div>
+    </div>
     </div>
   );
 };
