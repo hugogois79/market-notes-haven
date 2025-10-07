@@ -1,9 +1,10 @@
 
-import { API_HEADERS, GLOBAL_STATS_URL, SUBNETS_URL } from './apiConfig';
+import { TAO_STATS_PROXY_URL, GLOBAL_STATS_ENDPOINT, SUBNETS_ENDPOINT } from './apiConfig';
 import { TaoGlobalStats, TaoSubnetInfo } from './types';
 import { fetchTaoPriceFromCoinGecko } from './coinGeckoClient';
 import { MOCK_TAO_STATS } from './mockData';
 import { SUBNET_NAME_MAPPING } from './subnetMapping';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Fetch global TAO stats, attempting CoinGecko first, then TaoStats API
@@ -18,19 +19,17 @@ export const fetchTaoGlobalStats = async (): Promise<TaoGlobalStats> => {
         timestamp: new Date().toISOString(),
       };
     } catch (coinGeckoError) {
-      console.warn('CoinGecko API failed, trying primary API:', coinGeckoError);
+      console.warn('CoinGecko API failed, trying TaoStats via proxy:', coinGeckoError);
       
-      // If CoinGecko fails, try the original API
-      const response = await fetch(GLOBAL_STATS_URL, {
-        headers: API_HEADERS,
-        mode: 'cors',
+      // If CoinGecko fails, try TaoStats via secure proxy
+      const { data, error } = await supabase.functions.invoke('tao-stats-proxy', {
+        body: { endpoint: GLOBAL_STATS_ENDPOINT }
       });
       
-      if (!response.ok) {
-        throw new Error(`Primary API error: ${response.status}`);
+      if (error) {
+        throw new Error(`TaoStats proxy error: ${error.message}`);
       }
       
-      const data = await response.json();
       return {
         price: data.price,
         market_cap: data.market_cap,
@@ -57,22 +56,17 @@ export const fetchTaoGlobalStats = async (): Promise<TaoGlobalStats> => {
  */
 export const fetchTaoSubnets = async (): Promise<TaoSubnetInfo[]> => {
   try {
-    console.log('Fetching TAO subnets from API...');
-    console.log('Using API URL:', SUBNETS_URL);
-    console.log('With headers:', API_HEADERS);
+    console.log('Fetching TAO subnets via secure proxy...');
     
-    const response = await fetch(SUBNETS_URL, {
-      headers: API_HEADERS,
-      mode: 'cors',
-      cache: 'no-cache', // Force fresh data
+    const { data, error } = await supabase.functions.invoke('tao-stats-proxy', {
+      body: { endpoint: SUBNETS_ENDPOINT }
     });
     
-    if (!response.ok) {
-      console.error(`API error: ${response.status}`);
-      throw new Error(`API error: ${response.status} - ${await response.text()}`);
+    if (error) {
+      console.error(`Proxy error: ${error.message}`);
+      throw new Error(`Proxy error: ${error.message}`);
     }
     
-    const data = await response.json();
     console.log('TAO subnets API response:', data);
     
     // Process and map the data

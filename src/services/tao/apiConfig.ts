@@ -1,31 +1,22 @@
 
 /**
  * API configuration for TAO services
+ * Now uses secure edge function proxy to protect API keys
  */
 
-// TaoStats API configuration
-export const API_KEY = 'tao-a29151e1-e395-4ed0-ae18-376839738c0c:bcebc240';
-export const API_HEADERS = {
-  'Authorization': API_KEY,
-  'accept': 'application/json'
-};
+// Supabase edge function proxy URL
+const SUPABASE_URL = 'https://zyziolikudoczsthyoja.supabase.co';
+export const TAO_STATS_PROXY_URL = `${SUPABASE_URL}/functions/v1/tao-stats-proxy`;
 
-// TaoStats API endpoints
-export const GLOBAL_STATS_URL = 'https://api.taostats.io/v1/stats/latest';
-export const SUBNETS_URL = 'https://api.taostats.io/v1/subnets';
-export const VALIDATORS_URL = 'https://api.taostats.io/v1/validators'; // Added validator endpoint
-export const NETWORK_METRICS_URL = 'https://api.taostats.io/v1/network/metrics'; // Added network metrics endpoint
+// TaoStats API endpoints (used as parameters to the proxy)
+export const GLOBAL_STATS_ENDPOINT = '/stats/latest';
+export const SUBNETS_ENDPOINT = '/subnets';
+export const VALIDATORS_ENDPOINT = '/validators';
+export const NETWORK_METRICS_ENDPOINT = '/network/metrics';
 
-// CoinGecko API configuration
+// CoinGecko API configuration (public API, no authentication needed)
 export const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3';
 export const BITTENSOR_ID = 'bittensor'; // CoinGecko ID for Bittensor
-
-// Request configuration
-export const DEFAULT_REQUEST_CONFIG = {
-  headers: API_HEADERS,
-  mode: 'cors',
-  cache: 'no-cache', // Always fetch fresh data
-};
 
 // API request timeout in milliseconds
 export const API_TIMEOUT = 30000; // 30 seconds

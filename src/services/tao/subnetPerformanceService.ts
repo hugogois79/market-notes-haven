@@ -1,26 +1,25 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { API_HEADERS, SUBNETS_URL } from './apiConfig';
+import { TAO_STATS_PROXY_URL, SUBNETS_ENDPOINT } from './apiConfig';
 import { SubnetPerformance, TaoSubnetInfo } from './types';
 import { MOCK_TAO_STATS } from './mockData';
 import { SUBNET_NAME_MAPPING } from './subnetMapping';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Fetch subnet performance data
  */
 export const fetchSubnetPerformance = async (): Promise<TaoSubnetInfo[]> => {
   try {
-    console.log('Fetching subnet performance data...');
-    const response = await fetch(`${SUBNETS_URL}/performance`, {
-      headers: API_HEADERS,
-      mode: 'cors',
+    console.log('Fetching subnet performance data via proxy...');
+    
+    const { data, error } = await supabase.functions.invoke('tao-stats-proxy', {
+      body: { endpoint: `${SUBNETS_ENDPOINT}/performance` }
     });
     
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+    if (error) {
+      throw new Error(`Proxy error: ${error.message}`);
     }
-    
-    const data = await response.json();
     
     // Process and map the data with performance information
     return data.map((subnet: any) => {
