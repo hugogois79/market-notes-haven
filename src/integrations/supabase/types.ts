@@ -863,7 +863,6 @@ export type Database = {
           id: string
           photo_url: string | null
           profile_image_url: string | null
-          role: string | null
           status: string | null
           type: string | null
           updated_at: string | null
@@ -879,7 +878,6 @@ export type Database = {
           id: string
           photo_url?: string | null
           profile_image_url?: string | null
-          role?: string | null
           status?: string | null
           type?: string | null
           updated_at?: string | null
@@ -895,7 +893,6 @@ export type Database = {
           id?: string
           photo_url?: string | null
           profile_image_url?: string | null
-          role?: string | null
           status?: string | null
           type?: string | null
           updated_at?: string | null
@@ -1819,6 +1816,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_tokens: {
         Row: {
           created_at: string | null
@@ -1879,6 +1897,13 @@ export type Database = {
       halfvec_typmod_in: {
         Args: { "": unknown[] }
         Returns: number
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       hnsw_bit_support: {
         Args: { "": unknown }
@@ -2001,6 +2026,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "admin" | "moderator" | "user"
       expense_status: "pending" | "approved" | "rejected"
       file_status: "parsed" | "summarized" | "processed"
       investment_status: "pending" | "committed" | "deployed" | "exited"
@@ -2134,6 +2160,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "moderator", "user"],
       expense_status: ["pending", "approved", "rejected"],
       file_status: ["parsed", "summarized", "processed"],
       investment_status: ["pending", "committed", "deployed", "exited"],
