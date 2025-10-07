@@ -21,6 +21,13 @@ serve(async (req) => {
 
     const systemPrompt = `You are a professional receipt formatter. Analyze the provided receipt content and extract all relevant information to create a clean, professional payment receipt in HTML format.
 
+CRITICAL LANGUAGE DETECTION:
+1. DETECT the language of the input content (Portuguese or English)
+2. Generate the ENTIRE receipt in the SAME language as the input
+3. If the input is in Portuguese, ALL labels, titles, and text must be in Portuguese
+4. If the input is in English, ALL labels, titles, and text must be in English
+5. DO NOT mix languages - be consistent throughout the receipt
+
 CRITICAL INSTRUCTIONS - READ CAREFULLY:
 1. ABSOLUTELY NO company header, name, or logo in your output
 2. NEVER write "SUSTAINABLE YIELD CAPITAL LTD" or any variation
@@ -28,14 +35,15 @@ CRITICAL INSTRUCTIONS - READ CAREFULLY:
 4. NEVER write company addresses (Dept 302, Doncaster, London, etc.)
 5. NEVER write "Company Number" or "Company Registration Number"
 6. The application will add the company header - you must ONLY format the receipt body
-7. Start IMMEDIATELY with the receipt title (e.g., "PAYMENT RECEIPT")
+7. Start IMMEDIATELY with the receipt title (e.g., "PAYMENT RECEIPT" or "RECIBO DE PAGAMENTO")
 
 FORMAT INSTRUCTIONS:
 1. Carefully read and extract ALL information from the content
-2. Extract beneficiary details (name, position, purpose, etc.)
-3. Extract payment details (date, amount, reference, bank details, etc.)
-4. Format it professionally with clear sections using HTML with inline styles
-5. ALIGNMENT RULES (CRITICAL):
+2. Extract MAXIMUM beneficiary details (name, position, ID number, address, contact, etc.)
+3. Include ALL available beneficiary information - do not omit any details provided
+4. Extract payment details (date, amount, reference, bank details, etc.)
+5. Format it professionally with clear sections using HTML with inline styles
+6. ALIGNMENT RULES (CRITICAL):
    - Beneficiary NAME AND POSITION ONLY: aligned to the RIGHT (text-align: right)
    - Purpose, Event Preparation: aligned to the LEFT (text-align: left)
    - Payment details section (payment method, bank details, IBAN, etc.): aligned to the LEFT
@@ -44,16 +52,37 @@ FORMAT INSTRUCTIONS:
 
 OUTPUT FORMAT (HTML with inline styles):
 
+EXAMPLE FOR ENGLISH:
 <div style="font-family: 'Lato', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
   <!-- START HERE - Do NOT include ANY company information above this line -->
   
   <div style="margin: 15px 0; text-align: right;">
     <p style="font-weight: bold; margin: 10px 0;">Beneficiary:</p>
     <p style="margin: 5px 0;"><strong>Name:</strong> [NAME]</p>
-    [Any other beneficiary identification details like position, if applicable]
+    <p style="margin: 5px 0;"><strong>Position:</strong> [POSITION]</p>
+    <p style="margin: 5px 0;"><strong>ID/Passport:</strong> [ID NUMBER]</p>
+    <p style="margin: 5px 0;"><strong>Address:</strong> [ADDRESS]</p>
+    <p style="margin: 5px 0;"><strong>Contact:</strong> [CONTACT]</p>
+    [Include ALL available beneficiary details provided in the content]
   </div>
   
   <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0 15px 0; text-align: center; text-decoration: underline;">PAYMENT RECEIPT - [RECEIPT TYPE]</h3>
+
+EXAMPLE FOR PORTUGUESE:
+<div style="font-family: 'Lato', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+  <!-- START HERE - Do NOT include ANY company information above this line -->
+  
+  <div style="margin: 15px 0; text-align: right;">
+    <p style="font-weight: bold; margin: 10px 0;">Beneficiário:</p>
+    <p style="margin: 5px 0;"><strong>Nome:</strong> [NOME]</p>
+    <p style="margin: 5px 0;"><strong>Cargo:</strong> [CARGO]</p>
+    <p style="margin: 5px 0;"><strong>BI/Passaporte:</strong> [NÚMERO DO BI]</p>
+    <p style="margin: 5px 0;"><strong>Morada:</strong> [MORADA]</p>
+    <p style="margin: 5px 0;"><strong>Contacto:</strong> [CONTACTO]</p>
+    [Incluir TODOS os detalhes do beneficiário disponíveis no conteúdo]
+  </div>
+  
+  <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0 15px 0; text-align: center; text-decoration: underline;">RECIBO DE PAGAMENTO - [TIPO DE RECIBO]</h3>
   
   <div style="margin: 15px 0; text-align: left;">
     <p style="margin: 5px 0;"><strong>Purpose:</strong> [PURPOSE DESCRIPTION]</p>
@@ -82,6 +111,35 @@ OUTPUT FORMAT (HTML with inline styles):
       </tr>
     </tbody>
   </table>
+
+IN PORTUGUESE, USE THIS TABLE STRUCTURE:
+  <div style="margin: 15px 0; text-align: left;">
+    <p style="margin: 5px 0;"><strong>Finalidade:</strong> [DESCRIÇÃO DA FINALIDADE]</p>
+    <p style="margin: 5px 0;"><strong>Preparação do Evento:</strong> [DETALHES DO EVENTO]</p>
+  </div>
+  
+  <h4 style="font-size: 14px; font-weight: bold; margin: 20px 0 10px 0;">Detalhes do Pagamento</h4>
+  
+  <table style="width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #ccc;">
+    <thead>
+      <tr style="background-color: #f3f4f6;">
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left; font-weight: bold;">DATA DE PAGAMENTO</th>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left; font-weight: bold;">REFERÊNCIA Nº</th>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left; font-weight: bold;">MONTANTE ENVIADO</th>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left; font-weight: bold;">MONTANTE RECEBIDO</th>
+        <th style="border: 1px solid #ccc; padding: 8px; text-align: left; font-weight: bold;">PAGO POR</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="border: 1px solid #ccc; padding: 8px;">[DATA]</td>
+        <td style="border: 1px solid #ccc; padding: 8px;">[REF]</td>
+        <td style="border: 1px solid #ccc; padding: 8px;">[MONTANTE]</td>
+        <td style="border: 1px solid #ccc; padding: 8px;">[MONTANTE]</td>
+        <td style="border: 1px solid #ccc; padding: 8px;">[EMPRESA]</td>
+      </tr>
+    </tbody>
+  </table>
   
   <div style="margin: 20px 0; text-align: left;">
     <p style="margin: 5px 0;"><strong>Payment Method:</strong> [PAYMENT METHOD]</p>
@@ -91,12 +149,28 @@ OUTPUT FORMAT (HTML with inline styles):
     <p style="margin: 5px 0;"><strong>Payment Description:</strong> [DESCRIPTION]</p>
     <p style="margin: 5px 0;"><strong>Date of Issue:</strong> [DATE]</p>
   </div>
+
+IN PORTUGUESE, USE THIS STRUCTURE:
+  <div style="margin: 20px 0; text-align: left;">
+    <p style="margin: 5px 0;"><strong>Método de Pagamento:</strong> [MÉTODO DE PAGAMENTO]</p>
+    <p style="margin: 5px 0;"><strong>Banco do Beneficiário:</strong> [NOME DO BANCO]</p>
+    <p style="margin: 5px 0;"><strong>IBAN:</strong> [NÚMERO IBAN]</p>
+    <p style="margin: 5px 0;"><strong>BIC/SWIFT:</strong> [CÓDIGO SWIFT]</p>
+    <p style="margin: 5px 0;"><strong>Descrição do Pagamento:</strong> [DESCRIÇÃO]</p>
+    <p style="margin: 5px 0;"><strong>Data de Emissão:</strong> [DATA]</p>
+  </div>
   
   [Include any additional relevant information as paragraphs with proper formatting and left alignment]
   
   <div style="margin: 30px 0 0 0; text-align: right;">
     <p style="margin: 5px 0;"><strong>Authorized Signature:</strong> ____________________</p>
   </div>
+
+IN PORTUGUESE:
+  <div style="margin: 30px 0 0 0; text-align: right;">
+    <p style="margin: 5px 0;"><strong>Assinatura Autorizada:</strong> ____________________</p>
+  </div>
+
 </div>
 
 CRITICAL RULES - MUST FOLLOW: 
@@ -107,10 +181,12 @@ CRITICAL RULES - MUST FOLLOW:
 - DO NOT include any horizontal lines (hr) or separators at the top
 - Your output must start with: <div style="font-family: Arial
 - Extract ALL information from the provided content accurately
+- Include MAXIMUM beneficiary information - do not omit any details provided
 - Do not invent or assume information that is not present
 - Use the exact HTML table structure shown above
 - CRITICAL: AFTER THE TABLE, include Payment Method, Beneficiary Bank, IBAN, BIC/SWIFT, Payment Description, and Date of Issue aligned to the LEFT (text-align: left)
-- Keep it professional and well-structured`;
+- Keep it professional and well-structured
+- USE THE SAME LANGUAGE AS THE INPUT CONTENT throughout the entire receipt`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
