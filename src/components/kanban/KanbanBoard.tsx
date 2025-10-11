@@ -72,7 +72,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   return (
     <>
       <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="all-lists" direction="horizontal" type="list">
+        <Droppable droppableId="board-lists" direction="horizontal" type="list">
           {(provided) => (
             <div 
               className="flex gap-4 overflow-x-auto pb-6"
@@ -94,41 +94,41 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               {provided.placeholder}
 
               {isAddingList ? (
-            <div className="flex-shrink-0 w-80 bg-muted/50 rounded-lg p-3">
-              <Input
-                placeholder="Enter list title..."
-                value={newListTitle}
-                onChange={(e) => setNewListTitle(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleAddList();
-                  if (e.key === 'Escape') setIsAddingList(false);
-                }}
-                autoFocus
-                className="mb-2"
-              />
-              <div className="flex gap-2">
-                <Button size="sm" onClick={handleAddList}>
+                <div className="flex-shrink-0 w-80 bg-muted/50 rounded-lg p-3">
+                  <Input
+                    placeholder="Enter list title..."
+                    value={newListTitle}
+                    onChange={(e) => setNewListTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleAddList();
+                      if (e.key === 'Escape') setIsAddingList(false);
+                    }}
+                    autoFocus
+                    className="mb-2"
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleAddList}>
+                      Add List
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => setIsAddingList(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  className="flex-shrink-0 w-80 h-auto min-h-[100px] border-2 border-dashed"
+                  onClick={() => setIsAddingList(true)}
+                >
+                  <Plus className="h-5 w-5 mr-2" />
                   Add List
                 </Button>
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  onClick={() => setIsAddingList(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Button
-              variant="ghost"
-              className="flex-shrink-0 w-80 h-auto min-h-[100px] border-2 border-dashed"
-              onClick={() => setIsAddingList(true)}
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Add List
-            </Button>
-          )}
+              )}
             </div>
           )}
         </Droppable>
