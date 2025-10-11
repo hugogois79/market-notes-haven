@@ -71,14 +71,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   return (
     <>
-      <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="board-lists" direction="horizontal" type="list">
-          {(provided) => (
-            <div 
-              className="flex gap-4 pb-6 overflow-x-auto"
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-            >
+      <div className="overflow-x-auto">
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Droppable droppableId="board-lists" direction="horizontal" type="list">
+            {(provided) => (
+              <div 
+                className="flex gap-4 pb-6 min-w-min"
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+              >
               {lists.map((list, index) => (
                 <KanbanList
                   key={list.id}
@@ -129,10 +130,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   Add List
                 </Button>
               )}
-            </div>
-          )}
-        </Droppable>
-      </DragDropContext>
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+      </div>
 
       {selectedCard && (
         <KanbanCardModal
