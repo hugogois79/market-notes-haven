@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Droppable } from 'react-beautiful-dnd';
+import { Draggable, Droppable } from 'react-beautiful-dnd';
 import { KanbanList as KanbanListType, KanbanCard } from '@/services/kanbanService';
 import { KanbanCard as KanbanCardComponent } from './KanbanCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, MoreVertical } from 'lucide-react';
+import { Plus, MoreVertical, GripVertical } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +14,7 @@ import {
 
 interface KanbanListProps {
   list: KanbanListType;
+  index: number;
   cards: KanbanCard[];
   onAddCard: (listId: string, title: string) => void;
   onCardClick: (card: KanbanCard) => void;
@@ -23,6 +24,7 @@ interface KanbanListProps {
 
 export const KanbanList: React.FC<KanbanListProps> = ({
   list,
+  index,
   cards,
   onAddCard,
   onCardClick,
@@ -50,69 +52,82 @@ export const KanbanList: React.FC<KanbanListProps> = ({
   };
 
   return (
-    <div className="flex-shrink-0 w-80 bg-muted/50 rounded-lg p-3">
-      <div className="flex items-center justify-between mb-3">
-        {isEditingTitle ? (
-          <Input
-            value={editedTitle}
-            onChange={(e) => setEditedTitle(e.target.value)}
-            onBlur={handleEditTitle}
-            onKeyDown={(e) => e.key === 'Enter' && handleEditTitle()}
-            className="font-semibold h-8"
-            autoFocus
-          />
-        ) : (
-          <h3 
-            className="font-semibold cursor-pointer hover:opacity-70"
-            onDoubleClick={() => setIsEditingTitle(true)}
-          >
-            {list.title}
-          </h3>
-        )}
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>
-              Edit Title
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => onDeleteList(list.id)}
-              className="text-destructive"
-            >
-              Delete List
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <Droppable droppableId={list.id}>
-        {(provided, snapshot) => (
-          <div
-            ref={provided.innerRef}
-            {...provided.droppableProps}
-            className={`min-h-[100px] ${
-              snapshot.isDraggingOver ? 'bg-muted' : ''
-            } rounded-md p-2 transition-colors`}
-          >
-            {cards.map((card, index) => (
-              <KanbanCardComponent
-                key={card.id}
-                card={card}
-                index={index}
-                onClick={() => onCardClick(card)}
-              />
-            ))}
-            {provided.placeholder}
+    <Draggable draggableId={list.id} index={index}>
+      {(provided, snapshot) => (
+        <div 
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          className={`flex-shrink-0 w-80 bg-muted/50 rounded-lg p-3 ${
+            snapshot.isDragging ? 'opacity-50 rotate-2' : ''
+          }`}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 flex-1">
+              <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+              </div>
+              {isEditingTitle ? (
+                <Input
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  onBlur={handleEditTitle}
+                  onKeyDown={(e) => e.key === 'Enter' && handleEditTitle()}
+                  className="font-semibold h-8"
+                  autoFocus
+                />
+              ) : (
+                <h3 
+                  className="font-semibold cursor-pointer hover:opacity-70 flex-1"
+                  onDoubleClick={() => setIsEditingTitle(true)}
+                >
+                  {list.title}
+                </h3>
+              )}
+            </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>
+                  Edit Title
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => onDeleteList(list.id)}
+                  className="text-destructive"
+                >
+                  Delete List
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        )}
-      </Droppable>
 
-      {isAddingCard ? (
+          <Droppable droppableId={list.id} type="card">
+            {(provided, snapshot) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className={`min-h-[100px] ${
+                  snapshot.isDraggingOver ? 'bg-muted' : ''
+                } rounded-md p-2 transition-colors`}
+              >
+                {cards.map((card, cardIndex) => (
+                  <KanbanCardComponent
+                    key={card.id}
+                    card={card}
+                    index={cardIndex}
+                    onClick={() => onCardClick(card)}
+                  />
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+
+          {isAddingCard ? (
         <div className="mt-2 space-y-2">
           <Input
             placeholder="Enter card title..."
@@ -147,6 +162,8 @@ export const KanbanList: React.FC<KanbanListProps> = ({
           Add Card
         </Button>
       )}
-    </div>
+        </div>
+      )}
+    </Draggable>
   );
 };

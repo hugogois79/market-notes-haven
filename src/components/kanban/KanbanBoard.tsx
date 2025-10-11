@@ -17,6 +17,7 @@ interface KanbanBoardProps {
   onDeleteList: (listId: string) => void;
   onEditList: (listId: string, title: string) => void;
   onMoveCard: (cardId: string, targetListId: string, newPosition: number) => void;
+  onMoveList: (listId: string, newPosition: number) => void;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -28,7 +29,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onDeleteCard,
   onDeleteList,
   onEditList,
-  onMoveCard
+  onMoveCard,
+  onMoveList
 }) => {
   const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
   const [isAddingList, setIsAddingList] = useState(false);
@@ -43,7 +45,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   };
 
   const onDragEnd = (result: DropResult) => {
-    const { destination, source, draggableId } = result;
+    const { destination, source, draggableId, type } = result;
 
     if (!destination) return;
     if (
@@ -53,6 +55,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       return;
     }
 
+    // Handle list reordering
+    if (type === 'list') {
+      onMoveList(draggableId, destination.index);
+      return;
+    }
+
+    // Handle card movement
     onMoveCard(draggableId, destination.droppableId, destination.index);
   };
 
@@ -63,20 +72,28 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   return (
     <>
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-6">
-          {lists.map(list => (
-            <KanbanList
-              key={list.id}
-              list={list}
-              cards={getListCards(list.id)}
-              onAddCard={onAddCard}
-              onCardClick={setSelectedCard}
-              onDeleteList={onDeleteList}
-              onEditList={onEditList}
-            />
-          ))}
+        <Droppable droppableId="all-lists" direction="horizontal" type="list">
+          {(provided) => (
+            <div 
+              className="flex gap-4 overflow-x-auto pb-6"
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+            >
+              {lists.map((list, index) => (
+                <KanbanList
+                  key={list.id}
+                  list={list}
+                  index={index}
+                  cards={getListCards(list.id)}
+                  onAddCard={onAddCard}
+                  onCardClick={setSelectedCard}
+                  onDeleteList={onDeleteList}
+                  onEditList={onEditList}
+                />
+              ))}
+              {provided.placeholder}
 
-          {isAddingList ? (
+              {isAddingList ? (
             <div className="flex-shrink-0 w-80 bg-muted/50 rounded-lg p-3">
               <Input
                 placeholder="Enter list title..."
@@ -112,7 +129,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               Add List
             </Button>
           )}
-        </div>
+            </div>
+          )}
+        </Droppable>
       </DragDropContext>
 
       {selectedCard && (

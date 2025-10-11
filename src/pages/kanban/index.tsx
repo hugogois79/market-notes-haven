@@ -79,6 +79,10 @@ const KanbanPage = () => {
     await updateList(listId, { title });
   };
 
+  const handleMoveList = async (listId: string, newPosition: number) => {
+    await updateList(listId, { position: newPosition });
+  };
+
   if (!boardId) {
     return (
       <div className="p-6">
@@ -191,6 +195,7 @@ const KanbanPage = () => {
           onDeleteList={deleteList}
           onEditList={handleEditList}
           onMoveCard={moveCard}
+          onMoveList={handleMoveList}
         />
       )}
     </div>
