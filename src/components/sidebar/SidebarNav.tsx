@@ -10,6 +10,7 @@ import {
   Folder,
   Banknote,
   User,
+  Kanban,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +59,11 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       title: "Receipt Generator",
       icon: <FileText size={20} />,
       path: "/receipt-generator",
+    },
+    {
+      title: "Project Boards",
+      icon: <Kanban size={20} />,
+      path: "/kanban",
     },
     {
       title: "Market Data",

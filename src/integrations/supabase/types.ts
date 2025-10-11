@@ -639,6 +639,302 @@ export type Database = {
           },
         ]
       }
+      kanban_attachments: {
+        Row: {
+          card_id: string | null
+          created_at: string | null
+          file_type: string | null
+          file_url: string
+          filename: string
+          id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          card_id?: string | null
+          created_at?: string | null
+          file_type?: string | null
+          file_url: string
+          filename: string
+          id?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          card_id?: string | null
+          created_at?: string | null
+          file_type?: string | null
+          file_url?: string
+          filename?: string
+          id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_attachments_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_boards: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          title: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          title: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      kanban_card_labels: {
+        Row: {
+          card_id: string
+          label_id: string
+        }
+        Insert: {
+          card_id: string
+          label_id: string
+        }
+        Update: {
+          card_id?: string
+          label_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_card_labels_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_card_labels_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_labels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_cards: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          list_id: string | null
+          position: number
+          priority: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          list_id?: string | null
+          position: number
+          priority?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          list_id?: string | null
+          position?: number
+          priority?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_cards_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_checklist_items: {
+        Row: {
+          checklist_id: string | null
+          content: string
+          id: string
+          is_completed: boolean | null
+          position: number
+        }
+        Insert: {
+          checklist_id?: string | null
+          content: string
+          id?: string
+          is_completed?: boolean | null
+          position: number
+        }
+        Update: {
+          checklist_id?: string | null
+          content?: string
+          id?: string
+          is_completed?: boolean | null
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_checklist_items_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_checklists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_checklists: {
+        Row: {
+          card_id: string | null
+          id: string
+          position: number
+          title: string
+        }
+        Insert: {
+          card_id?: string | null
+          id?: string
+          position: number
+          title: string
+        }
+        Update: {
+          card_id?: string | null
+          id?: string
+          position?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_checklists_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_comments: {
+        Row: {
+          card_id: string | null
+          content: string
+          created_at: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          card_id?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          card_id?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_comments_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_labels: {
+        Row: {
+          board_id: string | null
+          color: string
+          id: string
+          name: string
+        }
+        Insert: {
+          board_id?: string | null
+          color: string
+          id?: string
+          name: string
+        }
+        Update: {
+          board_id?: string | null
+          color?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_labels_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_boards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_lists: {
+        Row: {
+          board_id: string | null
+          created_at: string | null
+          id: string
+          position: number
+          title: string
+        }
+        Insert: {
+          board_id?: string | null
+          created_at?: string | null
+          id?: string
+          position: number
+          title: string
+        }
+        Update: {
+          board_id?: string | null
+          created_at?: string | null
+          id?: string
+          position?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_lists_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_boards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       news_articles: {
         Row: {
           content: string
@@ -1987,6 +2283,10 @@ export type Database = {
           id: string
           similarity: number
         }[]
+      }
+      reorder_cards: {
+        Args: { card_id: string; new_list_id: string; new_position: number }
+        Returns: undefined
       }
       sparsevec_out: {
         Args: { "": unknown }

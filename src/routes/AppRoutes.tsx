@@ -20,6 +20,7 @@ import TokensDashboard from "@/pages/tokens";
 import TokenDetail from "@/pages/tokens/[id]";
 import CryptoDashboard from "@/pages/crypto/Dashboard";
 import ReceiptGenerator from "@/pages/ReceiptGenerator";
+import KanbanPage from "@/pages/kanban";
 
 // TAO-specific routes
 import TAOLayout from "@/pages/tao/layout";
@@ -132,6 +133,22 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <ReceiptGenerator />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="kanban"
+            element={
+              <ProtectedRoute>
+                <KanbanPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="kanban/:boardId"
+            element={
+              <ProtectedRoute>
+                <KanbanPage />
               </ProtectedRoute>
             }
           />
