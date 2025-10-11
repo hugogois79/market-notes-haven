@@ -99,24 +99,19 @@ const KanbanPage = () => {
   };
 
   const handleMoveList = async (listId: string, newPosition: number) => {
-    // Optimistic update - reorder lists locally first
-    const reorderedLists = Array.from(lists);
-    const sourceIndex = reorderedLists.findIndex(l => l.id === listId);
+    const sortedLists = [...lists].sort((a, b) => a.position - b.position);
+    const sourceIndex = sortedLists.findIndex(l => l.id === listId);
     if (sourceIndex === -1) return;
     
-    const [movedList] = reorderedLists.splice(sourceIndex, 1);
-    reorderedLists.splice(newPosition, 0, movedList);
+    const [movedList] = sortedLists.splice(sourceIndex, 1);
+    sortedLists.splice(newPosition, 0, movedList);
     
-    // Update positions for all affected lists
-    const updates = reorderedLists.map((list, index) => ({
-      id: list.id,
-      position: index
-    }));
-    
-    // Update database in background
+    // Update positions for all lists
     try {
       await Promise.all(
-        updates.map(update => updateList(update.id, { position: update.position }))
+        sortedLists.map((list, index) => 
+          updateList(list.id, { position: index })
+        )
       );
     } catch (error) {
       console.error('Error updating list positions:', error);
@@ -258,7 +253,7 @@ const KanbanPage = () => {
         </div>
       ) : (
         <KanbanBoard
-          lists={lists}
+          lists={[...lists].sort((a, b) => a.position - b.position)}
           cards={filteredCards}
           onAddList={handleAddList}
           onAddCard={handleAddCard}
