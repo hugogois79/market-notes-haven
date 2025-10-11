@@ -58,74 +58,102 @@ export const KanbanList: React.FC<KanbanListProps> = ({
         <div 
           ref={provided.innerRef}
           {...provided.draggableProps}
-          className={`flex-shrink-0 w-80 bg-muted/50 rounded-lg p-3 ${
+          className={`flex-shrink-0 ${
+            isCollapsed ? 'w-12' : 'w-80'
+          } bg-muted/50 rounded-lg p-3 transition-all duration-200 ${
             snapshot.isDragging ? 'opacity-50 rotate-2' : ''
           }`}
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2 flex-1">
-              <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
-                <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-              </div>
-              
+          {isCollapsed ? (
+            // Collapsed view - vertical
+            <div className="flex flex-col items-center h-full min-h-[200px]">
               <button
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                className="p-1 hover:bg-muted rounded"
+                onClick={() => setIsCollapsed(false)}
+                className="p-1 hover:bg-muted rounded mb-2"
               >
-                {isCollapsed ? (
-                  <ChevronRight className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
+                <ChevronRight className="h-4 w-4" />
               </button>
-
-              {isEditingTitle ? (
-                <Input
-                  value={editedTitle}
-                  onChange={(e) => setEditedTitle(e.target.value)}
-                  onBlur={handleEditTitle}
-                  onKeyDown={(e) => e.key === 'Enter' && handleEditTitle()}
-                  className="font-semibold h-8"
-                  autoFocus
-                />
-              ) : (
+              
+              <div 
+                className="flex-1 flex items-center justify-center cursor-pointer"
+                onClick={() => setIsCollapsed(false)}
+              >
                 <h3 
-                  className="font-semibold cursor-pointer hover:opacity-70 flex-1"
-                  onDoubleClick={() => setIsEditingTitle(true)}
+                  className="font-semibold text-sm whitespace-nowrap"
+                  style={{ 
+                    writingMode: 'vertical-rl',
+                    textOrientation: 'mixed'
+                  }}
                 >
                   {list.title}
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    ({cards.length})
-                  </span>
                 </h3>
-              )}
-            </div>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setIsCollapsed(!isCollapsed)}>
-                  {isCollapsed ? 'Expand List' : 'Collapse List'}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>
-                  Edit Title
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onDeleteList(list.id)}
-                  className="text-destructive"
-                >
-                  Delete List
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              </div>
 
-          {!isCollapsed && (
+              <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing mt-2">
+                <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+              </div>
+            </div>
+          ) : (
+            // Expanded view - normal
             <>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 flex-1">
+                  <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                    <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                  </div>
+                  
+                  <button
+                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    className="p-1 hover:bg-muted rounded"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+
+                  {isEditingTitle ? (
+                    <Input
+                      value={editedTitle}
+                      onChange={(e) => setEditedTitle(e.target.value)}
+                      onBlur={handleEditTitle}
+                      onKeyDown={(e) => e.key === 'Enter' && handleEditTitle()}
+                      className="font-semibold h-8"
+                      autoFocus
+                    />
+                  ) : (
+                    <h3 
+                      className="font-semibold cursor-pointer hover:opacity-70 flex-1"
+                      onDoubleClick={() => setIsEditingTitle(true)}
+                    >
+                      {list.title}
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        ({cards.length})
+                      </span>
+                    </h3>
+                  )}
+                </div>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setIsCollapsed(!isCollapsed)}>
+                      Collapse List
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>
+                      Edit Title
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => onDeleteList(list.id)}
+                      className="text-destructive"
+                    >
+                      Delete List
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
               <Droppable droppableId={list.id} type="card">
                 {(provided, snapshot) => (
                   <div
