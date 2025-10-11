@@ -59,7 +59,14 @@ export const useKanban = (boardId?: string) => {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'kanban_lists' },
+        { event: 'INSERT', schema: 'public', table: 'kanban_lists' },
+        () => {
+          if (boardId) fetchBoardData(boardId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'kanban_lists' },
         () => {
           if (boardId) fetchBoardData(boardId);
         }

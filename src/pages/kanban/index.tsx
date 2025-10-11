@@ -99,7 +99,28 @@ const KanbanPage = () => {
   };
 
   const handleMoveList = async (listId: string, newPosition: number) => {
-    await updateList(listId, { position: newPosition });
+    // Optimistic update - reorder lists locally first
+    const reorderedLists = Array.from(lists);
+    const sourceIndex = reorderedLists.findIndex(l => l.id === listId);
+    if (sourceIndex === -1) return;
+    
+    const [movedList] = reorderedLists.splice(sourceIndex, 1);
+    reorderedLists.splice(newPosition, 0, movedList);
+    
+    // Update positions for all affected lists
+    const updates = reorderedLists.map((list, index) => ({
+      id: list.id,
+      position: index
+    }));
+    
+    // Update database in background
+    try {
+      await Promise.all(
+        updates.map(update => updateList(update.id, { position: update.position }))
+      );
+    } catch (error) {
+      console.error('Error updating list positions:', error);
+    }
   };
 
   if (!boardId) {
