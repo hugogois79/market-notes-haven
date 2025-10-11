@@ -4,7 +4,7 @@ import { KanbanList as KanbanListType, KanbanCard } from '@/services/kanbanServi
 import { KanbanCard as KanbanCardComponent } from './KanbanCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, MoreVertical, GripVertical } from 'lucide-react';
+import { Plus, MoreVertical, GripVertical, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +35,7 @@ export const KanbanList: React.FC<KanbanListProps> = ({
   const [newCardTitle, setNewCardTitle] = useState('');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(list.title);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleAddCard = () => {
     if (newCardTitle.trim()) {
@@ -66,6 +67,18 @@ export const KanbanList: React.FC<KanbanListProps> = ({
               <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
                 <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground" />
               </div>
+              
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="p-1 hover:bg-muted rounded"
+              >
+                {isCollapsed ? (
+                  <ChevronRight className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </button>
+
               {isEditingTitle ? (
                 <Input
                   value={editedTitle}
@@ -81,6 +94,9 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                   onDoubleClick={() => setIsEditingTitle(true)}
                 >
                   {list.title}
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    ({cards.length})
+                  </span>
                 </h3>
               )}
             </div>
@@ -92,6 +108,9 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setIsCollapsed(!isCollapsed)}>
+                  {isCollapsed ? 'Expand List' : 'Collapse List'}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>
                   Edit Title
                 </DropdownMenuItem>
@@ -105,63 +124,67 @@ export const KanbanList: React.FC<KanbanListProps> = ({
             </DropdownMenu>
           </div>
 
-          <Droppable droppableId={list.id} type="card">
-            {(provided, snapshot) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className={`min-h-[100px] ${
-                  snapshot.isDraggingOver ? 'bg-muted' : ''
-                } rounded-md p-2 transition-colors`}
-              >
-                {cards.map((card, cardIndex) => (
-                  <KanbanCardComponent
-                    key={card.id}
-                    card={card}
-                    index={cardIndex}
-                    onClick={() => onCardClick(card)}
-                  />
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
+          {!isCollapsed && (
+            <>
+              <Droppable droppableId={list.id} type="card">
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`min-h-[100px] ${
+                      snapshot.isDraggingOver ? 'bg-muted' : ''
+                    } rounded-md p-2 transition-colors`}
+                  >
+                    {cards.map((card, cardIndex) => (
+                      <KanbanCardComponent
+                        key={card.id}
+                        card={card}
+                        index={cardIndex}
+                        onClick={() => onCardClick(card)}
+                      />
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
 
-          {isAddingCard ? (
-        <div className="mt-2 space-y-2">
-          <Input
-            placeholder="Enter card title..."
-            value={newCardTitle}
-            onChange={(e) => setNewCardTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleAddCard();
-              if (e.key === 'Escape') setIsAddingCard(false);
-            }}
-            autoFocus
-          />
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handleAddCard}>
-              Add Card
-            </Button>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={() => setIsAddingCard(false)}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <Button
-          variant="ghost"
-          className="w-full mt-2 justify-start"
-          onClick={() => setIsAddingCard(true)}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Card
-        </Button>
-      )}
+              {isAddingCard ? (
+                <div className="mt-2 space-y-2">
+                  <Input
+                    placeholder="Enter card title..."
+                    value={newCardTitle}
+                    onChange={(e) => setNewCardTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleAddCard();
+                      if (e.key === 'Escape') setIsAddingCard(false);
+                    }}
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleAddCard}>
+                      Add Card
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => setIsAddingCard(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  className="w-full mt-2 justify-start"
+                  onClick={() => setIsAddingCard(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Card
+                </Button>
+              )}
+            </>
+          )}
         </div>
       )}
     </Draggable>
