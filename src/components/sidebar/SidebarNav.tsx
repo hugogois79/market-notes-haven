@@ -11,8 +11,13 @@ import {
   Banknote,
   User,
   Kanban,
+  ChevronDown,
+  ChevronRight,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { KanbanService } from "@/services/kanbanService";
 
 type NavItem = {
   title: string;
@@ -28,6 +33,16 @@ interface SidebarNavProps {
 
 export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavProps) => {
   const location = useLocation();
+  const [isProjectsExpanded, setIsProjectsExpanded] = useState(false);
+  const [boards, setBoards] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchBoards = async () => {
+      const fetchedBoards = await KanbanService.getBoards();
+      setBoards(fetchedBoards);
+    };
+    fetchBoards();
+  }, []);
 
   const navItems: NavItem[] = [
     {
@@ -59,11 +74,6 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       title: "Receipt Generator",
       icon: <FileText size={20} />,
       path: "/receipt-generator",
-    },
-    {
-      title: "Project Boards",
-      icon: <Kanban size={20} />,
-      path: "/kanban",
     },
     {
       title: "Market Data",
@@ -122,6 +132,71 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
             </Link>
           </li>
         ))}
+        
+        {/* Project Boards Expandable Section */}
+        <li>
+          <button
+            onClick={() => setIsProjectsExpanded(!isProjectsExpanded)}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors",
+              !isExpanded && "justify-center px-2",
+              location.pathname.startsWith('/kanban')
+                ? "bg-brand/20 text-brand font-medium"
+                : "text-white hover:bg-white/10 hover:text-brand"
+            )}
+            title={!isExpanded ? "Project Boards" : ""}
+          >
+            <Kanban size={20} />
+            {isExpanded && (
+              <>
+                <span className="flex-1 text-left">Project Boards</span>
+                {isProjectsExpanded ? (
+                  <ChevronDown size={16} />
+                ) : (
+                  <ChevronRight size={16} />
+                )}
+              </>
+            )}
+          </button>
+          
+          {isExpanded && isProjectsExpanded && (
+            <ul className="ml-4 mt-1 space-y-1">
+              {boards.map((board) => (
+                <li key={board.id}>
+                  <Link
+                    to={`/kanban/${board.id}`}
+                    onClick={() => isMobile && onMobileClose()}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm",
+                      location.pathname === `/kanban/${board.id}`
+                        ? "bg-brand/20 text-brand font-medium"
+                        : "text-white/80 hover:bg-white/10 hover:text-brand"
+                    )}
+                  >
+                    <div 
+                      className="w-2 h-2 rounded-full" 
+                      style={{ backgroundColor: board.color || '#0a4a6b' }}
+                    />
+                    <span className="truncate">{board.title}</span>
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <Link
+                  to="/kanban"
+                  onClick={() => isMobile && onMobileClose()}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm",
+                    "text-white/60 hover:bg-white/10 hover:text-brand"
+                  )}
+                >
+                  <Plus size={16} />
+                  <span>New Board</span>
+                </Link>
+              </li>
+            </ul>
+          )}
+        </li>
       </ul>
     </nav>
   );
