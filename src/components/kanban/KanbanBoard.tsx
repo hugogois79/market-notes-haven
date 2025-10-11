@@ -72,10 +72,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   return (
     <>
       <DragDropContext onDragEnd={onDragEnd}>
+        <div className="overflow-x-auto">
         <Droppable droppableId="board-lists" direction="horizontal" type="list">
           {(provided) => (
             <div 
-              className="flex gap-4 overflow-x-auto pb-6"
+              className="flex gap-4 pb-6 min-w-full"
               ref={provided.innerRef}
               {...provided.droppableProps}
             >
@@ -132,6 +133,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             </div>
           )}
         </Droppable>
+        </div>
       </DragDropContext>
 
       {selectedCard && (
