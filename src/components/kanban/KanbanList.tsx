@@ -60,13 +60,17 @@ export const KanbanList: React.FC<KanbanListProps> = ({
           {...provided.draggableProps}
           className={`flex-shrink-0 ${
             isCollapsed ? 'w-12' : 'w-80'
-          } bg-muted/50 rounded-lg p-3 transition-all duration-200 ${
-            snapshot.isDragging ? 'opacity-50 rotate-2' : ''
+          } bg-muted/50 rounded-lg transition-all duration-200 ${
+            snapshot.isDragging ? 'opacity-50 shadow-lg' : ''
           }`}
         >
           {isCollapsed ? (
             // Collapsed view - vertical
-            <div className="flex flex-col items-center h-full min-h-[200px]">
+            <div className="flex flex-col items-center h-full min-h-[200px] p-3">
+              <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing mb-2">
+                <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+              </div>
+              
               <button
                 onClick={() => setIsCollapsed(false)}
                 className="p-1 hover:bg-muted rounded mb-2"
@@ -88,14 +92,10 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                   {list.title}
                 </h3>
               </div>
-
-              <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing mt-2">
-                <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-              </div>
             </div>
           ) : (
             // Expanded view - normal
-            <>
+            <div className="p-3">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2 flex-1">
                   <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
@@ -211,7 +211,7 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                   Add Card
                 </Button>
               )}
-            </>
+            </div>
           )}
         </div>
       )}
