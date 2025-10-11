@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useKanban } from '@/hooks/useKanban';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
@@ -11,9 +11,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, ArrowLeft } from 'lucide-react';
+import { Plus, Search, Kanban as KanbanIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const KanbanPage = () => {
@@ -37,8 +44,20 @@ const KanbanPage = () => {
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
   const [newBoardTitle, setNewBoardTitle] = useState('');
   const [newBoardDescription, setNewBoardDescription] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const currentBoard = boards.find(b => b.id === boardId);
+
+  // Filter cards based on search query
+  const filteredCards = useMemo(() => {
+    if (!searchQuery.trim()) return cards;
+    
+    const query = searchQuery.toLowerCase();
+    return cards.filter(card => 
+      card.title.toLowerCase().includes(query) ||
+      card.description?.toLowerCase().includes(query)
+    );
+  }, [cards, searchQuery]);
 
   const handleCreateBoard = async () => {
     try {
@@ -163,11 +182,43 @@ const KanbanPage = () => {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/kanban')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Boards
-        </Button>
+      <div className="mb-6 space-y-4">
+        {/* Board selector and search bar */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <KanbanIcon className="h-6 w-6" />
+            <Select value={boardId} onValueChange={(value) => navigate(`/kanban/${value}`)}>
+              <SelectTrigger className="w-[280px]">
+                <SelectValue placeholder="Select a board" />
+              </SelectTrigger>
+              <SelectContent>
+                {boards.map((board) => (
+                  <SelectItem key={board.id} value={board.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded" 
+                        style={{ backgroundColor: board.color || '#0a4a6b' }}
+                      />
+                      {board.title}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search cards..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
+        {/* Board title and description */}
         {currentBoard && (
           <div>
             <h1 className="text-3xl font-bold">{currentBoard.title}</h1>
@@ -187,7 +238,7 @@ const KanbanPage = () => {
       ) : (
         <KanbanBoard
           lists={lists}
-          cards={cards}
+          cards={filteredCards}
           onAddList={handleAddList}
           onAddCard={handleAddCard}
           onUpdateCard={updateCard}
@@ -197,6 +248,12 @@ const KanbanPage = () => {
           onMoveCard={moveCard}
           onMoveList={handleMoveList}
         />
+      )}
+
+      {searchQuery && filteredCards.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No cards found matching "{searchQuery}"</p>
+        </div>
       )}
     </div>
   );
