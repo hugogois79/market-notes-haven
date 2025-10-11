@@ -186,13 +186,18 @@ export class KanbanService {
   }
 
   static async moveCard(cardId: string, targetListId: string, newPosition: number) {
-    const { error } = await supabase.rpc('reorder_cards', {
-      card_id: cardId,
-      new_list_id: targetListId,
-      new_position: newPosition
-    });
+    const { data, error } = await supabase
+      .from('kanban_cards')
+      .update({ 
+        list_id: targetListId, 
+        position: newPosition 
+      })
+      .eq('id', cardId)
+      .select()
+      .single();
     
     if (error) throw error;
+    return data as KanbanCard;
   }
 
   // Label operations
