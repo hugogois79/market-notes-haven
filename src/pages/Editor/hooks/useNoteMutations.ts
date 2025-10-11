@@ -108,8 +108,11 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
       return tag.name || tag.id || String(tag);
     });
     
-    console.log("Saving tags immediately:", processedTags);
-    handleSaveWithChanges({ tags: processedTags }, false);
+    console.log("Saving tags immediately:", processedTags, "with category:", localCategory);
+    handleSaveWithChanges({ 
+      tags: processedTags,
+      category: localCategory // Preserve the current category when saving tags
+    }, false);
   };
 
   // Handle attachment change and save immediately
