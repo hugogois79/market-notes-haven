@@ -906,6 +906,7 @@ export type Database = {
       kanban_lists: {
         Row: {
           board_id: string | null
+          color: string | null
           created_at: string | null
           id: string
           position: number
@@ -913,6 +914,7 @@ export type Database = {
         }
         Insert: {
           board_id?: string | null
+          color?: string | null
           created_at?: string | null
           id?: string
           position: number
@@ -920,6 +922,7 @@ export type Database = {
         }
         Update: {
           board_id?: string | null
+          color?: string | null
           created_at?: string | null
           id?: string
           position?: number

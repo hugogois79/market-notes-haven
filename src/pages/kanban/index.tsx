@@ -99,6 +99,10 @@ const KanbanPage = () => {
     await updateList(listId, { title });
   };
 
+  const handleColorChange = async (listId: string, color: string) => {
+    await updateList(listId, { color });
+  };
+
   if (!boardId) {
     return (
       <div className="p-6">
@@ -242,6 +246,7 @@ const KanbanPage = () => {
           onDeleteCard={deleteCard}
           onDeleteList={deleteList}
           onEditList={handleEditList}
+          onColorChange={handleColorChange}
           onMoveCard={moveCard}
           onMoveList={moveList}
         />

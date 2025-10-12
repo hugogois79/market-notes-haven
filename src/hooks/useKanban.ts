@@ -126,6 +126,9 @@ export const useKanban = (boardId?: string) => {
     try {
       const updated = await KanbanService.updateList(id, updates);
       setLists(lists.map(l => l.id === id ? updated : l));
+      if (updates.color) {
+        toast.success('List color updated');
+      }
     } catch (error: any) {
       toast.error('Failed to update list: ' + error.message);
     }

@@ -15,6 +15,7 @@ export interface KanbanList {
   title: string;
   board_id: string;
   position: number;
+  color?: string;
   created_at: string;
 }
 

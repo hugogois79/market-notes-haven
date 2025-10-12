@@ -4,12 +4,13 @@ import { KanbanList as KanbanListType, KanbanCard } from '@/services/kanbanServi
 import { KanbanCard as KanbanCardComponent } from './KanbanCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, MoreVertical, GripVertical, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, MoreVertical, GripVertical, ChevronDown, ChevronRight, Palette } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 
 interface KanbanListProps {
@@ -20,7 +21,19 @@ interface KanbanListProps {
   onCardClick: (card: KanbanCard) => void;
   onDeleteList: (listId: string) => void;
   onEditList: (listId: string, title: string) => void;
+  onColorChange: (listId: string, color: string) => void;
 }
+
+const LIST_COLORS = [
+  { name: 'Gray', value: '#f3f4f6' },
+  { name: 'Blue', value: '#dbeafe' },
+  { name: 'Green', value: '#dcfce7' },
+  { name: 'Yellow', value: '#fef9c3' },
+  { name: 'Red', value: '#fee2e2' },
+  { name: 'Purple', value: '#f3e8ff' },
+  { name: 'Orange', value: '#ffedd5' },
+  { name: 'Pink', value: '#fce7f3' },
+];
 
 export const KanbanList: React.FC<KanbanListProps> = ({
   list,
@@ -29,7 +42,8 @@ export const KanbanList: React.FC<KanbanListProps> = ({
   onAddCard,
   onCardClick,
   onDeleteList,
-  onEditList
+  onEditList,
+  onColorChange
 }) => {
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [newCardTitle, setNewCardTitle] = useState('');
@@ -60,9 +74,13 @@ export const KanbanList: React.FC<KanbanListProps> = ({
           {...provided.draggableProps}
           className={`flex-shrink-0 ${
             isCollapsed ? 'w-12' : 'w-80'
-          } bg-muted/50 rounded-lg transition-all duration-200 ${
+          } rounded-lg transition-all duration-200 ${
             snapshot.isDragging ? 'opacity-50 shadow-lg' : ''
           }`}
+          style={{
+            backgroundColor: list.color || '#f3f4f6',
+            ...provided.draggableProps.style
+          }}
         >
           {isCollapsed ? (
             // Collapsed view - vertical
@@ -137,13 +155,33 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem onClick={() => setIsCollapsed(!isCollapsed)}>
                       Collapse List
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>
                       Edit Title
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <div className="px-2 py-1.5 text-sm font-semibold flex items-center gap-2">
+                      <Palette className="h-4 w-4" />
+                      Background Color
+                    </div>
+                    <div className="grid grid-cols-4 gap-1 p-2">
+                      {LIST_COLORS.map((color) => (
+                        <button
+                          key={color.value}
+                          onClick={() => onColorChange(list.id, color.value)}
+                          className="h-8 w-8 rounded border-2 hover:scale-110 transition-transform"
+                          style={{ 
+                            backgroundColor: color.value,
+                            borderColor: list.color === color.value ? '#000' : 'transparent'
+                          }}
+                          title={color.name}
+                        />
+                      ))}
+                    </div>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       onClick={() => onDeleteList(list.id)}
                       className="text-destructive"
