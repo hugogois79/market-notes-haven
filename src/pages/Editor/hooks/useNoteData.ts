@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { Note, Tag, Token } from "@/types";
 import { getTokensForNote } from "@/services/tokenService";
-import { fetchTags } from "@/services/supabaseService";
+import { fetchTags } from "@/services/tag";
 
 interface UseNoteDataProps {
   notes: Note[];
