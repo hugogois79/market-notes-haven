@@ -109,6 +109,13 @@ const EditorMain: React.FC<EditorMainProps> = ({
         isSaving={isSaving}
         lastSaved={lastSaved}
         onSave={handleManualSave}
+        noteContent={{
+          title,
+          category,
+          content: currentContent,
+          tags: linkedTags.map(tag => typeof tag === 'string' ? tag : tag.name),
+          summary
+        }}
       />
       
       <div className="flex flex-col overflow-hidden flex-1 relative">
