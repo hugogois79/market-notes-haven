@@ -13,13 +13,23 @@ serve(async (req) => {
 
   try {
     const { content } = await req.json();
+    console.log('Received content length:', content?.length);
+    console.log('First 500 chars:', content?.substring(0, 500));
+    
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    const systemPrompt = `You are a professional receipt formatter. Analyze the provided receipt content and extract all relevant information to create a clean, professional payment receipt in HTML format.
+    const systemPrompt = `You are a professional receipt formatter. Analyze the provided receipt content and extract ALL relevant information to create a clean, professional payment receipt in HTML format.
+
+ABSOLUTELY CRITICAL - READ FIRST:
+1. You MUST include EVERY SINGLE piece of information from the input content
+2. Do NOT skip, omit, or summarize ANY information
+3. If information is provided, it MUST appear in the output
+4. Extract ALL dates, amounts, references, names, addresses, and details
+5. Your job is to FORMAT, not to filter or reduce information
 
 CRITICAL LANGUAGE DETECTION:
 1. DETECT the language of the input content (Portuguese or English)
@@ -38,8 +48,9 @@ CRITICAL INSTRUCTIONS - READ CAREFULLY:
 7. Start IMMEDIATELY with the receipt title (e.g., "PAYMENT RECEIPT" or "RECIBO DE PAGAMENTO")
 
 FORMAT INSTRUCTIONS:
-1. Carefully read and extract ALL information from the content
-2. BENEFICIARY DETAILS - MAXIMUM EXTRACTION (CRITICAL):
+1. Carefully read and extract ALL information from the content - DO NOT SKIP ANYTHING
+2. VERIFY you have included EVERY date, amount, reference number, and detail from the input
+3. BENEFICIARY DETAILS - MAXIMUM EXTRACTION (CRITICAL):
    Extract EVERY detail about the beneficiary to create a complete profile:
    - Full legal name (first name, middle names, surname, any suffixes)
    - Position/Title/Role (e.g., Director, Manager, Consultant, Employee, Contractor)
@@ -211,13 +222,18 @@ CRITICAL RULES - MUST FOLLOW:
 - ABSOLUTELY NO "SUSTAINABLE YIELD" text of any variation
 - DO NOT include any horizontal lines (hr) or separators at the top
 - Your output must start with: <div style="font-family: Arial
-- Extract ALL information from the provided content accurately
+- CRITICAL: Extract ALL information from the provided content accurately - INCLUDE EVERYTHING
+- CRITICAL: Every date, amount, reference, bank detail, and description from the input MUST be in your output
 - BENEFICIARY INFORMATION: Extract and include EVERY SINGLE detail provided about the beneficiary - omit NOTHING. Be exhaustive and comprehensive in the beneficiary section.
+- PAYMENT INFORMATION: Include ALL payment details - dates, amounts (sent AND received), fees, reference numbers, transfer IDs
+- BANK DETAILS: Include ALL bank information - IBAN, BIC/SWIFT, bank names, account details
 - Do not invent or assume information that is not present
+- Do not skip, omit, or summarize any information that IS present
 - Use the exact HTML table structure shown above
 - CRITICAL: AFTER THE TABLE, include Payment Method, Beneficiary Bank, IBAN, BIC/SWIFT, Payment Description, and Date of Issue aligned to the LEFT (text-align: left)
 - Keep it professional and well-structured
-- USE THE SAME LANGUAGE AS THE INPUT CONTENT throughout the entire receipt`;
+- USE THE SAME LANGUAGE AS THE INPUT CONTENT throughout the entire receipt
+- VERIFY BEFORE RETURNING: Does your output contain ALL the information from the input? If not, you failed.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -254,6 +270,9 @@ CRITICAL RULES - MUST FOLLOW:
 
     const data = await response.json();
     let formattedReceipt = data.choices[0].message.content;
+    
+    console.log('AI Response length:', formattedReceipt?.length);
+    console.log('AI Response preview:', formattedReceipt?.substring(0, 1000));
     
     // Remove markdown code blocks aggressively (any variation)
     formattedReceipt = formattedReceipt
@@ -328,6 +347,13 @@ CRITICAL RULES - MUST FOLLOW:
       /(?:Reference|Ref|Referência).*?:\s*([A-Z0-9#]+)/,
       /#\d+/
     ]);
+
+    console.log('Extracted data:', {
+      beneficiaryName,
+      paymentAmount,
+      paymentDate,
+      paymentReference
+    });
 
     return new Response(
       JSON.stringify({ 
