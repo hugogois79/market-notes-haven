@@ -38,7 +38,8 @@ const KanbanPage = () => {
     deleteCard,
     deleteList,
     updateList,
-    moveCard
+    moveCard,
+    moveList
   } = useKanban(boardId);
 
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
@@ -96,26 +97,6 @@ const KanbanPage = () => {
 
   const handleEditList = async (listId: string, title: string) => {
     await updateList(listId, { title });
-  };
-
-  const handleMoveList = async (listId: string, newPosition: number) => {
-    const sortedLists = [...lists].sort((a, b) => a.position - b.position);
-    const sourceIndex = sortedLists.findIndex(l => l.id === listId);
-    if (sourceIndex === -1) return;
-    
-    const [movedList] = sortedLists.splice(sourceIndex, 1);
-    sortedLists.splice(newPosition, 0, movedList);
-    
-    // Update positions for all lists
-    try {
-      await Promise.all(
-        sortedLists.map((list, index) => 
-          updateList(list.id, { position: index })
-        )
-      );
-    } catch (error) {
-      console.error('Error updating list positions:', error);
-    }
   };
 
   if (!boardId) {
@@ -262,7 +243,7 @@ const KanbanPage = () => {
           onDeleteList={deleteList}
           onEditList={handleEditList}
           onMoveCard={moveCard}
-          onMoveList={handleMoveList}
+          onMoveList={moveList}
         />
       )}
 

@@ -181,6 +181,34 @@ export const useKanban = (boardId?: string) => {
     }
   };
 
+  const moveList = async (listId: string, newPosition: number) => {
+    try {
+      // Optimistically update the UI
+      const updatedLists = [...lists];
+      const listIndex = updatedLists.findIndex(l => l.id === listId);
+      if (listIndex !== -1) {
+        const [movedList] = updatedLists.splice(listIndex, 1);
+        updatedLists.splice(newPosition, 0, movedList);
+        
+        // Update positions for all affected lists
+        const updates = updatedLists.map((list, index) => ({
+          ...list,
+          position: index
+        }));
+        setLists(updates);
+        
+        // Persist to database
+        await Promise.all(
+          updates.map(list => KanbanService.moveList(list.id, list.position))
+        );
+      }
+    } catch (error: any) {
+      toast.error('Failed to move list: ' + error.message);
+      // Revert on error
+      if (boardId) fetchBoardData(boardId);
+    }
+  };
+
   return {
     boards,
     lists,
@@ -196,6 +224,7 @@ export const useKanban = (boardId?: string) => {
     updateCard,
     deleteCard,
     moveCard,
+    moveList,
     refetch: () => boardId && fetchBoardData(boardId)
   };
 };

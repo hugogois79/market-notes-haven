@@ -200,6 +200,18 @@ export class KanbanService {
     return data as KanbanCard;
   }
 
+  static async moveList(listId: string, newPosition: number) {
+    const { data, error } = await supabase
+      .from('kanban_lists')
+      .update({ position: newPosition })
+      .eq('id', listId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as KanbanList;
+  }
+
   // Label operations
   static async getLabels(boardId: string) {
     const { data, error } = await supabase
