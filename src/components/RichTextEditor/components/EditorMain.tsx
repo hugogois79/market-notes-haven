@@ -44,6 +44,9 @@ interface EditorMainProps {
   onTradeInfoChange?: (tradeInfo: TradeInfo) => void;
   hasConclusion?: boolean;
   onPrint?: () => void;
+  onDelete?: () => void;
+  isDeleting?: boolean;
+  canDelete?: boolean;
 }
 
 const EditorMain: React.FC<EditorMainProps> = ({
@@ -81,6 +84,9 @@ const EditorMain: React.FC<EditorMainProps> = ({
   onTradeInfoChange = () => {},
   hasConclusion = true,
   onPrint,
+  onDelete,
+  isDeleting = false,
+  canDelete = false,
 }) => {
   const isTradingCategory = category === "Trading" || category === "Pair Trading";
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -109,6 +115,10 @@ const EditorMain: React.FC<EditorMainProps> = ({
         isSaving={isSaving}
         lastSaved={lastSaved}
         onSave={handleManualSave}
+        onPrint={onPrint}
+        onDelete={onDelete}
+        isDeleting={isDeleting}
+        canDelete={canDelete}
         noteContent={{
           title,
           category,

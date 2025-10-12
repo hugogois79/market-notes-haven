@@ -30,6 +30,9 @@ interface NoteEditorCoreProps {
   onAttachmentChange: (url: string | null) => void;
   onSummaryGenerated?: (summary: string, hasConclusion?: boolean) => void;
   onTradeInfoChange?: (tradeInfo: TradeInfo) => void;
+  onDelete?: () => void;
+  isDeleting?: boolean;
+  canDelete?: boolean;
 }
 
 const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
@@ -54,6 +57,9 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
   onCategoryChange,
   onSummaryGenerated,
   onTradeInfoChange,
+  onDelete,
+  isDeleting = false,
+  canDelete = false,
 }) => {
   const [content, setContent] = useState(currentNote.content);
   const [tagInput, setTagInput] = useState("");
@@ -176,6 +182,9 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
       onTradeInfoChange={onTradeInfoChange}
       hasConclusion={hasConclusion}
       onPrint={handlePrint}
+      onDelete={onDelete}
+      isDeleting={isDeleting}
+      canDelete={canDelete}
     />
   );
 };

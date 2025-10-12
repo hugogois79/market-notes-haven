@@ -10,6 +10,9 @@ interface NoteEditorProps {
   linkedTokens: Token[];
   allTags: Tag[];
   getTagsFilteredByCategory?: (category: string | null) => Tag[];
+  onDelete?: () => void;
+  isDeleting?: boolean;
+  canDelete?: boolean;
 }
 
 interface SummaryState {
@@ -22,7 +25,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   onSave, 
   linkedTokens,
   allTags,
-  getTagsFilteredByCategory
+  getTagsFilteredByCategory,
+  onDelete,
+  isDeleting = false,
+  canDelete = false,
 }) => {
   const {
     isSaving,
@@ -85,6 +91,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       onAttachmentChange={handleAttachmentChange}
       onSummaryGenerated={handleSummaryGenerated}
       onTradeInfoChange={handleTradeInfoChange}
+      onDelete={onDelete}
+      isDeleting={isDeleting}
+      canDelete={canDelete}
     />
   );
 };

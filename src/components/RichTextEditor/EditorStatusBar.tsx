@@ -1,14 +1,29 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Save, Clock, Copy } from "lucide-react";
+import { Save, Clock, Copy, Printer, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface EditorStatusBarProps {
   isSaving: boolean;
   lastSaved: Date | null;
   onSave: () => void;
+  onPrint?: () => void;
+  onDelete?: () => void;
+  isDeleting?: boolean;
+  canDelete?: boolean;
   noteContent?: {
     title: string;
     category: string;
@@ -22,6 +37,10 @@ const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
   isSaving,
   lastSaved,
   onSave,
+  onPrint,
+  onDelete,
+  isDeleting = false,
+  canDelete = false,
   noteContent
 }) => {
   const handleCopyToClipboard = async () => {
@@ -53,6 +72,13 @@ const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
     }
   };
 
+  const handlePrint = () => {
+    if (onPrint) {
+      onPrint();
+      toast.success("Preparing note for printing...");
+    }
+  };
+
   return (
     <div className="flex items-center justify-between py-1 px-2 bg-muted/30 text-xs text-muted-foreground border-t border-b">
       <div className="flex items-center gap-2">
@@ -75,6 +101,20 @@ const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
           <Copy size={12} />
           Copy
         </Button>
+        
+        {onPrint && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs flex items-center gap-1"
+            onClick={handlePrint}
+            title="Print note"
+          >
+            <Printer size={12} />
+            Print
+          </Button>
+        )}
+        
         <Button
           variant="ghost"
           size="sm"
@@ -85,6 +125,38 @@ const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
           <Save size={12} />
           Save
         </Button>
+
+        {canDelete && onDelete && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs flex items-center gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                disabled={isDeleting}
+                title="Delete note"
+              >
+                <Trash2 size={12} />
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="z-[200]">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete your
+                  note from the database.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
     </div>
   );

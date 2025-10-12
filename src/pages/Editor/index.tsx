@@ -198,6 +198,9 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
           linkedTokens={linkedTokens}
           allTags={allTags}
           getTagsFilteredByCategory={getTagsFilteredByCategory}
+          onDelete={() => currentNote && handleDeleteWithLoading(currentNote.id)}
+          isDeleting={isDeleting}
+          canDelete={currentNote && !isNewNote && !currentNote.id.toString().startsWith("temp-")}
         />
       )}
     </div>
