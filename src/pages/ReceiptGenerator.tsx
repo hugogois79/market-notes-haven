@@ -63,9 +63,14 @@ const ReceiptGenerator = () => {
       setGeneratedReceipt(data.formattedReceipt);
       toast.success("Receipt formatted successfully!");
       
-      // Auto-save after generating
+      // Auto-save after generating with extracted data
       if (session?.user?.id) {
-        await saveReceipt(data.formattedReceipt);
+        await saveReceipt(data.formattedReceipt, {
+          beneficiary_name: data.beneficiary_name,
+          payment_amount: data.payment_amount,
+          payment_date: data.payment_date,
+          payment_reference: data.payment_reference
+        });
       }
     } catch (error) {
       console.error('Error formatting receipt:', error);
@@ -75,7 +80,15 @@ const ReceiptGenerator = () => {
     }
   };
 
-  const saveReceipt = async (formattedContent: string) => {
+  const saveReceipt = async (
+    formattedContent: string,
+    extractedData?: {
+      beneficiary_name?: string | null;
+      payment_amount?: string | null;
+      payment_date?: string | null;
+      payment_reference?: string | null;
+    }
+  ) => {
     if (!session?.user?.id) return;
 
     setIsSaving(true);
@@ -92,10 +105,10 @@ const ReceiptGenerator = () => {
         user_id: session.user.id,
         raw_content: content,
         formatted_content: formattedContent,
-        beneficiary_name: null,
-        payment_amount: null,
-        payment_date: null,
-        payment_reference: null,
+        beneficiary_name: extractedData?.beneficiary_name || null,
+        payment_amount: extractedData?.payment_amount || null,
+        payment_date: extractedData?.payment_date || null,
+        payment_reference: extractedData?.payment_reference || null,
       };
 
       if (receiptId) {

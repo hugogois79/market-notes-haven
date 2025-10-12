@@ -287,8 +287,56 @@ CRITICAL RULES - MUST FOLLOW:
       .replace(/Company Number:\s*\d+/gi, '')
       .trim();
 
+    // Extract structured data from the formatted receipt
+    const extractField = (html: string, patterns: string[]): string | null => {
+      for (const pattern of patterns) {
+        const regex = new RegExp(pattern, 'i');
+        const match = html.match(regex);
+        if (match && match[1]) {
+          return match[1].replace(/<[^>]*>/g, '').trim();
+        }
+      }
+      return null;
+    };
+
+    // Extract beneficiary name
+    const beneficiaryName = extractField(formattedReceipt, [
+      /<strong>(?:Full Name|Nome Completo):<\/strong>\s*([^<]+)/,
+      /<strong>Beneficiary:<\/strong>\s*([^<]+)/,
+      /<strong>Beneficiário:<\/strong>\s*([^<]+)/,
+      /Beneficiary:\s*<\/p>\s*<p[^>]*>(?:<strong>[^:]+:<\/strong>\s*)?([^<]+)/,
+      /Beneficiário:\s*<\/p>\s*<p[^>]*>(?:<strong>[^:]+:<\/strong>\s*)?([^<]+)/
+    ]);
+
+    // Extract payment amount
+    const paymentAmount = extractField(formattedReceipt, [
+      /<strong>(?:Amount Sent|Amount|Total|Montante Enviado|Montante|Total Pago):<\/strong>\s*([€$£]?\s*[\d,.]+\s*[€$£]?)/,
+      /<td[^>]*>([€$£]?\s*[\d,.]+\s*[€$£]?)<\/td>[^<]*<\/tr>/,
+      /(?:Amount|Montante|Total):\s*([€$£]?\s*[\d,.]+\s*[€$£]?)/
+    ]);
+
+    // Extract payment date
+    const paymentDate = extractField(formattedReceipt, [
+      /<strong>(?:Payment Date|Transfer Date|Date|Data de Pagamento|Data da Transferência):<\/strong>\s*([^<]+)/,
+      /<strong>(?:Date of Issue|Data de Emissão):<\/strong>\s*([^<]+)/,
+      /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/
+    ]);
+
+    // Extract payment reference
+    const paymentReference = extractField(formattedReceipt, [
+      /<strong>(?:Reference|Ref|Payment Reference|Transfer|Referência|Comprovativo).*?:<\/strong>\s*([^<]+)/,
+      /(?:Reference|Ref|Referência).*?:\s*([A-Z0-9#]+)/,
+      /#\d+/
+    ]);
+
     return new Response(
-      JSON.stringify({ formattedReceipt }),
+      JSON.stringify({ 
+        formattedReceipt,
+        beneficiary_name: beneficiaryName,
+        payment_amount: paymentAmount,
+        payment_date: paymentDate,
+        payment_reference: paymentReference
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
