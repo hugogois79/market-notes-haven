@@ -108,15 +108,19 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
       return tag.name || tag.id || String(tag);
     });
     
+    // Use localCategory if available, fallback to currentNote.category
+    const categoryToSave = localCategory || currentNote.category || "General";
+    
     console.log("==== SAVING TAGS ====");
     console.log("Processed tags:", processedTags);
     console.log("Current localCategory:", localCategory);
     console.log("Current note category:", currentNote.category);
-    console.log("Fields to save:", { tags: processedTags, category: localCategory });
+    console.log("Category to save:", categoryToSave);
+    console.log("Fields to save:", { tags: processedTags, category: categoryToSave });
     
     handleSaveWithChanges({ 
       tags: processedTags,
-      category: localCategory // Explicitly preserve the current local category
+      category: categoryToSave // Explicitly preserve the category
     }, false);
   };
 

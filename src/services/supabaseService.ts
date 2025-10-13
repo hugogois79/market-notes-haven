@@ -203,7 +203,7 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
         content: note.content || "", // Ensure content is never null
         summary: summaryToSave, // Use the provided or generated summary
         tags: note.tags || [],
-        category: note.category || "General",
+        category: note.category, // Don't force default here - let the hook handle it
         updated_at: new Date().toISOString(),
         user_id: userId,
         attachment_url: attachments.length > 0 ? attachments[0] : null, // For backward compatibility
