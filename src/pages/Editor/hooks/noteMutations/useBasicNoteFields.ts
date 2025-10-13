@@ -20,26 +20,20 @@ export const useBasicNoteFields = (currentNote: Note) => {
     hasConclusion: currentNote.hasConclusion ?? true
   });
 
-  // Update local state when currentNote changes (only sync from database)
+  // Update local state when currentNote changes (only sync when note ID changes to avoid overwriting unsaved changes)
   useEffect(() => {
-    console.log("useBasicNoteFields: Syncing with database values");
+    console.log("useBasicNoteFields: Syncing with database values for note:", currentNote.id);
     setLocalTitle(currentNote.title || "");
     setLocalCategory(currentNote.category || "General");
-    
-    if (currentNote.tradeInfo !== localTradeInfo) {
-      setLocalTradeInfo(currentNote.tradeInfo);
-    }
-    
-    if (currentNote.hasConclusion !== hasConclusion) {
-      setHasConclusion(currentNote.hasConclusion ?? true);
-    }
+    setLocalTradeInfo(currentNote.tradeInfo);
+    setHasConclusion(currentNote.hasConclusion ?? true);
     
     // Update summary state
     setSummaryState({
       summary: currentNote.summary || "",
       hasConclusion: currentNote.hasConclusion ?? true
     });
-  }, [currentNote.id, currentNote.title, currentNote.category, currentNote.tradeInfo, currentNote.hasConclusion, currentNote.summary]);
+  }, [currentNote.id]); // Only sync when loading a different note
 
   const handleTitleChange = (title: string) => {
     console.log("useBasicNoteFields: Title change (local only):", title);
