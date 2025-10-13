@@ -108,10 +108,15 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
       return tag.name || tag.id || String(tag);
     });
     
-    console.log("Saving tags immediately:", processedTags, "with category:", localCategory);
+    console.log("==== SAVING TAGS ====");
+    console.log("Processed tags:", processedTags);
+    console.log("Current localCategory:", localCategory);
+    console.log("Current note category:", currentNote.category);
+    console.log("Fields to save:", { tags: processedTags, category: localCategory });
+    
     handleSaveWithChanges({ 
       tags: processedTags,
-      category: localCategory // Preserve the current category when saving tags
+      category: localCategory // Explicitly preserve the current local category
     }, false);
   };
 

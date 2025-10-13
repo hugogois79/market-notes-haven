@@ -114,14 +114,21 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
     async (updatedFields: Partial<Note>) => {
       if (!currentNote) return;
 
+      console.log("==== useNoteData handleSave ====");
+      console.log("Current note category:", currentNote.category);
+      console.log("Updated fields:", updatedFields);
+
       const updatedNote = {
         ...currentNote,
         ...updatedFields,
         updatedAt: new Date()
       };
+      
+      console.log("Final note to save category:", updatedNote.category);
 
       try {
         const savedNote = await onSaveNote(updatedNote);
+        console.log("Saved note returned from DB, category:", savedNote?.category);
         if (savedNote) {
           setCurrentNote(savedNote);
         }
