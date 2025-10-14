@@ -265,7 +265,7 @@ export class KanbanService {
     const fileName = `${cardId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('Note Attachments')
+      .from('kanban-attachments')
       .upload(fileName, file, {
         cacheControl: '3600',
         upsert: false
@@ -274,7 +274,7 @@ export class KanbanService {
     if (uploadError) throw uploadError;
 
     const { data: { publicUrl } } = supabase.storage
-      .from('Note Attachments')
+      .from('kanban-attachments')
       .getPublicUrl(fileName);
 
     const { data, error } = await supabase
@@ -297,7 +297,7 @@ export class KanbanService {
     const fileName = fileUrl.split('/').slice(-2).join('/');
     
     const { error: storageError } = await supabase.storage
-      .from('Note Attachments')
+      .from('kanban-attachments')
       .remove([fileName]);
 
     if (storageError) console.error('Error deleting file from storage:', storageError);
