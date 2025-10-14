@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import DOMPurify from 'dompurify';
 import { useAuth } from "@/contexts/AuthContext";
 import sustainableYieldLogo from "@/assets/sustainable-yield-logo-new.png";
 import { PreviousReceipts } from "@/components/ReceiptGenerator/PreviousReceipts";
@@ -434,7 +435,7 @@ const ReceiptGenerator = () => {
                   )}
                   <div 
                     className="formatted-receipt"
-                    dangerouslySetInnerHTML={{ __html: generatedReceipt }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(generatedReceipt) }}
                     style={{
                       // Force right alignment for beneficiary sections
                       '& > div:first-of-type': {
