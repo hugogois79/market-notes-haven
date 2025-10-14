@@ -38,6 +38,16 @@ export interface KanbanLabel {
   board_id: string;
 }
 
+export interface KanbanAttachment {
+  id: string;
+  card_id: string;
+  file_url: string;
+  filename: string;
+  file_type?: string;
+  uploaded_by?: string;
+  created_at: string;
+}
+
 export class KanbanService {
   // Board operations
   static async getBoards() {
@@ -233,5 +243,70 @@ export class KanbanService {
     
     if (error) throw error;
     return data as KanbanLabel;
+  }
+
+  // Attachment operations
+  static async getAttachments(cardId: string) {
+    const { data, error } = await supabase
+      .from('kanban_attachments')
+      .select('*')
+      .eq('card_id', cardId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data as KanbanAttachment[];
+  }
+
+  static async uploadAttachment(cardId: string, file: File) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${cardId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('Note Attachments')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('Note Attachments')
+      .getPublicUrl(fileName);
+
+    const { data, error } = await supabase
+      .from('kanban_attachments')
+      .insert([{
+        card_id: cardId,
+        file_url: publicUrl,
+        filename: file.name,
+        file_type: file.type,
+        uploaded_by: user.id
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as KanbanAttachment;
+  }
+
+  static async deleteAttachment(id: string, fileUrl: string) {
+    const fileName = fileUrl.split('/').slice(-2).join('/');
+    
+    const { error: storageError } = await supabase.storage
+      .from('Note Attachments')
+      .remove([fileName]);
+
+    if (storageError) console.error('Error deleting file from storage:', storageError);
+
+    const { error } = await supabase
+      .from('kanban_attachments')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
   }
 }
