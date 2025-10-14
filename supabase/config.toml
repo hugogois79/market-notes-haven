@@ -1,13 +1,1 @@
 project_id = "zyziolikudoczsthyoja"
-
-[functions.format-receipt]
-verify_jwt = false
-
-[functions.summarize-note]
-verify_jwt = false
-
-[functions.trading-assistant]
-verify_jwt = false
-
-[functions.tao-stats-proxy]
-verify_jwt = false
