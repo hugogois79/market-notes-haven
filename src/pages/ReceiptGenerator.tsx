@@ -330,10 +330,12 @@ const ReceiptGenerator = () => {
         <body>
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
             <div style="text-align: left;">
-              <h2 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">${company?.name || ''}</h2>
-              ${companyAddress}
+              <p style="margin: 0; font-size: 11px; font-weight: 600;">Company Number: ${company?.company_number || company?.nipc || ''}</p>
             </div>
-            <img src="${logoToUse}" alt="${company?.name || ''}" class="header-logo" />
+            <div style="text-align: right;">
+              <img src="${logoToUse}" alt="${company?.name || ''}" class="header-logo" style="margin: 0 0 8px auto;" />
+              <h2 style="margin: 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">${company?.name || ''}</h2>
+            </div>
           </div>
           <hr style="border: none; border-top: 1px solid #ccc; margin: 0 0 15px 0;" />
           ${receiptNumber ? `<div class="payment-number">Payment Number: #${receiptNumber}</div>` : ''}
@@ -496,33 +498,33 @@ const ReceiptGenerator = () => {
                           : getCompanyData('sustainable yield');
                         
                         return (
-                          <>
-                            <h2 className="text-lg font-bold mb-1">{company?.name || ''}</h2>
-                            {company?.nipc ? (
-                              <>
-                                <p className="text-xs mb-0.5">NIPC {company.nipc} | Capital Social: {company.capital_social}</p>
-                                <p className="text-xs mb-0.5">Sede: {company.address}, {company.country}</p>
-                                <p className="text-xs mb-0.5">Email: {company.email}</p>
-                                <p className="text-xs">Conta: {company.bank_account} ({company.bank_name})</p>
-                              </>
-                            ) : (
-                              <>
-                                <p className="text-xs mb-0.5">{company?.address}</p>
-                                <p className="text-xs">Company Number: {company?.company_number}</p>
-                              </>
-                            )}
-                          </>
+                          <p className="text-sm font-semibold">
+                            Company Number: {company?.company_number || company?.nipc || ''}
+                          </p>
                         );
                       })()}
                     </div>
-                    <img 
-                      src={(content.toLowerCase().includes('epicatmosphere') || 
-                            generatedReceipt.toLowerCase().includes('epicatmosphere')) 
-                            ? epicatmosphereLogo 
-                            : sustainableYieldLogo} 
-                      alt="Company Logo" 
-                      className="w-48 h-auto"
-                    />
+                    <div className="text-right">
+                      <img 
+                        src={(content.toLowerCase().includes('epicatmosphere') || 
+                              generatedReceipt.toLowerCase().includes('epicatmosphere')) 
+                              ? epicatmosphereLogo 
+                              : sustainableYieldLogo} 
+                        alt="Company Logo" 
+                        className="w-48 h-auto ml-auto mb-2"
+                      />
+                      {(() => {
+                        const isEpic = content.toLowerCase().includes('epicatmosphere') || 
+                                      generatedReceipt.toLowerCase().includes('epicatmosphere');
+                        const company = isEpic 
+                          ? getCompanyData('epic atmosphere')
+                          : getCompanyData('sustainable yield');
+                        
+                        return (
+                          <h2 className="text-lg font-bold uppercase tracking-wide">{company?.name || ''}</h2>
+                        );
+                      })()}
+                    </div>
                   </div>
                   <hr className="border-t border-gray-300 mb-6" />
                   {receiptNumber && (
