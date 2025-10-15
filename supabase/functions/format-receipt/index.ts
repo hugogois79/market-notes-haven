@@ -22,11 +22,24 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    // Detect language from content
-    const isPortuguese = /\b(pagamento|recibo|beneficiário|morada|data|montante|banco|referência|assinatura|autorizada|finalidade|emitente|emissão)\b/i.test(content);
-    const language = isPortuguese ? 'Portuguese' : 'English';
+    // Improved language detection - check for English-specific words
+    const englishKeywords = /\b(payment|receipt|beneficiary|address|bank|reference|signature|authorized|purpose|issuer|date)\b/i;
+    const portugueseKeywords = /\b(pagamento|recibo|beneficiário|morada|banco|referência|assinatura|autorizada|finalidade|emitente|data)\b/i;
     
-    console.log('Detected language:', language);
+    const hasEnglish = englishKeywords.test(content);
+    const hasPortuguese = portugueseKeywords.test(content);
+    
+    // If both are detected, count occurrences to determine dominant language
+    let isEnglish = hasEnglish;
+    if (hasEnglish && hasPortuguese) {
+      const englishMatches = (content.match(englishKeywords) || []).length;
+      const portugueseMatches = (content.match(portugueseKeywords) || []).length;
+      isEnglish = englishMatches > portugueseMatches;
+    }
+    
+    const language = isEnglish ? 'English' : 'Portuguese';
+    
+    console.log('Detected language:', language, 'English keywords:', hasEnglish, 'Portuguese keywords:', hasPortuguese);
 
     const systemPrompt = `You are a professional receipt formatter. Analyze the provided receipt content and extract ALL relevant information to create a clean, professional payment receipt in HTML format.
 

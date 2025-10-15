@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Printer, Save, Loader2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,20 @@ import epicatmosphereLogo from "@/assets/epicatmosphere-logo.png";
 import { PreviousReceipts } from "@/components/ReceiptGenerator/PreviousReceipts";
 import type { Receipt } from "@/services/receiptService";
 
+interface CompanyData {
+  name: string;
+  nipc?: string;
+  capital_social?: string;
+  company_number?: string;
+  address: string;
+  country: string;
+  email?: string;
+  bank_account?: string;
+  bank_name?: string;
+  logo_url?: string;
+}
+
+
 const ReceiptGenerator = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
@@ -25,6 +39,28 @@ const ReceiptGenerator = () => {
   const [receiptNumber, setReceiptNumber] = useState<number | null>(null);
   const [receiptId, setReceiptId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("editor");
+  const [companies, setCompanies] = useState<CompanyData[]>([]);
+
+  useEffect(() => {
+    loadCompanies();
+  }, []);
+
+  const loadCompanies = async () => {
+    const { data, error } = await supabase
+      .from('receipt_companies')
+      .select('*');
+    
+    if (error) {
+      console.error('Error loading companies:', error);
+      return;
+    }
+    
+    setCompanies(data || []);
+  };
+
+  const getCompanyData = (companyName: string): CompanyData | null => {
+    return companies.find(c => c.name.toLowerCase().includes(companyName.toLowerCase())) || null;
+  };
 
   const handleLoadReceipt = (receipt: Receipt) => {
     setContent(receipt.raw_content);
@@ -165,16 +201,29 @@ const ReceiptGenerator = () => {
     // Check if issuer is Epicatmosphere
     const isEpicatmosphere = content.toLowerCase().includes('epicatmosphere') || 
                              generatedReceipt.toLowerCase().includes('epicatmosphere');
+    
+    const company = isEpicatmosphere 
+      ? getCompanyData('epic atmosphere')
+      : getCompanyData('sustainable yield');
+    
     const logoToUse = isEpicatmosphere ? epicatmosphereLogo : sustainableYieldLogo;
-    const companyName = isEpicatmosphere ? 'EPIC ATMOSPHERE UNIPESSOAL LDA' : 'SUSTAINABLE YIELD CAPITAL LTD';
-    const companyAddress = isEpicatmosphere ? 
-      `<p style="margin: 2px 0; font-size: 10px;">Rua do Comércio, 123</p>
-       <p style="margin: 2px 0; font-size: 10px;">1000-000 Lisboa – Portugal</p>
-       <p style="margin: 2px 0; font-size: 10px;">NIF: 123456789</p>
-       <p style="margin: 2px 0; font-size: 10px;">Email: info@epicatmosphere.com</p>` :
-      `<p style="margin: 2px 0; font-size: 10px;">Dept 302, 43 Owston Road Carcroft</p>
-       <p style="margin: 2px 0; font-size: 10px;">Doncaster, DN6 8DA – United Kingdom</p>
-       <p style="margin: 2px 0; font-size: 10px;">Company Number: 15769755</p>`;
+    
+    let companyAddress = '';
+    if (company) {
+      if (company.nipc) {
+        companyAddress = `
+          <p style="margin: 2px 0; font-size: 10px;">NIPC ${company.nipc} | Capital Social: ${company.capital_social}</p>
+          <p style="margin: 2px 0; font-size: 10px;">Sede: ${company.address}, ${company.country}</p>
+          <p style="margin: 2px 0; font-size: 10px;">Email: ${company.email}</p>
+          <p style="margin: 2px 0; font-size: 10px;">Conta: ${company.bank_account} (${company.bank_name})</p>
+        `;
+      } else {
+        companyAddress = `
+          <p style="margin: 2px 0; font-size: 10px;">${company.address}</p>
+          <p style="margin: 2px 0; font-size: 10px;">Company Number: ${company.company_number}</p>
+        `;
+      }
+    }
 
     const printContent = `
       <!DOCTYPE html>
@@ -271,10 +320,10 @@ const ReceiptGenerator = () => {
         <body>
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
             <div style="text-align: left;">
-              <h2 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">${companyName}</h2>
+              <h2 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">${company?.name || ''}</h2>
               ${companyAddress}
             </div>
-            <img src="${logoToUse}" alt="${companyName}" class="header-logo" />
+            <img src="${logoToUse}" alt="${company?.name || ''}" class="header-logo" />
           </div>
           <hr style="border: none; border-top: 1px solid #ccc; margin: 0 0 15px 0;" />
           ${receiptNumber ? `<div class="payment-number">Payment Number: #${receiptNumber}</div>` : ''}
@@ -429,37 +478,39 @@ const ReceiptGenerator = () => {
                 <div className="p-8 relative">
                   <div className="flex justify-between items-start mb-6">
                     <div className="text-left">
-                      <h2 className="text-lg font-bold mb-1">
-                        {(content.toLowerCase().includes('epicatmosphere') || 
-                          generatedReceipt.toLowerCase().includes('epicatmosphere')) 
-                          ? 'EPIC ATMOSPHERE UNIPESSOAL LDA' 
-                          : 'SUSTAINABLE YIELD CAPITAL LTD'}
-                      </h2>
-                      {(content.toLowerCase().includes('epicatmosphere') || 
-                        generatedReceipt.toLowerCase().includes('epicatmosphere')) ? (
-                        <>
-                          <p className="text-xs mb-0.5">Rua do Comércio, 123</p>
-                          <p className="text-xs mb-0.5">1000-000 Lisboa – Portugal</p>
-                          <p className="text-xs mb-0.5">NIF: 123456789</p>
-                          <p className="text-xs">Email: info@epicatmosphere.com</p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-xs mb-0.5">Dept 302, 43 Owston Road Carcroft</p>
-                          <p className="text-xs mb-0.5">Doncaster, DN6 8DA – United Kingdom</p>
-                          <p className="text-xs">Company Number: 15769755</p>
-                        </>
-                      )}
+                      {(() => {
+                        const isEpic = content.toLowerCase().includes('epicatmosphere') || 
+                                      generatedReceipt.toLowerCase().includes('epicatmosphere');
+                        const company = isEpic 
+                          ? getCompanyData('epic atmosphere')
+                          : getCompanyData('sustainable yield');
+                        
+                        return (
+                          <>
+                            <h2 className="text-lg font-bold mb-1">{company?.name || ''}</h2>
+                            {company?.nipc ? (
+                              <>
+                                <p className="text-xs mb-0.5">NIPC {company.nipc} | Capital Social: {company.capital_social}</p>
+                                <p className="text-xs mb-0.5">Sede: {company.address}, {company.country}</p>
+                                <p className="text-xs mb-0.5">Email: {company.email}</p>
+                                <p className="text-xs">Conta: {company.bank_account} ({company.bank_name})</p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-xs mb-0.5">{company?.address}</p>
+                                <p className="text-xs">Company Number: {company?.company_number}</p>
+                              </>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                     <img 
                       src={(content.toLowerCase().includes('epicatmosphere') || 
                             generatedReceipt.toLowerCase().includes('epicatmosphere')) 
                             ? epicatmosphereLogo 
                             : sustainableYieldLogo} 
-                      alt={(content.toLowerCase().includes('epicatmosphere') || 
-                            generatedReceipt.toLowerCase().includes('epicatmosphere'))
-                            ? 'Epic Atmosphere'
-                            : 'Sustainable Yield Capital'} 
+                      alt="Company Logo" 
                       className="w-48 h-auto"
                     />
                   </div>

@@ -1277,7 +1277,9 @@ export type Database = {
       receipt_companies: {
         Row: {
           address: string | null
-          city: string | null
+          bank_account: string | null
+          bank_name: string | null
+          capital_social: string | null
           company_number: string | null
           country: string | null
           created_at: string
@@ -1286,14 +1288,16 @@ export type Database = {
           is_default: boolean | null
           logo_url: string | null
           name: string
+          nipc: string | null
           phone: string | null
-          postal_code: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
           address?: string | null
-          city?: string | null
+          bank_account?: string | null
+          bank_name?: string | null
+          capital_social?: string | null
           company_number?: string | null
           country?: string | null
           created_at?: string
@@ -1302,14 +1306,16 @@ export type Database = {
           is_default?: boolean | null
           logo_url?: string | null
           name: string
+          nipc?: string | null
           phone?: string | null
-          postal_code?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
           address?: string | null
-          city?: string | null
+          bank_account?: string | null
+          bank_name?: string | null
+          capital_social?: string | null
           company_number?: string | null
           country?: string | null
           created_at?: string
@@ -1318,8 +1324,8 @@ export type Database = {
           is_default?: boolean | null
           logo_url?: string | null
           name?: string
+          nipc?: string | null
           phone?: string | null
-          postal_code?: string | null
           updated_at?: string
           user_id?: string | null
         }
