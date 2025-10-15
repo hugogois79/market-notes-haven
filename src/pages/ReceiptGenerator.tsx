@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import DOMPurify from 'dompurify';
 import { useAuth } from "@/contexts/AuthContext";
 import sustainableYieldLogo from "@/assets/sustainable-yield-logo-new.png";
+import epicatmosphereLogo from "@/assets/epicatmosphere-logo.png";
 import { PreviousReceipts } from "@/components/ReceiptGenerator/PreviousReceipts";
 import type { Receipt } from "@/services/receiptService";
 
@@ -161,6 +162,17 @@ const ReceiptGenerator = () => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
+    // Check if issuer is Epicatmosphere
+    const isEpicatmosphere = content.toLowerCase().includes('epicatmosphere') || 
+                             generatedReceipt.toLowerCase().includes('epicatmosphere');
+    const logoToUse = isEpicatmosphere ? epicatmosphereLogo : sustainableYieldLogo;
+    const companyName = isEpicatmosphere ? 'EPIC ATMOSPHERE UNIPESSOAL LDA' : 'SUSTAINABLE YIELD CAPITAL LTD';
+    const companyAddress = isEpicatmosphere ? 
+      '<p style="margin: 2px 0; font-size: 10px;">Portugal</p>' :
+      `<p style="margin: 2px 0; font-size: 10px;">Dept 302, 43 Owston Road Carcroft</p>
+       <p style="margin: 2px 0; font-size: 10px;">Doncaster, DN6 8DA – United Kingdom</p>
+       <p style="margin: 2px 0; font-size: 10px;">Company Number: 15769755</p>`;
+
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -256,12 +268,10 @@ const ReceiptGenerator = () => {
         <body>
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
             <div style="text-align: left;">
-              <h2 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">SUSTAINABLE YIELD CAPITAL LTD</h2>
-              <p style="margin: 2px 0; font-size: 10px;">Dept 302, 43 Owston Road Carcroft</p>
-              <p style="margin: 2px 0; font-size: 10px;">Doncaster, DN6 8DA – United Kingdom</p>
-              <p style="margin: 2px 0; font-size: 10px;">Company Number: 15769755</p>
+              <h2 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">${companyName}</h2>
+              ${companyAddress}
             </div>
-            <img src="${sustainableYieldLogo}" alt="Sustainable Yield Capital" class="header-logo" />
+            <img src="${logoToUse}" alt="${companyName}" class="header-logo" />
           </div>
           <hr style="border: none; border-top: 1px solid #ccc; margin: 0 0 15px 0;" />
           ${receiptNumber ? `<div class="payment-number">Payment Number: #${receiptNumber}</div>` : ''}
@@ -412,18 +422,36 @@ const ReceiptGenerator = () => {
                   </div>
                 )}
               </div>
-              <Card className="bg-white shadow-lg">
+               <Card className="bg-white shadow-lg">
                 <div className="p-8 relative">
                   <div className="flex justify-between items-start mb-6">
                     <div className="text-left">
-                      <h2 className="text-lg font-bold mb-1">SUSTAINABLE YIELD CAPITAL LTD</h2>
-                      <p className="text-xs mb-0.5">Dept 302, 43 Owston Road Carcroft</p>
-                      <p className="text-xs mb-0.5">Doncaster, DN6 8DA – United Kingdom</p>
-                      <p className="text-xs">Company Number: 15769755</p>
+                      <h2 className="text-lg font-bold mb-1">
+                        {(content.toLowerCase().includes('epicatmosphere') || 
+                          generatedReceipt.toLowerCase().includes('epicatmosphere')) 
+                          ? 'EPIC ATMOSPHERE UNIPESSOAL LDA' 
+                          : 'SUSTAINABLE YIELD CAPITAL LTD'}
+                      </h2>
+                      {(content.toLowerCase().includes('epicatmosphere') || 
+                        generatedReceipt.toLowerCase().includes('epicatmosphere')) ? (
+                        <p className="text-xs">Portugal</p>
+                      ) : (
+                        <>
+                          <p className="text-xs mb-0.5">Dept 302, 43 Owston Road Carcroft</p>
+                          <p className="text-xs mb-0.5">Doncaster, DN6 8DA – United Kingdom</p>
+                          <p className="text-xs">Company Number: 15769755</p>
+                        </>
+                      )}
                     </div>
                     <img 
-                      src={sustainableYieldLogo} 
-                      alt="Sustainable Yield Capital" 
+                      src={(content.toLowerCase().includes('epicatmosphere') || 
+                            generatedReceipt.toLowerCase().includes('epicatmosphere')) 
+                            ? epicatmosphereLogo 
+                            : sustainableYieldLogo} 
+                      alt={(content.toLowerCase().includes('epicatmosphere') || 
+                            generatedReceipt.toLowerCase().includes('epicatmosphere'))
+                            ? 'Epic Atmosphere'
+                            : 'Sustainable Yield Capital'} 
                       className="w-48 h-auto"
                     />
                   </div>
