@@ -61,11 +61,17 @@ ABSOLUTELY CRITICAL - LANGUAGE REQUIREMENT:
 7. VERIFY: Before returning, check that ALL field labels are in ${language}
 
 CRITICAL - COMPANY HEADER INSTRUCTIONS:
-1. The application will add the company header at the top with logo and company information
-2. You MUST NEVER include company names, addresses, or contact information in your output
-3. NEVER write "EPIC ATMOSPHERE", "SUSTAINABLE YIELD", or any company name
-4. START your output with the Beneficiary section or Receipt title
-5. The company header is handled separately - do NOT duplicate it
+1. You MUST generate a COMPLETE and DETAILED company header at the top of the receipt
+2. Include ALL company information in the header:
+   - Company name (in uppercase, bold)
+   - Company registration number (Company Number/NIPC)
+   - Complete registered address including street, city, postal code, and country
+   - Contact email address
+   - Bank account details (account number and bank name)
+   - Capital social (if mentioned)
+3. Format the company header professionally with proper spacing
+4. After the company header, add a horizontal line separator
+5. Then proceed with the receipt content
 
 ABSOLUTELY CRITICAL - CONTENT EXTRACTION:
 1. You MUST include EVERY SINGLE piece of information from the input content
@@ -75,12 +81,11 @@ ABSOLUTELY CRITICAL - CONTENT EXTRACTION:
 5. Your job is to FORMAT, not to filter or reduce information
 
 CRITICAL INSTRUCTIONS - READ CAREFULLY:
-1. ABSOLUTELY NO company header, name, or logo in your output
-2. NEVER write company names like "SUSTAINABLE YIELD CAPITAL LTD" or "EPIC ATMOSPHERE UNIPESSOAL LDA"
-3. NEVER write company addresses, NIPC, company numbers, or contact information
-4. The application handles the company header separately - you must ONLY format the receipt body
-5. Start IMMEDIATELY with either the Beneficiary section or the receipt title
-6. DO NOT add any horizontal lines or headers at the top of your output
+1. ALWAYS include a complete company header at the very top with ALL company details
+2. Include company name (uppercase), registration number, full address, email, bank details
+3. Format the header professionally with clear structure and spacing
+4. Add a horizontal separator line after the company header
+5. Then proceed with the beneficiary and payment sections below
 
 FORMAT INSTRUCTIONS:
 1. Carefully read and extract ALL information from the content - DO NOT SKIP ANYTHING
@@ -118,7 +123,16 @@ OUTPUT FORMAT (HTML with inline styles):
 ${language === 'English' ? `
 EXAMPLE FOR ENGLISH:
 <div style="font-family: 'Lato', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-  <!-- START HERE - Do NOT include ANY company information above this line -->
+  <!-- COMPANY HEADER - ALWAYS INCLUDE -->
+  <div style="margin-bottom: 20px;">
+    <h2 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">[COMPANY NAME IN UPPERCASE]</h2>
+    <p style="margin: 3px 0; font-size: 11px;">Company Number: [COMPANY NUMBER]</p>
+    <p style="margin: 3px 0; font-size: 11px;">Address: [COMPLETE ADDRESS WITH STREET, CITY, POSTAL CODE, COUNTRY]</p>
+    <p style="margin: 3px 0; font-size: 11px;">Email: [COMPANY EMAIL]</p>
+    <p style="margin: 3px 0; font-size: 11px;">Bank: [BANK NAME] | Account: [BANK ACCOUNT NUMBER]</p>
+    <p style="margin: 3px 0; font-size: 11px;">Capital Social: [CAPITAL AMOUNT IF PROVIDED]</p>
+  </div>
+  <hr style="border: none; border-top: 1px solid #ccc; margin: 15px 0;" />
   
   <div style="margin: 15px 0; text-align: right;">
     <p style="font-weight: bold; margin: 10px 0;">Beneficiary:</p>
@@ -138,7 +152,16 @@ EXAMPLE FOR ENGLISH:
 ` : `
 EXAMPLE FOR PORTUGUESE:
 <div style="font-family: 'Lato', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-  <!-- START HERE - Do NOT include ANY company information above this line -->
+  <!-- CABEÇALHO DA EMPRESA - SEMPRE INCLUIR -->
+  <div style="margin-bottom: 20px;">
+    <h2 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">[NOME DA EMPRESA EM MAIÚSCULAS]</h2>
+    <p style="margin: 3px 0; font-size: 11px;">NIPC: [NÚMERO NIPC]</p>
+    <p style="margin: 3px 0; font-size: 11px;">Morada: [MORADA COMPLETA COM RUA, CIDADE, CÓDIGO POSTAL, PAÍS]</p>
+    <p style="margin: 3px 0; font-size: 11px;">Email: [EMAIL DA EMPRESA]</p>
+    <p style="margin: 3px 0; font-size: 11px;">Banco: [NOME DO BANCO] | Conta: [NÚMERO DA CONTA]</p>
+    <p style="margin: 3px 0; font-size: 11px;">Capital Social: [MONTANTE DE CAPITAL SE FORNECIDO]</p>
+  </div>
+  <hr style="border: none; border-top: 1px solid #ccc; margin: 15px 0;" />
   
   <div style="margin: 15px 0; text-align: right;">
     <p style="font-weight: bold; margin: 10px 0;">Beneficiário:</p>
@@ -249,9 +272,9 @@ IN PORTUGUESE:
 CRITICAL RULES - MUST FOLLOW: 
 - Return ONLY the HTML content with inline styles - nothing else
 - ABSOLUTELY NO markdown formatting (NO code blocks, NO backticks of any kind)
-- ABSOLUTELY NO company name, header, or contact information at the top
-- DO NOT include any horizontal lines (hr) or separators at the top
-- Your output must start directly with the beneficiary section or receipt title
+- ALWAYS include a complete company header at the top with ALL company information
+- Include a horizontal line separator after the company header
+- Then proceed with the beneficiary and payment sections
 - CRITICAL: Generate ALL labels and text in ${language} ONLY - no mixing of languages
 - CRITICAL: Extract ALL information from the provided content accurately - INCLUDE EVERYTHING
 - Use professional formatting with proper spacing and alignment
