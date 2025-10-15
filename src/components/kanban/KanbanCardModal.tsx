@@ -20,6 +20,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { toast } from 'sonner';
+import { TaskChecklist, Task } from './TaskChecklist';
 
 interface KanbanCardModalProps {
   card: KanbanCard;
@@ -45,10 +46,18 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   const [attachments, setAttachments] = useState<KanbanAttachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   useEffect(() => {
     if (isOpen && card.id) {
       loadAttachments();
+      // Load tasks from card metadata
+      const cardTasks = (card as any).tasks;
+      if (cardTasks && Array.isArray(cardTasks)) {
+        setTasks(cardTasks);
+      } else {
+        setTasks([]);
+      }
     }
   }, [isOpen, card.id]);
 
@@ -121,7 +130,8 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
       title,
       description,
       priority,
-      due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined
+      due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
+      tasks: tasks as any
     });
     onClose();
   };
@@ -193,6 +203,10 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
                 <Label htmlFor="high" className="cursor-pointer">High</Label>
               </div>
             </RadioGroup>
+          </div>
+
+          <div>
+            <TaskChecklist tasks={tasks} onTasksChange={setTasks} />
           </div>
 
           <div>
