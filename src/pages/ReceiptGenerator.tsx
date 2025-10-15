@@ -46,20 +46,30 @@ const ReceiptGenerator = () => {
   }, []);
 
   const loadCompanies = async () => {
-    const { data, error } = await supabase
-      .from('receipt_companies')
-      .select('*');
-    
-    if (error) {
-      console.error('Error loading companies:', error);
-      return;
+    try {
+      const { data, error } = await supabase
+        .from('receipt_companies')
+        .select('*');
+      
+      if (error) {
+        console.error('Error loading companies:', error);
+        toast.error('Failed to load company data');
+        return;
+      }
+      
+      console.log('Loaded companies:', data);
+      setCompanies(data || []);
+    } catch (err) {
+      console.error('Exception loading companies:', err);
     }
-    
-    setCompanies(data || []);
   };
 
   const getCompanyData = (companyName: string): CompanyData | null => {
-    return companies.find(c => c.name.toLowerCase().includes(companyName.toLowerCase())) || null;
+    const found = companies.find(c => 
+      c.name.toLowerCase().includes(companyName.toLowerCase())
+    );
+    console.log(`Looking for company containing "${companyName}", found:`, found);
+    return found || null;
   };
 
   const handleLoadReceipt = (receipt: Receipt) => {
@@ -523,12 +533,6 @@ const ReceiptGenerator = () => {
                   <div 
                     className="formatted-receipt"
                     dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(generatedReceipt) }}
-                    style={{
-                      // Force right alignment for beneficiary sections
-                      '& > div:first-of-type': {
-                        textAlign: 'right'
-                      }
-                    } as React.CSSProperties}
                   />
                 </div>
                 </Card>
