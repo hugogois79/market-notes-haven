@@ -168,7 +168,10 @@ const ReceiptGenerator = () => {
     const logoToUse = isEpicatmosphere ? epicatmosphereLogo : sustainableYieldLogo;
     const companyName = isEpicatmosphere ? 'EPIC ATMOSPHERE UNIPESSOAL LDA' : 'SUSTAINABLE YIELD CAPITAL LTD';
     const companyAddress = isEpicatmosphere ? 
-      '<p style="margin: 2px 0; font-size: 10px;">Portugal</p>' :
+      `<p style="margin: 2px 0; font-size: 10px;">Rua do Comércio, 123</p>
+       <p style="margin: 2px 0; font-size: 10px;">1000-000 Lisboa – Portugal</p>
+       <p style="margin: 2px 0; font-size: 10px;">NIF: 123456789</p>
+       <p style="margin: 2px 0; font-size: 10px;">Email: info@epicatmosphere.com</p>` :
       `<p style="margin: 2px 0; font-size: 10px;">Dept 302, 43 Owston Road Carcroft</p>
        <p style="margin: 2px 0; font-size: 10px;">Doncaster, DN6 8DA – United Kingdom</p>
        <p style="margin: 2px 0; font-size: 10px;">Company Number: 15769755</p>`;
@@ -434,7 +437,12 @@ const ReceiptGenerator = () => {
                       </h2>
                       {(content.toLowerCase().includes('epicatmosphere') || 
                         generatedReceipt.toLowerCase().includes('epicatmosphere')) ? (
-                        <p className="text-xs">Portugal</p>
+                        <>
+                          <p className="text-xs mb-0.5">Rua do Comércio, 123</p>
+                          <p className="text-xs mb-0.5">1000-000 Lisboa – Portugal</p>
+                          <p className="text-xs mb-0.5">NIF: 123456789</p>
+                          <p className="text-xs">Email: info@epicatmosphere.com</p>
+                        </>
                       ) : (
                         <>
                           <p className="text-xs mb-0.5">Dept 302, 43 Owston Road Carcroft</p>

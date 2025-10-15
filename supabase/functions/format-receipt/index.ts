@@ -22,6 +22,12 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
+    // Detect language from content
+    const isPortuguese = /\b(pagamento|recibo|beneficiário|morada|data|montante|banco|referência|assinatura|autorizada|finalidade|emitente|emissão)\b/i.test(content);
+    const language = isPortuguese ? 'Portuguese' : 'English';
+    
+    console.log('Detected language:', language);
+
     const systemPrompt = `You are a professional receipt formatter. Analyze the provided receipt content and extract ALL relevant information to create a clean, professional payment receipt in HTML format.
 
 ABSOLUTELY CRITICAL - READ FIRST:
@@ -31,12 +37,13 @@ ABSOLUTELY CRITICAL - READ FIRST:
 4. Extract ALL dates, amounts, references, names, addresses, and details
 5. Your job is to FORMAT, not to filter or reduce information
 
-CRITICAL LANGUAGE DETECTION:
-1. DETECT the language of the input content (Portuguese or English)
-2. Generate the ENTIRE receipt in the SAME language as the input
-3. If the input is in Portuguese, ALL labels, titles, and text must be in Portuguese
-4. If the input is in English, ALL labels, titles, and text must be in English
-5. DO NOT mix languages - be consistent throughout the receipt
+CRITICAL LANGUAGE REQUIREMENT:
+1. The input content is in ${language}
+2. You MUST generate the ENTIRE receipt in ${language}
+3. ALL labels, titles, headers, and text MUST be in ${language}
+4. DO NOT mix languages - be 100% consistent in ${language} throughout
+5. If ${language} is Portuguese: use "Beneficiário", "Data de Pagamento", "Montante", "Assinatura Autorizada", etc.
+6. If ${language} is English: use "Beneficiary", "Payment Date", "Amount", "Authorized Signature", etc.
 
 CRITICAL INSTRUCTIONS - READ CAREFULLY:
 1. ABSOLUTELY NO company header, name, or logo in your output
