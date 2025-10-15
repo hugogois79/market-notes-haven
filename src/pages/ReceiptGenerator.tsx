@@ -478,14 +478,13 @@ const ReceiptGenerator = () => {
           {/* Generated Receipt Preview */}
           {generatedReceipt && (
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium">Formatted Receipt</label>
-                {receiptNumber && (
+              {receiptNumber && (
+                <div className="flex items-center justify-end mb-2">
                   <div className="text-sm text-muted-foreground">
                     Receipt Number: <span className="font-semibold">#{receiptNumber}</span>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
                <Card className="bg-white shadow-lg">
                 <div className="p-8 relative">
                   <div className="flex justify-between items-start mb-6">
