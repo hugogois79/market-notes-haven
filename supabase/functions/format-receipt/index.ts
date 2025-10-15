@@ -22,50 +22,65 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    // Improved language detection - check for English-specific words
-    const englishKeywords = /\b(payment|receipt|beneficiary|address|bank|reference|signature|authorized|purpose|issuer|date)\b/i;
-    const portugueseKeywords = /\b(pagamento|recibo|beneficiário|morada|banco|referência|assinatura|autorizada|finalidade|emitente|data)\b/i;
+    // Enhanced language detection - analyze the payment content specifically
+    // Look for key payment-related terms to determine language
+    const contentLower = content.toLowerCase();
     
-    const hasEnglish = englishKeywords.test(content);
-    const hasPortuguese = portugueseKeywords.test(content);
+    // Count English payment terms
+    const englishTerms = [
+      'payment', 'receipt', 'beneficiary', 'address', 'bank account', 
+      'reference', 'signature', 'authorized', 'amount', 'confirmed',
+      'managing director', 'kind regards', 'please acknowledge'
+    ];
     
-    // If both are detected, count occurrences to determine dominant language
-    let isEnglish = hasEnglish;
-    if (hasEnglish && hasPortuguese) {
-      const englishMatches = (content.match(englishKeywords) || []).length;
-      const portugueseMatches = (content.match(portugueseKeywords) || []).length;
-      isEnglish = englishMatches > portugueseMatches;
-    }
+    // Count Portuguese payment terms
+    const portugueseTerms = [
+      'pagamento', 'recibo', 'beneficiário', 'morada', 'conta bancária',
+      'referência', 'assinatura', 'autorizada', 'montante', 'confirmado',
+      'diretor', 'cumprimentos', 'por favor confirme'
+    ];
     
+    const englishCount = englishTerms.filter(term => contentLower.includes(term)).length;
+    const portugueseCount = portugueseTerms.filter(term => contentLower.includes(term)).length;
+    
+    // Default to English if counts are equal or both zero
+    const isEnglish = englishCount >= portugueseCount;
     const language = isEnglish ? 'English' : 'Portuguese';
     
-    console.log('Detected language:', language, 'English keywords:', hasEnglish, 'Portuguese keywords:', hasPortuguese);
+    console.log(`Language detection - English terms: ${englishCount}, Portuguese terms: ${portugueseCount}, Selected: ${language}`);
 
     const systemPrompt = `You are a professional receipt formatter. Analyze the provided receipt content and extract ALL relevant information to create a clean, professional payment receipt in HTML format.
 
-ABSOLUTELY CRITICAL - READ FIRST:
+ABSOLUTELY CRITICAL - LANGUAGE REQUIREMENT:
+1. The input content is primarily in ${language}
+2. You MUST generate the ENTIRE receipt in ${language} ONLY
+3. ALL labels, titles, headers, field names, and text MUST be in ${language}
+4. DO NOT mix languages - be 100% consistent in ${language} throughout
+5. If ${language} is Portuguese: use "Beneficiário", "Data de Pagamento", "Montante", "Assinatura Autorizada", "Data da Emissão", "Assunto", etc.
+6. If ${language} is English: use "Beneficiary", "Payment Date", "Amount", "Authorized Signature", "Date of Issue", "Subject", etc.
+7. VERIFY: Before returning, check that ALL field labels are in ${language}
+
+CRITICAL - COMPANY HEADER INSTRUCTIONS:
+1. The application will add the company header at the top with logo and company information
+2. You MUST NEVER include company names, addresses, or contact information in your output
+3. NEVER write "EPIC ATMOSPHERE", "SUSTAINABLE YIELD", or any company name
+4. START your output with the Beneficiary section or Receipt title
+5. The company header is handled separately - do NOT duplicate it
+
+ABSOLUTELY CRITICAL - CONTENT EXTRACTION:
 1. You MUST include EVERY SINGLE piece of information from the input content
 2. Do NOT skip, omit, or summarize ANY information
 3. If information is provided, it MUST appear in the output
 4. Extract ALL dates, amounts, references, names, addresses, and details
 5. Your job is to FORMAT, not to filter or reduce information
 
-CRITICAL LANGUAGE REQUIREMENT:
-1. The input content is in ${language}
-2. You MUST generate the ENTIRE receipt in ${language}
-3. ALL labels, titles, headers, and text MUST be in ${language}
-4. DO NOT mix languages - be 100% consistent in ${language} throughout
-5. If ${language} is Portuguese: use "Beneficiário", "Data de Pagamento", "Montante", "Assinatura Autorizada", etc.
-6. If ${language} is English: use "Beneficiary", "Payment Date", "Amount", "Authorized Signature", etc.
-
 CRITICAL INSTRUCTIONS - READ CAREFULLY:
 1. ABSOLUTELY NO company header, name, or logo in your output
-2. NEVER write "SUSTAINABLE YIELD CAPITAL LTD" or any variation
-3. NEVER write "SUSTAINABLE YIELD VENTURES CAPITAL LTD" or similar
-4. NEVER write company addresses (Dept 302, Doncaster, London, etc.)
-5. NEVER write "Company Number" or "Company Registration Number"
-6. The application will add the company header - you must ONLY format the receipt body
-7. Start IMMEDIATELY with the receipt title (e.g., "PAYMENT RECEIPT" or "RECIBO DE PAGAMENTO")
+2. NEVER write company names like "SUSTAINABLE YIELD CAPITAL LTD" or "EPIC ATMOSPHERE UNIPESSOAL LDA"
+3. NEVER write company addresses, NIPC, company numbers, or contact information
+4. The application handles the company header separately - you must ONLY format the receipt body
+5. Start IMMEDIATELY with either the Beneficiary section or the receipt title
+6. DO NOT add any horizontal lines or headers at the top of your output
 
 FORMAT INSTRUCTIONS:
 1. Carefully read and extract ALL information from the content - DO NOT SKIP ANYTHING
@@ -100,6 +115,7 @@ FORMAT INSTRUCTIONS:
 
 OUTPUT FORMAT (HTML with inline styles):
 
+${language === 'English' ? `
 EXAMPLE FOR ENGLISH:
 <div style="font-family: 'Lato', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
   <!-- START HERE - Do NOT include ANY company information above this line -->
@@ -109,20 +125,17 @@ EXAMPLE FOR ENGLISH:
     <p style="margin: 5px 0;"><strong>Full Name:</strong> [COMPLETE LEGAL NAME]</p>
     <p style="margin: 5px 0;"><strong>Position/Title:</strong> [JOB TITLE OR ROLE]</p>
     <p style="margin: 5px 0;"><strong>Company/Organization:</strong> [EMPLOYER OR AFFILIATION]</p>
-    <p style="margin: 5px 0;"><strong>Department:</strong> [DEPARTMENT IF APPLICABLE]</p>
-    <p style="margin: 5px 0;"><strong>ID/Passport Number:</strong> [IDENTIFICATION NUMBER]</p>
-    <p style="margin: 5px 0;"><strong>Tax/VAT Number:</strong> [TAX ID IF PROVIDED]</p>
-    <p style="margin: 5px 0;"><strong>Address:</strong> [COMPLETE ADDRESS WITH ALL DETAILS - STREET, BUILDING, FLOOR, CITY, POSTAL CODE, COUNTRY]</p>
-    <p style="margin: 5px 0;"><strong>Phone:</strong> [PRIMARY PHONE NUMBER]</p>
-    <p style="margin: 5px 0;"><strong>Alternative Phone:</strong> [SECONDARY PHONE IF PROVIDED]</p>
-    <p style="margin: 5px 0;"><strong>Email:</strong> [EMAIL ADDRESS]</p>
-    <p style="margin: 5px 0;"><strong>Nationality:</strong> [NATIONALITY IF MENTIONED]</p>
-    <p style="margin: 5px 0;"><strong>Relationship:</strong> [RELATIONSHIP TO COMPANY - EMPLOYEE, CONTRACTOR, ETC.]</p>
-    [Include EVERY additional detail about the beneficiary that was provided in the content - omit nothing]
+    <p style="margin: 5px 0;"><strong>Address:</strong> [COMPLETE ADDRESS]</p>
+    <p style="margin: 5px 0;"><strong>IBAN:</strong> [IBAN NUMBER]</p>
   </div>
   
-  <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0 15px 0; text-align: center; text-decoration: underline;">PAYMENT RECEIPT - [RECEIPT TYPE]</h3>
-
+  <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0 15px 0; text-align: center; text-decoration: underline;">PAYMENT RECEIPT - Legal Fees</h3>
+  
+  <div style="margin: 15px 0; text-align: left;">
+    <p style="margin: 5px 0;"><strong>Date of Issue:</strong> Porto, October 15, 2025</p>
+    <p style="margin: 5px 0;"><strong>Subject:</strong> Confirmation of Full Payment - Legal Fees (€40,000)</p>
+  </div>
+` : `
 EXAMPLE FOR PORTUGUESE:
 <div style="font-family: 'Lato', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
   <!-- START HERE - Do NOT include ANY company information above this line -->
@@ -131,20 +144,18 @@ EXAMPLE FOR PORTUGUESE:
     <p style="font-weight: bold; margin: 10px 0;">Beneficiário:</p>
     <p style="margin: 5px 0;"><strong>Nome Completo:</strong> [NOME LEGAL COMPLETO]</p>
     <p style="margin: 5px 0;"><strong>Cargo/Título:</strong> [CARGO OU FUNÇÃO]</p>
-    <p style="margin: 5px 0;"><strong>Empresa/Organização:</strong> [EMPREGADOR OU AFILIAÇÃO]</p>
-    <p style="margin: 5px 0;"><strong>Departamento:</strong> [DEPARTAMENTO SE APLICÁVEL]</p>
-    <p style="margin: 5px 0;"><strong>BI/Passaporte:</strong> [NÚMERO DE IDENTIFICAÇÃO]</p>
-    <p style="margin: 5px 0;"><strong>NIF/Número Fiscal:</strong> [NIF SE FORNECIDO]</p>
-    <p style="margin: 5px 0;"><strong>Morada:</strong> [MORADA COMPLETA COM TODOS OS DETALHES - RUA, EDIFÍCIO, ANDAR, CIDADE, CÓDIGO POSTAL, PAÍS]</p>
-    <p style="margin: 5px 0;"><strong>Telefone:</strong> [NÚMERO DE TELEFONE PRINCIPAL]</p>
-    <p style="margin: 5px 0;"><strong>Telefone Alternativo:</strong> [TELEFONE SECUNDÁRIO SE FORNECIDO]</p>
-    <p style="margin: 5px 0;"><strong>Email:</strong> [ENDEREÇO DE EMAIL]</p>
-    <p style="margin: 5px 0;"><strong>Nacionalidade:</strong> [NACIONALIDADE SE MENCIONADA]</p>
-    <p style="margin: 5px 0;"><strong>Relacionamento:</strong> [RELAÇÃO COM A EMPRESA - EMPREGADO, CONTRATADO, ETC.]</p>
-    [Incluir TODOS os detalhes adicionais sobre o beneficiário que foram fornecidos no conteúdo - não omitir nada]
+    <p style="margin: 5px 0;"><strong>Empresa/Organização:</strong> [EMPREGADOR]</p>
+    <p style="margin: 5px 0;"><strong>Morada:</strong> [MORADA COMPLETA]</p>
+    <p style="margin: 5px 0;"><strong>IBAN:</strong> [NÚMERO IBAN]</p>
   </div>
   
-  <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0 15px 0; text-align: center; text-decoration: underline;">RECIBO DE PAGAMENTO - [TIPO DE RECIBO]</h3>
+  <h3 style="font-size: 16px; font-weight: bold; margin: 20px 0 15px 0; text-align: center; text-decoration: underline;">RECIBO DE PAGAMENTO - Honorários Legais</h3>
+  
+  <div style="margin: 15px 0; text-align: left;">
+    <p style="margin: 5px 0;"><strong>Data da Emissão:</strong> Porto, 15 de outubro de 2025</p>
+    <p style="margin: 5px 0;"><strong>Assunto:</strong> Confirmação de Pagamento Integral - Honorários Legais (€40.000)</p>
+  </div>
+`}
   
   <div style="margin: 15px 0; text-align: left;">
     <p style="margin: 5px 0;"><strong>Purpose:</strong> [PURPOSE DESCRIPTION]</p>
@@ -238,11 +249,15 @@ IN PORTUGUESE:
 CRITICAL RULES - MUST FOLLOW: 
 - Return ONLY the HTML content with inline styles - nothing else
 - ABSOLUTELY NO markdown formatting (NO code blocks, NO backticks of any kind)
-- ABSOLUTELY NO company name, header, or contact information
-- ABSOLUTELY NO "SUSTAINABLE YIELD" text of any variation
+- ABSOLUTELY NO company name, header, or contact information at the top
 - DO NOT include any horizontal lines (hr) or separators at the top
-- Your output must start with: <div style="font-family: Arial
+- Your output must start directly with the beneficiary section or receipt title
+- CRITICAL: Generate ALL labels and text in ${language} ONLY - no mixing of languages
 - CRITICAL: Extract ALL information from the provided content accurately - INCLUDE EVERYTHING
+- Use professional formatting with proper spacing and alignment
+- Keep the beneficiary section aligned to the RIGHT
+- Keep payment details and other sections aligned to the LEFT
+- VERIFY LANGUAGE: Before returning, confirm that EVERY label is in ${language}
 - CRITICAL: Every date, amount, reference, bank detail, and description from the input MUST be in your output
 - BENEFICIARY INFORMATION: Extract and include EVERY SINGLE detail provided about the beneficiary - omit NOTHING. Be exhaustive and comprehensive in the beneficiary section.
 - PAYMENT INFORMATION: Include ALL payment details - dates, amounts (sent AND received), fees, reference numbers, transfer IDs
