@@ -328,10 +328,7 @@ const ReceiptGenerator = () => {
           </style>
         </head>
         <body>
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-            <div style="text-align: left;">
-              <p style="margin: 0; font-size: 11px; font-weight: 600;">Company Number: ${company?.company_number || company?.nipc || ''}</p>
-            </div>
+          <div style="display: flex; justify-content: flex-end; align-items: flex-start; margin-bottom: 15px;">
             <div style="text-align: right;">
               <img src="${logoToUse}" alt="${company?.name || ''}" class="header-logo" style="margin: 0 0 8px auto;" />
               <h2 style="margin: 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">${company?.name || ''}</h2>

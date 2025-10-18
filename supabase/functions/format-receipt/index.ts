@@ -126,9 +126,9 @@ EXAMPLE FOR ENGLISH:
   <!-- COMPANY HEADER - ALWAYS INCLUDE -->
   <div style="margin-bottom: 20px;">
     <h2 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">[COMPANY NAME IN UPPERCASE]</h2>
-    <p style="margin: 3px 0; font-size: 11px;">Company Number: [COMPANY NUMBER]</p>
+    <p style="margin: 3px 0; font-size: 11px;">Reg nº [COMPANY NUMBER] (Companies House - UK)</p>
     <p style="margin: 3px 0; font-size: 11px;">Address: [COMPLETE ADDRESS WITH STREET, CITY, POSTAL CODE, COUNTRY]</p>
-    <p style="margin: 3px 0; font-size: 11px;">Email: [COMPANY EMAIL]</p>
+    <p style="margin: 3px 0; font-size: 11px;">NIF: [VAT NUMBER IF PROVIDED]</p>
     <p style="margin: 3px 0; font-size: 11px;">Bank: [BANK NAME] | Account: [BANK ACCOUNT NUMBER]</p>
     <p style="margin: 3px 0; font-size: 11px;">Capital Social: [CAPITAL AMOUNT IF PROVIDED]</p>
   </div>
@@ -155,9 +155,9 @@ EXAMPLE FOR PORTUGUESE:
   <!-- CABEÇALHO DA EMPRESA - SEMPRE INCLUIR -->
   <div style="margin-bottom: 20px;">
     <h2 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">[NOME DA EMPRESA EM MAIÚSCULAS]</h2>
-    <p style="margin: 3px 0; font-size: 11px;">NIPC: [NÚMERO NIPC]</p>
-    <p style="margin: 3px 0; font-size: 11px;">Morada: [MORADA COMPLETA COM RUA, CIDADE, CÓDIGO POSTAL, PAÍS]</p>
-    <p style="margin: 3px 0; font-size: 11px;">Email: [EMAIL DA EMPRESA]</p>
+    <p style="margin: 3px 0; font-size: 11px;">Reg nº [NÚMERO DE REGISTO] (Companies House - UK)</p>
+    <p style="margin: 3px 0; font-size: 11px;">Sede: [MORADA COMPLETA COM RUA, CIDADE, CÓDIGO POSTAL, PAÍS]</p>
+    <p style="margin: 3px 0; font-size: 11px;">NIF: [NÚMERO NIF SE FORNECIDO]</p>
     <p style="margin: 3px 0; font-size: 11px;">Banco: [NOME DO BANCO] | Conta: [NÚMERO DA CONTA]</p>
     <p style="margin: 3px 0; font-size: 11px;">Capital Social: [MONTANTE DE CAPITAL SE FORNECIDO]</p>
   </div>
