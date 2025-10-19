@@ -11,9 +11,11 @@ import ProjectManagement from "@/components/financial/ProjectManagement";
 import TransactionManagement from "@/components/financial/TransactionManagement";
 import LoanManagement from "@/components/financial/LoanManagement";
 import { Building2, TrendingUp, Briefcase, CreditCard, PiggyBank } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function FinancialPage() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const { data: companies } = useQuery({
     queryKey: ["companies"],
@@ -36,10 +38,10 @@ export default function FinancialPage() {
   return (
     <MainLayout>
       <div className="container mx-auto py-6 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Gestão Financeira</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold">Gestão Financeira</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               Sistema multi-empresa de controlo financeiro
             </p>
           </div>
@@ -62,28 +64,28 @@ export default function FinancialPage() {
           </div>
         ) : (
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="dashboard">
+            <TabsList className={isMobile ? "flex w-full overflow-x-auto overflow-y-hidden whitespace-nowrap pb-px" : "grid w-full grid-cols-6"}>
+              <TabsTrigger value="dashboard" className="flex-shrink-0">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Dashboard
               </TabsTrigger>
-              <TabsTrigger value="transactions">
+              <TabsTrigger value="transactions" className="flex-shrink-0">
                 <CreditCard className="h-4 w-4 mr-2" />
                 Movimentos
               </TabsTrigger>
-              <TabsTrigger value="projects">
+              <TabsTrigger value="projects" className="flex-shrink-0">
                 <Briefcase className="h-4 w-4 mr-2" />
                 Projetos
               </TabsTrigger>
-              <TabsTrigger value="accounts">
+              <TabsTrigger value="accounts" className="flex-shrink-0">
                 <PiggyBank className="h-4 w-4 mr-2" />
                 Contas
               </TabsTrigger>
-              <TabsTrigger value="loans">
+              <TabsTrigger value="loans" className="flex-shrink-0">
                 <CreditCard className="h-4 w-4 mr-2" />
                 Empréstimos
               </TabsTrigger>
-              <TabsTrigger value="companies">
+              <TabsTrigger value="companies" className="flex-shrink-0">
                 <Building2 className="h-4 w-4 mr-2" />
                 Empresas
               </TabsTrigger>
