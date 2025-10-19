@@ -61,11 +61,17 @@ ABSOLUTELY CRITICAL - LANGUAGE REQUIREMENT:
 7. VERIFY: Before returning, check that ALL field labels are in ${language}
 
 CRITICAL - COMPANY HEADER INSTRUCTIONS:
-1. DO NOT generate any company header information at all
-2. DO NOT include: Company name, address, registration numbers, Email, Banco (Bank), IBAN, Account Number, Capital Social, or any other company contact/banking details
-3. The system handles the company header automatically
-4. Start directly with the receipt content (beneficiary information)
-5. DO NOT add a horizontal line at the top - this is handled by the system
+1. You MUST generate a COMPLETE and DETAILED company header at the top of the receipt
+2. Include ALL company information in the header:
+   - Company name (in uppercase, bold)
+   - Company registration number (Company Number/NIPC)
+   - Complete registered address including street, city, postal code, and country
+   - Contact email address
+   - Bank account details (account number and bank name)
+   - Capital social (if mentioned)
+3. Format the company header professionally with proper spacing
+4. After the company header, add a horizontal line separator
+5. Then proceed with the receipt content
 
 ABSOLUTELY CRITICAL - CONTENT EXTRACTION:
 1. You MUST include EVERY SINGLE piece of information from the input content
@@ -75,11 +81,11 @@ ABSOLUTELY CRITICAL - CONTENT EXTRACTION:
 5. Your job is to FORMAT, not to filter or reduce information
 
 CRITICAL INSTRUCTIONS - READ CAREFULLY:
-1. DO NOT include any company header information - this is handled by the system
-2. DO NOT include: Email, Banco, Bank Name, IBAN, Account Number, Capital Social
-3. Start directly with the beneficiary information
-4. DO NOT add a horizontal line at the top
-5. Focus on the beneficiary and payment sections only
+1. ALWAYS include a complete company header at the very top with ALL company details
+2. Include company name (uppercase), registration number, full address, email, bank details
+3. Format the header professionally with clear structure and spacing
+4. Add a horizontal separator line after the company header
+5. Then proceed with the beneficiary and payment sections below
 
 FORMAT INSTRUCTIONS:
 1. Carefully read and extract ALL information from the content - DO NOT SKIP ANYTHING
@@ -117,6 +123,8 @@ OUTPUT FORMAT (HTML with inline styles):
 ${language === 'English' ? `
 EXAMPLE FOR ENGLISH:
 <div style="font-family: 'Lato', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+  <!-- COMPANY HEADER - DO NOT INCLUDE, HEADER IS HANDLED BY THE SYSTEM -->
+  <hr style="border: none; border-top: 1px solid #ccc; margin: 15px 0;" />
   
   <div style="margin: 15px 0; text-align: right;">
     <p style="font-weight: bold; margin: 10px 0;">Beneficiary:</p>
@@ -136,6 +144,8 @@ EXAMPLE FOR ENGLISH:
 ` : `
 EXAMPLE FOR PORTUGUESE:
 <div style="font-family: 'Lato', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+  <!-- CABEÇALHO DA EMPRESA - NÃO INCLUIR, O CABEÇALHO É TRATADO PELO SISTEMA -->
+  <hr style="border: none; border-top: 1px solid #ccc; margin: 15px 0;" />
   
   <div style="margin: 15px 0; text-align: right;">
     <p style="font-weight: bold; margin: 10px 0;">Beneficiário:</p>
@@ -246,9 +256,9 @@ IN PORTUGUESE:
 CRITICAL RULES - MUST FOLLOW: 
 - Return ONLY the HTML content with inline styles - nothing else
 - ABSOLUTELY NO markdown formatting (NO code blocks, NO backticks of any kind)
-- DO NOT include any company header information - start directly with beneficiary section
-- DO NOT include: Email, Banco, Bank Name, IBAN (in header), Account Number, Capital Social
-- DO NOT add a horizontal line at the top - this is handled by the system
+- ALWAYS include a complete company header at the top with ALL company information
+- Include a horizontal line separator after the company header
+- Then proceed with the beneficiary and payment sections
 - CRITICAL: Generate ALL labels and text in ${language} ONLY - no mixing of languages
 - CRITICAL: Extract ALL information from the provided content accurately - INCLUDE EVERYTHING
 - Use professional formatting with proper spacing and alignment
