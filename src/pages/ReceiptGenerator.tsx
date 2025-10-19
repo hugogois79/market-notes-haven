@@ -328,10 +328,14 @@ const ReceiptGenerator = () => {
           </style>
         </head>
         <body>
-          <div style="display: flex; justify-content: flex-end; align-items: flex-start; margin-bottom: 15px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+            <div>
+              <img src="${logoToUse}" alt="${company?.name || ''}" class="header-logo" style="margin: 0;" />
+            </div>
             <div style="text-align: right;">
-              <img src="${logoToUse}" alt="${company?.name || ''}" class="header-logo" style="margin: 0 0 8px auto;" />
-              <h2 style="margin: 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">${company?.name || ''}</h2>
+              <h2 style="margin: 0 0 4px 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">${company?.name || ''}</h2>
+              <p style="margin: 2px 0; font-size: 10px;">Reg nº ${company?.company_number || company?.nipc || ''}</p>
+              <p style="margin: 2px 0; font-size: 10px;">${company?.address || ''}</p>
             </div>
           </div>
           <hr style="border: none; border-top: 1px solid #ccc; margin: 0 0 15px 0;" />
@@ -485,30 +489,17 @@ const ReceiptGenerator = () => {
                <Card className="bg-white shadow-lg">
                 <div className="p-8 relative">
                   <div className="flex justify-between items-start mb-6">
-                    <div className="text-left">
-                      {(() => {
-                        const isEpic = content.toLowerCase().includes('epicatmosphere') || 
-                                      generatedReceipt.toLowerCase().includes('epicatmosphere');
-                        const company = isEpic 
-                          ? getCompanyData('epic atmosphere')
-                          : getCompanyData('sustainable yield');
-                        
-                        return (
-                          <p className="text-sm font-semibold">
-                            Company Number: {company?.company_number || company?.nipc || ''}
-                          </p>
-                        );
-                      })()}
-                    </div>
-                    <div className="text-right">
+                    <div>
                       <img 
                         src={(content.toLowerCase().includes('epicatmosphere') || 
                               generatedReceipt.toLowerCase().includes('epicatmosphere')) 
                               ? epicatmosphereLogo 
                               : sustainableYieldLogo} 
                         alt="Company Logo" 
-                        className="w-48 h-auto ml-auto mb-2"
+                        className="w-48 h-auto"
                       />
+                    </div>
+                    <div className="text-right">
                       {(() => {
                         const isEpic = content.toLowerCase().includes('epicatmosphere') || 
                                       generatedReceipt.toLowerCase().includes('epicatmosphere');
@@ -517,7 +508,11 @@ const ReceiptGenerator = () => {
                           : getCompanyData('sustainable yield');
                         
                         return (
-                          <h2 className="text-lg font-bold uppercase tracking-wide">{company?.name || ''}</h2>
+                          <>
+                            <h2 className="text-lg font-bold uppercase tracking-wide mb-1">{company?.name || ''}</h2>
+                            <p className="text-sm">Reg nº {company?.company_number || company?.nipc || ''}</p>
+                            <p className="text-sm">{company?.address || ''}</p>
+                          </>
                         );
                       })()}
                     </div>

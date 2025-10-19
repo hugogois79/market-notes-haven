@@ -123,15 +123,7 @@ OUTPUT FORMAT (HTML with inline styles):
 ${language === 'English' ? `
 EXAMPLE FOR ENGLISH:
 <div style="font-family: 'Lato', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-  <!-- COMPANY HEADER - ALWAYS INCLUDE -->
-  <div style="margin-bottom: 20px;">
-    <h2 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">[COMPANY NAME IN UPPERCASE]</h2>
-    <p style="margin: 3px 0; font-size: 11px;">Reg nº [COMPANY NUMBER] (Companies House - UK)</p>
-    <p style="margin: 3px 0; font-size: 11px;">Address: [COMPLETE ADDRESS WITH STREET, CITY, POSTAL CODE, COUNTRY]</p>
-    <p style="margin: 3px 0; font-size: 11px;">NIF: [VAT NUMBER IF PROVIDED]</p>
-    <p style="margin: 3px 0; font-size: 11px;">Bank: [BANK NAME] | Account: [BANK ACCOUNT NUMBER]</p>
-    <p style="margin: 3px 0; font-size: 11px;">Capital Social: [CAPITAL AMOUNT IF PROVIDED]</p>
-  </div>
+  <!-- COMPANY HEADER - DO NOT INCLUDE, HEADER IS HANDLED BY THE SYSTEM -->
   <hr style="border: none; border-top: 1px solid #ccc; margin: 15px 0;" />
   
   <div style="margin: 15px 0; text-align: right;">
@@ -152,15 +144,7 @@ EXAMPLE FOR ENGLISH:
 ` : `
 EXAMPLE FOR PORTUGUESE:
 <div style="font-family: 'Lato', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-  <!-- CABEÇALHO DA EMPRESA - SEMPRE INCLUIR -->
-  <div style="margin-bottom: 20px;">
-    <h2 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">[NOME DA EMPRESA EM MAIÚSCULAS]</h2>
-    <p style="margin: 3px 0; font-size: 11px;">Reg nº [NÚMERO DE REGISTO] (Companies House - UK)</p>
-    <p style="margin: 3px 0; font-size: 11px;">Sede: [MORADA COMPLETA COM RUA, CIDADE, CÓDIGO POSTAL, PAÍS]</p>
-    <p style="margin: 3px 0; font-size: 11px;">NIF: [NÚMERO NIF SE FORNECIDO]</p>
-    <p style="margin: 3px 0; font-size: 11px;">Banco: [NOME DO BANCO] | Conta: [NÚMERO DA CONTA]</p>
-    <p style="margin: 3px 0; font-size: 11px;">Capital Social: [MONTANTE DE CAPITAL SE FORNECIDO]</p>
-  </div>
+  <!-- CABEÇALHO DA EMPRESA - NÃO INCLUIR, O CABEÇALHO É TRATADO PELO SISTEMA -->
   <hr style="border: none; border-top: 1px solid #ccc; margin: 15px 0;" />
   
   <div style="margin: 15px 0; text-align: right;">
