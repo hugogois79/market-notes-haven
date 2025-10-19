@@ -241,101 +241,17 @@ const ReceiptGenerator = () => {
         <head>
           <title>Receipt</title>
           <style>
-            @page {
-              size: A4;
-              margin: 2cm;
-            }
-            @media print {
-              @page {
-                margin: 0;
-              }
-              body {
-                margin: 2cm;
-              }
-            }
-            body {
-              font-family: 'Lato', sans-serif;
-              line-height: 1.4;
-              color: #000;
-              padding: 20px;
-              max-width: 800px;
-              margin: 0 auto;
-              font-size: 11px;
-            }
-            .header-logo {
-              max-width: 200px;
-              margin-bottom: 20px;
-            }
-            .payment-number {
-              text-align: right;
-              font-weight: bold;
-              margin: 10px 0;
-              font-size: 12px;
-              color: #333;
-            }
-            table {
-              border-collapse: collapse;
-              width: 100%;
-              margin: 10px 0;
-              font-size: 10px;
-            }
-            th, td {
-              border: 1px solid #ccc;
-              padding: 6px;
-              text-align: left;
-              font-size: 10px;
-            }
-            h3, h4 {
-              font-size: 12px;
-            }
-            p {
-              font-size: 11px;
-              margin: 5px 0;
-            }
-            /* Hide any duplicate company headers in the AI output */
-            .formatted-receipt h2:first-child,
-            .formatted-receipt h1:first-child {
-              display: none;
-            }
-            /* Force beneficiary section to align right */
-            .formatted-receipt > div:first-of-type {
-              text-align: right !important;
-            }
-            .formatted-receipt div[style*="text-align: right"],
-            .formatted-receipt div:has(p:contains("Beneficiary")) {
-              text-align: right !important;
-            }
-            .formatted-receipt p:contains("Beneficiary"),
-            .formatted-receipt p:contains("Name:"),
-            .formatted-receipt p:contains("Purpose:") {
-              text-align: right !important;
-            }
-            /* Force authorized signature to align right */
-            .formatted-receipt > div:last-of-type {
-              text-align: right !important;
-            }
-            @media print {
-              body {
-                padding: 0;
-              }
-              .formatted-receipt > div:first-of-type {
-                text-align: right !important;
-              }
-              .formatted-receipt > div:last-of-type {
-                text-align: right !important;
-              }
-            }
-          </style>
+...
         </head>
         <body>
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-            <div>
-              <img src="${logoToUse}" alt="${company?.name || ''}" class="header-logo" style="margin: 0;" />
-            </div>
-            <div style="text-align: right;">
+            <div style="text-align: left;">
               <h2 style="margin: 0 0 4px 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">${company?.name || ''}</h2>
               <p style="margin: 2px 0; font-size: 10px;">Reg nº ${company?.company_number || company?.nipc || ''}</p>
               <p style="margin: 2px 0; font-size: 10px;">${company?.address || ''}</p>
+            </div>
+            <div>
+              <img src="${logoToUse}" alt="${company?.name || ''}" class="header-logo" style="margin: 0;" />
             </div>
           </div>
           <hr style="border: none; border-top: 1px solid #ccc; margin: 0 0 15px 0;" />
@@ -489,17 +405,7 @@ const ReceiptGenerator = () => {
                <Card className="bg-white shadow-lg">
                 <div className="p-8 relative">
                   <div className="flex justify-between items-start mb-6">
-                    <div>
-                      <img 
-                        src={(content.toLowerCase().includes('epicatmosphere') || 
-                              generatedReceipt.toLowerCase().includes('epicatmosphere')) 
-                              ? epicatmosphereLogo 
-                              : sustainableYieldLogo} 
-                        alt="Company Logo" 
-                        className="w-48 h-auto"
-                      />
-                    </div>
-                    <div className="text-right">
+                    <div className="text-left">
                       {(() => {
                         const isEpic = content.toLowerCase().includes('epicatmosphere') || 
                                       generatedReceipt.toLowerCase().includes('epicatmosphere');
@@ -515,6 +421,16 @@ const ReceiptGenerator = () => {
                           </>
                         );
                       })()}
+                    </div>
+                    <div>
+                      <img 
+                        src={(content.toLowerCase().includes('epicatmosphere') || 
+                              generatedReceipt.toLowerCase().includes('epicatmosphere')) 
+                              ? epicatmosphereLogo 
+                              : sustainableYieldLogo} 
+                        alt="Company Logo" 
+                        className="w-48 h-auto"
+                      />
                     </div>
                   </div>
                   <hr className="border-t border-gray-300 mb-6" />
