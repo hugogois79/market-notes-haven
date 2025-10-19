@@ -31,6 +31,7 @@ import TAOValidatorManagement from "@/pages/tao/validators"; // Add import for t
 import TAOValidatorRelationshipManagement from "@/pages/tao/validator-relationship-management";
 import InvestorOpportunitiesPage from "@/pages/tao/investor-opportunities";
 import FollowUpSequencesPage from "@/pages/tao/follow-up-sequences";
+import FinancialPage from "@/pages/financial";
 import { useNotes } from "@/contexts/NotesContext";
 
 const AppRoutes = () => {
@@ -149,6 +150,14 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <KanbanPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="financeiro"
+            element={
+              <ProtectedRoute>
+                <FinancialPage />
               </ProtectedRoute>
             }
           />

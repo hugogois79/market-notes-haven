@@ -1,0 +1,130 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import MainLayout from "@/layouts/MainLayout";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CompanySelector from "@/components/financial/CompanySelector";
+import FinancialDashboard from "@/components/financial/FinancialDashboard";
+import CompanyManagement from "@/components/financial/CompanyManagement";
+import BankAccountManagement from "@/components/financial/BankAccountManagement";
+import ProjectManagement from "@/components/financial/ProjectManagement";
+import TransactionManagement from "@/components/financial/TransactionManagement";
+import LoanManagement from "@/components/financial/LoanManagement";
+import { Building2, TrendingUp, Briefcase, CreditCard, PiggyBank } from "lucide-react";
+
+export default function FinancialPage() {
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+
+  const { data: companies } = useQuery({
+    queryKey: ["companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("*")
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Auto-select first company if none selected
+  if (companies && companies.length > 0 && !selectedCompanyId) {
+    setSelectedCompanyId(companies[0].id);
+  }
+
+  return (
+    <MainLayout>
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Gestão Financeira</h1>
+            <p className="text-muted-foreground">
+              Sistema multi-empresa de controlo financeiro
+            </p>
+          </div>
+          {selectedCompanyId && (
+            <CompanySelector
+              companies={companies || []}
+              selectedCompanyId={selectedCompanyId}
+              onCompanyChange={setSelectedCompanyId}
+            />
+          )}
+        </div>
+
+        {!selectedCompanyId && companies?.length === 0 ? (
+          <div className="text-center py-12">
+            <Building2 className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-semibold">Nenhuma empresa criada</h3>
+            <p className="text-muted-foreground">
+              Comece por criar a sua primeira empresa
+            </p>
+          </div>
+        ) : (
+          <Tabs defaultValue="dashboard" className="w-full">
+            <TabsList className="grid w-full grid-cols-6">
+              <TabsTrigger value="dashboard">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Dashboard
+              </TabsTrigger>
+              <TabsTrigger value="transactions">
+                <CreditCard className="h-4 w-4 mr-2" />
+                Movimentos
+              </TabsTrigger>
+              <TabsTrigger value="projects">
+                <Briefcase className="h-4 w-4 mr-2" />
+                Projetos
+              </TabsTrigger>
+              <TabsTrigger value="accounts">
+                <PiggyBank className="h-4 w-4 mr-2" />
+                Contas
+              </TabsTrigger>
+              <TabsTrigger value="loans">
+                <CreditCard className="h-4 w-4 mr-2" />
+                Empréstimos
+              </TabsTrigger>
+              <TabsTrigger value="companies">
+                <Building2 className="h-4 w-4 mr-2" />
+                Empresas
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="dashboard" className="space-y-4">
+              {selectedCompanyId && (
+                <FinancialDashboard companyId={selectedCompanyId} />
+              )}
+            </TabsContent>
+
+            <TabsContent value="transactions" className="space-y-4">
+              {selectedCompanyId && (
+                <TransactionManagement companyId={selectedCompanyId} />
+              )}
+            </TabsContent>
+
+            <TabsContent value="projects" className="space-y-4">
+              {selectedCompanyId && (
+                <ProjectManagement companyId={selectedCompanyId} />
+              )}
+            </TabsContent>
+
+            <TabsContent value="accounts" className="space-y-4">
+              {selectedCompanyId && (
+                <BankAccountManagement companyId={selectedCompanyId} />
+              )}
+            </TabsContent>
+
+            <TabsContent value="loans" className="space-y-4">
+              {selectedCompanyId && (
+                <LoanManagement companyId={selectedCompanyId} />
+              )}
+            </TabsContent>
+
+            <TabsContent value="companies" className="space-y-4">
+              <CompanyManagement />
+            </TabsContent>
+          </Tabs>
+        )}
+      </div>
+    </MainLayout>
+  );
+}

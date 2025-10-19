@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      bank_accounts: {
+        Row: {
+          account_name: string
+          account_number: string
+          bank_name: string | null
+          company_id: string
+          created_at: string
+          currency: string
+          current_balance: number
+          id: string
+          initial_balance: number
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          bank_name?: string | null
+          company_id: string
+          created_at?: string
+          currency?: string
+          current_balance?: number
+          id?: string
+          initial_balance?: number
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          bank_name?: string | null
+          company_id?: string
+          created_at?: string
+          currency?: string
+          current_balance?: number
+          id?: string
+          initial_balance?: number
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           color: string
@@ -43,6 +93,137 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      companies: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          owner_id: string
+          phone: string | null
+          tax_id: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          owner_id: string
+          phone?: string | null
+          tax_id: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+          phone?: string | null
+          tax_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      company_loans: {
+        Row: {
+          amount: number
+          borrowing_company_id: string
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          interest_rate: number | null
+          lending_company_id: string
+          monthly_payment: number | null
+          start_date: string
+          status: Database["public"]["Enums"]["loan_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          borrowing_company_id: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          interest_rate?: number | null
+          lending_company_id: string
+          monthly_payment?: number | null
+          start_date: string
+          status?: Database["public"]["Enums"]["loan_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          borrowing_company_id?: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          interest_rate?: number | null
+          lending_company_id?: string
+          monthly_payment?: number | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["loan_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_loans_borrowing_company_id_fkey"
+            columns: ["borrowing_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_loans_lending_company_id_fkey"
+            columns: ["lending_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_users: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_users_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       crypto_assets: {
         Row: {
@@ -467,6 +648,150 @@ export type Database = {
           status?: Database["public"]["Enums"]["file_status"] | null
         }
         Relationships: []
+      }
+      financial_projects: {
+        Row: {
+          budget: number | null
+          client_name: string | null
+          company_id: string
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          start_date: string
+          status: Database["public"]["Enums"]["financial_project_status"]
+          updated_at: string
+        }
+        Insert: {
+          budget?: number | null
+          client_name?: string | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          start_date: string
+          status?: Database["public"]["Enums"]["financial_project_status"]
+          updated_at?: string
+        }
+        Update: {
+          budget?: number | null
+          client_name?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          start_date?: string
+          status?: Database["public"]["Enums"]["financial_project_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_transactions: {
+        Row: {
+          amount_net: number
+          bank_account_id: string | null
+          category: Database["public"]["Enums"]["transaction_category"]
+          company_id: string
+          created_at: string
+          created_by: string
+          date: string
+          description: string
+          entity_name: string
+          id: string
+          invoice_file_url: string | null
+          invoice_number: string | null
+          notes: string | null
+          payment_method: Database["public"]["Enums"]["financial_payment_method"]
+          project_id: string | null
+          subcategory: string | null
+          total_amount: number
+          type: Database["public"]["Enums"]["transaction_type"]
+          updated_at: string
+          vat_amount: number | null
+          vat_rate: number | null
+        }
+        Insert: {
+          amount_net: number
+          bank_account_id?: string | null
+          category: Database["public"]["Enums"]["transaction_category"]
+          company_id: string
+          created_at?: string
+          created_by: string
+          date: string
+          description: string
+          entity_name: string
+          id?: string
+          invoice_file_url?: string | null
+          invoice_number?: string | null
+          notes?: string | null
+          payment_method: Database["public"]["Enums"]["financial_payment_method"]
+          project_id?: string | null
+          subcategory?: string | null
+          total_amount: number
+          type: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string
+          vat_amount?: number | null
+          vat_rate?: number | null
+        }
+        Update: {
+          amount_net?: number
+          bank_account_id?: string | null
+          category?: Database["public"]["Enums"]["transaction_category"]
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          date?: string
+          description?: string
+          entity_name?: string
+          id?: string
+          invoice_file_url?: string | null
+          invoice_number?: string | null
+          notes?: string | null
+          payment_method?: Database["public"]["Enums"]["financial_payment_method"]
+          project_id?: string | null
+          subcategory?: string | null
+          total_amount?: number
+          type?: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string
+          vat_amount?: number | null
+          vat_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_transactions_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "financial_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       investment_preferences: {
         Row: {
@@ -2187,6 +2512,10 @@ export type Database = {
         Args: { "": string } | { "": unknown }
         Returns: unknown
       }
+      calculate_account_balance: {
+        Args: { account_id: string; company_id: string }
+        Returns: number
+      }
       halfvec_avg: {
         Args: { "": number[] }
         Returns: unknown
@@ -2338,10 +2667,29 @@ export type Database = {
       app_role: "admin" | "moderator" | "user"
       expense_status: "pending" | "approved" | "rejected"
       file_status: "parsed" | "summarized" | "processed"
+      financial_payment_method:
+        | "cash"
+        | "bank_transfer"
+        | "check"
+        | "credit_card"
+        | "debit_card"
+        | "mbway"
+        | "multibanco"
+      financial_project_status: "active" | "completed" | "cancelled" | "on_hold"
       investment_status: "pending" | "committed" | "deployed" | "exited"
+      loan_status: "active" | "paid" | "overdue" | "cancelled"
       report_status: "draft" | "submitted" | "approved" | "rejected"
       task_priority: "low" | "medium" | "high" | "urgent"
       task_status: "pending" | "in_progress" | "completed" | "cancelled"
+      transaction_category:
+        | "sales"
+        | "materials"
+        | "salaries"
+        | "services"
+        | "taxes"
+        | "utilities"
+        | "other"
+      transaction_type: "income" | "expense"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2472,10 +2820,31 @@ export const Constants = {
       app_role: ["admin", "moderator", "user"],
       expense_status: ["pending", "approved", "rejected"],
       file_status: ["parsed", "summarized", "processed"],
+      financial_payment_method: [
+        "cash",
+        "bank_transfer",
+        "check",
+        "credit_card",
+        "debit_card",
+        "mbway",
+        "multibanco",
+      ],
+      financial_project_status: ["active", "completed", "cancelled", "on_hold"],
       investment_status: ["pending", "committed", "deployed", "exited"],
+      loan_status: ["active", "paid", "overdue", "cancelled"],
       report_status: ["draft", "submitted", "approved", "rejected"],
       task_priority: ["low", "medium", "high", "urgent"],
       task_status: ["pending", "in_progress", "completed", "cancelled"],
+      transaction_category: [
+        "sales",
+        "materials",
+        "salaries",
+        "services",
+        "taxes",
+        "utilities",
+        "other",
+      ],
+      transaction_type: ["income", "expense"],
     },
   },
 } as const
