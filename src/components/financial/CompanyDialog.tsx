@@ -11,8 +11,49 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+
+const COUNTRIES = [
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda",
+  "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain",
+  "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan",
+  "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria",
+  "Burkina Faso", "Burundi", "Cambodia", "Cameroon", "Canada", "Cape Verde",
+  "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros",
+  "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic", "Denmark",
+  "Djibouti", "Dominica", "Dominican Republic", "East Timor", "Ecuador", "Egypt",
+  "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Ethiopia", "Fiji",
+  "Finland", "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece",
+  "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana", "Haiti", "Honduras",
+  "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel",
+  "Italy", "Ivory Coast", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya",
+  "Kiribati", "North Korea", "South Korea", "Kosovo", "Kuwait", "Kyrgyzstan",
+  "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein",
+  "Lithuania", "Luxembourg", "Macedonia", "Madagascar", "Malawi", "Malaysia",
+  "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius",
+  "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco",
+  "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand",
+  "Nicaragua", "Niger", "Nigeria", "Norway", "Oman", "Pakistan", "Palau", "Palestine",
+  "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
+  "Qatar", "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia",
+  "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe",
+  "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore",
+  "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Sudan",
+  "Spain", "Sri Lanka", "Sudan", "Suriname", "Swaziland", "Sweden", "Switzerland",
+  "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Togo", "Tonga",
+  "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu", "Uganda",
+  "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay",
+  "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia",
+  "Zimbabwe"
+].sort();
 
 interface CompanyDialogProps {
   open: boolean;
@@ -26,13 +67,16 @@ export default function CompanyDialog({
   company,
 }: CompanyDialogProps) {
   const queryClient = useQueryClient();
-  const { register, handleSubmit, reset } = useForm();
+  const { register, handleSubmit, reset, setValue } = useForm();
+  const [selectedCountry, setSelectedCountry] = useState("Portugal");
 
   useEffect(() => {
     if (company) {
       reset(company);
+      setSelectedCountry(company.country || "Portugal");
     } else {
       reset({});
+      setSelectedCountry("Portugal");
     }
   }, [company, reset]);
 
@@ -51,6 +95,7 @@ export default function CompanyDialog({
         email: data.email || null,
         phone: data.phone || null,
         address: data.address || null,
+        country: selectedCountry,
         owner_id: user.id,
       };
 
@@ -77,49 +122,65 @@ export default function CompanyDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["companies"] });
-      toast.success(company ? "Empresa atualizada com sucesso" : "Empresa criada com sucesso");
+      toast.success(company ? "Company updated successfully" : "Company created successfully");
       onOpenChange(false);
       reset();
     },
     onError: (error: any) => {
-      console.error("Erro ao guardar empresa:", error);
-      console.error("Código do erro:", error.code);
-      console.error("Detalhes do erro:", error.details);
+      console.error("Error saving company:", error);
+      console.error("Error code:", error.code);
+      console.error("Error details:", error.details);
       
       if (error.code === "23505") {
         // Unique constraint violation
         if (error.message?.includes("tax_id") || error.detail?.includes("tax_id")) {
-          toast.error("Este NIF já está registado no sistema. Por favor, verifique o NIF e tente novamente.");
+          toast.error("This Tax ID is already registered. Please verify and try again.");
         } else {
-          toast.error("Já existe uma empresa com estes dados no sistema.");
+          toast.error("A company with this data already exists.");
         }
       } else if (error.code === "PGRST116") {
         // No rows returned (shouldn't happen with insert/update)
-        toast.error("Erro ao processar dados. Por favor, tente novamente.");
+        toast.error("Error processing data. Please try again.");
       } else {
-        toast.error("Erro ao guardar empresa: " + (error.message || "Erro desconhecido"));
+        toast.error("Error saving company: " + (error.message || "Unknown error"));
       }
     },
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {company ? "Editar Empresa" : "Nova Empresa"}
+            {company ? "Edit Company" : "New Company"}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
           <div>
-            <Label>Nome da Empresa *</Label>
+            <Label>Company Name *</Label>
             <Input {...register("name", { required: true })} />
           </div>
 
           <div>
-            <Label>NIF *</Label>
-            <Input {...register("tax_id", { required: true })} maxLength={9} />
+            <Label>Tax ID *</Label>
+            <Input {...register("tax_id", { required: true })} />
+          </div>
+
+          <div>
+            <Label>Country *</Label>
+            <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {COUNTRIES.map((country) => (
+                  <SelectItem key={country} value={country}>
+                    {country}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
@@ -128,21 +189,21 @@ export default function CompanyDialog({
           </div>
 
           <div>
-            <Label>Telefone</Label>
+            <Label>Phone</Label>
             <Input {...register("phone")} />
           </div>
 
           <div>
-            <Label>Morada</Label>
+            <Label>Address</Label>
             <Textarea {...register("address")} rows={3} />
           </div>
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
+              Cancel
             </Button>
             <Button type="submit" disabled={saveMutation.isPending}>
-              {saveMutation.isPending ? "A guardar..." : "Guardar"}
+              {saveMutation.isPending ? "Saving..." : "Save"}
             </Button>
           </div>
         </form>

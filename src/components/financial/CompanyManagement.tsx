@@ -37,10 +37,10 @@ export default function CompanyManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["companies"] });
-      toast.success("Empresa eliminada");
+      toast.success("Company deleted");
     },
     onError: (error) => {
-      toast.error("Erro: " + error.message);
+      toast.error("Error: " + error.message);
     },
   });
 
@@ -48,12 +48,12 @@ export default function CompanyManagement() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Empresas</h2>
-          <p className="text-muted-foreground">Gerir as suas empresas</p>
+          <h2 className="text-2xl font-bold">Companies</h2>
+          <p className="text-muted-foreground">Manage your companies</p>
         </div>
         <Button onClick={() => setDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Nova Empresa
+          New Company
         </Button>
       </div>
 
@@ -81,7 +81,7 @@ export default function CompanyManagement() {
                     variant="ghost"
                     size="icon"
                     onClick={() => {
-                      if (confirm("Eliminar empresa?")) {
+                      if (confirm("Delete company?")) {
                         deleteMutation.mutate(company.id);
                       }
                     }}
@@ -93,8 +93,13 @@ export default function CompanyManagement() {
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="text-sm">
-                <span className="font-medium">NIF:</span> {company.tax_id}
+                <span className="font-medium">Tax ID:</span> {company.tax_id}
               </div>
+              {company.country && (
+                <div className="text-sm">
+                  <span className="font-medium">Country:</span> {company.country}
+                </div>
+              )}
               {company.email && (
                 <div className="text-sm">
                   <span className="font-medium">Email:</span> {company.email}
@@ -102,12 +107,12 @@ export default function CompanyManagement() {
               )}
               {company.phone && (
                 <div className="text-sm">
-                  <span className="font-medium">Telefone:</span> {company.phone}
+                  <span className="font-medium">Phone:</span> {company.phone}
                 </div>
               )}
               {company.address && (
                 <div className="text-sm">
-                  <span className="font-medium">Morada:</span> {company.address}
+                  <span className="font-medium">Address:</span> {company.address}
                 </div>
               )}
             </CardContent>

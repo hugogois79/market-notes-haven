@@ -40,9 +40,9 @@ export default function FinancialPage() {
       <div className="w-full px-6 py-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Gestão Financeira</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">Financial Management</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Sistema multi-empresa de controlo financeiro
+              Multi-company financial control system
             </p>
           </div>
           {selectedCompanyId && (
@@ -57,9 +57,9 @@ export default function FinancialPage() {
         {!selectedCompanyId && companies?.length === 0 ? (
           <div className="text-center py-12">
             <Building2 className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">Nenhuma empresa criada</h3>
+            <h3 className="mt-4 text-lg font-semibold">No companies created</h3>
             <p className="text-muted-foreground">
-              Comece por criar a sua primeira empresa
+              Start by creating your first company
             </p>
           </div>
         ) : (
@@ -71,23 +71,23 @@ export default function FinancialPage() {
               </TabsTrigger>
               <TabsTrigger value="transactions" className="flex-shrink-0">
                 <CreditCard className="h-4 w-4 mr-2" />
-                Movimentos
+                Transactions
               </TabsTrigger>
               <TabsTrigger value="projects" className="flex-shrink-0">
                 <Briefcase className="h-4 w-4 mr-2" />
-                Projetos
+                Projects
               </TabsTrigger>
               <TabsTrigger value="accounts" className="flex-shrink-0">
                 <PiggyBank className="h-4 w-4 mr-2" />
-                Contas
+                Accounts
               </TabsTrigger>
               <TabsTrigger value="loans" className="flex-shrink-0">
                 <CreditCard className="h-4 w-4 mr-2" />
-                Empréstimos
+                Loans
               </TabsTrigger>
               <TabsTrigger value="companies" className="flex-shrink-0">
                 <Building2 className="h-4 w-4 mr-2" />
-                Empresas
+                Companies
               </TabsTrigger>
             </TabsList>
 

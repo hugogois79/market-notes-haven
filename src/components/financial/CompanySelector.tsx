@@ -36,11 +36,11 @@ export default function CompanySelector({
               <div className="flex flex-col items-start">
                 <span className="font-medium">{selectedCompany.name}</span>
                 <span className="text-xs text-muted-foreground">
-                  NIF: {selectedCompany.tax_id}
+                  Tax ID: {selectedCompany.tax_id}
                 </span>
               </div>
             ) : (
-              "Selecione uma empresa"
+              "Select a company"
             )}
           </SelectValue>
         </div>
@@ -51,7 +51,7 @@ export default function CompanySelector({
             <div className="flex flex-col items-start">
               <span className="font-medium">{company.name}</span>
               <span className="text-xs text-muted-foreground">
-                NIF: {company.tax_id}
+                Tax ID: {company.tax_id}
               </span>
             </div>
           </SelectItem>
