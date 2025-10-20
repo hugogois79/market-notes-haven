@@ -218,22 +218,26 @@ const ReceiptGenerator = () => {
     
     const logoToUse = isEpicatmosphere ? epicatmosphereLogo : sustainableYieldLogo;
     
-    let companyAddress = '';
+    let companyDetails: string[] = [];
     if (company) {
-      if (company.nipc) {
-        companyAddress = `
-          <p style="margin: 2px 0; font-size: 10px;">NIPC ${company.nipc} | Capital Social: ${company.capital_social}</p>
-          <p style="margin: 2px 0; font-size: 10px;">Sede: ${company.address}, ${company.country}</p>
-          <p style="margin: 2px 0; font-size: 10px;">Email: ${company.email}</p>
-          <p style="margin: 2px 0; font-size: 10px;">Conta: ${company.bank_account} (${company.bank_name})</p>
-        `;
-      } else {
-        companyAddress = `
-          <p style="margin: 2px 0; font-size: 10px;">${company.address}</p>
-          <p style="margin: 2px 0; font-size: 10px;">Company Number: ${company.company_number}</p>
-        `;
+      // Add Morada Registada
+      if (company.address) {
+        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Morada Registada: ${company.address}${company.country ? ', ' + company.country : ''}</p>`);
+      }
+      // Add Email only if provided
+      if (company.email) {
+        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Email: ${company.email}</p>`);
+      }
+      // Add Bank Account only if provided
+      if (company.bank_account) {
+        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Conta Bancária: ${company.bank_account}${company.bank_name ? ' (' + company.bank_name + ')' : ''}</p>`);
+      }
+      // Add Capital Social only if provided
+      if (company.capital_social) {
+        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Capital Social: ${company.capital_social}</p>`);
       }
     }
+    const companyAddress = companyDetails.join('');
 
     const printContent = `
       <!DOCTYPE html>
@@ -329,13 +333,13 @@ const ReceiptGenerator = () => {
         </head>
         <body>
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-            <div>
+            <div style="flex: 0 0 auto;">
               <img src="${logoToUse}" alt="${company?.name || ''}" class="header-logo" style="margin: 0;" />
             </div>
-            <div style="text-align: right;">
-              <h2 style="margin: 0 0 4px 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">${company?.name || ''}</h2>
-              <p style="margin: 2px 0; font-size: 10px;">Reg nº ${company?.company_number || company?.nipc || ''}</p>
-              <p style="margin: 2px 0; font-size: 10px;">${company?.address || ''}</p>
+            <div style="text-align: right; flex: 1; margin-left: 20px;">
+              <h2 style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">${company?.name || ''}</h2>
+              ${company?.company_number || company?.nipc ? `<p style="margin: 2px 0; font-size: 10px;">Company Number: ${company?.company_number || company?.nipc || ''}</p>` : ''}
+              ${companyAddress}
             </div>
           </div>
           <hr style="border: none; border-top: 1px solid #ccc; margin: 0 0 15px 0;" />
@@ -489,7 +493,7 @@ const ReceiptGenerator = () => {
                <Card className="bg-white shadow-lg">
                 <div className="p-8 relative">
                   <div className="flex justify-between items-start mb-6">
-                    <div>
+                    <div className="flex-shrink-0">
                       <img 
                         src={(content.toLowerCase().includes('epicatmosphere') || 
                               generatedReceipt.toLowerCase().includes('epicatmosphere')) 
@@ -499,7 +503,7 @@ const ReceiptGenerator = () => {
                         className="w-48 h-auto"
                       />
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex-1 ml-4">
                       {(() => {
                         const isEpic = content.toLowerCase().includes('epicatmosphere') || 
                                       generatedReceipt.toLowerCase().includes('epicatmosphere');
@@ -510,8 +514,21 @@ const ReceiptGenerator = () => {
                         return (
                           <>
                             <h2 className="text-lg font-bold uppercase tracking-wide mb-1">{company?.name || ''}</h2>
-                            <p className="text-sm">Reg nº {company?.company_number || company?.nipc || ''}</p>
-                            <p className="text-sm">{company?.address || ''}</p>
+                            {(company?.company_number || company?.nipc) && (
+                              <p className="text-sm">Company Number: {company?.company_number || company?.nipc}</p>
+                            )}
+                            {company?.address && (
+                              <p className="text-sm">Morada Registada: {company.address}{company.country ? ', ' + company.country : ''}</p>
+                            )}
+                            {company?.email && (
+                              <p className="text-sm">Email: {company.email}</p>
+                            )}
+                            {company?.bank_account && (
+                              <p className="text-sm">Conta Bancária: {company.bank_account}{company.bank_name ? ' (' + company.bank_name + ')' : ''}</p>
+                            )}
+                            {company?.capital_social && (
+                              <p className="text-sm">Capital Social: {company.capital_social}</p>
+                            )}
                           </>
                         );
                       })()}
