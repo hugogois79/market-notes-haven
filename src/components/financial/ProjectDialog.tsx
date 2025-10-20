@@ -38,15 +38,20 @@ export default function ProjectDialog({
   const { register, handleSubmit, reset, watch, setValue } = useForm();
 
   useEffect(() => {
-    if (project) {
-      reset(project);
-    } else {
+    if (open && !project) {
       reset({
+        name: '',
+        client_name: '',
+        description: '',
+        budget: '',
         start_date: new Date().toISOString().split('T')[0],
+        end_date: '',
         status: 'active',
       });
+    } else if (project) {
+      reset(project);
     }
-  }, [project, reset]);
+  }, [open, project, reset]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
