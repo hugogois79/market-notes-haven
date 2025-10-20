@@ -2638,6 +2638,10 @@ export type Database = {
         Args: { "": unknown[] }
         Returns: number
       }
+      user_can_access_company: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
       vector_avg: {
         Args: { "": number[] }
         Returns: string
