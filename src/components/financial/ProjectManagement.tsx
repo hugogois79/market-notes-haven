@@ -83,7 +83,7 @@ export default function ProjectManagement({ companyId }: ProjectManagementProps)
         {projects?.map((project) => (
           <Card key={project.id}>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex items-center justify-between text-lg">
                 <span className="truncate">{project.name}</span>
                 <div className="flex gap-1">
                   <Button
