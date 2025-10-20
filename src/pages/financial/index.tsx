@@ -10,7 +10,7 @@ import BankAccountManagement from "@/components/financial/BankAccountManagement"
 import ProjectManagement from "@/components/financial/ProjectManagement";
 import TransactionManagement from "@/components/financial/TransactionManagement";
 import LoanManagement from "@/components/financial/LoanManagement";
-import { Building2, TrendingUp, Briefcase, CreditCard, PiggyBank } from "lucide-react";
+import { Building2, TrendingUp, Briefcase, CreditCard, PiggyBank, Settings } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function FinancialPage() {
@@ -37,7 +37,7 @@ export default function FinancialPage() {
 
   return (
     <MainLayout>
-      <div className="w-full px-6 py-6 space-y-6">
+      <div className="w-full px-4 py-6 space-y-6 max-w-[1800px] mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Financial Management</h1>
@@ -64,7 +64,7 @@ export default function FinancialPage() {
           </div>
         ) : (
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className={isMobile ? "flex w-full overflow-x-auto overflow-y-hidden whitespace-nowrap pb-px" : "grid w-full grid-cols-6"}>
+            <TabsList className={isMobile ? "flex w-full overflow-x-auto overflow-y-hidden whitespace-nowrap pb-px" : "grid w-full grid-cols-5"}>
               <TabsTrigger value="dashboard" className="flex-shrink-0">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Dashboard
@@ -77,17 +77,13 @@ export default function FinancialPage() {
                 <Briefcase className="h-4 w-4 mr-2" />
                 Projects
               </TabsTrigger>
-              <TabsTrigger value="accounts" className="flex-shrink-0">
-                <PiggyBank className="h-4 w-4 mr-2" />
-                Accounts
-              </TabsTrigger>
               <TabsTrigger value="loans" className="flex-shrink-0">
-                <CreditCard className="h-4 w-4 mr-2" />
+                <PiggyBank className="h-4 w-4 mr-2" />
                 Loans
               </TabsTrigger>
-              <TabsTrigger value="companies" className="flex-shrink-0">
-                <Building2 className="h-4 w-4 mr-2" />
-                Companies
+              <TabsTrigger value="settings" className="flex-shrink-0">
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
               </TabsTrigger>
             </TabsList>
 
@@ -109,20 +105,35 @@ export default function FinancialPage() {
               )}
             </TabsContent>
 
-            <TabsContent value="accounts" className="space-y-4">
-              {selectedCompanyId && (
-                <BankAccountManagement companyId={selectedCompanyId} />
-              )}
-            </TabsContent>
-
             <TabsContent value="loans" className="space-y-4">
               {selectedCompanyId && (
                 <LoanManagement companyId={selectedCompanyId} />
               )}
             </TabsContent>
 
-            <TabsContent value="companies" className="space-y-4">
-              <CompanyManagement />
+            <TabsContent value="settings" className="space-y-4">
+              <Tabs defaultValue="companies" className="w-full">
+                <TabsList>
+                  <TabsTrigger value="companies">
+                    <Building2 className="h-4 w-4 mr-2" />
+                    Companies
+                  </TabsTrigger>
+                  <TabsTrigger value="accounts">
+                    <PiggyBank className="h-4 w-4 mr-2" />
+                    Accounts
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="companies" className="space-y-4 mt-4">
+                  <CompanyManagement />
+                </TabsContent>
+
+                <TabsContent value="accounts" className="space-y-4 mt-4">
+                  {selectedCompanyId && (
+                    <BankAccountManagement companyId={selectedCompanyId} />
+                  )}
+                </TabsContent>
+              </Tabs>
             </TabsContent>
           </Tabs>
         )}
