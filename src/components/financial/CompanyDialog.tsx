@@ -38,11 +38,20 @@ export default function CompanyDialog({
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error("Utilizador não autenticado. Por favor, faça login novamente.");
+      }
       
       const companyData = {
-        ...data,
-        owner_id: user?.id,
+        name: data.name,
+        tax_id: data.tax_id,
+        email: data.email || null,
+        phone: data.phone || null,
+        address: data.address || null,
+        owner_id: user.id,
       };
 
       if (company) {
