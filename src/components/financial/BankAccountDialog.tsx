@@ -94,6 +94,7 @@ export default function BankAccountDialog({
       }
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bank-accounts", selectedCompany] });
       queryClient.invalidateQueries({ queryKey: ["bank-accounts"] });
       toast.success(account ? "Account updated" : "Account created");
       onOpenChange(false);
