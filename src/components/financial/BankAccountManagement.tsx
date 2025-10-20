@@ -23,7 +23,7 @@ export default function BankAccountManagement({ companyId }: BankAccountManageme
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bank_accounts")
-        .select("*")
+        .select("*, companies(name)")
         .eq("company_id", companyId)
         .order("account_name");
       
@@ -42,11 +42,11 @@ export default function BankAccountManagement({ companyId }: BankAccountManageme
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bank-accounts", companyId] });
-      toast.success("Conta eliminada");
+      queryClient.invalidateQueries({ queryKey: ["bank-accounts"] });
+      toast.success("Account deleted");
     },
     onError: (error) => {
-      toast.error("Erro: " + error.message);
+      toast.error("Error: " + error.message);
     },
   });
 
@@ -54,12 +54,12 @@ export default function BankAccountManagement({ companyId }: BankAccountManageme
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Contas Bancárias</h2>
-          <p className="text-muted-foreground">Gerir contas da empresa</p>
+          <h2 className="text-2xl font-bold">Bank Accounts</h2>
+          <p className="text-muted-foreground">Manage company accounts</p>
         </div>
         <Button onClick={() => setDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Nova Conta
+          New Account
         </Button>
       </div>
 
@@ -84,7 +84,7 @@ export default function BankAccountManagement({ companyId }: BankAccountManageme
                     variant="ghost"
                     size="icon"
                     onClick={() => {
-                      if (confirm("Eliminar conta?")) {
+                      if (confirm("Delete account?")) {
                         deleteMutation.mutate(account.id);
                       }
                     }}
@@ -102,14 +102,14 @@ export default function BankAccountManagement({ companyId }: BankAccountManageme
                 <span className="font-medium">IBAN:</span> {account.account_number}
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Saldo Atual:</span>
+                <span className="text-sm font-medium">Current Balance:</span>
                 <span className="text-lg font-bold text-primary">
                   {formatCurrency(Number(account.current_balance))}
                 </span>
               </div>
               <div>
                 <Badge variant={account.is_active ? "default" : "secondary"}>
-                  {account.is_active ? "Ativa" : "Inativa"}
+                  {account.is_active ? "Active" : "Inactive"}
                 </Badge>
               </div>
             </CardContent>

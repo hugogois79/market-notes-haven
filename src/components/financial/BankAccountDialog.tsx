@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -11,13 +11,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface BankAccountDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  companyId: string;
+  companyId?: string;
   account?: any;
 }
 
@@ -29,24 +36,44 @@ export default function BankAccountDialog({
 }: BankAccountDialogProps) {
   const queryClient = useQueryClient();
   const { register, handleSubmit, reset, watch, setValue } = useForm();
+  const [selectedCompany, setSelectedCompany] = useState(companyId || "");
+
+  const { data: companies } = useQuery({
+    queryKey: ["companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("*")
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
 
   useEffect(() => {
     if (account) {
       reset(account);
+      setSelectedCompany(account.company_id);
     } else {
       reset({
         currency: "EUR",
         is_active: true,
         initial_balance: 0,
       });
+      setSelectedCompany(companyId || "");
     }
-  }, [account, reset]);
+  }, [account, companyId, reset]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      if (!selectedCompany) {
+        throw new Error("Please select a company");
+      }
+
       const accountData = {
         ...data,
-        company_id: companyId,
+        company_id: selectedCompany,
         initial_balance: Number(data.initial_balance),
         current_balance: account ? Number(data.current_balance) : Number(data.initial_balance),
       };
@@ -67,49 +94,65 @@ export default function BankAccountDialog({
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bank-accounts", companyId] });
-      toast.success(account ? "Conta atualizada" : "Conta criada");
+      queryClient.invalidateQueries({ queryKey: ["bank-accounts"] });
+      toast.success(account ? "Account updated" : "Account created");
       onOpenChange(false);
       reset();
     },
     onError: (error: any) => {
-      toast.error("Erro: " + error.message);
+      toast.error("Error: " + error.message);
     },
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {account ? "Editar Conta" : "Nova Conta Bancária"}
+            {account ? "Edit Account" : "New Bank Account"}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
           <div>
-            <Label>Nome da Conta *</Label>
-            <Input {...register("account_name", { required: true })} placeholder="Conta Principal" />
+            <Label>Company *</Label>
+            <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a company" />
+              </SelectTrigger>
+              <SelectContent>
+                {companies?.map((company) => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
-            <Label>Banco</Label>
+            <Label>Account Name *</Label>
+            <Input {...register("account_name", { required: true })} placeholder="Main Account" />
+          </div>
+
+          <div>
+            <Label>Bank</Label>
             <Input {...register("bank_name")} placeholder="Ex: Millennium BCP" />
           </div>
 
           <div>
-            <Label>IBAN / Número da Conta *</Label>
+            <Label>IBAN / Account Number *</Label>
             <Input {...register("account_number", { required: true })} placeholder="PT50..." />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Saldo Inicial</Label>
+              <Label>Initial Balance</Label>
               <Input type="number" step="0.01" {...register("initial_balance")} />
             </div>
 
             <div>
-              <Label>Moeda</Label>
+              <Label>Currency</Label>
               <Input {...register("currency")} disabled />
             </div>
           </div>
@@ -124,16 +167,16 @@ export default function BankAccountDialog({
               htmlFor="is_active"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              Conta ativa
+              Active account
             </label>
           </div>
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
+              Cancel
             </Button>
-            <Button type="submit" disabled={saveMutation.isPending}>
-              {saveMutation.isPending ? "A guardar..." : "Guardar"}
+            <Button type="submit" disabled={saveMutation.isPending || !selectedCompany}>
+              {saveMutation.isPending ? "Saving..." : "Save"}
             </Button>
           </div>
         </form>
