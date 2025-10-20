@@ -98,7 +98,7 @@ export default function CompanyDialog({
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
-        throw new Error("Utilizador não autenticado. Por favor, faça login novamente.");
+        throw new Error("User not authenticated. Please log in again.");
       }
       
       const companyData = {
@@ -112,24 +112,18 @@ export default function CompanyDialog({
       };
 
       if (company) {
-        const { data: result, error } = await supabase
+        const { error } = await supabase
           .from("companies")
           .update(companyData)
-          .eq("id", company.id)
-          .select()
-          .single();
+          .eq("id", company.id);
         
         if (error) throw error;
-        return result;
       } else {
-        const { data: result, error } = await supabase
+        const { error } = await supabase
           .from("companies")
-          .insert(companyData)
-          .select()
-          .single();
+          .insert(companyData);
         
         if (error) throw error;
-        return result;
       }
     },
     onSuccess: () => {
@@ -137,25 +131,11 @@ export default function CompanyDialog({
       toast.success(company ? "Company updated successfully" : "Company created successfully");
       onOpenChange(false);
       reset();
+      setSelectedCountry("Portugal");
     },
     onError: (error: any) => {
       console.error("Error saving company:", error);
-      console.error("Error code:", error.code);
-      console.error("Error details:", error.details);
-      
-      if (error.code === "23505") {
-        // Unique constraint violation
-        if (error.message?.includes("tax_id") || error.detail?.includes("tax_id")) {
-          toast.error("This Tax ID is already registered. Please verify and try again.");
-        } else {
-          toast.error("A company with this data already exists.");
-        }
-      } else if (error.code === "PGRST116") {
-        // No rows returned (shouldn't happen with insert/update)
-        toast.error("Error processing data. Please try again.");
-      } else {
-        toast.error("Error saving company: " + (error.message || "Unknown error"));
-      }
+      toast.error("Error: " + (error.message || "Unknown error"));
     },
   });
 
