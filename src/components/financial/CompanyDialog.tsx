@@ -67,7 +67,17 @@ export default function CompanyDialog({
       reset();
     },
     onError: (error: any) => {
-      toast.error("Erro: " + error.message);
+      console.error("Error saving company:", error);
+      
+      if (error.code === "23505") {
+        if (error.message.includes("tax_id")) {
+          toast.error("Este NIF já está registado no sistema");
+        } else {
+          toast.error("Já existe uma empresa com estes dados");
+        }
+      } else {
+        toast.error("Erro ao guardar empresa: " + (error.message || "Erro desconhecido"));
+      }
     },
   });
 
