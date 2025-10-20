@@ -54,6 +54,7 @@ export default function ProjectDialog({
         ...data,
         company_id: companyId,
         budget: data.budget ? Number(data.budget) : null,
+        end_date: data.end_date || null,
       };
 
       if (project) {
