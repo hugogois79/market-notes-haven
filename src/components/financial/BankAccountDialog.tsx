@@ -94,11 +94,14 @@ export default function BankAccountDialog({
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bank-accounts", selectedCompany] });
-      queryClient.invalidateQueries({ queryKey: ["bank-accounts"] });
+      queryClient.invalidateQueries({ 
+        queryKey: ["bank-accounts"],
+        refetchType: 'all'
+      });
       toast.success(account ? "Account updated" : "Account created");
       onOpenChange(false);
       reset();
+      setSelectedCompany(companyId || "");
     },
     onError: (error: any) => {
       toast.error("Error: " + error.message);

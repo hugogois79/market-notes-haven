@@ -30,6 +30,9 @@ export default function BankAccountManagement({ companyId }: BankAccountManageme
       if (error) throw error;
       return data;
     },
+    enabled: !!companyId,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   const deleteMutation = useMutation({
