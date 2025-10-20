@@ -46,35 +46,47 @@ export default function CompanyDialog({
       };
 
       if (company) {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("companies")
           .update(companyData)
-          .eq("id", company.id);
+          .eq("id", company.id)
+          .select()
+          .single();
         
         if (error) throw error;
+        return result;
       } else {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from("companies")
-          .insert(companyData);
+          .insert(companyData)
+          .select()
+          .single();
         
         if (error) throw error;
+        return result;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["companies"] });
-      toast.success(company ? "Empresa atualizada" : "Empresa criada");
+      toast.success(company ? "Empresa atualizada com sucesso" : "Empresa criada com sucesso");
       onOpenChange(false);
       reset();
     },
     onError: (error: any) => {
-      console.error("Error saving company:", error);
+      console.error("Erro ao guardar empresa:", error);
+      console.error("Código do erro:", error.code);
+      console.error("Detalhes do erro:", error.details);
       
       if (error.code === "23505") {
-        if (error.message.includes("tax_id")) {
-          toast.error("Este NIF já está registado no sistema");
+        // Unique constraint violation
+        if (error.message?.includes("tax_id") || error.detail?.includes("tax_id")) {
+          toast.error("Este NIF já está registado no sistema. Por favor, verifique o NIF e tente novamente.");
         } else {
-          toast.error("Já existe uma empresa com estes dados");
+          toast.error("Já existe uma empresa com estes dados no sistema.");
         }
+      } else if (error.code === "PGRST116") {
+        // No rows returned (shouldn't happen with insert/update)
+        toast.error("Erro ao processar dados. Por favor, tente novamente.");
       } else {
         toast.error("Erro ao guardar empresa: " + (error.message || "Erro desconhecido"));
       }
