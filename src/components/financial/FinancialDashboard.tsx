@@ -84,27 +84,36 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {kpis.map((kpi) => (
-        <Card key={kpi.title}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{kpi.title}</CardTitle>
-            <div className={`p-2 rounded-lg ${kpi.bgColor}`}>
-              <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
+    <Card>
+      <CardContent className="p-0">
+        <div className="divide-y">
+          {kpis.map((kpi, index) => (
+            <div 
+              key={kpi.title}
+              className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${kpi.bgColor}`}>
+                  <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {kpi.title}
+                  </p>
+                  {kpi.description && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {kpi.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className={`text-2xl font-bold ${kpi.color}`}>
+                {kpi.value}
+              </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${kpi.color}`}>
-              {kpi.value}
-            </div>
-            {kpi.description && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {kpi.description}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

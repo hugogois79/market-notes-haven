@@ -35,11 +35,12 @@ export default function FinancialPage() {
   }
 
   return (
-    <div className="w-full h-full px-4 py-6 space-y-6 max-w-[1800px] mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="w-full h-full flex flex-col">
+      <div className="border-b bg-background px-6 py-4">
+        <div className="flex items-center justify-between max-w-[1800px] mx-auto">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Financial Management</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
+            <h1 className="text-2xl font-bold">Financial Management</h1>
+            <p className="text-sm text-muted-foreground">
               Multi-company financial control system
             </p>
           </div>
@@ -51,7 +52,9 @@ export default function FinancialPage() {
             />
           )}
         </div>
+      </div>
 
+      <div className="flex-1 overflow-auto px-6 py-6 max-w-[1800px] mx-auto w-full">
         {!selectedCompanyId && companies?.length === 0 ? (
           <div className="text-center py-12">
             <Building2 className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -136,5 +139,6 @@ export default function FinancialPage() {
           </Tabs>
         )}
       </div>
+    </div>
   );
 }
