@@ -72,13 +72,25 @@ export default function CompanyDialog({
 
   useEffect(() => {
     if (company) {
-      reset(company);
+      reset({
+        name: company.name,
+        tax_id: company.tax_id,
+        email: company.email || "",
+        phone: company.phone || "",
+        address: company.address || "",
+      });
       setSelectedCountry(company.country || "Portugal");
     } else {
-      reset({});
+      reset({
+        name: "",
+        tax_id: "",
+        email: "",
+        phone: "",
+        address: "",
+      });
       setSelectedCountry("Portugal");
     }
-  }, [company, reset]);
+  }, [company, open, reset]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
