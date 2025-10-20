@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import MainLayout from "@/layouts/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CompanySelector from "@/components/financial/CompanySelector";
 import FinancialDashboard from "@/components/financial/FinancialDashboard";
@@ -36,8 +35,7 @@ export default function FinancialPage() {
   }
 
   return (
-    <MainLayout>
-      <div className="w-full px-4 py-6 space-y-6 max-w-[1800px] mx-auto">
+    <div className="w-full h-full px-4 py-6 space-y-6 max-w-[1800px] mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Financial Management</h1>
@@ -138,6 +136,5 @@ export default function FinancialPage() {
           </Tabs>
         )}
       </div>
-    </MainLayout>
   );
 }
