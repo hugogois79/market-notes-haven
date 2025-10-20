@@ -4,10 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import BankAccountDialog from "./BankAccountDialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface BankAccountManagementProps {
   companyId: string;
@@ -66,58 +73,61 @@ export default function BankAccountManagement({ companyId }: BankAccountManageme
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {accounts?.map((account) => (
-          <Card key={account.id}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>{account.account_name}</span>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setEditingAccount(account);
-                      setDialogOpen(true);
-                    }}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      if (confirm("Delete account?")) {
-                        deleteMutation.mutate(account.id);
-                      }
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-sm text-muted-foreground">
-                {account.bank_name}
-              </div>
-              <div className="text-sm">
-                <span className="font-medium">IBAN:</span> {account.account_number}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Current Balance:</span>
-                <span className="text-lg font-bold text-primary">
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Account Name</TableHead>
+              <TableHead>Bank</TableHead>
+              <TableHead>IBAN</TableHead>
+              <TableHead className="text-right">Current Balance</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {accounts?.map((account) => (
+              <TableRow key={account.id}>
+                <TableCell className="font-medium">{account.account_name}</TableCell>
+                <TableCell>{account.bank_name}</TableCell>
+                <TableCell>{account.account_number}</TableCell>
+                <TableCell className="text-right font-bold text-primary">
                   {formatCurrency(Number(account.current_balance))}
-                </span>
-              </div>
-              <div>
-                <Badge variant={account.is_active ? "default" : "secondary"}>
-                  {account.is_active ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={account.is_active ? "default" : "secondary"}>
+                    {account.is_active ? "Active" : "Inactive"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex gap-1 justify-end">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setEditingAccount(account);
+                        setDialogOpen(true);
+                      }}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        if (confirm("Delete account?")) {
+                          deleteMutation.mutate(account.id);
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
       <BankAccountDialog
