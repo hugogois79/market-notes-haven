@@ -37,16 +37,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           (isMobile ? 'md:ml-80' : (sidebarExpanded ? 'md:ml-80' : 'md:ml-24')) 
           : 'ml-0'
       }`}>
-        <header className="h-14 px-4 border-b flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            
-          </div>
-          <div className="flex items-center gap-2">
-            <UserProfileButton />
-          </div>
-        </header>
-        
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto w-full">
           {children || <Outlet />}
         </main>
       </div>
