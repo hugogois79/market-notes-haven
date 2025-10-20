@@ -654,6 +654,7 @@ export type Database = {
       }
       financial_projects: {
         Row: {
+          associated_companies: string[] | null
           budget: number | null
           client_name: string | null
           company_id: string
@@ -667,6 +668,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          associated_companies?: string[] | null
           budget?: number | null
           client_name?: string | null
           company_id: string
@@ -680,6 +682,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          associated_companies?: string[] | null
           budget?: number | null
           client_name?: string | null
           company_id?: string

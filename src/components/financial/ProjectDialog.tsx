@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -18,8 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface ProjectDialogProps {
   open: boolean;
@@ -36,6 +37,20 @@ export default function ProjectDialog({
 }: ProjectDialogProps) {
   const queryClient = useQueryClient();
   const { register, handleSubmit, reset, watch, setValue } = useForm();
+  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
+
+  const { data: companies } = useQuery({
+    queryKey: ["companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("*")
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
 
   useEffect(() => {
     if (open && !project) {
@@ -48,8 +63,10 @@ export default function ProjectDialog({
         end_date: '',
         status: 'active',
       });
+      setSelectedCompanies([]);
     } else if (project) {
       reset(project);
+      setSelectedCompanies(project.associated_companies || []);
     }
   }, [open, project, reset]);
 
@@ -60,6 +77,7 @@ export default function ProjectDialog({
         company_id: companyId,
         budget: data.budget ? Number(data.budget) : null,
         end_date: data.end_date || null,
+        associated_companies: selectedCompanies,
       };
 
       if (project) {
@@ -106,6 +124,36 @@ export default function ProjectDialog({
           <div>
             <Label>Cliente</Label>
             <Input {...register("client_name")} placeholder="Nome do cliente" />
+          </div>
+
+          <div>
+            <Label>Empresas Associadas</Label>
+            <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto">
+              {companies?.map((company) => (
+                <div key={company.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`company-${company.id}`}
+                    checked={selectedCompanies.includes(company.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedCompanies([...selectedCompanies, company.id]);
+                      } else {
+                        setSelectedCompanies(selectedCompanies.filter(id => id !== company.id));
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor={`company-${company.id}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    {company.name}
+                  </label>
+                </div>
+              ))}
+              {(!companies || companies.length === 0) && (
+                <p className="text-sm text-muted-foreground">Nenhuma empresa disponível</p>
+              )}
+            </div>
           </div>
 
           <div>

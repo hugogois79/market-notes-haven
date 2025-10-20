@@ -32,6 +32,19 @@ export default function ProjectManagement({ companyId }: ProjectManagementProps)
     },
   });
 
+  const { data: allCompanies } = useQuery({
+    queryKey: ["companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("*")
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -114,6 +127,16 @@ export default function ProjectManagement({ companyId }: ProjectManagementProps)
               {project.client_name && (
                 <div className="text-sm">
                   <span className="font-medium">Cliente:</span> {project.client_name}
+                </div>
+              )}
+              {project.associated_companies && project.associated_companies.length > 0 && (
+                <div className="text-sm">
+                  <span className="font-medium">Empresas:</span>{" "}
+                  {project.associated_companies
+                    .map((companyId: string) => 
+                      allCompanies?.find(c => c.id === companyId)?.name || companyId
+                    )
+                    .join(", ")}
                 </div>
               )}
               {project.budget && (
