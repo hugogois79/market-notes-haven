@@ -336,11 +336,11 @@ const ReceiptGenerator = () => {
           </style>
         </head>
         <body>
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-            <div style="flex: 0 0 auto;">
-              <img src="${logoToUse}" alt="${company?.name || ''}" class="header-logo" style="margin: 0;" />
+          <div style="display: flex; justify-content: flex-end; align-items: flex-start; margin-bottom: 10px;">
+            <div style="text-align: right;">
+              <img src="${logoToUse}" alt="${company?.name || ''}" class="header-logo" style="margin: 0 0 5px 0;" />
+              ${receiptNumber ? `<div class="payment-number" style="margin: 0;">Payment Number: #${receiptNumber}</div>` : ''}
             </div>
-            ${receiptNumber ? `<div class="payment-number">Payment Number: #${receiptNumber}</div>` : ''}
           </div>
           
           <div class="company-info">
