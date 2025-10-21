@@ -1,0 +1,537 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Plus, Pencil, Trash2, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { expenseClaimService, Expense } from "@/services/expenseClaimService";
+import { formatCurrency } from "@/lib/utils";
+import { format } from "date-fns";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+interface ExpenseFormData {
+  expense_date: string;
+  description: string;
+  supplier: string;
+  amount: string;
+  project_id: string;
+  receipt_file?: File;
+}
+
+const NewExpensePage = () => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  
+  const [claimType, setClaimType] = useState<"reembolso" | "justificacao_cartao">("reembolso");
+  const [description, setDescription] = useState("");
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [showExpenseDialog, setShowExpenseDialog] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [currentClaimId, setCurrentClaimId] = useState<string | null>(null);
+  
+  const [expenseForm, setExpenseForm] = useState<ExpenseFormData>({
+    expense_date: format(new Date(), "yyyy-MM-dd"),
+    description: "",
+    supplier: "",
+    amount: "",
+    project_id: "",
+  });
+
+  // Get projects for dropdown
+  const { data: projects } = useQuery({
+    queryKey: ["financial-projects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("financial_projects")
+        .select("id, name")
+        .eq("status", "active");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const createClaimMutation = useMutation({
+    mutationFn: expenseClaimService.createExpenseClaim,
+    onSuccess: (data) => {
+      setCurrentClaimId(data.id);
+    },
+  });
+
+  const addExpenseMutation = useMutation({
+    mutationFn: expenseClaimService.addExpense,
+    onSuccess: (data) => {
+      setExpenses([...expenses, data]);
+      setShowExpenseDialog(false);
+      resetExpenseForm();
+      toast({
+        title: "Despesa adicionada",
+        description: "A despesa foi adicionada com sucesso.",
+      });
+    },
+  });
+
+  const updateExpenseMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<Expense> }) =>
+      expenseClaimService.updateExpense(id, updates),
+    onSuccess: (data) => {
+      setExpenses(expenses.map((e) => (e.id === data.id ? data : e)));
+      setShowExpenseDialog(false);
+      setEditingExpense(null);
+      resetExpenseForm();
+      toast({
+        title: "Despesa atualizada",
+        description: "A despesa foi atualizada com sucesso.",
+      });
+    },
+  });
+
+  const deleteExpenseMutation = useMutation({
+    mutationFn: ({ id, claimId }: { id: string; claimId: string }) =>
+      expenseClaimService.deleteExpense(id, claimId),
+    onSuccess: (_, variables) => {
+      setExpenses(expenses.filter((e) => e.id !== variables.id));
+      toast({
+        title: "Despesa removida",
+        description: "A despesa foi removida com sucesso.",
+      });
+    },
+  });
+
+  const submitClaimMutation = useMutation({
+    mutationFn: expenseClaimService.submitExpenseClaim,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["expense-claims"] });
+      toast({
+        title: "Requisição submetida",
+        description: "Sua requisição foi submetida com sucesso.",
+      });
+      navigate("/expenses");
+    },
+  });
+
+  const saveDraftMutation = useMutation({
+    mutationFn: () =>
+      expenseClaimService.updateExpenseClaim(currentClaimId!, {
+        description,
+        status: "rascunho",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["expense-claims"] });
+      toast({
+        title: "Rascunho salvo",
+        description: "Sua requisição foi salva como rascunho.",
+      });
+      navigate("/expenses");
+    },
+  });
+
+  const resetExpenseForm = () => {
+    setExpenseForm({
+      expense_date: format(new Date(), "yyyy-MM-dd"),
+      description: "",
+      supplier: "",
+      amount: "",
+      project_id: "",
+    });
+  };
+
+  const handleAddExpense = async () => {
+    if (!currentClaimId) {
+      const claim = await createClaimMutation.mutateAsync({
+        claim_type: claimType,
+        description,
+        status: "rascunho",
+      });
+      setCurrentClaimId(claim.id);
+    }
+
+    let receiptUrl = null;
+    if (expenseForm.receipt_file && currentClaimId) {
+      receiptUrl = await expenseClaimService.uploadReceipt(
+        expenseForm.receipt_file,
+        currentClaimId
+      );
+    }
+
+    if (editingExpense) {
+      updateExpenseMutation.mutate({
+        id: editingExpense.id,
+        updates: {
+          expense_date: expenseForm.expense_date,
+          description: expenseForm.description,
+          supplier: expenseForm.supplier,
+          amount: parseFloat(expenseForm.amount),
+          project_id: expenseForm.project_id || null,
+          receipt_image_url: receiptUrl || editingExpense.receipt_image_url,
+        },
+      });
+    } else {
+      addExpenseMutation.mutate({
+        expense_claim_id: currentClaimId!,
+        expense_date: expenseForm.expense_date,
+        description: expenseForm.description,
+        supplier: expenseForm.supplier,
+        amount: parseFloat(expenseForm.amount),
+        project_id: expenseForm.project_id || null,
+        receipt_image_url: receiptUrl,
+      });
+    }
+  };
+
+  const handleEditExpense = (expense: Expense) => {
+    setEditingExpense(expense);
+    setExpenseForm({
+      expense_date: expense.expense_date,
+      description: expense.description,
+      supplier: expense.supplier,
+      amount: expense.amount.toString(),
+      project_id: expense.project_id || "",
+    });
+    setShowExpenseDialog(true);
+  };
+
+  const handleDeleteExpense = (id: string) => {
+    if (currentClaimId) {
+      deleteExpenseMutation.mutate({ id, claimId: currentClaimId });
+    }
+  };
+
+  const handleSubmit = () => {
+    if (!currentClaimId) {
+      toast({
+        title: "Erro",
+        description: "Adicione pelo menos uma despesa antes de submeter.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (expenses.length === 0) {
+      toast({
+        title: "Erro",
+        description: "Adicione pelo menos uma despesa antes de submeter.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    submitClaimMutation.mutate(currentClaimId);
+  };
+
+  const handleSaveDraft = () => {
+    if (!currentClaimId) {
+      toast({
+        title: "Erro",
+        description: "Adicione pelo menos uma despesa antes de salvar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    saveDraftMutation.mutate();
+  };
+
+  const total = expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/expenses")}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Nova Requisição de Despesas</h1>
+          <p className="text-muted-foreground mt-1">
+            Preencha os dados da requisição
+          </p>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Tipo de Requisição</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RadioGroup
+            value={claimType}
+            onValueChange={(value) =>
+              setClaimType(value as "reembolso" | "justificacao_cartao")
+            }
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="reembolso" id="reembolso" />
+              <Label htmlFor="reembolso">Reembolso de Despesas</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem
+                value="justificacao_cartao"
+                id="justificacao_cartao"
+              />
+              <Label htmlFor="justificacao_cartao">
+                Justificação de Cartão de Crédito
+              </Label>
+            </div>
+          </RadioGroup>
+
+          <div className="mt-4">
+            <Label htmlFor="description">Descrição Geral</Label>
+            <Textarea
+              id="description"
+              placeholder="ex: Viagem a Lisboa, Material escritório"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="mt-2"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Lista de Despesas</CardTitle>
+            <Button onClick={() => setShowExpenseDialog(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Adicionar Despesa
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {expenses.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhuma despesa adicionada. Clique em "Adicionar Despesa" para começar.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead>Fornecedor</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Projeto</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {expenses.map((expense) => (
+                  <TableRow key={expense.id}>
+                    <TableCell>
+                      {format(new Date(expense.expense_date), "dd/MM/yyyy")}
+                    </TableCell>
+                    <TableCell>{expense.description}</TableCell>
+                    <TableCell>{expense.supplier}</TableCell>
+                    <TableCell className="font-semibold">
+                      {formatCurrency(Number(expense.amount))}
+                    </TableCell>
+                    <TableCell>
+                      {projects?.find((p) => p.id === expense.project_id)?.name ||
+                        "-"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEditExpense(expense)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDeleteExpense(expense.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Resumo e Submissão</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center text-xl font-bold">
+              <span>Total:</span>
+              <span className="text-primary">{formatCurrency(total)}</span>
+            </div>
+            <div className="flex gap-4">
+              <Button
+                variant="outline"
+                onClick={handleSaveDraft}
+                disabled={saveDraftMutation.isPending}
+              >
+                Guardar Rascunho
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={submitClaimMutation.isPending || expenses.length === 0}
+              >
+                Submeter Requisição
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={showExpenseDialog} onOpenChange={setShowExpenseDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingExpense ? "Editar Despesa" : "Adicionar Despesa"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="expense_date">Data *</Label>
+              <Input
+                id="expense_date"
+                type="date"
+                value={expenseForm.expense_date}
+                onChange={(e) =>
+                  setExpenseForm({ ...expenseForm, expense_date: e.target.value })
+                }
+                max={format(new Date(), "yyyy-MM-dd")}
+              />
+            </div>
+            <div>
+              <Label htmlFor="expense_description">Descrição *</Label>
+              <Input
+                id="expense_description"
+                value={expenseForm.description}
+                onChange={(e) =>
+                  setExpenseForm({ ...expenseForm, description: e.target.value })
+                }
+                placeholder="Descrição da despesa"
+              />
+            </div>
+            <div>
+              <Label htmlFor="supplier">Fornecedor *</Label>
+              <Input
+                id="supplier"
+                value={expenseForm.supplier}
+                onChange={(e) =>
+                  setExpenseForm({ ...expenseForm, supplier: e.target.value })
+                }
+                placeholder="Nome do fornecedor"
+              />
+            </div>
+            <div>
+              <Label htmlFor="amount">Valor (€) *</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                value={expenseForm.amount}
+                onChange={(e) =>
+                  setExpenseForm({ ...expenseForm, amount: e.target.value })
+                }
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <Label htmlFor="project">Projeto (opcional)</Label>
+              <Select
+                value={expenseForm.project_id}
+                onValueChange={(value) =>
+                  setExpenseForm({ ...expenseForm, project_id: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um projeto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhum</SelectItem>
+                  {projects?.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="receipt">Comprovativo (opcional)</Label>
+              <Input
+                id="receipt"
+                type="file"
+                accept=".jpg,.jpeg,.png,.pdf"
+                onChange={(e) =>
+                  setExpenseForm({
+                    ...expenseForm,
+                    receipt_file: e.target.files?.[0],
+                  })
+                }
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Formatos aceites: JPG, PNG, PDF (máx. 5MB)
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowExpenseDialog(false);
+                setEditingExpense(null);
+                resetExpenseForm();
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAddExpense}
+              disabled={
+                !expenseForm.expense_date ||
+                !expenseForm.description ||
+                !expenseForm.supplier ||
+                !expenseForm.amount ||
+                parseFloat(expenseForm.amount) <= 0
+              }
+            >
+              {editingExpense ? "Atualizar" : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default NewExpensePage;

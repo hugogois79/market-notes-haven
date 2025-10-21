@@ -490,6 +490,45 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_claims: {
+        Row: {
+          claim_number: number
+          claim_type: string
+          created_at: string
+          description: string | null
+          employee_id: string
+          id: string
+          status: string
+          submission_date: string | null
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          claim_number?: number
+          claim_type: string
+          created_at?: string
+          description?: string | null
+          employee_id: string
+          id?: string
+          status?: string
+          submission_date?: string | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          claim_number?: number
+          claim_type?: string
+          created_at?: string
+          description?: string | null
+          employee_id?: string
+          id?: string
+          status?: string
+          submission_date?: string | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       expense_reports: {
         Row: {
           created_at: string
@@ -559,59 +598,50 @@ export type Database = {
       expenses: {
         Row: {
           amount: number
-          category_id: string | null
           created_at: string
-          date: string
+          description: string
+          expense_claim_id: string
+          expense_date: string
           id: string
-          image_url: string | null
-          merchant: string | null
-          notes: string | null
           project_id: string | null
-          status: Database["public"]["Enums"]["expense_status"]
-          title: string
-          updated_at: string
+          receipt_image_url: string | null
+          supplier: string
         }
         Insert: {
           amount: number
-          category_id?: string | null
           created_at?: string
-          date: string
+          description: string
+          expense_claim_id: string
+          expense_date: string
           id?: string
-          image_url?: string | null
-          merchant?: string | null
-          notes?: string | null
           project_id?: string | null
-          status?: Database["public"]["Enums"]["expense_status"]
-          title: string
-          updated_at?: string
+          receipt_image_url?: string | null
+          supplier: string
         }
         Update: {
           amount?: number
-          category_id?: string | null
           created_at?: string
-          date?: string
+          description?: string
+          expense_claim_id?: string
+          expense_date?: string
           id?: string
-          image_url?: string | null
-          merchant?: string | null
-          notes?: string | null
           project_id?: string | null
-          status?: Database["public"]["Enums"]["expense_status"]
-          title?: string
-          updated_at?: string
+          receipt_image_url?: string | null
+          supplier?: string
         }
         Relationships: [
           {
-            foreignKeyName: "expenses_category_id_fkey"
-            columns: ["category_id"]
+            foreignKeyName: "fk_expenses_claim"
+            columns: ["expense_claim_id"]
             isOneToOne: false
-            referencedRelation: "expense_categories"
+            referencedRelation: "expense_claims"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "expenses_project_id_fkey"
+            foreignKeyName: "fk_expenses_project"
             columns: ["project_id"]
             isOneToOne: false
-            referencedRelation: "projects"
+            referencedRelation: "financial_projects"
             referencedColumns: ["id"]
           },
         ]
@@ -1735,13 +1765,6 @@ export type Database = {
           report_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "report_expenses_expense_id_fkey"
-            columns: ["expense_id"]
-            isOneToOne: false
-            referencedRelation: "expenses"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "report_expenses_report_id_fkey"
             columns: ["report_id"]
