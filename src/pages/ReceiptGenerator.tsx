@@ -277,6 +277,10 @@ const ReceiptGenerator = () => {
               font-size: 12px;
               color: #333;
             }
+            .company-info {
+              text-align: center;
+              margin-bottom: 20px;
+            }
             table {
               border-collapse: collapse;
               width: 100%;
@@ -332,18 +336,21 @@ const ReceiptGenerator = () => {
           </style>
         </head>
         <body>
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
             <div style="flex: 0 0 auto;">
               <img src="${logoToUse}" alt="${company?.name || ''}" class="header-logo" style="margin: 0;" />
             </div>
-            <div style="text-align: right; flex: 1; margin-left: 20px;">
-              <h2 style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">${company?.name || ''}</h2>
-              ${company?.company_number || company?.nipc ? `<p style="margin: 2px 0; font-size: 10px;">Company Number: ${company?.company_number || company?.nipc || ''}</p>` : ''}
-              ${companyAddress}
-            </div>
+            ${receiptNumber ? `<div class="payment-number">Payment Number: #${receiptNumber}</div>` : ''}
           </div>
+          
+          <div class="company-info">
+            <h2 style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">${company?.name || ''}</h2>
+            ${company?.company_number || company?.nipc ? `<p style="margin: 2px 0; font-size: 10px;">Company Number: ${company?.company_number || company?.nipc || ''}</p>` : ''}
+            ${companyAddress}
+          </div>
+          
           <hr style="border: none; border-top: 1px solid #ccc; margin: 0 0 15px 0;" />
-          ${receiptNumber ? `<div class="payment-number">Payment Number: #${receiptNumber}</div>` : ''}
+          
           <div class="formatted-receipt">
             ${generatedReceipt}
           </div>
