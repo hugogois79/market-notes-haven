@@ -500,17 +500,7 @@ const ReceiptGenerator = () => {
                <Card className="bg-white shadow-lg">
                 <div className="p-8 relative">
                   <div className="flex justify-between items-start mb-6">
-                    <div className="flex-shrink-0">
-                      <img 
-                        src={(content.toLowerCase().includes('epicatmosphere') || 
-                              generatedReceipt.toLowerCase().includes('epicatmosphere')) 
-                              ? epicatmosphereLogo 
-                              : sustainableYieldLogo} 
-                        alt="Company Logo" 
-                        className="w-48 h-auto"
-                      />
-                    </div>
-                    <div className="text-right flex-1 ml-4">
+                    <div className="text-left flex-1 mr-4">
                       {(() => {
                         const isEpic = content.toLowerCase().includes('epicatmosphere') || 
                                       generatedReceipt.toLowerCase().includes('epicatmosphere');
@@ -539,6 +529,16 @@ const ReceiptGenerator = () => {
                           </>
                         );
                       })()}
+                    </div>
+                    <div className="flex-shrink-0">
+                      <img 
+                        src={(content.toLowerCase().includes('epicatmosphere') || 
+                              generatedReceipt.toLowerCase().includes('epicatmosphere')) 
+                              ? epicatmosphereLogo 
+                              : sustainableYieldLogo} 
+                        alt="Company Logo" 
+                        className="w-48 h-auto"
+                      />
                     </div>
                   </div>
                   <hr className="border-t border-gray-300 mb-6" />
