@@ -166,6 +166,14 @@ const EditExpensePage = () => {
         description: "A despesa foi adicionada com sucesso.",
       });
     },
+    onError: (error) => {
+      console.error("Error adding expense:", error);
+      toast({
+        title: "Erro ao adicionar despesa",
+        description: "Não foi possível adicionar a despesa. Por favor tente novamente.",
+        variant: "destructive",
+      });
+    },
   });
 
   const updateExpenseMutation = useMutation({
@@ -179,6 +187,14 @@ const EditExpensePage = () => {
       toast({
         title: "Despesa atualizada",
         description: "A despesa foi atualizada com sucesso.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error updating expense:", error);
+      toast({
+        title: "Erro ao atualizar despesa",
+        description: "Não foi possível atualizar a despesa. Por favor tente novamente.",
+        variant: "destructive",
       });
     },
   });
@@ -247,41 +263,78 @@ const EditExpensePage = () => {
   };
 
   const handleAddExpense = async () => {
-    // Create or get supplier
-    if (expenseForm.supplier.trim()) {
-      await supplierService.getOrCreateSupplier(expenseForm.supplier.trim());
-      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-    }
+    try {
+      // Validação básica
+      if (!expenseForm.expense_date || !expenseForm.description || !expenseForm.supplier || !expenseForm.amount) {
+        toast({
+          title: "Campos obrigatórios",
+          description: "Por favor preencha todos os campos obrigatórios.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    let receiptUrl = null;
-    if (expenseForm.receipt_file && id) {
-      receiptUrl = await expenseClaimService.uploadReceipt(
-        expenseForm.receipt_file,
-        id
-      );
-    }
+      if (parseFloat(expenseForm.amount) <= 0) {
+        toast({
+          title: "Valor inválido",
+          description: "O valor da despesa deve ser maior que zero.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (editingExpense) {
-      updateExpenseMutation.mutate({
-        id: editingExpense.id,
-        updates: {
+      // Create or get supplier
+      if (expenseForm.supplier.trim()) {
+        await supplierService.getOrCreateSupplier(expenseForm.supplier.trim());
+        queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      }
+
+      let receiptUrl = null;
+      if (expenseForm.receipt_file && id) {
+        try {
+          receiptUrl = await expenseClaimService.uploadReceipt(
+            expenseForm.receipt_file,
+            id
+          );
+        } catch (uploadError) {
+          console.error("Upload error:", uploadError);
+          toast({
+            title: "Erro no upload",
+            description: "Não foi possível fazer upload do comprovativo. A despesa será guardada sem comprovativo.",
+            variant: "destructive",
+          });
+        }
+      }
+
+      if (editingExpense) {
+        updateExpenseMutation.mutate({
+          id: editingExpense.id,
+          updates: {
+            expense_date: expenseForm.expense_date,
+            description: expenseForm.description,
+            supplier: expenseForm.supplier.trim(),
+            amount: parseFloat(expenseForm.amount),
+            project_id: expenseForm.project_id || null,
+            receipt_image_url: receiptUrl || editingExpense.receipt_image_url,
+          },
+        });
+      } else {
+        addExpenseMutation.mutate({
+          expense_claim_id: id!,
           expense_date: expenseForm.expense_date,
           description: expenseForm.description,
           supplier: expenseForm.supplier.trim(),
           amount: parseFloat(expenseForm.amount),
           project_id: expenseForm.project_id || null,
-          receipt_image_url: receiptUrl || editingExpense.receipt_image_url,
-        },
-      });
-    } else {
-      addExpenseMutation.mutate({
-        expense_claim_id: id!,
-        expense_date: expenseForm.expense_date,
-        description: expenseForm.description,
-        supplier: expenseForm.supplier.trim(),
-        amount: parseFloat(expenseForm.amount),
-        project_id: expenseForm.project_id || null,
-        receipt_image_url: receiptUrl,
+          receipt_image_url: receiptUrl,
+        });
+      }
+    } catch (error) {
+      console.error("Error adding expense:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao guardar a despesa. Por favor tente novamente.",
+        variant: "destructive",
       });
     }
   };
