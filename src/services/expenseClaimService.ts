@@ -197,12 +197,19 @@ export const expenseClaimService = {
 
   // Upload receipt
   async uploadReceipt(file: File, claimId: string) {
+    // Get current user ID
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) throw new Error('User not authenticated');
+
     const fileExt = file.name.split('.').pop();
-    const fileName = `${claimId}/${Date.now()}.${fileExt}`;
+    const fileName = `${userData.user.id}/${claimId}/${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('Expense Receipts')
-      .upload(fileName, file);
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
 
     if (uploadError) throw uploadError;
 
