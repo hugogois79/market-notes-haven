@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Plus, Eye, Edit, FileText } from "lucide-react";
+import { Plus, Eye, Edit, FileText, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -77,10 +77,16 @@ const ExpensesPage = () => {
             Gerencie seus pedidos de reembolso e justificações
           </p>
         </div>
-        <Button onClick={() => navigate("/expenses/new")} size="lg">
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Requisição
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => navigate("/expenses/settings")} variant="outline" size="lg">
+            <Settings className="mr-2 h-4 w-4" />
+            Definições
+          </Button>
+          <Button onClick={() => navigate("/expenses/new")} size="lg">
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Requisição
+          </Button>
+        </div>
       </div>
 
       <Card>
