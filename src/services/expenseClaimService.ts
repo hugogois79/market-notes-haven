@@ -152,7 +152,7 @@ export const expenseClaimService = {
     if (error) throw error;
 
     // Update total amount
-    await this.updateClaimTotal(expense.expense_claim_id);
+    await expenseClaimService.updateClaimTotal(expense.expense_claim_id);
 
     return data as Expense;
   },
@@ -169,7 +169,7 @@ export const expenseClaimService = {
     if (error) throw error;
 
     // Update total amount
-    await this.updateClaimTotal(data.expense_claim_id);
+    await expenseClaimService.updateClaimTotal(data.expense_claim_id);
 
     return data as Expense;
   },
@@ -184,7 +184,7 @@ export const expenseClaimService = {
     if (error) throw error;
 
     // Update total amount
-    await this.updateClaimTotal(claimId);
+    await expenseClaimService.updateClaimTotal(claimId);
   },
 
   // Update claim total amount
