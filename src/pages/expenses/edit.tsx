@@ -482,6 +482,7 @@ const EditExpensePage = () => {
                   <TableHead>Fornecedor</TableHead>
                   <TableHead>Valor</TableHead>
                   <TableHead>Projeto</TableHead>
+                  <TableHead>Comprovativo</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -499,6 +500,21 @@ const EditExpensePage = () => {
                     <TableCell>
                       {projects?.find((p) => p.id === expense.project_id)?.name ||
                         "-"}
+                    </TableCell>
+                    <TableCell>
+                      {expense.receipt_image_url ? (
+                        <a
+                          href={expense.receipt_image_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline flex items-center gap-1"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Ver
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
@@ -693,6 +709,19 @@ const EditExpensePage = () => {
             </div>
             <div>
               <Label htmlFor="receipt">Comprovativo (opcional)</Label>
+              {editingExpense?.receipt_image_url && (
+                <div className="mb-2">
+                  <a
+                    href={editingExpense.receipt_image_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline flex items-center gap-2 text-sm"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Ver comprovativo atual
+                  </a>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Input
                   id="receipt"
@@ -709,6 +738,7 @@ const EditExpensePage = () => {
               </div>
               <p className="text-sm text-muted-foreground mt-1">
                 Formatos aceites: JPG, PNG, PDF (máx. 5MB)
+                {expenseForm.receipt_file && ` - ${expenseForm.receipt_file.name}`}
               </p>
             </div>
           </div>
