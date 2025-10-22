@@ -524,7 +524,14 @@ const NewExpensePage = () => {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-full p-0">
-                  <Command>
+                  <Command
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && expenseForm.supplier.trim()) {
+                        e.preventDefault();
+                        setSupplierOpen(false);
+                      }
+                    }}
+                  >
                     <CommandInput 
                       placeholder="Procurar ou adicionar fornecedor..." 
                       value={expenseForm.supplier}
