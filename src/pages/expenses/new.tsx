@@ -194,12 +194,16 @@ const NewExpensePage = () => {
   };
 
   const handleAddExpense = async () => {
-    if (!currentClaimId) {
+    let claimId = currentClaimId;
+    
+    // Create claim if it doesn't exist
+    if (!claimId) {
       const claim = await createClaimMutation.mutateAsync({
         claim_type: claimType,
         description,
         status: "rascunho",
       });
+      claimId = claim.id;
       setCurrentClaimId(claim.id);
     }
 
@@ -211,10 +215,10 @@ const NewExpensePage = () => {
     }
 
     let receiptUrl = null;
-    if (expenseForm.receipt_file && currentClaimId) {
+    if (expenseForm.receipt_file && claimId) {
       receiptUrl = await expenseClaimService.uploadReceipt(
         expenseForm.receipt_file,
-        currentClaimId
+        claimId
       );
     }
 
@@ -224,7 +228,7 @@ const NewExpensePage = () => {
         updates: {
           expense_date: expenseForm.expense_date,
           description: expenseForm.description,
-          supplier: expenseForm.supplier,
+          supplier: expenseForm.supplier.trim(),
           amount: parseFloat(expenseForm.amount),
           project_id: expenseForm.project_id || null,
           receipt_image_url: receiptUrl || editingExpense.receipt_image_url,
@@ -232,10 +236,10 @@ const NewExpensePage = () => {
       });
     } else {
       addExpenseMutation.mutate({
-        expense_claim_id: currentClaimId!,
+        expense_claim_id: claimId,
         expense_date: expenseForm.expense_date,
         description: expenseForm.description,
-        supplier: expenseForm.supplier,
+        supplier: expenseForm.supplier.trim(),
         amount: parseFloat(expenseForm.amount),
         project_id: expenseForm.project_id || null,
         receipt_image_url: receiptUrl,
