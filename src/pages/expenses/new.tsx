@@ -125,6 +125,14 @@ const NewExpensePage = () => {
         description: "A despesa foi adicionada com sucesso.",
       });
     },
+    onError: (error) => {
+      console.error("Error adding expense:", error);
+      toast({
+        title: "Erro ao adicionar despesa",
+        description: "Não foi possível adicionar a despesa. Por favor tente novamente.",
+        variant: "destructive",
+      });
+    },
   });
 
   const updateExpenseMutation = useMutation({
@@ -138,6 +146,14 @@ const NewExpensePage = () => {
       toast({
         title: "Despesa atualizada",
         description: "A despesa foi atualizada com sucesso.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error updating expense:", error);
+      toast({
+        title: "Erro ao atualizar despesa",
+        description: "Não foi possível atualizar a despesa. Por favor tente novamente.",
+        variant: "destructive",
       });
     },
   });
@@ -194,55 +210,92 @@ const NewExpensePage = () => {
   };
 
   const handleAddExpense = async () => {
-    let claimId = currentClaimId;
-    
-    // Create claim if it doesn't exist
-    if (!claimId) {
-      const claim = await createClaimMutation.mutateAsync({
-        claim_type: claimType,
-        description,
-        status: "rascunho",
-      });
-      claimId = claim.id;
-      setCurrentClaimId(claim.id);
-    }
+    try {
+      // Validação básica
+      if (!expenseForm.expense_date || !expenseForm.description || !expenseForm.supplier || !expenseForm.amount) {
+        toast({
+          title: "Campos obrigatórios",
+          description: "Por favor preencha todos os campos obrigatórios.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    // Create or get supplier
-    if (expenseForm.supplier.trim()) {
-      await supplierService.getOrCreateSupplier(expenseForm.supplier.trim());
-      // Invalidate suppliers query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-    }
+      if (parseFloat(expenseForm.amount) <= 0) {
+        toast({
+          title: "Valor inválido",
+          description: "O valor da despesa deve ser maior que zero.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    let receiptUrl = null;
-    if (expenseForm.receipt_file && claimId) {
-      receiptUrl = await expenseClaimService.uploadReceipt(
-        expenseForm.receipt_file,
-        claimId
-      );
-    }
+      let claimId = currentClaimId;
+      
+      // Create claim if it doesn't exist
+      if (!claimId) {
+        const claim = await createClaimMutation.mutateAsync({
+          claim_type: claimType,
+          description,
+          status: "rascunho",
+        });
+        claimId = claim.id;
+        setCurrentClaimId(claim.id);
+      }
 
-    if (editingExpense) {
-      updateExpenseMutation.mutate({
-        id: editingExpense.id,
-        updates: {
+      // Create or get supplier
+      if (expenseForm.supplier.trim()) {
+        await supplierService.getOrCreateSupplier(expenseForm.supplier.trim());
+        // Invalidate suppliers query to refresh the list
+        queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      }
+
+      let receiptUrl = null;
+      if (expenseForm.receipt_file && claimId) {
+        try {
+          receiptUrl = await expenseClaimService.uploadReceipt(
+            expenseForm.receipt_file,
+            claimId
+          );
+        } catch (uploadError) {
+          console.error("Upload error:", uploadError);
+          toast({
+            title: "Erro no upload",
+            description: "Não foi possível fazer upload do comprovativo. A despesa será guardada sem comprovativo.",
+            variant: "destructive",
+          });
+        }
+      }
+
+      if (editingExpense) {
+        updateExpenseMutation.mutate({
+          id: editingExpense.id,
+          updates: {
+            expense_date: expenseForm.expense_date,
+            description: expenseForm.description,
+            supplier: expenseForm.supplier.trim(),
+            amount: parseFloat(expenseForm.amount),
+            project_id: expenseForm.project_id || null,
+            receipt_image_url: receiptUrl || editingExpense.receipt_image_url,
+          },
+        });
+      } else {
+        addExpenseMutation.mutate({
+          expense_claim_id: claimId,
           expense_date: expenseForm.expense_date,
           description: expenseForm.description,
           supplier: expenseForm.supplier.trim(),
           amount: parseFloat(expenseForm.amount),
           project_id: expenseForm.project_id || null,
-          receipt_image_url: receiptUrl || editingExpense.receipt_image_url,
-        },
-      });
-    } else {
-      addExpenseMutation.mutate({
-        expense_claim_id: claimId,
-        expense_date: expenseForm.expense_date,
-        description: expenseForm.description,
-        supplier: expenseForm.supplier.trim(),
-        amount: parseFloat(expenseForm.amount),
-        project_id: expenseForm.project_id || null,
-        receipt_image_url: receiptUrl,
+          receipt_image_url: receiptUrl,
+        });
+      }
+    } catch (error) {
+      console.error("Error adding expense:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao guardar a despesa. Por favor tente novamente.",
+        variant: "destructive",
       });
     }
   };
