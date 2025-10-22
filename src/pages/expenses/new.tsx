@@ -70,23 +70,33 @@ const NewExpensePage = () => {
     project_id: "",
   });
 
-  // Get projects for dropdown
+  // Get requesters for dropdown
+  const { data: requesters } = useQuery({
+    queryKey: ["expense-requesters"],
+    queryFn: () => expenseRequesterService.getRequesters(),
+  });
+
+  // Get projects for dropdown - filtered by requester
   const { data: projects } = useQuery({
-    queryKey: ["financial-projects"],
+    queryKey: ["financial-projects", requesterId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("financial_projects")
         .select("id, name")
         .eq("status", "active");
       if (error) throw error;
-      return data;
+      
+      // Filter by requester's assigned projects
+      if (requesterId && requesters) {
+        const selectedRequester = requesters.find(r => r.id === requesterId);
+        if (selectedRequester?.assigned_project_ids?.length) {
+          return data?.filter(p => selectedRequester.assigned_project_ids.includes(p.id)) || [];
+        }
+      }
+      
+      return data || [];
     },
-  });
-
-  // Get requesters for dropdown
-  const { data: requesters } = useQuery({
-    queryKey: ["expense-requesters"],
-    queryFn: () => expenseRequesterService.getRequesters(),
+    enabled: !!requesters,
   });
 
   // Get suppliers for autocomplete
