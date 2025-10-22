@@ -77,7 +77,7 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       path: "/receipt-generator",
     },
     {
-      title: "Financeiro",
+      title: "Finance",
       icon: <Coins size={20} />,
       path: "/financeiro",
     },
@@ -155,12 +155,12 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
                 ? "bg-brand/20 text-brand font-medium"
                 : "text-white hover:bg-white/10 hover:text-brand"
             )}
-            title={!isExpanded ? "Project Boards" : ""}
+            title={!isExpanded ? "Boards" : ""}
           >
             <Kanban size={20} />
             {isExpanded && (
               <>
-                <span className="flex-1 text-left">Project Boards</span>
+                <span className="flex-1 text-left">Boards</span>
                 {isProjectsExpanded ? (
                   <ChevronDown size={16} />
                 ) : (
