@@ -32,10 +32,14 @@ import {
 } from "@/components/ui/select";
 import { expenseClaimService, Expense } from "@/services/expenseClaimService";
 import { expenseRequesterService } from "@/services/expenseRequesterService";
-import { formatCurrency } from "@/lib/utils";
+import { supplierService } from "@/services/supplierService";
+import { formatCurrency, cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
 
 interface ExpenseFormData {
   expense_date: string;
@@ -84,6 +88,14 @@ const NewExpensePage = () => {
     queryKey: ["expense-requesters"],
     queryFn: () => expenseRequesterService.getRequesters(),
   });
+
+  // Get suppliers for autocomplete
+  const { data: suppliers } = useQuery({
+    queryKey: ["suppliers"],
+    queryFn: () => supplierService.getSuppliers(),
+  });
+
+  const [supplierOpen, setSupplierOpen] = useState(false);
 
   const createClaimMutation = useMutation({
     mutationFn: expenseClaimService.createExpenseClaim,
@@ -179,6 +191,13 @@ const NewExpensePage = () => {
         status: "rascunho",
       });
       setCurrentClaimId(claim.id);
+    }
+
+    // Create or get supplier
+    if (expenseForm.supplier.trim()) {
+      await supplierService.getOrCreateSupplier(expenseForm.supplier.trim());
+      // Invalidate suppliers query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
     }
 
     let receiptUrl = null;
@@ -482,14 +501,57 @@ const NewExpensePage = () => {
             </div>
             <div>
               <Label htmlFor="supplier">Fornecedor *</Label>
-              <Input
-                id="supplier"
-                value={expenseForm.supplier}
-                onChange={(e) =>
-                  setExpenseForm({ ...expenseForm, supplier: e.target.value })
-                }
-                placeholder="Nome do fornecedor"
-              />
+              <Popover open={supplierOpen} onOpenChange={setSupplierOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={supplierOpen}
+                    className="w-full justify-between"
+                  >
+                    {expenseForm.supplier || "Selecione ou digite um fornecedor..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Procurar ou adicionar fornecedor..." 
+                      value={expenseForm.supplier}
+                      onValueChange={(value) =>
+                        setExpenseForm({ ...expenseForm, supplier: value })
+                      }
+                    />
+                    <CommandList>
+                      <CommandEmpty>
+                        <div className="p-2 text-sm">
+                          Pressione Enter para adicionar "{expenseForm.supplier}"
+                        </div>
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {suppliers?.map((supplier) => (
+                          <CommandItem
+                            key={supplier.id}
+                            value={supplier.name}
+                            onSelect={(currentValue) => {
+                              setExpenseForm({ ...expenseForm, supplier: currentValue });
+                              setSupplierOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                expenseForm.supplier === supplier.name ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {supplier.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label htmlFor="amount">Valor (€) *</Label>
