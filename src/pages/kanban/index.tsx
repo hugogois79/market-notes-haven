@@ -22,7 +22,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Search, Kanban as KanbanIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PopulateBoardButton } from './PopulateBoardButton';
 
 const KanbanPage = () => {
   const { boardId } = useParams();
@@ -218,10 +217,6 @@ const KanbanPage = () => {
               className="pl-10"
             />
           </div>
-          
-          {boardId === '7878b039-c2e2-4eef-bf0f-98b7e2a064fc' && (
-            <PopulateBoardButton boardId={boardId} />
-          )}
         </div>
 
         {/* Board title and description */}
