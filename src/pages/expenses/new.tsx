@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Pencil, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Upload, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { expenseClaimService, Expense } from "@/services/expenseClaimService";
+import { expenseRequesterService } from "@/services/expenseRequesterService";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
@@ -51,6 +52,7 @@ const NewExpensePage = () => {
   
   const [claimType, setClaimType] = useState<"reembolso" | "justificacao_cartao">("reembolso");
   const [description, setDescription] = useState("");
+  const [requesterId, setRequesterId] = useState<string>("");
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -75,6 +77,12 @@ const NewExpensePage = () => {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Get requesters for dropdown
+  const { data: requesters } = useQuery({
+    queryKey: ["expense-requesters"],
+    queryFn: () => expenseRequesterService.getRequesters(),
   });
 
   const createClaimMutation = useMutation({
@@ -140,6 +148,7 @@ const NewExpensePage = () => {
     mutationFn: () =>
       expenseClaimService.updateExpenseClaim(currentClaimId!, {
         description,
+        requester_id: requesterId || null,
         status: "rascunho",
       }),
     onSuccess: () => {
@@ -262,16 +271,26 @@ const NewExpensePage = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/expenses")}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Nova Requisição de Despesas</h1>
-          <p className="text-muted-foreground mt-1">
-            Preencha os dados da requisição
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/expenses")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Nova Requisição de Despesas</h1>
+            <p className="text-muted-foreground mt-1">
+              Preencha os dados da requisição
+            </p>
+          </div>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate("/expenses/settings")}
+        >
+          <Settings className="mr-2 h-4 w-4" />
+          Definições
+        </Button>
       </div>
 
       <Card>
@@ -279,36 +298,56 @@ const NewExpensePage = () => {
           <CardTitle>Tipo de Requisição</CardTitle>
         </CardHeader>
         <CardContent>
-          <RadioGroup
-            value={claimType}
-            onValueChange={(value) =>
-              setClaimType(value as "reembolso" | "justificacao_cartao")
-            }
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="reembolso" id="reembolso" />
-              <Label htmlFor="reembolso">Reembolso de Despesas</Label>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="requester">Requisitante *</Label>
+              <Select value={requesterId} onValueChange={setRequesterId}>
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Selecione o requisitante" />
+                </SelectTrigger>
+                <SelectContent>
+                  {requesters?.map((requester) => (
+                    <SelectItem key={requester.id} value={requester.id}>
+                      {requester.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem
-                value="justificacao_cartao"
-                id="justificacao_cartao"
-              />
-              <Label htmlFor="justificacao_cartao">
-                Justificação de Cartão de Crédito
-              </Label>
-            </div>
-          </RadioGroup>
 
-          <div className="mt-4">
-            <Label htmlFor="description">Descrição Geral</Label>
-            <Textarea
-              id="description"
-              placeholder="ex: Viagem a Lisboa, Material escritório"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="mt-2"
-            />
+            <div>
+              <RadioGroup
+                value={claimType}
+                onValueChange={(value) =>
+                  setClaimType(value as "reembolso" | "justificacao_cartao")
+                }
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="reembolso" id="reembolso" />
+                  <Label htmlFor="reembolso">Reembolso de Despesas</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="justificacao_cartao"
+                    id="justificacao_cartao"
+                  />
+                  <Label htmlFor="justificacao_cartao">
+                    Justificação de Cartão de Crédito
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div>
+              <Label htmlFor="description">Descrição Geral</Label>
+              <Textarea
+                id="description"
+                placeholder="ex: Viagem a Lisboa, Material escritório"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="mt-2"
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

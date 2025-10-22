@@ -34,6 +34,7 @@ import FollowUpSequencesPage from "@/pages/tao/follow-up-sequences";
 import FinancialPage from "@/pages/financial";
 import ExpensesIndex from "@/pages/expenses/index";
 import ExpensesNew from "@/pages/expenses/new";
+import ExpensesSettings from "@/pages/expenses/settings";
 import ExpenseDetail from "@/pages/expenses/[id]";
 import { useNotes } from "@/contexts/NotesContext";
 
@@ -177,6 +178,14 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <ExpensesNew />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="expenses/settings"
+            element={
+              <ProtectedRoute>
+                <ExpensesSettings />
               </ProtectedRoute>
             }
           />

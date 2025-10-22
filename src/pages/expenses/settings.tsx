@@ -1,0 +1,247 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "@/hooks/use-toast";
+import { expenseRequesterService, ExpenseRequester } from "@/services/expenseRequesterService";
+
+const ExpenseSettingsPage = () => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [showDialog, setShowDialog] = useState(false);
+  const [editingRequester, setEditingRequester] = useState<ExpenseRequester | null>(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+
+  const { data: requesters = [], isLoading } = useQuery({
+    queryKey: ["expense-requesters"],
+    queryFn: () => expenseRequesterService.getRequesters(true),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: expenseRequesterService.createRequester,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["expense-requesters"] });
+      toast({
+        title: "Requisitante criado",
+        description: "O requisitante foi criado com sucesso.",
+      });
+      handleCloseDialog();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<ExpenseRequester> }) =>
+      expenseRequesterService.updateRequester(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["expense-requesters"] });
+      toast({
+        title: "Requisitante atualizado",
+        description: "O requisitante foi atualizado com sucesso.",
+      });
+      handleCloseDialog();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: expenseRequesterService.deleteRequester,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["expense-requesters"] });
+      toast({
+        title: "Requisitante removido",
+        description: "O requisitante foi removido com sucesso.",
+      });
+    },
+  });
+
+  const handleCloseDialog = () => {
+    setShowDialog(false);
+    setEditingRequester(null);
+    setName("");
+    setEmail("");
+  };
+
+  const handleEdit = (requester: ExpenseRequester) => {
+    setEditingRequester(requester);
+    setName(requester.name);
+    setEmail(requester.email || "");
+    setShowDialog(true);
+  };
+
+  const handleSubmit = () => {
+    if (!name.trim()) {
+      toast({
+        title: "Erro",
+        description: "O nome é obrigatório.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (editingRequester) {
+      updateMutation.mutate({
+        id: editingRequester.id,
+        updates: { name, email: email || null },
+      });
+    } else {
+      createMutation.mutate({ name, email: email || null });
+    }
+  };
+
+  const handleToggleActive = (requester: ExpenseRequester) => {
+    updateMutation.mutate({
+      id: requester.id,
+      updates: { is_active: !requester.is_active },
+    });
+  };
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/expenses")}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Definições de Despesas</h1>
+          <p className="text-muted-foreground mt-1">
+            Gerir requisitantes de despesas
+          </p>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Requisitantes</CardTitle>
+            <Button onClick={() => setShowDialog(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Adicionar Requisitante
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="text-center py-8">Carregando...</div>
+          ) : requesters.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum requisitante cadastrado. Clique em "Adicionar Requisitante" para começar.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {requesters.map((requester) => (
+                  <TableRow key={requester.id}>
+                    <TableCell className="font-medium">{requester.name}</TableCell>
+                    <TableCell>{requester.email || "-"}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={requester.is_active}
+                          onCheckedChange={() => handleToggleActive(requester)}
+                        />
+                        <span className="text-sm">
+                          {requester.is_active ? "Ativo" : "Inativo"}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEdit(requester)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            if (confirm("Tem certeza que deseja remover este requisitante?")) {
+                              deleteMutation.mutate(requester.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={showDialog} onOpenChange={handleCloseDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingRequester ? "Editar Requisitante" : "Adicionar Requisitante"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="name">Nome *</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Nome do requisitante"
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Email (opcional)</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@exemplo.com"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseDialog}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSubmit}>
+              {editingRequester ? "Atualizar" : "Criar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default ExpenseSettingsPage;

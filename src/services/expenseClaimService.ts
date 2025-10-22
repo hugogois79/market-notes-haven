@@ -8,6 +8,7 @@ export interface ExpenseClaim {
   status: 'rascunho' | 'submetido' | 'aprovado' | 'pago' | 'rejeitado';
   total_amount: number;
   description: string | null;
+  requester_id: string | null;
   submission_date: string | null;
   created_at: string;
   updated_at: string;
