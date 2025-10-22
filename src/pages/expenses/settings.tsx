@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, FolderKanban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +24,23 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { expenseRequesterService, ExpenseRequester } from "@/services/expenseRequesterService";
+import { financialProjectService, FinancialProject } from "@/services/financialProjectService";
+import { Badge } from "@/components/ui/badge";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const ExpenseSettingsPage = () => {
   const navigate = useNavigate();
@@ -32,10 +49,17 @@ const ExpenseSettingsPage = () => {
   const [editingRequester, setEditingRequester] = useState<ExpenseRequester | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  const [openProjectSelect, setOpenProjectSelect] = useState(false);
 
   const { data: requesters = [], isLoading } = useQuery({
     queryKey: ["expense-requesters"],
     queryFn: () => expenseRequesterService.getRequesters(true),
+  });
+
+  const { data: projects = [] } = useQuery({
+    queryKey: ["financial-projects"],
+    queryFn: () => financialProjectService.getProjects(),
   });
 
   const createMutation = useMutation({
@@ -79,12 +103,14 @@ const ExpenseSettingsPage = () => {
     setEditingRequester(null);
     setName("");
     setEmail("");
+    setSelectedProjectIds([]);
   };
 
   const handleEdit = (requester: ExpenseRequester) => {
     setEditingRequester(requester);
     setName(requester.name);
     setEmail(requester.email || "");
+    setSelectedProjectIds(requester.assigned_project_ids || []);
     setShowDialog(true);
   };
 
@@ -101,10 +127,10 @@ const ExpenseSettingsPage = () => {
     if (editingRequester) {
       updateMutation.mutate({
         id: editingRequester.id,
-        updates: { name, email: email || null },
+        updates: { name, email: email || null, assigned_project_ids: selectedProjectIds },
       });
     } else {
-      createMutation.mutate({ name, email: email || null });
+      createMutation.mutate({ name, email: email || null, assigned_project_ids: selectedProjectIds });
     }
   };
 
@@ -152,16 +178,36 @@ const ExpenseSettingsPage = () => {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Projectos Assignados</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {requesters.map((requester) => (
-                  <TableRow key={requester.id}>
-                    <TableCell className="font-medium">{requester.name}</TableCell>
-                    <TableCell>{requester.email || "-"}</TableCell>
-                    <TableCell>
+                {requesters.map((requester) => {
+                  const assignedProjects = projects.filter(p => 
+                    requester.assigned_project_ids?.includes(p.id)
+                  );
+                  
+                  return (
+                    <TableRow key={requester.id}>
+                      <TableCell className="font-medium">{requester.name}</TableCell>
+                      <TableCell>{requester.email || "-"}</TableCell>
+                      <TableCell>
+                        {assignedProjects.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {assignedProjects.map(project => (
+                              <Badge key={project.id} variant="secondary" className="text-xs">
+                                <FolderKanban className="h-3 w-3 mr-1" />
+                                {project.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Nenhum</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                       <div className="flex items-center gap-2">
                         <Switch
                           checked={requester.is_active}
@@ -195,7 +241,8 @@ const ExpenseSettingsPage = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -228,6 +275,78 @@ const ExpenseSettingsPage = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="email@exemplo.com"
               />
+            </div>
+            <div>
+              <Label>Projectos Assignados</Label>
+              <Popover open={openProjectSelect} onOpenChange={setOpenProjectSelect}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-start"
+                  >
+                    <FolderKanban className="mr-2 h-4 w-4" />
+                    {selectedProjectIds.length === 0
+                      ? "Selecionar projectos..."
+                      : `${selectedProjectIds.length} projeto(s) selecionado(s)`}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Procurar projecto..." />
+                    <CommandEmpty>Nenhum projecto encontrado.</CommandEmpty>
+                    <CommandList>
+                      <CommandGroup>
+                        {projects.map((project) => {
+                          const isSelected = selectedProjectIds.includes(project.id);
+                          return (
+                            <CommandItem
+                              key={project.id}
+                              onSelect={() => {
+                                if (isSelected) {
+                                  setSelectedProjectIds(
+                                    selectedProjectIds.filter((id) => id !== project.id)
+                                  );
+                                } else {
+                                  setSelectedProjectIds([...selectedProjectIds, project.id]);
+                                }
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  isSelected ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {project.name}
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {selectedProjectIds.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {projects
+                    .filter((p) => selectedProjectIds.includes(p.id))
+                    .map((project) => (
+                      <Badge
+                        key={project.id}
+                        variant="secondary"
+                        className="text-xs cursor-pointer"
+                        onClick={() =>
+                          setSelectedProjectIds(
+                            selectedProjectIds.filter((id) => id !== project.id)
+                          )
+                        }
+                      >
+                        {project.name} ×
+                      </Badge>
+                    ))}
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>

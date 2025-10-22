@@ -5,6 +5,7 @@ export interface ExpenseRequester {
   name: string;
   email: string | null;
   is_active: boolean;
+  assigned_project_ids: string[];
   created_at: string;
   updated_at: string;
 }
@@ -28,6 +29,7 @@ export const expenseRequesterService = {
   async createRequester(requester: {
     name: string;
     email?: string | null;
+    assigned_project_ids?: string[];
   }) {
     const { data, error } = await supabase
       .from('expense_requesters')

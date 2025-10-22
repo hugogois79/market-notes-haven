@@ -608,6 +608,7 @@ export type Database = {
       }
       expense_requesters: {
         Row: {
+          assigned_project_ids: string[] | null
           created_at: string
           email: string | null
           id: string
@@ -616,6 +617,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_project_ids?: string[] | null
           created_at?: string
           email?: string | null
           id?: string
@@ -624,6 +626,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_project_ids?: string[] | null
           created_at?: string
           email?: string | null
           id?: string
