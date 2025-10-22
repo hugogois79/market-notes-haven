@@ -507,16 +507,16 @@ const NewExpensePage = () => {
             <div>
               <Label htmlFor="project">Projeto (opcional)</Label>
               <Select
-                value={expenseForm.project_id}
+                value={expenseForm.project_id || "none"}
                 onValueChange={(value) =>
-                  setExpenseForm({ ...expenseForm, project_id: value })
+                  setExpenseForm({ ...expenseForm, project_id: value === "none" ? "" : value })
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um projeto" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="none">Nenhum</SelectItem>
                   {projects?.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
