@@ -2,6 +2,16 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Plus, Pencil, Trash2, Upload } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -61,6 +71,7 @@ const EditExpensePage = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   const [expenseForm, setExpenseForm] = useState<ExpenseFormData>({
     expense_date: format(new Date(), "yyyy-MM-dd"),
@@ -213,6 +224,18 @@ const EditExpensePage = () => {
     },
   });
 
+  const deleteClaimMutation = useMutation({
+    mutationFn: () => expenseClaimService.deleteExpenseClaim(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["expense-claims"] });
+      toast({
+        title: "Rascunho eliminado",
+        description: "O rascunho foi eliminado com sucesso.",
+      });
+      navigate("/expenses");
+    },
+  });
+
   const resetExpenseForm = () => {
     setExpenseForm({
       expense_date: format(new Date(), "yyyy-MM-dd"),
@@ -305,6 +328,14 @@ const EditExpensePage = () => {
 
   const handleSaveDraft = () => {
     saveDraftMutation.mutate();
+  };
+
+  const handleDeleteDraft = () => {
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeleteDraft = () => {
+    deleteClaimMutation.mutate();
   };
 
   const total = expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
@@ -460,6 +491,16 @@ const EditExpensePage = () => {
               >
                 Guardar Rascunho
               </Button>
+              {claim?.status === "rascunho" && (
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteDraft}
+                  disabled={deleteClaimMutation.isPending}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Eliminar Rascunho
+                </Button>
+              )}
               <Button
                 onClick={handleSubmit}
                 disabled={submitClaimMutation.isPending || expenses.length === 0}
@@ -626,6 +667,23 @@ const EditExpensePage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser revertida. O rascunho e todas as despesas associadas serão permanentemente eliminados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteDraft} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
