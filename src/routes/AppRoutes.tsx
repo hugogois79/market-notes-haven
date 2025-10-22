@@ -32,6 +32,9 @@ import TAOValidatorRelationshipManagement from "@/pages/tao/validator-relationsh
 import InvestorOpportunitiesPage from "@/pages/tao/investor-opportunities";
 import FollowUpSequencesPage from "@/pages/tao/follow-up-sequences";
 import FinancialPage from "@/pages/financial";
+import ExpensesIndex from "@/pages/expenses/index";
+import ExpensesNew from "@/pages/expenses/new";
+import ExpenseDetail from "@/pages/expenses/[id]";
 import { useNotes } from "@/contexts/NotesContext";
 
 const AppRoutes = () => {
@@ -158,6 +161,30 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <FinancialPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="expenses"
+            element={
+              <ProtectedRoute>
+                <ExpensesIndex />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="expenses/new"
+            element={
+              <ProtectedRoute>
+                <ExpensesNew />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="expenses/:id"
+            element={
+              <ProtectedRoute>
+                <ExpenseDetail />
               </ProtectedRoute>
             }
           />

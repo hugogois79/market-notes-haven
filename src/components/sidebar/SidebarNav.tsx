@@ -82,7 +82,7 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       path: "/financeiro",
     },
     {
-      title: "Despesas",
+      title: "Expenses",
       icon: <FileCheck size={20} />,
       path: "/expenses",
     },
