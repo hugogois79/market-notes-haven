@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Pencil, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Upload, Eye, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,6 +72,8 @@ const EditExpensePage = () => {
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [viewingReceipt, setViewingReceipt] = useState<{ url: string; type: string } | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   
   const [expenseForm, setExpenseForm] = useState<ExpenseFormData>({
     expense_date: format(new Date(), "yyyy-MM-dd"),
@@ -96,6 +98,43 @@ const EditExpensePage = () => {
     queryFn: () => expenseClaimService.getExpenses(id!),
     enabled: !!id,
   });
+
+  // Handle receipt viewing
+  const handleViewReceipt = async (url: string) => {
+    setLoadingPreview(true);
+    try {
+      const filePath = expenseClaimService.getFilePathFromUrl(url);
+      if (!filePath) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível obter o caminho do ficheiro",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Download the file and create blob URL
+      const { data, error } = await supabase.storage
+        .from('expense-receipts')
+        .download(filePath);
+
+      if (error) throw error;
+
+      const blobUrl = URL.createObjectURL(data);
+      const fileType = data.type;
+
+      setViewingReceipt({ url: blobUrl, type: fileType });
+    } catch (error) {
+      console.error("Error viewing receipt:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível visualizar o ficheiro",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
 
   // Handle receipt download
   const handleDownloadReceipt = async (url: string) => {
@@ -540,15 +579,27 @@ const EditExpensePage = () => {
                     </TableCell>
                     <TableCell>
                       {expense.receipt_image_url ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDownloadReceipt(expense.receipt_image_url!)}
-                          className="text-primary hover:underline flex items-center gap-1 h-auto p-0"
-                        >
-                          <Upload className="h-4 w-4" />
-                          Download
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewReceipt(expense.receipt_image_url!)}
+                            disabled={loadingPreview}
+                            className="text-primary hover:underline flex items-center gap-1 h-auto p-0"
+                          >
+                            <Eye className="h-4 w-4" />
+                            Ver
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDownloadReceipt(expense.receipt_image_url!)}
+                            className="text-primary hover:underline flex items-center gap-1 h-auto p-0"
+                          >
+                            <Upload className="h-4 w-4" />
+                            Download
+                          </Button>
+                        </div>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
@@ -747,7 +798,18 @@ const EditExpensePage = () => {
             <div>
               <Label htmlFor="receipt">Comprovativo (opcional)</Label>
               {editingExpense?.receipt_image_url && (
-                <div className="mb-2">
+                <div className="mb-2 flex gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleViewReceipt(editingExpense.receipt_image_url!)}
+                    disabled={loadingPreview}
+                    className="text-primary hover:underline flex items-center gap-2 text-sm h-auto p-0"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Ver comprovativo atual
+                  </Button>
                   <Button
                     type="button"
                     variant="ghost"
@@ -805,6 +867,50 @@ const EditExpensePage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!viewingReceipt} onOpenChange={() => {
+        if (viewingReceipt) {
+          URL.revokeObjectURL(viewingReceipt.url);
+        }
+        setViewingReceipt(null);
+      }}>
+        <DialogContent className="max-w-4xl h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              Visualizar Comprovativo
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (viewingReceipt) {
+                    URL.revokeObjectURL(viewingReceipt.url);
+                  }
+                  setViewingReceipt(null);
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto">
+            {viewingReceipt && (
+              viewingReceipt.type.startsWith('image/') ? (
+                <img 
+                  src={viewingReceipt.url} 
+                  alt="Comprovativo" 
+                  className="w-full h-auto"
+                />
+              ) : (
+                <iframe
+                  src={viewingReceipt.url}
+                  className="w-full h-[calc(90vh-8rem)]"
+                  title="Comprovativo"
+                />
+              )
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Download } from "lucide-react";
+import { ArrowLeft, FileText, Download, Eye, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -13,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { expenseClaimService } from "@/services/expenseClaimService";
+import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
@@ -20,6 +23,8 @@ import { toast } from "@/hooks/use-toast";
 const ExpenseDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [viewingReceipt, setViewingReceipt] = useState<{ url: string; type: string } | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   const { data: claim, isLoading: loadingClaim } = useQuery({
     queryKey: ["expense-claim", id],
@@ -32,6 +37,42 @@ const ExpenseDetailPage = () => {
     queryFn: () => expenseClaimService.getExpenses(id!),
     enabled: !!id,
   });
+
+  const handleViewReceipt = async (url: string) => {
+    setLoadingPreview(true);
+    try {
+      const filePath = expenseClaimService.getFilePathFromUrl(url);
+      if (!filePath) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível obter o caminho do ficheiro",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Download the file and create blob URL
+      const { data, error } = await supabase.storage
+        .from('expense-receipts')
+        .download(filePath);
+
+      if (error) throw error;
+
+      const blobUrl = URL.createObjectURL(data);
+      const fileType = data.type;
+
+      setViewingReceipt({ url: blobUrl, type: fileType });
+    } catch (error) {
+      console.error("Error viewing receipt:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível visualizar o ficheiro",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
 
   const handleDownloadReceipt = async (url: string) => {
     try {
@@ -216,15 +257,27 @@ const ExpenseDetailPage = () => {
                     </TableCell>
                     <TableCell>
                       {expense.receipt_image_url ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDownloadReceipt(expense.receipt_image_url!)}
-                          className="text-primary hover:underline"
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleViewReceipt(expense.receipt_image_url!)}
+                            disabled={loadingPreview}
+                            className="text-primary hover:underline"
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDownloadReceipt(expense.receipt_image_url!)}
+                            className="text-primary hover:underline"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download
+                          </Button>
+                        </div>
                       ) : (
                         "-"
                       )}
@@ -250,6 +303,50 @@ const ExpenseDetailPage = () => {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={!!viewingReceipt} onOpenChange={() => {
+        if (viewingReceipt) {
+          URL.revokeObjectURL(viewingReceipt.url);
+        }
+        setViewingReceipt(null);
+      }}>
+        <DialogContent className="max-w-4xl h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              Visualizar Comprovativo
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (viewingReceipt) {
+                    URL.revokeObjectURL(viewingReceipt.url);
+                  }
+                  setViewingReceipt(null);
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto">
+            {viewingReceipt && (
+              viewingReceipt.type.startsWith('image/') ? (
+                <img 
+                  src={viewingReceipt.url} 
+                  alt="Comprovativo" 
+                  className="w-full h-auto"
+                />
+              ) : (
+                <iframe
+                  src={viewingReceipt.url}
+                  className="w-full h-[calc(90vh-8rem)]"
+                  title="Comprovativo"
+                />
+              )
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
