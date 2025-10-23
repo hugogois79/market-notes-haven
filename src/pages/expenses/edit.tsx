@@ -97,46 +97,41 @@ const EditExpensePage = () => {
     enabled: !!id,
   });
 
-  // Process receipt URLs to blob URLs when expenses load
-  useEffect(() => {
-    const processReceiptUrls = async () => {
-      if (!existingExpenses) return;
+  // Handle receipt download
+  const handleDownloadReceipt = async (url: string) => {
+    try {
+      const filePath = expenseClaimService.getFilePathFromUrl(url);
+      if (!filePath) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível obter o caminho do ficheiro",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const fileName = filePath.split('/').pop() || 'recibo.pdf';
+      await expenseClaimService.downloadReceipt(filePath, fileName);
       
-      const processedExpenses = await Promise.all(
-        existingExpenses.map(async (expense) => {
-          if (expense.receipt_image_url) {
-            try {
-              // Extract the file path from the full URL
-              const url = new URL(expense.receipt_image_url);
-              const pathParts = url.pathname.split('/');
-              const bucketIndex = pathParts.findIndex(part => part === 'expense-receipts');
-              if (bucketIndex !== -1) {
-                const filePath = pathParts.slice(bucketIndex + 1).join('/');
-                // Download file and create blob URL (bypasses ad blockers)
-                const blobUrl = await expenseClaimService.getReceiptBlobUrl(filePath);
-                return { ...expense, receipt_image_url: blobUrl };
-              }
-            } catch (error) {
-              console.error('Error processing receipt URL:', error);
-            }
-          }
-          return expense;
-        })
-      );
-      
-      setExpenses(processedExpenses);
-    };
-    
-    processReceiptUrls();
-    
-    // Cleanup blob URLs on unmount
-    return () => {
-      expenses.forEach(expense => {
-        if (expense.receipt_image_url && expense.receipt_image_url.startsWith('blob:')) {
-          URL.revokeObjectURL(expense.receipt_image_url);
-        }
+      toast({
+        title: "Download iniciado",
+        description: "O ficheiro está a ser transferido",
       });
-    };
+    } catch (error) {
+      console.error("Error downloading receipt:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível fazer download do ficheiro",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Load expenses directly (no URL processing needed)
+  useEffect(() => {
+    if (existingExpenses) {
+      setExpenses(existingExpenses);
+    }
   }, [existingExpenses]);
 
   // Load claim data when available
@@ -545,15 +540,15 @@ const EditExpensePage = () => {
                     </TableCell>
                     <TableCell>
                       {expense.receipt_image_url ? (
-                        <a
-                          href={expense.receipt_image_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline flex items-center gap-1"
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadReceipt(expense.receipt_image_url!)}
+                          className="text-primary hover:underline flex items-center gap-1 h-auto p-0"
                         >
                           <Upload className="h-4 w-4" />
-                          Ver
-                        </a>
+                          Download
+                        </Button>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
@@ -753,15 +748,16 @@ const EditExpensePage = () => {
               <Label htmlFor="receipt">Comprovativo (opcional)</Label>
               {editingExpense?.receipt_image_url && (
                 <div className="mb-2">
-                  <a
-                    href={editingExpense.receipt_image_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline flex items-center gap-2 text-sm"
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDownloadReceipt(editingExpense.receipt_image_url!)}
+                    className="text-primary hover:underline flex items-center gap-2 text-sm h-auto p-0"
                   >
                     <Upload className="h-4 w-4" />
-                    Ver comprovativo atual
-                  </a>
+                    Download comprovativo atual
+                  </Button>
                 </div>
               )}
               <div className="flex items-center gap-2">

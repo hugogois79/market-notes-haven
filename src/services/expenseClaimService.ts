@@ -223,16 +223,37 @@ export const expenseClaimService = {
     return data.signedUrl;
   },
 
-  // Download receipt and create blob URL (bypasses ad blockers)
-  async getReceiptBlobUrl(filePath: string) {
+  // Download receipt file directly (bypasses ad blockers)
+  async downloadReceipt(filePath: string, fileName: string) {
     const { data, error } = await supabase.storage
       .from('expense-receipts')
       .download(filePath);
 
     if (error) throw error;
     
-    // Create a blob URL from the downloaded file
+    // Create a blob URL and trigger download
     const blobUrl = URL.createObjectURL(data);
-    return blobUrl;
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+  },
+
+  // Get file path from full URL
+  getFilePathFromUrl(url: string): string | null {
+    try {
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/');
+      const bucketIndex = pathParts.findIndex(part => part === 'expense-receipts');
+      if (bucketIndex !== -1) {
+        return pathParts.slice(bucketIndex + 1).join('/');
+      }
+    } catch (error) {
+      console.error('Error parsing URL:', error);
+    }
+    return null;
   },
 };
