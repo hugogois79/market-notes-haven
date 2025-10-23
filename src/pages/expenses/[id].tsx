@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { expenseClaimService } from "@/services/expenseClaimService";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
+import { toast } from "@/hooks/use-toast";
 
 const ExpenseDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +32,35 @@ const ExpenseDetailPage = () => {
     queryFn: () => expenseClaimService.getExpenses(id!),
     enabled: !!id,
   });
+
+  const handleDownloadReceipt = async (url: string) => {
+    try {
+      const filePath = expenseClaimService.getFilePathFromUrl(url);
+      if (!filePath) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível obter o caminho do ficheiro",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const fileName = filePath.split('/').pop() || 'recibo.pdf';
+      await expenseClaimService.downloadReceipt(filePath, fileName);
+      
+      toast({
+        title: "Download iniciado",
+        description: "O ficheiro está a ser transferido",
+      });
+    } catch (error) {
+      console.error("Error downloading receipt:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível fazer download do ficheiro",
+        variant: "destructive",
+      });
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
@@ -189,12 +219,11 @@ const ExpenseDetailPage = () => {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() =>
-                            window.open(expense.receipt_image_url!, "_blank")
-                          }
+                          onClick={() => handleDownloadReceipt(expense.receipt_image_url!)}
+                          className="text-primary hover:underline"
                         >
                           <Download className="h-4 w-4 mr-2" />
-                          Ver
+                          Download
                         </Button>
                       ) : (
                         "-"
