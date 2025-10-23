@@ -206,6 +206,7 @@ const NewExpensePage = () => {
       supplier: "",
       amount: "",
       project_id: "",
+      receipt_file: undefined,
     });
   };
 
@@ -225,6 +226,16 @@ const NewExpensePage = () => {
         toast({
           title: "Valor inválido",
           description: "O valor da despesa deve ser maior que zero.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validação do comprovativo (obrigatório apenas para novas despesas)
+      if (!editingExpense && !expenseForm.receipt_file) {
+        toast({
+          title: "Comprovativo obrigatório",
+          description: "Por favor anexe o comprovativo da despesa.",
           variant: "destructive",
         });
         return;
@@ -662,7 +673,7 @@ const NewExpensePage = () => {
               </Select>
             </div>
             <div>
-              <Label htmlFor="receipt">Comprovativo (opcional)</Label>
+              <Label htmlFor="receipt">Comprovativo *</Label>
               <Input
                 id="receipt"
                 type="file"
@@ -674,6 +685,17 @@ const NewExpensePage = () => {
                   })
                 }
               />
+              {expenseForm.receipt_file && (
+                <p className="text-sm text-green-600 mt-2 flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  Ficheiro selecionado: {expenseForm.receipt_file.name}
+                </p>
+              )}
+              {editingExpense?.receipt_image_url && !expenseForm.receipt_file && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Comprovativo já anexado. Pode carregar um novo para substituir.
+                </p>
+              )}
               <p className="text-xs text-muted-foreground mt-1">
                 Formatos aceites: JPG, PNG, PDF (máx. 5MB)
               </p>
@@ -697,7 +719,8 @@ const NewExpensePage = () => {
                 !expenseForm.description ||
                 !expenseForm.supplier ||
                 !expenseForm.amount ||
-                parseFloat(expenseForm.amount) <= 0
+                parseFloat(expenseForm.amount) <= 0 ||
+                (!editingExpense && !expenseForm.receipt_file)
               }
             >
               {editingExpense ? "Atualizar" : "Guardar"}
