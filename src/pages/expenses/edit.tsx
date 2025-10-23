@@ -97,7 +97,7 @@ const EditExpensePage = () => {
     enabled: !!id,
   });
 
-  // Process receipt URLs to signed URLs when expenses load
+  // Process receipt URLs to blob URLs when expenses load
   useEffect(() => {
     const processReceiptUrls = async () => {
       if (!existingExpenses) return;
@@ -112,8 +112,9 @@ const EditExpensePage = () => {
               const bucketIndex = pathParts.findIndex(part => part === 'expense-receipts');
               if (bucketIndex !== -1) {
                 const filePath = pathParts.slice(bucketIndex + 1).join('/');
-                const signedUrl = await expenseClaimService.getReceiptUrl(filePath);
-                return { ...expense, receipt_image_url: signedUrl };
+                // Download file and create blob URL (bypasses ad blockers)
+                const blobUrl = await expenseClaimService.getReceiptBlobUrl(filePath);
+                return { ...expense, receipt_image_url: blobUrl };
               }
             } catch (error) {
               console.error('Error processing receipt URL:', error);
@@ -127,6 +128,15 @@ const EditExpensePage = () => {
     };
     
     processReceiptUrls();
+    
+    // Cleanup blob URLs on unmount
+    return () => {
+      expenses.forEach(expense => {
+        if (expense.receipt_image_url && expense.receipt_image_url.startsWith('blob:')) {
+          URL.revokeObjectURL(expense.receipt_image_url);
+        }
+      });
+    };
   }, [existingExpenses]);
 
   // Load claim data when available

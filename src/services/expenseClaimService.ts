@@ -223,13 +223,16 @@ export const expenseClaimService = {
     return data.signedUrl;
   },
 
-  // Get signed URL for a receipt (used when displaying existing receipts)
-  async getReceiptUrl(filePath: string) {
+  // Download receipt and create blob URL (bypasses ad blockers)
+  async getReceiptBlobUrl(filePath: string) {
     const { data, error } = await supabase.storage
       .from('expense-receipts')
-      .createSignedUrl(filePath, 3600); // 1 hour expiry
+      .download(filePath);
 
     if (error) throw error;
-    return data.signedUrl;
+    
+    // Create a blob URL from the downloaded file
+    const blobUrl = URL.createObjectURL(data);
+    return blobUrl;
   },
 };
