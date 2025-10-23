@@ -205,7 +205,7 @@ export const expenseClaimService = {
     const fileName = `${userData.user.id}/${claimId}/${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('Expense Receipts')
+      .from('expense-receipts')
       .upload(fileName, file, {
         cacheControl: '3600',
         upsert: false
@@ -214,7 +214,7 @@ export const expenseClaimService = {
     if (uploadError) throw uploadError;
 
     const { data } = supabase.storage
-      .from('Expense Receipts')
+      .from('expense-receipts')
       .getPublicUrl(fileName);
 
     return data.publicUrl;
