@@ -213,10 +213,23 @@ export const expenseClaimService = {
 
     if (uploadError) throw uploadError;
 
-    const { data } = supabase.storage
+    // Use signed URL instead of public URL to avoid browser extensions blocking
+    const { data, error: signedUrlError } = await supabase.storage
       .from('expense-receipts')
-      .getPublicUrl(fileName);
+      .createSignedUrl(fileName, 31536000); // 1 year expiry
 
-    return data.publicUrl;
+    if (signedUrlError) throw signedUrlError;
+
+    return data.signedUrl;
+  },
+
+  // Get signed URL for a receipt (used when displaying existing receipts)
+  async getReceiptUrl(filePath: string) {
+    const { data, error } = await supabase.storage
+      .from('expense-receipts')
+      .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+    if (error) throw error;
+    return data.signedUrl;
   },
 };

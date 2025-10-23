@@ -97,6 +97,38 @@ const EditExpensePage = () => {
     enabled: !!id,
   });
 
+  // Process receipt URLs to signed URLs when expenses load
+  useEffect(() => {
+    const processReceiptUrls = async () => {
+      if (!existingExpenses) return;
+      
+      const processedExpenses = await Promise.all(
+        existingExpenses.map(async (expense) => {
+          if (expense.receipt_image_url) {
+            try {
+              // Extract the file path from the full URL
+              const url = new URL(expense.receipt_image_url);
+              const pathParts = url.pathname.split('/');
+              const bucketIndex = pathParts.findIndex(part => part === 'expense-receipts');
+              if (bucketIndex !== -1) {
+                const filePath = pathParts.slice(bucketIndex + 1).join('/');
+                const signedUrl = await expenseClaimService.getReceiptUrl(filePath);
+                return { ...expense, receipt_image_url: signedUrl };
+              }
+            } catch (error) {
+              console.error('Error processing receipt URL:', error);
+            }
+          }
+          return expense;
+        })
+      );
+      
+      setExpenses(processedExpenses);
+    };
+    
+    processReceiptUrls();
+  }, [existingExpenses]);
+
   // Load claim data when available
   useEffect(() => {
     if (claim) {
