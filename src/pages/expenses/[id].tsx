@@ -71,6 +71,7 @@ const ExpenseDetailPage = () => {
       console.log("Created blob URL:", blobUrl, "Type:", fileType);
 
       setViewingReceipt({ url: blobUrl, type: fileType });
+      setLoadingPreview(false);
     } catch (error) {
       console.error("Error viewing receipt:", error);
       toast({
@@ -78,8 +79,6 @@ const ExpenseDetailPage = () => {
         description: "Não foi possível visualizar o ficheiro",
         variant: "destructive",
       });
-      setLoadingPreview(false);
-    } finally {
       setLoadingPreview(false);
     }
   };
