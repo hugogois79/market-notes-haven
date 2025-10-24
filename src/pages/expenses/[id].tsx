@@ -25,6 +25,7 @@ const ExpenseDetailPage = () => {
   const navigate = useNavigate();
   const [viewingReceipt, setViewingReceipt] = useState<{ url: string; type: string } | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   const { data: claim, isLoading: loadingClaim } = useQuery({
     queryKey: ["expense-claim", id],
@@ -40,21 +41,30 @@ const ExpenseDetailPage = () => {
 
   const handleViewReceipt = async (url: string) => {
     setLoadingPreview(true);
+    setPreviewError(null);
+    setViewingReceipt(null);
+    
     try {
+      console.log("=== Starting receipt view ===");
       console.log("Original URL:", url);
+      
       const filePath = expenseClaimService.getFilePathFromUrl(url);
       console.log("Extracted file path:", filePath);
       
       if (!filePath) {
+        const errorMsg = "Não foi possível obter o caminho do ficheiro";
+        setPreviewError(errorMsg);
         toast({
           title: "Erro",
-          description: "Não foi possível obter o caminho do ficheiro",
+          description: errorMsg,
           variant: "destructive",
         });
         setLoadingPreview(false);
         return;
       }
 
+      console.log("Attempting to download from bucket 'expense-receipts', path:", filePath);
+      
       // Download the file and create blob URL
       const { data, error } = await supabase.storage
         .from('expense-receipts')
@@ -62,21 +72,39 @@ const ExpenseDetailPage = () => {
 
       if (error) {
         console.error("Supabase storage error:", error);
+        setPreviewError(`Erro ao carregar ficheiro: ${error.message}`);
         throw error;
       }
 
-      console.log("Downloaded file:", data.type, data.size);
+      if (!data) {
+        const errorMsg = "Ficheiro não encontrado";
+        console.error("No data returned from storage");
+        setPreviewError(errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      console.log("Downloaded file successfully:", {
+        type: data.type,
+        size: data.size,
+        sizeKB: (data.size / 1024).toFixed(2) + " KB"
+      });
+      
       const blobUrl = URL.createObjectURL(data);
-      const fileType = data.type;
-      console.log("Created blob URL:", blobUrl, "Type:", fileType);
+      const fileType = data.type || 'application/octet-stream';
+      
+      console.log("Created blob URL:", blobUrl);
+      console.log("File type:", fileType);
+      console.log("=== Receipt view successful ===");
 
       setViewingReceipt({ url: blobUrl, type: fileType });
       setLoadingPreview(false);
     } catch (error) {
-      console.error("Error viewing receipt:", error);
+      console.error("=== Error viewing receipt ===", error);
+      const errorMsg = error instanceof Error ? error.message : "Não foi possível visualizar o ficheiro";
+      setPreviewError(errorMsg);
       toast({
         title: "Erro",
-        description: "Não foi possível visualizar o ficheiro",
+        description: errorMsg,
         variant: "destructive",
       });
       setLoadingPreview(false);
@@ -313,12 +341,13 @@ const ExpenseDetailPage = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={!!viewingReceipt || loadingPreview} onOpenChange={() => {
+      <Dialog open={!!viewingReceipt || loadingPreview || !!previewError} onOpenChange={() => {
         if (viewingReceipt) {
           URL.revokeObjectURL(viewingReceipt.url);
         }
         setViewingReceipt(null);
         setLoadingPreview(false);
+        setPreviewError(null);
       }}>
         <DialogContent className="max-w-4xl h-[90vh]">
           <DialogHeader>
@@ -333,6 +362,7 @@ const ExpenseDetailPage = () => {
                   }
                   setViewingReceipt(null);
                   setLoadingPreview(false);
+                  setPreviewError(null);
                 }}
               >
                 <X className="h-4 w-4" />
@@ -344,6 +374,12 @@ const ExpenseDetailPage = () => {
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
                 <p className="text-muted-foreground">A carregar comprovativo...</p>
+              </div>
+            ) : previewError ? (
+              <div className="text-center py-8">
+                <FileText className="mx-auto h-16 w-16 text-destructive opacity-50 mb-4" />
+                <p className="text-lg font-semibold text-destructive mb-2">Erro ao carregar ficheiro</p>
+                <p className="text-sm text-muted-foreground">{previewError}</p>
               </div>
             ) : viewingReceipt ? (
               viewingReceipt.type.startsWith('image/') ? (
