@@ -41,13 +41,17 @@ const ExpenseDetailPage = () => {
   const handleViewReceipt = async (url: string) => {
     setLoadingPreview(true);
     try {
+      console.log("Original URL:", url);
       const filePath = expenseClaimService.getFilePathFromUrl(url);
+      console.log("Extracted file path:", filePath);
+      
       if (!filePath) {
         toast({
           title: "Erro",
           description: "Não foi possível obter o caminho do ficheiro",
           variant: "destructive",
         });
+        setLoadingPreview(false);
         return;
       }
 
@@ -56,10 +60,15 @@ const ExpenseDetailPage = () => {
         .from('expense-receipts')
         .download(filePath);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase storage error:", error);
+        throw error;
+      }
 
+      console.log("Downloaded file:", data.type, data.size);
       const blobUrl = URL.createObjectURL(data);
       const fileType = data.type;
+      console.log("Created blob URL:", blobUrl, "Type:", fileType);
 
       setViewingReceipt({ url: blobUrl, type: fileType });
     } catch (error) {
@@ -69,6 +78,7 @@ const ExpenseDetailPage = () => {
         description: "Não foi possível visualizar o ficheiro",
         variant: "destructive",
       });
+      setLoadingPreview(false);
     } finally {
       setLoadingPreview(false);
     }
@@ -304,11 +314,12 @@ const ExpenseDetailPage = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={!!viewingReceipt} onOpenChange={() => {
+      <Dialog open={!!viewingReceipt || loadingPreview} onOpenChange={() => {
         if (viewingReceipt) {
           URL.revokeObjectURL(viewingReceipt.url);
         }
         setViewingReceipt(null);
+        setLoadingPreview(false);
       }}>
         <DialogContent className="max-w-4xl h-[90vh]">
           <DialogHeader>
@@ -322,19 +333,25 @@ const ExpenseDetailPage = () => {
                     URL.revokeObjectURL(viewingReceipt.url);
                   }
                   setViewingReceipt(null);
+                  setLoadingPreview(false);
                 }}
               >
                 <X className="h-4 w-4" />
               </Button>
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-auto">
-            {viewingReceipt && (
+          <div className="flex-1 overflow-auto flex items-center justify-center">
+            {loadingPreview ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">A carregar comprovativo...</p>
+              </div>
+            ) : viewingReceipt ? (
               viewingReceipt.type.startsWith('image/') ? (
                 <img 
                   src={viewingReceipt.url} 
                   alt="Comprovativo" 
-                  className="w-full h-auto"
+                  className="w-full h-auto object-contain"
                 />
               ) : (
                 <iframe
@@ -343,7 +360,7 @@ const ExpenseDetailPage = () => {
                   title="Comprovativo"
                 />
               )
-            )}
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>
