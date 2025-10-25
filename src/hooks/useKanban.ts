@@ -8,6 +8,7 @@ export const useKanban = (boardId?: string) => {
   const [lists, setLists] = useState<KanbanList[]>([]);
   const [cards, setCards] = useState<KanbanCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
     fetchBoards();
@@ -15,10 +16,10 @@ export const useKanban = (boardId?: string) => {
 
   useEffect(() => {
     if (boardId) {
-      fetchBoardData(boardId);
+      fetchBoardData(boardId, showArchived);
       subscribeToChanges(boardId);
     }
-  }, [boardId]);
+  }, [boardId, showArchived]);
 
   const fetchBoards = async () => {
     try {
@@ -31,12 +32,12 @@ export const useKanban = (boardId?: string) => {
     }
   };
 
-  const fetchBoardData = async (id: string) => {
+  const fetchBoardData = async (id: string, includeArchived: boolean = false) => {
     try {
       setLoading(true);
       const [listsData, cardsData] = await Promise.all([
         KanbanService.getLists(id),
-        KanbanService.getCardsByBoard(id)
+        KanbanService.getCardsByBoard(id, includeArchived)
       ]);
       setLists(listsData);
       setCards(cardsData);
@@ -54,21 +55,21 @@ export const useKanban = (boardId?: string) => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'kanban_cards' },
         () => {
-          if (boardId) fetchBoardData(boardId);
+          if (boardId) fetchBoardData(boardId, showArchived);
         }
       )
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'kanban_lists' },
         () => {
-          if (boardId) fetchBoardData(boardId);
+          if (boardId) fetchBoardData(boardId, showArchived);
         }
       )
       .on(
         'postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'kanban_lists' },
         () => {
-          if (boardId) fetchBoardData(boardId);
+          if (boardId) fetchBoardData(boardId, showArchived);
         }
       )
       .subscribe();
@@ -178,7 +179,7 @@ export const useKanban = (boardId?: string) => {
   const moveCard = async (cardId: string, targetListId: string, newPosition: number) => {
     try {
       await KanbanService.moveCard(cardId, targetListId, newPosition);
-      if (boardId) fetchBoardData(boardId);
+      if (boardId) fetchBoardData(boardId, showArchived);
     } catch (error: any) {
       toast.error('Failed to move card: ' + error.message);
     }
@@ -208,7 +209,7 @@ export const useKanban = (boardId?: string) => {
     } catch (error: any) {
       toast.error('Failed to move list: ' + error.message);
       // Revert on error
-      if (boardId) fetchBoardData(boardId);
+      if (boardId) fetchBoardData(boardId, showArchived);
     }
   };
 
@@ -217,6 +218,8 @@ export const useKanban = (boardId?: string) => {
     lists,
     cards,
     loading,
+    showArchived,
+    setShowArchived,
     createBoard,
     updateBoard,
     deleteBoard,
@@ -228,6 +231,6 @@ export const useKanban = (boardId?: string) => {
     deleteCard,
     moveCard,
     moveList,
-    refetch: () => boardId && fetchBoardData(boardId)
+    refetch: () => boardId && fetchBoardData(boardId, showArchived)
   };
 };

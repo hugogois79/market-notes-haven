@@ -28,6 +28,9 @@ export interface KanbanCard {
   due_date?: string;
   priority?: 'low' | 'medium' | 'high';
   tasks?: Array<{id: string; text: string; completed: boolean}>;
+  archived?: boolean;
+  completed?: boolean;
+  completed_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -151,15 +154,20 @@ export class KanbanService {
     return data as unknown as KanbanCard[];
   }
 
-  static async getCardsByBoard(boardId: string) {
-    const { data, error } = await supabase
+  static async getCardsByBoard(boardId: string, includeArchived: boolean = false) {
+    let query = supabase
       .from('kanban_cards')
       .select(`
         *,
         kanban_lists!inner(board_id)
       `)
-      .eq('kanban_lists.board_id', boardId)
-      .order('position', { ascending: true });
+      .eq('kanban_lists.board_id', boardId);
+    
+    if (!includeArchived) {
+      query = query.or('archived.is.null,archived.eq.false');
+    }
+    
+    const { data, error } = await query.order('position', { ascending: true });
     
     if (error) throw error;
     return data as unknown as KanbanCard[];

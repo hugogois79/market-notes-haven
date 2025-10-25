@@ -1141,6 +1141,9 @@ export type Database = {
       }
       kanban_cards: {
         Row: {
+          archived: boolean | null
+          completed: boolean | null
+          completed_at: string | null
           created_at: string | null
           description: string | null
           due_date: string | null
@@ -1153,6 +1156,9 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          archived?: boolean | null
+          completed?: boolean | null
+          completed_at?: string | null
           created_at?: string | null
           description?: string | null
           due_date?: string | null
@@ -1165,6 +1171,9 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          archived?: boolean | null
+          completed?: boolean | null
+          completed_at?: string | null
           created_at?: string | null
           description?: string | null
           due_date?: string | null

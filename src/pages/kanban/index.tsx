@@ -20,8 +20,9 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Search, Kanban as KanbanIcon } from 'lucide-react';
+import { Plus, Search, Kanban as KanbanIcon, Archive } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 
 const KanbanPage = () => {
   const { boardId } = useParams();
@@ -31,6 +32,8 @@ const KanbanPage = () => {
     lists,
     cards,
     loading,
+    showArchived,
+    setShowArchived,
     createBoard,
     createList,
     createCard,
@@ -215,6 +218,18 @@ const KanbanPage = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Archive className="h-4 w-4 text-muted-foreground" />
+            <Label htmlFor="show-archived" className="text-sm cursor-pointer">
+              Show Archived
+            </Label>
+            <Switch
+              id="show-archived"
+              checked={showArchived}
+              onCheckedChange={setShowArchived}
             />
           </div>
         </div>

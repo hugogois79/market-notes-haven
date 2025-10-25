@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip } from 'lucide-react';
+import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -141,6 +141,16 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
       onDelete(card.id);
       onClose();
     }
+  };
+
+  const handleMarkComplete = () => {
+    onUpdate(card.id, {
+      completed: true,
+      archived: true,
+      completed_at: new Date().toISOString()
+    });
+    toast.success('Card marked as complete and archived');
+    onClose();
   };
 
   return (
@@ -275,6 +285,12 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
               <Save className="h-4 w-4 mr-2" />
               Save
             </Button>
+            {!card.completed && (
+              <Button onClick={handleMarkComplete} className="bg-green-600 hover:bg-green-700">
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Complete
+              </Button>
+            )}
             <Button onClick={handleDelete} variant="destructive">
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
