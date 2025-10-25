@@ -242,18 +242,37 @@ export const expenseClaimService = {
     URL.revokeObjectURL(blobUrl);
   },
 
-  // Get file path from full URL
+  // Get file path from full URL (handles both signed and public URLs)
   getFilePathFromUrl(url: string): string | null {
     try {
-      const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('/');
+      console.log("Parsing URL for file path:", url);
+      
+      // Handle relative URLs by prepending a dummy domain
+      const fullUrl = url.startsWith('http') ? url : `https://dummy.com${url}`;
+      const urlObj = new URL(fullUrl);
+      
+      // Remove query parameters (tokens, etc.)
+      const pathname = urlObj.pathname;
+      console.log("Pathname:", pathname);
+      
+      // Split the path and find the bucket name
+      const pathParts = pathname.split('/').filter(part => part.length > 0);
+      console.log("Path parts:", pathParts);
+      
       const bucketIndex = pathParts.findIndex(part => part === 'expense-receipts');
-      if (bucketIndex !== -1) {
-        return pathParts.slice(bucketIndex + 1).join('/');
+      console.log("Bucket index:", bucketIndex);
+      
+      if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
+        const filePath = pathParts.slice(bucketIndex + 1).join('/');
+        console.log("Extracted file path:", filePath);
+        return filePath;
       }
+      
+      console.warn("Could not find bucket 'expense-receipts' in URL path");
+      return null;
     } catch (error) {
       console.error('Error parsing URL:', error);
+      return null;
     }
-    return null;
   },
 };
