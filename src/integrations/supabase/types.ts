@@ -1148,6 +1148,7 @@ export type Database = {
           list_id: string | null
           position: number
           priority: string | null
+          tasks: Json | null
           title: string
           updated_at: string | null
         }
@@ -1159,6 +1160,7 @@ export type Database = {
           list_id?: string | null
           position: number
           priority?: string | null
+          tasks?: Json | null
           title: string
           updated_at?: string | null
         }
@@ -1170,6 +1172,7 @@ export type Database = {
           list_id?: string | null
           position?: number
           priority?: string | null
+          tasks?: Json | null
           title?: string
           updated_at?: string | null
         }

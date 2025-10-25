@@ -148,7 +148,7 @@ export class KanbanService {
       .order('position', { ascending: true });
     
     if (error) throw error;
-    return data as KanbanCard[];
+    return data as unknown as KanbanCard[];
   }
 
   static async getCardsByBoard(boardId: string) {
@@ -162,7 +162,7 @@ export class KanbanService {
       .order('position', { ascending: true });
     
     if (error) throw error;
-    return data as KanbanCard[];
+    return data as unknown as KanbanCard[];
   }
 
   static async createCard(card: Partial<KanbanCard>) {
