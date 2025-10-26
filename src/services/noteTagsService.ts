@@ -6,11 +6,18 @@ import { toast } from 'sonner';
 // Create a note-tag association
 export const createNoteTag = async ({ noteId, tagName }: { noteId: string, tagName: string }) => {
   try {
-    // First check if tag already exists
+    // Get current user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // First check if tag already exists for this user
     const { data: existingTag, error: tagSearchError } = await supabase
       .from('tags')
       .select('*')
       .eq('name', tagName)
+      .eq('user_id', user.id)
       .single();
     
     if (tagSearchError && tagSearchError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
@@ -23,7 +30,7 @@ export const createNoteTag = async ({ noteId, tagName }: { noteId: string, tagNa
     if (!existingTag) {
       const { data: newTag, error: createError } = await supabase
         .from('tags')
-        .insert({ name: tagName })
+        .insert({ name: tagName, user_id: user.id })
         .select()
         .single();
         
@@ -36,9 +43,9 @@ export const createNoteTag = async ({ noteId, tagName }: { noteId: string, tagNa
       tagId = existingTag.id;
     }
     
-    // Create note-tag association
+    // Create note-tag association using the new table
     const { error: associationError } = await supabase
-      .from('notes_tags')
+      .from('note_tags')
       .insert({ note_id: noteId, tag_id: tagId });
       
     if (associationError) {
@@ -56,7 +63,7 @@ export const createNoteTag = async ({ noteId, tagName }: { noteId: string, tagNa
 export const deleteNoteTag = async ({ noteId, tagId }: { noteId: string, tagId: string }) => {
   try {
     const { error } = await supabase
-      .from('notes_tags')
+      .from('note_tags')
       .delete()
       .match({ note_id: noteId, tag_id: tagId });
       
@@ -74,9 +81,9 @@ export const deleteNoteTag = async ({ noteId, tagId }: { noteId: string, tagId: 
 // Get all tags for a note
 export const getNoteTags = async (noteId: string): Promise<Tag[]> => {
   try {
-    // Query the notes_tags junction table to get tag IDs
+    // Query the note_tags junction table to get tag IDs
     const { data: noteTagsData, error: noteTagsError } = await supabase
-      .from('notes_tags')
+      .from('note_tags')
       .select('tag_id')
       .eq('note_id', noteId);
       
@@ -93,10 +100,9 @@ export const getNoteTags = async (noteId: string): Promise<Tag[]> => {
     const tagIds = noteTagsData.map(item => item.tag_id);
     
     // Get tag details from the tags table
-    // Only select fields that definitely exist in the tags table
     const { data: tagsData, error: tagsError } = await supabase
       .from('tags')
-      .select('id, name, category')
+      .select('id, name, category_id, color')
       .in('id', tagIds);
     
     if (tagsError) {
@@ -111,7 +117,7 @@ export const getNoteTags = async (noteId: string): Promise<Tag[]> => {
     return tagsData.map(tag => ({
       id: tag.id,
       name: tag.name,
-      category: tag.category,
+      category: tag.category_id || undefined,
       categories: [] // Add empty categories array as required by the Tag interface
     }));
   } catch (error) {

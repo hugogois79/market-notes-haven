@@ -1385,6 +1385,46 @@ export type Database = {
         }
         Relationships: []
       }
+      note_tags: {
+        Row: {
+          created_at: string
+          note_id: string
+          tag_id: string
+        }
+        Insert: {
+          created_at?: string
+          note_id: string
+          tag_id: string
+        }
+        Update: {
+          created_at?: string
+          note_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_tags_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "note_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tag_usage_counts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "note_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notes: {
         Row: {
           attachment_url: string | null
@@ -1458,6 +1498,13 @@ export type Database = {
             columns: ["note_id"]
             isOneToOne: false
             referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notes_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tag_usage_counts"
             referencedColumns: ["id"]
           },
           {
@@ -1962,6 +2009,13 @@ export type Database = {
             foreignKeyName: "tag_categories_tag_id_fkey"
             columns: ["tag_id"]
             isOneToOne: false
+            referencedRelation: "tag_usage_counts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tag_categories_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
             referencedRelation: "tags"
             referencedColumns: ["id"]
           },
@@ -1970,29 +2024,43 @@ export type Database = {
       tags: {
         Row: {
           category: string | null
+          category_id: string | null
+          color: string | null
           created_at: string | null
           id: string
           name: string
           updated_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           category?: string | null
+          category_id?: string | null
+          color?: string | null
           created_at?: string | null
           id?: string
           name: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           category?: string | null
+          category_id?: string | null
+          color?: string | null
           created_at?: string | null
           id?: string
           name?: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tags_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tao_contact_logs: {
         Row: {
@@ -2614,7 +2682,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      tag_usage_counts: {
+        Row: {
+          category_id: string | null
+          color: string | null
+          created_at: string | null
+          id: string | null
+          name: string | null
+          updated_at: string | null
+          usage_count: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tags_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       calculate_account_balance: {
