@@ -74,77 +74,84 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   return (
     <>
       <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="board-lists" direction="horizontal" type="list">
-          {(provided) => (
-            <div 
-              className="flex gap-4 pb-6 min-w-min overflow-x-auto"
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-            >
-              {lists.map((list, index) => (
-                <Draggable key={list.id} draggableId={list.id} index={index}>
-                  {(provided) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                    >
-                      <KanbanList
-                        list={list}
-                        index={index}
-                        cards={getListCards(list.id)}
-                        onAddCard={onAddCard}
-                        onCardClick={setSelectedCard}
-                        onUpdateCard={onUpdateCard}
-                        onDeleteList={onDeleteList}
-                        onEditList={onEditList}
-                        onColorChange={onColorChange}
-                        dragHandleProps={provided.dragHandleProps}
-                      />
-                    </div>
-                  )}
-                </Draggable>
-              ))}
-              {provided.placeholder}
+        <div className="overflow-x-auto">
+          <Droppable droppableId="all-lists" direction="horizontal" type="list">
+            {(provided, snapshot) => (
+              <div 
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="flex gap-4 pb-6 min-w-min"
+              >
+                {lists.map((list, index) => (
+                  <Draggable 
+                    key={list.id} 
+                    draggableId={list.id} 
+                    index={index}
+                  >
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className={snapshot.isDragging ? 'opacity-50' : ''}
+                      >
+                        <KanbanList
+                          list={list}
+                          index={index}
+                          cards={getListCards(list.id)}
+                          onAddCard={onAddCard}
+                          onCardClick={setSelectedCard}
+                          onUpdateCard={onUpdateCard}
+                          onDeleteList={onDeleteList}
+                          onEditList={onEditList}
+                          onColorChange={onColorChange}
+                          dragHandleProps={provided.dragHandleProps}
+                        />
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
 
-              {isAddingList ? (
-                <div className="flex-shrink-0 w-80 bg-muted/50 rounded-lg p-3">
-                  <Input
-                    placeholder="Enter list title..."
-                    value={newListTitle}
-                    onChange={(e) => setNewListTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleAddList();
-                      if (e.key === 'Escape') setIsAddingList(false);
-                    }}
-                    autoFocus
-                    className="mb-2"
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleAddList}>
-                      Add List
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      onClick={() => setIsAddingList(false)}
-                    >
-                      Cancel
-                    </Button>
+                {isAddingList ? (
+                  <div className="flex-shrink-0 w-80 bg-muted/50 rounded-lg p-3">
+                    <Input
+                      placeholder="Enter list title..."
+                      value={newListTitle}
+                      onChange={(e) => setNewListTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleAddList();
+                        if (e.key === 'Escape') setIsAddingList(false);
+                      }}
+                      autoFocus
+                      className="mb-2"
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleAddList}>
+                        Add List
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => setIsAddingList(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <Button
-                  variant="ghost"
-                  className="flex-shrink-0 w-80 h-auto min-h-[100px] border-2 border-dashed"
-                  onClick={() => setIsAddingList(true)}
-                >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Add List
-                </Button>
-              )}
-            </div>
-          )}
-        </Droppable>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    className="flex-shrink-0 w-80 h-auto min-h-[100px] border-2 border-dashed"
+                    onClick={() => setIsAddingList(true)}
+                  >
+                    <Plus className="h-5 w-5 mr-2" />
+                    Add List
+                  </Button>
+                )}
+              </div>
+            )}
+          </Droppable>
+        </div>
       </DragDropContext>
 
       {selectedCard && (
