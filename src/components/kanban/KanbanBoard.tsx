@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { KanbanList as KanbanListType, KanbanCard } from '@/services/kanbanService';
 import { KanbanList } from './KanbanList';
 import { KanbanCardModal } from './KanbanCardModal';
@@ -83,18 +83,27 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 {...provided.droppableProps}
               >
               {lists.map((list, index) => (
-                <KanbanList
-                  key={list.id}
-                  list={list}
-                  index={index}
-                  cards={getListCards(list.id)}
-                  onAddCard={onAddCard}
-                  onCardClick={setSelectedCard}
-                  onUpdateCard={onUpdateCard}
-                  onDeleteList={onDeleteList}
-                  onEditList={onEditList}
-                  onColorChange={onColorChange}
-                />
+                <Draggable key={list.id} draggableId={list.id} index={index}>
+                  {(provided) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                    >
+                      <KanbanList
+                        list={list}
+                        index={index}
+                        cards={getListCards(list.id)}
+                        onAddCard={onAddCard}
+                        onCardClick={setSelectedCard}
+                        onUpdateCard={onUpdateCard}
+                        onDeleteList={onDeleteList}
+                        onEditList={onEditList}
+                        onColorChange={onColorChange}
+                        dragHandleProps={provided.dragHandleProps}
+                      />
+                    </div>
+                  )}
+                </Draggable>
               ))}
               {provided.placeholder}
 

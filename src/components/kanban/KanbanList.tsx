@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Draggable, Droppable } from 'react-beautiful-dnd';
+import { Droppable } from 'react-beautiful-dnd';
 import { KanbanList as KanbanListType, KanbanCard } from '@/services/kanbanService';
 import { KanbanCard as KanbanCardComponent } from './KanbanCard';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ interface KanbanListProps {
   onDeleteList: (listId: string) => void;
   onEditList: (listId: string, title: string) => void;
   onColorChange: (listId: string, color: string) => void;
+  dragHandleProps?: any;
 }
 
 const LIST_COLORS = [
@@ -45,7 +46,8 @@ export const KanbanList: React.FC<KanbanListProps> = ({
   onUpdateCard,
   onDeleteList,
   onEditList,
-  onColorChange
+  onColorChange,
+  dragHandleProps
 }) => {
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [newCardTitle, setNewCardTitle] = useState('');
@@ -69,25 +71,18 @@ export const KanbanList: React.FC<KanbanListProps> = ({
   };
 
   return (
-    <Draggable draggableId={list.id} index={index}>
-      {(provided, snapshot) => (
-        <div 
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          className={`flex-shrink-0 ${
-            isCollapsed ? 'w-12' : 'w-80'
-          } rounded-lg transition-all duration-200 ${
-            snapshot.isDragging ? 'opacity-50 shadow-lg' : ''
-          }`}
-          style={{
-            backgroundColor: list.color || '#f3f4f6',
-            ...provided.draggableProps.style
-          }}
-        >
+    <div 
+      className={`flex-shrink-0 ${
+        isCollapsed ? 'w-12' : 'w-80'
+      } rounded-lg transition-all duration-200`}
+      style={{
+        backgroundColor: list.color || '#f3f4f6'
+      }}
+    >
           {isCollapsed ? (
             // Collapsed view - vertical
             <div className="flex flex-col items-center h-full min-h-[200px] p-3">
-              <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing mb-2">
+              <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing mb-2">
                 <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground" />
               </div>
               
@@ -118,7 +113,7 @@ export const KanbanList: React.FC<KanbanListProps> = ({
             <div className="p-3">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2 flex-1">
-                  <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                  <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing">
                     <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                   </div>
                   
@@ -272,8 +267,6 @@ export const KanbanList: React.FC<KanbanListProps> = ({
               )}
             </div>
           )}
-        </div>
-      )}
-    </Draggable>
+    </div>
   );
 };
