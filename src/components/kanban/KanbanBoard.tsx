@@ -90,6 +90,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   cards={getListCards(list.id)}
                   onAddCard={onAddCard}
                   onCardClick={setSelectedCard}
+                  onUpdateCard={onUpdateCard}
                   onDeleteList={onDeleteList}
                   onEditList={onEditList}
                   onColorChange={onColorChange}

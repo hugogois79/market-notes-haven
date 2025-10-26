@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Draggable } from 'react-beautiful-dnd';
 import { KanbanCard as KanbanCardType } from '@/services/kanbanService';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 interface KanbanCardProps {
   card: KanbanCardType;
   index: number;
   onClick: () => void;
+  onMarkComplete: (cardId: string) => void;
 }
 
 const priorityColors = {
@@ -18,7 +21,15 @@ const priorityColors = {
   high: 'bg-red-100 text-red-800 hover:bg-red-200'
 };
 
-export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick }) => {
+export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, onMarkComplete }) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMarkComplete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onMarkComplete(card.id);
+    toast.success('Card marked as complete and archived');
+  };
+
   return (
     <Draggable draggableId={card.id} index={index}>
       {(provided, snapshot) => (
@@ -26,11 +37,24 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick }) 
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className={`mb-2 cursor-pointer hover:shadow-md transition-shadow ${
+          className={`mb-2 cursor-pointer hover:shadow-md transition-shadow relative ${
             snapshot.isDragging ? 'shadow-lg rotate-2' : ''
           }`}
           onClick={onClick}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
         >
+          {isHovered && !card.completed && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-background border-2 border-primary shadow-lg hover:bg-primary hover:text-primary-foreground z-10 p-0"
+              onClick={handleMarkComplete}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+            </Button>
+          )}
+          
           <CardContent className="p-3">
             <h4 className="font-medium text-sm mb-2">{card.title}</h4>
             

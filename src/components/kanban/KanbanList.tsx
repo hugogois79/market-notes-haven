@@ -19,6 +19,7 @@ interface KanbanListProps {
   cards: KanbanCard[];
   onAddCard: (listId: string, title: string) => void;
   onCardClick: (card: KanbanCard) => void;
+  onUpdateCard: (cardId: string, updates: Partial<KanbanCard>) => void;
   onDeleteList: (listId: string) => void;
   onEditList: (listId: string, title: string) => void;
   onColorChange: (listId: string, color: string) => void;
@@ -41,6 +42,7 @@ export const KanbanList: React.FC<KanbanListProps> = ({
   cards,
   onAddCard,
   onCardClick,
+  onUpdateCard,
   onDeleteList,
   onEditList,
   onColorChange
@@ -207,6 +209,11 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                         card={card}
                         index={cardIndex}
                         onClick={() => onCardClick(card)}
+                        onMarkComplete={(cardId) => onUpdateCard(cardId, {
+                          completed: true,
+                          archived: true,
+                          completed_at: new Date().toISOString()
+                        })}
                       />
                     ))}
                     {provided.placeholder}

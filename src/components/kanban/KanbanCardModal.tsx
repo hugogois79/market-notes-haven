@@ -149,7 +149,6 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
       archived: true,
       completed_at: new Date().toISOString()
     });
-    toast.success('Card marked as complete and archived');
     onClose();
   };
 
