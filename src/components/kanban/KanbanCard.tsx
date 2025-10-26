@@ -4,7 +4,7 @@ import { KanbanCard as KanbanCardType } from '@/services/kanbanService';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Calendar, AlertCircle, CheckCircle2, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -30,6 +30,12 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
     toast.success('Card marked as complete and archived');
   };
 
+  const handleReopen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onMarkComplete(card.id);
+    toast.success('Card reopened');
+  };
+
   return (
     <Draggable draggableId={card.id} index={index}>
       {(provided, snapshot) => (
@@ -52,6 +58,17 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
               onClick={handleMarkComplete}
             >
               <CheckCircle2 className="h-4 w-4" />
+            </Button>
+          )}
+          
+          {isHovered && card.concluded && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-background border-2 border-orange-500 shadow-lg hover:bg-orange-500 hover:text-white z-10 p-0"
+              onClick={handleReopen}
+            >
+              <RotateCcw className="h-4 w-4" />
             </Button>
           )}
           

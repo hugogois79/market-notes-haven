@@ -209,12 +209,25 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                         card={card}
                         index={cardIndex}
                         onClick={() => onCardClick(card)}
-                        onMarkComplete={(cardId) => onUpdateCard(cardId, {
-                          concluded: true,
-                          completed: true,
-                          archived: true,
-                          completed_at: new Date().toISOString()
-                        })}
+                        onMarkComplete={(cardId) => {
+                          if (card.concluded) {
+                            // Reopen the card
+                            onUpdateCard(cardId, {
+                              concluded: false,
+                              completed: false,
+                              archived: false,
+                              completed_at: undefined
+                            });
+                          } else {
+                            // Mark as complete
+                            onUpdateCard(cardId, {
+                              concluded: true,
+                              completed: true,
+                              archived: true,
+                              completed_at: new Date().toISOString()
+                            });
+                          }
+                        }}
                       />
                     ))}
                     {provided.placeholder}

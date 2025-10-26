@@ -164,7 +164,18 @@ export const useKanban = (boardId?: string) => {
       // If card is marked as concluded and we're not showing archived, remove it from view
       if (updates.concluded && !showArchived) {
         setCards(cards.filter(c => c.id !== id));
-      } else {
+      } 
+      // If card is being reopened (concluded: false), add it back if it's not in the list
+      else if (updates.concluded === false) {
+        const cardExists = cards.some(c => c.id === id);
+        if (!cardExists) {
+          // Refetch to get the updated card
+          if (boardId) fetchBoardData(boardId, showArchived);
+        } else {
+          setCards(cards.map(c => c.id === id ? updated : c));
+        }
+      } 
+      else {
         setCards(cards.map(c => c.id === id ? updated : c));
       }
     } catch (error: any) {
