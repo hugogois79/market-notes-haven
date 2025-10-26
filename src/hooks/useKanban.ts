@@ -160,7 +160,13 @@ export const useKanban = (boardId?: string) => {
   const updateCard = async (id: string, updates: Partial<KanbanCard>) => {
     try {
       const updated = await KanbanService.updateCard(id, updates);
-      setCards(cards.map(c => c.id === id ? updated : c));
+      
+      // If card is marked as concluded and we're not showing archived, remove it from view
+      if (updates.concluded && !showArchived) {
+        setCards(cards.filter(c => c.id !== id));
+      } else {
+        setCards(cards.map(c => c.id === id ? updated : c));
+      }
     } catch (error: any) {
       toast.error('Failed to update card: ' + error.message);
     }
