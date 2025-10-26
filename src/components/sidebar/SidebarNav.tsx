@@ -6,7 +6,6 @@ import {
   Tags, 
   TrendingUp, 
   Coins,
-  LineChart,
   Folder,
   Banknote,
   User,
@@ -108,11 +107,6 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
         </div>
       ),
       path: "/tao",
-    },
-    {
-      title: "Analytics",
-      icon: <LineChart size={20} />,
-      path: "/analytics",
     },
     {
       title: "Profile",
