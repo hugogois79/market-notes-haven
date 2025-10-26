@@ -44,7 +44,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {isHovered && !card.completed && (
+          {isHovered && !card.concluded && (
             <Button
               size="sm"
               variant="ghost"

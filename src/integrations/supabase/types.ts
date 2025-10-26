@@ -1144,6 +1144,7 @@ export type Database = {
           archived: boolean | null
           completed: boolean | null
           completed_at: string | null
+          concluded: boolean | null
           created_at: string | null
           description: string | null
           due_date: string | null
@@ -1159,6 +1160,7 @@ export type Database = {
           archived?: boolean | null
           completed?: boolean | null
           completed_at?: string | null
+          concluded?: boolean | null
           created_at?: string | null
           description?: string | null
           due_date?: string | null
@@ -1174,6 +1176,7 @@ export type Database = {
           archived?: boolean | null
           completed?: boolean | null
           completed_at?: string | null
+          concluded?: boolean | null
           created_at?: string | null
           description?: string | null
           due_date?: string | null

@@ -145,6 +145,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
 
   const handleMarkComplete = () => {
     onUpdate(card.id, {
+      concluded: true,
       completed: true,
       archived: true,
       completed_at: new Date().toISOString()

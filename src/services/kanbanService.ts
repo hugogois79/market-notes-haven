@@ -31,6 +31,7 @@ export interface KanbanCard {
   archived?: boolean;
   completed?: boolean;
   completed_at?: string;
+  concluded?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -164,7 +165,7 @@ export class KanbanService {
       .eq('kanban_lists.board_id', boardId);
     
     if (!includeArchived) {
-      query = query.or('archived.is.null,archived.eq.false');
+      query = query.or('concluded.is.null,concluded.eq.false');
     }
     
     const { data, error } = await query.order('position', { ascending: true });
@@ -181,7 +182,7 @@ export class KanbanService {
       .single();
     
     if (error) throw error;
-    return data as KanbanCard;
+    return data as unknown as KanbanCard;
   }
 
   static async updateCard(id: string, updates: Partial<KanbanCard>) {
@@ -193,7 +194,7 @@ export class KanbanService {
       .single();
     
     if (error) throw error;
-    return data as KanbanCard;
+    return data as unknown as KanbanCard;
   }
 
   static async deleteCard(id: string) {
@@ -217,7 +218,7 @@ export class KanbanService {
       .single();
     
     if (error) throw error;
-    return data as KanbanCard;
+    return data as unknown as KanbanCard;
   }
 
   static async moveList(listId: string, newPosition: number) {
