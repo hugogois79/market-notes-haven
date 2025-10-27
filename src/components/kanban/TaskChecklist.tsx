@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Pencil, Check } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
 export interface Task {
@@ -18,6 +18,8 @@ interface TaskChecklistProps {
 
 export const TaskChecklist: React.FC<TaskChecklistProps> = ({ tasks, onTasksChange }) => {
   const [newTaskText, setNewTaskText] = useState('');
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
 
   const addTask = () => {
     if (newTaskText.trim()) {
@@ -41,6 +43,28 @@ export const TaskChecklist: React.FC<TaskChecklistProps> = ({ tasks, onTasksChan
 
   const removeTask = (taskId: string) => {
     onTasksChange(tasks.filter(task => task.id !== taskId));
+  };
+
+  const startEditing = (task: Task) => {
+    setEditingTaskId(task.id);
+    setEditingText(task.text);
+  };
+
+  const saveEdit = (taskId: string) => {
+    if (editingText.trim()) {
+      onTasksChange(
+        tasks.map(task =>
+          task.id === taskId ? { ...task, text: editingText.trim() } : task
+        )
+      );
+    }
+    setEditingTaskId(null);
+    setEditingText('');
+  };
+
+  const cancelEdit = () => {
+    setEditingTaskId(null);
+    setEditingText('');
   };
 
   const completedCount = tasks.filter(t => t.completed).length;
@@ -75,22 +99,69 @@ export const TaskChecklist: React.FC<TaskChecklistProps> = ({ tasks, onTasksChan
             <Checkbox
               checked={task.completed}
               onCheckedChange={() => toggleTask(task.id)}
+              disabled={editingTaskId === task.id}
             />
-            <span
-              className={`flex-1 text-sm ${
-                task.completed ? 'line-through text-muted-foreground' : ''
-              }`}
-            >
-              {task.text}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => removeTask(task.id)}
-              className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            {editingTaskId === task.id ? (
+              <>
+                <Input
+                  value={editingText}
+                  onChange={(e) => setEditingText(e.target.value)}
+                  className="flex-1 h-8"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      saveEdit(task.id);
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      cancelEdit();
+                    }
+                  }}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => saveEdit(task.id)}
+                  className="h-8 w-8 p-0"
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={cancelEdit}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <span
+                  className={`flex-1 text-sm ${
+                    task.completed ? 'line-through text-muted-foreground' : ''
+                  }`}
+                >
+                  {task.text}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => startEditing(task)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeTask(task.id)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </>
+            )}
           </div>
         ))}
       </div>
