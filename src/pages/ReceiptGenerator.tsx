@@ -216,7 +216,8 @@ const ReceiptGenerator = () => {
       ? getCompanyData('epic atmosphere')
       : getCompanyData('sustainable yield');
     
-    const logoToUse = isEpicatmosphere ? epicatmosphereLogo : sustainableYieldLogo;
+    // Use logo from database if available, otherwise fall back to imported logos
+    const logoToUse = company?.logo_url || (isEpicatmosphere ? epicatmosphereLogo : sustainableYieldLogo);
     
     let companyDetails: string[] = [];
     if (company) {
@@ -224,16 +225,16 @@ const ReceiptGenerator = () => {
       if (company.address) {
         companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Morada Registada: ${company.address}${company.country ? ', ' + company.country : ''}</p>`);
       }
-      // Add Email only if provided
-      if (company.email) {
+      // Add Email only if provided and not "Não Fornecido"
+      if (company.email && company.email !== 'Não Fornecido') {
         companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Email: ${company.email}</p>`);
       }
-      // Add Bank Account only if provided
-      if (company.bank_account) {
-        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Conta Bancária: ${company.bank_account}${company.bank_name ? ' (' + company.bank_name + ')' : ''}</p>`);
+      // Add Bank Account only if provided and not "Não Fornecido"
+      if (company.bank_account && company.bank_account !== 'Não Fornecido') {
+        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Conta Bancária: ${company.bank_account}${company.bank_name && company.bank_name !== 'Não Fornecido' ? ' (' + company.bank_name + ')' : ''}</p>`);
       }
-      // Add Capital Social only if provided
-      if (company.capital_social) {
+      // Add Capital Social only if provided and not "Não Fornecido"
+      if (company.capital_social && company.capital_social !== 'Não Fornecido') {
         companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Capital Social: ${company.capital_social}</p>`);
       }
     }
