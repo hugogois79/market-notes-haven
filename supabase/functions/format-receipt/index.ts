@@ -316,12 +316,39 @@ CRITICAL RULES - MUST FOLLOW:
     console.log('AI Response length:', formattedReceipt?.length);
     console.log('AI Response preview:', formattedReceipt?.substring(0, 1000));
     
-    // Remove markdown code blocks only
+    // Remove markdown code blocks
     formattedReceipt = formattedReceipt
       .replace(/```html!?/gi, '')
       .replace(/```/g, '')
       .replace(/`/g, '')
       .trim();
+    
+    // Remove conversational text and questions - extract only HTML content
+    // Look for the first <div and last </div> to extract only the receipt HTML
+    const firstDivIndex = formattedReceipt.indexOf('<div');
+    const lastDivIndex = formattedReceipt.lastIndexOf('</div>');
+    
+    if (firstDivIndex !== -1 && lastDivIndex !== -1 && lastDivIndex > firstDivIndex) {
+      formattedReceipt = formattedReceipt.substring(firstDivIndex, lastDivIndex + 6); // +6 for '</div>'
+      console.log('Extracted HTML content between <div> tags');
+    }
+    
+    // Additional cleanup: remove any remaining conversational phrases
+    const conversationalPatterns = [
+      /Perfeito\s*[✅✓]?\s*/gi,
+      /Quer que eu gere[^?]*\?/gi,
+      /Com base nos[^.]*\./gi,
+      /Would you like me to[^?]*\?/gi,
+      /Here's the formatted receipt[^.]*\./gi,
+      /I've formatted the receipt[^.]*\./gi,
+      /Based on the information provided[^.]*\./gi
+    ];
+    
+    conversationalPatterns.forEach(pattern => {
+      formattedReceipt = formattedReceipt.replace(pattern, '');
+    });
+    
+    formattedReceipt = formattedReceipt.trim();
 
     // Extract structured data from the formatted receipt
     const extractField = (html: string, patterns: string[]): string | null => {
