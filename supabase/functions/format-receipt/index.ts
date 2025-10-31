@@ -61,17 +61,11 @@ ABSOLUTELY CRITICAL - LANGUAGE REQUIREMENT:
 7. VERIFY: Before returning, check that ALL field labels are in ${language}
 
 CRITICAL - COMPANY HEADER INSTRUCTIONS:
-1. You MUST generate a COMPLETE and DETAILED company header at the top of the receipt
-2. Include ALL company information in the header:
-   - Company name (in uppercase, bold)
-   - Company registration number (Company Number/NIPC)
-   - Complete registered address including street, city, postal code, and country
-   - Contact email address
-   - Bank account details (account number and bank name)
-   - Capital social (if mentioned)
-3. Format the company header professionally with proper spacing
-4. After the company header, add a horizontal line separator
-5. Then proceed with the receipt content
+1. DO NOT include company header - the system handles this separately
+2. DO NOT include company name, registration number, address, email, or bank details at the top
+3. DO NOT add placeholder text like "[Adicionar se disponível]" or "[email@example.com]"
+4. Start directly with a horizontal line separator
+5. Then proceed with the beneficiary section
 
 ABSOLUTELY CRITICAL - CONTENT EXTRACTION:
 1. You MUST include EVERY SINGLE piece of information from the input content
@@ -81,11 +75,10 @@ ABSOLUTELY CRITICAL - CONTENT EXTRACTION:
 5. Your job is to FORMAT, not to filter or reduce information
 
 CRITICAL INSTRUCTIONS - READ CAREFULLY:
-1. ALWAYS include a complete company header at the very top with ALL company details
-2. Include company name (uppercase), registration number, full address, email, bank details
-3. Format the header professionally with clear structure and spacing
-4. Add a horizontal separator line after the company header
-5. Then proceed with the beneficiary and payment sections below
+1. DO NOT include company header at the top - this is handled by the system
+2. DO NOT add placeholder fields for missing information
+3. Start with a horizontal separator line
+4. Then proceed with the beneficiary and payment sections
 
 FORMAT INSTRUCTIONS:
 1. Carefully read and extract ALL information from the content - DO NOT SKIP ANYTHING
@@ -256,8 +249,9 @@ IN PORTUGUESE:
 CRITICAL RULES - MUST FOLLOW: 
 - Return ONLY the HTML content with inline styles - nothing else
 - ABSOLUTELY NO markdown formatting (NO code blocks, NO backticks of any kind)
-- ALWAYS include a complete company header at the top with ALL company information
-- Include a horizontal line separator after the company header
+- DO NOT include company header - the system handles this
+- DO NOT add placeholder text for missing fields
+- Start with a horizontal line separator
 - Then proceed with the beneficiary and payment sections
 - CRITICAL: Generate ALL labels and text in ${language} ONLY - no mixing of languages
 - CRITICAL: Extract ALL information from the provided content accurately - INCLUDE EVERYTHING
@@ -345,6 +339,23 @@ CRITICAL RULES - MUST FOLLOW:
     ];
     
     conversationalPatterns.forEach(pattern => {
+      formattedReceipt = formattedReceipt.replace(pattern, '');
+    });
+    
+    // Remove placeholder lines for missing company information
+    const placeholderPatterns = [
+      /<p[^>]*>.*?\[email@example\.com[^\]]*\].*?<\/p>/gi,
+      /<p[^>]*>.*?\[Adicionar[^\]]*\].*?<\/p>/gi,
+      /<p[^>]*>.*?\[Número da Conta[^\]]*\].*?<\/p>/gi,
+      /<p[^>]*>.*?\[Nome do Banco[^\]]*\].*?<\/p>/gi,
+      /<p[^>]*>.*?\[Add [^\]]*if available\].*?<\/p>/gi,
+      /<p[^>]*>.*?Email:.*?\[.*?Adicionar.*?\].*?<\/p>/gi,
+      /<p[^>]*>.*?Conta Bancária:.*?\[.*?Adicionar.*?\].*?<\/p>/gi,
+      /<p[^>]*>.*?Banco:.*?\[.*?Adicionar.*?\].*?<\/p>/gi,
+      /<p[^>]*>.*?Capital Social:.*?\[.*?Adicionar.*?\].*?<\/p>/gi
+    ];
+    
+    placeholderPatterns.forEach(pattern => {
       formattedReceipt = formattedReceipt.replace(pattern, '');
     });
     
