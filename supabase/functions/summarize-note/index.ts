@@ -12,8 +12,8 @@ const corsHeaders = {
 
 // Input validation schema
 const requestSchema = z.object({
-  content: z.string().min(1, "Content cannot be empty").max(50000, "Content too long"),
-  noteId: z.string().uuid("Invalid note ID format"),
+  content: z.string().min(1, "Content cannot be empty").max(200000, "Content too long"),
+  noteId: z.string().uuid("Invalid note ID format").optional(),
   maxLength: z.number().min(100).max(2000).default(500),
   summarizeTradeChat: z.boolean().default(false),
   formatAsBulletPoints: z.boolean().default(false),

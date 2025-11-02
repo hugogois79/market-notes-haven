@@ -211,6 +211,7 @@ const TradingChat = ({ noteId, onChatSummaryUpdated }: TradingChatProps) => {
       const response = await supabase.functions.invoke('summarize-note', {
         body: { 
           content: aiMessages.join("\n\n"),
+          noteId,
           maxLength: 250,
           summarizeTradeChat: true,
           formatAsBulletPoints: true

@@ -99,7 +99,7 @@ export const fetchNotes = async (): Promise<Note[]> => {
 };
 
 // Generate AI summary for note content
-export const generateNoteSummary = async (content: string): Promise<string | null> => {
+export const generateNoteSummary = async (content: string, noteId?: string): Promise<string | null> => {
   try {
     if (!content.trim()) {
       return null;
@@ -108,6 +108,7 @@ export const generateNoteSummary = async (content: string): Promise<string | nul
     const response = await supabase.functions.invoke('summarize-note', {
       body: {
         content: content,
+        noteId,
         maxLength: 150
       }
     });
