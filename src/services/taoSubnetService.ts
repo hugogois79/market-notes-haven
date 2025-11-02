@@ -83,10 +83,18 @@ export const updateTaoSubnet = async (subnet: Partial<TaoSubnet> & { id: number 
 
 export const createTaoSubnet = async (subnet: Omit<TaoSubnet, "id" | "created_at" | "updated_at">): Promise<TaoSubnet | null> => {
   try {
+    // Get current user ID
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+      console.error('User must be logged in to create a subnet');
+      return null;
+    }
+
     // Ensure emission is always a string to match the database column type
     const subnetToCreate = {
       ...subnet,
-      emission: String(subnet.emission)
+      emission: String(subnet.emission),
+      user_id: userData.user.id
     };
 
     const { data, error } = await supabase

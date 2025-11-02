@@ -24,9 +24,21 @@ export const fetchTaoNotes = async (): Promise<TaoNote[]> => {
 
 export const createTaoNote = async (note: Omit<TaoNote, 'id' | 'created_at' | 'updated_at'>): Promise<TaoNote | null> => {
   try {
+    // Get current user ID
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+      toast.error("You must be logged in to create a note");
+      return null;
+    }
+
+    const noteWithUser = {
+      ...note,
+      user_id: userData.user.id
+    };
+
     const { data, error } = await supabase
       .from('tao_notes')
-      .insert([note])
+      .insert([noteWithUser])
       .select()
       .single();
 

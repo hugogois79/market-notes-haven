@@ -86,6 +86,13 @@ export const createContactLog = async (contactLog: Omit<TaoContactLog, 'id' | 'c
       contactLog.method = "Email";
     }
 
+    // Get current user ID
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+      toast.error("You must be logged in to create a contact log");
+      return null;
+    }
+
     const cleanedContactLog = {
       validator_id: contactLog.validator_id,
       subnet_id: contactLog.subnet_id || null,
@@ -95,7 +102,8 @@ export const createContactLog = async (contactLog: Omit<TaoContactLog, 'id' | 'c
       next_steps: contactLog.next_steps || null,
       linked_note_id: contactLog.linked_note_id || null,
       attachment_url: contactLog.attachment_url || null,
-      attachments: contactLog.attachments || []
+      attachments: contactLog.attachments || [],
+      user_id: userData.user.id
     };
 
     console.log("Submitting cleaned data:", cleanedContactLog);

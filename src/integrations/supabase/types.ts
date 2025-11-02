@@ -704,6 +704,7 @@ export type Database = {
           name: string | null
           pages: number | null
           status: Database["public"]["Enums"]["file_status"] | null
+          user_id: string
         }
         Insert: {
           date_created?: string
@@ -715,6 +716,7 @@ export type Database = {
           name?: string | null
           pages?: number | null
           status?: Database["public"]["Enums"]["file_status"] | null
+          user_id: string
         }
         Update: {
           date_created?: string
@@ -726,6 +728,7 @@ export type Database = {
           name?: string | null
           pages?: number | null
           status?: Database["public"]["Enums"]["file_status"] | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -1566,6 +1569,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           updated_at: string
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -1574,6 +1578,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           updated_at?: string
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -1582,6 +1587,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -2081,6 +2087,7 @@ export type Database = {
           subnet_id: number | null
           summary: string | null
           updated_at: string
+          user_id: string
           validator_id: string | null
         }
         Insert: {
@@ -2095,6 +2102,7 @@ export type Database = {
           subnet_id?: number | null
           summary?: string | null
           updated_at?: string
+          user_id: string
           validator_id?: string | null
         }
         Update: {
@@ -2109,6 +2117,7 @@ export type Database = {
           subnet_id?: number | null
           summary?: string | null
           updated_at?: string
+          user_id?: string
           validator_id?: string | null
         }
         Relationships: [
@@ -2143,6 +2152,7 @@ export type Database = {
           subnet_id: number | null
           title: string
           updated_at: string
+          user_id: string
           validator_id: string | null
         }
         Insert: {
@@ -2152,6 +2162,7 @@ export type Database = {
           subnet_id?: number | null
           title: string
           updated_at?: string
+          user_id: string
           validator_id?: string | null
         }
         Update: {
@@ -2161,6 +2172,7 @@ export type Database = {
           subnet_id?: number | null
           title?: string
           updated_at?: string
+          user_id?: string
           validator_id?: string | null
         }
         Relationships: [
@@ -2196,6 +2208,7 @@ export type Database = {
           neurons: number
           tier: number
           updated_at: string
+          user_id: string
         }
         Insert: {
           api_docs_url?: string | null
@@ -2212,6 +2225,7 @@ export type Database = {
           neurons: number
           tier: number
           updated_at?: string
+          user_id: string
         }
         Update: {
           api_docs_url?: string | null
@@ -2228,6 +2242,7 @@ export type Database = {
           neurons?: number
           tier?: number
           updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

@@ -1,5 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -9,32 +10,48 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Input validation schema
+const requestSchema = z.object({
+  content: z.string().min(1, "Content cannot be empty").max(50000, "Content too long"),
+  noteId: z.string().uuid("Invalid note ID format"),
+  maxLength: z.number().min(100).max(2000).default(500),
+  summarizeTradeChat: z.boolean().default(false),
+  formatAsBulletPoints: z.boolean().default(false),
+  generateTradeInfo: z.boolean().default(false)
+});
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
   
-  const { 
-    content, 
-    noteId, 
-    maxLength = 500, 
-    summarizeTradeChat = false, 
-    formatAsBulletPoints = false,
-    generateTradeInfo = false
-  } = await req.json();
-  
-  if (!content) {
-    return new Response(
-      JSON.stringify({ error: 'Content is required' }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
-  }
-  
   try {
+    // Parse and validate input
+    const requestData = await req.json();
+    const validationResult = requestSchema.safeParse(requestData);
+    
+    if (!validationResult.success) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid input', 
+          details: validationResult.error.issues 
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
+    const { 
+      content, 
+      noteId, 
+      maxLength, 
+      summarizeTradeChat, 
+      formatAsBulletPoints,
+      generateTradeInfo
+    } = validationResult.data;
     // Define the system prompt based on what we're summarizing
     let systemPrompt = summarizeTradeChat
       ? `You are an AI assistant specializing in trading journal analysis. Summarize the following trading journal entries, focusing on key insights, strategies, and patterns.`

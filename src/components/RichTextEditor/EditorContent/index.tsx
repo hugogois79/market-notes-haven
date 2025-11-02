@@ -1,5 +1,6 @@
 
 import React, { useEffect, useRef } from "react";
+import DOMPurify from "dompurify";
 import ContentStyles from "./ContentStyles";
 import { useContentChange } from "./useContentChange";
 import { processExistingListsFormatting } from "../hooks/formatting/formatters";
@@ -41,9 +42,17 @@ const EditorContent: React.FC<EditorContentProps> = ({
   // Set initial content when the component mounts and ensure it's editable
   useEffect(() => {
     if (editorRef.current) {
+      // Sanitize content before setting innerHTML to prevent XSS
+      const sanitizedContent = DOMPurify.sanitize(content || '', {
+        ALLOWED_TAGS: ['p', 'div', 'span', 'strong', 'em', 'u', 'h1', 'h2', 'h3',
+                      'table', 'tr', 'td', 'th', 'thead', 'tbody', 'ul', 'ol', 'li',
+                      'br', 'hr', 'input', 'label', 'a', 'img'],
+        ALLOWED_ATTR: ['class', 'style', 'type', 'checked', 'href', 'target', 'data-*', 'src', 'alt']
+      });
+      
       // Only set innerHTML if it's different from current content to prevent cursor jumping
-      if (editorRef.current.innerHTML !== content) {
-        editorRef.current.innerHTML = content || '';
+      if (editorRef.current.innerHTML !== sanitizedContent) {
+        editorRef.current.innerHTML = sanitizedContent;
       }
       
       // Process any checkboxes that might be in the content

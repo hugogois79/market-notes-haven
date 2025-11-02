@@ -1,5 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -8,6 +9,14 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schemas
+const requestSchema = z.object({
+  message: z.string().min(1, "Message cannot be empty").max(5000, "Message too long"),
+  noteId: z.string().uuid("Invalid note ID format"),
+  action: z.enum(['remove_bullet_point']).optional(),
+  summaryText: z.string().max(10000, "Summary text too long").optional()
+});
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -18,17 +27,23 @@ serve(async (req) => {
   try {
     // Parse the request body
     const requestData = await req.json();
-    const { message, noteId, action, summaryText } = requestData;
     
-    if (!message || !noteId) {
+    // Validate input
+    const validationResult = requestSchema.safeParse(requestData);
+    if (!validationResult.success) {
       return new Response(
-        JSON.stringify({ error: 'Message and noteId are required' }),
+        JSON.stringify({ 
+          error: 'Invalid input', 
+          details: validationResult.error.issues 
+        }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
     }
+    
+    const { message, noteId, action, summaryText } = validationResult.data;
     
     // Handle removal action if specified
     if (action === 'remove_bullet_point') {
