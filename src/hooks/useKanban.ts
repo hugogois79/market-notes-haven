@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 export const useKanban = (boardId?: string, spaceId?: string | null) => {
   const [spaces, setSpaces] = useState<KanbanSpace[]>([]);
   const [boards, setBoards] = useState<KanbanBoard[]>([]);
+  const [allBoards, setAllBoards] = useState<KanbanBoard[]>([]);
   const [lists, setLists] = useState<KanbanList[]>([]);
   const [cards, setCards] = useState<KanbanCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -14,6 +15,7 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
   useEffect(() => {
     fetchSpaces();
     fetchBoards(spaceId);
+    fetchAllBoards();
   }, [spaceId]);
 
   useEffect(() => {
@@ -40,6 +42,16 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
       toast.error('Failed to load boards: ' + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllBoards = async () => {
+    try {
+      const data = await KanbanService.getBoards();
+      setAllBoards(data);
+    } catch (error: any) {
+      // Silent fail - this is for SpaceManager only
+      console.error('Failed to load all boards:', error);
     }
   };
 
@@ -254,6 +266,7 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
         );
         // Refresh boards to reflect changes
         fetchBoards(spaceId);
+        fetchAllBoards();
       }
       
       setSpaces([newSpace, ...spaces]);
@@ -289,6 +302,7 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
       
       // Refresh boards to reflect changes
       fetchBoards(spaceId);
+      fetchAllBoards();
       
       setSpaces(spaces.map(s => s.id === id ? updated : s));
       toast.success('Space updated successfully');
@@ -310,6 +324,7 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
   return {
     spaces,
     boards,
+    allBoards,
     lists,
     cards,
     loading,

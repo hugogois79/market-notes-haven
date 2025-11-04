@@ -36,6 +36,7 @@ const KanbanPage = () => {
   const {
     spaces,
     boards,
+    allBoards,
     lists,
     cards,
     loading,
@@ -205,7 +206,7 @@ const KanbanPage = () => {
           <TabsContent value="spaces">
             <SpaceManager
               spaces={spaces}
-              boards={boards}
+              boards={allBoards}
               onCreateSpace={createSpace}
               onUpdateSpace={updateSpace}
               onDeleteSpace={deleteSpace}
