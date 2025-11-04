@@ -205,6 +205,7 @@ const KanbanPage = () => {
           <TabsContent value="spaces">
             <SpaceManager
               spaces={spaces}
+              boards={boards}
               onCreateSpace={createSpace}
               onUpdateSpace={updateSpace}
               onDeleteSpace={deleteSpace}

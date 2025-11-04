@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KanbanSpace } from '@/services/kanbanService';
+import { KanbanSpace, KanbanBoard } from '@/services/kanbanService';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, FolderKanban, Edit, Trash } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,14 +28,16 @@ import {
 
 interface SpaceManagerProps {
   spaces: KanbanSpace[];
-  onCreateSpace: (space: Partial<KanbanSpace>) => Promise<KanbanSpace>;
-  onUpdateSpace: (id: string, updates: Partial<KanbanSpace>) => Promise<void>;
+  boards: KanbanBoard[];
+  onCreateSpace: (space: Partial<KanbanSpace>, boardIds: string[]) => Promise<KanbanSpace>;
+  onUpdateSpace: (id: string, updates: Partial<KanbanSpace>, boardIds: string[]) => Promise<void>;
   onDeleteSpace: (id: string) => Promise<void>;
   onSelectSpace: (spaceId: string) => void;
 }
 
 export const SpaceManager: React.FC<SpaceManagerProps> = ({
   spaces,
+  boards,
   onCreateSpace,
   onUpdateSpace,
   onDeleteSpace,
@@ -45,13 +49,15 @@ export const SpaceManager: React.FC<SpaceManagerProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('#0a4a6b');
+  const [selectedBoardIds, setSelectedBoardIds] = useState<string[]>([]);
 
   const handleCreate = async () => {
     try {
-      await onCreateSpace({ title, description, color });
+      await onCreateSpace({ title, description, color }, selectedBoardIds);
       setTitle('');
       setDescription('');
       setColor('#0a4a6b');
+      setSelectedBoardIds([]);
       setIsCreateOpen(false);
     } catch (error) {
       // Error handled by hook
@@ -61,11 +67,12 @@ export const SpaceManager: React.FC<SpaceManagerProps> = ({
   const handleEdit = async () => {
     if (!editingSpace) return;
     try {
-      await onUpdateSpace(editingSpace.id, { title, description, color });
+      await onUpdateSpace(editingSpace.id, { title, description, color }, selectedBoardIds);
       setEditingSpace(null);
       setTitle('');
       setDescription('');
       setColor('#0a4a6b');
+      setSelectedBoardIds([]);
     } catch (error) {
       // Error handled by hook
     }
@@ -86,6 +93,17 @@ export const SpaceManager: React.FC<SpaceManagerProps> = ({
     setTitle(space.title);
     setDescription(space.description || '');
     setColor(space.color);
+    // Set boards that belong to this space
+    const spaceBoardIds = boards.filter(b => b.space_id === space.id).map(b => b.id);
+    setSelectedBoardIds(spaceBoardIds);
+  };
+
+  const toggleBoardSelection = (boardId: string) => {
+    setSelectedBoardIds(prev => 
+      prev.includes(boardId) 
+        ? prev.filter(id => id !== boardId)
+        : [...prev, boardId]
+    );
   };
 
   return (
@@ -130,6 +148,32 @@ export const SpaceManager: React.FC<SpaceManagerProps> = ({
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
                 />
+              </div>
+              <div>
+                <Label>Boards in this space</Label>
+                <ScrollArea className="h-[200px] border rounded-md p-3">
+                  <div className="space-y-2">
+                    {boards.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No boards available</p>
+                    ) : (
+                      boards.map((board) => (
+                        <div key={board.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`create-${board.id}`}
+                            checked={selectedBoardIds.includes(board.id)}
+                            onCheckedChange={() => toggleBoardSelection(board.id)}
+                          />
+                          <label
+                            htmlFor={`create-${board.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {board.title}
+                          </label>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
               </div>
               <Button onClick={handleCreate} className="w-full">
                 Create Space
@@ -215,6 +259,32 @@ export const SpaceManager: React.FC<SpaceManagerProps> = ({
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
               />
+            </div>
+            <div>
+              <Label>Boards in this space</Label>
+              <ScrollArea className="h-[200px] border rounded-md p-3">
+                <div className="space-y-2">
+                  {boards.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No boards available</p>
+                  ) : (
+                    boards.map((board) => (
+                      <div key={board.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`edit-${board.id}`}
+                          checked={selectedBoardIds.includes(board.id)}
+                          onCheckedChange={() => toggleBoardSelection(board.id)}
+                        />
+                        <label
+                          htmlFor={`edit-${board.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {board.title}
+                        </label>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
             </div>
             <Button onClick={handleEdit} className="w-full">
               Save Changes

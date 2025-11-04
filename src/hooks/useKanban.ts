@@ -241,9 +241,21 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
     }
   };
 
-  const createSpace = async (space: Partial<KanbanSpace>) => {
+  const createSpace = async (space: Partial<KanbanSpace>, boardIds: string[] = []) => {
     try {
       const newSpace = await KanbanService.createSpace(space);
+      
+      // Assign boards to the new space
+      if (boardIds.length > 0) {
+        await Promise.all(
+          boardIds.map(boardId => 
+            KanbanService.updateBoard(boardId, { space_id: newSpace.id })
+          )
+        );
+        // Refresh boards to reflect changes
+        fetchBoards(spaceId);
+      }
+      
       setSpaces([newSpace, ...spaces]);
       toast.success('Space created successfully');
       return newSpace;
@@ -253,9 +265,31 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
     }
   };
 
-  const updateSpace = async (id: string, updates: Partial<KanbanSpace>) => {
+  const updateSpace = async (id: string, updates: Partial<KanbanSpace>, boardIds: string[] = []) => {
     try {
       const updated = await KanbanService.updateSpace(id, updates);
+      
+      // Update board assignments
+      // First, remove all boards from this space
+      const currentSpaceBoards = boards.filter(b => b.space_id === id);
+      await Promise.all(
+        currentSpaceBoards.map(board => 
+          KanbanService.updateBoard(board.id, { space_id: null })
+        )
+      );
+      
+      // Then assign the selected boards to this space
+      if (boardIds.length > 0) {
+        await Promise.all(
+          boardIds.map(boardId => 
+            KanbanService.updateBoard(boardId, { space_id: id })
+          )
+        );
+      }
+      
+      // Refresh boards to reflect changes
+      fetchBoards(spaceId);
+      
       setSpaces(spaces.map(s => s.id === id ? updated : s));
       toast.success('Space updated successfully');
     } catch (error: any) {
