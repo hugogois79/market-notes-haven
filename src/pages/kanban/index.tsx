@@ -59,7 +59,7 @@ const KanbanPage = () => {
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
   const [newBoardTitle, setNewBoardTitle] = useState('');
   const [newBoardDescription, setNewBoardDescription] = useState('');
-  const [selectedSpace, setSelectedSpace] = useState<string>('');
+  const [selectedSpace, setSelectedSpace] = useState<string>('none');
   const [searchQuery, setSearchQuery] = useState('');
 
   const currentBoard = boards.find(b => b.id === boardId);
@@ -80,11 +80,11 @@ const KanbanPage = () => {
       const board = await createBoard({
         title: newBoardTitle,
         description: newBoardDescription,
-        space_id: selectedSpace || undefined
+        space_id: selectedSpace === 'none' ? undefined : selectedSpace
       });
       setNewBoardTitle('');
       setNewBoardDescription('');
-      setSelectedSpace('');
+      setSelectedSpace('none');
       setIsCreateBoardOpen(false);
       navigate(`/kanban/${board.id}`);
     } catch (error) {
@@ -184,7 +184,7 @@ const KanbanPage = () => {
                           <SelectValue placeholder="Select a space" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No Space</SelectItem>
+                          <SelectItem value="none">No Space</SelectItem>
                           {spaces.map((space) => (
                             <SelectItem key={space.id} value={space.id}>
                               {space.title}
