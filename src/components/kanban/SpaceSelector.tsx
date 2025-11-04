@@ -24,15 +24,15 @@ export const SpaceSelector: React.FC<SpaceSelectorProps> = ({
     <div className="flex items-center gap-2">
       <FolderKanban className="h-5 w-5 text-muted-foreground" />
       <Select 
-        value={currentSpaceId || 'all'} 
-        onValueChange={(value) => onSpaceChange(value === 'all' ? null : value)}
+        value={currentSpaceId === null ? 'all' : currentSpaceId === '' ? 'unorganized' : currentSpaceId} 
+        onValueChange={(value) => onSpaceChange(value === 'all' ? null : value === 'unorganized' ? '' : value)}
       >
         <SelectTrigger className="w-[280px]">
           <SelectValue placeholder="Select a space" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Boards</SelectItem>
-          <SelectItem value="">Unorganized Boards</SelectItem>
+          <SelectItem value="unorganized">Unorganized Boards</SelectItem>
           {spaces.map((space) => (
             <SelectItem key={space.id} value={space.id}>
               <div className="flex items-center gap-2">
