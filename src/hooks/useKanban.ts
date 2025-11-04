@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { KanbanService, KanbanBoard, KanbanList, KanbanCard } from '@/services/kanbanService';
+import { KanbanService, KanbanBoard, KanbanList, KanbanCard, KanbanSpace } from '@/services/kanbanService';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export const useKanban = (boardId?: string) => {
+export const useKanban = (boardId?: string, spaceId?: string | null) => {
+  const [spaces, setSpaces] = useState<KanbanSpace[]>([]);
   const [boards, setBoards] = useState<KanbanBoard[]>([]);
   const [lists, setLists] = useState<KanbanList[]>([]);
   const [cards, setCards] = useState<KanbanCard[]>([]);
@@ -11,8 +12,9 @@ export const useKanban = (boardId?: string) => {
   const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
-    fetchBoards();
-  }, []);
+    fetchSpaces();
+    fetchBoards(spaceId);
+  }, [spaceId]);
 
   useEffect(() => {
     if (boardId) {
@@ -21,9 +23,18 @@ export const useKanban = (boardId?: string) => {
     }
   }, [boardId, showArchived]);
 
-  const fetchBoards = async () => {
+  const fetchSpaces = async () => {
     try {
-      const data = await KanbanService.getBoards();
+      const data = await KanbanService.getSpaces();
+      setSpaces(data);
+    } catch (error: any) {
+      toast.error('Failed to load spaces: ' + error.message);
+    }
+  };
+
+  const fetchBoards = async (filterSpaceId?: string | null) => {
+    try {
+      const data = await KanbanService.getBoards(filterSpaceId);
       setBoards(data);
     } catch (error: any) {
       toast.error('Failed to load boards: ' + error.message);
@@ -230,13 +241,49 @@ export const useKanban = (boardId?: string) => {
     }
   };
 
+  const createSpace = async (space: Partial<KanbanSpace>) => {
+    try {
+      const newSpace = await KanbanService.createSpace(space);
+      setSpaces([newSpace, ...spaces]);
+      toast.success('Space created successfully');
+      return newSpace;
+    } catch (error: any) {
+      toast.error('Failed to create space: ' + error.message);
+      throw error;
+    }
+  };
+
+  const updateSpace = async (id: string, updates: Partial<KanbanSpace>) => {
+    try {
+      const updated = await KanbanService.updateSpace(id, updates);
+      setSpaces(spaces.map(s => s.id === id ? updated : s));
+      toast.success('Space updated successfully');
+    } catch (error: any) {
+      toast.error('Failed to update space: ' + error.message);
+    }
+  };
+
+  const deleteSpace = async (id: string) => {
+    try {
+      await KanbanService.deleteSpace(id);
+      setSpaces(spaces.filter(s => s.id !== id));
+      toast.success('Space deleted successfully');
+    } catch (error: any) {
+      toast.error('Failed to delete space: ' + error.message);
+    }
+  };
+
   return {
+    spaces,
     boards,
     lists,
     cards,
     loading,
     showArchived,
     setShowArchived,
+    createSpace,
+    updateSpace,
+    deleteSpace,
     createBoard,
     updateBoard,
     deleteBoard,
@@ -248,6 +295,7 @@ export const useKanban = (boardId?: string) => {
     deleteCard,
     moveCard,
     moveList,
-    refetch: () => boardId && fetchBoardData(boardId, showArchived)
+    refetch: () => boardId && fetchBoardData(boardId, showArchived),
+    refetchBoards: () => fetchBoards(spaceId)
   };
 };

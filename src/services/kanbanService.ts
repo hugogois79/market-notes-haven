@@ -1,10 +1,21 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export interface KanbanSpace {
+  id: string;
+  title: string;
+  description?: string;
+  color: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface KanbanBoard {
   id: string;
   title: string;
   description?: string;
   color: string;
+  space_id?: string;
   user_id: string;
   created_at: string;
   updated_at: string;
@@ -54,12 +65,67 @@ export interface KanbanAttachment {
 }
 
 export class KanbanService {
-  // Board operations
-  static async getBoards() {
+  // Space operations
+  static async getSpaces() {
     const { data, error } = await supabase
+      .from('kanban_spaces')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data as KanbanSpace[];
+  }
+
+  static async createSpace(space: Partial<KanbanSpace>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { data, error } = await supabase
+      .from('kanban_spaces')
+      .insert([{ ...space, user_id: user?.id } as any])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as KanbanSpace;
+  }
+
+  static async updateSpace(id: string, updates: Partial<KanbanSpace>) {
+    const { data, error } = await supabase
+      .from('kanban_spaces')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as KanbanSpace;
+  }
+
+  static async deleteSpace(id: string) {
+    const { error } = await supabase
+      .from('kanban_spaces')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+
+  // Board operations
+  static async getBoards(spaceId?: string) {
+    let query = supabase
       .from('kanban_boards')
       .select('*')
       .order('created_at', { ascending: false });
+    
+    if (spaceId !== undefined) {
+      if (spaceId === null || spaceId === '') {
+        query = query.is('space_id', null);
+      } else {
+        query = query.eq('space_id', spaceId);
+      }
+    }
+    
+    const { data, error } = await query;
     
     if (error) throw error;
     return data as KanbanBoard[];

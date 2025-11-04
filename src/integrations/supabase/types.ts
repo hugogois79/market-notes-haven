@@ -1094,6 +1094,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          space_id: string | null
           title: string
           updated_at: string | null
           user_id: string | null
@@ -1103,6 +1104,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          space_id?: string | null
           title: string
           updated_at?: string | null
           user_id?: string | null
@@ -1112,11 +1114,20 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          space_id?: string | null
           title?: string
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "kanban_boards_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_spaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       kanban_card_labels: {
         Row: {
@@ -1363,6 +1374,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      kanban_spaces: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       news_articles: {
         Row: {

@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useKanban } from '@/hooks/useKanban';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
+import { SpaceSelector } from '@/components/kanban/SpaceSelector';
+import { SpaceManager } from '@/components/kanban/SpaceManager';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -20,20 +22,28 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Search, Kanban as KanbanIcon, Archive } from 'lucide-react';
+import { Plus, Search, Kanban as KanbanIcon, Archive, ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const KanbanPage = () => {
   const { boardId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const spaceIdParam = searchParams.get('space');
+  const viewParam = searchParams.get('view') || 'boards';
   const {
+    spaces,
     boards,
     lists,
     cards,
     loading,
     showArchived,
     setShowArchived,
+    createSpace,
+    updateSpace,
+    deleteSpace,
     createBoard,
     createList,
     createCard,
@@ -42,12 +52,14 @@ const KanbanPage = () => {
     deleteList,
     updateList,
     moveCard,
-    moveList
-  } = useKanban(boardId);
+    moveList,
+    refetchBoards
+  } = useKanban(boardId, spaceIdParam);
 
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
   const [newBoardTitle, setNewBoardTitle] = useState('');
   const [newBoardDescription, setNewBoardDescription] = useState('');
+  const [selectedSpace, setSelectedSpace] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
 
   const currentBoard = boards.find(b => b.id === boardId);
@@ -67,15 +79,32 @@ const KanbanPage = () => {
     try {
       const board = await createBoard({
         title: newBoardTitle,
-        description: newBoardDescription
+        description: newBoardDescription,
+        space_id: selectedSpace || undefined
       });
       setNewBoardTitle('');
       setNewBoardDescription('');
+      setSelectedSpace('');
       setIsCreateBoardOpen(false);
       navigate(`/kanban/${board.id}`);
     } catch (error) {
       // Error handled by hook
     }
+  };
+
+  const handleSpaceChange = (spaceId: string | null) => {
+    if (spaceId === null) {
+      searchParams.delete('space');
+    } else {
+      searchParams.set('space', spaceId);
+    }
+    setSearchParams(searchParams);
+  };
+
+  const handleSpaceSelect = (spaceId: string) => {
+    searchParams.set('space', spaceId);
+    searchParams.set('view', 'boards');
+    setSearchParams(searchParams);
   };
 
   const handleAddList = async (title: string) => {
@@ -109,77 +138,126 @@ const KanbanPage = () => {
   if (!boardId) {
     return (
       <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Project Boards</h1>
-          <Dialog open={isCreateBoardOpen} onOpenChange={setIsCreateBoardOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Board
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Board</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Title</Label>
-                  <Input
-                    value={newBoardTitle}
-                    onChange={(e) => setNewBoardTitle(e.target.value)}
-                    placeholder="e.g., DABINAR"
-                  />
-                </div>
-                <div>
-                  <Label>Description</Label>
-                  <Textarea
-                    value={newBoardDescription}
-                    onChange={(e) => setNewBoardDescription(e.target.value)}
-                    placeholder="Describe your project..."
-                  />
-                </div>
-                <Button onClick={handleCreateBoard} className="w-full">
-                  Create Board
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+        <Tabs value={viewParam} onValueChange={(v) => {
+          searchParams.set('view', v);
+          setSearchParams(searchParams);
+        }}>
+          <div className="flex justify-between items-center mb-6">
+            <TabsList>
+              <TabsTrigger value="spaces">Spaces</TabsTrigger>
+              <TabsTrigger value="boards">Boards</TabsTrigger>
+            </TabsList>
+            
+            {viewParam === 'boards' && (
+              <Dialog open={isCreateBoardOpen} onOpenChange={setIsCreateBoardOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Board
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Board</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Title</Label>
+                      <Input
+                        value={newBoardTitle}
+                        onChange={(e) => setNewBoardTitle(e.target.value)}
+                        placeholder="e.g., DABINAR"
+                      />
+                    </div>
+                    <div>
+                      <Label>Description</Label>
+                      <Textarea
+                        value={newBoardDescription}
+                        onChange={(e) => setNewBoardDescription(e.target.value)}
+                        placeholder="Describe your project..."
+                      />
+                    </div>
+                    <div>
+                      <Label>Space (optional)</Label>
+                      <Select value={selectedSpace} onValueChange={setSelectedSpace}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a space" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No Space</SelectItem>
+                          {spaces.map((space) => (
+                            <SelectItem key={space.id} value={space.id}>
+                              {space.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button onClick={handleCreateBoard} className="w-full">
+                      Create Board
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map(i => (
-              <Skeleton key={i} className="h-32 w-full" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {boards.map(board => (
-              <div
-                key={board.id}
-                onClick={() => navigate(`/kanban/${board.id}`)}
-                className="p-6 rounded-lg border-2 hover:border-primary cursor-pointer transition-colors"
-                style={{ backgroundColor: board.color + '10' }}
-              >
-                <h3 className="text-xl font-bold mb-2">{board.title}</h3>
-                {board.description && (
-                  <p className="text-sm text-muted-foreground">{board.description}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+          <TabsContent value="spaces">
+            <SpaceManager
+              spaces={spaces}
+              onCreateSpace={createSpace}
+              onUpdateSpace={updateSpace}
+              onDeleteSpace={deleteSpace}
+              onSelectSpace={handleSpaceSelect}
+            />
+          </TabsContent>
 
-        {!loading && boards.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground mb-4">No boards yet. Create your first board to get started!</p>
-            <Button onClick={() => setIsCreateBoardOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Your First Board
-            </Button>
-          </div>
-        )}
+          <TabsContent value="boards">
+            <div className="space-y-6">
+              <SpaceSelector
+                spaces={spaces}
+                currentSpaceId={spaceIdParam}
+                onSpaceChange={handleSpaceChange}
+              />
+
+              {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1, 2, 3].map(i => (
+                    <Skeleton key={i} className="h-32 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {boards.map(board => (
+                    <div
+                      key={board.id}
+                      onClick={() => navigate(`/kanban/${board.id}`)}
+                      className="p-6 rounded-lg border-2 hover:border-primary cursor-pointer transition-colors"
+                      style={{ backgroundColor: board.color + '10' }}
+                    >
+                      <h3 className="text-xl font-bold mb-2">{board.title}</h3>
+                      {board.description && (
+                        <p className="text-sm text-muted-foreground">{board.description}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!loading && boards.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground mb-4">
+                    {spaceIdParam ? 'No boards in this space yet.' : 'No boards yet. Create your first board to get started!'}
+                  </p>
+                  <Button onClick={() => setIsCreateBoardOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Board
+                  </Button>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     );
   }
@@ -187,8 +265,15 @@ const KanbanPage = () => {
   return (
     <div className="p-6">
       <div className="mb-6 space-y-4">
-        {/* Board selector and search bar */}
+        {/* Back button and board selector */}
         <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/kanban')}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Boards
+          </Button>
           <div className="flex items-center gap-2">
             <KanbanIcon className="h-6 w-6" />
             <Select value={boardId} onValueChange={(value) => navigate(`/kanban/${value}`)}>
