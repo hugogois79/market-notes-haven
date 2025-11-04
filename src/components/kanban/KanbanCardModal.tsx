@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -21,21 +21,31 @@ import {
 } from '@/components/ui/popover';
 import { toast } from 'sonner';
 import { TaskChecklist, Task } from './TaskChecklist';
+import { BoardListSelector } from './BoardListSelector';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 interface KanbanCardModalProps {
   card: KanbanCard;
+  boardId: string;
   isOpen: boolean;
   onClose: () => void;
   onUpdate: (id: string, updates: Partial<KanbanCard>) => void;
   onDelete: (id: string) => void;
+  onMove?: (cardId: string, newListId: string, newBoardId: string) => void;
 }
 
 export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   card,
+  boardId,
   isOpen,
   onClose,
   onUpdate,
-  onDelete
+  onDelete,
+  onMove
 }) => {
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description || '');
@@ -47,6 +57,9 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [moveToListId, setMoveToListId] = useState<string>(card.list_id);
+  const [moveToBoardId, setMoveToBoardId] = useState<string>(boardId);
+  const [showMoveSection, setShowMoveSection] = useState(false);
 
   useEffect(() => {
     if (isOpen && card.id) {
@@ -125,14 +138,36 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     return '📎';
   };
 
-  const handleSave = () => {
-    onUpdate(card.id, {
-      title,
-      description,
-      priority,
-      due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
-      tasks: tasks as any
-    });
+  const handleSave = async () => {
+    // Check if card should be moved
+    if (moveToListId !== card.list_id && onMove) {
+      try {
+        // First update the card details
+        await KanbanService.updateCard(card.id, {
+          title,
+          description,
+          priority,
+          due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
+          tasks: tasks as any
+        });
+        
+        // Then move it to the new list
+        await onMove(card.id, moveToListId, moveToBoardId);
+        toast.success('Card moved successfully');
+      } catch (error) {
+        console.error('Error moving card:', error);
+        toast.error('Failed to move card');
+      }
+    } else {
+      // Just update the card
+      onUpdate(card.id, {
+        title,
+        description,
+        priority,
+        due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
+        tasks: tasks as any
+      });
+    }
     onClose();
   };
 
@@ -217,6 +252,25 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
 
           <div>
             <TaskChecklist tasks={tasks} onTasksChange={setTasks} />
+          </div>
+
+          <div>
+            <Collapsible open={showMoveSection} onOpenChange={setShowMoveSection}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-start">
+                  <MoveRight className="h-4 w-4 mr-2" />
+                  Move to another list/board
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-4">
+                <BoardListSelector
+                  currentBoardId={boardId}
+                  currentListId={card.list_id}
+                  onBoardChange={setMoveToBoardId}
+                  onListChange={setMoveToListId}
+                />
+              </CollapsibleContent>
+            </Collapsible>
           </div>
 
           <div>

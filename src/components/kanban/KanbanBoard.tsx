@@ -6,8 +6,10 @@ import { KanbanCardModal } from './KanbanCardModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface KanbanBoardProps {
+  boardId: string;
   lists: KanbanListType[];
   cards: KanbanCard[];
   onAddList: (title: string) => void;
@@ -22,6 +24,7 @@ interface KanbanBoardProps {
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
+  boardId,
   lists,
   cards,
   onAddList,
@@ -69,6 +72,27 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   const getListCards = (listId: string) => {
     return cards.filter(card => card.list_id === listId);
+  };
+
+  const handleMoveCard = async (cardId: string, newListId: string, newBoardId: string) => {
+    // If moving to a different board, navigate there
+    if (newBoardId !== boardId) {
+      // Get the card's current position in the new list
+      const targetListCards = cards.filter(c => c.list_id === newListId);
+      const newPosition = targetListCards.length;
+      
+      await onMoveCard(cardId, newListId, newPosition);
+      toast.success('Card moved to another board');
+      
+      // Close modal and navigate
+      setSelectedCard(null);
+      window.location.href = `/kanban/${newBoardId}`;
+    } else {
+      // Moving within the same board
+      const targetListCards = cards.filter(c => c.list_id === newListId);
+      const newPosition = targetListCards.length;
+      await onMoveCard(cardId, newListId, newPosition);
+    }
   };
 
   return (
@@ -157,10 +181,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       {selectedCard && (
         <KanbanCardModal
           card={selectedCard}
+          boardId={boardId}
           isOpen={!!selectedCard}
           onClose={() => setSelectedCard(null)}
           onUpdate={onUpdateCard}
           onDelete={onDeleteCard}
+          onMove={handleMoveCard}
         />
       )}
     </>

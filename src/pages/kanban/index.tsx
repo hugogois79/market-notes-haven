@@ -340,6 +340,7 @@ const KanbanPage = () => {
         </div>
       ) : (
         <KanbanBoard
+          boardId={boardId}
           lists={[...lists].sort((a, b) => a.position - b.position)}
           cards={filteredCards}
           onAddList={handleAddList}
