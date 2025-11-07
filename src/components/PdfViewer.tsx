@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Download, Maximize2, FileText } from "lucide-react";
+import { Download, Maximize2, FileText, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface PdfViewerProps {
@@ -33,6 +33,68 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+  };
+
+  const handlePrint = async () => {
+    try {
+      // Convert blob to data URL for printing
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      
+      reader.onloadend = () => {
+        const base64data = reader.result as string;
+        
+        // Create a hidden iframe for printing
+        const printFrame = document.createElement('iframe');
+        printFrame.style.position = 'fixed';
+        printFrame.style.right = '0';
+        printFrame.style.bottom = '0';
+        printFrame.style.width = '0';
+        printFrame.style.height = '0';
+        printFrame.style.border = '0';
+        document.body.appendChild(printFrame);
+        
+        const printDocument = printFrame.contentWindow?.document;
+        if (printDocument) {
+          printDocument.open();
+          printDocument.write(`
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <title>${filename}</title>
+              </head>
+              <body style="margin: 0;">
+                <embed src="${base64data}" type="application/pdf" width="100%" height="100%" />
+              </body>
+            </html>
+          `);
+          printDocument.close();
+          
+          // Wait for PDF to load then print
+          printFrame.onload = () => {
+            setTimeout(() => {
+              printFrame.contentWindow?.print();
+              // Remove iframe after printing
+              setTimeout(() => {
+                document.body.removeChild(printFrame);
+              }, 100);
+            }, 250);
+          };
+        }
+      };
+      
+      reader.readAsDataURL(blob);
+    } catch (err) {
+      console.error("Error printing PDF:", err);
+      // Fallback: try to open in new window for printing
+      const newWindow = window.open(url, '_blank');
+      if (newWindow) {
+        newWindow.onload = () => {
+          newWindow.print();
+        };
+      }
+    }
   };
 
   const handleFullscreen = async () => {
@@ -108,6 +170,10 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
           Visualização de PDF
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={handlePrint}>
+            <Printer className="h-4 w-4 mr-2" />
+            Imprimir
+          </Button>
           <Button size="sm" variant="outline" onClick={handleFullscreen}>
             <Maximize2 className="h-4 w-4 mr-2" />
             Abrir em nova aba
