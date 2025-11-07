@@ -5,6 +5,7 @@ import { ArrowLeft, FileText, Download, Eye, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PdfViewer } from "@/components/PdfViewer";
 import {
   Table,
   TableBody,
@@ -389,31 +390,7 @@ const ExpenseDetailPage = () => {
                   className="w-full h-auto object-contain"
                 />
               ) : viewingReceipt.type === 'application/pdf' ? (
-                <div className="w-full h-[calc(90vh-8rem)] flex flex-col">
-                  <object
-                    data={viewingReceipt.url}
-                    type="application/pdf"
-                    className="w-full flex-1"
-                  >
-                    <div className="flex flex-col items-center justify-center h-full gap-4">
-                      <FileText className="h-16 w-16 text-muted-foreground" />
-                      <p className="text-muted-foreground">
-                        Não foi possível pré-visualizar o PDF neste navegador.
-                      </p>
-                      <Button
-                        onClick={() => {
-                          const a = document.createElement('a');
-                          a.href = viewingReceipt.url;
-                          a.download = 'comprovativo.pdf';
-                          a.click();
-                        }}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Descarregar PDF
-                      </Button>
-                    </div>
-                  </object>
-                </div>
+                <PdfViewer url={viewingReceipt.url} filename="comprovativo.pdf" />
               ) : (
                 <div className="flex flex-col items-center justify-center gap-4">
                   <FileText className="h-16 w-16 text-muted-foreground" />
