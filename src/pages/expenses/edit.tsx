@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Plus, Pencil, Trash2, Upload, Eye, X } from "lucide-react";
+import { PdfViewer } from "@/components/PdfViewer";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -892,20 +893,20 @@ const EditExpensePage = () => {
               </Button>
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-hidden">
             {viewingReceipt && (
               viewingReceipt.type.startsWith('image/') ? (
                 <img 
                   src={viewingReceipt.url} 
                   alt="Comprovativo" 
-                  className="w-full h-auto"
+                  className="w-full h-auto object-contain"
                 />
+              ) : viewingReceipt.type === 'application/pdf' ? (
+                <PdfViewer url={viewingReceipt.url} filename="comprovativo.pdf" />
               ) : (
-                <iframe
-                  src={viewingReceipt.url}
-                  className="w-full h-[calc(90vh-8rem)]"
-                  title="Comprovativo"
-                />
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-muted-foreground">Tipo de ficheiro não suportado para pré-visualização</p>
+                </div>
               )
             )}
           </div>
