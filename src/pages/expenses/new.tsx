@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Pencil, Trash2, Upload, Settings } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Upload, Settings, FileText, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -473,6 +473,7 @@ const NewExpensePage = () => {
                   <TableHead>Fornecedor</TableHead>
                   <TableHead>Valor</TableHead>
                   <TableHead>Projeto</TableHead>
+                  <TableHead>Comprovativo</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -490,6 +491,25 @@ const NewExpensePage = () => {
                     <TableCell>
                       {projects?.find((p) => p.id === expense.project_id)?.name ||
                         "-"}
+                    </TableCell>
+                    <TableCell>
+                      {expense.receipt_image_url ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            if (expense.receipt_image_url) {
+                              window.open(expense.receipt_image_url, '_blank');
+                            }
+                          }}
+                          className="text-green-600 hover:text-green-700"
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          Ver
+                        </Button>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
