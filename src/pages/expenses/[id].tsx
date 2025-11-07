@@ -388,12 +388,50 @@ const ExpenseDetailPage = () => {
                   alt="Comprovativo" 
                   className="w-full h-auto object-contain"
                 />
+              ) : viewingReceipt.type === 'application/pdf' ? (
+                <div className="w-full h-[calc(90vh-8rem)] flex flex-col">
+                  <object
+                    data={viewingReceipt.url}
+                    type="application/pdf"
+                    className="w-full flex-1"
+                  >
+                    <div className="flex flex-col items-center justify-center h-full gap-4">
+                      <FileText className="h-16 w-16 text-muted-foreground" />
+                      <p className="text-muted-foreground">
+                        Não foi possível pré-visualizar o PDF neste navegador.
+                      </p>
+                      <Button
+                        onClick={() => {
+                          const a = document.createElement('a');
+                          a.href = viewingReceipt.url;
+                          a.download = 'comprovativo.pdf';
+                          a.click();
+                        }}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Descarregar PDF
+                      </Button>
+                    </div>
+                  </object>
+                </div>
               ) : (
-                <iframe
-                  src={viewingReceipt.url}
-                  className="w-full h-[calc(90vh-8rem)]"
-                  title="Comprovativo"
-                />
+                <div className="flex flex-col items-center justify-center gap-4">
+                  <FileText className="h-16 w-16 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    Tipo de ficheiro: {viewingReceipt.type}
+                  </p>
+                  <Button
+                    onClick={() => {
+                      const a = document.createElement('a');
+                      a.href = viewingReceipt.url;
+                      a.download = 'comprovativo';
+                      a.click();
+                    }}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Descarregar Ficheiro
+                  </Button>
+                </div>
               )
             ) : null}
           </div>
