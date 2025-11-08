@@ -70,11 +70,11 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
       </div>
       
       <div className="flex-1 overflow-hidden bg-muted/20">
-        <iframe
+        <embed
           src={url}
-          className="w-full h-full border-0"
+          type="application/pdf"
+          className="w-full h-full"
           title={filename}
-          onError={() => setError(true)}
         />
       </div>
     </div>
