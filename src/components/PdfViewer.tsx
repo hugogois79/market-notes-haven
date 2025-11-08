@@ -8,22 +8,40 @@ interface PdfViewerProps {
 }
 
 export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) => {
+  const [pdfDataUrl, setPdfDataUrl] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   
   useEffect(() => {
-    // Verify blob is accessible
-    fetch(url)
-      .then(response => response.blob())
-      .then(blob => {
-        console.log("PdfViewer: Blob loaded successfully, size:", blob.size);
-        setLoading(false);
-      })
-      .catch(err => {
+    const loadPdf = async () => {
+      try {
+        console.log("PdfViewer: Loading PDF from URL:", url);
+        const response = await fetch(url);
+        const blob = await response.blob();
+        console.log("PdfViewer: Blob loaded successfully, size:", blob.size, "type:", blob.type);
+        
+        // Convert blob to data URL for reliable rendering
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const dataUrl = reader.result as string;
+          console.log("PdfViewer: Data URL created, length:", dataUrl.length);
+          setPdfDataUrl(dataUrl);
+          setLoading(false);
+        };
+        reader.onerror = () => {
+          console.error("PdfViewer: Error reading blob");
+          setError(true);
+          setLoading(false);
+        };
+        reader.readAsDataURL(blob);
+      } catch (err) {
         console.error("PdfViewer: Error loading blob:", err);
         setError(true);
         setLoading(false);
-      });
+      }
+    };
+    
+    loadPdf();
   }, [url]);
 
   const handleDownload = () => {
@@ -35,102 +53,51 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
     document.body.removeChild(a);
   };
 
-  const handlePrint = async () => {
-    try {
-      // Convert blob to data URL for printing
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const reader = new FileReader();
-      
-      reader.onloadend = () => {
-        const base64data = reader.result as string;
-        
-        // Create a hidden iframe for printing
-        const printFrame = document.createElement('iframe');
-        printFrame.style.position = 'fixed';
-        printFrame.style.right = '0';
-        printFrame.style.bottom = '0';
-        printFrame.style.width = '0';
-        printFrame.style.height = '0';
-        printFrame.style.border = '0';
-        document.body.appendChild(printFrame);
-        
-        const printDocument = printFrame.contentWindow?.document;
-        if (printDocument) {
-          printDocument.open();
-          printDocument.write(`
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <title>${filename}</title>
-              </head>
-              <body style="margin: 0;">
-                <embed src="${base64data}" type="application/pdf" width="100%" height="100%" />
-              </body>
-            </html>
-          `);
-          printDocument.close();
-          
-          // Wait for PDF to load then print
-          printFrame.onload = () => {
-            setTimeout(() => {
-              printFrame.contentWindow?.print();
-              // Remove iframe after printing
-              setTimeout(() => {
-                document.body.removeChild(printFrame);
-              }, 100);
-            }, 250);
-          };
-        }
-      };
-      
-      reader.readAsDataURL(blob);
-    } catch (err) {
-      console.error("Error printing PDF:", err);
-      // Fallback: try to open in new window for printing
-      const newWindow = window.open(url, '_blank');
-      if (newWindow) {
-        newWindow.onload = () => {
-          newWindow.print();
-        };
-      }
-    }
+  const handlePrint = () => {
+    if (!pdfDataUrl) return;
+    
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'fixed';
+    printFrame.style.right = '0';
+    printFrame.style.bottom = '0';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
+    printFrame.style.border = '0';
+    document.body.appendChild(printFrame);
+    
+    printFrame.onload = () => {
+      setTimeout(() => {
+        printFrame.contentWindow?.print();
+        setTimeout(() => {
+          document.body.removeChild(printFrame);
+        }, 100);
+      }, 250);
+    };
+    
+    printFrame.src = pdfDataUrl;
   };
 
-  const handleFullscreen = async () => {
-    try {
-      // Convert blob to data URL for opening in new tab
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const reader = new FileReader();
-      
-      reader.onloadend = () => {
-        const base64data = reader.result as string;
-        const newWindow = window.open();
-        if (newWindow) {
-          newWindow.document.write(`
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <title>${filename}</title>
-                <style>
-                  body { margin: 0; padding: 0; }
-                  embed { width: 100vw; height: 100vh; }
-                </style>
-              </head>
-              <body>
-                <embed src="${base64data}" type="application/pdf" />
-              </body>
-            </html>
-          `);
-        }
-      };
-      
-      reader.readAsDataURL(blob);
-    } catch (err) {
-      console.error("Error opening PDF in new tab:", err);
-      // Fallback to direct blob URL
-      window.open(url, '_blank');
+  const handleFullscreen = () => {
+    if (!pdfDataUrl) return;
+    
+    const newWindow = window.open();
+    if (newWindow) {
+      newWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${filename}</title>
+            <style>
+              body { margin: 0; padding: 0; overflow: hidden; }
+              iframe { width: 100vw; height: 100vh; border: none; }
+            </style>
+          </head>
+          <body>
+            <iframe src="${pdfDataUrl}" type="application/pdf"></iframe>
+          </body>
+        </html>
+      `);
+      newWindow.document.close();
     }
   };
 
@@ -186,27 +153,13 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
       </div>
       
       <div className="flex-1 overflow-hidden bg-muted/20">
-        <object
-          data={url}
-          type="application/pdf"
-          className="w-full h-full"
-        >
-          <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
-            <FileText className="h-16 w-16 text-muted-foreground" />
-            <div className="text-center space-y-2">
-              <p className="text-lg font-semibold">
-                Não foi possível pré-visualizar o PDF
-              </p>
-              <p className="text-sm text-muted-foreground">
-                O seu navegador não suporta visualização de PDFs incorporados.
-              </p>
-            </div>
-            <Button onClick={handleDownload}>
-              <Download className="h-4 w-4 mr-2" />
-              Descarregar PDF
-            </Button>
-          </div>
-        </object>
+        {pdfDataUrl && (
+          <iframe
+            src={pdfDataUrl}
+            className="w-full h-full border-0"
+            title={filename}
+          />
+        )}
       </div>
     </div>
   );
