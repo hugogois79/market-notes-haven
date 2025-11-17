@@ -542,49 +542,6 @@ const ReceiptGenerator = () => {
               )}
                <Card className="bg-white shadow-lg">
                 <div className="p-8 relative">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="text-left flex-1 mr-4">
-                      {(() => {
-                        const isEpic = content.toLowerCase().includes('epicatmosphere') || 
-                                      generatedReceipt.toLowerCase().includes('epicatmosphere');
-                        const company = isEpic 
-                          ? getCompanyData('epic atmosphere')
-                          : getCompanyData('sustainable yield');
-                        
-                        return (
-                          <>
-                            <h2 className="text-lg font-bold uppercase tracking-wide mb-1">{company?.name || ''}</h2>
-                            {(company?.company_number || company?.nipc) && (
-                              <p className="text-sm">Company Number: {company?.company_number || company?.nipc}</p>
-                            )}
-                            {company?.address && (
-                              <p className="text-sm">Morada Registada: {company.address}{company.country ? ', ' + company.country : ''}</p>
-                            )}
-                            {company?.email && (
-                              <p className="text-sm">Email: {company.email}</p>
-                            )}
-                            {company?.bank_account && (
-                              <p className="text-sm">Conta Bancária: {company.bank_account}{company.bank_name ? ' (' + company.bank_name + ')' : ''}</p>
-                            )}
-                            {company?.capital_social && (
-                              <p className="text-sm">Capital Social: {company.capital_social}</p>
-                            )}
-                          </>
-                        );
-                      })()}
-                    </div>
-                    <div className="flex-shrink-0">
-                      <img 
-                        src={(content.toLowerCase().includes('epicatmosphere') || 
-                              generatedReceipt.toLowerCase().includes('epicatmosphere')) 
-                              ? epicatmosphereLogo 
-                              : sustainableYieldLogo} 
-                        alt="Company Logo" 
-                        className="w-48 h-auto"
-                      />
-                    </div>
-                  </div>
-                  <hr className="border-t border-gray-300 mb-6" />
                   {receiptNumber && (
                     <div className="text-right font-semibold text-sm mb-4">
                       Payment Number: #{receiptNumber}
