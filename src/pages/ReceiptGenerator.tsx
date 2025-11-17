@@ -40,6 +40,7 @@ const ReceiptGenerator = () => {
   const [receiptId, setReceiptId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("editor");
   const [companies, setCompanies] = useState<CompanyData[]>([]);
+  const [beneficiaryName, setBeneficiaryName] = useState<string>("");
 
   useEffect(() => {
     loadCompanies();
@@ -114,6 +115,7 @@ const ReceiptGenerator = () => {
     setGeneratedReceipt(receipt.formatted_content);
     setReceiptNumber(receipt.receipt_number);
     setReceiptId(receipt.id);
+    setBeneficiaryName(receipt.beneficiary_name || "");
     setActiveTab("editor");
     toast.success(`Loaded receipt #${receipt.receipt_number}`);
   };
@@ -123,6 +125,7 @@ const ReceiptGenerator = () => {
     setGeneratedReceipt("");
     setReceiptNumber(null);
     setReceiptId(null);
+    setBeneficiaryName("");
     toast.info("Starting new receipt");
   };
 
@@ -150,6 +153,7 @@ const ReceiptGenerator = () => {
         // Add company header to the receipt
         const receiptWithHeader = generateCompanyHeader() + data.formattedReceipt;
         setGeneratedReceipt(receiptWithHeader);
+        setBeneficiaryName(data.beneficiary_name || "");
         toast.success("Receipt formatted successfully!");
       
         // Auto-save after generating with extracted data
@@ -275,6 +279,13 @@ const ReceiptGenerator = () => {
     }
     const companyInfoHtml = companyInfo.join('');
 
+    const beneficiarySection = beneficiaryName ? `
+      <div style="margin-bottom: 20px;">
+        <p style="font-size: 10px; color: #666; margin: 0 0 5px 0;">Beneficiário:</p>
+        <p style="font-size: 14px; font-weight: bold; margin: 0;">${beneficiaryName}</p>
+      </div>
+    ` : '';
+
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -382,6 +393,8 @@ const ReceiptGenerator = () => {
         </head>
         <body>
           ${receiptNumber ? `<div class="payment-number">Receipt Number: #${receiptNumber}</div>` : ''}
+          
+          ${beneficiarySection}
           
           <div class="company-header">
             <div class="company-info">
@@ -542,6 +555,12 @@ const ReceiptGenerator = () => {
               )}
                <Card className="bg-white shadow-lg">
                 <div className="p-8 relative">
+                  {beneficiaryName && (
+                    <div className="mb-6">
+                      <p className="text-sm text-muted-foreground mb-1">Beneficiário:</p>
+                      <p className="text-lg font-semibold">{beneficiaryName}</p>
+                    </div>
+                  )}
                   {receiptNumber && (
                     <div className="text-right font-semibold text-sm mb-4">
                       Payment Number: #{receiptNumber}
