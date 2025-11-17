@@ -9,6 +9,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader } from "lucide-react";
+import { z } from "zod";
+
+const loginSchema = z.object({
+  email: z.string().trim().email({ message: "Invalid email address" }).max(255, { message: "Email must be less than 255 characters" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }).max(72, { message: "Password must be less than 72 characters" }),
+});
+
+const signupSchema = z.object({
+  email: z.string().trim().email({ message: "Invalid email address" }).max(255, { message: "Email must be less than 255 characters" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }).max(72, { message: "Password must be less than 72 characters" }),
+  username: z.string().trim().min(3, { message: "Username must be at least 3 characters" }).max(50, { message: "Username must be less than 50 characters" }),
+});
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -22,22 +34,19 @@ const Auth = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password || !username) {
-      toast.error("Please fill in all fields");
-      return;
-    }
-
-    setLoading(true);
-    
     try {
+      const validatedData = signupSchema.parse({ email, password, username });
+      
+      setLoading(true);
+      
       const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
+        email: validatedData.email,
+        password: validatedData.password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
-            username,
-            full_name: username,
+            username: validatedData.username,
+            full_name: validatedData.username,
           },
         },
       });
@@ -49,8 +58,12 @@ const Auth = () => {
         setActiveTab("login");
       }
     } catch (error) {
-      console.error("Signup error:", error);
-      toast.error("An error occurred during signup");
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      } else {
+        console.error("Signup error:", error);
+        toast.error("An error occurred during signup");
+      }
     } finally {
       setLoading(false);
     }
@@ -60,17 +73,14 @@ const Auth = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
-      toast.error("Please fill in all fields");
-      return;
-    }
-
-    setLoading(true);
-    
     try {
+      const validatedData = loginSchema.parse({ email, password });
+      
+      setLoading(true);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: validatedData.email,
+        password: validatedData.password,
       });
 
       if (error) {
@@ -80,8 +90,12 @@ const Auth = () => {
         navigate("/");
       }
     } catch (error) {
-      console.error("Login error:", error);
-      toast.error("An error occurred during login");
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      } else {
+        console.error("Login error:", error);
+        toast.error("An error occurred during login");
+      }
     } finally {
       setLoading(false);
     }
