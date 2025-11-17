@@ -152,14 +152,15 @@ const ReceiptGenerator = () => {
         setGeneratedReceipt(receiptWithHeader);
         toast.success("Receipt formatted successfully!");
       
-      // Auto-save after generating with extracted data
-      if (session?.user?.id) {
-        await saveReceipt(data.formattedReceipt, {
-          beneficiary_name: data.beneficiary_name,
-          payment_amount: data.payment_amount,
-          payment_date: data.payment_date,
-          payment_reference: data.payment_reference
-        });
+        // Auto-save after generating with extracted data
+        if (session?.user?.id) {
+          await saveReceipt(data.formattedReceipt, {
+            beneficiary_name: data.beneficiary_name,
+            payment_amount: data.payment_amount,
+            payment_date: data.payment_date,
+            payment_reference: data.payment_reference
+          });
+        }
       }
     } catch (error) {
       console.error('Error formatting receipt:', error);
