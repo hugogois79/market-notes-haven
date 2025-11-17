@@ -208,6 +208,33 @@ const ReceiptGenerator = () => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
+    // Get company data for print
+    const isEpicatmosphere = content.toLowerCase().includes('epicatmosphere') || 
+                            generatedReceipt.toLowerCase().includes('epicatmosphere');
+    
+    const company = isEpicatmosphere 
+      ? getCompanyData('epic atmosphere')
+      : getCompanyData('sustainable yield');
+    
+    const logoToUse = company?.logo_url || (isEpicatmosphere ? epicatmosphereLogo : sustainableYieldLogo);
+    
+    let companyDetails: string[] = [];
+    if (company) {
+      if (company.address) {
+        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Morada Registada: ${company.address}${company.country ? ', ' + company.country : ''}</p>`);
+      }
+      if (company.email && company.email !== 'Não Fornecido') {
+        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Email: ${company.email}</p>`);
+      }
+      if (company.bank_account && company.bank_account !== 'Não Fornecido') {
+        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Conta Bancária: ${company.bank_account}${company.bank_name && company.bank_name !== 'Não Fornecido' ? ' (' + company.bank_name + ')' : ''}</p>`);
+      }
+      if (company.capital_social && company.capital_social !== 'Não Fornecido') {
+        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Capital Social: ${company.capital_social}</p>`);
+      }
+    }
+    const companyAddress = companyDetails.join('');
+
     const printContent = `
       <!DOCTYPE html>
       <html>
