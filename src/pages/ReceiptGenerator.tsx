@@ -391,10 +391,6 @@ const ReceiptGenerator = () => {
           </style>
         </head>
         <body>
-          ${receiptNumber ? `<div class="payment-number">Receipt Number: #${receiptNumber}</div>` : ''}
-          
-          ${beneficiarySection}
-          
           <div class="company-header">
             <div class="company-info">
               ${companyInfoHtml}
@@ -405,6 +401,10 @@ const ReceiptGenerator = () => {
           </div>
           
           <hr style="border: none; border-top: 1px solid #ccc; margin: 0 0 15px 0;" />
+          
+          ${receiptNumber ? `<div class="payment-number">Receipt Number: #${receiptNumber}</div>` : ''}
+          
+          ${beneficiarySection}
           
           <div class="formatted-receipt">
             ${generatedReceipt}
@@ -554,7 +554,7 @@ const ReceiptGenerator = () => {
               )}
                <Card className="bg-white shadow-lg">
                 <div className="p-8 relative">
-                  {/* Company Header */}
+                  {/* Company Header - Who is paying */}
                   <div className="flex justify-between items-start mb-6 pb-4 border-b-2 border-gray-800">
                     <div className="text-left flex-1">
                       {(() => {
@@ -591,18 +591,18 @@ const ReceiptGenerator = () => {
                     </div>
                   </div>
 
+                  {/* Receipt Number */}
+                  {receiptNumber && (
+                    <div className="text-right font-semibold text-sm mb-4">
+                      Payment Number: #{receiptNumber}
+                    </div>
+                  )}
+
                   {/* Beneficiary Name */}
                   {beneficiaryName && (
                     <div className="mb-6">
                       <p className="text-sm text-muted-foreground mb-1">Beneficiário:</p>
                       <p className="text-lg font-semibold">{beneficiaryName}</p>
-                    </div>
-                  )}
-                  
-                  {/* Receipt Number */}
-                  {receiptNumber && (
-                    <div className="text-right font-semibold text-sm mb-4">
-                      Payment Number: #{receiptNumber}
                     </div>
                   )}
                   
