@@ -79,16 +79,18 @@ ABSOLUTELY CRITICAL - LANGUAGE REQUIREMENT:
 2. You MUST generate the ENTIRE receipt in ${language} ONLY
 3. ALL labels, titles, headers, field names, and text MUST be in ${language}
 4. DO NOT mix languages - be 100% consistent in ${language} throughout
-5. If ${language} is Portuguese: use "Beneficiário", "Data de Pagamento", "Montante", "Assinatura Autorizada", "Data da Emissão", "Assunto", etc.
-6. If ${language} is English: use "Beneficiary", "Payment Date", "Amount", "Authorized Signature", "Date of Issue", "Subject", etc.
+5. If ${language} is Portuguese: use "Beneficiário", "Data de Pagamento", "Montante", "Assinatura Autorizada", "Data da Emissão", "Assunto", "Número de Pagamento", etc.
+6. If ${language} is English: use "Beneficiary", "Payment Date", "Amount", "Authorized Signature", "Date of Issue", "Subject", "Payment Number", etc.
 7. VERIFY: Before returning, check that ALL field labels are in ${language}
+8. The language detection determined ${language} based on the payment-related terms in the input
 
 CRITICAL - COMPANY HEADER INSTRUCTIONS:
-1. DO NOT include company header - the system handles this separately
-2. DO NOT include company name, registration number, address, email, or bank details at the top
+1. DO NOT include company header at the top - the system automatically adds the payment author's company logo and details
+2. DO NOT include company name, registration number, address, email, or bank details at the beginning
 3. DO NOT add placeholder text like "[Adicionar se disponível]" or "[email@example.com]"
-4. Start directly with a horizontal line separator
-5. Then proceed with the beneficiary section
+4. DO include a horizontal line separator at the top if it helps structure
+5. Start with payment number (if available) and then the beneficiary section
+6. The payment author's information (company issuing the receipt) is added automatically by the system
 
 ABSOLUTELY CRITICAL - CONTENT EXTRACTION:
 1. You MUST include EVERY SINGLE piece of information from the input content
