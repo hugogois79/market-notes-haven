@@ -342,19 +342,16 @@ export type Database = {
       diana: {
         Row: {
           content: string | null
-          embedding: string | null
           id: number
           metadata: Json | null
         }
         Insert: {
           content?: string | null
-          embedding?: string | null
           id?: number
           metadata?: Json | null
         }
         Update: {
           content?: string | null
-          embedding?: string | null
           id?: number
           metadata?: Json | null
         }
@@ -364,7 +361,6 @@ export type Database = {
         Row: {
           date_created: string | null
           document_id: string | null
-          embedding: string | null
           id: string
           text: string | null
           valid: boolean | null
@@ -372,7 +368,6 @@ export type Database = {
         Insert: {
           date_created?: string | null
           document_id?: string | null
-          embedding?: string | null
           id?: string
           text?: string | null
           valid?: boolean | null
@@ -380,7 +375,6 @@ export type Database = {
         Update: {
           date_created?: string | null
           document_id?: string | null
-          embedding?: string | null
           id?: string
           text?: string | null
           valid?: boolean | null
@@ -399,21 +393,18 @@ export type Database = {
         Row: {
           content: string | null
           date_created: string | null
-          embedding: string | null
           id: number
           metadata: Json | null
         }
         Insert: {
           content?: string | null
           date_created?: string | null
-          embedding?: string | null
           id?: number
           metadata?: Json | null
         }
         Update: {
           content?: string | null
           date_created?: string | null
-          embedding?: string | null
           id?: number
           metadata?: Json | null
         }
@@ -424,7 +415,6 @@ export type Database = {
           chunk_order: number | null
           content: string | null
           date_created: string | null
-          embedding: string | null
           file_id: string | null
           id: string
           metadata: Json | null
@@ -433,7 +423,6 @@ export type Database = {
           chunk_order?: number | null
           content?: string | null
           date_created?: string | null
-          embedding?: string | null
           file_id?: string | null
           id?: string
           metadata?: Json | null
@@ -442,7 +431,6 @@ export type Database = {
           chunk_order?: number | null
           content?: string | null
           date_created?: string | null
-          embedding?: string | null
           file_id?: string | null
           id?: string
           metadata?: Json | null
@@ -697,7 +685,6 @@ export type Database = {
         Row: {
           date_created: string
           description: string | null
-          embedding: string | null
           google_drive_id: string | null
           google_drive_url: string | null
           id: string
@@ -709,7 +696,6 @@ export type Database = {
         Insert: {
           date_created?: string
           description?: string | null
-          embedding?: string | null
           google_drive_id?: string | null
           google_drive_url?: string | null
           id?: string
@@ -721,7 +707,6 @@ export type Database = {
         Update: {
           date_created?: string
           description?: string | null
-          embedding?: string | null
           google_drive_id?: string | null
           google_drive_url?: string | null
           id?: string
@@ -1409,7 +1394,6 @@ export type Database = {
         Row: {
           content: string
           created_at: string | null
-          embedding: string | null
           id: number
           metadata: Json | null
           narrative: string
@@ -1418,7 +1402,6 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string | null
-          embedding?: string | null
           id?: number
           metadata?: Json | null
           narrative: string
@@ -1427,7 +1410,6 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string | null
-          embedding?: string | null
           id?: number
           metadata?: Json | null
           narrative?: string
@@ -2777,53 +2759,6 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
-      }
-      match_diana: {
-        Args: { filter?: Json; match_count?: number; query_embedding: string }
-        Returns: {
-          content: string
-          id: number
-          metadata: Json
-          similarity: number
-        }[]
-      }
-      match_diana_documents: {
-        Args: { filter?: Json; match_count?: number; query_embedding: string }
-        Returns: {
-          content: string
-          id: number
-          metadata: Json
-          similarity: number
-        }[]
-      }
-      match_documents: {
-        Args: { filter?: Json; match_count?: number; query_embedding: string }
-        Returns: {
-          content: string
-          id: number
-          metadata: Json
-          similarity: number
-        }[]
-      }
-      match_documents_new: {
-        Args: { filter?: Json; match_count?: number; query_embedding: string }
-        Returns: {
-          content: string
-          file_id: string
-          file_name: string
-          file_url: string
-          id: string
-          metadata: Json
-          similarity: number
-        }[]
-      }
-      match_files: {
-        Args: { filter?: Json; match_count?: number; query_embedding: string }
-        Returns: {
-          description: string
-          id: string
-          similarity: number
-        }[]
       }
       reorder_cards: {
         Args: { card_id: string; new_list_id: string; new_position: number }
