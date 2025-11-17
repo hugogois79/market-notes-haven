@@ -208,38 +208,6 @@ const ReceiptGenerator = () => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
-    // Check if issuer is Epicatmosphere
-    const isEpicatmosphere = content.toLowerCase().includes('epicatmosphere') || 
-                             generatedReceipt.toLowerCase().includes('epicatmosphere');
-    
-    const company = isEpicatmosphere 
-      ? getCompanyData('epic atmosphere')
-      : getCompanyData('sustainable yield');
-    
-    // Use logo from database if available, otherwise fall back to imported logos
-    const logoToUse = company?.logo_url || (isEpicatmosphere ? epicatmosphereLogo : sustainableYieldLogo);
-    
-    let companyDetails: string[] = [];
-    if (company) {
-      // Add Morada Registada
-      if (company.address) {
-        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Morada Registada: ${company.address}${company.country ? ', ' + company.country : ''}</p>`);
-      }
-      // Add Email only if provided and not "Não Fornecido"
-      if (company.email && company.email !== 'Não Fornecido') {
-        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Email: ${company.email}</p>`);
-      }
-      // Add Bank Account only if provided and not "Não Fornecido"
-      if (company.bank_account && company.bank_account !== 'Não Fornecido') {
-        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Conta Bancária: ${company.bank_account}${company.bank_name && company.bank_name !== 'Não Fornecido' ? ' (' + company.bank_name + ')' : ''}</p>`);
-      }
-      // Add Capital Social only if provided and not "Não Fornecido"
-      if (company.capital_social && company.capital_social !== 'Não Fornecido') {
-        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Capital Social: ${company.capital_social}</p>`);
-      }
-    }
-    const companyAddress = companyDetails.join('');
-
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -278,10 +246,6 @@ const ReceiptGenerator = () => {
               font-size: 12px;
               color: #333;
             }
-            .company-info {
-              text-align: center;
-              margin-bottom: 20px;
-            }
             table {
               border-collapse: collapse;
               width: 100%;
@@ -301,10 +265,19 @@ const ReceiptGenerator = () => {
               font-size: 11px;
               margin: 5px 0;
             }
-            /* Hide any duplicate company headers in the AI output */
-            .formatted-receipt h2:first-child,
-            .formatted-receipt h1:first-child {
-              display: none;
+            /* Company header styling */
+            .company-header {
+              text-align: right;
+              margin-bottom: 20px;
+            }
+            .company-header img {
+              max-width: 200px;
+            }
+            .company-info {
+              text-align: center;
+              margin-bottom: 20px;
+              border-bottom: 2px solid #333;
+              padding-bottom: 10px;
             }
             /* Force beneficiary section to align right */
             .formatted-receipt > div:first-of-type {
