@@ -72,6 +72,43 @@ const ReceiptGenerator = () => {
     return found || null;
   };
 
+  const generateCompanyHeader = (): string => {
+    // Detect company from content
+    const isEpicatmosphere = content.toLowerCase().includes('epicatmosphere') || 
+                            generatedReceipt.toLowerCase().includes('epicatmosphere');
+    
+    const company = isEpicatmosphere 
+      ? getCompanyData('epic atmosphere')
+      : getCompanyData('sustainable yield');
+    
+    const logoToUse = company?.logo_url || (isEpicatmosphere ? epicatmosphereLogo : sustainableYieldLogo);
+    
+    let companyInfo: string[] = [];
+    if (company) {
+      // Company name
+      companyInfo.push(`<p style="margin: 2px 0; font-size: 11px; font-weight: bold;">${company.name}</p>`);
+      // Address
+      if (company.address) {
+        companyInfo.push(`<p style="margin: 2px 0; font-size: 10px;">${company.address}${company.country ? ', ' + company.country : ''}</p>`);
+      }
+      // NIPC/Company Number
+      if (company.nipc || company.company_number) {
+        companyInfo.push(`<p style="margin: 2px 0; font-size: 10px;">Contribuinte: ${company.nipc || company.company_number}</p>`);
+      }
+    }
+    
+    return `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #333;">
+        <div style="text-align: left;">
+          ${companyInfo.join('')}
+        </div>
+        <div style="text-align: right;">
+          <img src="${logoToUse}" alt="Company Logo" style="max-width: 200px; height: auto;" />
+        </div>
+      </div>
+    `;
+  };
+
   const handleLoadReceipt = (receipt: Receipt) => {
     setContent(receipt.raw_content);
     setGeneratedReceipt(receipt.formatted_content);
@@ -108,8 +145,12 @@ const ReceiptGenerator = () => {
         return;
       }
 
-      setGeneratedReceipt(data.formattedReceipt);
-      toast.success("Receipt formatted successfully!");
+      if (data.formattedReceipt) {
+        console.log('Received formatted receipt');
+        // Add company header to the receipt
+        const receiptWithHeader = generateCompanyHeader() + data.formattedReceipt;
+        setGeneratedReceipt(receiptWithHeader);
+        toast.success("Receipt formatted successfully!");
       
       // Auto-save after generating with extracted data
       if (session?.user?.id) {
@@ -218,22 +259,20 @@ const ReceiptGenerator = () => {
     
     const logoToUse = company?.logo_url || (isEpicatmosphere ? epicatmosphereLogo : sustainableYieldLogo);
     
-    let companyDetails: string[] = [];
+    let companyInfo: string[] = [];
     if (company) {
+      // Company name
+      companyInfo.push(`<p style="margin: 2px 0; font-size: 11px; font-weight: bold;">${company.name}</p>`);
+      // Address
       if (company.address) {
-        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Morada Registada: ${company.address}${company.country ? ', ' + company.country : ''}</p>`);
+        companyInfo.push(`<p style="margin: 2px 0; font-size: 10px;">${company.address}${company.country ? ', ' + company.country : ''}</p>`);
       }
-      if (company.email && company.email !== 'Não Fornecido') {
-        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Email: ${company.email}</p>`);
-      }
-      if (company.bank_account && company.bank_account !== 'Não Fornecido') {
-        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Conta Bancária: ${company.bank_account}${company.bank_name && company.bank_name !== 'Não Fornecido' ? ' (' + company.bank_name + ')' : ''}</p>`);
-      }
-      if (company.capital_social && company.capital_social !== 'Não Fornecido') {
-        companyDetails.push(`<p style="margin: 2px 0; font-size: 10px;">Capital Social: ${company.capital_social}</p>`);
+      // NIPC/Company Number
+      if (company.nipc || company.company_number) {
+        companyInfo.push(`<p style="margin: 2px 0; font-size: 10px;">Contribuinte: ${company.nipc || company.company_number}</p>`);
       }
     }
-    const companyAddress = companyDetails.join('');
+    const companyInfoHtml = companyInfo.join('');
 
     const printContent = `
       <!DOCTYPE html>
@@ -294,17 +333,21 @@ const ReceiptGenerator = () => {
             }
             /* Company header styling */
             .company-header {
-              text-align: right;
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
               margin-bottom: 20px;
-            }
-            .company-header img {
-              max-width: 200px;
+              padding-bottom: 15px;
+              border-bottom: 2px solid #333;
             }
             .company-info {
-              text-align: center;
-              margin-bottom: 20px;
-              border-bottom: 2px solid #333;
-              padding-bottom: 10px;
+              text-align: left;
+            }
+            .company-logo {
+              text-align: right;
+            }
+            .company-logo img {
+              max-width: 200px;
             }
             /* Force beneficiary section to align right */
             .formatted-receipt > div:first-of-type {
@@ -337,17 +380,15 @@ const ReceiptGenerator = () => {
           </style>
         </head>
         <body>
-          <div style="display: flex; justify-content: flex-end; align-items: flex-start; margin-bottom: 10px;">
-            <div style="text-align: right;">
-              <img src="${logoToUse}" alt="${company?.name || ''}" class="header-logo" style="margin: 0 0 5px 0;" />
-              ${receiptNumber ? `<div class="payment-number" style="margin: 0;">Payment Number: #${receiptNumber}</div>` : ''}
-            </div>
-          </div>
+          ${receiptNumber ? `<div class="payment-number">Receipt Number: #${receiptNumber}</div>` : ''}
           
-          <div class="company-info">
-            <h2 style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">${company?.name || ''}</h2>
-            ${company?.company_number || company?.nipc ? `<p style="margin: 2px 0; font-size: 10px;">Company Number: ${company?.company_number || company?.nipc || ''}</p>` : ''}
-            ${companyAddress}
+          <div class="company-header">
+            <div class="company-info">
+              ${companyInfoHtml}
+            </div>
+            <div class="company-logo">
+              <img src="${logoToUse}" alt="${company?.name || ''}" />
+            </div>
           </div>
           
           <hr style="border: none; border-top: 1px solid #ccc; margin: 0 0 15px 0;" />
