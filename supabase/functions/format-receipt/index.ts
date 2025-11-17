@@ -89,7 +89,7 @@ CRITICAL - COMPANY HEADER INSTRUCTIONS:
 2. DO NOT include company name, registration number, address, email, or bank details at the beginning
 3. DO NOT add placeholder text like "[Adicionar se disponível]" or "[email@example.com]"
 4. DO include a horizontal line separator at the top if it helps structure
-5. Start with payment number (if available) and then the beneficiary section
+5. Start with payment number (if available) and then the payer section
 6. The payment author's information (company issuing the receipt) is added automatically by the system
 
 ABSOLUTELY CRITICAL - CONTENT EXTRACTION:
@@ -103,34 +103,31 @@ CRITICAL INSTRUCTIONS - READ CAREFULLY:
 1. DO NOT include company header at the top - this is handled by the system
 2. DO NOT add placeholder fields for missing information
 3. Start with a horizontal separator line
-4. Then proceed with the beneficiary and payment sections
+4. Then proceed with the payer information and payment details sections
 
 FORMAT INSTRUCTIONS:
 1. Carefully read and extract ALL information from the content - DO NOT SKIP ANYTHING
 2. VERIFY you have included EVERY date, amount, reference number, and detail from the input
-3. BENEFICIARY DETAILS - MAXIMUM EXTRACTION (CRITICAL):
-   Extract EVERY detail about the beneficiary to create a complete profile:
-   - Full legal name (first name, middle names, surname, any suffixes)
-   - Position/Title/Role (e.g., Director, Manager, Consultant, Employee, Contractor)
+3. PAYER DETAILS - MAXIMUM EXTRACTION (CRITICAL):
+   Extract EVERY detail about the payer (entity making the payment) to create a complete profile:
+   - Full company/organization name or individual's full legal name
+   - Position/Title/Role of the person signing or authorizing (e.g., Director, Manager, Authorized Representative)
    - Professional designation or credentials (if mentioned)
-   - Company affiliation or employer (if working for an organization)
    - Department or business unit (if applicable)
-   - ID/Passport/Tax identification number (BI, Passaporte, NIF, VAT number, etc.)
-   - Complete residential or business address (street number and name, building/apartment, floor, city, region, postal code, country)
-   - Primary contact information (mobile phone, landline, email address)
+   - Company registration number, Tax ID (NIPC, NIF, VAT number, etc.)
+   - Complete business or residential address (street number and name, building/apartment, floor, city, region, postal code, country)
+   - Primary contact information (phone, email address)
    - Secondary contact information (alternative phone, fax, secondary email)
-   - Bank account details (if provided and relevant)
-   - Relationship to the company/project (employee, contractor, consultant, partner, vendor)
-   - Nationality or citizenship (if mentioned)
-   - Date of birth or age (if provided)
-   - Any other identifying, professional, or personal details mentioned in the content
+   - Bank account details from which payment originated (if provided)
+   - Relationship to the transaction (client, customer, company, partner)
+   - Any other identifying, professional, or organizational details mentioned in the content
    
-   IMPORTANT: Do NOT omit ANY beneficiary information that is available in the content. Include everything provided, even if it seems like a minor detail. The beneficiary section should be as comprehensive and detailed as possible.
+   IMPORTANT: Do NOT omit ANY payer information that is available in the content. Include everything provided, even if it seems like a minor detail. The payer section should be as comprehensive and detailed as possible.
 
 3. Extract payment details (date, amount, reference, bank details, etc.)
 4. Format it professionally with clear sections using HTML with inline styles
 5. ALIGNMENT RULES (CRITICAL):
-   - Beneficiary NAME AND POSITION ONLY: aligned to the RIGHT (text-align: right)
+   - Payer information section (company/name, position, tax ID, address, IBAN): aligned to the RIGHT (text-align: right)
    - Purpose, Event Preparation, Description sections: JUSTIFIED (text-align: justify)
    - Payment details section (payment method, bank details, IBAN, etc.): aligned to the LEFT
    - Authorized Signature: aligned to the RIGHT
@@ -145,10 +142,10 @@ EXAMPLE FOR ENGLISH:
   <hr style="border: none; border-top: 1px solid #ccc; margin: 15px 0;" />
   
   <div style="margin: 15px 0; text-align: right;">
-    <p style="font-weight: bold; margin: 10px 0;">Beneficiary:</p>
-    <p style="margin: 5px 0;"><strong>Full Name:</strong> [COMPLETE LEGAL NAME]</p>
+    <p style="font-weight: bold; margin: 10px 0;">Payer:</p>
+    <p style="margin: 5px 0;"><strong>Company/Name:</strong> [COMPLETE NAME]</p>
     <p style="margin: 5px 0;"><strong>Position/Title:</strong> [JOB TITLE OR ROLE]</p>
-    <p style="margin: 5px 0;"><strong>Company/Organization:</strong> [EMPLOYER OR AFFILIATION]</p>
+    <p style="margin: 5px 0;"><strong>Tax ID/NIPC:</strong> [TAX IDENTIFICATION]</p>
     <p style="margin: 5px 0;"><strong>Address:</strong> [COMPLETE ADDRESS]</p>
     <p style="margin: 5px 0;"><strong>IBAN:</strong> [IBAN NUMBER]</p>
   </div>
@@ -166,10 +163,10 @@ EXAMPLE FOR PORTUGUESE:
   <hr style="border: none; border-top: 1px solid #ccc; margin: 15px 0;" />
   
   <div style="margin: 15px 0; text-align: right;">
-    <p style="font-weight: bold; margin: 10px 0;">Beneficiário:</p>
-    <p style="margin: 5px 0;"><strong>Nome Completo:</strong> [NOME LEGAL COMPLETO]</p>
+    <p style="font-weight: bold; margin: 10px 0;">Pagador:</p>
+    <p style="margin: 5px 0;"><strong>Empresa/Nome:</strong> [NOME COMPLETO]</p>
     <p style="margin: 5px 0;"><strong>Cargo/Título:</strong> [CARGO OU FUNÇÃO]</p>
-    <p style="margin: 5px 0;"><strong>Empresa/Organização:</strong> [EMPREGADOR]</p>
+    <p style="margin: 5px 0;"><strong>NIPC/NIF:</strong> [IDENTIFICAÇÃO FISCAL]</p>
     <p style="margin: 5px 0;"><strong>Morada:</strong> [MORADA COMPLETA]</p>
     <p style="margin: 5px 0;"><strong>IBAN:</strong> [NÚMERO IBAN]</p>
   </div>
