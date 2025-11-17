@@ -131,7 +131,7 @@ FORMAT INSTRUCTIONS:
 4. Format it professionally with clear sections using HTML with inline styles
 5. ALIGNMENT RULES (CRITICAL):
    - Beneficiary NAME AND POSITION ONLY: aligned to the RIGHT (text-align: right)
-   - Purpose, Event Preparation: aligned to the LEFT (text-align: left)
+   - Purpose, Event Preparation, Description sections: JUSTIFIED (text-align: justify)
    - Payment details section (payment method, bank details, IBAN, etc.): aligned to the LEFT
    - Authorized Signature: aligned to the RIGHT
    - All other content should be left-aligned by default
@@ -182,7 +182,7 @@ EXAMPLE FOR PORTUGUESE:
   </div>
 `}
   
-  <div style="margin: 15px 0; text-align: left;">
+  <div style="margin: 15px 0; text-align: justify;">
     <p style="margin: 5px 0;"><strong>Purpose:</strong> [PURPOSE DESCRIPTION]</p>
     <p style="margin: 5px 0;"><strong>Event Preparation:</strong> [EVENT DETAILS]</p>
   </div>
@@ -211,7 +211,7 @@ EXAMPLE FOR PORTUGUESE:
   </table>
 
 IN PORTUGUESE, USE THIS TABLE STRUCTURE:
-  <div style="margin: 15px 0; text-align: left;">
+  <div style="margin: 15px 0; text-align: justify;">
     <p style="margin: 5px 0;"><strong>Finalidade:</strong> [DESCRIÇÃO DA FINALIDADE]</p>
     <p style="margin: 5px 0;"><strong>Preparação do Evento:</strong> [DETALHES DO EVENTO]</p>
   </div>
