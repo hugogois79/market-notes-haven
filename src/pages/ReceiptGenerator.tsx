@@ -150,9 +150,8 @@ const ReceiptGenerator = () => {
 
       if (data.formattedReceipt) {
         console.log('Received formatted receipt');
-        // Add company header to the receipt
-        const receiptWithHeader = generateCompanyHeader() + data.formattedReceipt;
-        setGeneratedReceipt(receiptWithHeader);
+        // Don't add header to generatedReceipt - it will be added in the preview
+        setGeneratedReceipt(data.formattedReceipt);
         setBeneficiaryName(data.beneficiary_name || "");
         toast.success("Receipt formatted successfully!");
       
@@ -555,17 +554,59 @@ const ReceiptGenerator = () => {
               )}
                <Card className="bg-white shadow-lg">
                 <div className="p-8 relative">
+                  {/* Company Header */}
+                  <div className="flex justify-between items-start mb-6 pb-4 border-b-2 border-gray-800">
+                    <div className="text-left flex-1">
+                      {(() => {
+                        const isEpic = content.toLowerCase().includes('epicatmosphere') || 
+                                      generatedReceipt.toLowerCase().includes('epicatmosphere');
+                        const company = isEpic 
+                          ? getCompanyData('epic atmosphere')
+                          : getCompanyData('sustainable yield');
+                        
+                        return (
+                          <>
+                            {company?.name && (
+                              <h2 className="text-sm font-bold mb-1">{company.name}</h2>
+                            )}
+                            {company?.address && (
+                              <p className="text-xs">{company.address}{company.country ? ', ' + company.country : ''}</p>
+                            )}
+                            {(company?.nipc || company?.company_number) && (
+                              <p className="text-xs">Contribuinte: {company.nipc || company.company_number}</p>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                    <div className="flex-shrink-0 ml-4">
+                      <img 
+                        src={(content.toLowerCase().includes('epicatmosphere') || 
+                              generatedReceipt.toLowerCase().includes('epicatmosphere')) 
+                              ? epicatmosphereLogo 
+                              : sustainableYieldLogo} 
+                        alt="Company Logo" 
+                        className="w-48 h-auto"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Beneficiary Name */}
                   {beneficiaryName && (
                     <div className="mb-6">
                       <p className="text-sm text-muted-foreground mb-1">Beneficiário:</p>
                       <p className="text-lg font-semibold">{beneficiaryName}</p>
                     </div>
                   )}
+                  
+                  {/* Receipt Number */}
                   {receiptNumber && (
                     <div className="text-right font-semibold text-sm mb-4">
                       Payment Number: #{receiptNumber}
                     </div>
                   )}
+                  
+                  {/* Receipt Content */}
                   <div 
                     className="formatted-receipt"
                     dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(generatedReceipt) }}
