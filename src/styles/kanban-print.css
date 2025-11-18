@@ -11,14 +11,15 @@
   nav,
   aside,
   header:not(.print-header),
-  footer:not(.print-footer) {
+  footer:not(.print-footer),
+  [id^="kanban-list-"]:not(.print-this-list) {
     display: none !important;
   }
 
   /* Page setup */
   @page {
-    size: A4 landscape;
-    margin: 1cm;
+    size: A4 portrait;
+    margin: 1.5cm;
   }
 
   body {
@@ -33,75 +34,70 @@
     box-shadow: none !important;
   }
 
-  /* Board title */
-  .print-board-title {
-    font-size: 18pt;
+  /* Hide everything except print container */
+  body > *:not(#kanban-print-container) {
+    display: none !important;
+  }
+
+  #kanban-print-container {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Board title for single list print */
+  .print-list-title {
+    font-size: 16pt;
     font-weight: bold;
     margin-bottom: 0.5cm;
     border-bottom: 2px solid #333;
     padding-bottom: 0.3cm;
   }
 
-  /* Lists layout */
-  .kanban-board-print {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 0.5cm;
-    page-break-inside: avoid;
-  }
-
+  /* List container */
   .kanban-list-print {
-    flex: 1;
-    min-width: 0;
     border: 1px solid #333;
     border-radius: 4px;
-    padding: 0.3cm;
+    padding: 0.5cm;
     page-break-inside: avoid;
-  }
-
-  .kanban-list-title {
-    font-size: 12pt;
-    font-weight: bold;
-    margin-bottom: 0.3cm;
-    padding-bottom: 0.2cm;
-    border-bottom: 1px solid #666;
   }
 
   /* Cards */
   .kanban-card-print {
     border: 1px solid #999;
     border-radius: 3px;
-    padding: 0.2cm;
-    margin-bottom: 0.2cm;
+    padding: 0.3cm;
+    margin-bottom: 0.3cm;
     page-break-inside: avoid;
     background: white !important;
   }
 
   .kanban-card-title {
-    font-size: 10pt;
+    font-size: 11pt;
     font-weight: 600;
-    margin-bottom: 0.1cm;
+    margin-bottom: 0.15cm;
     color: black !important;
   }
 
   .kanban-card-description {
-    font-size: 8pt;
+    font-size: 9pt;
     color: #333 !important;
-    margin-bottom: 0.15cm;
+    margin-bottom: 0.2cm;
+    line-height: 1.4;
   }
 
   .kanban-card-meta {
-    font-size: 7pt;
+    font-size: 8pt;
     color: #666 !important;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.2cm;
+    gap: 0.3cm;
   }
 
   .kanban-card-badge {
     border: 1px solid #999;
     border-radius: 2px;
-    padding: 0.05cm 0.15cm;
+    padding: 0.1cm 0.2cm;
     display: inline-flex;
     align-items: center;
     gap: 0.1cm;
@@ -110,17 +106,20 @@
   /* Priority colors (using borders since bg doesn't print well) */
   .priority-high {
     border-color: #ef4444 !important;
-    border-width: 2px;
+    border-width: 2px !important;
+    border-left-width: 4px !important;
   }
 
   .priority-medium {
     border-color: #f97316 !important;
-    border-width: 2px;
+    border-width: 2px !important;
+    border-left-width: 4px !important;
   }
 
   .priority-low {
     border-color: #22c55e !important;
-    border-width: 2px;
+    border-width: 2px !important;
+    border-left-width: 4px !important;
   }
 
   /* Icons (use text alternatives) */
@@ -128,16 +127,14 @@
     display: none !important;
   }
 
-  /* Task checklist */
-  .kanban-card-tasks {
-    font-size: 8pt;
-    margin-top: 0.1cm;
-  }
-
   /* No cards message */
   .no-cards-print {
     font-size: 9pt;
     color: #999 !important;
     font-style: italic;
+    text-align: center;
+    padding: 1cm 0;
   }
 }
+
+
