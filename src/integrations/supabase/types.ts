@@ -1075,6 +1075,7 @@ export type Database = {
       }
       kanban_boards: {
         Row: {
+          archived: boolean
           color: string | null
           created_at: string | null
           description: string | null
@@ -1085,6 +1086,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          archived?: boolean
           color?: string | null
           created_at?: string | null
           description?: string | null
@@ -1095,6 +1097,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          archived?: boolean
           color?: string | null
           created_at?: string | null
           description?: string | null
