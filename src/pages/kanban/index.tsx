@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Search, Kanban as KanbanIcon, Archive, ArrowLeft, MoreVertical, Pencil, Trash2, ArchiveRestore } from 'lucide-react';
+import { Plus, Search, Kanban as KanbanIcon, Archive, ArrowLeft, MoreVertical, Pencil, Trash2, ArchiveRestore, Printer } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -86,6 +86,10 @@ const KanbanPage = () => {
   const [showArchivedLists, setShowArchivedLists] = useState(false);
 
   const currentBoard = boards.find(b => b.id === boardId);
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   // Filter boards based on archived status
   const filteredBoards = useMemo(() => {
@@ -469,7 +473,7 @@ const KanbanPage = () => {
 
   return (
     <div className="p-6">
-      <div className="mb-6 space-y-4">
+      <div className="mb-6 space-y-4 no-print">
         {/* Back button and board selector */}
         <div className="flex items-center gap-4">
           <Button
@@ -511,7 +515,16 @@ const KanbanPage = () => {
             />
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 no-print">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handlePrint}
+              className="gap-2"
+            >
+              <Printer className="h-4 w-4" />
+              Print Pending Lists
+            </Button>
             <div className="flex items-center gap-2">
               <Archive className="h-4 w-4 text-muted-foreground" />
               <Label htmlFor="show-archived-cards" className="text-sm cursor-pointer">
@@ -555,21 +568,91 @@ const KanbanPage = () => {
           ))}
         </div>
       ) : (
-        <KanbanBoard
-          boardId={boardId}
-          lists={[...filteredLists].sort((a, b) => a.position - b.position)}
-          cards={filteredCards}
-          onAddList={handleAddList}
-          onAddCard={handleAddCard}
-          onUpdateCard={updateCard}
-          onDeleteCard={deleteCard}
-          onDeleteList={deleteList}
-          onEditList={handleEditList}
-          onColorChange={handleColorChange}
-          onArchiveList={handleArchiveList}
-          onMoveCard={moveCard}
-          onMoveList={moveList}
-        />
+        <>
+          {/* Print View - Hidden on screen, visible when printing */}
+          <div className="hidden print:block">
+            <div className="print-board-title">{currentBoard?.title}</div>
+            <div className="kanban-board-print">
+              {[...filteredLists]
+                .sort((a, b) => a.position - b.position)
+                .map(list => {
+                  const listCards = filteredCards
+                    .filter(card => card.list_id === list.id && !card.concluded)
+                    .sort((a, b) => a.position - b.position);
+                  
+                  return (
+                    <div key={list.id} className="kanban-list-print">
+                      <div className="kanban-list-title">{list.title}</div>
+                      {listCards.length > 0 ? (
+                        listCards.map(card => (
+                          <div 
+                            key={card.id} 
+                            className={`kanban-card-print ${
+                              card.priority === 'high' ? 'priority-high' :
+                              card.priority === 'medium' ? 'priority-medium' :
+                              card.priority === 'low' ? 'priority-low' : ''
+                            }`}
+                          >
+                            <div className="kanban-card-title">{card.title}</div>
+                            {card.description && (
+                              <div className="kanban-card-description">{card.description}</div>
+                            )}
+                            <div className="kanban-card-meta">
+                              {card.priority && (
+                                <span className="kanban-card-badge">
+                                  Priority: {card.priority}
+                                </span>
+                              )}
+                              {card.due_date && (
+                                <span className="kanban-card-badge">
+                                  Due: {new Date(card.due_date).toLocaleDateString()}
+                                </span>
+                              )}
+                              {card.tasks && Array.isArray(card.tasks) && card.tasks.length > 0 && (() => {
+                                const completed = card.tasks.filter((t: any) => t.completed).length;
+                                const total = card.tasks.length;
+                                return (
+                                  <span className="kanban-card-badge">
+                                    Tasks: {completed}/{total}
+                                  </span>
+                                );
+                              })()}
+                              {card.attachment_count && card.attachment_count > 0 && (
+                                <span className="kanban-card-badge">
+                                  Attachments: {card.attachment_count}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="no-cards-print">No pending cards</div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+
+          {/* Screen View - Hidden when printing */}
+          <div className="print:hidden">
+            <KanbanBoard
+              boardId={boardId}
+              lists={[...filteredLists].sort((a, b) => a.position - b.position)}
+              cards={filteredCards}
+              onAddList={handleAddList}
+              onAddCard={handleAddCard}
+              onUpdateCard={updateCard}
+              onDeleteCard={deleteCard}
+              onDeleteList={deleteList}
+              onEditList={handleEditList}
+              onColorChange={handleColorChange}
+              onArchiveList={handleArchiveList}
+              onMoveCard={moveCard}
+              onMoveList={moveList}
+            />
+          </div>
+        </>
       )}
 
       {searchQuery && filteredCards.length === 0 && (
