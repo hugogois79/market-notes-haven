@@ -17,6 +17,7 @@ export interface KanbanBoard {
   color: string;
   space_id?: string;
   user_id: string;
+  archived: boolean;
   created_at: string;
   updated_at: string;
 }

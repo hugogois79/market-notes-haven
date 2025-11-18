@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Search, Kanban as KanbanIcon, Archive, ArrowLeft, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Kanban as KanbanIcon, Archive, ArrowLeft, MoreVertical, Pencil, Trash2, ArchiveRestore } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -82,8 +82,14 @@ const KanbanPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingBoard, setEditingBoard] = useState<typeof boards[0] | null>(null);
   const [deletingBoardId, setDeletingBoardId] = useState<string | null>(null);
+  const [showArchivedBoards, setShowArchivedBoards] = useState(false);
 
   const currentBoard = boards.find(b => b.id === boardId);
+
+  // Filter boards based on archived status
+  const filteredBoards = useMemo(() => {
+    return boards.filter(board => showArchivedBoards ? board.archived : !board.archived);
+  }, [boards, showArchivedBoards]);
 
   // Filter cards based on search query
   const filteredCards = useMemo(() => {
@@ -137,6 +143,16 @@ const KanbanPage = () => {
       if (boardId === deletingBoardId) {
         navigate('/kanban');
       }
+    } catch (error) {
+      // Error handled by hook
+    }
+  };
+
+  const handleArchiveBoard = async (board: typeof boards[0]) => {
+    try {
+      await updateBoard(board.id, {
+        archived: !board.archived
+      });
     } catch (error) {
       // Error handled by hook
     }
@@ -199,14 +215,26 @@ const KanbanPage = () => {
             </TabsList>
             
             {viewParam === 'boards' && (
-              <Dialog open={isCreateBoardOpen} onOpenChange={setIsCreateBoardOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Board
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/50">
+                  <Archive className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="show-archived-boards" className="text-sm cursor-pointer">
+                    Show Archived
+                  </Label>
+                  <Switch
+                    id="show-archived-boards"
+                    checked={showArchivedBoards}
+                    onCheckedChange={setShowArchivedBoards}
+                  />
+                </div>
+                <Dialog open={isCreateBoardOpen} onOpenChange={setIsCreateBoardOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      New Board
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Create New Board</DialogTitle>
                   </DialogHeader>
@@ -247,8 +275,9 @@ const KanbanPage = () => {
                       Create Board
                     </Button>
                   </div>
-                </DialogContent>
-              </Dialog>
+                  </DialogContent>
+                </Dialog>
+              </div>
             )}
           </div>
 
@@ -279,7 +308,7 @@ const KanbanPage = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {boards.map(board => (
+                  {filteredBoards.map(board => (
                     <div
                       key={board.id}
                       onClick={() => navigate(`/kanban/${board.id}`)}
@@ -304,6 +333,24 @@ const KanbanPage = () => {
                             <DropdownMenuItem 
                               onClick={(e) => {
                                 e.stopPropagation();
+                                handleArchiveBoard(board);
+                              }}
+                            >
+                              {board.archived ? (
+                                <>
+                                  <ArchiveRestore className="h-4 w-4 mr-2" />
+                                  Unarchive Board
+                                </>
+                              ) : (
+                                <>
+                                  <Archive className="h-4 w-4 mr-2" />
+                                  Archive Board
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setDeletingBoardId(board.id);
                               }}
                               className="text-destructive"
@@ -323,10 +370,14 @@ const KanbanPage = () => {
                 </div>
               )}
 
-              {!loading && boards.length === 0 && (
+              {!loading && filteredBoards.length === 0 && (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground mb-4">
-                    {spaceIdParam ? 'No boards in this space yet.' : 'No boards yet. Create your first board to get started!'}
+                    {showArchivedBoards 
+                      ? 'No archived boards.' 
+                      : spaceIdParam 
+                        ? 'No boards in this space yet.' 
+                        : 'No boards yet. Create your first board to get started!'}
                   </p>
                   <Button onClick={() => setIsCreateBoardOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
