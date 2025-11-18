@@ -47,6 +47,7 @@ export interface KanbanCard {
   concluded?: boolean;
   created_at: string;
   updated_at: string;
+  attachment_count?: number;
 }
 
 export interface KanbanLabel {
@@ -224,6 +225,7 @@ export class KanbanService {
   }
 
   static async getCardsByBoard(boardId: string, includeArchived: boolean = false) {
+    // First get the cards
     let query = supabase
       .from('kanban_cards')
       .select(`
@@ -236,10 +238,40 @@ export class KanbanService {
       query = query.or('concluded.is.null,concluded.eq.false');
     }
     
-    const { data, error } = await query.order('position', { ascending: true });
+    const { data: cardsData, error } = await query.order('position', { ascending: true });
     
     if (error) throw error;
-    return data as unknown as KanbanCard[];
+    
+    // Get attachment counts for all cards
+    const cardIds = cardsData?.map(c => c.id) || [];
+    
+    if (cardIds.length === 0) {
+      return [] as KanbanCard[];
+    }
+    
+    const { data: attachmentCounts, error: countError } = await supabase
+      .from('kanban_attachments')
+      .select('card_id')
+      .in('card_id', cardIds);
+    
+    if (countError) {
+      console.error('Error fetching attachment counts:', countError);
+      return cardsData as unknown as KanbanCard[];
+    }
+    
+    // Count attachments per card
+    const countMap = (attachmentCounts || []).reduce((acc, att) => {
+      acc[att.card_id] = (acc[att.card_id] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    // Add attachment count to each card
+    const cardsWithCounts = cardsData?.map(card => ({
+      ...card,
+      attachment_count: countMap[card.id] || 0
+    }));
+    
+    return cardsWithCounts as unknown as KanbanCard[];
   }
 
   static async createCard(card: Partial<KanbanCard>) {
