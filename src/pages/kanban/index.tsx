@@ -83,6 +83,7 @@ const KanbanPage = () => {
   const [editingBoard, setEditingBoard] = useState<typeof boards[0] | null>(null);
   const [deletingBoardId, setDeletingBoardId] = useState<string | null>(null);
   const [showArchivedBoards, setShowArchivedBoards] = useState(false);
+  const [showArchivedLists, setShowArchivedLists] = useState(false);
 
   const currentBoard = boards.find(b => b.id === boardId);
 
@@ -90,6 +91,11 @@ const KanbanPage = () => {
   const filteredBoards = useMemo(() => {
     return boards.filter(board => showArchivedBoards ? board.archived : !board.archived);
   }, [boards, showArchivedBoards]);
+
+  // Filter lists based on archived status
+  const filteredLists = useMemo(() => {
+    return lists.filter(list => showArchivedLists ? list.archived : !list.archived);
+  }, [lists, showArchivedLists]);
 
   // Filter cards based on search query
   const filteredCards = useMemo(() => {
@@ -199,6 +205,19 @@ const KanbanPage = () => {
 
   const handleColorChange = async (listId: string, color: string) => {
     await updateList(listId, { color });
+  };
+
+  const handleArchiveList = async (listId: string) => {
+    const list = lists.find(l => l.id === listId);
+    if (!list) return;
+    
+    try {
+      await updateList(listId, {
+        archived: !list.archived
+      });
+    } catch (error) {
+      // Error handled by hook
+    }
   };
 
   if (!boardId) {
@@ -492,16 +511,29 @@ const KanbanPage = () => {
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <Archive className="h-4 w-4 text-muted-foreground" />
-            <Label htmlFor="show-archived" className="text-sm cursor-pointer">
-              Show Archived
-            </Label>
-            <Switch
-              id="show-archived"
-              checked={showArchived}
-              onCheckedChange={setShowArchived}
-            />
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Archive className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="show-archived-cards" className="text-sm cursor-pointer">
+                Show Archived Cards
+              </Label>
+              <Switch
+                id="show-archived-cards"
+                checked={showArchived}
+                onCheckedChange={setShowArchived}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Archive className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="show-archived-lists" className="text-sm cursor-pointer">
+                Show Archived Lists
+              </Label>
+              <Switch
+                id="show-archived-lists"
+                checked={showArchivedLists}
+                onCheckedChange={setShowArchivedLists}
+              />
+            </div>
           </div>
         </div>
 
@@ -525,7 +557,7 @@ const KanbanPage = () => {
       ) : (
         <KanbanBoard
           boardId={boardId}
-          lists={[...lists].sort((a, b) => a.position - b.position)}
+          lists={[...filteredLists].sort((a, b) => a.position - b.position)}
           cards={filteredCards}
           onAddList={handleAddList}
           onAddCard={handleAddCard}
@@ -534,6 +566,7 @@ const KanbanPage = () => {
           onDeleteList={deleteList}
           onEditList={handleEditList}
           onColorChange={handleColorChange}
+          onArchiveList={handleArchiveList}
           onMoveCard={moveCard}
           onMoveList={moveList}
         />

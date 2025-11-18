@@ -23,6 +23,7 @@ interface KanbanListProps {
   onDeleteList: (listId: string) => void;
   onEditList: (listId: string, title: string) => void;
   onColorChange: (listId: string, color: string) => void;
+  onArchiveList: (listId: string) => void;
   dragHandleProps?: any;
 }
 
@@ -47,6 +48,7 @@ export const KanbanList: React.FC<KanbanListProps> = ({
   onDeleteList,
   onEditList,
   onColorChange,
+  onArchiveList,
   dragHandleProps
 }) => {
   const [isAddingCard, setIsAddingCard] = useState(false);
@@ -158,6 +160,10 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>
                       Edit Title
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => onArchiveList(list.id)}>
+                      {list.archived ? 'Unarchive List' : 'Archive List'}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <div className="px-2 py-1.5 text-sm font-semibold flex items-center gap-2">
