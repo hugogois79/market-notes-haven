@@ -22,10 +22,26 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Search, Kanban as KanbanIcon, Archive, ArrowLeft } from 'lucide-react';
+import { Plus, Search, Kanban as KanbanIcon, Archive, ArrowLeft, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const KanbanPage = () => {
   const { boardId } = useParams();
@@ -46,6 +62,8 @@ const KanbanPage = () => {
     updateSpace,
     deleteSpace,
     createBoard,
+    updateBoard,
+    deleteBoard,
     createList,
     createCard,
     updateCard,
@@ -62,6 +80,8 @@ const KanbanPage = () => {
   const [newBoardDescription, setNewBoardDescription] = useState('');
   const [selectedSpace, setSelectedSpace] = useState<string>('none');
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingBoard, setEditingBoard] = useState<typeof boards[0] | null>(null);
+  const [deletingBoardId, setDeletingBoardId] = useState<string | null>(null);
 
   const currentBoard = boards.find(b => b.id === boardId);
 
@@ -88,6 +108,35 @@ const KanbanPage = () => {
       setSelectedSpace('none');
       setIsCreateBoardOpen(false);
       navigate(`/kanban/${board.id}`);
+    } catch (error) {
+      // Error handled by hook
+    }
+  };
+
+  const handleEditBoard = async () => {
+    if (!editingBoard || !editingBoard.title.trim()) return;
+    
+    try {
+      await updateBoard(editingBoard.id, {
+        title: editingBoard.title,
+        description: editingBoard.description,
+      });
+      setEditingBoard(null);
+    } catch (error) {
+      // Error handled by hook
+    }
+  };
+
+  const handleDeleteBoard = async () => {
+    if (!deletingBoardId) return;
+    
+    try {
+      await deleteBoard(deletingBoardId);
+      setDeletingBoardId(null);
+      
+      if (boardId === deletingBoardId) {
+        navigate('/kanban');
+      }
     } catch (error) {
       // Error handled by hook
     }
@@ -234,10 +283,38 @@ const KanbanPage = () => {
                     <div
                       key={board.id}
                       onClick={() => navigate(`/kanban/${board.id}`)}
-                      className="p-6 rounded-lg border-2 hover:border-primary cursor-pointer transition-colors"
+                      className="p-6 rounded-lg border-2 hover:border-primary cursor-pointer transition-colors relative group"
                       style={{ backgroundColor: board.color + '10' }}
                     >
-                      <h3 className="text-xl font-bold mb-2">{board.title}</h3>
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingBoard(board);
+                            }}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit Board
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeletingBoardId(board.id);
+                              }}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Board
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <h3 className="text-xl font-bold mb-2 pr-8">{board.title}</h3>
                       {board.description && (
                         <p className="text-sm text-muted-foreground">{board.description}</p>
                       )}
@@ -260,6 +337,62 @@ const KanbanPage = () => {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Edit Board Dialog */}
+        <Dialog open={!!editingBoard} onOpenChange={(open) => !open && setEditingBoard(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Board</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-board-title">Board Title</Label>
+                <Input
+                  id="edit-board-title"
+                  value={editingBoard?.title || ""}
+                  onChange={(e) => setEditingBoard(editingBoard ? { ...editingBoard, title: e.target.value } : null)}
+                  placeholder="Enter board title"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-board-description">Description (optional)</Label>
+                <Textarea
+                  id="edit-board-description"
+                  value={editingBoard?.description || ""}
+                  onChange={(e) => setEditingBoard(editingBoard ? { ...editingBoard, description: e.target.value } : null)}
+                  placeholder="Enter board description"
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setEditingBoard(null)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleEditBoard}>
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Board Confirmation */}
+        <AlertDialog open={!!deletingBoardId} onOpenChange={(open) => !open && setDeletingBoardId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Board</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this board? This will also delete all lists and cards in this board. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteBoard} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }
