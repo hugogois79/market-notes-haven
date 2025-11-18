@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Search, Kanban as KanbanIcon, Archive, ArrowLeft, MoreVertical, Pencil, Trash2, ArchiveRestore, Printer } from 'lucide-react';
+import { Plus, Search, Kanban as KanbanIcon, Archive, ArrowLeft, MoreVertical, Pencil, Trash2, ArchiveRestore } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -86,10 +86,6 @@ const KanbanPage = () => {
   const [showArchivedLists, setShowArchivedLists] = useState(false);
 
   const currentBoard = boards.find(b => b.id === boardId);
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   // Filter boards based on archived status
   const filteredBoards = useMemo(() => {
@@ -516,15 +512,6 @@ const KanbanPage = () => {
           </div>
 
           <div className="flex items-center gap-4 no-print">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handlePrint}
-              className="gap-2"
-            >
-              <Printer className="h-4 w-4" />
-              Print Pending Lists
-            </Button>
             <div className="flex items-center gap-2">
               <Archive className="h-4 w-4 text-muted-foreground" />
               <Label htmlFor="show-archived-cards" className="text-sm cursor-pointer">

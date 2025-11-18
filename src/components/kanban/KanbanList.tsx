@@ -4,7 +4,7 @@ import { KanbanList as KanbanListType, KanbanCard } from '@/services/kanbanServi
 import { KanbanCard as KanbanCardComponent } from './KanbanCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, MoreVertical, GripVertical, ChevronDown, ChevronRight, Palette } from 'lucide-react';
+import { Plus, MoreVertical, GripVertical, ChevronDown, ChevronRight, Palette, Printer } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { printKanbanList } from '@/utils/kanbanPrint';
 
 interface KanbanListProps {
   list: KanbanListType;
@@ -72,8 +73,13 @@ export const KanbanList: React.FC<KanbanListProps> = ({
     setIsEditingTitle(false);
   };
 
+  const handlePrintList = () => {
+    printKanbanList(list.id, list.title, cards);
+  };
+
   return (
     <div 
+      id={`kanban-list-${list.id}`}
       className={`flex-shrink-0 ${
         isCollapsed ? 'w-12' : 'w-80'
       } rounded-lg transition-all duration-200`}
@@ -164,6 +170,10 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => onArchiveList(list.id)}>
                       {list.archived ? 'Unarchive List' : 'Archive List'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handlePrintList}>
+                      <Printer className="h-4 w-4 mr-2" />
+                      Print List
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <div className="px-2 py-1.5 text-sm font-semibold flex items-center gap-2">
