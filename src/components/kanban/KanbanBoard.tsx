@@ -19,6 +19,7 @@ interface KanbanBoardProps {
   onDeleteList: (listId: string) => void;
   onEditList: (listId: string, title: string) => void;
   onColorChange: (listId: string, color: string) => void;
+  onArchiveList: (listId: string) => void;
   onMoveCard: (cardId: string, targetListId: string, newPosition: number) => void;
   onMoveList: (listId: string, newPosition: number) => void;
 }
@@ -34,6 +35,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onDeleteList,
   onEditList,
   onColorChange,
+  onArchiveList,
   onMoveCard,
   onMoveList
 }) => {
@@ -128,6 +130,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           onDeleteList={onDeleteList}
                           onEditList={onEditList}
                           onColorChange={onColorChange}
+                          onArchiveList={onArchiveList}
                           dragHandleProps={provided.dragHandleProps}
                         />
                       </div>
