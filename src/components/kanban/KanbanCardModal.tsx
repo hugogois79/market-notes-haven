@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight } from 'lucide-react';
+import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -136,6 +136,25 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     if (['xls', 'xlsx'].includes(ext || '')) return '📊';
     if (['zip', 'rar'].includes(ext || '')) return '🗜️';
     return '📎';
+  };
+
+  const handleDownloadAttachment = async (attachment: KanbanAttachment) => {
+    try {
+      const response = await fetch(attachment.file_url);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = attachment.filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success('Download started');
+    } catch (error) {
+      console.error('Error downloading attachment:', error);
+      toast.error('Failed to download attachment');
+    }
   };
 
   const handleSave = async () => {
@@ -292,14 +311,24 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
                         <span className="text-lg">{getFileIcon(attachment.filename)}</span>
                         <span className="text-sm truncate">{attachment.filename}</span>
                       </a>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteAttachment(attachment)}
-                        className="ml-2 flex-shrink-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadAttachment(attachment)}
+                          title="Download"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteAttachment(attachment)}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
