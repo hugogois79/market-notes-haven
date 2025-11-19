@@ -70,6 +70,36 @@ export const printKanbanList = (listId: string, listTitle: string, cards: any[])
         tasksBadge.className = 'kanban-card-badge';
         tasksBadge.textContent = `Tasks: ${completed}/${total}`;
         metaContainer.appendChild(tasksBadge);
+        
+        // Add detailed task list
+        const tasksContainer = document.createElement('div');
+        tasksContainer.className = 'kanban-card-tasks';
+        
+        card.tasks.forEach((task: any) => {
+          const taskItem = document.createElement('div');
+          taskItem.className = `kanban-task-item ${task.completed ? 'task-completed' : ''}`;
+          
+          const checkbox = document.createElement('span');
+          checkbox.className = 'task-checkbox';
+          checkbox.textContent = task.completed ? '☑' : '☐';
+          taskItem.appendChild(checkbox);
+          
+          const taskText = document.createElement('span');
+          taskText.className = 'task-text';
+          taskText.textContent = task.text;
+          taskItem.appendChild(taskText);
+          
+          if (task.dueDate) {
+            const taskDate = document.createElement('span');
+            taskDate.className = 'task-date';
+            taskDate.textContent = `(${new Date(task.dueDate).toLocaleDateString()})`;
+            taskItem.appendChild(taskDate);
+          }
+          
+          tasksContainer.appendChild(taskItem);
+        });
+        
+        cardElement.appendChild(tasksContainer);
       }
       
       if (card.attachment_count && card.attachment_count > 0) {

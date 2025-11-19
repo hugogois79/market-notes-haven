@@ -102,6 +102,43 @@
     align-items: center;
     gap: 0.1cm;
   }
+  
+  .kanban-card-tasks {
+    margin-top: 0.3cm;
+    padding-top: 0.3cm;
+    border-top: 1px solid #ddd;
+  }
+  
+  .kanban-task-item {
+    display: flex;
+    align-items: center;
+    gap: 0.15cm;
+    padding: 0.1cm 0;
+    font-size: 8pt;
+    line-height: 1.4;
+  }
+  
+  .kanban-task-item.task-completed .task-text {
+    text-decoration: line-through;
+    color: #999 !important;
+  }
+  
+  .task-checkbox {
+    font-size: 10pt;
+    line-height: 1;
+    min-width: 0.4cm;
+  }
+  
+  .task-text {
+    flex: 1;
+    color: #333 !important;
+  }
+  
+  .task-date {
+    color: #666 !important;
+    font-size: 7pt;
+    white-space: nowrap;
+  }
 
   /* Priority colors (using borders since bg doesn't print well) */
   .priority-high {
