@@ -2,13 +2,18 @@ import React, { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, X, Pencil, Check } from 'lucide-react';
+import { Plus, X, Pencil, Check, Calendar as CalendarIcon } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 export interface Task {
   id: string;
   text: string;
   completed: boolean;
+  dueDate?: Date;
 }
 
 interface TaskChecklistProps {
@@ -20,6 +25,7 @@ export const TaskChecklist: React.FC<TaskChecklistProps> = ({ tasks, onTasksChan
   const [newTaskText, setNewTaskText] = useState('');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
+  const [editingDate, setEditingDate] = useState<Date | undefined>(undefined);
 
   const addTask = () => {
     if (newTaskText.trim()) {
@@ -48,23 +54,34 @@ export const TaskChecklist: React.FC<TaskChecklistProps> = ({ tasks, onTasksChan
   const startEditing = (task: Task) => {
     setEditingTaskId(task.id);
     setEditingText(task.text);
+    setEditingDate(task.dueDate);
   };
 
   const saveEdit = (taskId: string) => {
     if (editingText.trim()) {
       onTasksChange(
         tasks.map(task =>
-          task.id === taskId ? { ...task, text: editingText.trim() } : task
+          task.id === taskId ? { ...task, text: editingText.trim(), dueDate: editingDate } : task
         )
       );
     }
     setEditingTaskId(null);
     setEditingText('');
+    setEditingDate(undefined);
   };
 
   const cancelEdit = () => {
     setEditingTaskId(null);
     setEditingText('');
+    setEditingDate(undefined);
+  };
+
+  const updateTaskDate = (taskId: string, date: Date | undefined) => {
+    onTasksChange(
+      tasks.map(task =>
+        task.id === taskId ? { ...task, dueDate: date } : task
+      )
+    );
   };
 
   const completedCount = tasks.filter(t => t.completed).length;
@@ -103,21 +120,47 @@ export const TaskChecklist: React.FC<TaskChecklistProps> = ({ tasks, onTasksChan
             />
             {editingTaskId === task.id ? (
               <>
-                <Input
-                  value={editingText}
-                  onChange={(e) => setEditingText(e.target.value)}
-                  className="flex-1 h-8"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      saveEdit(task.id);
-                    } else if (e.key === 'Escape') {
-                      e.preventDefault();
-                      cancelEdit();
-                    }
-                  }}
-                />
+                <div className="flex-1 flex flex-col gap-2">
+                  <Input
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                    className="h-8"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        saveEdit(task.id);
+                      } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        cancelEdit();
+                      }
+                    }}
+                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "justify-start text-left font-normal h-7",
+                          !editingDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-3 w-3" />
+                        {editingDate ? format(editingDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={editingDate}
+                        onSelect={setEditingDate}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -137,13 +180,38 @@ export const TaskChecklist: React.FC<TaskChecklistProps> = ({ tasks, onTasksChan
               </>
             ) : (
               <>
-                <span
-                  className={`flex-1 text-sm ${
-                    task.completed ? 'line-through text-muted-foreground' : ''
-                  }`}
-                >
-                  {task.text}
-                </span>
+                <div className="flex-1 flex flex-col gap-1">
+                  <span
+                    className={`text-sm ${
+                      task.completed ? 'line-through text-muted-foreground' : ''
+                    }`}
+                  >
+                    {task.text}
+                  </span>
+                  {task.dueDate && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-fit h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          <CalendarIcon className="mr-1 h-3 w-3" />
+                          {format(new Date(task.dueDate), "PPP")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={task.dueDate ? new Date(task.dueDate) : undefined}
+                          onSelect={(date) => updateTaskDate(task.id, date)}
+                          initialFocus
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
