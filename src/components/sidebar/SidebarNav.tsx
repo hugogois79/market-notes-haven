@@ -60,9 +60,9 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
     setExpandedSpaces(newExpanded);
   };
 
-  const unorganizedBoards = boards.filter(b => !b.space_id);
+  const unorganizedBoards = boards.filter(b => !b.space_id && !b.archived);
   const boardsBySpace = spaces.reduce((acc, space) => {
-    acc[space.id] = boards.filter(b => b.space_id === space.id);
+    acc[space.id] = boards.filter(b => b.space_id === space.id && !b.archived);
     return acc;
   }, {} as Record<string, any[]>);
 
