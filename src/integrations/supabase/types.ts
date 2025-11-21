@@ -1150,6 +1150,7 @@ export type Database = {
       kanban_cards: {
         Row: {
           archived: boolean | null
+          attachment_count: number | null
           completed: boolean | null
           completed_at: string | null
           concluded: boolean | null
@@ -1166,6 +1167,7 @@ export type Database = {
         }
         Insert: {
           archived?: boolean | null
+          attachment_count?: number | null
           completed?: boolean | null
           completed_at?: string | null
           concluded?: boolean | null
@@ -1182,6 +1184,7 @@ export type Database = {
         }
         Update: {
           archived?: boolean | null
+          attachment_count?: number | null
           completed?: boolean | null
           completed_at?: string | null
           concluded?: boolean | null

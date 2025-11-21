@@ -78,8 +78,6 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     try {
       const data = await KanbanService.getAttachments(card.id);
       setAttachments(data);
-      // Update card's attachment count
-      onUpdate(card.id, { attachment_count: data.length });
     } catch (error) {
       console.error('Error loading attachments:', error);
     }
