@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, AlertCircle, CheckCircle2, RotateCcw, Paperclip, ListChecks } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isPast, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 
 interface KanbanCardProps {
@@ -92,12 +92,17 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
                 </Badge>
               )}
               
-              {card.due_date && (
-                <Badge variant="outline" className="text-xs">
-                  <Calendar className="h-3 w-3 mr-1" />
-                  {format(new Date(card.due_date), 'MMM dd')}
-                </Badge>
-              )}
+              {card.due_date && (() => {
+                const dueDate = new Date(card.due_date);
+                const isOverdue = isPast(startOfDay(dueDate)) && startOfDay(dueDate).getTime() !== startOfDay(new Date()).getTime();
+                return (
+                  <Badge variant="outline" className={`text-xs ${isOverdue ? 'border-red-500' : ''}`}>
+                    <Calendar className={`h-3 w-3 mr-1 ${isOverdue ? 'text-red-500' : ''}`} />
+                    {isOverdue && '! '}
+                    {format(dueDate, 'MMM dd')}
+                  </Badge>
+                );
+              })()}
               
               {card.tasks && Array.isArray(card.tasks) && card.tasks.length > 0 && (() => {
                 const completed = card.tasks.filter((t: any) => t.completed).length;
