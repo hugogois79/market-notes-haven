@@ -26,15 +26,14 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
   };
 
   const handlePrint = () => {
-    // Open PDF in new window and trigger print
-    const printWindow = window.open(url, '_blank');
-    if (printWindow) {
-      printWindow.focus();
-      // Wait for PDF to load before printing
-      setTimeout(() => {
-        printWindow.print();
-      }, 250);
-    }
+    // Use browser's native download to allow user to print from their PDF viewer
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
