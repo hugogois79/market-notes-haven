@@ -52,12 +52,14 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
   };
 
   const handleFullscreen = () => {
-    // Open in new tab with proper parameters to avoid blocking
-    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
-    if (!newWindow) {
-      // If blocked, show a message to the user
-      alert('Por favor, permita pop-ups para abrir o PDF em nova aba');
-    }
+    // Use a link element to open in new tab - more reliable than window.open
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
