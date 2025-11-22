@@ -75,6 +75,14 @@ const Categories = () => {
     
     // Create a new note with the category
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("You must be logged in to create a category");
+        setIsSaving(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('notes')
         .insert([
@@ -82,7 +90,8 @@ const Categories = () => {
             title: `${newCategory} Notes`, 
             content: `# ${newCategory} Notes\n\nThis is your first note in the ${newCategory} category.`,
             category: newCategory,
-            tags: []
+            tags: [],
+            user_id: user.id
           }
         ]);
 
