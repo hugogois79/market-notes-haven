@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download, Maximize2, FileText, Printer, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, FileText, Printer, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Document, Page, pdfjs } from 'react-pdf';
 
@@ -49,17 +49,6 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
         document.body.removeChild(printFrame);
       }
     };
-  };
-
-  const handleFullscreen = () => {
-    // Use a link element to open in new tab - more reliable than window.open
-    const link = document.createElement('a');
-    link.href = url;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
@@ -114,10 +103,6 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
           <Button size="sm" variant="outline" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
             Imprimir
-          </Button>
-          <Button size="sm" variant="outline" onClick={handleFullscreen}>
-            <Maximize2 className="h-4 w-4 mr-2" />
-            Abrir em nova aba
           </Button>
           <Button size="sm" onClick={handleDownload}>
             <Download className="h-4 w-4 mr-2" />
