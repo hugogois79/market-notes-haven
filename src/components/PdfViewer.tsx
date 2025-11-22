@@ -26,11 +26,38 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
   };
 
   const handlePrint = () => {
-    window.open(url, '_blank')?.print();
+    // Create a hidden iframe to print the PDF
+    const printFrame = document.createElement('iframe');
+    printFrame.style.display = 'none';
+    printFrame.src = url;
+    document.body.appendChild(printFrame);
+    
+    printFrame.onload = () => {
+      try {
+        printFrame.contentWindow?.print();
+        // Remove iframe after a delay
+        setTimeout(() => {
+          document.body.removeChild(printFrame);
+        }, 1000);
+      } catch (error) {
+        console.error('Print error:', error);
+        // Fallback: open in new window
+        const printWindow = window.open(url, '_blank', 'noopener,noreferrer');
+        if (printWindow) {
+          printWindow.onload = () => printWindow.print();
+        }
+        document.body.removeChild(printFrame);
+      }
+    };
   };
 
   const handleFullscreen = () => {
-    window.open(url, '_blank');
+    // Open in new tab with proper parameters to avoid blocking
+    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!newWindow) {
+      // If blocked, show a message to the user
+      alert('Por favor, permita pop-ups para abrir o PDF em nova aba');
+    }
   };
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
