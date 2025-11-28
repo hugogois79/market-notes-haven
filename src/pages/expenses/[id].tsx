@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Download, Eye, X } from "lucide-react";
+import { ArrowLeft, FileText, Download, Eye, X, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -141,6 +141,194 @@ const ExpenseDetailPage = () => {
     }
   };
 
+  const handlePrint = async () => {
+    if (!claim || !expenses || expenses.length === 0) return;
+
+    toast({
+      title: "A preparar impressão...",
+      description: "Por favor aguarde enquanto os recibos são carregados",
+    });
+
+    try {
+      // Load all receipts as blob URLs
+      const receiptPromises = expenses
+        .filter(expense => expense.receipt_image_url)
+        .map(async (expense) => {
+          const filePath = expenseClaimService.getFilePathFromUrl(expense.receipt_image_url!);
+          if (!filePath) return null;
+
+          const { data, error } = await supabase.storage
+            .from('expense-receipts')
+            .download(filePath);
+
+          if (error || !data) return null;
+
+          return {
+            expense,
+            blobUrl: URL.createObjectURL(data),
+            type: data.type,
+          };
+        });
+
+      const receipts = (await Promise.all(receiptPromises)).filter(Boolean);
+
+      // Generate print HTML
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast({
+          title: "Erro",
+          description: "Por favor permita pop-ups para imprimir",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>Requisição #${claim.claim_number}</title>
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { font-family: Arial, sans-serif; padding: 40px; }
+              .page { page-break-after: always; }
+              .header { margin-bottom: 30px; }
+              .header h1 { font-size: 28px; margin-bottom: 8px; }
+              .header p { color: #666; font-size: 14px; }
+              .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+              .info-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
+              .info-card h3 { font-size: 12px; color: #666; margin-bottom: 8px; }
+              .info-card p { font-size: 16px; font-weight: 600; }
+              .badge { display: inline-block; padding: 4px 12px; border-radius: 4px; color: white; font-size: 14px; }
+              .badge.submetido { background-color: #3b82f6; }
+              .section { margin-bottom: 30px; }
+              .section h2 { font-size: 20px; margin-bottom: 16px; }
+              table { width: 100%; border-collapse: collapse; }
+              table th, table td { text-align: left; padding: 12px; border-bottom: 1px solid #e5e7eb; }
+              table th { background-color: #f9fafb; font-weight: 600; font-size: 14px; }
+              table td { font-size: 14px; }
+              .total { display: flex; justify-content: space-between; align-items: center; padding: 20px; border: 2px solid #e5e7eb; border-radius: 8px; margin-top: 20px; }
+              .total span { font-size: 24px; font-weight: bold; }
+              .total .amount { color: #3b82f6; }
+              .receipt-page { page-break-after: always; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+              .receipt-page img { max-width: 100%; max-height: 90vh; object-fit: contain; }
+              .receipt-page h2 { margin-bottom: 20px; }
+              @media print {
+                body { padding: 20px; }
+                .page { page-break-after: always; }
+                .receipt-page { page-break-after: always; }
+              }
+            </style>
+          </head>
+          <body>
+            <!-- First Page: Summary -->
+            <div class="page">
+              <div class="header">
+                <h1>Requisição #${claim.claim_number}</h1>
+                <p>Detalhes da requisição de despesas</p>
+              </div>
+
+              <div class="info-grid">
+                <div class="info-card">
+                  <h3>Tipo</h3>
+                  <p>${getTypeBadge(claim.claim_type)}</p>
+                </div>
+                <div class="info-card">
+                  <h3>Status</h3>
+                  <span class="badge submetido">Submetido</span>
+                </div>
+                <div class="info-card">
+                  <h3>Data Criação</h3>
+                  <p>${format(new Date(claim.created_at), "dd/MM/yyyy")}</p>
+                </div>
+                <div class="info-card">
+                  <h3>Data Submissão</h3>
+                  <p>${claim.submission_date ? format(new Date(claim.submission_date), "dd/MM/yyyy") : "-"}</p>
+                </div>
+              </div>
+
+              ${claim.description ? `
+                <div class="section">
+                  <h2>Descrição</h2>
+                  <p>${claim.description}</p>
+                </div>
+              ` : ''}
+
+              <div class="section">
+                <h2>Lista de Despesas</h2>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Descrição</th>
+                      <th>Fornecedor</th>
+                      <th>Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${expenses.map(expense => `
+                      <tr>
+                        <td>${format(new Date(expense.expense_date), "dd/MM/yyyy")}</td>
+                        <td>${expense.description}</td>
+                        <td>${expense.supplier}</td>
+                        <td><strong>${formatCurrency(Number(expense.amount))}</strong></td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+
+                <div class="total">
+                  <span>Total:</span>
+                  <span class="amount">${formatCurrency(Number(claim.total_amount))}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Following Pages: Individual Receipts -->
+            ${receipts.map((receipt, index) => `
+              <div class="receipt-page">
+                <h2>Comprovativo ${index + 1} - ${receipt.expense.description}</h2>
+                ${receipt.type.startsWith('image/') ? `
+                  <img src="${receipt.blobUrl}" alt="Recibo ${index + 1}" />
+                ` : `
+                  <p style="color: #666;">PDF: ${receipt.expense.description}</p>
+                  <p style="color: #999; font-size: 12px;">Os PDFs devem ser impressos separadamente</p>
+                `}
+              </div>
+            `).join('')}
+
+            <script>
+              // Clean up blob URLs after printing
+              window.onafterprint = function() {
+                ${receipts.map(r => `URL.revokeObjectURL('${r.blobUrl}');`).join('\n')}
+                window.close();
+              };
+
+              // Trigger print dialog after page loads
+              window.onload = function() {
+                setTimeout(function() {
+                  window.print();
+                }, 500);
+              };
+            </script>
+          </body>
+        </html>
+      `;
+
+      printWindow.document.write(html);
+      printWindow.document.close();
+
+    } catch (error) {
+      console.error("Error preparing print:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível preparar a impressão",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
       rascunho: "bg-gray-500",
@@ -199,11 +387,19 @@ const ExpenseDetailPage = () => {
             Detalhes da requisição de despesas
           </p>
         </div>
-        {claim.status === "rascunho" && (
-          <Button onClick={() => navigate(`/expenses/${id}/edit`)}>
-            Editar
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {claim.status === "submetido" && (
+            <Button onClick={handlePrint} variant="outline">
+              <Printer className="h-4 w-4 mr-2" />
+              Imprimir
+            </Button>
+          )}
+          {claim.status === "rascunho" && (
+            <Button onClick={() => navigate(`/expenses/${id}/edit`)}>
+              Editar
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
