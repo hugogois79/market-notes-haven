@@ -49,53 +49,6 @@ const SpecialSections = ({
           onSummaryGenerated={onSummaryGenerated}
         />
       </Card>
-      
-      {/* Trade Info Section - Only displayed for trading categories */}
-      {isTradingCategory && (
-        <Card className="p-4 border rounded-md mt-4">
-          <Tabs defaultValue="trade-info">
-            <TabsList className="mb-4">
-              <TabsTrigger value="trade-info">Trade Info</TabsTrigger>
-              <TabsTrigger value="trade-journal">Trade Journal</TabsTrigger>
-              <TabsTrigger value="trade-settlements">Trade Settlements</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="trade-info">
-              <TradeInfoSection 
-                availableTokens={availableTokens}
-                isLoadingTokens={isLoadingTokens}
-                tradeInfo={tradeInfo}
-                onTradeInfoChange={onTradeInfoChange}
-                noteContent={content}
-              />
-            </TabsContent>
-            
-            <TabsContent value="trade-journal">
-              {/* Journal Summary Section - Always show even when empty */}
-              <div className="mb-4">
-                <JournalSummary 
-                  summary={chatSummary} 
-                  onRefresh={chatSummary ? () => {
-                    if (noteId) {
-                      // This will trigger the chat to regenerate its summary
-                      const tradingChatElement = document.getElementById('trading-chat');
-                      if (tradingChatElement) {
-                        // Signal to the TradingChat component to regenerate the summary
-                        const event = new CustomEvent('regenerate-summary');
-                        tradingChatElement.dispatchEvent(event);
-                      }
-                    }
-                  } : undefined}
-                />
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="trade-settlements">
-              <TradingSettlementNotes noteId={noteId} />
-            </TabsContent>
-          </Tabs>
-        </Card>
-      )}
     </>
   );
 };
