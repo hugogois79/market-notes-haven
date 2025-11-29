@@ -182,9 +182,10 @@ const ExpenseDetailPage = () => {
     });
 
     try {
-      // Dynamically import pdfjs
+      // Dynamically import pdfjs with better error handling
       const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+      const pdfjsVersion = '4.10.38';
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.mjs`;
 
       // Load all receipts and convert PDFs to images
       const receiptPromises = expenses
@@ -210,35 +211,42 @@ const ExpenseDetailPage = () => {
 
           // Handle PDFs - convert each page to image
           if (data.type === 'application/pdf') {
-            const arrayBuffer = await data.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            const images: string[] = [];
+            try {
+              const arrayBuffer = await data.arrayBuffer();
+              const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+              const pdf = await loadingTask.promise;
+              const images: string[] = [];
 
-            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-              const page = await pdf.getPage(pageNum);
-              const viewport = page.getViewport({ scale: 2.0 });
-              
-              const canvas = document.createElement('canvas');
-              const context = canvas.getContext('2d');
-              canvas.height = viewport.height;
-              canvas.width = viewport.width;
+              for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                const viewport = page.getViewport({ scale: 2.0 });
+                
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                
+                if (!context) continue;
+                
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
 
-              if (context) {
-                const renderContext: any = {
+                await page.render({
                   canvasContext: context,
                   viewport: viewport,
-                };
-                await page.render(renderContext).promise;
+                  canvas: canvas,
+                }).promise;
 
                 images.push(canvas.toDataURL('image/png'));
               }
-            }
 
-            return {
-              expense,
-              images,
-              type: 'pdf',
-            };
+              return {
+                expense,
+                images,
+                type: 'pdf',
+              };
+            } catch (pdfError) {
+              console.error('Erro ao processar PDF:', pdfError);
+              return null;
+            }
           }
 
           return null;
