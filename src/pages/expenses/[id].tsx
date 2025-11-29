@@ -40,6 +40,38 @@ const ExpenseDetailPage = () => {
     enabled: !!id,
   });
 
+  const { data: requester } = useQuery({
+    queryKey: ["requester", claim?.requester_id],
+    queryFn: async () => {
+      if (!claim?.requester_id) return null;
+      const { data, error } = await supabase
+        .from("expense_requesters")
+        .select("*")
+        .eq("id", claim.requester_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!claim?.requester_id,
+  });
+
+  const { data: projects } = useQuery({
+    queryKey: ["projects", expenses],
+    queryFn: async () => {
+      if (!expenses || expenses.length === 0) return [];
+      const projectIds = [...new Set(expenses.map(e => e.project_id).filter(Boolean))];
+      if (projectIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from("financial_projects")
+        .select("*")
+        .in("id", projectIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!expenses && expenses.length > 0,
+  });
+
   const handleViewReceipt = async (url: string) => {
     setLoadingPreview(true);
     setPreviewError(null);
@@ -248,6 +280,17 @@ const ExpenseDetailPage = () => {
                 </div>
               </div>
 
+              <div class="info-grid" style="grid-template-columns: repeat(2, 1fr); margin-top: 20px;">
+                <div class="info-card">
+                  <h3>Requisitante</h3>
+                  <p>${requester?.name || "-"}</p>
+                </div>
+                <div class="info-card">
+                  <h3>Projeto</h3>
+                  <p>${projects && projects.length > 0 ? projects[0].name : "-"}</p>
+                </div>
+              </div>
+
               ${claim.description ? `
                 <div class="section">
                   <h2>Descrição</h2>
@@ -441,6 +484,28 @@ const ExpenseDetailPage = () => {
               {claim.submission_date
                 ? format(new Date(claim.submission_date), "dd/MM/yyyy")
                 : "-"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Requisitante</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg font-semibold">{requester?.name || "-"}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Projeto</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg font-semibold">
+              {projects && projects.length > 0 ? projects[0].name : "-"}
             </p>
           </CardContent>
         </Card>
