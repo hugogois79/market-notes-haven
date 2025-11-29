@@ -182,12 +182,16 @@ const ExpenseDetailPage = () => {
     });
 
     try {
-      // Dynamically import pdfjs with better error handling
+      // Dynamically import pdf.js
       const pdfjsLib = await import('pdfjs-dist');
-      const pdfjsVersion = '4.10.38';
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.mjs`;
+      
+      // Set worker source for pdf.js v5.x (uses .mjs with bundler)
+      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+        'pdfjs-dist/build/pdf.worker.min.mjs',
+        import.meta.url
+      ).toString();
 
-      // Load all receipts and convert PDFs to images
+      // Process all receipts
       const receiptPromises = expenses
         .filter(expense => expense.receipt_image_url)
         .map(async (expense) => {
@@ -199,14 +203,13 @@ const ExpenseDetailPage = () => {
             .download(filePath);
 
           if (error || !data) {
-            console.error('Error downloading receipt:', error, 'for path:', filePath);
+            console.error('Error downloading receipt:', error);
             return null;
           }
 
           // Handle images directly
           if (data.type.startsWith('image/')) {
             const blobUrl = URL.createObjectURL(data);
-            console.log('Image processed:', expense.description, blobUrl);
             return {
               expense,
               images: [blobUrl],
@@ -218,44 +221,46 @@ const ExpenseDetailPage = () => {
           if (data.type === 'application/pdf') {
             try {
               const arrayBuffer = await data.arrayBuffer();
-              const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-              const pdf = await loadingTask.promise;
+              const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
               const images: string[] = [];
 
               for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                const page = await pdf.getPage(pageNum);
-                const viewport = page.getViewport({ scale: 2.0 });
-                
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                
-                if (!context) {
-                  console.error('Failed to get canvas context for page:', pageNum);
-                  continue;
+                try {
+                  const page = await pdf.getPage(pageNum);
+                  const viewport = page.getViewport({ scale: 2.0 });
+                  
+                  const canvas = document.createElement('canvas');
+                  const context = canvas.getContext('2d');
+                  
+                  if (!context) {
+                    console.error('Failed to get canvas context');
+                    continue;
+                  }
+                  
+                  canvas.height = viewport.height;
+                  canvas.width = viewport.width;
+
+                  await page.render({
+                    canvasContext: context,
+                    viewport: viewport,
+                    canvas: canvas,
+                  }).promise;
+
+                  images.push(canvas.toDataURL('image/png'));
+                } catch (pageError) {
+                  console.error(`Error processing PDF page ${pageNum}:`, pageError);
                 }
-                
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                await page.render({
-                  canvasContext: context,
-                  viewport: viewport,
-                  canvas: canvas,
-                }).promise;
-
-                const dataUrl = canvas.toDataURL('image/png');
-                images.push(dataUrl);
-                console.log(`PDF page ${pageNum}/${pdf.numPages} processed`);
               }
 
-              console.log('PDF processed:', expense.description, 'Pages:', images.length);
-              return {
-                expense,
-                images,
-                type: 'pdf',
-              };
+              if (images.length > 0) {
+                return {
+                  expense,
+                  images,
+                  type: 'pdf',
+                };
+              }
             } catch (pdfError) {
-              console.error('Erro ao processar PDF:', pdfError);
+              console.error('Error processing PDF:', pdfError);
               return null;
             }
           }
@@ -265,21 +270,19 @@ const ExpenseDetailPage = () => {
 
       const receipts = (await Promise.all(receiptPromises)).filter(Boolean);
 
-      console.log('Total receipts processed:', receipts.length);
-      console.log('Receipts data:', receipts);
-
       if (receipts.length === 0) {
         toast({
           title: "Aviso",
           description: "Nenhum comprovativo foi encontrado para imprimir",
           variant: "default",
         });
-      } else {
-        toast({
-          title: "Comprovantes carregados",
-          description: `${receipts.length} comprovante(s) pronto(s) para impressão`,
-        });
+        return;
       }
+
+      toast({
+        title: "Comprovantes carregados",
+        description: `${receipts.length} comprovante(s) pronto(s) para impressão`,
+      });
 
       // Generate print HTML
       const printWindow = window.open('', '_blank');
