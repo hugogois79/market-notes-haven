@@ -335,8 +335,8 @@ const ExpenseDetailPage = () => {
                 ${receipt.type.startsWith('image/') ? `
                   <img src="${receipt.blobUrl}" alt="Recibo ${index + 1}" />
                 ` : `
-                  <p style="color: #666;">PDF: ${receipt.expense.description}</p>
-                  <p style="color: #999; font-size: 12px;">Os PDFs devem ser impressos separadamente</p>
+                  <p style="font-size: 18px; font-weight: 600; color: #333; margin-top: 100px;">Comprovativo de Anexo</p>
+                  <p style="color: #999; font-size: 12px; margin-top: 10px;">Os PDFs devem ser impressos separadamente</p>
                 `}
               </div>
             `).join('')}
