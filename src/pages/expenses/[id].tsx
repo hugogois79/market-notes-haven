@@ -182,7 +182,7 @@ const ExpenseDetailPage = () => {
     });
 
     try {
-      // Load all receipts as blob URLs
+      // Load all image receipts as blob URLs
       const receiptPromises = expenses
         .filter(expense => expense.receipt_image_url)
         .map(async (expense) => {
@@ -195,14 +195,33 @@ const ExpenseDetailPage = () => {
 
           if (error || !data) return null;
 
-          return {
-            expense,
-            blobUrl: URL.createObjectURL(data),
-            type: data.type,
-          };
+          // Only include images, not PDFs
+          if (data.type.startsWith('image/')) {
+            return {
+              expense,
+              blobUrl: URL.createObjectURL(data),
+              type: data.type,
+            };
+          }
+          return null;
         });
 
       const receipts = (await Promise.all(receiptPromises)).filter(Boolean);
+
+      // Check if there are any PDFs
+      const hasPDFs = expenses.some(expense => {
+        if (!expense.receipt_image_url) return false;
+        const filePath = expenseClaimService.getFilePathFromUrl(expense.receipt_image_url);
+        return filePath?.toLowerCase().endsWith('.pdf');
+      });
+
+      if (hasPDFs) {
+        toast({
+          title: "Atenção",
+          description: "Os recibos em PDF devem ser impressos separadamente através do botão 'Ver'",
+          variant: "default",
+        });
+      }
 
       // Generate print HTML
       const printWindow = window.open('', '_blank');
@@ -328,17 +347,11 @@ const ExpenseDetailPage = () => {
               </div>
             </div>
 
-            <!-- Following Pages: Individual Receipts -->
+            <!-- Following Pages: Individual Image Receipts -->
             ${receipts.map((receipt, index) => `
               <div class="receipt-page">
                 <h2>Comprovativo ${index + 1} - ${receipt.expense.description}</h2>
-                ${receipt.type.startsWith('image/') ? `
-                  <img src="${receipt.blobUrl}" alt="Recibo ${index + 1}" />
-                ` : receipt.type === 'application/pdf' ? `
-                  <iframe src="${receipt.blobUrl}" style="width: 100%; height: 85vh; border: none;"></iframe>
-                ` : `
-                  <p style="font-size: 18px; font-weight: 600; color: #333; margin-top: 100px;">Comprovativo de Anexo</p>
-                `}
+                <img src="${receipt.blobUrl}" alt="Recibo ${index + 1}" />
               </div>
             `).join('')}
 
