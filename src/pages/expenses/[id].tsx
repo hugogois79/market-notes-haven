@@ -334,9 +334,10 @@ const ExpenseDetailPage = () => {
                 <h2>Comprovativo ${index + 1} - ${receipt.expense.description}</h2>
                 ${receipt.type.startsWith('image/') ? `
                   <img src="${receipt.blobUrl}" alt="Recibo ${index + 1}" />
+                ` : receipt.type === 'application/pdf' ? `
+                  <iframe src="${receipt.blobUrl}" style="width: 100%; height: 85vh; border: none;"></iframe>
                 ` : `
                   <p style="font-size: 18px; font-weight: 600; color: #333; margin-top: 100px;">Comprovativo de Anexo</p>
-                  <p style="color: #999; font-size: 12px; margin-top: 10px;">Os PDFs devem ser impressos separadamente</p>
                 `}
               </div>
             `).join('')}
