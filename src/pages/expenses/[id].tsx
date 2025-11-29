@@ -198,13 +198,18 @@ const ExpenseDetailPage = () => {
             .from('expense-receipts')
             .download(filePath);
 
-          if (error || !data) return null;
+          if (error || !data) {
+            console.error('Error downloading receipt:', error, 'for path:', filePath);
+            return null;
+          }
 
           // Handle images directly
           if (data.type.startsWith('image/')) {
+            const blobUrl = URL.createObjectURL(data);
+            console.log('Image processed:', expense.description, blobUrl);
             return {
               expense,
-              images: [URL.createObjectURL(data)],
+              images: [blobUrl],
               type: 'image',
             };
           }
@@ -224,7 +229,10 @@ const ExpenseDetailPage = () => {
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
                 
-                if (!context) continue;
+                if (!context) {
+                  console.error('Failed to get canvas context for page:', pageNum);
+                  continue;
+                }
                 
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
@@ -235,9 +243,12 @@ const ExpenseDetailPage = () => {
                   canvas: canvas,
                 }).promise;
 
-                images.push(canvas.toDataURL('image/png'));
+                const dataUrl = canvas.toDataURL('image/png');
+                images.push(dataUrl);
+                console.log(`PDF page ${pageNum}/${pdf.numPages} processed`);
               }
 
+              console.log('PDF processed:', expense.description, 'Pages:', images.length);
               return {
                 expense,
                 images,
@@ -253,6 +264,22 @@ const ExpenseDetailPage = () => {
         });
 
       const receipts = (await Promise.all(receiptPromises)).filter(Boolean);
+
+      console.log('Total receipts processed:', receipts.length);
+      console.log('Receipts data:', receipts);
+
+      if (receipts.length === 0) {
+        toast({
+          title: "Aviso",
+          description: "Nenhum comprovativo foi encontrado para imprimir",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Comprovantes carregados",
+          description: `${receipts.length} comprovante(s) pronto(s) para impressão`,
+        });
+      }
 
       // Generate print HTML
       const printWindow = window.open('', '_blank');
