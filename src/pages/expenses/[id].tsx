@@ -182,7 +182,11 @@ const ExpenseDetailPage = () => {
     });
 
     try {
-      // Load all image receipts as blob URLs
+      // Dynamically import pdfjs
+      const pdfjsLib = await import('pdfjs-dist');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
+      // Load all receipts and convert PDFs to images
       const receiptPromises = expenses
         .filter(expense => expense.receipt_image_url)
         .map(async (expense) => {
@@ -195,33 +199,52 @@ const ExpenseDetailPage = () => {
 
           if (error || !data) return null;
 
-          // Only include images, not PDFs
+          // Handle images directly
           if (data.type.startsWith('image/')) {
             return {
               expense,
-              blobUrl: URL.createObjectURL(data),
-              type: data.type,
+              images: [URL.createObjectURL(data)],
+              type: 'image',
             };
           }
+
+          // Handle PDFs - convert each page to image
+          if (data.type === 'application/pdf') {
+            const arrayBuffer = await data.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const images: string[] = [];
+
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+              const page = await pdf.getPage(pageNum);
+              const viewport = page.getViewport({ scale: 2.0 });
+              
+              const canvas = document.createElement('canvas');
+              const context = canvas.getContext('2d');
+              canvas.height = viewport.height;
+              canvas.width = viewport.width;
+
+              if (context) {
+                const renderContext: any = {
+                  canvasContext: context,
+                  viewport: viewport,
+                };
+                await page.render(renderContext).promise;
+
+                images.push(canvas.toDataURL('image/png'));
+              }
+            }
+
+            return {
+              expense,
+              images,
+              type: 'pdf',
+            };
+          }
+
           return null;
         });
 
       const receipts = (await Promise.all(receiptPromises)).filter(Boolean);
-
-      // Check if there are any PDFs
-      const hasPDFs = expenses.some(expense => {
-        if (!expense.receipt_image_url) return false;
-        const filePath = expenseClaimService.getFilePathFromUrl(expense.receipt_image_url);
-        return filePath?.toLowerCase().endsWith('.pdf');
-      });
-
-      if (hasPDFs) {
-        toast({
-          title: "Atenção",
-          description: "Os recibos em PDF devem ser impressos separadamente através do botão 'Ver'",
-          variant: "default",
-        });
-      }
 
       // Generate print HTML
       const printWindow = window.open('', '_blank');
@@ -347,18 +370,20 @@ const ExpenseDetailPage = () => {
               </div>
             </div>
 
-            <!-- Following Pages: Individual Image Receipts -->
-            ${receipts.map((receipt, index) => `
-              <div class="receipt-page">
-                <h2>Comprovativo ${index + 1} - ${receipt.expense.description}</h2>
-                <img src="${receipt.blobUrl}" alt="Recibo ${index + 1}" />
-              </div>
-            `).join('')}
+            <!-- Following Pages: Individual Receipts -->
+            ${receipts.flatMap((receipt, receiptIndex) => 
+              receipt.images.map((imageUrl, pageIndex) => `
+                <div class="receipt-page">
+                  <h2>Comprovativo ${receiptIndex + 1}${receipt.images.length > 1 ? ` - Página ${pageIndex + 1}` : ''} - ${receipt.expense.description}</h2>
+                  <img src="${imageUrl}" alt="Recibo ${receiptIndex + 1}" />
+                </div>
+              `)
+            ).join('')}
 
             <script>
               // Clean up blob URLs after printing
               window.onafterprint = function() {
-                ${receipts.map(r => `URL.revokeObjectURL('${r.blobUrl}');`).join('\n')}
+                ${receipts.flatMap(r => r.images.filter(url => url.startsWith('blob:')).map(url => `URL.revokeObjectURL('${url}');`)).join('\n')}
                 window.close();
               };
 
@@ -366,7 +391,7 @@ const ExpenseDetailPage = () => {
               window.onload = function() {
                 setTimeout(function() {
                   window.print();
-                }, 500);
+                }, 1000);
               };
             </script>
           </body>
