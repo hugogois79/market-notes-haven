@@ -184,33 +184,72 @@ export default function LegalPage() {
                           {docs.map((doc) => (
                             <div
                               key={doc.id}
-                              className="flex items-start gap-4 p-3 rounded-md bg-background border hover:bg-accent/50 transition-colors"
+                              className="grid grid-cols-12 gap-4 p-4 rounded-md bg-background border hover:bg-accent/50 transition-colors items-start"
                             >
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-medium text-foreground mb-1">{doc.title}</h4>
+                              <div className="col-span-3">
+                                <h4 className="font-semibold text-foreground">{doc.title}</h4>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {new Date(doc.created_date).toLocaleDateString("pt-PT", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric"
+                                  })}
+                                </p>
+                              </div>
+
+                              <div className="col-span-1 flex items-center">
+                                <Badge
+                                  className={documentTypeBadgeColors[docType] || ""}
+                                  variant="outline"
+                                >
+                                  {docType}
+                                </Badge>
+                              </div>
+
+                              <div className="col-span-1 flex items-center justify-center">
+                                {doc.attachment_url && (
+                                  <a
+                                    href={doc.attachment_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary hover:text-primary/80"
+                                    title="Ver anexo"
+                                  >
+                                    <svg 
+                                      xmlns="http://www.w3.org/2000/svg" 
+                                      width="16" 
+                                      height="16" 
+                                      viewBox="0 0 24 24" 
+                                      fill="none" 
+                                      stroke="currentColor" 
+                                      strokeWidth="2" 
+                                      strokeLinecap="round" 
+                                      strokeLinejoin="round"
+                                    >
+                                      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                                    </svg>
+                                  </a>
+                                )}
+                              </div>
+
+                              <div className="col-span-5">
                                 {doc.description && (
-                                  <p className="text-sm text-muted-foreground line-clamp-2">
+                                  <p className="text-sm text-muted-foreground leading-relaxed">
                                     {doc.description}
                                   </p>
                                 )}
-                                <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                                  <span>{new Date(doc.created_date).toLocaleDateString("pt-PT")}</span>
-                                  {doc.legal_contacts && (
-                                    <Badge variant="outline" className="text-xs">
-                                      {doc.legal_contacts.name}
-                                    </Badge>
-                                  )}
-                                  {doc.attachment_url && (
-                                    <a
-                                      href={doc.attachment_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-primary hover:underline"
-                                    >
-                                      Ver anexo
-                                    </a>
-                                  )}
-                                </div>
+                              </div>
+
+                              <div className="col-span-2 flex items-center justify-end">
+                                {doc.legal_contacts && (
+                                  <Badge 
+                                    variant="secondary" 
+                                    className="text-xs cursor-pointer hover:bg-secondary/80"
+                                    title={doc.legal_contacts.role}
+                                  >
+                                    {doc.legal_contacts.name}
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           ))}
