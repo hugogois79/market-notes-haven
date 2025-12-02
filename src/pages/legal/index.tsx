@@ -1,14 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, Paperclip, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Upload, Paperclip, ChevronDown, ChevronRight, Users, Briefcase } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DocumentDialog } from "./components/DocumentDialog";
-import { CaseDialog } from "./components/CaseDialog";
-import { ContactDialog } from "./components/ContactDialog";
 import { FilterBar } from "./components/FilterBar";
 
 interface LegalCase {
@@ -49,8 +48,6 @@ export default function LegalPage() {
   const [contacts, setContacts] = useState<LegalContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
-  const [caseDialogOpen, setCaseDialogOpen] = useState(false);
-  const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [filters, setFilters] = useState({
     caseId: "",
     documentType: "",
@@ -163,14 +160,18 @@ export default function LegalPage() {
           <p className="text-muted-foreground mt-2">Gestão de Processos e Documentos Jurídicos</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setCaseDialogOpen(true)} variant="outline">
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Caso
-          </Button>
-          <Button onClick={() => setContactDialogOpen(true)} variant="outline">
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Contato
-          </Button>
+          <Link to="/legal/cases">
+            <Button variant="outline">
+              <Briefcase className="w-4 h-4 mr-2" />
+              Gerir Casos
+            </Button>
+          </Link>
+          <Link to="/legal/contacts">
+            <Button variant="outline">
+              <Users className="w-4 h-4 mr-2" />
+              Gerir Contactos
+            </Button>
+          </Link>
           <Button onClick={() => setDocumentDialogOpen(true)}>
             <Upload className="w-4 h-4 mr-2" />
             Adicionar Documento
@@ -355,18 +356,6 @@ export default function LegalPage() {
         onOpenChange={setDocumentDialogOpen}
         cases={cases}
         contacts={contacts}
-        onSuccess={fetchData}
-      />
-
-      <CaseDialog
-        open={caseDialogOpen}
-        onOpenChange={setCaseDialogOpen}
-        onSuccess={fetchData}
-      />
-
-      <ContactDialog
-        open={contactDialogOpen}
-        onOpenChange={setContactDialogOpen}
         onSuccess={fetchData}
       />
     </div>
