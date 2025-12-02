@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search, Check } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -104,12 +104,12 @@ export default function LegalContactsPage() {
     setEditValues({ name: "", roles: [] });
   };
 
-  const toggleRole = (role: string) => {
+  const toggleRole = (role: string, checked: boolean) => {
     setEditValues(prev => ({
       ...prev,
-      roles: prev.roles.includes(role)
-        ? prev.roles.filter(r => r !== role)
-        : [...prev.roles, role]
+      roles: checked
+        ? [...prev.roles, role]
+        : prev.roles.filter(r => r !== role)
     }));
   };
 
@@ -225,20 +225,19 @@ export default function LegalContactsPage() {
                               : `${editValues.roles.length} selecionado(s)`}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[200px] p-2" align="start">
+                        <PopoverContent className="w-[200px] p-2 bg-popover" align="start">
                           <div className="space-y-1">
                             {roles.map((role) => (
-                              <div
+                              <label
                                 key={role}
                                 className="flex items-center gap-2 p-2 rounded hover:bg-accent cursor-pointer"
-                                onClick={() => toggleRole(role)}
                               >
                                 <Checkbox 
                                   checked={editValues.roles.includes(role)}
-                                  onCheckedChange={() => toggleRole(role)}
+                                  onCheckedChange={(checked) => toggleRole(role, checked as boolean)}
                                 />
                                 <span className="text-sm">{role}</span>
-                              </div>
+                              </label>
                             ))}
                           </div>
                         </PopoverContent>
