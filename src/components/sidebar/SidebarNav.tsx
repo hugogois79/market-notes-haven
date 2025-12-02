@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Plus,
   FileCheck,
+  Scale,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -106,6 +107,11 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       title: "Expenses",
       icon: <FileCheck size={20} />,
       path: "/expenses",
+    },
+    {
+      title: "Legal",
+      icon: <Scale size={20} />,
+      path: "/legal",
     },
     {
       title: "Market Data",

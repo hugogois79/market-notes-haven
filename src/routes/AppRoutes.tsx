@@ -37,6 +37,7 @@ import ExpensesNew from "@/pages/expenses/new";
 import ExpensesEdit from "@/pages/expenses/edit";
 import ExpensesSettings from "@/pages/expenses/settings";
 import ExpenseDetail from "@/pages/expenses/[id]";
+import LegalPage from "@/pages/legal";
 import { useNotes } from "@/contexts/NotesContext";
 
 const AppRoutes = () => {
@@ -203,6 +204,14 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <ExpenseDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="legal"
+            element={
+              <ProtectedRoute>
+                <LegalPage />
               </ProtectedRoute>
             }
           />

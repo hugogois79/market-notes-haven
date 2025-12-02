@@ -1396,6 +1396,117 @@ export type Database = {
         }
         Relationships: []
       }
+      legal_cases: {
+        Row: {
+          created_at: string | null
+          id: string
+          status: string
+          title: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      legal_contacts: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          role: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          role: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          role?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      legal_documents: {
+        Row: {
+          attachment_url: string | null
+          case_id: string | null
+          contact_id: string | null
+          created_at: string | null
+          created_date: string
+          description: string | null
+          document_type: string
+          id: string
+          title: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          attachment_url?: string | null
+          case_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          created_date?: string
+          description?: string | null
+          document_type: string
+          id?: string
+          title: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          attachment_url?: string | null
+          case_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          created_date?: string
+          description?: string | null
+          document_type?: string
+          id?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_documents_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "legal_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_documents_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "legal_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       news_articles: {
         Row: {
           content: string
