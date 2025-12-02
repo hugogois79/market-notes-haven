@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -13,20 +13,29 @@ interface ContactDialogProps {
   onSuccess: () => void;
 }
 
-const CONTACT_ROLES = ["Defendant", "Witness", "Attorney", "Plaintiff", "Judge", "Other"];
+const CONTACT_ROLES = ["Defendant", "Witness", "Defendant Witness", "Attorney", "Specialist", "D.O.J", "Other"];
 
 export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
-    role: "",
+    roles: [] as string[],
   });
+
+  const toggleRole = (role: string) => {
+    setFormData(prev => ({
+      ...prev,
+      roles: prev.roles.includes(role)
+        ? prev.roles.filter(r => r !== role)
+        : [...prev.roles, role]
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.role) {
-      toast.error("Preencha todos os campos");
+    if (!formData.name || formData.roles.length === 0) {
+      toast.error("Preencha o nome e selecione pelo menos um papel");
       return;
     }
 
@@ -36,7 +45,8 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
       if (!user) throw new Error("Usuário não autenticado");
 
       const { error } = await supabase.from("legal_contacts").insert({
-        ...formData,
+        name: formData.name,
+        role: formData.roles.join(", "),
         user_id: user.id,
       });
 
@@ -44,7 +54,7 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
 
       toast.success("Contato criado com sucesso");
       onOpenChange(false);
-      setFormData({ name: "", role: "" });
+      setFormData({ name: "", roles: [] });
       onSuccess();
     } catch (error: any) {
       console.error("Error creating contact:", error);
@@ -73,23 +83,27 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="role">Função *</Label>
-            <Select
-              value={formData.role}
-              onValueChange={(value) => setFormData({ ...formData, role: value })}
-              required
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a função" />
-              </SelectTrigger>
-              <SelectContent>
-                {CONTACT_ROLES.map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {role}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Papéis *</Label>
+            <div className="grid grid-cols-2 gap-2 p-3 border rounded-md">
+              {CONTACT_ROLES.map((role) => (
+                <div
+                  key={role}
+                  className="flex items-center gap-2 p-2 rounded hover:bg-accent cursor-pointer"
+                  onClick={() => toggleRole(role)}
+                >
+                  <Checkbox 
+                    checked={formData.roles.includes(role)}
+                    onCheckedChange={() => toggleRole(role)}
+                  />
+                  <span className="text-sm">{role}</span>
+                </div>
+              ))}
+            </div>
+            {formData.roles.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Selecionados: {formData.roles.join(", ")}
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
