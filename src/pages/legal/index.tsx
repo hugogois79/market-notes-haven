@@ -222,23 +222,14 @@ export default function LegalPage() {
                     asChild
                   >
                     <>
-                      <TableRow className="bg-accent/20 hover:bg-accent/30">
-                        <TableCell colSpan={7} className="font-semibold">
-                          <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
+                      <TableRow className="bg-accent/10 hover:bg-accent/20">
+                        <TableCell colSpan={7}>
+                          <CollapsibleTrigger className="flex items-center gap-3 w-full text-left font-semibold text-base">
                             {isCaseOpen ? (
                               <ChevronDown className="w-4 h-4" />
                             ) : (
                               <ChevronRight className="w-4 h-4" />
                             )}
-                            <span className="uppercase text-xs text-muted-foreground tracking-wider">
-                              CASO RELACIONADO
-                            </span>
-                          </CollapsibleTrigger>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow className="bg-accent/10 hover:bg-accent/20">
-                        <TableCell colSpan={7}>
-                          <CollapsibleTrigger className="flex items-center gap-3 w-full text-left font-semibold text-base">
                             {caseTitle}
                             <Badge variant="secondary" className="ml-2">
                               {totalDocs}
