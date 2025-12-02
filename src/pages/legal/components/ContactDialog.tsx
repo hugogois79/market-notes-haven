@@ -22,54 +22,73 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
     roles: [] as string[],
   });
 
-  const toggleRole = (role: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      roles: checked
-        ? [...prev.roles, role]
-        : prev.roles.filter(r => r !== role)
-    }));
+  const toggleRole = (role: string) => {
+    setFormData(prev => {
+      const newRoles = prev.roles.includes(role)
+        ? prev.roles.filter(r => r !== role)
+        : [...prev.roles, role];
+      return { ...prev, roles: newRoles };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || formData.roles.length === 0) {
-      toast.error("Preencha o nome e selecione pelo menos um papel");
+    if (!formData.name.trim()) {
+      toast.error("Preencha o nome do contacto");
+      return;
+    }
+    
+    if (formData.roles.length === 0) {
+      toast.error("Selecione pelo menos um papel");
       return;
     }
 
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
 
       const { error } = await supabase.from("legal_contacts").insert({
-        name: formData.name,
+        name: formData.name.trim(),
         role: formData.roles.join(", "),
         user_id: user.id,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error:", error);
+        toast.error("Erro ao criar contacto: " + error.message);
+        return;
+      }
 
-      toast.success("Contato criado com sucesso");
-      onOpenChange(false);
+      toast.success("Contacto criado com sucesso");
       setFormData({ name: "", roles: [] });
+      onOpenChange(false);
       onSuccess();
     } catch (error: any) {
       console.error("Error creating contact:", error);
-      toast.error("Erro ao criar contato");
+      toast.error("Erro ao criar contacto");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleClose = (isOpen: boolean) => {
+    if (!isOpen) {
+      setFormData({ name: "", roles: [] });
+    }
+    onOpenChange(isOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Novo Contato</DialogTitle>
-          <DialogDescription>Adicione um novo contato ao sistema legal.</DialogDescription>
+          <DialogTitle>Novo Contacto</DialogTitle>
+          <DialogDescription>Adicione um novo contacto ao sistema legal.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -79,25 +98,31 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Ex: Hugo Góis"
-              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Papéis *</Label>
-            <div className="grid grid-cols-2 gap-2 p-3 border rounded-md">
-              {CONTACT_ROLES.map((role) => (
-                <label
-                  key={role}
-                  className="flex items-center gap-2 p-2 rounded hover:bg-accent cursor-pointer"
-                >
-                  <Checkbox 
-                    checked={formData.roles.includes(role)}
-                    onCheckedChange={(checked) => toggleRole(role, checked as boolean)}
-                  />
-                  <span className="text-sm">{role}</span>
-                </label>
-              ))}
+            <Label>Papéis * ({formData.roles.length} selecionado{formData.roles.length !== 1 ? 's' : ''})</Label>
+            <div className="grid grid-cols-2 gap-2 p-3 border rounded-md bg-background">
+              {CONTACT_ROLES.map((role) => {
+                const isChecked = formData.roles.includes(role);
+                return (
+                  <div
+                    key={role}
+                    className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${
+                      isChecked ? 'bg-primary/10' : 'hover:bg-accent'
+                    }`}
+                    onClick={() => toggleRole(role)}
+                  >
+                    <Checkbox 
+                      checked={isChecked}
+                      onCheckedChange={() => toggleRole(role)}
+                      className="pointer-events-none"
+                    />
+                    <span className="text-sm select-none">{role}</span>
+                  </div>
+                );
+              })}
             </div>
             {formData.roles.length > 0 && (
               <p className="text-xs text-muted-foreground">
@@ -107,11 +132,11 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => handleClose(false)}>
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Criando..." : "Criar Contato"}
+              {loading ? "Criando..." : "Criar Contacto"}
             </Button>
           </div>
         </form>
