@@ -1425,25 +1425,37 @@ export type Database = {
       }
       legal_contacts: {
         Row: {
+          address: string | null
           created_at: string | null
+          email: string | null
           id: string
           name: string
+          notes: string | null
+          phone: string | null
           role: string
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          address?: string | null
           created_at?: string | null
+          email?: string | null
           id?: string
           name: string
+          notes?: string | null
+          phone?: string | null
           role: string
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          address?: string | null
           created_at?: string | null
+          email?: string | null
           id?: string
           name?: string
+          notes?: string | null
+          phone?: string | null
           role?: string
           updated_at?: string | null
           user_id?: string | null
