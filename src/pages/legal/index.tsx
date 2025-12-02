@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, Paperclip, ChevronDown, ChevronRight, Users, Briefcase } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Upload, Paperclip, ChevronDown, ChevronRight, Users, Briefcase, Pencil } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -48,6 +48,7 @@ export default function LegalPage() {
   const [contacts, setContacts] = useState<LegalContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<LegalDocument | null>(null);
   const [filters, setFilters] = useState({
     caseId: "",
     documentType: "",
@@ -152,6 +153,18 @@ export default function LegalPage() {
     setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const navigate = useNavigate();
+
+  const handleEditDocument = (doc: LegalDocument) => {
+    setSelectedDocument(doc);
+    setDocumentDialogOpen(true);
+  };
+
+  const handleAddDocument = () => {
+    setSelectedDocument(null);
+    setDocumentDialogOpen(true);
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-8">
@@ -172,7 +185,7 @@ export default function LegalPage() {
               Gerir Contactos
             </Button>
           </Link>
-          <Button onClick={() => setDocumentDialogOpen(true)}>
+          <Button onClick={handleAddDocument}>
             <Upload className="w-4 h-4 mr-2" />
             Adicionar Documento
           </Button>
@@ -198,13 +211,16 @@ export default function LegalPage() {
           <Table>
             <TableHeader className="bg-muted/50">
               <TableRow>
-                <TableHead className="w-12">#</TableHead>
-                <TableHead className="w-[30%]">Nome do Documento</TableHead>
-                <TableHead className="w-[12%]">Tipo</TableHead>
+              <TableHead className="w-12">#</TableHead>
+                <TableHead className="w-[28%]">Nome do Documento</TableHead>
+                <TableHead className="w-[10%]">Tipo</TableHead>
                 <TableHead className="w-12 text-center">
                   <Paperclip className="w-4 h-4 inline-block" />
                 </TableHead>
-                <TableHead className="w-[30%]">Descrição</TableHead>
+                <TableHead className="w-[28%]">Descrição</TableHead>
+                <TableHead className="w-[10%]">Data Criação</TableHead>
+                <TableHead className="w-[10%]">Contatos</TableHead>
+                <TableHead className="w-10"></TableHead>
                 <TableHead className="w-[12%]">Data Criação</TableHead>
                 <TableHead className="w-[12%]">Contatos</TableHead>
               </TableRow>
@@ -223,18 +239,31 @@ export default function LegalPage() {
                   >
                     <>
                       <TableRow className="bg-accent/10 hover:bg-accent/20">
-                        <TableCell colSpan={7}>
-                          <CollapsibleTrigger className="flex items-center gap-3 w-full text-left font-semibold text-base">
-                            {isCaseOpen ? (
-                              <ChevronDown className="w-4 h-4" />
-                            ) : (
-                              <ChevronRight className="w-4 h-4" />
-                            )}
-                            {caseTitle}
-                            <Badge variant="secondary" className="ml-2">
-                              {totalDocs}
-                            </Badge>
-                          </CollapsibleTrigger>
+                        <TableCell colSpan={8}>
+                          <div className="flex items-center justify-between w-full">
+                            <CollapsibleTrigger className="flex items-center gap-3 text-left font-semibold text-base flex-1">
+                              {isCaseOpen ? (
+                                <ChevronDown className="w-4 h-4" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4" />
+                              )}
+                              {caseTitle}
+                              <Badge variant="secondary" className="ml-2">
+                                {totalDocs}
+                              </Badge>
+                            </CollapsibleTrigger>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate("/legal/cases");
+                              }}
+                            >
+                              <Briefcase className="w-4 h-4 mr-1" />
+                              Gerir Caso
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                       <CollapsibleContent asChild>
@@ -252,7 +281,7 @@ export default function LegalPage() {
                               >
                                 <>
                                   <TableRow className="bg-muted/30 hover:bg-muted/40">
-                                    <TableCell colSpan={7}>
+                                    <TableCell colSpan={8}>
                                       <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
                                         {isSectionOpen ? (
                                           <ChevronDown className="w-3 h-3" />
@@ -277,7 +306,11 @@ export default function LegalPage() {
                                   <CollapsibleContent asChild>
                                     <>
                                       {docs.map((doc, idx) => (
-                                        <TableRow key={doc.id} className="hover:bg-accent/30">
+                                        <TableRow 
+                                          key={doc.id} 
+                                          className="hover:bg-accent/30 cursor-pointer"
+                                          onClick={() => handleEditDocument(doc)}
+                                        >
                                           <TableCell className="text-muted-foreground text-sm">
                                             {idx + 1}
                                           </TableCell>
@@ -292,7 +325,7 @@ export default function LegalPage() {
                                               {docType}
                                             </Badge>
                                           </TableCell>
-                                          <TableCell className="text-center">
+                                          <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                                             {doc.attachment_url && (
                                               <a
                                                 href={doc.attachment_url}
@@ -323,6 +356,19 @@ export default function LegalPage() {
                                               </Badge>
                                             )}
                                           </TableCell>
+                                          <TableCell>
+                                            <Button 
+                                              variant="ghost" 
+                                              size="icon" 
+                                              className="h-8 w-8"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleEditDocument(doc);
+                                              }}
+                                            >
+                                              <Pencil className="w-4 h-4" />
+                                            </Button>
+                                          </TableCell>
                                         </TableRow>
                                       ))}
                                     </>
@@ -344,10 +390,14 @@ export default function LegalPage() {
 
       <DocumentDialog
         open={documentDialogOpen}
-        onOpenChange={setDocumentDialogOpen}
+        onOpenChange={(open) => {
+          setDocumentDialogOpen(open);
+          if (!open) setSelectedDocument(null);
+        }}
         cases={cases}
         contacts={contacts}
         onSuccess={fetchData}
+        document={selectedDocument}
       />
     </div>
   );

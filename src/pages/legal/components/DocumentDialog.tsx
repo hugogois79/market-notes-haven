@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Upload } from "lucide-react";
+import { Upload, Trash2 } from "lucide-react";
+
+interface LegalDocument {
+  id: string;
+  title: string;
+  description: string | null;
+  document_type: string;
+  attachment_url: string | null;
+  created_date: string;
+  case_id: string;
+  contact_id: string | null;
+}
 
 interface DocumentDialogProps {
   open: boolean;
@@ -15,11 +26,12 @@ interface DocumentDialogProps {
   cases: Array<{ id: string; title: string }>;
   contacts: Array<{ id: string; name: string }>;
   onSuccess: () => void;
+  document?: LegalDocument | null;
 }
 
 const DOCUMENT_TYPES = ["Notes", "Court Document", "Motion", "Defendant Testimony"];
 
-export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess }: DocumentDialogProps) {
+export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess, document }: DocumentDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
@@ -30,6 +42,31 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess 
     created_date: new Date().toISOString().split("T")[0],
   });
   const [file, setFile] = useState<File | null>(null);
+
+  const isEditMode = !!document;
+
+  useEffect(() => {
+    if (document) {
+      setFormData({
+        title: document.title,
+        description: document.description || "",
+        document_type: document.document_type,
+        case_id: document.case_id,
+        contact_id: document.contact_id || "",
+        created_date: document.created_date,
+      });
+    } else {
+      setFormData({
+        title: "",
+        description: "",
+        document_type: "",
+        case_id: "",
+        contact_id: "",
+        created_date: new Date().toISOString().split("T")[0],
+      });
+    }
+    setFile(null);
+  }, [document, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +81,7 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      let attachmentUrl = null;
+      let attachmentUrl = document?.attachment_url || null;
 
       // Upload file if provided
       if (file) {
@@ -64,30 +101,62 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess 
         attachmentUrl = publicUrl;
       }
 
-      const { error } = await supabase.from("legal_documents").insert({
-        ...formData,
-        contact_id: formData.contact_id || null,
-        attachment_url: attachmentUrl,
-        user_id: user.id,
-      });
+      if (isEditMode) {
+        const { error } = await supabase
+          .from("legal_documents")
+          .update({
+            title: formData.title,
+            description: formData.description || null,
+            document_type: formData.document_type,
+            case_id: formData.case_id,
+            contact_id: formData.contact_id || null,
+            created_date: formData.created_date,
+            attachment_url: attachmentUrl,
+          })
+          .eq("id", document.id);
+
+        if (error) throw error;
+        toast.success("Documento atualizado com sucesso");
+      } else {
+        const { error } = await supabase.from("legal_documents").insert({
+          ...formData,
+          contact_id: formData.contact_id || null,
+          attachment_url: attachmentUrl,
+          user_id: user.id,
+        });
+
+        if (error) throw error;
+        toast.success("Documento criado com sucesso");
+      }
+
+      onOpenChange(false);
+      onSuccess();
+    } catch (error: any) {
+      console.error("Error saving document:", error);
+      toast.error(isEditMode ? "Erro ao atualizar documento" : "Erro ao criar documento");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!document || !confirm("Tem certeza que deseja eliminar este documento?")) return;
+
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from("legal_documents")
+        .delete()
+        .eq("id", document.id);
 
       if (error) throw error;
 
-      toast.success("Documento criado com sucesso");
+      toast.success("Documento eliminado com sucesso");
       onOpenChange(false);
-      setFormData({
-        title: "",
-        description: "",
-        document_type: "",
-        case_id: "",
-        contact_id: "",
-        created_date: new Date().toISOString().split("T")[0],
-      });
-      setFile(null);
       onSuccess();
     } catch (error: any) {
-      console.error("Error creating document:", error);
-      toast.error("Erro ao criar documento");
+      console.error("Error deleting document:", error);
+      toast.error("Erro ao eliminar documento");
     } finally {
       setLoading(false);
     }
@@ -97,7 +166,7 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Adicionar Novo Documento</DialogTitle>
+          <DialogTitle>{isEditMode ? "Editar Documento" : "Adicionar Novo Documento"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -193,6 +262,11 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess 
 
           <div className="space-y-2">
             <Label htmlFor="file">Anexo</Label>
+            {document?.attachment_url && !file && (
+              <div className="text-sm text-muted-foreground mb-2">
+                Anexo atual: <a href={document.attachment_url} target="_blank" rel="noopener noreferrer" className="text-primary underline">Ver ficheiro</a>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <Input
                 id="file"
@@ -207,13 +281,23 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess 
             </p>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Criando..." : "Criar Documento"}
-            </Button>
+          <div className="flex justify-between gap-2 pt-4">
+            <div>
+              {isEditMode && (
+                <Button type="button" variant="destructive" onClick={handleDelete} disabled={loading}>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Eliminar
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "A guardar..." : isEditMode ? "Guardar" : "Criar Documento"}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>
