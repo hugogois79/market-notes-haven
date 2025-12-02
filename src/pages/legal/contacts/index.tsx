@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search, Phone, Mail, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,6 +26,10 @@ interface LegalContact {
   id: string;
   name: string;
   role: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  notes: string | null;
   created_at: string;
 }
 
@@ -48,13 +53,11 @@ const roleColors: Record<string, string> = {
   "Other": "bg-gray-100 text-gray-800",
 };
 
-// Parse role string to array (handles comma-separated or single values)
 const parseRoles = (roleStr: string): string[] => {
   if (!roleStr) return [];
   return roleStr.split(",").map(r => r.trim()).filter(Boolean);
 };
 
-// Convert roles array to string for storage
 const rolesToString = (rolesArr: string[]): string => {
   return rolesArr.join(", ");
 };
@@ -64,7 +67,14 @@ export default function LegalContactsPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState({ name: "", roles: [] as string[] });
+  const [editValues, setEditValues] = useState({ 
+    name: "", 
+    roles: [] as string[],
+    phone: "",
+    email: "",
+    address: "",
+    notes: ""
+  });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -96,12 +106,19 @@ export default function LegalContactsPage() {
 
   const startEdit = (contact: LegalContact) => {
     setEditingId(contact.id);
-    setEditValues({ name: contact.name, roles: parseRoles(contact.role) });
+    setEditValues({ 
+      name: contact.name, 
+      roles: parseRoles(contact.role),
+      phone: contact.phone || "",
+      email: contact.email || "",
+      address: contact.address || "",
+      notes: contact.notes || ""
+    });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditValues({ name: "", roles: [] });
+    setEditValues({ name: "", roles: [], phone: "", email: "", address: "", notes: "" });
   };
 
   const toggleRole = (role: string, checked: boolean) => {
@@ -118,7 +135,14 @@ export default function LegalContactsPage() {
     try {
       const { error } = await supabase
         .from("legal_contacts")
-        .update({ name: editValues.name, role: rolesToString(editValues.roles) })
+        .update({ 
+          name: editValues.name, 
+          role: rolesToString(editValues.roles),
+          phone: editValues.phone || null,
+          email: editValues.email || null,
+          address: editValues.address || null,
+          notes: editValues.notes || null
+        })
         .eq("id", editingId);
 
       if (error) throw error;
@@ -151,7 +175,9 @@ export default function LegalContactsPage() {
 
   const filteredContacts = contacts.filter(contact =>
     contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.role.toLowerCase().includes(searchTerm.toLowerCase())
+    contact.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (contact.email && contact.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (contact.phone && contact.phone.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -191,14 +217,17 @@ export default function LegalContactsPage() {
           Nenhum contacto encontrado.
         </div>
       ) : (
-        <div className="border rounded-lg bg-card">
+        <div className="border rounded-lg bg-card overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[50%]">Nome</TableHead>
-                <TableHead className="w-[25%]">Papel</TableHead>
-                <TableHead className="w-[15%]">Criado em</TableHead>
-                <TableHead className="w-[10%] text-right">Ações</TableHead>
+                <TableHead className="min-w-[150px]">Nome</TableHead>
+                <TableHead className="min-w-[140px]">Papel</TableHead>
+                <TableHead className="min-w-[130px]">Telefone</TableHead>
+                <TableHead className="min-w-[180px]">Email</TableHead>
+                <TableHead className="min-w-[200px]">Morada</TableHead>
+                <TableHead className="min-w-[150px]">Notas</TableHead>
+                <TableHead className="w-[100px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -219,9 +248,9 @@ export default function LegalContactsPage() {
                     {editingId === contact.id ? (
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" className="h-8 justify-start min-w-[180px]">
+                          <Button variant="outline" className="h-8 justify-start min-w-[120px] text-xs">
                             {editValues.roles.length === 0 
-                              ? "Selecionar papéis..." 
+                              ? "Selecionar..." 
                               : `${editValues.roles.length} selecionado(s)`}
                           </Button>
                         </PopoverTrigger>
@@ -245,15 +274,78 @@ export default function LegalContactsPage() {
                     ) : (
                       <div className="flex flex-wrap gap-1">
                         {parseRoles(contact.role).map((role, idx) => (
-                          <Badge key={idx} className={roleColors[role] || "bg-gray-100 text-gray-800"}>
+                          <Badge key={idx} className={`text-xs ${roleColors[role] || "bg-gray-100 text-gray-800"}`}>
                             {role}
                           </Badge>
                         ))}
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {new Date(contact.created_at).toLocaleDateString("pt-PT")}
+                  <TableCell>
+                    {editingId === contact.id ? (
+                      <Input
+                        value={editValues.phone}
+                        onChange={(e) => setEditValues({ ...editValues, phone: e.target.value })}
+                        className="h-8"
+                        placeholder="Telefone"
+                      />
+                    ) : contact.phone ? (
+                      <a href={`tel:${contact.phone}`} className="text-sm flex items-center gap-1 text-primary hover:underline">
+                        <Phone className="w-3 h-3" />
+                        {contact.phone}
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingId === contact.id ? (
+                      <Input
+                        value={editValues.email}
+                        onChange={(e) => setEditValues({ ...editValues, email: e.target.value })}
+                        className="h-8"
+                        placeholder="Email"
+                        type="email"
+                      />
+                    ) : contact.email ? (
+                      <a href={`mailto:${contact.email}`} className="text-sm flex items-center gap-1 text-primary hover:underline">
+                        <Mail className="w-3 h-3" />
+                        {contact.email}
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingId === contact.id ? (
+                      <Input
+                        value={editValues.address}
+                        onChange={(e) => setEditValues({ ...editValues, address: e.target.value })}
+                        className="h-8"
+                        placeholder="Morada"
+                      />
+                    ) : contact.address ? (
+                      <span className="text-sm flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                        <span className="line-clamp-1">{contact.address}</span>
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingId === contact.id ? (
+                      <Textarea
+                        value={editValues.notes}
+                        onChange={(e) => setEditValues({ ...editValues, notes: e.target.value })}
+                        className="h-16 text-sm"
+                        placeholder="Notas"
+                      />
+                    ) : contact.notes ? (
+                      <span className="text-sm text-muted-foreground line-clamp-2">{contact.notes}</span>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     {editingId === contact.id ? (
