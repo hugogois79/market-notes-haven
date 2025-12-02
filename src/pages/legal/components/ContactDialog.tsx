@@ -3,9 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Check } from "lucide-react";
 
 interface ContactDialogProps {
   open: boolean;
@@ -17,29 +18,26 @@ const CONTACT_ROLES = ["Defendant", "Witness", "Defendant Witness", "Attorney", 
 
 export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    roles: [] as string[],
-  });
+  const [name, setName] = useState("");
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
 
   const toggleRole = (role: string) => {
-    setFormData(prev => {
-      const newRoles = prev.roles.includes(role)
-        ? prev.roles.filter(r => r !== role)
-        : [...prev.roles, role];
-      return { ...prev, roles: newRoles };
-    });
+    setSelectedRoles(prev => 
+      prev.includes(role) 
+        ? prev.filter(r => r !== role) 
+        : [...prev, role]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name.trim()) {
+    if (!name.trim()) {
       toast.error("Preencha o nome do contacto");
       return;
     }
     
-    if (formData.roles.length === 0) {
+    if (selectedRoles.length === 0) {
       toast.error("Selecione pelo menos um papel");
       return;
     }
@@ -53,8 +51,8 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
       }
 
       const { error } = await supabase.from("legal_contacts").insert({
-        name: formData.name.trim(),
-        role: formData.roles.join(", "),
+        name: name.trim(),
+        role: selectedRoles.join(", "),
         user_id: user.id,
       });
 
@@ -65,7 +63,8 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
       }
 
       toast.success("Contacto criado com sucesso");
-      setFormData({ name: "", roles: [] });
+      setName("");
+      setSelectedRoles([]);
       onOpenChange(false);
       onSuccess();
     } catch (error: any) {
@@ -78,7 +77,8 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
 
   const handleClose = (isOpen: boolean) => {
     if (!isOpen) {
-      setFormData({ name: "", roles: [] });
+      setName("");
+      setSelectedRoles([]);
     }
     onOpenChange(isOpen);
   };
@@ -95,37 +95,33 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
             <Label htmlFor="contact-name">Nome *</Label>
             <Input
               id="contact-name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Ex: Hugo Góis"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Papéis * ({formData.roles.length} selecionado{formData.roles.length !== 1 ? 's' : ''})</Label>
-            <div className="grid grid-cols-2 gap-2 p-3 border rounded-md bg-background">
+            <Label>Papéis * ({selectedRoles.length} selecionado{selectedRoles.length !== 1 ? 's' : ''})</Label>
+            <div className="flex flex-wrap gap-2">
               {CONTACT_ROLES.map((role) => {
-                const isChecked = formData.roles.includes(role);
+                const isSelected = selectedRoles.includes(role);
                 return (
-                  <div
+                  <Badge
                     key={role}
-                    className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${
-                      isChecked ? 'bg-primary/10' : 'hover:bg-accent'
-                    }`}
+                    variant={isSelected ? "default" : "outline"}
+                    className={`cursor-pointer transition-colors ${isSelected ? 'bg-primary' : 'hover:bg-accent'}`}
                     onClick={() => toggleRole(role)}
                   >
-                    <Checkbox 
-                      checked={isChecked}
-                      className="pointer-events-none"
-                    />
-                    <span className="text-sm select-none">{role}</span>
-                  </div>
+                    {isSelected && <Check className="w-3 h-3 mr-1" />}
+                    {role}
+                  </Badge>
                 );
               })}
             </div>
-            {formData.roles.length > 0 && (
+            {selectedRoles.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                Selecionados: {formData.roles.join(", ")}
+                Selecionados: {selectedRoles.join(", ")}
               </p>
             )}
           </div>
