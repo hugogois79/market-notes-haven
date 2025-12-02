@@ -70,6 +70,7 @@ const rolesToString = (rolesArr: string[]): string => {
 
 export default function LegalContactsPage() {
   const [contacts, setContacts] = useState<LegalContact[]>([]);
+  const [allCases, setAllCases] = useState<LegalCase[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -79,14 +80,34 @@ export default function LegalContactsPage() {
     phone: "",
     email: "",
     address: "",
-    notes: ""
+    notes: "",
+    caseIds: [] as string[]
   });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     fetchContacts();
+    fetchAllCases();
   }, []);
+
+  const fetchAllCases = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("legal_cases")
+        .select("id, title")
+        .eq("user_id", user.id)
+        .order("title");
+
+      if (error) throw error;
+      setAllCases(data || []);
+    } catch (error) {
+      console.error("Error fetching cases:", error);
+    }
+  };
 
   const fetchContacts = async () => {
     try {
@@ -103,32 +124,27 @@ export default function LegalContactsPage() {
 
       if (contactsError) throw contactsError;
 
-      // Fetch documents with cases for each contact
-      const { data: documentsData, error: documentsError } = await supabase
-        .from("legal_documents")
+      // Fetch contact-case relationships from junction table
+      const { data: contactCasesData, error: contactCasesError } = await supabase
+        .from("legal_contact_cases")
         .select(`
           contact_id,
           legal_cases!inner(id, title)
-        `)
-        .eq("user_id", user.id)
-        .not("contact_id", "is", null);
+        `);
 
-      if (documentsError) throw documentsError;
+      if (contactCasesError) throw contactCasesError;
 
       // Build a map of contact_id -> cases
       const contactCasesMap: Record<string, LegalCase[]> = {};
-      documentsData?.forEach((doc: any) => {
-        if (doc.contact_id && doc.legal_cases) {
-          if (!contactCasesMap[doc.contact_id]) {
-            contactCasesMap[doc.contact_id] = [];
+      contactCasesData?.forEach((item: any) => {
+        if (item.contact_id && item.legal_cases) {
+          if (!contactCasesMap[item.contact_id]) {
+            contactCasesMap[item.contact_id] = [];
           }
-          const caseExists = contactCasesMap[doc.contact_id].some(c => c.id === doc.legal_cases.id);
-          if (!caseExists) {
-            contactCasesMap[doc.contact_id].push({
-              id: doc.legal_cases.id,
-              title: doc.legal_cases.title
-            });
-          }
+          contactCasesMap[item.contact_id].push({
+            id: item.legal_cases.id,
+            title: item.legal_cases.title
+          });
         }
       });
 
@@ -155,13 +171,14 @@ export default function LegalContactsPage() {
       phone: contact.phone || "",
       email: contact.email || "",
       address: contact.address || "",
-      notes: contact.notes || ""
+      notes: contact.notes || "",
+      caseIds: contact.cases.map(c => c.id)
     });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditValues({ name: "", roles: [], phone: "", email: "", address: "", notes: "" });
+    setEditValues({ name: "", roles: [], phone: "", email: "", address: "", notes: "", caseIds: [] });
   };
 
   const toggleRole = (role: string, checked: boolean) => {
@@ -173,9 +190,19 @@ export default function LegalContactsPage() {
     }));
   };
 
+  const toggleCase = (caseId: string, checked: boolean) => {
+    setEditValues(prev => ({
+      ...prev,
+      caseIds: checked
+        ? [...prev.caseIds, caseId]
+        : prev.caseIds.filter(id => id !== caseId)
+    }));
+  };
+
   const saveEdit = async () => {
     if (!editingId) return;
     try {
+      // Update contact details
       const { error } = await supabase
         .from("legal_contacts")
         .update({ 
@@ -189,6 +216,28 @@ export default function LegalContactsPage() {
         .eq("id", editingId);
 
       if (error) throw error;
+
+      // Update contact-case relationships
+      // First, delete all existing relationships for this contact
+      await supabase
+        .from("legal_contact_cases")
+        .delete()
+        .eq("contact_id", editingId);
+
+      // Then, insert new relationships
+      if (editValues.caseIds.length > 0) {
+        const relationships = editValues.caseIds.map(caseId => ({
+          contact_id: editingId,
+          case_id: caseId
+        }));
+        
+        const { error: insertError } = await supabase
+          .from("legal_contact_cases")
+          .insert(relationships);
+        
+        if (insertError) throw insertError;
+      }
+
       toast.success("Contacto atualizado");
       fetchContacts();
       cancelEdit();
@@ -326,7 +375,37 @@ export default function LegalContactsPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    {contact.cases.length > 0 ? (
+                    {editingId === contact.id ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="h-8 justify-start min-w-[120px] text-xs">
+                            {editValues.caseIds.length === 0 
+                              ? "Selecionar..." 
+                              : `${editValues.caseIds.length} processo(s)`}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[250px] p-2 bg-popover" align="start">
+                          <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                            {allCases.length === 0 ? (
+                              <p className="text-sm text-muted-foreground p-2">Nenhum processo disponível</p>
+                            ) : (
+                              allCases.map((legalCase) => (
+                                <label
+                                  key={legalCase.id}
+                                  className="flex items-center gap-2 p-2 rounded hover:bg-accent cursor-pointer"
+                                >
+                                  <Checkbox 
+                                    checked={editValues.caseIds.includes(legalCase.id)}
+                                    onCheckedChange={(checked) => toggleCase(legalCase.id, checked as boolean)}
+                                  />
+                                  <span className="text-sm">{legalCase.title}</span>
+                                </label>
+                              ))
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    ) : contact.cases.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {contact.cases.map((legalCase) => (
                           <Link key={legalCase.id} to="/legal">

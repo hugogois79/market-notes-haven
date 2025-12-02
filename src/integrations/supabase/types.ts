@@ -1423,6 +1423,42 @@ export type Database = {
         }
         Relationships: []
       }
+      legal_contact_cases: {
+        Row: {
+          case_id: string
+          contact_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          case_id: string
+          contact_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          case_id?: string
+          contact_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_contact_cases_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "legal_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_contact_cases_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "legal_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_contacts: {
         Row: {
           address: string | null
