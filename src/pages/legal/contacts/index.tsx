@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router-dom";
 import { ContactDialog } from "../components/ContactDialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,12 +48,23 @@ const roleColors: Record<string, string> = {
   "Other": "bg-gray-100 text-gray-800",
 };
 
+// Parse role string to array (handles comma-separated or single values)
+const parseRoles = (roleStr: string): string[] => {
+  if (!roleStr) return [];
+  return roleStr.split(",").map(r => r.trim()).filter(Boolean);
+};
+
+// Convert roles array to string for storage
+const rolesToString = (rolesArr: string[]): string => {
+  return rolesArr.join(", ");
+};
+
 export default function LegalContactsPage() {
   const [contacts, setContacts] = useState<LegalContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState({ name: "", role: "" });
+  const [editValues, setEditValues] = useState({ name: "", roles: [] as string[] });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -84,12 +96,21 @@ export default function LegalContactsPage() {
 
   const startEdit = (contact: LegalContact) => {
     setEditingId(contact.id);
-    setEditValues({ name: contact.name, role: contact.role });
+    setEditValues({ name: contact.name, roles: parseRoles(contact.role) });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditValues({ name: "", role: "" });
+    setEditValues({ name: "", roles: [] });
+  };
+
+  const toggleRole = (role: string) => {
+    setEditValues(prev => ({
+      ...prev,
+      roles: prev.roles.includes(role)
+        ? prev.roles.filter(r => r !== role)
+        : [...prev.roles, role]
+    }));
   };
 
   const saveEdit = async () => {
@@ -97,7 +118,7 @@ export default function LegalContactsPage() {
     try {
       const { error } = await supabase
         .from("legal_contacts")
-        .update({ name: editValues.name, role: editValues.role })
+        .update({ name: editValues.name, role: rolesToString(editValues.roles) })
         .eq("id", editingId);
 
       if (error) throw error;
@@ -196,23 +217,40 @@ export default function LegalContactsPage() {
                   </TableCell>
                   <TableCell>
                     {editingId === contact.id ? (
-                      <Select
-                        value={editValues.role}
-                        onValueChange={(value) => setEditValues({ ...editValues, role: value })}
-                      >
-                        <SelectTrigger className="h-8 w-[180px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {roles.map((role) => (
-                            <SelectItem key={role} value={role}>{role}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="h-8 justify-start min-w-[180px]">
+                            {editValues.roles.length === 0 
+                              ? "Selecionar papéis..." 
+                              : `${editValues.roles.length} selecionado(s)`}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[200px] p-2" align="start">
+                          <div className="space-y-1">
+                            {roles.map((role) => (
+                              <div
+                                key={role}
+                                className="flex items-center gap-2 p-2 rounded hover:bg-accent cursor-pointer"
+                                onClick={() => toggleRole(role)}
+                              >
+                                <Checkbox 
+                                  checked={editValues.roles.includes(role)}
+                                  onCheckedChange={() => toggleRole(role)}
+                                />
+                                <span className="text-sm">{role}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     ) : (
-                      <Badge className={roleColors[contact.role] || "bg-gray-100 text-gray-800"}>
-                        {contact.role}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        {parseRoles(contact.role).map((role, idx) => (
+                          <Badge key={idx} className={roleColors[role] || "bg-gray-100 text-gray-800"}>
+                            {role}
+                          </Badge>
+                        ))}
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
