@@ -5,12 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { pt } from "date-fns/locale";
-import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -54,7 +48,7 @@ export function CaseDialog({ open, onOpenChange, onSuccess }: CaseDialogProps) {
     case_type: "",
     priority: "medium",
     description: "",
-    date_opened: undefined as Date | undefined,
+    date_opened: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,7 +71,7 @@ export function CaseDialog({ open, onOpenChange, onSuccess }: CaseDialogProps) {
         case_type: formData.case_type || null,
         priority: formData.priority,
         description: formData.description || null,
-        date_opened: formData.date_opened ? format(formData.date_opened, "yyyy-MM-dd") : null,
+        date_opened: formData.date_opened || null,
         user_id: user.id,
       });
 
@@ -103,7 +97,7 @@ export function CaseDialog({ open, onOpenChange, onSuccess }: CaseDialogProps) {
       case_type: "",
       priority: "medium",
       description: "",
-      date_opened: undefined,
+      date_opened: "",
     });
   };
 
@@ -143,32 +137,11 @@ export function CaseDialog({ open, onOpenChange, onSuccess }: CaseDialogProps) {
 
             <div className="space-y-2">
               <Label>Data de Abertura</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !formData.date_opened && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.date_opened ? (
-                      format(formData.date_opened, "dd/MM/yyyy", { locale: pt })
-                    ) : (
-                      "Selecionar data"
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.date_opened}
-                    onSelect={(date) => setFormData({ ...formData, date_opened: date })}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <Input
+                value={formData.date_opened}
+                onChange={(e) => setFormData({ ...formData, date_opened: e.target.value })}
+                placeholder="dd/mm/aaaa"
+              />
             </div>
 
             <div className="space-y-2">

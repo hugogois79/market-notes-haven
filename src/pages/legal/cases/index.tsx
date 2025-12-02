@@ -3,18 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search, Calendar, FileText, AlertCircle } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router-dom";
 import { CaseDialog } from "../components/CaseDialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { pt } from "date-fns/locale";
-import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -96,8 +91,7 @@ export default function LegalCasesPage() {
     case_type: "",
     priority: "",
     description: "",
-    date_opened: undefined as Date | undefined,
-    created_at: undefined as Date | undefined,
+    date_opened: "",
   });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -137,8 +131,7 @@ export default function LegalCasesPage() {
       case_type: caseItem.case_type || "",
       priority: caseItem.priority || "medium",
       description: caseItem.description || "",
-      date_opened: caseItem.date_opened ? new Date(caseItem.date_opened) : undefined,
-      created_at: caseItem.created_at ? new Date(caseItem.created_at) : undefined,
+      date_opened: caseItem.date_opened || "",
     });
   };
 
@@ -151,8 +144,7 @@ export default function LegalCasesPage() {
       case_type: "",
       priority: "",
       description: "",
-      date_opened: undefined,
-      created_at: undefined,
+      date_opened: "",
     });
   };
 
@@ -168,8 +160,7 @@ export default function LegalCasesPage() {
           case_type: editValues.case_type || null,
           priority: editValues.priority || null,
           description: editValues.description || null,
-          date_opened: editValues.date_opened ? format(editValues.date_opened, "yyyy-MM-dd") : null,
-          created_at: editValues.created_at ? editValues.created_at.toISOString() : undefined,
+          date_opened: editValues.date_opened || null,
         })
         .eq("id", editingId);
 
@@ -253,8 +244,7 @@ export default function LegalCasesPage() {
                 <TableHead className="min-w-[100px]">Status</TableHead>
                 <TableHead className="min-w-[100px]">Tipo</TableHead>
                 <TableHead className="min-w-[90px]">Prioridade</TableHead>
-                <TableHead className="min-w-[100px]">Data Abertura</TableHead>
-                <TableHead className="min-w-[100px]">Criado em</TableHead>
+                <TableHead className="min-w-[120px]">Data Abertura</TableHead>
                 <TableHead className="min-w-[150px]">Descrição</TableHead>
                 <TableHead className="w-[100px] text-right">Ações</TableHead>
               </TableRow>
@@ -365,70 +355,16 @@ export default function LegalCasesPage() {
                   </TableCell>
                   <TableCell>
                     {editingId === caseItem.id ? (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "h-8 w-[110px] justify-start text-left font-normal text-xs",
-                              !editValues.date_opened && "text-muted-foreground"
-                            )}
-                          >
-                            <Calendar className="mr-1 h-3 w-3" />
-                            {editValues.date_opened
-                              ? format(editValues.date_opened, "dd/MM/yyyy")
-                              : "Data"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={editValues.date_opened}
-                            onSelect={(date) => setEditValues({ ...editValues, date_opened: date })}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <Input
+                        value={editValues.date_opened}
+                        onChange={(e) => setEditValues({ ...editValues, date_opened: e.target.value })}
+                        className="h-8 w-[120px]"
+                        placeholder="dd/mm/aaaa"
+                      />
                     ) : caseItem.date_opened ? (
-                      <span className="text-sm flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-muted-foreground" />
-                        {new Date(caseItem.date_opened).toLocaleDateString("pt-PT")}
-                      </span>
+                      <span className="text-sm">{caseItem.date_opened}</span>
                     ) : (
                       <span className="text-muted-foreground text-sm">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {editingId === caseItem.id ? (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "h-8 w-[110px] justify-start text-left font-normal text-xs",
-                              !editValues.created_at && "text-muted-foreground"
-                            )}
-                          >
-                            <Calendar className="mr-1 h-3 w-3" />
-                            {editValues.created_at
-                              ? format(editValues.created_at, "dd/MM/yyyy")
-                              : "Data"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={editValues.created_at}
-                            onSelect={(date) => setEditValues({ ...editValues, created_at: date })}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    ) : (
-                      <span className="text-sm flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-muted-foreground" />
-                        {new Date(caseItem.created_at).toLocaleDateString("pt-PT")}
-                      </span>
                     )}
                   </TableCell>
                   <TableCell>
