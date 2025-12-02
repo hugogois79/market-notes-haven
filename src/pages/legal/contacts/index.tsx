@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search, Phone, Mail, MapPin } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search, Phone, Mail, MapPin, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,6 +22,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+interface LegalCase {
+  id: string;
+  title: string;
+}
+
 interface LegalContact {
   id: string;
   name: string;
@@ -31,6 +36,7 @@ interface LegalContact {
   address: string | null;
   notes: string | null;
   created_at: string;
+  cases: LegalCase[];
 }
 
 const roles = [
@@ -88,14 +94,51 @@ export default function LegalContactsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
+      // Fetch contacts
+      const { data: contactsData, error: contactsError } = await supabase
         .from("legal_contacts")
         .select("*")
         .eq("user_id", user.id)
         .order("name");
 
-      if (error) throw error;
-      setContacts(data || []);
+      if (contactsError) throw contactsError;
+
+      // Fetch documents with cases for each contact
+      const { data: documentsData, error: documentsError } = await supabase
+        .from("legal_documents")
+        .select(`
+          contact_id,
+          legal_cases!inner(id, title)
+        `)
+        .eq("user_id", user.id)
+        .not("contact_id", "is", null);
+
+      if (documentsError) throw documentsError;
+
+      // Build a map of contact_id -> cases
+      const contactCasesMap: Record<string, LegalCase[]> = {};
+      documentsData?.forEach((doc: any) => {
+        if (doc.contact_id && doc.legal_cases) {
+          if (!contactCasesMap[doc.contact_id]) {
+            contactCasesMap[doc.contact_id] = [];
+          }
+          const caseExists = contactCasesMap[doc.contact_id].some(c => c.id === doc.legal_cases.id);
+          if (!caseExists) {
+            contactCasesMap[doc.contact_id].push({
+              id: doc.legal_cases.id,
+              title: doc.legal_cases.title
+            });
+          }
+        }
+      });
+
+      // Merge contacts with their cases
+      const contactsWithCases: LegalContact[] = (contactsData || []).map(contact => ({
+        ...contact,
+        cases: contactCasesMap[contact.id] || []
+      }));
+
+      setContacts(contactsWithCases);
     } catch (error: any) {
       console.error("Error fetching contacts:", error);
       toast.error("Erro ao carregar contactos");
@@ -223,6 +266,7 @@ export default function LegalContactsPage() {
               <TableRow>
                 <TableHead className="min-w-[150px]">Nome</TableHead>
                 <TableHead className="min-w-[140px]">Papel</TableHead>
+                <TableHead className="min-w-[150px]">Processos</TableHead>
                 <TableHead className="min-w-[130px]">Telefone</TableHead>
                 <TableHead className="min-w-[180px]">Email</TableHead>
                 <TableHead className="min-w-[200px]">Morada</TableHead>
@@ -279,6 +323,22 @@ export default function LegalContactsPage() {
                           </Badge>
                         ))}
                       </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {contact.cases.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {contact.cases.map((legalCase) => (
+                          <Link key={legalCase.id} to="/legal">
+                            <Badge variant="outline" className="text-xs cursor-pointer hover:bg-accent">
+                              <Briefcase className="w-3 h-3 mr-1" />
+                              {legalCase.title}
+                            </Badge>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
                     )}
                   </TableCell>
                   <TableCell>
