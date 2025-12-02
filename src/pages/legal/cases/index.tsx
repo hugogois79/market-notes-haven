@@ -79,6 +79,17 @@ const priorityLabels: Record<string, string> = {
   "urgent": "Urgente",
 };
 
+const formatDateToEU = (dateStr: string | null): string => {
+  if (!dateStr) return "";
+  // Convert yyyy-mm-dd to dd/mm/yyyy
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    const [, year, month, day] = match;
+    return `${day}/${month}/${year}`;
+  }
+  return dateStr;
+};
+
 export default function LegalCasesPage() {
   const [cases, setCases] = useState<LegalCase[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,7 +142,7 @@ export default function LegalCasesPage() {
       case_type: caseItem.case_type || "",
       priority: caseItem.priority || "medium",
       description: caseItem.description || "",
-      date_opened: caseItem.date_opened || "",
+      date_opened: formatDateToEU(caseItem.date_opened),
     });
   };
 
@@ -377,7 +388,7 @@ export default function LegalCasesPage() {
                         placeholder="dd/mm/aaaa"
                       />
                     ) : caseItem.date_opened ? (
-                      <span className="text-sm">{caseItem.date_opened}</span>
+                      <span className="text-sm">{formatDateToEU(caseItem.date_opened)}</span>
                     ) : (
                       <span className="text-muted-foreground text-sm">-</span>
                     )}

@@ -39,6 +39,21 @@ const STATUSES = [
   { value: "Closed", label: "Fechado" }
 ];
 
+const parseDate = (dateStr: string): string | null => {
+  if (!dateStr) return null;
+  // Try dd/mm/yyyy format
+  const ddmmyyyy = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddmmyyyy) {
+    const [, day, month, year] = ddmmyyyy;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  // Try yyyy-mm-dd format (already valid)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+  return null;
+};
+
 export function CaseDialog({ open, onOpenChange, onSuccess }: CaseDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -71,7 +86,7 @@ export function CaseDialog({ open, onOpenChange, onSuccess }: CaseDialogProps) {
         case_type: formData.case_type || null,
         priority: formData.priority,
         description: formData.description || null,
-        date_opened: formData.date_opened || null,
+        date_opened: parseDate(formData.date_opened),
         user_id: user.id,
       });
 
