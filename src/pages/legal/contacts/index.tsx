@@ -3,10 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search, Phone, Mail, MapPin, Briefcase } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search, Phone, Mail, MapPin, Briefcase, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router-dom";
 import { ContactDialog } from "../components/ContactDialog";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -85,6 +86,8 @@ export default function LegalContactsPage() {
   });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterCase, setFilterCase] = useState<string>("all");
+  const [filterRole, setFilterRole] = useState<string>("all");
 
   useEffect(() => {
     fetchContacts();
@@ -265,12 +268,20 @@ export default function LegalContactsPage() {
     }
   };
 
-  const filteredContacts = contacts.filter(contact =>
-    contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (contact.email && contact.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (contact.phone && contact.phone.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredContacts = contacts.filter(contact => {
+    const matchesSearch = contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contact.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (contact.email && contact.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (contact.phone && contact.phone.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesCase = filterCase === "all" || 
+      contact.cases.some(c => c.id === filterCase);
+    
+    const matchesRole = filterRole === "all" || 
+      parseRoles(contact.role).includes(filterRole);
+    
+    return matchesSearch && matchesCase && matchesRole;
+  });
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -290,16 +301,46 @@ export default function LegalContactsPage() {
         </Button>
       </div>
 
-      <div className="mb-4">
-        <div className="relative max-w-sm">
+      <div className="mb-4 flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Filtros</span>
+        </div>
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Pesquisar contactos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
+            className="pl-9 w-[200px]"
           />
         </div>
+        <Select value={filterCase} onValueChange={setFilterCase}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Todos os Processos" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os Processos</SelectItem>
+            {allCases.map((caseItem) => (
+              <SelectItem key={caseItem.id} value={caseItem.id}>
+                {caseItem.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterRole} onValueChange={setFilterRole}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Todos os Papéis" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os Papéis</SelectItem>
+            {roles.map((role) => (
+              <SelectItem key={role} value={role}>
+                {role}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? (
