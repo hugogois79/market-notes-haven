@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,12 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 
 interface ContactDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+}
+
+interface LegalCase {
+  id: string;
+  title: string;
 }
 
 const CONTACT_ROLES = ["Defendant", "Witness", "Defendant Witness", "Attorney", "Specialist", "D.O.J", "Other"];
@@ -25,12 +30,46 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
+  const [cases, setCases] = useState<LegalCase[]>([]);
+  const [selectedCases, setSelectedCases] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      fetchCases();
+    }
+  }, [open]);
+
+  const fetchCases = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("legal_cases")
+        .select("id, title")
+        .eq("user_id", user.id)
+        .order("title");
+
+      if (error) throw error;
+      setCases(data || []);
+    } catch (error) {
+      console.error("Error fetching cases:", error);
+    }
+  };
 
   const toggleRole = (role: string) => {
     setSelectedRoles(prev => 
       prev.includes(role) 
         ? prev.filter(r => r !== role) 
         : [...prev, role]
+    );
+  };
+
+  const toggleCase = (caseId: string) => {
+    setSelectedCases(prev => 
+      prev.includes(caseId) 
+        ? prev.filter(id => id !== caseId) 
+        : [...prev, caseId]
     );
   };
 
@@ -55,20 +94,40 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
         return;
       }
 
-      const { error } = await supabase.from("legal_contacts").insert({
-        name: name.trim(),
-        role: selectedRoles.join(", "),
-        phone: phone.trim() || null,
-        email: email.trim() || null,
-        address: address.trim() || null,
-        notes: notes.trim() || null,
-        user_id: user.id,
-      });
+      const { data: contactData, error: contactError } = await supabase
+        .from("legal_contacts")
+        .insert({
+          name: name.trim(),
+          role: selectedRoles.join(", "),
+          phone: phone.trim() || null,
+          email: email.trim() || null,
+          address: address.trim() || null,
+          notes: notes.trim() || null,
+          user_id: user.id,
+        })
+        .select("id")
+        .single();
 
-      if (error) {
-        console.error("Supabase error:", error);
-        toast.error("Erro ao criar contacto: " + error.message);
+      if (contactError) {
+        console.error("Supabase error:", contactError);
+        toast.error("Erro ao criar contacto: " + contactError.message);
         return;
+      }
+
+      // Insert case associations
+      if (selectedCases.length > 0 && contactData) {
+        const caseAssociations = selectedCases.map(caseId => ({
+          contact_id: contactData.id,
+          case_id: caseId,
+        }));
+
+        const { error: assocError } = await supabase
+          .from("legal_contact_cases")
+          .insert(caseAssociations);
+
+        if (assocError) {
+          console.error("Error associating cases:", assocError);
+        }
       }
 
       toast.success("Contacto criado com sucesso");
@@ -90,6 +149,7 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
     setEmail("");
     setAddress("");
     setNotes("");
+    setSelectedCases([]);
   };
 
   const handleClose = (isOpen: boolean) => {
@@ -174,6 +234,33 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
               </p>
             )}
           </div>
+
+          {cases.length > 0 && (
+            <div className="space-y-2">
+              <Label>Casos ({selectedCases.length} selecionado{selectedCases.length !== 1 ? 's' : ''})</Label>
+              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 border rounded-md">
+                {cases.map((caseItem) => {
+                  const isSelected = selectedCases.includes(caseItem.id);
+                  return (
+                    <Badge
+                      key={caseItem.id}
+                      variant={isSelected ? "default" : "outline"}
+                      className={`cursor-pointer transition-colors ${isSelected ? 'bg-primary' : 'hover:bg-accent'}`}
+                      onClick={() => toggleCase(caseItem.id)}
+                    >
+                      {isSelected && <Check className="w-3 h-3 mr-1" />}
+                      {caseItem.title}
+                    </Badge>
+                  );
+                })}
+              </div>
+              {selectedCases.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Casos: {cases.filter(c => selectedCases.includes(c.id)).map(c => c.title).join(", ")}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="contact-notes">Notas</Label>
