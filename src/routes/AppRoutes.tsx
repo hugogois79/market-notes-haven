@@ -38,6 +38,8 @@ import ExpensesEdit from "@/pages/expenses/edit";
 import ExpensesSettings from "@/pages/expenses/settings";
 import ExpenseDetail from "@/pages/expenses/[id]";
 import LegalPage from "@/pages/legal";
+import LegalCasesPage from "@/pages/legal/cases";
+import LegalContactsPage from "@/pages/legal/contacts";
 import { useNotes } from "@/contexts/NotesContext";
 
 const AppRoutes = () => {
@@ -212,6 +214,22 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <LegalPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="legal/cases"
+            element={
+              <ProtectedRoute>
+                <LegalCasesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="legal/contacts"
+            element={
+              <ProtectedRoute>
+                <LegalContactsPage />
               </ProtectedRoute>
             }
           />
