@@ -218,11 +218,9 @@ export default function LegalPage() {
                   <Paperclip className="w-4 h-4 inline-block" />
                 </TableHead>
                 <TableHead className="w-[28%]">Descrição</TableHead>
-                <TableHead className="w-[10%]">Data Criação</TableHead>
-                <TableHead className="w-[10%]">Contatos</TableHead>
-                <TableHead className="w-10"></TableHead>
                 <TableHead className="w-[12%]">Data Criação</TableHead>
                 <TableHead className="w-[12%]">Contatos</TableHead>
+                <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
