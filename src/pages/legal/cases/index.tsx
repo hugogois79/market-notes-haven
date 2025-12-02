@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search, FileText } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search, FileText, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -106,6 +106,9 @@ export default function LegalCasesPage() {
   });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterPriority, setFilterPriority] = useState<string>("all");
 
   useEffect(() => {
     fetchCases();
@@ -218,11 +221,26 @@ export default function LegalCasesPage() {
     }
   };
 
-  const filteredCases = cases.filter(caseItem =>
-    caseItem.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (caseItem.case_number && caseItem.case_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (caseItem.case_type && caseItem.case_type.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredCases = cases.filter(caseItem => {
+    const matchesSearch = caseItem.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (caseItem.case_number && caseItem.case_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (caseItem.case_type && caseItem.case_type.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesStatus = filterStatus === "all" || caseItem.status === filterStatus;
+    const matchesType = filterType === "all" || caseItem.case_type === filterType;
+    const matchesPriority = filterPriority === "all" || caseItem.priority === filterPriority;
+    
+    return matchesSearch && matchesStatus && matchesType && matchesPriority;
+  });
+
+  const hasActiveFilters = searchTerm || filterStatus !== "all" || filterType !== "all" || filterPriority !== "all";
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setFilterStatus("all");
+    setFilterType("all");
+    setFilterPriority("all");
+  };
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -242,16 +260,70 @@ export default function LegalCasesPage() {
         </Button>
       </div>
 
-      <div className="mb-4">
-        <div className="relative max-w-sm">
+      <div className="mb-4 flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Filtros</span>
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-3 h-3 mr-1" />
+              Limpar
+            </Button>
+          )}
+        </div>
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Pesquisar casos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
+            className="pl-9 w-[200px]"
           />
         </div>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Todos os Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os Status</SelectItem>
+            {STATUSES.map((status) => (
+              <SelectItem key={status.value} value={status.value}>
+                {status.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterType} onValueChange={setFilterType}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Todos os Tipos" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os Tipos</SelectItem>
+            {CASE_TYPES.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterPriority} onValueChange={setFilterPriority}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Todas Prioridades" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas Prioridades</SelectItem>
+            {PRIORITIES.map((priority) => (
+              <SelectItem key={priority.value} value={priority.value}>
+                {priority.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? (
