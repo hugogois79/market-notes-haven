@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Plus, Upload, Paperclip, ChevronDown, ChevronRight } from "lucide-react";
@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { DocumentDialog } from "./components/DocumentDialog";
 import { CaseDialog } from "./components/CaseDialog";
 import { ContactDialog } from "./components/ContactDialog";
+import { FilterBar } from "./components/FilterBar";
 
 interface LegalCase {
   id: string;
@@ -50,10 +51,39 @@ export default function LegalPage() {
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [caseDialogOpen, setCaseDialogOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    caseId: "",
+    documentType: "",
+    contactId: "",
+    searchTerm: "",
+  });
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value === "all" ? "" : value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({ caseId: "", documentType: "", contactId: "", searchTerm: "" });
+  };
+
+  const filteredDocuments = useMemo(() => {
+    return documents.filter(doc => {
+      if (filters.caseId && doc.case_id !== filters.caseId) return false;
+      if (filters.documentType && doc.document_type !== filters.documentType) return false;
+      if (filters.contactId && doc.contact_id !== filters.contactId) return false;
+      if (filters.searchTerm) {
+        const search = filters.searchTerm.toLowerCase();
+        const matchesTitle = doc.title.toLowerCase().includes(search);
+        const matchesDescription = doc.description?.toLowerCase().includes(search);
+        if (!matchesTitle && !matchesDescription) return false;
+      }
+      return true;
+    });
+  }, [documents, filters]);
 
   const fetchData = async () => {
     try {
@@ -99,7 +129,7 @@ export default function LegalPage() {
     }
   };
 
-  const groupedDocuments = documents.reduce((acc, doc) => {
+  const groupedDocuments = filteredDocuments.reduce((acc, doc) => {
     const caseTitle = doc.legal_cases?.title || "Sem Caso";
     if (!acc[caseTitle]) {
       acc[caseTitle] = {};
@@ -147,6 +177,14 @@ export default function LegalPage() {
           </Button>
         </div>
       </div>
+
+      <FilterBar
+        cases={cases}
+        contacts={contacts}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onClearFilters={clearFilters}
+      />
 
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Carregando...</div>
