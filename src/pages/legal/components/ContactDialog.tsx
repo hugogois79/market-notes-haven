@@ -116,7 +116,6 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
                   >
                     <Checkbox 
                       checked={isChecked}
-                      onCheckedChange={() => toggleRole(role)}
                       className="pointer-events-none"
                     />
                     <span className="text-sm select-none">{role}</span>
