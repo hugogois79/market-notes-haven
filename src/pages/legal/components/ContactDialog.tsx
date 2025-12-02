@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,12 +22,12 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
     roles: [] as string[],
   });
 
-  const toggleRole = (role: string) => {
+  const toggleRole = (role: string, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
-      roles: prev.roles.includes(role)
-        ? prev.roles.filter(r => r !== role)
-        : [...prev.roles, role]
+      roles: checked
+        ? [...prev.roles, role]
+        : prev.roles.filter(r => r !== role)
     }));
   };
 
@@ -69,6 +69,7 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Novo Contato</DialogTitle>
+          <DialogDescription>Adicione um novo contato ao sistema legal.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -86,17 +87,16 @@ export function ContactDialog({ open, onOpenChange, onSuccess }: ContactDialogPr
             <Label>Papéis *</Label>
             <div className="grid grid-cols-2 gap-2 p-3 border rounded-md">
               {CONTACT_ROLES.map((role) => (
-                <div
+                <label
                   key={role}
                   className="flex items-center gap-2 p-2 rounded hover:bg-accent cursor-pointer"
-                  onClick={() => toggleRole(role)}
                 >
                   <Checkbox 
                     checked={formData.roles.includes(role)}
-                    onCheckedChange={() => toggleRole(role)}
+                    onCheckedChange={(checked) => toggleRole(role, checked as boolean)}
                   />
                   <span className="text-sm">{role}</span>
-                </div>
+                </label>
               ))}
             </div>
             {formData.roles.length > 0 && (
