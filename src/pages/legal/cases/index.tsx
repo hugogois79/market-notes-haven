@@ -97,6 +97,7 @@ export default function LegalCasesPage() {
     priority: "",
     description: "",
     date_opened: undefined as Date | undefined,
+    created_at: undefined as Date | undefined,
   });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -137,6 +138,7 @@ export default function LegalCasesPage() {
       priority: caseItem.priority || "medium",
       description: caseItem.description || "",
       date_opened: caseItem.date_opened ? new Date(caseItem.date_opened) : undefined,
+      created_at: caseItem.created_at ? new Date(caseItem.created_at) : undefined,
     });
   };
 
@@ -150,6 +152,7 @@ export default function LegalCasesPage() {
       priority: "",
       description: "",
       date_opened: undefined,
+      created_at: undefined,
     });
   };
 
@@ -166,6 +169,7 @@ export default function LegalCasesPage() {
           priority: editValues.priority || null,
           description: editValues.description || null,
           date_opened: editValues.date_opened ? format(editValues.date_opened, "yyyy-MM-dd") : null,
+          created_at: editValues.created_at ? editValues.created_at.toISOString() : undefined,
         })
         .eq("id", editingId);
 
@@ -250,6 +254,7 @@ export default function LegalCasesPage() {
                 <TableHead className="min-w-[100px]">Tipo</TableHead>
                 <TableHead className="min-w-[90px]">Prioridade</TableHead>
                 <TableHead className="min-w-[100px]">Data Abertura</TableHead>
+                <TableHead className="min-w-[100px]">Criado em</TableHead>
                 <TableHead className="min-w-[150px]">Descrição</TableHead>
                 <TableHead className="w-[100px] text-right">Ações</TableHead>
               </TableRow>
@@ -391,6 +396,39 @@ export default function LegalCasesPage() {
                       </span>
                     ) : (
                       <span className="text-muted-foreground text-sm">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingId === caseItem.id ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "h-8 w-[110px] justify-start text-left font-normal text-xs",
+                              !editValues.created_at && "text-muted-foreground"
+                            )}
+                          >
+                            <Calendar className="mr-1 h-3 w-3" />
+                            {editValues.created_at
+                              ? format(editValues.created_at, "dd/MM/yyyy")
+                              : "Data"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={editValues.created_at}
+                            onSelect={(date) => setEditValues({ ...editValues, created_at: date })}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      <span className="text-sm flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-muted-foreground" />
+                        {new Date(caseItem.created_at).toLocaleDateString("pt-PT")}
+                      </span>
                     )}
                   </TableCell>
                   <TableCell>
