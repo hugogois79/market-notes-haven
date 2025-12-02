@@ -2,13 +2,19 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search, Calendar, FileText, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router-dom";
 import { CaseDialog } from "../components/CaseDialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { pt } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,17 +29,77 @@ import {
 interface LegalCase {
   id: string;
   title: string;
+  case_number: string | null;
   status: string;
+  case_type: string | null;
+  priority: string | null;
+  description: string | null;
+  date_opened: string | null;
   created_at: string;
 }
+
+const CASE_TYPES = [
+  "Criminal",
+  "Civil",
+  "Família",
+  "Trabalho",
+  "Administrativo",
+  "Fiscal",
+  "Comercial",
+  "Outro"
+];
+
+const PRIORITIES = [
+  { value: "low", label: "Baixa" },
+  { value: "medium", label: "Média" },
+  { value: "high", label: "Alta" },
+  { value: "urgent", label: "Urgente" }
+];
+
+const STATUSES = [
+  { value: "Active", label: "Ativo" },
+  { value: "Pending", label: "Pendente" },
+  { value: "Awaiting", label: "A aguardar" },
+  { value: "Closed", label: "Fechado" }
+];
+
+const statusColors: Record<string, string> = {
+  "Active": "bg-green-100 text-green-800",
+  "Closed": "bg-gray-100 text-gray-800",
+  "Pending": "bg-yellow-100 text-yellow-800",
+  "Awaiting": "bg-blue-100 text-blue-800",
+};
+
+const priorityColors: Record<string, string> = {
+  "low": "bg-gray-100 text-gray-700",
+  "medium": "bg-blue-100 text-blue-700",
+  "high": "bg-orange-100 text-orange-700",
+  "urgent": "bg-red-100 text-red-700",
+};
+
+const priorityLabels: Record<string, string> = {
+  "low": "Baixa",
+  "medium": "Média",
+  "high": "Alta",
+  "urgent": "Urgente",
+};
 
 export default function LegalCasesPage() {
   const [cases, setCases] = useState<LegalCase[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState({ title: "", status: "" });
+  const [editValues, setEditValues] = useState({
+    title: "",
+    case_number: "",
+    status: "",
+    case_type: "",
+    priority: "",
+    description: "",
+    date_opened: undefined as Date | undefined,
+  });
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     fetchCases();
@@ -63,12 +129,28 @@ export default function LegalCasesPage() {
 
   const startEdit = (caseItem: LegalCase) => {
     setEditingId(caseItem.id);
-    setEditValues({ title: caseItem.title, status: caseItem.status });
+    setEditValues({
+      title: caseItem.title,
+      case_number: caseItem.case_number || "",
+      status: caseItem.status,
+      case_type: caseItem.case_type || "",
+      priority: caseItem.priority || "medium",
+      description: caseItem.description || "",
+      date_opened: caseItem.date_opened ? new Date(caseItem.date_opened) : undefined,
+    });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditValues({ title: "", status: "" });
+    setEditValues({
+      title: "",
+      case_number: "",
+      status: "",
+      case_type: "",
+      priority: "",
+      description: "",
+      date_opened: undefined,
+    });
   };
 
   const saveEdit = async () => {
@@ -76,7 +158,15 @@ export default function LegalCasesPage() {
     try {
       const { error } = await supabase
         .from("legal_cases")
-        .update({ title: editValues.title, status: editValues.status })
+        .update({
+          title: editValues.title,
+          case_number: editValues.case_number || null,
+          status: editValues.status,
+          case_type: editValues.case_type || null,
+          priority: editValues.priority || null,
+          description: editValues.description || null,
+          date_opened: editValues.date_opened ? format(editValues.date_opened, "yyyy-MM-dd") : null,
+        })
         .eq("id", editingId);
 
       if (error) throw error;
@@ -107,11 +197,11 @@ export default function LegalCasesPage() {
     }
   };
 
-  const statusColors: Record<string, string> = {
-    "Active": "bg-green-100 text-green-800",
-    "Closed": "bg-gray-100 text-gray-800",
-    "Pending": "bg-yellow-100 text-yellow-800",
-  };
+  const filteredCases = cases.filter(caseItem =>
+    caseItem.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (caseItem.case_number && caseItem.case_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (caseItem.case_type && caseItem.case_type.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -123,7 +213,7 @@ export default function LegalCasesPage() {
         </Link>
         <div className="flex-1">
           <h1 className="text-3xl font-bold text-foreground">Gestão de Casos</h1>
-          <p className="text-muted-foreground">Consultar, editar e eliminar casos jurídicos</p>
+          <p className="text-muted-foreground">Consultar, editar e eliminar casos jurídicos ({cases.length} total)</p>
         </div>
         <Button onClick={() => setDialogOpen(true)}>
           <Plus className="w-4 h-4 mr-2" />
@@ -131,25 +221,41 @@ export default function LegalCasesPage() {
         </Button>
       </div>
 
+      <div className="mb-4">
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Pesquisar casos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Carregando...</div>
-      ) : cases.length === 0 ? (
+      ) : filteredCases.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           Nenhum caso encontrado.
         </div>
       ) : (
-        <div className="border rounded-lg bg-card">
+        <div className="border rounded-lg bg-card overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[50%]">Título</TableHead>
-                <TableHead className="w-[20%]">Status</TableHead>
-                <TableHead className="w-[20%]">Criado em</TableHead>
-                <TableHead className="w-[10%] text-right">Ações</TableHead>
+                <TableHead className="min-w-[180px]">Título</TableHead>
+                <TableHead className="min-w-[120px]">Nº Processo</TableHead>
+                <TableHead className="min-w-[100px]">Status</TableHead>
+                <TableHead className="min-w-[100px]">Tipo</TableHead>
+                <TableHead className="min-w-[90px]">Prioridade</TableHead>
+                <TableHead className="min-w-[100px]">Data Abertura</TableHead>
+                <TableHead className="min-w-[150px]">Descrição</TableHead>
+                <TableHead className="w-[100px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cases.map((caseItem) => (
+              {filteredCases.map((caseItem) => (
                 <TableRow key={caseItem.id}>
                   <TableCell>
                     {editingId === caseItem.id ? (
@@ -164,6 +270,23 @@ export default function LegalCasesPage() {
                   </TableCell>
                   <TableCell>
                     {editingId === caseItem.id ? (
+                      <Input
+                        value={editValues.case_number}
+                        onChange={(e) => setEditValues({ ...editValues, case_number: e.target.value })}
+                        className="h-8"
+                        placeholder="Nº Processo"
+                      />
+                    ) : caseItem.case_number ? (
+                      <span className="text-sm flex items-center gap-1">
+                        <FileText className="w-3 h-3 text-muted-foreground" />
+                        {caseItem.case_number}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingId === caseItem.id ? (
                       <Select
                         value={editValues.status}
                         onValueChange={(value) => setEditValues({ ...editValues, status: value })}
@@ -172,9 +295,11 @@ export default function LegalCasesPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Active">Active</SelectItem>
-                          <SelectItem value="Pending">Pending</SelectItem>
-                          <SelectItem value="Closed">Closed</SelectItem>
+                          {STATUSES.map((status) => (
+                            <SelectItem key={status.value} value={status.value}>
+                              {status.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     ) : (
@@ -183,8 +308,104 @@ export default function LegalCasesPage() {
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {new Date(caseItem.created_at).toLocaleDateString("pt-PT")}
+                  <TableCell>
+                    {editingId === caseItem.id ? (
+                      <Select
+                        value={editValues.case_type}
+                        onValueChange={(value) => setEditValues({ ...editValues, case_type: value })}
+                      >
+                        <SelectTrigger className="h-8 w-[120px]">
+                          <SelectValue placeholder="Tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CASE_TYPES.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : caseItem.case_type ? (
+                      <Badge variant="outline" className="text-xs">
+                        {caseItem.case_type}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingId === caseItem.id ? (
+                      <Select
+                        value={editValues.priority}
+                        onValueChange={(value) => setEditValues({ ...editValues, priority: value })}
+                      >
+                        <SelectTrigger className="h-8 w-[100px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PRIORITIES.map((priority) => (
+                            <SelectItem key={priority.value} value={priority.value}>
+                              {priority.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : caseItem.priority ? (
+                      <Badge className={`text-xs ${priorityColors[caseItem.priority] || ""}`}>
+                        {priorityLabels[caseItem.priority] || caseItem.priority}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingId === caseItem.id ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "h-8 w-[110px] justify-start text-left font-normal text-xs",
+                              !editValues.date_opened && "text-muted-foreground"
+                            )}
+                          >
+                            <Calendar className="mr-1 h-3 w-3" />
+                            {editValues.date_opened
+                              ? format(editValues.date_opened, "dd/MM/yyyy")
+                              : "Data"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={editValues.date_opened}
+                            onSelect={(date) => setEditValues({ ...editValues, date_opened: date })}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    ) : caseItem.date_opened ? (
+                      <span className="text-sm flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-muted-foreground" />
+                        {new Date(caseItem.date_opened).toLocaleDateString("pt-PT")}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingId === caseItem.id ? (
+                      <Textarea
+                        value={editValues.description}
+                        onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
+                        className="h-16 text-sm"
+                        placeholder="Descrição"
+                      />
+                    ) : caseItem.description ? (
+                      <span className="text-sm text-muted-foreground line-clamp-2">{caseItem.description}</span>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     {editingId === caseItem.id ? (

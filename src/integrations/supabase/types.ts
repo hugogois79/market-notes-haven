@@ -1398,24 +1398,39 @@ export type Database = {
       }
       legal_cases: {
         Row: {
+          case_number: string | null
+          case_type: string | null
           created_at: string | null
+          date_opened: string | null
+          description: string | null
           id: string
+          priority: string | null
           status: string
           title: string
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          case_number?: string | null
+          case_type?: string | null
           created_at?: string | null
+          date_opened?: string | null
+          description?: string | null
           id?: string
+          priority?: string | null
           status?: string
           title: string
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          case_number?: string | null
+          case_type?: string | null
           created_at?: string | null
+          date_opened?: string | null
+          description?: string | null
           id?: string
+          priority?: string | null
           status?: string
           title?: string
           updated_at?: string | null
