@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, Paperclip, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DocumentDialog } from "./components/DocumentDialog";
 import { CaseDialog } from "./components/CaseDialog";
 import { ContactDialog } from "./components/ContactDialog";
@@ -113,6 +114,17 @@ export default function LegalPage() {
     return acc;
   }, {} as Record<string, Record<string, LegalDocument[]>>);
 
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const [openCases, setOpenCases] = useState<Record<string, boolean>>({});
+
+  const toggleCase = (caseTitle: string) => {
+    setOpenCases(prev => ({ ...prev, [caseTitle]: !prev[caseTitle] }));
+  };
+
+  const toggleSection = (key: string) => {
+    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-8">
@@ -143,125 +155,161 @@ export default function LegalPage() {
           Nenhum documento encontrado. Adicione o primeiro documento.
         </div>
       ) : (
-        <Accordion type="multiple" className="space-y-4">
-          {Object.entries(groupedDocuments).map(([caseTitle, docsByType]) => (
-            <AccordionItem
-              key={caseTitle}
-              value={caseTitle}
-              className="border rounded-lg bg-card"
-            >
-              <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                <div className="flex items-center gap-3 text-left">
-                  <span className="font-semibold text-lg">{caseTitle}</span>
-                  <Badge variant="secondary">
-                    {Object.values(docsByType).reduce((sum, docs) => sum + docs.length, 0)} documentos
-                  </Badge>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-6 pb-4">
-                <Accordion type="multiple" className="space-y-2">
-                  {Object.entries(docsByType).map(([docType, docs]) => (
-                    <AccordionItem
-                      key={docType}
-                      value={docType}
-                      className="border rounded-md bg-muted/30"
-                    >
-                      <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            className={documentTypeBadgeColors[docType] || ""}
-                            variant="outline"
-                          >
-                            {docType}
-                          </Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {docs.length} {docs.length === 1 ? "documento" : "documentos"}
-                          </span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-4 pb-3">
-                        <div className="space-y-2">
-                          {docs.map((doc) => (
-                            <div
-                              key={doc.id}
-                              className="grid grid-cols-12 gap-4 p-4 rounded-md bg-background border hover:bg-accent/50 transition-colors items-start"
-                            >
-                              <div className="col-span-3">
-                                <h4 className="font-semibold text-foreground">{doc.title}</h4>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                  {new Date(doc.created_date).toLocaleDateString("pt-PT", {
-                                    day: "2-digit",
-                                    month: "short",
-                                    year: "numeric"
-                                  })}
-                                </p>
-                              </div>
-
-                              <div className="col-span-1 flex items-center">
-                                <Badge
-                                  className={documentTypeBadgeColors[docType] || ""}
-                                  variant="outline"
-                                >
-                                  {docType}
-                                </Badge>
-                              </div>
-
-                              <div className="col-span-1 flex items-center justify-center">
-                                {doc.attachment_url && (
-                                  <a
-                                    href={doc.attachment_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary hover:text-primary/80"
-                                    title="Ver anexo"
-                                  >
-                                    <svg 
-                                      xmlns="http://www.w3.org/2000/svg" 
-                                      width="16" 
-                                      height="16" 
-                                      viewBox="0 0 24 24" 
-                                      fill="none" 
-                                      stroke="currentColor" 
-                                      strokeWidth="2" 
-                                      strokeLinecap="round" 
-                                      strokeLinejoin="round"
-                                    >
-                                      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-                                    </svg>
-                                  </a>
-                                )}
-                              </div>
-
-                              <div className="col-span-5">
-                                {doc.description && (
-                                  <p className="text-sm text-muted-foreground leading-relaxed">
-                                    {doc.description}
-                                  </p>
-                                )}
-                              </div>
-
-                              <div className="col-span-2 flex items-center justify-end">
-                                {doc.legal_contacts && (
-                                  <Badge 
-                                    variant="secondary" 
-                                    className="text-xs cursor-pointer hover:bg-secondary/80"
-                                    title={doc.legal_contacts.role}
-                                  >
-                                    {doc.legal_contacts.name}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+        <div className="border rounded-lg bg-card overflow-hidden">
+          <Table>
+            <TableHeader className="bg-muted/50">
+              <TableRow>
+                <TableHead className="w-12">#</TableHead>
+                <TableHead className="w-[30%]">Nome do Documento</TableHead>
+                <TableHead className="w-[12%]">Tipo</TableHead>
+                <TableHead className="w-12 text-center">
+                  <Paperclip className="w-4 h-4 inline-block" />
+                </TableHead>
+                <TableHead className="w-[30%]">Descrição</TableHead>
+                <TableHead className="w-[12%]">Data Criação</TableHead>
+                <TableHead className="w-[12%]">Contatos</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Object.entries(groupedDocuments).map(([caseTitle, docsByType]) => {
+                const totalDocs = Object.values(docsByType).reduce((sum, docs) => sum + docs.length, 0);
+                const isCaseOpen = openCases[caseTitle];
+                
+                return (
+                  <Collapsible 
+                    key={caseTitle} 
+                    open={isCaseOpen}
+                    onOpenChange={() => toggleCase(caseTitle)}
+                    asChild
+                  >
+                    <>
+                      <TableRow className="bg-accent/20 hover:bg-accent/30">
+                        <TableCell colSpan={7} className="font-semibold">
+                          <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
+                            {isCaseOpen ? (
+                              <ChevronDown className="w-4 h-4" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4" />
+                            )}
+                            <span className="uppercase text-xs text-muted-foreground tracking-wider">
+                              CASO RELACIONADO
+                            </span>
+                          </CollapsibleTrigger>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className="bg-accent/10 hover:bg-accent/20">
+                        <TableCell colSpan={7}>
+                          <CollapsibleTrigger className="flex items-center gap-3 w-full text-left font-semibold text-base">
+                            {caseTitle}
+                            <Badge variant="secondary" className="ml-2">
+                              {totalDocs}
+                            </Badge>
+                          </CollapsibleTrigger>
+                        </TableCell>
+                      </TableRow>
+                      <CollapsibleContent asChild>
+                        <>
+                          {Object.entries(docsByType).map(([docType, docs]) => {
+                            const sectionKey = `${caseTitle}-${docType}`;
+                            const isSectionOpen = openSections[sectionKey];
+                            
+                            return (
+                              <Collapsible
+                                key={docType}
+                                open={isSectionOpen}
+                                onOpenChange={() => toggleSection(sectionKey)}
+                                asChild
+                              >
+                                <>
+                                  <TableRow className="bg-muted/30 hover:bg-muted/40">
+                                    <TableCell colSpan={7}>
+                                      <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
+                                        {isSectionOpen ? (
+                                          <ChevronDown className="w-3 h-3" />
+                                        ) : (
+                                          <ChevronRight className="w-3 h-3" />
+                                        )}
+                                        <span className="uppercase text-xs text-muted-foreground tracking-wider mr-2">
+                                          TIPO DE DOCUMENTO
+                                        </span>
+                                        <Badge
+                                          className={documentTypeBadgeColors[docType] || ""}
+                                          variant="outline"
+                                        >
+                                          {docType}
+                                        </Badge>
+                                        <span className="text-xs text-muted-foreground ml-2">
+                                          {docs.length}
+                                        </span>
+                                      </CollapsibleTrigger>
+                                    </TableCell>
+                                  </TableRow>
+                                  <CollapsibleContent asChild>
+                                    <>
+                                      {docs.map((doc, idx) => (
+                                        <TableRow key={doc.id} className="hover:bg-accent/30">
+                                          <TableCell className="text-muted-foreground text-sm">
+                                            {idx + 1}
+                                          </TableCell>
+                                          <TableCell className="font-medium">
+                                            {doc.title}
+                                          </TableCell>
+                                          <TableCell>
+                                            <Badge
+                                              className={documentTypeBadgeColors[docType] || ""}
+                                              variant="outline"
+                                            >
+                                              {docType}
+                                            </Badge>
+                                          </TableCell>
+                                          <TableCell className="text-center">
+                                            {doc.attachment_url && (
+                                              <a
+                                                href={doc.attachment_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-primary hover:text-primary/80 inline-flex"
+                                              >
+                                                <Paperclip className="w-4 h-4" />
+                                              </a>
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="text-sm text-muted-foreground max-w-md">
+                                            <div className="line-clamp-2">
+                                              {doc.description || "-"}
+                                            </div>
+                                          </TableCell>
+                                          <TableCell className="text-sm text-muted-foreground">
+                                            {new Date(doc.created_date).toLocaleDateString("pt-PT")}
+                                          </TableCell>
+                                          <TableCell>
+                                            {doc.legal_contacts && (
+                                              <Badge 
+                                                variant="secondary" 
+                                                className="text-xs"
+                                                title={doc.legal_contacts.role}
+                                              >
+                                                {doc.legal_contacts.name}
+                                              </Badge>
+                                            )}
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </>
+                                  </CollapsibleContent>
+                                </>
+                              </Collapsible>
+                            );
+                          })}
+                        </>
+                      </CollapsibleContent>
+                    </>
+                  </Collapsible>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
       <DocumentDialog
