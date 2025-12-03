@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Upload, Paperclip, ChevronDown, ChevronRight, Users, Briefcase, Pencil } from "lucide-react";
@@ -325,14 +325,33 @@ export default function LegalPage() {
                                           </TableCell>
                                           <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                                             {doc.attachment_url && (
-                                              <a
-                                                href={doc.attachment_url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
+                                              <button
+                                                onClick={async (e) => {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  try {
+                                                    // Get signed URL for private bucket
+                                                    const filePath = doc.attachment_url!.includes('legal-documents/')
+                                                      ? doc.attachment_url!.split('legal-documents/')[1]
+                                                      : doc.attachment_url!;
+                                                    
+                                                    const { data, error } = await supabase.storage
+                                                      .from("legal-documents")
+                                                      .createSignedUrl(filePath, 3600); // 1 hour expiry
+                                                    
+                                                    if (error) throw error;
+                                                    if (data?.signedUrl) {
+                                                      window.open(data.signedUrl, '_blank');
+                                                    }
+                                                  } catch (error) {
+                                                    console.error("Error getting signed URL:", error);
+                                                    toast.error("Erro ao abrir ficheiro");
+                                                  }
+                                                }}
                                                 className="text-primary hover:text-primary/80 inline-flex"
                                               >
                                                 <Paperclip className="w-4 h-4" />
-                                              </a>
+                                              </button>
                                             )}
                                           </TableCell>
                                           <TableCell className="text-sm text-muted-foreground max-w-md">
