@@ -94,11 +94,8 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from("legal-documents")
-          .getPublicUrl(fileName);
-
-        attachmentUrl = publicUrl;
+        // Store the file path, not the public URL (bucket is private)
+        attachmentUrl = fileName;
       }
 
       if (isEditMode) {
@@ -264,7 +261,32 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
             <Label htmlFor="file">Anexo</Label>
             {document?.attachment_url && !file && (
               <div className="text-sm text-muted-foreground mb-2">
-                Anexo atual: <a href={document.attachment_url} target="_blank" rel="noopener noreferrer" className="text-primary underline">Ver ficheiro</a>
+                Anexo atual:{" "}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const filePath = document.attachment_url!.includes('legal-documents/')
+                        ? document.attachment_url!.split('legal-documents/')[1]
+                        : document.attachment_url!;
+                      
+                      const { data, error } = await supabase.storage
+                        .from("legal-documents")
+                        .createSignedUrl(filePath, 3600);
+                      
+                      if (error) throw error;
+                      if (data?.signedUrl) {
+                        window.open(data.signedUrl, '_blank');
+                      }
+                    } catch (error) {
+                      console.error("Error getting signed URL:", error);
+                      toast.error("Erro ao abrir ficheiro");
+                    }
+                  }}
+                  className="text-primary underline"
+                >
+                  Ver ficheiro
+                </button>
               </div>
             )}
             <div className="flex items-center gap-2">
