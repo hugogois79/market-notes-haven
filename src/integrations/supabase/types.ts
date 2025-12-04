@@ -2933,6 +2933,10 @@ export type Database = {
         Args: { account_id: string; company_id: string }
         Returns: number
       }
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2950,7 +2954,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "worker"
       expense_status: "pending" | "approved" | "rejected"
       file_status: "parsed" | "summarized" | "processed"
       financial_payment_method:
@@ -3103,7 +3107,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "worker"],
       expense_status: ["pending", "approved", "rejected"],
       file_status: ["parsed", "summarized", "processed"],
       financial_payment_method: [

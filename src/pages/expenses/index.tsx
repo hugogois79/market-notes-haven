@@ -23,10 +23,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useIsMobile } from "@/hooks/use-mobile";
+import ExpenseCard from "@/components/expenses/ExpenseCard";
 
 const ExpensesPage = () => {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const isMobile = useIsMobile();
 
   const { data: claims, isLoading } = useQuery({
     queryKey: ["expense-claims", statusFilter],
@@ -69,43 +72,48 @@ const ExpensesPage = () => {
     .reduce((sum, c) => sum + Number(c.total_amount), 0) || 0;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6 pb-24 md:pb-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Minhas Requisições de Despesas</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl md:text-3xl font-bold">Minhas Requisições de Despesas</h1>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">
             Gerencie seus pedidos de reembolso e justificações
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => navigate("/expenses/settings")} variant="outline" size="lg">
-            <Settings className="mr-2 h-4 w-4" />
-            Definições
-          </Button>
-          <Button onClick={() => navigate("/expenses/new")} size="lg">
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Requisição
-          </Button>
-        </div>
+        {!isMobile && (
+          <div className="flex gap-2">
+            <Button onClick={() => navigate("/expenses/settings")} variant="outline" size="lg">
+              <Settings className="mr-2 h-4 w-4" />
+              Definições
+            </Button>
+            <Button onClick={() => navigate("/expenses/new")} size="lg">
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Requisição
+            </Button>
+          </div>
+        )}
       </div>
 
+      {/* Total Pending Card */}
       <Card>
-        <CardHeader>
-          <CardTitle>Total Pendente</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base md:text-lg">Total Pendente</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-3xl font-bold text-primary">
+          <p className="text-2xl md:text-3xl font-bold text-primary">
             {formatCurrency(totalPending)}
           </p>
         </CardContent>
       </Card>
 
+      {/* Filter */}
       <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Requisições</CardTitle>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <CardTitle className="text-base md:text-lg">Requisições</CardTitle>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filtrar por status" />
               </SelectTrigger>
               <SelectContent>
@@ -134,7 +142,15 @@ const ExpensesPage = () => {
                 Criar primeira requisição
               </Button>
             </div>
+          ) : isMobile ? (
+            // Mobile Card View
+            <div className="space-y-3">
+              {claims.map((claim) => (
+                <ExpenseCard key={claim.id} claim={claim} />
+              ))}
+            </div>
           ) : (
+            // Desktop Table View
             <Table>
               <TableHeader>
                 <TableRow>
@@ -189,6 +205,27 @@ const ExpensesPage = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Mobile Floating Action Buttons */}
+      {isMobile && (
+        <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-50">
+          <Button
+            onClick={() => navigate("/expenses/settings")}
+            variant="outline"
+            size="icon"
+            className="h-12 w-12 rounded-full shadow-lg bg-background"
+          >
+            <Settings className="h-5 w-5" />
+          </Button>
+          <Button
+            onClick={() => navigate("/expenses/new")}
+            size="icon"
+            className="h-14 w-14 rounded-full shadow-lg"
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
