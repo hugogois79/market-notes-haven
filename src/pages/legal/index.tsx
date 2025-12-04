@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Upload, Paperclip, ChevronDown, ChevronRight, Users, Briefcase, Pencil } from "lucide-react";
+import { Upload, Paperclip, ChevronDown, ChevronRight, Users, Briefcase, Pencil, Banknote } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -170,9 +170,9 @@ export default function LegalPage() {
         </div>
       </div>
 
-      {/* Separator links for Cases and Contacts */}
-      <div className="flex gap-4 mb-4">
-        <Link to="/legal/cases" className="flex-1">
+      {/* Separator links for Cases, Contacts and Financeiro */}
+      <div className="flex gap-4 mb-4 flex-wrap">
+        <Link to="/legal/cases" className="flex-1 min-w-[200px]">
           <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors cursor-pointer">
             <Briefcase className="w-5 h-5 text-amber-600" />
             <span className="uppercase text-[10px] font-medium text-amber-600 dark:text-amber-500 tracking-wider">
@@ -184,7 +184,7 @@ export default function LegalPage() {
             </Badge>
           </div>
         </Link>
-        <Link to="/legal/contacts" className="flex-1">
+        <Link to="/legal/contacts" className="flex-1 min-w-[200px]">
           <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors cursor-pointer">
             <Users className="w-5 h-5 text-blue-600" />
             <span className="uppercase text-[10px] font-medium text-blue-600 dark:text-blue-500 tracking-wider">
@@ -193,6 +193,18 @@ export default function LegalPage() {
             <span className="font-semibold text-foreground">Gerir Contactos</span>
             <Badge variant="secondary" className="ml-auto bg-muted text-muted-foreground text-xs">
               {contacts.length}
+            </Badge>
+          </div>
+        </Link>
+        <Link to="/legal/billable-items" className="flex-1 min-w-[200px]">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-950/50 transition-colors cursor-pointer">
+            <Banknote className="w-5 h-5 text-green-600" />
+            <span className="uppercase text-[10px] font-medium text-green-600 dark:text-green-500 tracking-wider">
+              FINANCEIRO
+            </span>
+            <span className="font-semibold text-foreground">Itens Faturáveis</span>
+            <Badge variant="secondary" className="ml-auto bg-muted text-muted-foreground text-xs">
+              €
             </Badge>
           </div>
         </Link>
