@@ -55,6 +55,8 @@ import {
   Check,
   Pencil,
   Trash2,
+  Upload,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -100,6 +102,8 @@ export default function LegalBillableItemsPage() {
   const [editingItem, setEditingItem] = useState<BillableItem | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -113,6 +117,31 @@ export default function LegalBillableItemsPage() {
     attachment_url: "",
     notes: "",
   });
+
+  // Upload file to Supabase Storage
+  const uploadFile = async (file: File): Promise<string | null> => {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id;
+    if (!userId) return null;
+
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("legal-documents")
+      .upload(fileName, file);
+
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      throw uploadError;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from("legal-documents")
+      .getPublicUrl(fileName);
+
+    return urlData.publicUrl;
+  };
 
   // Fetch legal cases
   const { data: cases = [] } = useQuery({
@@ -230,6 +259,7 @@ export default function LegalBillableItemsPage() {
       attachment_url: "",
       notes: "",
     });
+    setSelectedFile(null);
   };
 
   const handleEdit = (item: BillableItem) => {
@@ -245,19 +275,39 @@ export default function LegalBillableItemsPage() {
       attachment_url: item.attachment_url || "",
       notes: item.notes || "",
     });
+    setSelectedFile(null);
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.description) {
       toast.error("Descrição é obrigatória");
       return;
     }
 
-    if (editingItem) {
-      updateMutation.mutate({ id: editingItem.id, data: formData });
-    } else {
-      createMutation.mutate(formData);
+    setIsUploading(true);
+    try {
+      let attachmentUrl = formData.attachment_url;
+
+      // Upload file if selected
+      if (selectedFile) {
+        const uploadedUrl = await uploadFile(selectedFile);
+        if (uploadedUrl) {
+          attachmentUrl = uploadedUrl;
+        }
+      }
+
+      const dataToSubmit = { ...formData, attachment_url: attachmentUrl };
+
+      if (editingItem) {
+        updateMutation.mutate({ id: editingItem.id, data: dataToSubmit });
+      } else {
+        createMutation.mutate(dataToSubmit);
+      }
+    } catch (error) {
+      toast.error("Erro ao fazer upload do ficheiro");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -639,6 +689,63 @@ export default function LegalBillableItemsPage() {
                 placeholder="Notas adicionais (opcional)"
               />
             </div>
+
+            <div className="space-y-2">
+              <Label>Anexo</Label>
+              {(formData.attachment_url || selectedFile) ? (
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                  <Paperclip className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm flex-1 truncate">
+                    {selectedFile?.name || formData.attachment_url?.split('/').pop() || 'Ficheiro anexado'}
+                  </span>
+                  {formData.attachment_url && !selectedFile && (
+                    <a
+                      href={formData.attachment_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline text-sm"
+                    >
+                      Ver
+                    </a>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      setFormData((prev) => ({ ...prev, attachment_url: "" }));
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <Input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    className="hidden"
+                    id="file-upload"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setSelectedFile(file);
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="file-upload"
+                    className="flex items-center justify-center gap-2 p-3 border-2 border-dashed rounded-md cursor-pointer hover:bg-muted transition-colors"
+                  >
+                    <Upload className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Clique para selecionar ficheiro
+                    </span>
+                  </label>
+                </div>
+              )}
+            </div>
           </div>
 
           <DialogFooter>
@@ -647,9 +754,9 @@ export default function LegalBillableItemsPage() {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={createMutation.isPending || updateMutation.isPending}
+              disabled={createMutation.isPending || updateMutation.isPending || isUploading}
             >
-              {editingItem ? "Guardar" : "Criar"}
+              {isUploading ? "A carregar..." : editingItem ? "Guardar" : "Criar"}
             </Button>
           </DialogFooter>
         </DialogContent>
