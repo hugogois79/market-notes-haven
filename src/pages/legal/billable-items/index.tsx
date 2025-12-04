@@ -531,16 +531,16 @@ export default function LegalBillableItemsPage() {
             <div className="space-y-2">
               <Label>Caso</Label>
               <Select
-                value={formData.case_id}
+                value={formData.case_id || "none"}
                 onValueChange={(value) =>
-                  setFormData((prev) => ({ ...prev, case_id: value }))
+                  setFormData((prev) => ({ ...prev, case_id: value === "none" ? "" : value }))
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecionar caso (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem Caso</SelectItem>
+                  <SelectItem value="none">Sem Caso</SelectItem>
                   {cases.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.title}
