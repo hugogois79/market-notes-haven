@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Upload, Paperclip, ChevronDown, ChevronRight, Users, Briefcase, Pencil } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -143,7 +143,7 @@ export default function LegalPage() {
     setOpenCases(prev => ({ ...prev, [caseTitle]: !prev[caseTitle] }));
   };
 
-  const navigate = useNavigate();
+  
 
   const handleEditDocument = (doc: LegalDocument) => {
     setSelectedDocument(doc);
@@ -163,23 +163,39 @@ export default function LegalPage() {
           <p className="text-muted-foreground mt-2">Gestão de Processos e Documentos Jurídicos</p>
         </div>
         <div className="flex gap-2">
-          <Link to="/legal/cases">
-            <Button variant="outline">
-              <Briefcase className="w-4 h-4 mr-2" />
-              Gerir Casos
-            </Button>
-          </Link>
-          <Link to="/legal/contacts">
-            <Button variant="outline">
-              <Users className="w-4 h-4 mr-2" />
-              Gerir Contactos
-            </Button>
-          </Link>
           <Button onClick={handleAddDocument}>
             <Upload className="w-4 h-4 mr-2" />
             Adicionar Documento
           </Button>
         </div>
+      </div>
+
+      {/* Separator links for Cases and Contacts */}
+      <div className="flex gap-4 mb-4">
+        <Link to="/legal/cases" className="flex-1">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors cursor-pointer">
+            <Briefcase className="w-5 h-5 text-amber-600" />
+            <span className="uppercase text-[10px] font-medium text-amber-600 dark:text-amber-500 tracking-wider">
+              CASES
+            </span>
+            <span className="font-semibold text-foreground">Gerir Casos</span>
+            <Badge variant="secondary" className="ml-auto bg-muted text-muted-foreground text-xs">
+              {cases.length}
+            </Badge>
+          </div>
+        </Link>
+        <Link to="/legal/contacts" className="flex-1">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors cursor-pointer">
+            <Users className="w-5 h-5 text-blue-600" />
+            <span className="uppercase text-[10px] font-medium text-blue-600 dark:text-blue-500 tracking-wider">
+              CONTACTS
+            </span>
+            <span className="font-semibold text-foreground">Gerir Contactos</span>
+            <Badge variant="secondary" className="ml-auto bg-muted text-muted-foreground text-xs">
+              {contacts.length}
+            </Badge>
+          </div>
+        </Link>
       </div>
 
       <FilterBar
@@ -228,36 +244,22 @@ export default function LegalPage() {
                       {/* Airtable-style separator row */}
                       <TableRow className="bg-amber-50 dark:bg-amber-950/30 border-t-2 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/50">
                         <TableCell colSpan={8} className="py-2">
-                          <div className="flex items-center justify-between w-full">
-                            <CollapsibleTrigger className="flex items-center gap-3 text-left flex-1">
-                              {isCaseOpen ? (
-                                <ChevronDown className="w-4 h-4 text-amber-600" />
-                              ) : (
-                                <ChevronRight className="w-4 h-4 text-amber-600" />
-                              )}
-                              <span className="uppercase text-[10px] font-medium text-amber-600 dark:text-amber-500 tracking-wider">
-                                CASES
-                              </span>
-                              <span className="font-semibold text-foreground">
-                                {caseTitle}
-                              </span>
-                              <Badge variant="secondary" className="ml-2 bg-muted text-muted-foreground text-xs">
-                                {docs.length}
-                              </Badge>
-                            </CollapsibleTrigger>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate("/legal/cases");
-                              }}
-                              className="text-muted-foreground hover:text-foreground"
-                            >
-                              <Briefcase className="w-4 h-4 mr-1" />
-                              Gerir Caso
-                            </Button>
-                          </div>
+                          <CollapsibleTrigger className="flex items-center gap-3 text-left w-full">
+                            {isCaseOpen ? (
+                              <ChevronDown className="w-4 h-4 text-amber-600" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 text-amber-600" />
+                            )}
+                            <span className="uppercase text-[10px] font-medium text-amber-600 dark:text-amber-500 tracking-wider">
+                              CASES
+                            </span>
+                            <span className="font-semibold text-foreground">
+                              {caseTitle}
+                            </span>
+                            <Badge variant="secondary" className="ml-2 bg-muted text-muted-foreground text-xs">
+                              {docs.length}
+                            </Badge>
+                          </CollapsibleTrigger>
                         </TableCell>
                       </TableRow>
                       <CollapsibleContent asChild>
