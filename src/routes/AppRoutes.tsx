@@ -49,7 +49,11 @@ const AppRoutes = () => {
     <>
       <Routes>
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<Index />} />
+          <Route index element={
+            <ProtectedRoute>
+              <Index />
+            </ProtectedRoute>
+          } />
           <Route path="auth" element={<Auth />} />
           <Route
             path="notes"
