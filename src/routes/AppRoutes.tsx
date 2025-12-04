@@ -40,6 +40,7 @@ import ExpenseDetail from "@/pages/expenses/[id]";
 import LegalPage from "@/pages/legal";
 import LegalCasesPage from "@/pages/legal/cases";
 import LegalContactsPage from "@/pages/legal/contacts";
+import LegalBillableItemsPage from "@/pages/legal/billable-items";
 import { useNotes } from "@/contexts/NotesContext";
 
 const AppRoutes = () => {
@@ -234,6 +235,14 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <LegalContactsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="legal/billable-items"
+            element={
+              <ProtectedRoute>
+                <LegalBillableItemsPage />
               </ProtectedRoute>
             }
           />
