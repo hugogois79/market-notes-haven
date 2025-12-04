@@ -526,8 +526,14 @@ export default function LegalBillableItemsPage() {
                             </TableCell>
                             <TableCell className="text-center">
                               {item.attachment_url ? (
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <Paperclip className="w-4 h-4" />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => window.open(item.attachment_url!, '_blank')}
+                                  title="Ver anexo"
+                                >
+                                  <Paperclip className="w-4 h-4 text-primary" />
                                 </Button>
                               ) : (
                                 <span className="text-muted-foreground">-</span>
