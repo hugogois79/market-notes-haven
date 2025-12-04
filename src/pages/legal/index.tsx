@@ -127,30 +127,20 @@ export default function LegalPage() {
     }
   };
 
+  // Group documents by case only (Airtable style)
   const groupedDocuments = filteredDocuments.reduce((acc, doc) => {
     const caseTitle = doc.legal_cases?.title || "Sem Caso";
     if (!acc[caseTitle]) {
-      acc[caseTitle] = {};
+      acc[caseTitle] = [];
     }
-    
-    const docType = doc.document_type;
-    if (!acc[caseTitle][docType]) {
-      acc[caseTitle][docType] = [];
-    }
-    
-    acc[caseTitle][docType].push(doc);
+    acc[caseTitle].push(doc);
     return acc;
-  }, {} as Record<string, Record<string, LegalDocument[]>>);
+  }, {} as Record<string, LegalDocument[]>);
 
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const [openCases, setOpenCases] = useState<Record<string, boolean>>({});
 
   const toggleCase = (caseTitle: string) => {
     setOpenCases(prev => ({ ...prev, [caseTitle]: !prev[caseTitle] }));
-  };
-
-  const toggleSection = (key: string) => {
-    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const navigate = useNavigate();
@@ -224,8 +214,7 @@ export default function LegalPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {Object.entries(groupedDocuments).map(([caseTitle, docsByType]) => {
-                const totalDocs = Object.values(docsByType).reduce((sum, docs) => sum + docs.length, 0);
+              {Object.entries(groupedDocuments).map(([caseTitle, docs]) => {
                 const isCaseOpen = openCases[caseTitle];
                 
                 return (
@@ -236,18 +225,24 @@ export default function LegalPage() {
                     asChild
                   >
                     <>
-                      <TableRow className="bg-accent/10 hover:bg-accent/20">
-                        <TableCell colSpan={8}>
+                      {/* Airtable-style separator row */}
+                      <TableRow className="bg-amber-50 dark:bg-amber-950/30 border-t-2 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/50">
+                        <TableCell colSpan={8} className="py-2">
                           <div className="flex items-center justify-between w-full">
-                            <CollapsibleTrigger className="flex items-center gap-3 text-left font-semibold text-base flex-1">
+                            <CollapsibleTrigger className="flex items-center gap-3 text-left flex-1">
                               {isCaseOpen ? (
-                                <ChevronDown className="w-4 h-4" />
+                                <ChevronDown className="w-4 h-4 text-amber-600" />
                               ) : (
-                                <ChevronRight className="w-4 h-4" />
+                                <ChevronRight className="w-4 h-4 text-amber-600" />
                               )}
-                              {caseTitle}
-                              <Badge variant="secondary" className="ml-2">
-                                {totalDocs}
+                              <span className="uppercase text-[10px] font-medium text-amber-600 dark:text-amber-500 tracking-wider">
+                                CASES
+                              </span>
+                              <span className="font-semibold text-foreground">
+                                {caseTitle}
+                              </span>
+                              <Badge variant="secondary" className="ml-2 bg-muted text-muted-foreground text-xs">
+                                {docs.length}
                               </Badge>
                             </CollapsibleTrigger>
                             <Button
@@ -257,6 +252,7 @@ export default function LegalPage() {
                                 e.stopPropagation();
                                 navigate("/legal/cases");
                               }}
+                              className="text-muted-foreground hover:text-foreground"
                             >
                               <Briefcase className="w-4 h-4 mr-1" />
                               Gerir Caso
@@ -266,134 +262,90 @@ export default function LegalPage() {
                       </TableRow>
                       <CollapsibleContent asChild>
                         <>
-                          {Object.entries(docsByType).map(([docType, docs]) => {
-                            const sectionKey = `${caseTitle}-${docType}`;
-                            const isSectionOpen = openSections[sectionKey];
-                            
-                            return (
-                              <Collapsible
-                                key={docType}
-                                open={isSectionOpen}
-                                onOpenChange={() => toggleSection(sectionKey)}
-                                asChild
-                              >
-                                <>
-                                  <TableRow className="bg-muted/30 hover:bg-muted/40">
-                                    <TableCell colSpan={8}>
-                                      <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
-                                        {isSectionOpen ? (
-                                          <ChevronDown className="w-3 h-3" />
-                                        ) : (
-                                          <ChevronRight className="w-3 h-3" />
-                                        )}
-                                        <span className="uppercase text-xs text-muted-foreground tracking-wider mr-2">
-                                          TIPO DE DOCUMENTO
-                                        </span>
-                                        <Badge
-                                          className={documentTypeBadgeColors[docType] || ""}
-                                          variant="outline"
-                                        >
-                                          {docType}
-                                        </Badge>
-                                        <span className="text-xs text-muted-foreground ml-2">
-                                          {docs.length}
-                                        </span>
-                                      </CollapsibleTrigger>
-                                    </TableCell>
-                                  </TableRow>
-                                  <CollapsibleContent asChild>
-                                    <>
-                                      {docs.map((doc, idx) => (
-                                        <TableRow 
-                                          key={doc.id} 
-                                          className="hover:bg-accent/30 cursor-pointer"
-                                          onClick={() => handleEditDocument(doc)}
-                                        >
-                                          <TableCell className="text-muted-foreground text-sm">
-                                            {idx + 1}
-                                          </TableCell>
-                                          <TableCell className="font-medium">
-                                            {doc.title}
-                                          </TableCell>
-                                          <TableCell>
-                                            <Badge
-                                              className={documentTypeBadgeColors[docType] || ""}
-                                              variant="outline"
-                                            >
-                                              {docType}
-                                            </Badge>
-                                          </TableCell>
-                                          <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                                            {doc.attachment_url && (
-                                              <button
-                                                onClick={async (e) => {
-                                                  e.preventDefault();
-                                                  e.stopPropagation();
-                                                  try {
-                                                    // Get signed URL for private bucket
-                                                    const filePath = doc.attachment_url!.includes('legal-documents/')
-                                                      ? doc.attachment_url!.split('legal-documents/')[1]
-                                                      : doc.attachment_url!;
-                                                    
-                                                    const { data, error } = await supabase.storage
-                                                      .from("legal-documents")
-                                                      .createSignedUrl(filePath, 3600); // 1 hour expiry
-                                                    
-                                                    if (error) throw error;
-                                                    if (data?.signedUrl) {
-                                                      window.open(data.signedUrl, '_blank');
-                                                    }
-                                                  } catch (error) {
-                                                    console.error("Error getting signed URL:", error);
-                                                    toast.error("Erro ao abrir ficheiro");
-                                                  }
-                                                }}
-                                                className="text-primary hover:text-primary/80 inline-flex"
-                                              >
-                                                <Paperclip className="w-4 h-4" />
-                                              </button>
-                                            )}
-                                          </TableCell>
-                                          <TableCell className="text-sm text-muted-foreground max-w-md">
-                                            <div className="line-clamp-2">
-                                              {doc.description || "-"}
-                                            </div>
-                                          </TableCell>
-                                          <TableCell className="text-sm text-muted-foreground">
-                                            {new Date(doc.created_date).toLocaleDateString("pt-PT")}
-                                          </TableCell>
-                                          <TableCell>
-                                            {doc.legal_contacts && (
-                                              <Badge 
-                                                variant="secondary" 
-                                                className="text-xs"
-                                                title={doc.legal_contacts.role}
-                                              >
-                                                {doc.legal_contacts.name}
-                                              </Badge>
-                                            )}
-                                          </TableCell>
-                                          <TableCell>
-                                            <Button 
-                                              variant="ghost" 
-                                              size="icon" 
-                                              className="h-8 w-8"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleEditDocument(doc);
-                                              }}
-                                            >
-                                              <Pencil className="w-4 h-4" />
-                                            </Button>
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </>
-                                  </CollapsibleContent>
-                                </>
-                              </Collapsible>
-                            );
-                          })}
+                          {docs.map((doc, idx) => (
+                            <TableRow 
+                              key={doc.id} 
+                              className="hover:bg-accent/30 cursor-pointer"
+                              onClick={() => handleEditDocument(doc)}
+                            >
+                              <TableCell className="text-muted-foreground text-sm">
+                                {idx + 1}
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {doc.title}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  className={documentTypeBadgeColors[doc.document_type] || ""}
+                                  variant="outline"
+                                >
+                                  {doc.document_type}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                                {doc.attachment_url && (
+                                  <button
+                                    onClick={async (e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      try {
+                                        const filePath = doc.attachment_url!.includes('legal-documents/')
+                                          ? doc.attachment_url!.split('legal-documents/')[1]
+                                          : doc.attachment_url!;
+                                        
+                                        const { data, error } = await supabase.storage
+                                          .from("legal-documents")
+                                          .createSignedUrl(filePath, 3600);
+                                        
+                                        if (error) throw error;
+                                        if (data?.signedUrl) {
+                                          window.open(data.signedUrl, '_blank');
+                                        }
+                                      } catch (error) {
+                                        console.error("Error getting signed URL:", error);
+                                        toast.error("Erro ao abrir ficheiro");
+                                      }
+                                    }}
+                                    className="text-primary hover:text-primary/80 inline-flex"
+                                  >
+                                    <Paperclip className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground max-w-md">
+                                <div className="line-clamp-2">
+                                  {doc.description || "-"}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {new Date(doc.created_date).toLocaleDateString("pt-PT")}
+                              </TableCell>
+                              <TableCell>
+                                {doc.legal_contacts && (
+                                  <Badge 
+                                    variant="secondary" 
+                                    className="text-xs"
+                                    title={doc.legal_contacts.role}
+                                  >
+                                    {doc.legal_contacts.name}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditDocument(doc);
+                                  }}
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
                         </>
                       </CollapsibleContent>
                     </>
