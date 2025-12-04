@@ -1396,6 +1396,62 @@ export type Database = {
         }
         Relationships: []
       }
+      legal_billable_items: {
+        Row: {
+          amount: number
+          attachment_url: string | null
+          case_id: string | null
+          created_at: string
+          date: string
+          description: string
+          id: string
+          invoice_number: string | null
+          is_paid: boolean
+          notes: string | null
+          type: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount?: number
+          attachment_url?: string | null
+          case_id?: string | null
+          created_at?: string
+          date?: string
+          description: string
+          id?: string
+          invoice_number?: string | null
+          is_paid?: boolean
+          notes?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          attachment_url?: string | null
+          case_id?: string | null
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          invoice_number?: string | null
+          is_paid?: boolean
+          notes?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_billable_items_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "legal_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_cases: {
         Row: {
           case_number: string | null

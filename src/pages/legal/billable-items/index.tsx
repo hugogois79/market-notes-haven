@@ -1,9 +1,12 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -25,6 +28,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   ChevronDown,
   ChevronRight,
   Plus,
@@ -33,239 +53,31 @@ import {
   ArrowLeft,
   FileText,
   Check,
+  Pencil,
+  Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 // Types
 interface BillableItem {
   id: string;
-  caseId: string;
-  caseName: string;
+  case_id: string | null;
   description: string;
-  invoiceNumber: string;
+  invoice_number: string | null;
   date: string;
-  type: "fees" | "external_services" | "hours_worked";
+  type: string;
   amount: number;
-  paid: boolean;
-  attachmentUrl?: string;
+  is_paid: boolean;
+  attachment_url: string | null;
+  notes: string | null;
+  user_id: string | null;
+  case_title?: string;
 }
 
-// Mock data
-const mockBillableItems: BillableItem[] = [
-  // Diana - Regulação Parental
-  {
-    id: "1",
-    caseId: "case-1",
-    caseName: "Diana - Regulação Parental",
-    description: "Despesas Deslocação Ki Alves Pereira",
-    invoiceNumber: "25",
-    date: "2024-06-04",
-    type: "external_services",
-    amount: 1353.0,
-    paid: true,
-  },
-  {
-    id: "2",
-    caseId: "case-1",
-    caseName: "Diana - Regulação Parental",
-    description: "Despesas Deslocação",
-    invoiceNumber: "1353",
-    date: "2024-06-05",
-    type: "external_services",
-    amount: 1353.0,
-    paid: true,
-  },
-  {
-    id: "3",
-    caseId: "case-1",
-    caseName: "Diana - Regulação Parental",
-    description: "Sessões de Julgamento 2 Semestre 2024",
-    invoiceNumber: "240107",
-    date: "2024-11-08",
-    type: "hours_worked",
-    amount: 18450.0,
-    paid: true,
-  },
-  {
-    id: "4",
-    caseId: "case-1",
-    caseName: "Diana - Regulação Parental",
-    description: "Honorarios Recurso Processo",
-    invoiceNumber: "25001",
-    date: "2025-01-07",
-    type: "fees",
-    amount: 14760.0,
-    paid: true,
-  },
-  {
-    id: "5",
-    caseId: "case-1",
-    caseName: "Diana - Regulação Parental",
-    description: "Transcrições de Testemunhos",
-    invoiceNumber: "30",
-    date: "2025-01-16",
-    type: "external_services",
-    amount: 1085.5,
-    paid: true,
-  },
-  {
-    id: "6",
-    caseId: "case-1",
-    caseName: "Diana - Regulação Parental",
-    description: "Taxa de Justiça",
-    invoiceNumber: "31",
-    date: "2025-01-28",
-    type: "fees",
-    amount: 122.4,
-    paid: true,
-  },
-  {
-    id: "7",
-    caseId: "case-1",
-    caseName: "Diana - Regulação Parental",
-    description: "Taxas de Justiça",
-    invoiceNumber: "32",
-    date: "2025-02-28",
-    type: "fees",
-    amount: 306.0,
-    paid: true,
-  },
-
-  // Vilacellos vs Splendidoption
-  {
-    id: "8",
-    caseId: "case-2",
-    caseName: "Vilacellos vs Splendidoption",
-    description: "Instituto de Arbitragem - Custas",
-    invoiceNumber: "11012025",
-    date: "2025-01-11",
-    type: "fees",
-    amount: 2167.8,
-    paid: true,
-  },
-
-  // Violência Doméstica
-  {
-    id: "9",
-    caseId: "case-3",
-    caseName: "Violência Doméstica",
-    description: "Honorarios",
-    invoiceNumber: "36",
-    date: "2021-05-04",
-    type: "fees",
-    amount: 4305.0,
-    paid: true,
-  },
-  {
-    id: "10",
-    caseId: "case-3",
-    caseName: "Violência Doméstica",
-    description: "Honorarios 2 Semestre 2024",
-    invoiceNumber: "900174943",
-    date: "2024-06-28",
-    type: "fees",
-    amount: 16186.6,
-    paid: false,
-  },
-  {
-    id: "11",
-    caseId: "case-3",
-    caseName: "Violência Doméstica",
-    description: "Honorario 1º Trimestre 2021",
-    invoiceNumber: "1100000498",
-    date: "2021-05-04",
-    type: "fees",
-    amount: 4305.0,
-    paid: true,
-  },
-  {
-    id: "12",
-    caseId: "case-3",
-    caseName: "Violência Doméstica",
-    description: "Honorários 2 Trimestre 2021",
-    invoiceNumber: "900102912",
-    date: "2021-06-24",
-    type: "fees",
-    amount: 6526.4,
-    paid: true,
-  },
-  {
-    id: "13",
-    caseId: "case-3",
-    caseName: "Violência Doméstica",
-    description: "Honorários 1º Trimestre 2022",
-    invoiceNumber: "900111474",
-    date: "2021-12-10",
-    type: "fees",
-    amount: 7792.4,
-    paid: true,
-  },
-  {
-    id: "14",
-    caseId: "case-3",
-    caseName: "Violência Doméstica",
-    description: "Honorario 2 Trimestre 2022",
-    invoiceNumber: "900123039",
-    date: "2022-07-12",
-    type: "fees",
-    amount: 6278.9,
-    paid: true,
-  },
-  {
-    id: "15",
-    caseId: "case-3",
-    caseName: "Violência Doméstica",
-    description: "Honorários 4 Trimestre 2022",
-    invoiceNumber: "900130448",
-    date: "2022-11-30",
-    type: "fees",
-    amount: 7786.1,
-    paid: true,
-  },
-  {
-    id: "16",
-    caseId: "case-3",
-    caseName: "Violência Doméstica",
-    description: "Honorários 1º Trimestre 2023",
-    invoiceNumber: "900136582",
-    date: "2023-03-24",
-    type: "fees",
-    amount: 18905.0,
-    paid: true,
-  },
-  {
-    id: "17",
-    caseId: "case-3",
-    caseName: "Violência Doméstica",
-    description: "Honorários 2º Trimeste 2023",
-    invoiceNumber: "900142988",
-    date: "2023-07-25",
-    type: "fees",
-    amount: 28792.2,
-    paid: true,
-  },
-  {
-    id: "18",
-    caseId: "case-3",
-    caseName: "Violência Doméstica",
-    description: "Honorario 4º Trimestre 2023",
-    invoiceNumber: "900151807",
-    date: "2023-12-19",
-    type: "fees",
-    amount: 29882.8,
-    paid: true,
-  },
-  {
-    id: "19",
-    caseId: "case-3",
-    caseName: "Violência Doméstica",
-    description: "Honorários 1 Trimestre 2024",
-    invoiceNumber: "900164180",
-    date: "2024-06-28",
-    type: "fees",
-    amount: 33187.8,
-    paid: true,
-  },
-];
+interface LegalCase {
+  id: string;
+  title: string;
+}
 
 const typeColors: Record<string, string> = {
   fees: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
@@ -280,9 +92,174 @@ const typeLabels: Record<string, string> = {
 };
 
 export default function LegalBillableItemsPage() {
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [paidFilter, setPaidFilter] = useState<string>("all");
   const [openCases, setOpenCases] = useState<Record<string, boolean>>({});
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<BillableItem | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    case_id: "",
+    description: "",
+    invoice_number: "",
+    date: new Date().toISOString().split("T")[0],
+    type: "fees",
+    amount: 0,
+    is_paid: false,
+    attachment_url: "",
+    notes: "",
+  });
+
+  // Fetch legal cases
+  const { data: cases = [] } = useQuery({
+    queryKey: ["legal-cases"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("legal_cases")
+        .select("id, title")
+        .order("title");
+      if (error) throw error;
+      return data as LegalCase[];
+    },
+  });
+
+  // Fetch billable items with case info
+  const { data: billableItems = [], isLoading } = useQuery({
+    queryKey: ["legal-billable-items"],
+    queryFn: async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+
+      const { data, error } = await supabase
+        .from("legal_billable_items")
+        .select(`
+          *,
+          legal_cases (title)
+        `)
+        .eq("user_id", userId)
+        .order("date", { ascending: false });
+      
+      if (error) throw error;
+      
+      return (data || []).map((item: any) => ({
+        ...item,
+        case_title: item.legal_cases?.title || "Sem Caso",
+      })) as BillableItem[];
+    },
+  });
+
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const { data: userData } = await supabase.auth.getUser();
+      const { error } = await supabase.from("legal_billable_items").insert({
+        ...data,
+        case_id: data.case_id || null,
+        user_id: userData.user?.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["legal-billable-items"] });
+      toast.success("Item criado com sucesso");
+      setIsDialogOpen(false);
+      resetForm();
+    },
+    onError: () => {
+      toast.error("Erro ao criar item");
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
+      const { error } = await supabase
+        .from("legal_billable_items")
+        .update({
+          ...data,
+          case_id: data.case_id || null,
+        })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["legal-billable-items"] });
+      toast.success("Item atualizado com sucesso");
+      setIsDialogOpen(false);
+      setEditingItem(null);
+      resetForm();
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar item");
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("legal_billable_items")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["legal-billable-items"] });
+      toast.success("Item eliminado com sucesso");
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
+    },
+    onError: () => {
+      toast.error("Erro ao eliminar item");
+    },
+  });
+
+  const resetForm = () => {
+    setFormData({
+      case_id: "",
+      description: "",
+      invoice_number: "",
+      date: new Date().toISOString().split("T")[0],
+      type: "fees",
+      amount: 0,
+      is_paid: false,
+      attachment_url: "",
+      notes: "",
+    });
+  };
+
+  const handleEdit = (item: BillableItem) => {
+    setEditingItem(item);
+    setFormData({
+      case_id: item.case_id || "",
+      description: item.description,
+      invoice_number: item.invoice_number || "",
+      date: item.date,
+      type: item.type,
+      amount: item.amount,
+      is_paid: item.is_paid,
+      attachment_url: item.attachment_url || "",
+      notes: item.notes || "",
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = () => {
+    if (!formData.description) {
+      toast.error("Descrição é obrigatória");
+      return;
+    }
+
+    if (editingItem) {
+      updateMutation.mutate({ id: editingItem.id, data: formData });
+    } else {
+      createMutation.mutate(formData);
+    }
+  };
 
   const toggleCase = (caseId: string) => {
     setOpenCases((prev) => ({ ...prev, [caseId]: !prev[caseId] }));
@@ -290,36 +267,37 @@ export default function LegalBillableItemsPage() {
 
   // Filter items
   const filteredItems = useMemo(() => {
-    return mockBillableItems.filter((item) => {
+    return billableItems.filter((item) => {
       if (searchTerm) {
         const search = searchTerm.toLowerCase();
         if (
           !item.description.toLowerCase().includes(search) &&
-          !item.invoiceNumber.toLowerCase().includes(search)
+          !(item.invoice_number || "").toLowerCase().includes(search)
         ) {
           return false;
         }
       }
-      if (paidFilter === "paid" && !item.paid) return false;
-      if (paidFilter === "unpaid" && item.paid) return false;
+      if (paidFilter === "paid" && !item.is_paid) return false;
+      if (paidFilter === "unpaid" && item.is_paid) return false;
       return true;
     });
-  }, [searchTerm, paidFilter]);
+  }, [billableItems, searchTerm, paidFilter]);
 
   // Group by case
   const groupedByCases = useMemo(() => {
     const grouped: Record<string, { caseName: string; items: BillableItem[]; total: number }> = {};
 
     filteredItems.forEach((item) => {
-      if (!grouped[item.caseId]) {
-        grouped[item.caseId] = {
-          caseName: item.caseName,
+      const caseKey = item.case_id || "no-case";
+      if (!grouped[caseKey]) {
+        grouped[caseKey] = {
+          caseName: item.case_title || "Sem Caso",
           items: [],
           total: 0,
         };
       }
-      grouped[item.caseId].items.push(item);
-      grouped[item.caseId].total += item.amount;
+      grouped[caseKey].items.push(item);
+      grouped[caseKey].total += item.amount;
     });
 
     return grouped;
@@ -357,7 +335,7 @@ export default function LegalBillableItemsPage() {
             Gestão de Itens Faturáveis por Caso
           </p>
         </div>
-        <Button>
+        <Button onClick={() => { resetForm(); setEditingItem(null); setIsDialogOpen(true); }}>
           <Plus className="w-4 h-4 mr-2" />
           Nova Despesa
         </Button>
@@ -395,6 +373,20 @@ export default function LegalBillableItemsPage() {
           {formatCurrency(grandTotal)}
         </span>
       </div>
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="text-center py-12 text-muted-foreground">
+          A carregar itens...
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && filteredItems.length === 0 && (
+        <div className="text-center py-12 text-muted-foreground">
+          Nenhum item faturável encontrado. Clique em "Nova Despesa" para adicionar.
+        </div>
+      )}
 
       {/* Grouped Accordion List */}
       <div className="space-y-3">
@@ -440,55 +432,79 @@ export default function LegalBillableItemsPage() {
                     <Table>
                       <TableHeader className="bg-muted/30">
                         <TableRow>
-                          <TableHead className="w-[30%]">Descrição</TableHead>
-                          <TableHead className="w-[12%]">Fatura #</TableHead>
-                          <TableHead className="w-[12%]">Data</TableHead>
-                          <TableHead className="w-[15%]">Tipo</TableHead>
-                          <TableHead className="w-[15%] text-right">Valor</TableHead>
-                          <TableHead className="w-[8%] text-center">Pago</TableHead>
-                          <TableHead className="w-[8%] text-center">
+                          <TableHead className="w-[28%]">Descrição</TableHead>
+                          <TableHead className="w-[10%]">Fatura #</TableHead>
+                          <TableHead className="w-[10%]">Data</TableHead>
+                          <TableHead className="w-[14%]">Tipo</TableHead>
+                          <TableHead className="w-[12%] text-right">Valor</TableHead>
+                          <TableHead className="w-[6%] text-center">Pago</TableHead>
+                          <TableHead className="w-[6%] text-center">
                             <Paperclip className="w-4 h-4 inline-block" />
                           </TableHead>
+                          <TableHead className="w-[14%] text-center">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {items.map((item) => (
                           <TableRow
                             key={item.id}
-                            className="hover:bg-accent/30 cursor-pointer"
+                            className="hover:bg-accent/30"
                           >
                             <TableCell className="font-medium">
                               {item.description}
                             </TableCell>
                             <TableCell className="text-muted-foreground">
-                              {item.invoiceNumber}
+                              {item.invoice_number || "-"}
                             </TableCell>
                             <TableCell className="text-muted-foreground">
                               {formatDate(item.date)}
                             </TableCell>
                             <TableCell>
-                              <Badge className={typeColors[item.type]}>
-                                {typeLabels[item.type]}
+                              <Badge className={typeColors[item.type] || typeColors.fees}>
+                                {typeLabels[item.type] || item.type}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right font-medium">
                               {formatCurrency(item.amount)}
                             </TableCell>
                             <TableCell className="text-center">
-                              {item.paid ? (
+                              {item.is_paid ? (
                                 <Check className="w-5 h-5 text-green-600 inline-block" />
                               ) : (
                                 <Checkbox disabled />
                               )}
                             </TableCell>
                             <TableCell className="text-center">
-                              {item.attachmentUrl ? (
+                              {item.attachment_url ? (
                                 <Button variant="ghost" size="icon" className="h-8 w-8">
                                   <Paperclip className="w-4 h-4" />
                                 </Button>
                               ) : (
                                 <span className="text-muted-foreground">-</span>
                               )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex justify-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => handleEdit(item)}
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive"
+                                  onClick={() => {
+                                    setItemToDelete(item.id);
+                                    setDeleteDialogOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -502,11 +518,163 @@ export default function LegalBillableItemsPage() {
         })}
       </div>
 
-      {Object.keys(groupedByCases).length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-          Nenhum item encontrado.
-        </div>
-      )}
+      {/* Create/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingItem ? "Editar Item Faturável" : "Nova Despesa"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Caso</Label>
+              <Select
+                value={formData.case_id}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, case_id: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar caso (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sem Caso</SelectItem>
+                  {cases.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Descrição *</Label>
+              <Input
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, description: e.target.value }))
+                }
+                placeholder="Ex: Honorários 1º Trimestre 2024"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nº Fatura</Label>
+                <Input
+                  value={formData.invoice_number}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, invoice_number: e.target.value }))
+                  }
+                  placeholder="Ex: 900174943"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Data</Label>
+                <Input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, date: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, type: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fees">Honorários</SelectItem>
+                    <SelectItem value="external_services">Serviços Externos</SelectItem>
+                    <SelectItem value="hours_worked">Horas Trabalhadas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Valor (€)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.amount}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="is_paid"
+                checked={formData.is_paid}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({ ...prev, is_paid: checked as boolean }))
+                }
+              />
+              <Label htmlFor="is_paid" className="cursor-pointer">
+                Pago
+              </Label>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Notas</Label>
+              <Input
+                value={formData.notes}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, notes: e.target.value }))
+                }
+                placeholder="Notas adicionais (opcional)"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {editingItem ? "Guardar" : "Criar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem a certeza que deseja eliminar este item faturável? Esta ação não pode ser revertida.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => itemToDelete && deleteMutation.mutate(itemToDelete)}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
