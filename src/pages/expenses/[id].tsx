@@ -187,6 +187,7 @@ const ExpenseDetailPage = () => {
       // Only process receipts if expenses exist
       if (expenses && expenses.length > 0) {
         const expensesWithReceipts = expenses.filter(expense => expense.receipt_image_url);
+        console.log('Expenses with receipts:', expensesWithReceipts.length);
         
         if (expensesWithReceipts.length > 0) {
           // Dynamically import pdf.js
@@ -197,21 +198,35 @@ const ExpenseDetailPage = () => {
 
           // Process all receipts
           const receiptPromises = expensesWithReceipts.map(async (expense) => {
+            console.log('Processing receipt for expense:', expense.description, expense.receipt_image_url);
             const filePath = expenseClaimService.getFilePathFromUrl(expense.receipt_image_url!);
-            if (!filePath) return null;
+            console.log('Extracted file path:', filePath);
+            
+            if (!filePath) {
+              console.error('Failed to extract file path from URL');
+              return null;
+            }
 
             const { data, error } = await supabase.storage
               .from('expense-receipts')
               .download(filePath);
 
-            if (error || !data) {
-              console.error('Error downloading receipt:', error);
+            if (error) {
+              console.error('Error downloading receipt:', error.message);
               return null;
             }
+            
+            if (!data) {
+              console.error('No data returned from storage');
+              return null;
+            }
+
+            console.log('Downloaded file type:', data.type, 'size:', data.size);
 
             // Handle images directly
             if (data.type.startsWith('image/')) {
               const blobUrl = URL.createObjectURL(data);
+              console.log('Created image blob URL');
               return {
                 expense,
                 images: [blobUrl],
@@ -221,9 +236,11 @@ const ExpenseDetailPage = () => {
 
             // Handle PDFs - convert each page to image
             if (data.type === 'application/pdf') {
+              console.log('Processing PDF file...');
               try {
                 const arrayBuffer = await data.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                console.log('PDF loaded, pages:', pdf.numPages);
                 const images: string[] = [];
 
                 for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
@@ -248,12 +265,15 @@ const ExpenseDetailPage = () => {
                       canvas: canvas,
                     }).promise;
 
-                    images.push(canvas.toDataURL('image/png'));
+                    const imageData = canvas.toDataURL('image/png');
+                    images.push(imageData);
+                    console.log(`PDF page ${pageNum} rendered successfully`);
                   } catch (pageError) {
                     console.error(`Error processing PDF page ${pageNum}:`, pageError);
                   }
                 }
 
+                console.log('Total images from PDF:', images.length);
                 if (images.length > 0) {
                   return {
                     expense,
@@ -267,10 +287,12 @@ const ExpenseDetailPage = () => {
               }
             }
 
+            console.warn('Unknown file type:', data.type);
             return null;
           });
 
           receipts = (await Promise.all(receiptPromises)).filter(Boolean) as { expense: any; images: string[]; type: string }[];
+          console.log('Total receipts processed:', receipts.length);
         }
       }
 
