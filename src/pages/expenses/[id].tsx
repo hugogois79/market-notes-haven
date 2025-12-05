@@ -174,111 +174,109 @@ const ExpenseDetailPage = () => {
   };
 
   const handlePrint = async () => {
-    if (!claim || !expenses || expenses.length === 0) return;
+    if (!claim) return;
 
     toast({
       title: "A preparar impressão...",
-      description: "Por favor aguarde enquanto os recibos são carregados",
+      description: "Por favor aguarde enquanto os dados são carregados",
     });
 
     try {
-      // Dynamically import pdf.js
-      const pdfjsLib = await import('pdfjs-dist');
-      
-      // Use CDN worker with matching version (5.4.394)
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.394/pdf.worker.min.mjs`;
+      let receipts: { expense: any; images: string[]; type: string }[] = [];
 
-      // Process all receipts
-      const receiptPromises = expenses
-        .filter(expense => expense.receipt_image_url)
-        .map(async (expense) => {
-          const filePath = expenseClaimService.getFilePathFromUrl(expense.receipt_image_url!);
-          if (!filePath) return null;
+      // Only process receipts if expenses exist
+      if (expenses && expenses.length > 0) {
+        const expensesWithReceipts = expenses.filter(expense => expense.receipt_image_url);
+        
+        if (expensesWithReceipts.length > 0) {
+          // Dynamically import pdf.js
+          const pdfjsLib = await import('pdfjs-dist');
+          
+          // Use CDN worker with matching version (5.4.394)
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.394/pdf.worker.min.mjs`;
 
-          const { data, error } = await supabase.storage
-            .from('expense-receipts')
-            .download(filePath);
+          // Process all receipts
+          const receiptPromises = expensesWithReceipts.map(async (expense) => {
+            const filePath = expenseClaimService.getFilePathFromUrl(expense.receipt_image_url!);
+            if (!filePath) return null;
 
-          if (error || !data) {
-            console.error('Error downloading receipt:', error);
-            return null;
-          }
+            const { data, error } = await supabase.storage
+              .from('expense-receipts')
+              .download(filePath);
 
-          // Handle images directly
-          if (data.type.startsWith('image/')) {
-            const blobUrl = URL.createObjectURL(data);
-            return {
-              expense,
-              images: [blobUrl],
-              type: 'image',
-            };
-          }
-
-          // Handle PDFs - convert each page to image
-          if (data.type === 'application/pdf') {
-            try {
-              const arrayBuffer = await data.arrayBuffer();
-              const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-              const images: string[] = [];
-
-              for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                try {
-                  const page = await pdf.getPage(pageNum);
-                  const viewport = page.getViewport({ scale: 2.0 });
-                  
-                  const canvas = document.createElement('canvas');
-                  const context = canvas.getContext('2d');
-                  
-                  if (!context) {
-                    console.error('Failed to get canvas context');
-                    continue;
-                  }
-                  
-                  canvas.height = viewport.height;
-                  canvas.width = viewport.width;
-
-                  await page.render({
-                    canvasContext: context,
-                    viewport: viewport,
-                    canvas: canvas,
-                  }).promise;
-
-                  images.push(canvas.toDataURL('image/png'));
-                } catch (pageError) {
-                  console.error(`Error processing PDF page ${pageNum}:`, pageError);
-                }
-              }
-
-              if (images.length > 0) {
-                return {
-                  expense,
-                  images,
-                  type: 'pdf',
-                };
-              }
-            } catch (pdfError) {
-              console.error('Error processing PDF:', pdfError);
+            if (error || !data) {
+              console.error('Error downloading receipt:', error);
               return null;
             }
-          }
 
-          return null;
-        });
+            // Handle images directly
+            if (data.type.startsWith('image/')) {
+              const blobUrl = URL.createObjectURL(data);
+              return {
+                expense,
+                images: [blobUrl],
+                type: 'image',
+              };
+            }
 
-      const receipts = (await Promise.all(receiptPromises)).filter(Boolean);
+            // Handle PDFs - convert each page to image
+            if (data.type === 'application/pdf') {
+              try {
+                const arrayBuffer = await data.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const images: string[] = [];
 
-      if (receipts.length === 0) {
-        toast({
-          title: "Aviso",
-          description: "Nenhum comprovativo foi encontrado para imprimir",
-          variant: "default",
-        });
-        return;
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                  try {
+                    const page = await pdf.getPage(pageNum);
+                    const viewport = page.getViewport({ scale: 2.0 });
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    
+                    if (!context) {
+                      console.error('Failed to get canvas context');
+                      continue;
+                    }
+                    
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    await page.render({
+                      canvasContext: context,
+                      viewport: viewport,
+                      canvas: canvas,
+                    }).promise;
+
+                    images.push(canvas.toDataURL('image/png'));
+                  } catch (pageError) {
+                    console.error(`Error processing PDF page ${pageNum}:`, pageError);
+                  }
+                }
+
+                if (images.length > 0) {
+                  return {
+                    expense,
+                    images,
+                    type: 'pdf',
+                  };
+                }
+              } catch (pdfError) {
+                console.error('Error processing PDF:', pdfError);
+                return null;
+              }
+            }
+
+            return null;
+          });
+
+          receipts = (await Promise.all(receiptPromises)).filter(Boolean) as { expense: any; images: string[]; type: string }[];
+        }
       }
 
       toast({
-        title: "Comprovantes carregados",
-        description: `${receipts.length} comprovante(s) pronto(s) para impressão`,
+        title: "Pronto para impressão",
+        description: receipts.length > 0 ? `Requisição + ${receipts.length} comprovativo(s)` : "Requisição sem comprovativos",
       });
 
       // Generate print HTML
@@ -375,34 +373,44 @@ const ExpenseDetailPage = () => {
                 </div>
               ` : ''}
 
-              <div class="section">
-                <h2>Lista de Despesas</h2>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Data</th>
-                      <th>Descrição</th>
-                      <th>Fornecedor</th>
-                      <th>Valor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${expenses.map(expense => `
+              ${expenses && expenses.length > 0 ? `
+                <div class="section">
+                  <h2>Lista de Despesas</h2>
+                  <table>
+                    <thead>
                       <tr>
-                        <td>${format(new Date(expense.expense_date), "dd/MM/yyyy")}</td>
-                        <td>${expense.description}</td>
-                        <td>${expense.supplier}</td>
-                        <td><strong>${formatCurrency(Number(expense.amount))}</strong></td>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th>Fornecedor</th>
+                        <th>Valor</th>
                       </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      ${expenses.map(expense => `
+                        <tr>
+                          <td>${format(new Date(expense.expense_date), "dd/MM/yyyy")}</td>
+                          <td>${expense.description}</td>
+                          <td>${expense.supplier}</td>
+                          <td><strong>${formatCurrency(Number(expense.amount))}</strong></td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
 
-                <div class="total">
-                  <span>Total:</span>
-                  <span class="amount">${formatCurrency(Number(claim.total_amount))}</span>
+                  <div class="total">
+                    <span>Total:</span>
+                    <span class="amount">${formatCurrency(Number(claim.total_amount))}</span>
+                  </div>
                 </div>
-              </div>
+              ` : `
+                <div class="section">
+                  <p style="color: #666;">Nenhuma despesa registada</p>
+                  <div class="total">
+                    <span>Total:</span>
+                    <span class="amount">${formatCurrency(Number(claim.total_amount))}</span>
+                  </div>
+                </div>
+              `}
             </div>
 
             <!-- Following Pages: Individual Receipts -->
