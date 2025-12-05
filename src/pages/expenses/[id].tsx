@@ -193,8 +193,11 @@ const ExpenseDetailPage = () => {
           // Dynamically import pdf.js
           const pdfjsLib = await import('pdfjs-dist');
           
-          // Use CDN worker with matching version (5.4.394)
-          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.394/pdf.worker.min.mjs`;
+          // Set up the worker using Vite's import.meta.url approach
+          pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+            'pdfjs-dist/build/pdf.worker.mjs',
+            import.meta.url
+          ).toString();
 
           // Process all receipts
           const receiptPromises = expensesWithReceipts.map(async (expense) => {
