@@ -19,10 +19,12 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     localTradeInfo,
     hasConclusion,
     summaryState,
+    localProjectId,
     handleTitleChange,
     handleCategoryChange,
     handleTradeInfoChange,
-    handleSummaryGenerated
+    handleSummaryGenerated,
+    handleProjectChange
   } = useBasicNoteFields(currentNote);
 
   const {
@@ -136,6 +138,13 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     }
   };
 
+  // Handle project change and save immediately
+  const handleProjectChangeAndSave = (projectId: string | null) => {
+    console.log("useNoteMutations: Project change and save:", projectId);
+    handleProjectChange(projectId);
+    handleSaveWithChanges({ project_id: projectId }, false);
+  };
+
   return {
     // State
     isSaving,
@@ -148,6 +157,7 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     attachments,
     linkedTags,
     linkedTokens,
+    localProjectId,
 
     // Handlers - no auto-save for title/category
     handleTitleChange: handleTitleChangeOnly,
@@ -159,6 +169,7 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     handleSaveWithChanges,
     handleManualSave: handleManualSaveWithCurrentState,
     handleTagsChange: handleTagsChangeAndSave,
-    handleTokensChange
+    handleTokensChange,
+    handleProjectChange: handleProjectChangeAndSave
   };
 };

@@ -67,4 +67,5 @@ export interface Note {
   tradeInfo?: TradeInfo;
   hasConclusion?: boolean;
   tradingSettlementNotes?: TradingSettlementNote[];
+  project_id?: string | null;
 }
