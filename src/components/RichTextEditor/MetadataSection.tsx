@@ -2,8 +2,8 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
 import TagsSection from "./TagsSection";
-import TokenSection from "./TokenSection";
-import { Tag, Token } from "@/types";
+import ProjectSection from "./ProjectSection";
+import { Tag } from "@/types";
 
 interface MetadataSectionProps {
   linkedTags: Tag[];
@@ -14,18 +14,11 @@ interface MetadataSectionProps {
   handleSelectTag: (tag: Tag) => void;
   isLoadingTags: boolean;
   getAvailableTagsForSelection: () => Tag[];
-  linkedTokens: Token[];
-  handleRemoveToken: (tokenId: string) => void;
-  handleTokenSelect: (tokenId: string) => void;
-  isLoadingTokens: boolean;
-  isFilter?: boolean;
-  onFilterChange?: (tokenId: string | null) => void;
-  selectedFilterToken?: string | null;
-  onMultiFilterChange?: (tokenId: string) => void;
-  selectedFilterTokens?: string[];
-  compact?: boolean; // Added prop for compact layout
-  categoryFilter?: string; // For filtering tags by category
-  category?: string; // Added category prop to match what's being passed
+  selectedProjectId?: string | null;
+  onProjectSelect?: (projectId: string | null) => void;
+  compact?: boolean;
+  categoryFilter?: string;
+  category?: string;
 }
 
 const MetadataSection = ({
@@ -37,20 +30,12 @@ const MetadataSection = ({
   handleSelectTag,
   isLoadingTags,
   getAvailableTagsForSelection,
-  linkedTokens,
-  handleRemoveToken,
-  handleTokenSelect,
-  isLoadingTokens,
-  isFilter = false,
-  onFilterChange,
-  selectedFilterToken,
-  onMultiFilterChange,
-  selectedFilterTokens,
-  compact = false, // Default to false for backward compatibility
-  categoryFilter, // For filtering tags
-  category // Added the category prop here
+  selectedProjectId = null,
+  onProjectSelect = () => {},
+  compact = false,
+  categoryFilter,
+  category
 }: MetadataSectionProps) => {
-  // Use different layout based on compact prop
   return compact ? (
     <div className="flex gap-4">
       <div className="flex-1">
@@ -64,21 +49,14 @@ const MetadataSection = ({
           isLoadingTags={isLoadingTags}
           getAvailableTagsForSelection={getAvailableTagsForSelection}
           compact={compact}
-          categoryFilter={categoryFilter || category} // Use either categoryFilter or category
+          categoryFilter={categoryFilter || category}
         />
       </div>
       
       <div className="flex-1">
-        <TokenSection 
-          selectedTokens={linkedTokens} 
-          handleRemoveToken={handleRemoveToken}
-          handleTokenSelect={handleTokenSelect}
-          isLoadingTokens={isLoadingTokens}
-          isFilter={isFilter}
-          onFilterChange={onFilterChange}
-          selectedFilterToken={selectedFilterToken}
-          onMultiFilterChange={onMultiFilterChange}
-          selectedFilterTokens={selectedFilterTokens}
+        <ProjectSection 
+          selectedProjectId={selectedProjectId}
+          onProjectSelect={onProjectSelect}
           compact={compact}
         />
       </div>
@@ -96,21 +74,14 @@ const MetadataSection = ({
           isLoadingTags={isLoadingTags}
           getAvailableTagsForSelection={getAvailableTagsForSelection}
           compact={compact}
-          categoryFilter={categoryFilter || category} // Use either categoryFilter or category
+          categoryFilter={categoryFilter || category}
         />
       </Card>
       
       <Card className="p-4 border rounded-md flex-1">
-        <TokenSection 
-          selectedTokens={linkedTokens} 
-          handleRemoveToken={handleRemoveToken}
-          handleTokenSelect={handleTokenSelect}
-          isLoadingTokens={isLoadingTokens}
-          isFilter={isFilter}
-          onFilterChange={onFilterChange}
-          selectedFilterToken={selectedFilterToken}
-          onMultiFilterChange={onMultiFilterChange}
-          selectedFilterTokens={selectedFilterTokens}
+        <ProjectSection 
+          selectedProjectId={selectedProjectId}
+          onProjectSelect={onProjectSelect}
           compact={compact}
         />
       </Card>
