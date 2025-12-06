@@ -170,7 +170,7 @@ const ExpensesPage = () => {
                       #{claim.claim_number}
                     </TableCell>
                     <TableCell>
-                      {format(new Date(claim.created_at), "dd/MM/yyyy")}
+                      {format(new Date(claim.claim_date), "dd/MM/yyyy")}
                     </TableCell>
                     <TableCell>{getTypeBadge(claim.claim_type)}</TableCell>
                     <TableCell>{claim.description || "-"}</TableCell>
