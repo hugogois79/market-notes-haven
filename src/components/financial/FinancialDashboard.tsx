@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, DollarSign, Wallet } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Wallet, FolderOpen } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 interface FinancialDashboardProps {
@@ -36,6 +36,25 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
     },
   });
 
+  // Fetch project expenses for current year
+  const currentYear = new Date().getFullYear();
+  const { data: projectExpenses } = useQuery({
+    queryKey: ["project-expenses-dashboard", currentYear],
+    queryFn: async () => {
+      const startOfYear = `${currentYear}-01-01`;
+      const endOfYear = `${currentYear}-12-31`;
+      
+      const { data, error } = await supabase
+        .from("expense_projects")
+        .select("total_cost, start_date, created_at")
+        .gte("created_at", startOfYear)
+        .lte("created_at", endOfYear);
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Calculate KPIs
   const income = transactions?.filter(t => t.type === 'income')
     .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
@@ -48,6 +67,11 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
   
   const totalBalance = bankAccounts?.reduce(
     (sum, acc) => sum + Number(acc.current_balance), 0
+  ) || 0;
+
+  // Calculate total project expenses for the year
+  const totalProjectExpenses = projectExpenses?.reduce(
+    (sum, proj) => sum + Number(proj.total_cost || 0), 0
   ) || 0;
 
   const kpis = [
@@ -64,6 +88,14 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
       icon: TrendingDown,
       color: "text-red-600",
       bgColor: "bg-red-50",
+    },
+    {
+      title: "Despesas Projetos",
+      value: formatCurrency(totalProjectExpenses),
+      description: `${projectExpenses?.length || 0} projetos em ${currentYear}`,
+      icon: FolderOpen,
+      color: "text-purple-600",
+      bgColor: "bg-purple-50",
     },
     {
       title: "Lucro",
