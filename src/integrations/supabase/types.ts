@@ -1741,6 +1741,7 @@ export type Database = {
           created_at: string | null
           has_conclusion: boolean | null
           id: string
+          project_id: string | null
           summary: string | null
           tags: string[] | null
           title: string
@@ -1756,6 +1757,7 @@ export type Database = {
           created_at?: string | null
           has_conclusion?: boolean | null
           id?: string
+          project_id?: string | null
           summary?: string | null
           tags?: string[] | null
           title?: string
@@ -1771,6 +1773,7 @@ export type Database = {
           created_at?: string | null
           has_conclusion?: boolean | null
           id?: string
+          project_id?: string | null
           summary?: string | null
           tags?: string[] | null
           title?: string
@@ -1778,7 +1781,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "expense_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notes_tags: {
         Row: {

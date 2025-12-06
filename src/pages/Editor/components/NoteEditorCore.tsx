@@ -33,6 +33,8 @@ interface NoteEditorCoreProps {
   onDelete?: () => void;
   isDeleting?: boolean;
   canDelete?: boolean;
+  selectedProjectId?: string | null;
+  onProjectSelect?: (projectId: string | null) => void;
 }
 
 const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
@@ -60,6 +62,8 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
   onDelete,
   isDeleting = false,
   canDelete = false,
+  selectedProjectId = null,
+  onProjectSelect = () => {},
 }) => {
   const [content, setContent] = useState(currentNote.content);
   const [tagInput, setTagInput] = useState("");
@@ -180,6 +184,8 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
       onDelete={onDelete}
       isDeleting={isDeleting}
       canDelete={canDelete}
+      selectedProjectId={selectedProjectId}
+      onProjectSelect={onProjectSelect}
     />
   );
 };

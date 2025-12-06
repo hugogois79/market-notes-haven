@@ -38,6 +38,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     localTradeInfo,
     hasConclusion,
     summaryState,
+    localProjectId,
     handleTitleChange,
     handleContentChange,
     handleCategoryChange,
@@ -47,6 +48,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     handleTokensChange,
     handleAttachmentChange,
     handleManualSave,
+    handleProjectChange,
     attachments
   } = useNoteMutations({ currentNote, onSave });
 
@@ -94,6 +96,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       onDelete={onDelete}
       isDeleting={isDeleting}
       canDelete={canDelete}
+      selectedProjectId={localProjectId}
+      onProjectSelect={handleProjectChange}
     />
   );
 };

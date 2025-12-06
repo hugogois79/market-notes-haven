@@ -15,6 +15,7 @@ export const useBasicNoteFields = (currentNote: Note) => {
   const [localCategory, setLocalCategory] = useState(currentNote.category || "General");
   const [localTradeInfo, setLocalTradeInfo] = useState<TradeInfo | undefined>(currentNote.tradeInfo);
   const [hasConclusion, setHasConclusion] = useState(currentNote.hasConclusion ?? true);
+  const [localProjectId, setLocalProjectId] = useState<string | null>(currentNote.project_id || null);
   const [summaryState, setSummaryState] = useState({
     summary: currentNote.summary || "",
     hasConclusion: currentNote.hasConclusion ?? true
@@ -27,6 +28,7 @@ export const useBasicNoteFields = (currentNote: Note) => {
     setLocalCategory(currentNote.category || "General");
     setLocalTradeInfo(currentNote.tradeInfo);
     setHasConclusion(currentNote.hasConclusion ?? true);
+    setLocalProjectId(currentNote.project_id || null);
     
     // Update summary state
     setSummaryState({
@@ -60,15 +62,23 @@ export const useBasicNoteFields = (currentNote: Note) => {
     });
   };
 
+  const handleProjectChange = (projectId: string | null) => {
+    console.log("useBasicNoteFields: Project change:", projectId);
+    setLocalProjectId(projectId);
+    return projectId;
+  };
+
   return {
     localTitle,
     localCategory,
     localTradeInfo,
     hasConclusion,
     summaryState,
+    localProjectId,
     handleTitleChange,
     handleCategoryChange,
     handleTradeInfoChange,
-    handleSummaryGenerated
+    handleSummaryGenerated,
+    handleProjectChange
   };
 };
