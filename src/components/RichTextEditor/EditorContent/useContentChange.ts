@@ -33,10 +33,7 @@ export const useContentChange = ({
 
   // Handle content change event
   const handleContentChange = useCallback((event?: React.FormEvent) => {
-    if (event) {
-      // Prevent default browser handling for custom processing
-      event.preventDefault();
-    }
+    // Don't prevent default - allow normal input/paste behavior
   
     if (editorRef.current) {
       // Re-establish editability every time content changes
