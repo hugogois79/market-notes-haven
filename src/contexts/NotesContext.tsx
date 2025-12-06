@@ -67,7 +67,8 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
         title: title, // Ensure title is preserved
         content: note.content !== undefined ? note.content : existingNote?.content || "",
         tags: processedTags, // Ensure tags are preserved and processed
-        attachments: Array.isArray(note.attachments) ? note.attachments : existingNote?.attachments || []
+        attachments: Array.isArray(note.attachments) ? note.attachments : existingNote?.attachments || [],
+        project_id: note.project_id !== undefined ? note.project_id : existingNote?.project_id // Preserve project_id
       };
       
       if (note.id.toString().startsWith('temp-')) {
