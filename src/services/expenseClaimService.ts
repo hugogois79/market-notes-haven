@@ -123,6 +123,22 @@ export const expenseClaimService = {
     return data as ExpenseClaim;
   },
 
+  // Cancel submission (revert to draft)
+  async cancelSubmission(id: string) {
+    const { data, error } = await supabase
+      .from('expense_claims')
+      .update({
+        status: 'rascunho',
+        submission_date: null,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as ExpenseClaim;
+  },
+
   // Delete expense claim
   async deleteExpenseClaim(id: string) {
     const { error } = await supabase
