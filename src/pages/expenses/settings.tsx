@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { expenseRequesterService, ExpenseRequester } from "@/services/expenseRequesterService";
-import { financialProjectService, FinancialProject } from "@/services/financialProjectService";
+import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import {
   Command,
@@ -58,8 +58,16 @@ const ExpenseSettingsPage = () => {
   });
 
   const { data: projects = [] } = useQuery({
-    queryKey: ["financial-projects"],
-    queryFn: () => financialProjectService.getProjects(),
+    queryKey: ["expense-projects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expense_projects")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
   });
 
   const createMutation = useMutation({
