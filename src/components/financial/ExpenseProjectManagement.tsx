@@ -241,7 +241,14 @@ export default function ExpenseProjectManagement() {
             ) : (
               projects?.map((project) => (
                 <TableRow key={project.id}>
-                  <TableCell className="font-medium">{project.name}</TableCell>
+                  <TableCell>
+                    <span 
+                      className="font-medium px-2 py-1 rounded text-white"
+                      style={{ backgroundColor: project.color }}
+                    >
+                      {project.name}
+                    </span>
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
                     {project.description || "-"}
                   </TableCell>
