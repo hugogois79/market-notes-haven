@@ -56,6 +56,7 @@ const NewExpensePage = () => {
   
   const [claimType, setClaimType] = useState<"reembolso" | "justificacao_cartao">("reembolso");
   const [description, setDescription] = useState("");
+  const [claimDate, setClaimDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [requesterId, setRequesterId] = useState<string>("");
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
@@ -248,6 +249,7 @@ const NewExpensePage = () => {
         const claim = await createClaimMutation.mutateAsync({
           claim_type: claimType,
           description,
+          claim_date: claimDate,
           status: "rascunho",
         });
         claimId = claim.id;
@@ -394,8 +396,8 @@ const NewExpensePage = () => {
         <CardHeader>
           <CardTitle>Tipo de Requisição</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="requester">Requisitante *</Label>
               <Select value={requesterId} onValueChange={setRequesterId}>
@@ -413,38 +415,49 @@ const NewExpensePage = () => {
             </div>
 
             <div>
-              <RadioGroup
-                value={claimType}
-                onValueChange={(value) =>
-                  setClaimType(value as "reembolso" | "justificacao_cartao")
-                }
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="reembolso" id="reembolso" />
-                  <Label htmlFor="reembolso">Reembolso de Despesas</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem
-                    value="justificacao_cartao"
-                    id="justificacao_cartao"
-                  />
-                  <Label htmlFor="justificacao_cartao">
-                    Justificação de Cartão de Crédito
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            <div>
-              <Label htmlFor="description">Descrição Geral</Label>
-              <Textarea
-                id="description"
-                placeholder="ex: Viagem a Lisboa, Material escritório"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+              <Label htmlFor="claimDate">Data da Requisição *</Label>
+              <Input
+                id="claimDate"
+                type="date"
+                value={claimDate}
+                onChange={(e) => setClaimDate(e.target.value)}
                 className="mt-2"
               />
             </div>
+          </div>
+
+          <div>
+            <RadioGroup
+              value={claimType}
+              onValueChange={(value) =>
+                setClaimType(value as "reembolso" | "justificacao_cartao")
+              }
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="reembolso" id="reembolso" />
+                <Label htmlFor="reembolso">Reembolso de Despesas</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem
+                  value="justificacao_cartao"
+                  id="justificacao_cartao"
+                />
+                <Label htmlFor="justificacao_cartao">
+                  Justificação de Cartão de Crédito
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div>
+            <Label htmlFor="description">Descrição Geral</Label>
+            <Textarea
+              id="description"
+              placeholder="ex: Viagem a Lisboa, Material escritório"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="mt-2"
+            />
           </div>
         </CardContent>
       </Card>
