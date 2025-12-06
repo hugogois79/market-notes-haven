@@ -733,7 +733,7 @@ const ExpenseDetailPage = () => {
                 </div>
                 <div class="info-card">
                   <div class="info-card-label">Submission Date</div>
-                  <div class="info-card-value">${claim.submission_date ? format(new Date(claim.submission_date), "dd/MM/yyyy") : format(new Date(claim.created_at), "dd/MM/yyyy")}</div>
+                  <div class="info-card-value">${format(new Date(claim.claim_date), "dd/MM/yyyy")}</div>
                 </div>
                 <div class="info-card">
                   <div class="info-card-label">Request Type</div>
