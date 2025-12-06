@@ -536,27 +536,36 @@ export type Database = {
           color: string | null
           created_at: string
           description: string | null
+          end_date: string | null
           id: string
           is_active: boolean
           name: string
+          start_date: string | null
+          total_cost: number | null
           updated_at: string
         }
         Insert: {
           color?: string | null
           created_at?: string
           description?: string | null
+          end_date?: string | null
           id?: string
           is_active?: boolean
           name: string
+          start_date?: string | null
+          total_cost?: number | null
           updated_at?: string
         }
         Update: {
           color?: string | null
           created_at?: string
           description?: string | null
+          end_date?: string | null
           id?: string
           is_active?: boolean
           name?: string
+          start_date?: string | null
+          total_cost?: number | null
           updated_at?: string
         }
         Relationships: []
