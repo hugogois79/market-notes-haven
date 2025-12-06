@@ -1,13 +1,21 @@
 
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Tag, ChevronRight } from "lucide-react";
+import { Calendar, Tag, ChevronRight, FolderOpen } from "lucide-react";
 import { Note, Token } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { getTokensForNote } from "@/services/tokenService";
 import TokenBadge from "./TokenBadge";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+interface ExpenseProject {
+  id: string;
+  name: string;
+  color: string | null;
+}
 
 interface NoteCardProps {
   note: Note;
@@ -27,6 +35,22 @@ const NoteCard = ({
   const navigate = useNavigate();
   const [tokens, setTokens] = useState<Token[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Fetch project info if note has project_id
+  const { data: project } = useQuery({
+    queryKey: ['expense-project', note.project_id],
+    queryFn: async () => {
+      if (!note.project_id) return null;
+      const { data, error } = await supabase
+        .from('expense_projects')
+        .select('id, name, color')
+        .eq('id', note.project_id)
+        .single();
+      if (error) return null;
+      return data as ExpenseProject;
+    },
+    enabled: !!note.project_id,
+  });
   
   useEffect(() => {
     const fetchTokens = async () => {
@@ -149,6 +173,20 @@ const NoteCard = ({
             </div>
             
             <div className="flex flex-wrap items-center gap-1 mt-1.5">
+              {/* Project Badge */}
+              {project && (
+                <Badge 
+                  className="text-[9px] py-0 px-1.5 flex items-center gap-0.5"
+                  style={{ 
+                    backgroundColor: project.color || '#0A3A5C',
+                    color: 'white'
+                  }}
+                >
+                  <FolderOpen size={8} />
+                  {project.name}
+                </Badge>
+              )}
+              
               {note.tags && note.tags.length > 0 && note.tags.map((tagId) => (
                 <Badge 
                   key={tagId} 
@@ -201,8 +239,22 @@ const NoteCard = ({
               <span>{formatDate(note.updatedAt || new Date())}</span>
             </div>
             
-            {/* Combined tags and tokens section */}
+            {/* Combined project, tags and tokens section */}
             <div className="flex flex-wrap items-center gap-1 w-full mt-1">
+              {/* Project Badge */}
+              {project && (
+                <Badge 
+                  className="text-xs py-0 px-1.5 flex items-center gap-1"
+                  style={{ 
+                    backgroundColor: project.color || '#0A3A5C',
+                    color: 'white'
+                  }}
+                >
+                  <FolderOpen size={8} />
+                  {project.name}
+                </Badge>
+              )}
+              
               {/* Tags */}
               {note.tags && note.tags.length > 0 && note.tags.map((tagId) => (
                 <Badge 
