@@ -210,7 +210,8 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
         attachment_url: attachments.length > 0 ? attachments[0] : null, // For backward compatibility
         attachments: attachments, // Include all attachments (up to 20)
         trade_info: tradeInfoToJson(note.tradeInfo), // Convert TradeInfo to JSON
-        has_conclusion: note.hasConclusion
+        has_conclusion: note.hasConclusion,
+        project_id: note.project_id // Include project_id
       })
       .eq('id', note.id)
       .select()
