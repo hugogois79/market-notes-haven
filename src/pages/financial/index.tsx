@@ -6,7 +6,7 @@ import CompanySelector from "@/components/financial/CompanySelector";
 import FinancialDashboard from "@/components/financial/FinancialDashboard";
 import CompanyManagement from "@/components/financial/CompanyManagement";
 import BankAccountManagement from "@/components/financial/BankAccountManagement";
-import ProjectManagement from "@/components/financial/ProjectManagement";
+import ExpenseProjectManagement from "@/components/financial/ExpenseProjectManagement";
 import TransactionManagement from "@/components/financial/TransactionManagement";
 import LoanManagement from "@/components/financial/LoanManagement";
 import { Building2, TrendingUp, Briefcase, CreditCard, PiggyBank, Settings } from "lucide-react";
@@ -65,7 +65,7 @@ export default function FinancialPage() {
           </div>
         ) : (
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className={isMobile ? "flex w-full overflow-x-auto overflow-y-hidden whitespace-nowrap pb-px" : "grid w-full grid-cols-5"}>
+            <TabsList className={isMobile ? "flex w-full overflow-x-auto overflow-y-hidden whitespace-nowrap pb-px" : "grid w-full grid-cols-4"}>
               <TabsTrigger value="dashboard" className="flex-shrink-0">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Dashboard
@@ -73,10 +73,6 @@ export default function FinancialPage() {
               <TabsTrigger value="transactions" className="flex-shrink-0">
                 <CreditCard className="h-4 w-4 mr-2" />
                 Transactions
-              </TabsTrigger>
-              <TabsTrigger value="projects" className="flex-shrink-0">
-                <Briefcase className="h-4 w-4 mr-2" />
-                Projects
               </TabsTrigger>
               <TabsTrigger value="loans" className="flex-shrink-0">
                 <PiggyBank className="h-4 w-4 mr-2" />
@@ -100,12 +96,6 @@ export default function FinancialPage() {
               )}
             </TabsContent>
 
-            <TabsContent value="projects" className="space-y-4">
-              {selectedCompanyId && (
-                <ProjectManagement companyId={selectedCompanyId} />
-              )}
-            </TabsContent>
-
             <TabsContent value="loans" className="space-y-4">
               {selectedCompanyId && (
                 <LoanManagement companyId={selectedCompanyId} />
@@ -123,6 +113,10 @@ export default function FinancialPage() {
                     <PiggyBank className="h-4 w-4 mr-2" />
                     Accounts
                   </TabsTrigger>
+                  <TabsTrigger value="projects">
+                    <Briefcase className="h-4 w-4 mr-2" />
+                    Projects
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="companies" className="space-y-4 mt-4">
@@ -133,6 +127,10 @@ export default function FinancialPage() {
                   {selectedCompanyId && (
                     <BankAccountManagement companyId={selectedCompanyId} />
                   )}
+                </TabsContent>
+
+                <TabsContent value="projects" className="space-y-4 mt-4">
+                  <ExpenseProjectManagement />
                 </TabsContent>
               </Tabs>
             </TabsContent>
