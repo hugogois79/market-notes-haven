@@ -68,6 +68,7 @@ const EditExpensePage = () => {
   
   const [claimType, setClaimType] = useState<"reembolso" | "justificacao_cartao">("reembolso");
   const [description, setDescription] = useState("");
+  const [claimDate, setClaimDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [requesterId, setRequesterId] = useState<string>("");
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
@@ -179,6 +180,7 @@ const EditExpensePage = () => {
     if (claim) {
       setClaimType(claim.claim_type as "reembolso" | "justificacao_cartao");
       setDescription(claim.description || "");
+      setClaimDate(claim.claim_date || format(new Date(), "yyyy-MM-dd"));
       setRequesterId(claim.requester_id || "");
     }
   }, [claim]);
@@ -304,6 +306,7 @@ const EditExpensePage = () => {
     mutationFn: () =>
       expenseClaimService.updateExpenseClaim(id!, {
         description,
+        claim_date: claimDate,
         requester_id: requesterId || null,
         status: "rascunho",
       }),
@@ -495,20 +498,33 @@ const EditExpensePage = () => {
           <CardTitle>Tipo de Requisição</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="requester">Requisitante *</Label>
-            <Select value={requesterId} onValueChange={setRequesterId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o requisitante" />
-              </SelectTrigger>
-              <SelectContent>
-                {requesters?.map((requester) => (
-                  <SelectItem key={requester.id} value={requester.id}>
-                    {requester.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="requester">Requisitante *</Label>
+              <Select value={requesterId} onValueChange={setRequesterId}>
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Selecione o requisitante" />
+                </SelectTrigger>
+                <SelectContent>
+                  {requesters?.map((requester) => (
+                    <SelectItem key={requester.id} value={requester.id}>
+                      {requester.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="claimDate">Data da Requisição *</Label>
+              <Input
+                id="claimDate"
+                type="date"
+                value={claimDate}
+                onChange={(e) => setClaimDate(e.target.value)}
+                className="mt-2"
+              />
+            </div>
           </div>
 
           <RadioGroup value={claimType} onValueChange={(value: any) => setClaimType(value)}>
