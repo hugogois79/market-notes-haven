@@ -100,10 +100,10 @@ const ProjectSection: React.FC<ProjectSectionProps> = ({
         <SelectTrigger className="w-[180px] h-8">
           <SelectValue placeholder="Selecionar projeto..." />
         </SelectTrigger>
-        <SelectContent className="bg-popover border border-border shadow-lg">
+        <SelectContent className="z-[100] bg-white dark:bg-gray-900 border border-border shadow-lg">
           <SelectItem value="none">Sem projeto</SelectItem>
           {!isLoading && projects.map(project => (
-            <SelectItem key={project.id} value={project.id}>
+            <SelectItem key={project.id} value={project.id} className="bg-white dark:bg-gray-900">
               {project.name}
             </SelectItem>
           ))}
