@@ -17,6 +17,7 @@ export interface DbNote {
   attachments: string[] | null; // Added attachments array field
   trade_info: Json | null; // Changed from TradeInfo to Json for Supabase compatibility
   has_conclusion: boolean | null;
+  project_id: string | null; // Added project_id field
 }
 
 // Type for our user profile
@@ -58,6 +59,7 @@ export const dbNoteToNote = (dbNote: DbNote): Note => ({
   attachments: dbNote.attachments || (dbNote.attachment_url ? [dbNote.attachment_url] : []), // Handle attachments array
   tradeInfo: jsonToTradeInfo(dbNote.trade_info), // Convert JSON to TradeInfo
   hasConclusion: dbNote.has_conclusion, // Include hasConclusion field
+  project_id: dbNote.project_id || undefined, // Include project_id
 });
 
 // Convert app note to database format
@@ -73,6 +75,7 @@ export const noteToDbNote = (note: Note): Omit<DbNote, 'created_at' | 'updated_a
   attachments: note.attachments || [],  // Add attachments array to database
   trade_info: tradeInfoToJson(note.tradeInfo), // Convert TradeInfo to JSON
   has_conclusion: note.hasConclusion || null, // Add the has_conclusion field
+  project_id: note.project_id || null, // Add project_id field
 });
 
 // Fetch all notes from Supabase
