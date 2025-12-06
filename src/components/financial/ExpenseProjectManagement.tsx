@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ExpenseProject {
   id: string;
@@ -33,8 +34,14 @@ interface ExpenseProject {
   start_date: string | null;
   end_date: string | null;
   total_cost: number | null;
+  associated_companies: string[] | null;
   created_at: string;
   updated_at: string;
+}
+
+interface Company {
+  id: string;
+  name: string;
 }
 
 export default function ExpenseProjectManagement() {
@@ -48,6 +55,7 @@ export default function ExpenseProjectManagement() {
     start_date: "",
     end_date: "",
     total_cost: "",
+    associated_companies: [] as string[],
   });
   const queryClient = useQueryClient();
 
@@ -64,6 +72,19 @@ export default function ExpenseProjectManagement() {
     },
   });
 
+  const { data: companies } = useQuery({
+    queryKey: ["companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, name")
+        .order("name");
+      
+      if (error) throw error;
+      return data as Company[];
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const { error } = await supabase
@@ -76,6 +97,7 @@ export default function ExpenseProjectManagement() {
           start_date: data.start_date || null,
           end_date: data.end_date || null,
           total_cost: data.total_cost ? parseFloat(data.total_cost) : null,
+          associated_companies: data.associated_companies.length > 0 ? data.associated_companies : null,
         });
       
       if (error) throw error;
@@ -102,6 +124,7 @@ export default function ExpenseProjectManagement() {
           start_date: data.start_date || null,
           end_date: data.end_date || null,
           total_cost: data.total_cost ? parseFloat(data.total_cost) : null,
+          associated_companies: data.associated_companies.length > 0 ? data.associated_companies : null,
         })
         .eq("id", id);
       
@@ -146,6 +169,7 @@ export default function ExpenseProjectManagement() {
       start_date: "",
       end_date: "",
       total_cost: "",
+      associated_companies: [],
     });
   };
 
@@ -158,6 +182,7 @@ export default function ExpenseProjectManagement() {
       start_date: "",
       end_date: "",
       total_cost: "",
+      associated_companies: [],
     });
     setEditingProject(null);
     setDialogOpen(true);
@@ -172,9 +197,26 @@ export default function ExpenseProjectManagement() {
       start_date: project.start_date || "",
       end_date: project.end_date || "",
       total_cost: project.total_cost?.toString() || "",
+      associated_companies: project.associated_companies || [],
     });
     setEditingProject(project);
     setDialogOpen(true);
+  };
+
+  const toggleCompany = (companyId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      associated_companies: prev.associated_companies.includes(companyId)
+        ? prev.associated_companies.filter(id => id !== companyId)
+        : [...prev.associated_companies, companyId]
+    }));
+  };
+
+  const getCompanyNames = (companyIds: string[] | null) => {
+    if (!companyIds || companyIds.length === 0) return "-";
+    return companyIds
+      .map(id => companies?.find(c => c.id === id)?.name || id)
+      .join(", ");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -223,6 +265,7 @@ export default function ExpenseProjectManagement() {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Descrição</TableHead>
+              <TableHead>Empresas</TableHead>
               <TableHead>Data Início</TableHead>
               <TableHead>Data Fim</TableHead>
               <TableHead>Custo Total</TableHead>
@@ -234,13 +277,13 @@ export default function ExpenseProjectManagement() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
+                <TableCell colSpan={9} className="text-center py-8">
                   A carregar...
                 </TableCell>
               </TableRow>
             ) : projects?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   Nenhum projeto registado
                 </TableCell>
               </TableRow>
@@ -248,8 +291,11 @@ export default function ExpenseProjectManagement() {
               projects?.map((project) => (
                 <TableRow key={project.id}>
                   <TableCell className="font-medium">{project.name}</TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground max-w-[150px] truncate">
                     {project.description || "-"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                    {getCompanyNames(project.associated_companies)}
                   </TableCell>
                   <TableCell>{formatDate(project.start_date)}</TableCell>
                   <TableCell>{formatDate(project.end_date)}</TableCell>
@@ -382,6 +428,25 @@ export default function ExpenseProjectManagement() {
               />
               <Label htmlFor="is_active">Ativo</Label>
             </div>
+            {companies && companies.length > 0 && (
+              <div className="space-y-2">
+                <Label>Empresas Associadas</Label>
+                <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
+                  {companies.map((company) => (
+                    <div key={company.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`company-${company.id}`}
+                        checked={formData.associated_companies.includes(company.id)}
+                        onCheckedChange={() => toggleCompany(company.id)}
+                      />
+                      <Label htmlFor={`company-${company.id}`} className="font-normal cursor-pointer">
+                        {company.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={handleCloseDialog}>
                 Cancelar
