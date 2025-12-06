@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,16 +12,22 @@ import {
   X,
   FolderOpenDot,
   FilterX,
-  Coins,
+  FolderOpen,
   ChevronDown,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import NoteCard from "@/components/NoteCard";
-import { Note, Tag as TagType, Token } from "@/types";
+import { Note, Tag as TagType } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { fetchTags } from "@/services/tag";
-import { fetchTokens } from "@/services/tokenService";
 import { useNotes } from "@/contexts/NotesContext";
+import { supabase } from "@/integrations/supabase/client";
+
+interface ExpenseProject {
+  id: string;
+  name: string;
+  color: string | null;
+}
 import TagBadge from "@/components/ui/tag-badge";
 import {
   DropdownMenu,
@@ -47,52 +53,43 @@ const Notes = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
+  const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [tokenFilteredNotes, setTokenFilteredNotes] = useState<Record<string, string[]>>({});
-  const [tokenFilteringComplete, setTokenFilteringComplete] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [tagSearchQuery, setTagSearchQuery] = useState("");
-  const [tokenSearchQuery, setTokenSearchQuery] = useState("");
+  const [projectSearchQuery, setProjectSearchQuery] = useState("");
+
+  // Fetch projects for filter
+  const { data: projects = [], isLoading: isLoadingProjects } = useQuery({
+    queryKey: ["expense-projects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('expense_projects')
+        .select('id, name, color')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data as ExpenseProject[];
+    },
+  });
 
   const { data: tags = [], isLoading: isLoadingTags } = useQuery({
     queryKey: ["tags"],
     queryFn: fetchTags,
   });
 
-  const { data: tokens = [], isLoading: isLoadingTokens } = useQuery({
-    queryKey: ["tokens"],
-    queryFn: fetchTokens,
-  });
 
-  useEffect(() => {
-    setTokenFilteredNotes({});
-    setTokenFilteringComplete(selectedTokens.length === 0);
-  }, [selectedTokens]);
 
   const tagMapping = tags.reduce((acc: Record<string, string>, tag: TagType) => {
     acc[tag.id] = tag.name;
     return acc;
   }, {});
 
-  const handleTokenMatch = useCallback((noteId: string, tokenId: string, matches: boolean) => {
-    if (matches) {
-      setTokenFilteredNotes(prev => ({
-        ...prev,
-        [tokenId]: [...(prev[tokenId] || []), noteId]
-      }));
-    }
-  }, []);
-
   const categories = Array.from(
     new Set(contextNotes.filter(note => note.category).map(note => note.category))
   );
-
-  const selectedTokenNames = tokens
-    .filter(token => selectedTokens.includes(token.id))
-    .map(token => token.symbol);
 
   const filteredNotes = useMemo(() => {
     if (!contextNotes || contextNotes.length === 0) return [];
@@ -112,20 +109,13 @@ const Notes = () => {
         selectedTags.length === 0 || 
         (note.tags && note.tags.some(tag => selectedTags.includes(tag)));
 
-      let tokenMatch = true;
-      if (selectedTokens.length > 0) {
-        if (!tokenFilteringComplete) {
-          tokenMatch = true;
-        } else {
-          tokenMatch = selectedTokens.some(tokenId => 
-            tokenFilteredNotes[tokenId]?.includes(note.id)
-          );
-        }
-      }
+      const projectMatch =
+        selectedProjects.length === 0 || 
+        (note.project_id && selectedProjects.includes(note.project_id));
       
-      return searchMatch && categoryMatch && tagMatch && tokenMatch;
+      return searchMatch && categoryMatch && tagMatch && projectMatch;
     });
-  }, [contextNotes, searchQuery, selectedCategories, selectedTags, selectedTokens, tokenFilteringComplete, tokenFilteredNotes]);
+  }, [contextNotes, searchQuery, selectedCategories, selectedTags, selectedProjects]);
 
   const handleCreateNote = () => {
     navigate("/editor/new");
@@ -147,11 +137,11 @@ const Notes = () => {
     );
   };
 
-  const toggleToken = (tokenId: string) => {
-    setSelectedTokens(prev => 
-      prev.includes(tokenId)
-        ? prev.filter(t => t !== tokenId)
-        : [...prev, tokenId]
+  const toggleProject = (projectId: string) => {
+    setSelectedProjects(prev => 
+      prev.includes(projectId)
+        ? prev.filter(p => p !== projectId)
+        : [...prev, projectId]
     );
   };
 
@@ -180,41 +170,28 @@ const Notes = () => {
     category.toLowerCase().includes(categorySearchQuery.toLowerCase())
   );
 
-  const filteredTokens = tokens.filter(
-    token => !tokenSearchQuery || 
-    token.symbol.toLowerCase().includes(tokenSearchQuery.toLowerCase()) ||
-    token.name.toLowerCase().includes(tokenSearchQuery.toLowerCase())
+  const filteredProjects = projects.filter(
+    project => !projectSearchQuery || 
+    project.name.toLowerCase().includes(projectSearchQuery.toLowerCase())
   );
 
   const handleClearFilters = () => {
     setSearchQuery("");
     setSelectedCategories([]);
     setSelectedTags([]);
-    setSelectedTokens([]);
+    setSelectedProjects([]);
   };
 
   const areFiltersActive =
     searchQuery !== "" || 
     selectedCategories.length > 0 || 
     selectedTags.length > 0 || 
-    selectedTokens.length > 0;
+    selectedProjects.length > 0;
 
-  useEffect(() => {
-    if (selectedTokens.length > 0) {
-      const allTokensFiltered = selectedTokens.every(
-        tokenId => tokenId in tokenFilteredNotes
-      );
-      
-      if (allTokensFiltered) {
-        setTokenFilteringComplete(true);
-      }
-    }
-  }, [tokenFilteredNotes, selectedTokens]);
-  
   const filteredNoteCount = filteredNotes.length;
 
   const selectedTagObjects = tags.filter(tag => selectedTags.includes(tag.id));
-  const selectedTokenObjects = tokens.filter(token => selectedTokens.includes(token.id));
+  const selectedProjectObjects = projects.filter(project => selectedProjects.includes(project.id));
 
   return (
     <div className="container mx-auto py-4">
@@ -386,58 +363,58 @@ const Notes = () => {
               size="sm"
               className="h-9 gap-1"
             >
-              <Coins size={14} />
-              <span>Tokens</span>
-              {selectedTokens.length > 0 && (
+              <FolderOpen size={14} />
+              <span>Projetos</span>
+              {selectedProjects.length > 0 && (
                 <Badge className="ml-1 h-5 px-1.5">
-                  {selectedTokens.length}
+                  {selectedProjects.length}
                 </Badge>
               )}
               <ChevronDown size={14} className="ml-1 opacity-70" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-[220px]">
-            <DropdownMenuLabel>Filter by Tokens</DropdownMenuLabel>
+            <DropdownMenuLabel>Filtrar por Projeto</DropdownMenuLabel>
             <div className="px-2 py-1.5">
               <div className="relative mb-2">
                 <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
                 <Input
-                  placeholder="Search tokens..."
-                  value={tokenSearchQuery}
-                  onChange={(e) => setTokenSearchQuery(e.target.value)}
+                  placeholder="Pesquisar projetos..."
+                  value={projectSearchQuery}
+                  onChange={(e) => setProjectSearchQuery(e.target.value)}
                   className="pl-7 h-8 text-xs"
                 />
               </div>
             </div>
             <div className="max-h-40 overflow-y-auto">
-              {filteredTokens.length === 0 ? (
+              {filteredProjects.length === 0 ? (
                 <div className="text-xs text-center py-2 text-muted-foreground">
-                  {tokenSearchQuery ? "No matching tokens" : "No tokens available"}
+                  {projectSearchQuery ? "Nenhum projeto encontrado" : "Nenhum projeto disponível"}
                 </div>
               ) : (
-                filteredTokens.map(token => (
+                filteredProjects.map(project => (
                   <DropdownMenuCheckboxItem
-                    key={token.id}
-                    checked={selectedTokens.includes(token.id)}
-                    onCheckedChange={() => toggleToken(token.id)}
+                    key={project.id}
+                    checked={selectedProjects.includes(project.id)}
+                    onCheckedChange={() => toggleProject(project.id)}
                   >
                     <div className="flex items-center">
-                      <Coins size={14} className="mr-2 text-muted-foreground" />
-                      {token.symbol}
+                      <FolderOpen size={14} className="mr-2 text-muted-foreground" />
+                      {project.name}
                     </div>
                   </DropdownMenuCheckboxItem>
                 ))
               )}
             </div>
-            {selectedTokens.length > 0 && (
+            {selectedProjects.length > 0 && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
-                  onClick={() => setSelectedTokens([])} 
+                  onClick={() => setSelectedProjects([])} 
                   className="justify-center text-red-500"
                 >
                   <X size={14} className="mr-2" />
-                  Clear tokens
+                  Limpar projetos
                 </DropdownMenuItem>
               </>
             )}
@@ -501,20 +478,20 @@ const Notes = () => {
             </Badge>
           ))}
           
-          {selectedTokens.map(tokenId => {
-            const token = tokens.find(t => t.id === tokenId);
+          {selectedProjects.map(projectId => {
+            const project = projects.find(p => p.id === projectId);
             return (
               <Badge
-                key={tokenId}
+                key={projectId}
                 variant="outline"
                 className="flex items-center gap-1 bg-muted/40"
               >
-                <Coins size={12} />
-                {token?.symbol || tokenId}
+                <FolderOpen size={12} />
+                {project?.name || projectId}
                 <X
                   size={12}
                   className="cursor-pointer ml-1"
-                  onClick={() => toggleToken(tokenId)}
+                  onClick={() => toggleProject(projectId)}
                 />
               </Badge>
             );
@@ -592,8 +569,6 @@ const Notes = () => {
                 note={note}
                 className={viewMode === "list" ? "flex-row" : ""}
                 tagMapping={tagMapping}
-                selectedTokenIds={selectedTokens}
-                onTokenMatch={handleTokenMatch}
               />
             ))}
           </div>
