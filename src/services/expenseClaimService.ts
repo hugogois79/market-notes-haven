@@ -23,6 +23,7 @@ export interface Expense {
   supplier: string;
   amount: number;
   project_id: string | null;
+  category_id: string | null;
   receipt_image_url: string | null;
   created_at: string;
 }
@@ -160,6 +161,7 @@ export const expenseClaimService = {
     supplier: string;
     amount: number;
     project_id?: string | null;
+    category_id?: string | null;
     receipt_image_url?: string | null;
   }) {
     const { data, error } = await supabase
