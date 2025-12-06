@@ -33,6 +33,7 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
         attachments: changes.attachments !== undefined ? 
           (Array.isArray(changes.attachments) ? changes.attachments : 
             (changes.attachments ? [changes.attachments] : [])) : undefined,
+        project_id: changes.project_id !== undefined ? changes.project_id : undefined,
       };
       
       console.log("Saving note with validated changes:", validatedChanges);
