@@ -12,7 +12,7 @@ const corsHeaders = {
 
 // Input validation schema
 const requestSchema = z.object({
-  content: z.string().min(1, "Content cannot be empty").max(200000, "Content too long"),
+  content: z.string().min(1, "Content cannot be empty"),
   noteId: z.string().uuid("Invalid note ID format").optional(),
   maxLength: z.number().min(100).max(2000).default(500),
   summarizeTradeChat: z.boolean().default(false),
@@ -44,7 +44,7 @@ serve(async (req) => {
       );
     }
     
-    const { 
+    let { 
       content, 
       noteId, 
       maxLength, 
@@ -52,7 +52,14 @@ serve(async (req) => {
       formatAsBulletPoints,
       generateTradeInfo
     } = validationResult.data;
-    // Define the system prompt based on what we're summarizing
+    
+    // Truncate content if too long (OpenAI has token limits)
+    const MAX_CONTENT_LENGTH = 100000;
+    if (content.length > MAX_CONTENT_LENGTH) {
+      console.log(`Content truncated from ${content.length} to ${MAX_CONTENT_LENGTH} characters`);
+      content = content.substring(0, MAX_CONTENT_LENGTH);
+    }
+    
     let systemPrompt = summarizeTradeChat
       ? `You are an AI assistant specializing in trading journal analysis. Summarize the following trading journal entries, focusing on key insights, strategies, and patterns.`
       : `You are an AI assistant that summarizes content. Create a concise summary of the provided text.`;
