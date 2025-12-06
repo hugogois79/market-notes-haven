@@ -536,7 +536,6 @@ export type Database = {
       }
       expense_projects: {
         Row: {
-          associated_companies: string[] | null
           color: string | null
           created_at: string
           description: string | null
@@ -549,7 +548,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          associated_companies?: string[] | null
           color?: string | null
           created_at?: string
           description?: string | null
@@ -562,7 +560,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          associated_companies?: string[] | null
           color?: string | null
           created_at?: string
           description?: string | null
