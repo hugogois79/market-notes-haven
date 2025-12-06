@@ -57,14 +57,14 @@ const ExpenseDetailPage = () => {
   });
 
   const { data: projects } = useQuery({
-    queryKey: ["projects", expenses],
+    queryKey: ["expense-projects", expenses],
     queryFn: async () => {
       if (!expenses || expenses.length === 0) return [];
       const projectIds = [...new Set(expenses.map(e => e.project_id).filter(Boolean))];
       if (projectIds.length === 0) return [];
       
       const { data, error } = await supabase
-        .from("financial_projects")
+        .from("expense_projects")
         .select("*")
         .in("id", projectIds);
       if (error) throw error;

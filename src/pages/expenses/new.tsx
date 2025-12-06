@@ -78,12 +78,12 @@ const NewExpensePage = () => {
 
   // Get projects for dropdown - filtered by requester
   const { data: projects } = useQuery({
-    queryKey: ["financial-projects", requesterId],
+    queryKey: ["expense-projects", requesterId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("financial_projects")
+        .from("expense_projects")
         .select("id, name")
-        .eq("status", "active");
+        .eq("is_active", true);
       if (error) throw error;
       
       // Filter by requester's assigned projects
