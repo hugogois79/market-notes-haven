@@ -9,7 +9,8 @@ import BankAccountManagement from "@/components/financial/BankAccountManagement"
 import ExpenseProjectManagement from "@/components/financial/ExpenseProjectManagement";
 import TransactionManagement from "@/components/financial/TransactionManagement";
 import LoanManagement from "@/components/financial/LoanManagement";
-import { Building2, TrendingUp, Briefcase, CreditCard, PiggyBank, Settings, FolderKanban } from "lucide-react";
+import CategoryManagement from "@/components/financial/CategoryManagement";
+import { Building2, TrendingUp, Briefcase, CreditCard, PiggyBank, Settings, FolderKanban, Tag } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function FinancialPage() {
@@ -125,6 +126,10 @@ export default function FinancialPage() {
                     <Briefcase className="h-4 w-4 mr-2" />
                     Projects
                   </TabsTrigger>
+                  <TabsTrigger value="categories">
+                    <Tag className="h-4 w-4 mr-2" />
+                    Categories
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="companies" className="space-y-4 mt-4">
@@ -139,6 +144,10 @@ export default function FinancialPage() {
 
                 <TabsContent value="projects" className="space-y-4 mt-4">
                   <ExpenseProjectManagement />
+                </TabsContent>
+
+                <TabsContent value="categories" className="space-y-4 mt-4">
+                  <CategoryManagement />
                 </TabsContent>
               </Tabs>
             </TabsContent>

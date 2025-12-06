@@ -447,6 +447,7 @@ export type Database = {
       }
       expense_categories: {
         Row: {
+          assigned_project_ids: string[] | null
           color: string | null
           created_at: string
           description: string | null
@@ -458,6 +459,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          assigned_project_ids?: string[] | null
           color?: string | null
           created_at?: string
           description?: string | null
@@ -469,6 +471,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          assigned_project_ids?: string[] | null
           color?: string | null
           created_at?: string
           description?: string | null
