@@ -220,7 +220,7 @@ export default function ExpenseProjectManagement() {
               <TableHead>Data Início</TableHead>
               <TableHead>Data Fim</TableHead>
               <TableHead>Custo Total</TableHead>
-              <TableHead>Cor</TableHead>
+              
               <TableHead>Estado</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -256,15 +256,6 @@ export default function ExpenseProjectManagement() {
                   <TableCell>{formatDate(project.end_date)}</TableCell>
                   <TableCell className="font-medium">
                     {formatCurrency(project.total_cost)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-6 h-6 rounded-full border"
-                        style={{ backgroundColor: project.color }}
-                      />
-                      <span className="text-xs text-muted-foreground">{project.color}</span>
-                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={project.is_active ? "default" : "secondary"}>
