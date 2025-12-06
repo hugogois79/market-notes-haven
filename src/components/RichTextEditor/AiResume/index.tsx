@@ -44,17 +44,20 @@ const AiResume: React.FC<AiResumeProps> = ({
       // Strip HTML to reduce content size and get plain text for summarization
       let plainTextContent = stripHtml(content).trim();
       
+      console.log(`Original content length: ${content.length}, Plain text length: ${plainTextContent.length}`);
+      
       if (!plainTextContent) {
         toast.error("No text content found to summarize.");
         setIsGenerating(false);
         return;
       }
       
-      // Truncate content if it exceeds the limit (keep under 180k to be safe)
-      const MAX_CONTENT_LENGTH = 180000;
+      // Truncate content if it exceeds the limit (keep under 150k to be safe with validation at 200k)
+      const MAX_CONTENT_LENGTH = 150000;
       if (plainTextContent.length > MAX_CONTENT_LENGTH) {
         plainTextContent = plainTextContent.substring(0, MAX_CONTENT_LENGTH);
-        console.log(`Content truncated from ${content.length} to ${MAX_CONTENT_LENGTH} characters`);
+        toast.info(`Content truncated to ${MAX_CONTENT_LENGTH} characters for processing.`);
+        console.log(`Content truncated to ${MAX_CONTENT_LENGTH} characters`);
       }
       
       // Call the Supabase Edge Function to summarize the content
