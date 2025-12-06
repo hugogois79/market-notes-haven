@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Download, Eye, X, Printer, Undo2 } from "lucide-react";
+import { ArrowLeft, FileText, Download, Eye, X, Printer, Undo2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -1133,6 +1133,7 @@ const ExpenseDetailPage = () => {
                   <TableHead>Fornecedor</TableHead>
                   <TableHead>Valor</TableHead>
                   <TableHead>Comprovativo</TableHead>
+                  {claim.status === "rascunho" && <TableHead className="w-[50px]"></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1173,6 +1174,17 @@ const ExpenseDetailPage = () => {
                         "-"
                       )}
                     </TableCell>
+                    {claim.status === "rascunho" && (
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => navigate(`/expenses/${id}/edit?editExpense=${expense.id}`)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
