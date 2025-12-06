@@ -241,21 +241,14 @@ export default function ProjectCashflowDialog({
                   </TableRow>
                 ) : (
                   <>
-                    {/* Section Header: Pagamentos */}
-                    <TableRow className="bg-destructive/10">
-                      <TableCell colSpan={14} className="font-bold text-destructive">
-                        Pagamentos
-                      </TableCell>
-                    </TableRow>
-
-                    {/* Total Pagamentos row - clickable to expand */}
+                    {/* Pagamentos row - clickable to expand */}
                     <TableRow 
-                      className="bg-destructive/5 font-bold border-t cursor-pointer hover:bg-destructive/10 transition-colors"
+                      className="bg-destructive/10 font-bold cursor-pointer hover:bg-destructive/15 transition-colors"
                       onClick={togglePayments}
                     >
-                      <TableCell className="sticky left-0 bg-destructive/5 flex items-center gap-2">
+                      <TableCell className="sticky left-0 bg-destructive/10 flex items-center gap-2 text-destructive">
                         {expandedPayments ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        Total Pagamentos
+                        Pagamentos
                       </TableCell>
                       {MONTHS.map((_, monthIndex) => {
                         const amount = getMonthTotal(monthIndex);
