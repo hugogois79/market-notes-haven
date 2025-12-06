@@ -715,7 +715,7 @@ export type Database = {
             foreignKeyName: "fk_expenses_project"
             columns: ["project_id"]
             isOneToOne: false
-            referencedRelation: "financial_projects"
+            referencedRelation: "expense_projects"
             referencedColumns: ["id"]
           },
         ]
