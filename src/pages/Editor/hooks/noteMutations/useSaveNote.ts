@@ -23,18 +23,41 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
     setIsSaving(true);
     
     try {
-      const validatedChanges = {
-        ...changes,
-        title: changes.title !== undefined ? changes.title : undefined,
-        category: changes.category !== undefined ? changes.category : undefined,
-        tags: changes.tags !== undefined ? 
-          (Array.isArray(changes.tags) ? changes.tags : 
-            (changes.tags ? [changes.tags] : [])) : undefined,
-        attachments: changes.attachments !== undefined ? 
-          (Array.isArray(changes.attachments) ? changes.attachments : 
-            (changes.attachments ? [changes.attachments] : [])) : undefined,
-        project_id: changes.project_id !== undefined ? changes.project_id : undefined,
-      };
+      const validatedChanges: Partial<Note> = {};
+      
+      // Only include fields that are explicitly passed in changes
+      if ('title' in changes) {
+        validatedChanges.title = changes.title;
+      }
+      if ('category' in changes) {
+        validatedChanges.category = changes.category;
+      }
+      if ('content' in changes) {
+        validatedChanges.content = changes.content;
+      }
+      if ('tags' in changes) {
+        validatedChanges.tags = Array.isArray(changes.tags) ? changes.tags : 
+          (changes.tags ? [changes.tags] : []);
+      }
+      if ('attachments' in changes) {
+        validatedChanges.attachments = Array.isArray(changes.attachments) ? changes.attachments : 
+          (changes.attachments ? [changes.attachments] : []);
+      }
+      if ('attachment_url' in changes) {
+        validatedChanges.attachment_url = changes.attachment_url;
+      }
+      if ('project_id' in changes) {
+        validatedChanges.project_id = changes.project_id;
+      }
+      if ('summary' in changes) {
+        validatedChanges.summary = changes.summary;
+      }
+      if ('tradeInfo' in changes) {
+        validatedChanges.tradeInfo = changes.tradeInfo;
+      }
+      if ('hasConclusion' in changes) {
+        validatedChanges.hasConclusion = changes.hasConclusion;
+      }
       
       console.log("Saving note with validated changes:", validatedChanges);
       
