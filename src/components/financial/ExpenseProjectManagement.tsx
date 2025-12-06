@@ -229,6 +229,7 @@ export default function ExpenseProjectManagement() {
               <TableHead>Data Início</TableHead>
               <TableHead>Data Fim</TableHead>
               <TableHead>Custo Total</TableHead>
+              <TableHead>Cor</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -236,13 +237,13 @@ export default function ExpenseProjectManagement() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
+                <TableCell colSpan={8} className="text-center py-8">
                   A carregar...
                 </TableCell>
               </TableRow>
             ) : projects?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   Nenhum projeto registado
                 </TableCell>
               </TableRow>
@@ -256,12 +257,7 @@ export default function ExpenseProjectManagement() {
                     setDetailDialogOpen(true);
                   }}
                 >
-                  <TableCell 
-                    className="font-semibold"
-                    style={{ color: project.color }}
-                  >
-                    {project.name}
-                  </TableCell>
+                  <TableCell className="font-medium">{project.name}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {project.description || "-"}
                   </TableCell>
@@ -269,6 +265,15 @@ export default function ExpenseProjectManagement() {
                   <TableCell>{formatDate(project.end_date)}</TableCell>
                   <TableCell className="font-medium">
                     {formatCurrency(project.total_cost)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-6 h-6 rounded-full border"
+                        style={{ backgroundColor: project.color }}
+                      />
+                      <span className="text-xs text-muted-foreground">{project.color}</span>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={project.is_active ? "default" : "secondary"}>
