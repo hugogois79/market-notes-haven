@@ -9,6 +9,7 @@ export interface ExpenseClaim {
   total_amount: number;
   description: string | null;
   requester_id: string | null;
+  claim_date: string;
   submission_date: string | null;
   created_at: string;
   updated_at: string;
@@ -71,6 +72,7 @@ export const expenseClaimService = {
   async createExpenseClaim(claim: {
     claim_type: 'reembolso' | 'justificacao_cartao';
     description: string;
+    claim_date: string;
     status?: 'rascunho' | 'submetido';
   }) {
     const { data: userData } = await supabase.auth.getUser();
@@ -83,6 +85,7 @@ export const expenseClaimService = {
           employee_id: userData.user.id,
           claim_type: claim.claim_type,
           description: claim.description,
+          claim_date: claim.claim_date,
           status: claim.status || 'rascunho',
           total_amount: 0,
         },

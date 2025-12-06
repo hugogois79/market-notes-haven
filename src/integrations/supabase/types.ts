@@ -483,6 +483,7 @@ export type Database = {
       }
       expense_claims: {
         Row: {
+          claim_date: string
           claim_number: number
           claim_type: string
           created_at: string
@@ -496,6 +497,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          claim_date?: string
           claim_number?: number
           claim_type: string
           created_at?: string
@@ -509,6 +511,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          claim_date?: string
           claim_number?: number
           claim_type?: string
           created_at?: string
