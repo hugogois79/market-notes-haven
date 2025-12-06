@@ -245,9 +245,13 @@ export default function ExpenseProjectManagement() {
                 <TableRow key={project.id}>
                   <TableCell className="text-center">
                     <button 
+                      type="button"
                       className="font-medium px-2 py-1 rounded text-white cursor-pointer hover:opacity-80 transition-opacity"
                       style={{ backgroundColor: project.color }}
-                      onClick={() => setCashflowProject(project)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCashflowProject(project);
+                      }}
                     >
                       {project.name}
                     </button>
