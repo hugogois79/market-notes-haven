@@ -457,7 +457,7 @@ const EditExpensePage = () => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!id) {
       toast({
         title: "Erro",
@@ -474,6 +474,18 @@ const EditExpensePage = () => {
         variant: "destructive",
       });
       return;
+    }
+
+    // Save form changes before submitting
+    try {
+      await expenseClaimService.updateExpenseClaim(id, {
+        description,
+        claim_type: claimType,
+        claim_date: claimDate,
+        requester_id: requesterId || null,
+      });
+    } catch (error) {
+      console.error("Error saving changes before submit:", error);
     }
 
     submitClaimMutation.mutate(id);
