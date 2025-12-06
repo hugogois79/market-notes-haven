@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
+import companyLogo from "@/assets/robsonway-logo.png";
 
 const ExpenseDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -316,7 +317,7 @@ const ExpenseDetailPage = () => {
       }
 
       // Convert logo to base64 for print
-      const logoBase64 = await fetch('/src/assets/robsonway-logo.png')
+      const logoBase64 = await fetch(companyLogo)
         .then(res => res.blob())
         .then(blob => new Promise<string>((resolve) => {
           const reader = new FileReader();
@@ -384,7 +385,6 @@ const ExpenseDetailPage = () => {
               .header-logo img {
                 max-width: 100%;
                 max-height: 100%;
-                filter: brightness(0) invert(1);
               }
               
               .header-info h1 {
