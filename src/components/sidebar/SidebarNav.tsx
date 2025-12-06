@@ -6,6 +6,7 @@ import {
   TrendingUp, 
   Coins,
   Folder,
+  FolderKanban,
   Banknote,
   User,
   Kanban,
@@ -113,6 +114,12 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       title: "Finance",
       icon: <Coins size={20} />,
       path: "/financeiro",
+      workerAllowed: false,
+    },
+    {
+      title: "Projects",
+      icon: <FolderKanban size={20} />,
+      path: "/projects",
       workerAllowed: false,
     },
     {
