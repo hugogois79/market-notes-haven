@@ -355,63 +355,68 @@ const ExpenseDetailPage = () => {
         <html>
           <head>
             <meta charset="UTF-8">
-            <title>Expense Request #${claim.claim_number}</title>
+            <title>Requisição de Despesas #${claim.claim_number}</title>
             <style>
-              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+              @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
               
               * { margin: 0; padding: 0; box-sizing: border-box; }
               
               body { 
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
-                background: #f8fafc;
-                color: #1e293b;
-                font-size: 14px;
-                line-height: 1.5;
+                font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; 
+                background: #ffffff;
+                color: #1a1a2e;
+                font-size: 13px;
+                line-height: 1.6;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
               }
               
               .page { 
                 page-break-after: always; 
                 background: white;
-                max-width: 900px;
+                max-width: 850px;
                 margin: 0 auto;
-                padding: 40px;
+                padding: 48px;
+                min-height: 100vh;
               }
               
-              /* Header */
+              /* Elegant Header */
               .header {
-                background: white;
-                border: 1px solid #e2e8f0;
-                border-radius: 16px;
-                padding: 24px 32px;
-                margin-bottom: 32px;
                 display: flex;
                 justify-content: space-between;
-                align-items: center;
+                align-items: flex-start;
+                margin-bottom: 40px;
+                padding-bottom: 32px;
+                border-bottom: 2px solid #f0f0f5;
               }
               
               .header-left {
                 display: flex;
-                align-items: center;
-              }
-              
-              .header-logo {
-                height: 60px;
+                flex-direction: column;
+                gap: 16px;
               }
               
               .header-logo img {
-                height: 100%;
+                height: 48px;
                 width: auto;
               }
               
-              .header-info h1 {
-                font-size: 28px;
-                font-weight: 700;
-                margin-bottom: 4px;
+              .document-title {
+                margin-top: 8px;
               }
               
-              .header-info p {
-                opacity: 0.8;
+              .document-title h1 {
+                font-size: 28px;
+                font-weight: 800;
+                color: #1a1a2e;
+                letter-spacing: -0.5px;
+              }
+              
+              .document-title .doc-number {
                 font-size: 14px;
+                font-weight: 500;
+                color: #6b7280;
+                margin-top: 4px;
               }
               
               .header-right {
@@ -422,285 +427,334 @@ const ExpenseDetailPage = () => {
                 display: inline-flex;
                 align-items: center;
                 gap: 8px;
-                padding: 8px 16px;
-                border-radius: 8px;
-                font-weight: 600;
-                font-size: 13px;
+                padding: 10px 20px;
+                border-radius: 50px;
+                font-weight: 700;
+                font-size: 12px;
                 text-transform: uppercase;
-                letter-spacing: 0.5px;
+                letter-spacing: 1px;
               }
               
-              .status-pending { background: #fbbf24; color: #78350f; }
-              .status-approved { background: #22c55e; color: white; }
-              .status-submitted { background: #3b82f6; color: white; }
-              .status-draft { background: #94a3b8; color: white; }
+              .status-pending { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #78350f; }
+              .status-approved { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; }
+              .status-submitted { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; }
+              .status-draft { background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%); color: white; }
               
-              .status-dot {
-                width: 8px;
-                height: 8px;
-                border-radius: 50%;
-                background: currentColor;
-              }
-              
-              /* Info Grid */
-              .info-grid {
+              /* Info Cards Grid */
+              .info-section {
                 display: grid;
                 grid-template-columns: repeat(4, 1fr);
-                gap: 16px;
-                margin-bottom: 24px;
+                gap: 20px;
+                margin-bottom: 32px;
               }
               
               .info-card {
-                background: white;
-                border: 1px solid #e2e8f0;
-                border-radius: 12px;
-                padding: 16px 20px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                border-radius: 16px;
+                padding: 20px;
+                position: relative;
+                overflow: hidden;
+              }
+              
+              .info-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 4px;
+                height: 100%;
+                background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%);
+                border-radius: 4px 0 0 4px;
               }
               
               .info-card-label {
-                font-size: 11px;
-                font-weight: 600;
-                color: #64748b;
+                font-size: 10px;
+                font-weight: 700;
+                color: #6366f1;
                 text-transform: uppercase;
-                letter-spacing: 0.5px;
-                margin-bottom: 6px;
-              }
-              
-              .info-card-value {
-                font-size: 16px;
-                font-weight: 600;
-                color: #0f172a;
-              }
-              
-              /* Description Section */
-              .description-card {
-                background: #f1f5f9;
-                border-radius: 12px;
-                padding: 20px 24px;
-                margin-bottom: 24px;
-              }
-              
-              .description-card h3 {
-                font-size: 12px;
-                font-weight: 600;
-                color: #64748b;
-                text-transform: uppercase;
+                letter-spacing: 1.2px;
                 margin-bottom: 8px;
               }
               
-              .description-card p {
-                color: #334155;
+              .info-card-value {
                 font-size: 15px;
+                font-weight: 700;
+                color: #1a1a2e;
               }
               
-              /* Expenses Table */
-              .table-section {
-                background: white;
-                border: 1px solid #e2e8f0;
+              /* Description */
+              .description-section {
+                background: #fafbfc;
+                border: 1px solid #e5e7eb;
                 border-radius: 16px;
+                padding: 24px;
+                margin-bottom: 32px;
+              }
+              
+              .description-section h3 {
+                font-size: 11px;
+                font-weight: 700;
+                color: #6366f1;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 12px;
+              }
+              
+              .description-section p {
+                color: #374151;
+                font-size: 14px;
+                line-height: 1.7;
+              }
+              
+              /* Modern Table */
+              .table-container {
+                border-radius: 20px;
                 overflow: hidden;
-                margin-bottom: 24px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+                margin-bottom: 32px;
               }
               
               .table-header {
-                background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
-                padding: 16px 24px;
+                background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
+                padding: 20px 28px;
                 color: white;
-                font-weight: 600;
+              }
+              
+              .table-header h2 {
                 font-size: 16px;
+                font-weight: 700;
+                letter-spacing: -0.3px;
               }
               
               table {
                 width: 100%;
                 border-collapse: collapse;
+                background: white;
               }
               
               table th {
                 background: #f8fafc;
-                padding: 14px 16px;
+                padding: 16px 20px;
                 text-align: left;
-                font-size: 11px;
+                font-size: 10px;
                 font-weight: 700;
-                color: #475569;
+                color: #64748b;
                 text-transform: uppercase;
-                letter-spacing: 0.5px;
+                letter-spacing: 1px;
                 border-bottom: 2px solid #e2e8f0;
               }
               
               table td {
-                padding: 16px;
+                padding: 18px 20px;
                 border-bottom: 1px solid #f1f5f9;
-                font-size: 14px;
-                color: #334155;
+                font-size: 13px;
+                color: #374151;
               }
               
               table tr:last-child td {
                 border-bottom: none;
               }
               
-              table tr:hover {
-                background: #f8fafc;
+              table tr:nth-child(even) {
+                background: #fafbfc;
+              }
+              
+              .expense-description {
+                font-weight: 600;
+                color: #1a1a2e;
+              }
+              
+              .expense-supplier {
+                color: #6b7280;
+                font-size: 12px;
               }
               
               .amount-cell {
-                font-weight: 700;
-                color: #0f172a;
+                font-weight: 800;
+                color: #1a1a2e;
                 font-size: 15px;
+                font-variant-numeric: tabular-nums;
               }
               
-              .amount-high {
-                color: #dc2626;
-                background: #fef2f2;
-                padding: 4px 8px;
-                border-radius: 4px;
-              }
-              
-              .receipt-indicator {
-                display: inline-flex;
-                align-items: center;
-                gap: 4px;
-                font-size: 12px;
-                padding: 4px 8px;
-                border-radius: 4px;
-              }
-              
-              .has-receipt {
-                background: #dcfce7;
-                color: #166534;
-              }
-              
-              .no-receipt {
-                background: #fef3c7;
+              .amount-highlight {
+                background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+                padding: 6px 12px;
+                border-radius: 8px;
                 color: #92400e;
               }
               
-              /* Summary Card */
-              .summary-section {
+              .receipt-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 11px;
+                font-weight: 600;
+                padding: 6px 12px;
+                border-radius: 20px;
+              }
+              
+              .receipt-attached {
+                background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+                color: #065f46;
+              }
+              
+              .receipt-missing {
+                background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+                color: #991b1b;
+              }
+              
+              /* Summary Section */
+              .summary-wrapper {
                 display: flex;
                 justify-content: flex-end;
+                margin-bottom: 40px;
               }
               
               .summary-card {
-                background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0891b2 100%);
-                border-radius: 16px;
-                padding: 24px 32px;
+                background: linear-gradient(145deg, #1a1a2e 0%, #2d2d44 50%, #4c1d95 100%);
+                border-radius: 24px;
+                padding: 28px 36px;
                 color: white;
-                min-width: 320px;
+                min-width: 340px;
+                box-shadow: 0 20px 40px rgba(26, 26, 46, 0.3);
               }
               
               .summary-row {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 8px 0;
+                padding: 10px 0;
               }
               
-              .summary-row.subtotal {
-                border-bottom: 1px solid rgba(255,255,255,0.2);
-                margin-bottom: 8px;
-                padding-bottom: 12px;
+              .summary-row.border-bottom {
+                border-bottom: 1px solid rgba(255,255,255,0.15);
+                margin-bottom: 12px;
+                padding-bottom: 16px;
               }
               
               .summary-label {
-                font-size: 14px;
-                opacity: 0.8;
+                font-size: 13px;
+                opacity: 0.75;
+                font-weight: 500;
               }
               
               .summary-value {
                 font-size: 16px;
-                font-weight: 600;
+                font-weight: 700;
+                font-variant-numeric: tabular-nums;
               }
               
-              .summary-row.total .summary-label {
-                font-size: 18px;
-                font-weight: 600;
+              .summary-row.grand-total {
+                margin-top: 8px;
+                padding-top: 16px;
+                border-top: 2px solid rgba(255,255,255,0.2);
+              }
+              
+              .summary-row.grand-total .summary-label {
+                font-size: 16px;
+                font-weight: 700;
                 opacity: 1;
               }
               
-              .summary-row.total .summary-value {
-                font-size: 28px;
-                font-weight: 700;
+              .summary-row.grand-total .summary-value {
+                font-size: 32px;
+                font-weight: 800;
+                background: linear-gradient(135deg, #a5b4fc 0%, #c4b5fd 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+              }
+              
+              /* Footer */
+              .page-footer {
+                margin-top: auto;
+                padding-top: 24px;
+                border-top: 1px solid #e5e7eb;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 11px;
+                color: #9ca3af;
+              }
+              
+              .footer-brand {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-weight: 600;
+              }
+              
+              .footer-brand img {
+                height: 20px;
+                opacity: 0.6;
               }
               
               /* Receipt Pages */
               .receipt-page {
                 page-break-after: always;
                 background: white;
-                max-width: 900px;
+                max-width: 850px;
                 margin: 0 auto;
-                padding: 40px;
+                padding: 48px;
                 min-height: 100vh;
+                display: flex;
+                flex-direction: column;
               }
               
               .receipt-header {
-                background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
-                border-radius: 12px;
-                padding: 20px 24px;
-                margin-bottom: 24px;
+                background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 50%, #4c1d95 100%);
+                border-radius: 20px;
+                padding: 24px 32px;
+                margin-bottom: 32px;
                 color: white;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                box-shadow: 0 10px 30px rgba(26, 26, 46, 0.2);
               }
               
               .receipt-header h2 {
                 font-size: 18px;
-                font-weight: 600;
+                font-weight: 700;
               }
               
-              .receipt-header .badge {
-                background: rgba(255,255,255,0.2);
-                padding: 6px 12px;
-                border-radius: 6px;
+              .receipt-meta {
+                background: rgba(255,255,255,0.15);
+                padding: 8px 16px;
+                border-radius: 12px;
                 font-size: 12px;
+                font-weight: 600;
+                backdrop-filter: blur(10px);
               }
               
               .receipt-content {
+                flex: 1;
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                flex: 1;
+                background: #f8fafc;
+                border-radius: 16px;
+                padding: 24px;
               }
               
               .receipt-content img {
                 max-width: 100%;
-                max-height: 75vh;
+                max-height: 70vh;
                 object-fit: contain;
-                border-radius: 8px;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-              }
-              
-              /* Footer */
-              .page-footer {
-                margin-top: 32px;
-                padding-top: 16px;
-                border-top: 1px solid #e2e8f0;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                font-size: 11px;
-                color: #94a3b8;
-              }
-              
-              .page-footer .brand {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-              }
-              
-              .page-footer .brand img {
-                height: 24px;
-                opacity: 0.5;
+                border-radius: 12px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.1);
               }
               
               @media print {
                 body { background: white; }
                 .page, .receipt-page { 
-                  padding: 24px; 
+                  padding: 32px; 
                   box-shadow: none;
                   max-width: 100%;
+                }
+                .summary-row.grand-total .summary-value {
+                  color: white;
+                  -webkit-text-fill-color: white;
                 }
               }
             </style>
@@ -711,54 +765,59 @@ const ExpenseDetailPage = () => {
               <div class="header">
                 <div class="header-left">
                   <div class="header-logo">
-                    ${logoBase64 ? `<img src="${logoBase64}" alt="Sustainable Yield Capital" />` : '<span style="font-size: 24px; font-weight: 700;">SYC</span>'}
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Sustainable Yield Capital" />` : '<span style="font-size: 24px; font-weight: 800; color: #1a1a2e;">SYC</span>'}
+                  </div>
+                  <div class="document-title">
+                    <h1>Requisição de Despesas</h1>
+                    <div class="doc-number">Nº ${claim.claim_number} · ${format(new Date(claim.claim_date), "dd/MM/yyyy")}</div>
                   </div>
                 </div>
                 <div class="header-right">
                   <span class="status-badge status-${getStatusClass(claim.status)}">
-                    <span class="status-dot"></span>
                     ${getStatusLabel(claim.status)}
                   </span>
                 </div>
               </div>
 
-              <div class="info-grid">
+              <div class="info-section">
                 <div class="info-card">
-                  <div class="info-card-label">Requester</div>
+                  <div class="info-card-label">Requisitante</div>
                   <div class="info-card-value">${requester?.name || "-"}</div>
                 </div>
                 <div class="info-card">
-                  <div class="info-card-label">Department / Project</div>
+                  <div class="info-card-label">Projeto</div>
                   <div class="info-card-value">${projects && projects.length > 0 ? projects[0].name : "-"}</div>
                 </div>
                 <div class="info-card">
-                  <div class="info-card-label">Submission Date</div>
+                  <div class="info-card-label">Data</div>
                   <div class="info-card-value">${format(new Date(claim.claim_date), "dd/MM/yyyy")}</div>
                 </div>
                 <div class="info-card">
-                  <div class="info-card-label">Request Type</div>
-                  <div class="info-card-value">${getTypeBadge(claim.claim_type)}</div>
+                  <div class="info-card-label">Tipo</div>
+                  <div class="info-card-value">${claim.claim_type === "reembolso" ? "Reembolso" : "Cartão Crédito"}</div>
                 </div>
               </div>
 
               ${claim.description ? `
-                <div class="description-card">
-                  <h3>Description</h3>
+                <div class="description-section">
+                  <h3>Descrição</h3>
                   <p>${claim.description}</p>
                 </div>
               ` : ''}
 
-              <div class="table-section">
-                <div class="table-header">Expense Items</div>
+              <div class="table-container">
+                <div class="table-header">
+                  <h2>Itens de Despesa</h2>
+                </div>
                 ${expenses && expenses.length > 0 ? `
                   <table>
                     <thead>
                       <tr>
-                        <th>Date</th>
-                        <th>Description</th>
-                        <th>Supplier</th>
-                        <th style="text-align: center;">Receipt</th>
-                        <th style="text-align: right;">Amount</th>
+                        <th style="width: 100px;">Data</th>
+                        <th>Descrição</th>
+                        <th>Fornecedor</th>
+                        <th style="text-align: center; width: 100px;">Recibo</th>
+                        <th style="text-align: right; width: 120px;">Valor</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -768,15 +827,17 @@ const ExpenseDetailPage = () => {
                         return `
                           <tr>
                             <td>${format(new Date(expense.expense_date), "dd/MM/yyyy")}</td>
-                            <td><strong>${expense.description}</strong></td>
-                            <td>${expense.supplier}</td>
+                            <td>
+                              <div class="expense-description">${expense.description}</div>
+                            </td>
+                            <td class="expense-supplier">${expense.supplier}</td>
                             <td style="text-align: center;">
-                              <span class="receipt-indicator ${expense.receipt_image_url ? 'has-receipt' : 'no-receipt'}">
-                                ${expense.receipt_image_url ? '✓ Attached' : '⚠ Missing'}
+                              <span class="receipt-badge ${expense.receipt_image_url ? 'receipt-attached' : 'receipt-missing'}">
+                                ${expense.receipt_image_url ? '✓ Anexado' : '✗ Em falta'}
                               </span>
                             </td>
                             <td style="text-align: right;">
-                              <span class="amount-cell ${isHighAmount ? 'amount-high' : ''}">
+                              <span class="amount-cell ${isHighAmount ? 'amount-highlight' : ''}">
                                 ${formatCurrency(amount)}
                               </span>
                             </td>
@@ -786,35 +847,35 @@ const ExpenseDetailPage = () => {
                     </tbody>
                   </table>
                 ` : `
-                  <div style="padding: 40px; text-align: center; color: #94a3b8;">
-                    No expenses recorded
+                  <div style="padding: 48px; text-align: center; color: #9ca3af; font-size: 14px;">
+                    Sem despesas registadas
                   </div>
                 `}
               </div>
 
-              <div class="summary-section">
+              <div class="summary-wrapper">
                 <div class="summary-card">
-                  <div class="summary-row subtotal">
-                    <span class="summary-label">Subtotal (Net)</span>
+                  <div class="summary-row border-bottom">
+                    <span class="summary-label">Subtotal</span>
                     <span class="summary-value">${formatCurrency(Number(claim.total_amount))}</span>
                   </div>
                   <div class="summary-row">
-                    <span class="summary-label">VAT</span>
-                    <span class="summary-value">€ 0.00</span>
+                    <span class="summary-label">IVA</span>
+                    <span class="summary-value">€ 0,00</span>
                   </div>
-                  <div class="summary-row total">
-                    <span class="summary-label">Grand Total</span>
+                  <div class="summary-row grand-total">
+                    <span class="summary-label">Total</span>
                     <span class="summary-value">${formatCurrency(Number(claim.total_amount))}</span>
                   </div>
                 </div>
               </div>
 
               <div class="page-footer">
-                <div class="brand">
-                  <span>Generated by Sustainable Yield Capital</span>
+                <div class="footer-brand">
+                  Sustainable Yield Capital
                 </div>
                 <div>
-                  ${format(new Date(), "dd/MM/yyyy HH:mm")} · Page 1 of ${1 + receipts.reduce((acc, r) => acc + r.images.length, 0)}
+                  ${format(new Date(), "dd/MM/yyyy HH:mm")} · Página 1 de ${1 + receipts.reduce((acc, r) => acc + r.images.length, 0)}
                 </div>
               </div>
             </div>
@@ -824,18 +885,18 @@ const ExpenseDetailPage = () => {
               receipt.images.map((imageUrl, pageIndex) => `
                 <div class="receipt-page">
                   <div class="receipt-header">
-                    <h2>Receipt ${receiptIndex + 1}${receipt.images.length > 1 ? ` - Page ${pageIndex + 1}` : ''}: ${receipt.expense.description}</h2>
-                    <span class="badge">${receipt.expense.supplier} · ${formatCurrency(Number(receipt.expense.amount))}</span>
+                    <h2>Comprovativo ${receiptIndex + 1}${receipt.images.length > 1 ? ` · Pág. ${pageIndex + 1}` : ''}: ${receipt.expense.description}</h2>
+                    <span class="receipt-meta">${receipt.expense.supplier} · ${formatCurrency(Number(receipt.expense.amount))}</span>
                   </div>
                   <div class="receipt-content">
-                    <img src="${imageUrl}" alt="Receipt ${receiptIndex + 1}" />
+                    <img src="${imageUrl}" alt="Comprovativo ${receiptIndex + 1}" />
                   </div>
                   <div class="page-footer">
-                    <div class="brand">
-                      <span>Sustainable Yield Capital</span>
+                    <div class="footer-brand">
+                      Sustainable Yield Capital
                     </div>
                     <div>
-                      Expense Request #${claim.claim_number} · Receipt ${receiptIndex + 1}${receipt.images.length > 1 ? ` Page ${pageIndex + 1}` : ''}
+                      Requisição #${claim.claim_number} · Comprovativo ${receiptIndex + 1}${receipt.images.length > 1 ? ` Pág. ${pageIndex + 1}` : ''}
                     </div>
                   </div>
                 </div>
