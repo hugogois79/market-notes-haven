@@ -24,11 +24,13 @@ interface EditorMainProps {
   handleSelectTag: (tag: Tag) => void;
   getAvailableTagsForSelection: () => Tag[];
   isLoadingTags: boolean;
-  linkedTokens: Token[];
-  handleTokenSelect: (token: string | Token) => void;
-  handleRemoveToken: (tokenId: string) => void;
-  availableTokens: Token[];
-  isLoadingTokens: boolean;
+  linkedTokens?: Token[];
+  handleTokenSelect?: (token: string | Token) => void;
+  handleRemoveToken?: (tokenId: string) => void;
+  availableTokens?: Token[];
+  isLoadingTokens?: boolean;
+  selectedProjectId?: string | null;
+  onProjectSelect?: (projectId: string | null) => void;
   noteId: string;
   attachment_url?: string;
   attachments?: string[];
@@ -64,11 +66,13 @@ const EditorMain: React.FC<EditorMainProps> = ({
   handleSelectTag,
   getAvailableTagsForSelection,
   isLoadingTags,
-  linkedTokens,
+  linkedTokens = [],
   handleTokenSelect,
   handleRemoveToken,
-  availableTokens,
-  isLoadingTokens,
+  availableTokens = [],
+  isLoadingTokens = false,
+  selectedProjectId = null,
+  onProjectSelect = () => {},
   noteId,
   attachment_url,
   attachments = [],
@@ -152,10 +156,8 @@ const EditorMain: React.FC<EditorMainProps> = ({
               handleSelectTag={handleSelectTag}
               isLoadingTags={isLoadingTags}
               getAvailableTagsForSelection={getAvailableTagsForSelection}
-              linkedTokens={linkedTokens}
-              handleRemoveToken={handleRemoveToken}
-              handleTokenSelect={handleTokenSelect}
-              isLoadingTokens={isLoadingTokens}
+              selectedProjectId={selectedProjectId}
+              onProjectSelect={onProjectSelect}
               category={category}
               categoryFilter={category}
             />
