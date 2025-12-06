@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -208,9 +208,15 @@ export default function ExpenseProjectManagement() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-bold">Projetos</h2>
-        <p className="text-muted-foreground">Gerir projetos para atribuição</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Projetos</h2>
+          <p className="text-muted-foreground">Gerir projetos para atribuição</p>
+        </div>
+        <Button onClick={handleOpenCreate}>
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Projeto
+        </Button>
       </div>
 
       <div className="border rounded-lg">
