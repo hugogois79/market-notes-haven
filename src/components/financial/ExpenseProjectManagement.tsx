@@ -206,15 +206,9 @@ export default function ExpenseProjectManagement() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Projetos</h2>
-          <p className="text-muted-foreground">Gerir projetos para atribuição</p>
-        </div>
-        <Button onClick={handleOpenCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Projeto
-        </Button>
+      <div>
+        <h2 className="text-2xl font-bold">Projetos</h2>
+        <p className="text-muted-foreground">Gerir projetos para atribuição</p>
       </div>
 
       <div className="border rounded-lg">
