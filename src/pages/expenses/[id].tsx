@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Download, Eye, X, Printer } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, FileText, Download, Eye, X, Printer, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -25,9 +25,11 @@ import companyLogo from "@/assets/syc-logo.png";
 const ExpenseDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [viewingReceipt, setViewingReceipt] = useState<{ url: string; type: string } | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [cancellingSubmission, setCancellingSubmission] = useState(false);
 
   const { data: claim, isLoading: loadingClaim } = useQuery({
     queryKey: ["expense-claim", id],
@@ -72,6 +74,28 @@ const ExpenseDetailPage = () => {
     },
     enabled: !!expenses && expenses.length > 0,
   });
+
+  const handleCancelSubmission = async () => {
+    if (!id) return;
+    setCancellingSubmission(true);
+    try {
+      await expenseClaimService.cancelSubmission(id);
+      queryClient.invalidateQueries({ queryKey: ["expense-claim", id] });
+      toast({
+        title: "Submissão anulada",
+        description: "A requisição voltou ao estado de rascunho.",
+      });
+    } catch (error) {
+      console.error("Error cancelling submission:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível anular a submissão.",
+        variant: "destructive",
+      });
+    } finally {
+      setCancellingSubmission(false);
+    }
+  };
 
   const handleViewReceipt = async (url: string) => {
     setLoadingPreview(true);
@@ -929,10 +953,20 @@ const ExpenseDetailPage = () => {
         </div>
         <div className="flex gap-2">
           {claim.status === "submetido" && (
-            <Button onClick={handlePrint} variant="outline">
-              <Printer className="h-4 w-4 mr-2" />
-              Imprimir
-            </Button>
+            <>
+              <Button 
+                onClick={handleCancelSubmission} 
+                variant="outline"
+                disabled={cancellingSubmission}
+              >
+                <Undo2 className="h-4 w-4 mr-2" />
+                {cancellingSubmission ? "A anular..." : "Anular Submissão"}
+              </Button>
+              <Button onClick={handlePrint} variant="outline">
+                <Printer className="h-4 w-4 mr-2" />
+                Imprimir
+              </Button>
+            </>
           )}
           {claim.status === "rascunho" && (
             <Button onClick={() => navigate(`/expenses/${id}/edit`)}>
