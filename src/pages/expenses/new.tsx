@@ -47,6 +47,7 @@ interface ExpenseFormData {
   supplier: string;
   amount: string;
   project_id: string;
+  category_id: string;
   receipt_file?: File;
 }
 
@@ -69,6 +70,7 @@ const NewExpensePage = () => {
     supplier: "",
     amount: "",
     project_id: "",
+    category_id: "",
   });
 
   // Get requesters for dropdown
@@ -104,6 +106,19 @@ const NewExpensePage = () => {
   const { data: suppliers } = useQuery({
     queryKey: ["suppliers"],
     queryFn: () => supplierService.getSuppliers(),
+  });
+
+  // Get expense categories
+  const { data: categories } = useQuery({
+    queryKey: ["expense-categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expense_categories")
+        .select("id, name, color")
+        .eq("is_active", true);
+      if (error) throw error;
+      return data || [];
+    },
   });
 
   const [supplierOpen, setSupplierOpen] = useState(false);
@@ -207,6 +222,7 @@ const NewExpensePage = () => {
       supplier: "",
       amount: "",
       project_id: "",
+      category_id: "",
       receipt_file: undefined,
     });
   };
@@ -289,6 +305,7 @@ const NewExpensePage = () => {
             supplier: expenseForm.supplier.trim(),
             amount: parseFloat(expenseForm.amount),
             project_id: expenseForm.project_id || null,
+            category_id: expenseForm.category_id || null,
             receipt_image_url: receiptUrl || editingExpense.receipt_image_url,
           },
         });
@@ -300,6 +317,7 @@ const NewExpensePage = () => {
           supplier: expenseForm.supplier.trim(),
           amount: parseFloat(expenseForm.amount),
           project_id: expenseForm.project_id || null,
+          category_id: expenseForm.category_id || null,
           receipt_image_url: receiptUrl,
         });
       }
@@ -321,6 +339,7 @@ const NewExpensePage = () => {
       supplier: expense.supplier,
       amount: expense.amount.toString(),
       project_id: expense.project_id || "",
+      category_id: expense.category_id || "",
     });
     setShowExpenseDialog(true);
   };
@@ -484,6 +503,7 @@ const NewExpensePage = () => {
                   <TableHead>Data</TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead>Fornecedor</TableHead>
+                  <TableHead>Categoria</TableHead>
                   <TableHead>Valor</TableHead>
                   <TableHead>Projeto</TableHead>
                   <TableHead>Comprovativo</TableHead>
@@ -498,6 +518,9 @@ const NewExpensePage = () => {
                     </TableCell>
                     <TableCell>{expense.description}</TableCell>
                     <TableCell>{expense.supplier}</TableCell>
+                    <TableCell>
+                      {categories?.find((c) => c.id === expense.category_id)?.name || "-"}
+                    </TableCell>
                     <TableCell className="font-semibold">
                       {formatCurrency(Number(expense.amount))}
                     </TableCell>
@@ -700,6 +723,27 @@ const NewExpensePage = () => {
                   {projects?.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="category">Categoria (opcional)</Label>
+              <Select
+                value={expenseForm.category_id || "none"}
+                onValueChange={(value) =>
+                  setExpenseForm({ ...expenseForm, category_id: value === "none" ? "" : value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  {categories?.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
