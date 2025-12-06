@@ -100,19 +100,13 @@ const ProjectSection: React.FC<ProjectSectionProps> = ({
         <SelectTrigger className="w-[180px] h-8">
           <SelectValue placeholder="Selecionar projeto..." />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-popover border border-border shadow-lg">
           <SelectItem value="none">Sem projeto</SelectItem>
-          {isLoading ? (
-            <SelectItem value="loading" disabled>A carregar...</SelectItem>
-          ) : projects.length === 0 ? (
-            <SelectItem value="no-projects" disabled>Sem projetos disponíveis</SelectItem>
-          ) : (
-            projects.map(project => (
-              <SelectItem key={project.id} value={project.id}>
-                {project.name}
-              </SelectItem>
-            ))
-          )}
+          {!isLoading && projects.map(project => (
+            <SelectItem key={project.id} value={project.id}>
+              {project.name}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
     </div>
