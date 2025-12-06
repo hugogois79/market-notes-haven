@@ -9,8 +9,7 @@ import BankAccountManagement from "@/components/financial/BankAccountManagement"
 import ExpenseProjectManagement from "@/components/financial/ExpenseProjectManagement";
 import TransactionManagement from "@/components/financial/TransactionManagement";
 import LoanManagement from "@/components/financial/LoanManagement";
-import { Building2, TrendingUp, Briefcase, CreditCard, PiggyBank, Settings, FolderKanban } from "lucide-react";
-import ProjectManagement from "@/components/financial/ProjectManagement";
+import { Building2, TrendingUp, Briefcase, CreditCard, PiggyBank, Settings } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function FinancialPage() {
@@ -66,7 +65,7 @@ export default function FinancialPage() {
           </div>
         ) : (
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className={isMobile ? "flex w-full overflow-x-auto overflow-y-hidden whitespace-nowrap pb-px" : "grid w-full grid-cols-5"}>
+            <TabsList className={isMobile ? "flex w-full overflow-x-auto overflow-y-hidden whitespace-nowrap pb-px" : "grid w-full grid-cols-4"}>
               <TabsTrigger value="dashboard" className="flex-shrink-0">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Dashboard
@@ -74,10 +73,6 @@ export default function FinancialPage() {
               <TabsTrigger value="transactions" className="flex-shrink-0">
                 <CreditCard className="h-4 w-4 mr-2" />
                 Transactions
-              </TabsTrigger>
-              <TabsTrigger value="projects" className="flex-shrink-0">
-                <FolderKanban className="h-4 w-4 mr-2" />
-                Projects
               </TabsTrigger>
               <TabsTrigger value="loans" className="flex-shrink-0">
                 <PiggyBank className="h-4 w-4 mr-2" />
@@ -98,12 +93,6 @@ export default function FinancialPage() {
             <TabsContent value="transactions" className="space-y-4">
               {selectedCompanyId && (
                 <TransactionManagement companyId={selectedCompanyId} />
-              )}
-            </TabsContent>
-
-            <TabsContent value="projects" className="space-y-4">
-              {selectedCompanyId && (
-                <ProjectManagement companyId={selectedCompanyId} />
               )}
             </TabsContent>
 
