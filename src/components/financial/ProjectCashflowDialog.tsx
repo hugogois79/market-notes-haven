@@ -17,6 +17,7 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 interface ProjectCashflowDialogProps {
   open: boolean;
@@ -34,6 +35,13 @@ interface Expense {
   expense_date: string;
   description: string;
   supplier: string;
+  category_id: string | null;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  color: string | null;
 }
 
 const MONTHS = [
@@ -48,6 +56,8 @@ export default function ProjectCashflowDialog({
 }: ProjectCashflowDialogProps) {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear.toString());
+  const [expandedPayments, setExpandedPayments] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const { data: expenses, isLoading } = useQuery({
     queryKey: ["project-expenses", project?.id, selectedYear],
@@ -71,6 +81,20 @@ export default function ProjectCashflowDialog({
     enabled: !!project?.id && open,
   });
 
+  const { data: categories } = useQuery({
+    queryKey: ["expense_categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expense_categories")
+        .select("id, name, color")
+        .order("name");
+      
+      if (error) throw error;
+      return data as Category[];
+    },
+    enabled: open,
+  });
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-PT", {
       style: "currency",
@@ -80,28 +104,54 @@ export default function ProjectCashflowDialog({
     }).format(value);
   };
 
-  // Group expenses by supplier
-  const expensesBySupplier = expenses?.reduce((acc, expense) => {
-    if (!acc[expense.supplier]) {
-      acc[expense.supplier] = [];
+  // Group expenses by category, then by supplier
+  const expensesByCategory = expenses?.reduce((acc, expense) => {
+    const categoryId = expense.category_id || "uncategorized";
+    if (!acc[categoryId]) {
+      acc[categoryId] = {};
     }
-    acc[expense.supplier].push(expense);
+    if (!acc[categoryId][expense.supplier]) {
+      acc[categoryId][expense.supplier] = [];
+    }
+    acc[categoryId][expense.supplier].push(expense);
     return acc;
-  }, {} as Record<string, Expense[]>) || {};
+  }, {} as Record<string, Record<string, Expense[]>>) || {};
 
-  // Calculate monthly totals for each supplier
-  const getMonthlyAmount = (supplierExpenses: Expense[], monthIndex: number) => {
-    return supplierExpenses
+  const getCategoryName = (categoryId: string) => {
+    if (categoryId === "uncategorized") return "Sem Categoria";
+    return categories?.find(c => c.id === categoryId)?.name || "Sem Categoria";
+  };
+
+  // Calculate monthly totals for expenses
+  const getMonthlyAmount = (expenseList: Expense[], monthIndex: number) => {
+    return expenseList
       .filter(exp => new Date(exp.expense_date).getMonth() === monthIndex)
       .reduce((sum, exp) => sum + exp.amount, 0);
   };
 
   // Calculate supplier yearly total
-  const getSupplierTotal = (supplierExpenses: Expense[]) => {
-    return supplierExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const getExpensesTotal = (expenseList: Expense[]) => {
+    return expenseList.reduce((sum, exp) => sum + exp.amount, 0);
   };
 
-  // Calculate monthly totals across all suppliers
+  // Calculate category monthly totals
+  const getCategoryMonthlyTotal = (categoryId: string, monthIndex: number) => {
+    const categoryExpenses = expensesByCategory[categoryId];
+    if (!categoryExpenses) return 0;
+    return Object.values(categoryExpenses).flat()
+      .filter(exp => new Date(exp.expense_date).getMonth() === monthIndex)
+      .reduce((sum, exp) => sum + exp.amount, 0);
+  };
+
+  // Calculate category yearly total
+  const getCategoryTotal = (categoryId: string) => {
+    const categoryExpenses = expensesByCategory[categoryId];
+    if (!categoryExpenses) return 0;
+    return Object.values(categoryExpenses).flat()
+      .reduce((sum, exp) => sum + exp.amount, 0);
+  };
+
+  // Calculate monthly totals across all expenses
   const getMonthTotal = (monthIndex: number) => {
     return expenses
       ?.filter(exp => new Date(exp.expense_date).getMonth() === monthIndex)
@@ -122,6 +172,20 @@ export default function ProjectCashflowDialog({
 
   // Generate year options (last 5 years)
   const yearOptions = Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
+
+  const togglePayments = () => setExpandedPayments(!expandedPayments);
+  
+  const toggleCategory = (categoryId: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(categoryId)) {
+      newExpanded.delete(categoryId);
+    } else {
+      newExpanded.add(categoryId);
+    }
+    setExpandedCategories(newExpanded);
+  };
+
+  const hasExpenses = Object.keys(expensesByCategory).length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -169,7 +233,7 @@ export default function ProjectCashflowDialog({
                       A carregar...
                     </TableCell>
                   </TableRow>
-                ) : Object.keys(expensesBySupplier).length === 0 ? (
+                ) : !hasExpenses ? (
                   <TableRow>
                     <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                       Sem despesas registadas para {selectedYear}
@@ -184,29 +248,15 @@ export default function ProjectCashflowDialog({
                       </TableCell>
                     </TableRow>
 
-                    {/* Expense rows by supplier */}
-                    {Object.entries(expensesBySupplier).map(([supplier, supplierExpenses]) => (
-                      <TableRow key={supplier} className="hover:bg-muted/30">
-                        <TableCell className="sticky left-0 bg-background font-medium">
-                          {supplier}
-                        </TableCell>
-                        {MONTHS.map((_, monthIndex) => {
-                          const amount = getMonthlyAmount(supplierExpenses, monthIndex);
-                          return (
-                            <TableCell key={monthIndex} className="text-right text-destructive">
-                              {amount > 0 ? formatCurrency(-amount) : "-"}
-                            </TableCell>
-                          );
-                        })}
-                        <TableCell className="text-right font-medium text-destructive">
-                          {formatCurrency(-getSupplierTotal(supplierExpenses))}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-
-                    {/* Total Pagamentos row */}
-                    <TableRow className="bg-destructive/5 font-bold border-t-2">
-                      <TableCell className="sticky left-0 bg-destructive/5">Total Pagamentos</TableCell>
+                    {/* Total Pagamentos row - clickable to expand */}
+                    <TableRow 
+                      className="bg-destructive/5 font-bold border-t cursor-pointer hover:bg-destructive/10 transition-colors"
+                      onClick={togglePayments}
+                    >
+                      <TableCell className="sticky left-0 bg-destructive/5 flex items-center gap-2">
+                        {expandedPayments ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        Total Pagamentos
+                      </TableCell>
                       {MONTHS.map((_, monthIndex) => {
                         const amount = getMonthTotal(monthIndex);
                         return (
@@ -219,6 +269,54 @@ export default function ProjectCashflowDialog({
                         {formatCurrency(-yearTotal)}
                       </TableCell>
                     </TableRow>
+
+                    {/* Expanded: Categories */}
+                    {expandedPayments && Object.keys(expensesByCategory).map((categoryId) => (
+                      <>
+                        {/* Category row - clickable to expand suppliers */}
+                        <TableRow 
+                          key={categoryId}
+                          className="bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => toggleCategory(categoryId)}
+                        >
+                          <TableCell className="sticky left-0 bg-muted/30 pl-8 flex items-center gap-2 font-medium">
+                            {expandedCategories.has(categoryId) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            {getCategoryName(categoryId)}
+                          </TableCell>
+                          {MONTHS.map((_, monthIndex) => {
+                            const amount = getCategoryMonthlyTotal(categoryId, monthIndex);
+                            return (
+                              <TableCell key={monthIndex} className="text-right text-destructive">
+                                {amount > 0 ? formatCurrency(-amount) : "-"}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="text-right font-medium text-destructive">
+                            {formatCurrency(-getCategoryTotal(categoryId))}
+                          </TableCell>
+                        </TableRow>
+
+                        {/* Expanded: Suppliers within category */}
+                        {expandedCategories.has(categoryId) && Object.entries(expensesByCategory[categoryId]).map(([supplier, supplierExpenses]) => (
+                          <TableRow key={`${categoryId}-${supplier}`} className="hover:bg-muted/20">
+                            <TableCell className="sticky left-0 bg-background pl-14 text-muted-foreground">
+                              {supplier}
+                            </TableCell>
+                            {MONTHS.map((_, monthIndex) => {
+                              const amount = getMonthlyAmount(supplierExpenses, monthIndex);
+                              return (
+                                <TableCell key={monthIndex} className="text-right text-destructive/80">
+                                  {amount > 0 ? formatCurrency(-amount) : "-"}
+                                </TableCell>
+                              );
+                            })}
+                            <TableCell className="text-right text-destructive/80">
+                              {formatCurrency(-getExpensesTotal(supplierExpenses))}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </>
+                    ))}
 
                     {/* Saldo Acumulado row */}
                     <TableRow className="bg-muted font-bold border-t-2">
