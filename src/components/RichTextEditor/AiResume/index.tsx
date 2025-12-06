@@ -26,6 +26,12 @@ const AiResume: React.FC<AiResumeProps> = ({
   // Use custom hook to parse the summary
   const parsedSummary = useSummaryParser(initialSummary, noteId);
   
+  // Helper to strip HTML tags and get plain text
+  const stripHtml = (html: string): string => {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    return doc.body.textContent || '';
+  };
+
   const generateSummary = async () => {
     if (!content.trim()) {
       toast.error("Please add some content to your note first.");
@@ -35,10 +41,19 @@ const AiResume: React.FC<AiResumeProps> = ({
     setIsGenerating(true);
     
     try {
+      // Strip HTML to reduce content size and get plain text for summarization
+      const plainTextContent = stripHtml(content).trim();
+      
+      if (!plainTextContent) {
+        toast.error("No text content found to summarize.");
+        setIsGenerating(false);
+        return;
+      }
+      
       // Call the Supabase Edge Function to summarize the content
       const { data, error } = await supabase.functions.invoke('summarize-note', {
         body: { 
-          content,
+          content: plainTextContent,
           noteId,
           maxLength: 250, // Allow for slightly longer summaries for financial analysis
           generateTradeInfo: true // Always generate trade info
