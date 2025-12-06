@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import ProjectCashflowDialog from "./ProjectCashflowDialog";
 
 interface ExpenseProject {
   id: string;
@@ -40,6 +41,7 @@ interface ExpenseProject {
 export default function ExpenseProjectManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<ExpenseProject | null>(null);
+  const [cashflowProject, setCashflowProject] = useState<ExpenseProject | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -242,12 +244,13 @@ export default function ExpenseProjectManagement() {
               projects?.map((project) => (
                 <TableRow key={project.id}>
                   <TableCell className="text-center">
-                    <span 
-                      className="font-medium px-2 py-1 rounded text-white"
+                    <button 
+                      className="font-medium px-2 py-1 rounded text-white cursor-pointer hover:opacity-80 transition-opacity"
                       style={{ backgroundColor: project.color }}
+                      onClick={() => setCashflowProject(project)}
                     >
                       {project.name}
-                    </span>
+                    </button>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {project.description || "-"}
@@ -385,6 +388,12 @@ export default function ExpenseProjectManagement() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ProjectCashflowDialog
+        open={!!cashflowProject}
+        onOpenChange={(open) => !open && setCashflowProject(null)}
+        project={cashflowProject}
+      />
     </div>
   );
 }
