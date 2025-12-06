@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import ProjectDetailDialog from "./ProjectDetailDialog";
 
 interface ExpenseProject {
   id: string;
@@ -39,6 +40,8 @@ interface ExpenseProject {
 
 export default function ExpenseProjectManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<ExpenseProject | null>(null);
   const [editingProject, setEditingProject] = useState<ExpenseProject | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -246,7 +249,14 @@ export default function ExpenseProjectManagement() {
               </TableRow>
             ) : (
               projects?.map((project) => (
-                <TableRow key={project.id}>
+                <TableRow 
+                  key={project.id} 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => {
+                    setSelectedProject(project);
+                    setDetailDialogOpen(true);
+                  }}
+                >
                   <TableCell className="font-medium">{project.name}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {project.description || "-"}
@@ -275,14 +285,29 @@ export default function ExpenseProjectManagement() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleOpenEdit(project)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedProject(project);
+                          setDetailDialogOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEdit(project);
+                        }}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           if (confirm("Eliminar projeto?")) {
                             deleteMutation.mutate(project.id);
                           }
@@ -393,6 +418,12 @@ export default function ExpenseProjectManagement() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ProjectDetailDialog
+        project={selectedProject}
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+      />
     </div>
   );
 }
