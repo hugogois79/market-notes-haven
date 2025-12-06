@@ -1001,7 +1001,7 @@ const ExpenseDetailPage = () => {
           </CardHeader>
           <CardContent>
             <p className="text-lg font-semibold">
-              {format(new Date(claim.created_at), "dd/MM/yyyy")}
+              {format(new Date(claim.claim_date), "dd/MM/yyyy")}
             </p>
           </CardContent>
         </Card>
