@@ -321,15 +321,16 @@ const EditExpensePage = () => {
     mutationFn: () =>
       expenseClaimService.updateExpenseClaim(id!, {
         description,
+        claim_type: claimType,
         claim_date: claimDate,
         requester_id: requesterId || null,
-        status: "rascunho",
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expense-claims"] });
+      queryClient.invalidateQueries({ queryKey: ["expense-claim", id] });
       toast({
-        title: "Rascunho salvo",
-        description: "Sua requisição foi salva como rascunho.",
+        title: "Alterações guardadas",
+        description: "As alterações foram guardadas com sucesso.",
       });
       navigate("/expenses");
     },
@@ -686,7 +687,7 @@ const EditExpensePage = () => {
                 onClick={handleSaveDraft}
                 disabled={saveDraftMutation.isPending}
               >
-                Guardar Rascunho
+                Guardar Alterações
               </Button>
               {claim?.status === "rascunho" && (
                 <Button
