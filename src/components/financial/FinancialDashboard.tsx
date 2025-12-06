@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, DollarSign, Wallet, FolderOpen, Calendar, CalendarDays } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { TrendingUp, TrendingDown, DollarSign, Wallet, FolderOpen } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -18,8 +18,6 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
   // Calculate date ranges
   const startOfYear = `${currentYear}-01-01`;
   const endOfYear = `${currentYear}-12-31`;
-  const startOfMonth = format(new Date(currentYear, currentMonth, 1), 'yyyy-MM-dd');
-  const endOfMonth = format(new Date(currentYear, currentMonth + 1, 0), 'yyyy-MM-dd');
   const monthName = format(now, 'MMMM', { locale: pt });
 
   const { data: transactions } = useQuery({
@@ -84,7 +82,6 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
     .reduce((sum, t) => sum + Number(t.total_amount), 0);
   
   const yearProfit = yearIncome - yearExpenses;
-  const yearProfitMargin = yearIncome > 0 ? (yearProfit / yearIncome) * 100 : 0;
 
   // Calculate MONTH KPIs
   const monthIncome = monthTransactions.filter(t => t.type === 'income')
@@ -94,7 +91,6 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
     .reduce((sum, t) => sum + Number(t.total_amount), 0);
   
   const monthProfit = monthIncome - monthExpenses;
-  const monthProfitMargin = monthIncome > 0 ? (monthProfit / monthIncome) * 100 : 0;
   
   const totalBalance = bankAccounts?.reduce(
     (sum, acc) => sum + Number(acc.current_balance), 0
@@ -105,49 +101,27 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
     (sum, proj) => sum + Number(proj.total_cost || 0), 0
   ) || 0;
 
-  const monthKpis = [
+  const kpis = [
     {
       title: "Receitas",
-      value: formatCurrency(monthIncome),
+      monthValue: monthIncome,
+      yearValue: yearIncome,
       icon: TrendingUp,
       color: "text-green-600",
       bgColor: "bg-green-50",
     },
     {
       title: "Despesas",
-      value: formatCurrency(monthExpenses),
-      icon: TrendingDown,
-      color: "text-red-600",
-      bgColor: "bg-red-50",
-    },
-    {
-      title: "Lucro",
-      value: formatCurrency(monthProfit),
-      description: `Margem: ${monthProfitMargin.toFixed(1)}%`,
-      icon: DollarSign,
-      color: monthProfit >= 0 ? "text-green-600" : "text-red-600",
-      bgColor: monthProfit >= 0 ? "bg-green-50" : "bg-red-50",
-    },
-  ];
-
-  const yearKpis = [
-    {
-      title: "Receitas",
-      value: formatCurrency(yearIncome),
-      icon: TrendingUp,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
-    },
-    {
-      title: "Despesas",
-      value: formatCurrency(yearExpenses),
+      monthValue: monthExpenses,
+      yearValue: yearExpenses,
       icon: TrendingDown,
       color: "text-red-600",
       bgColor: "bg-red-50",
     },
     {
       title: "Despesas Projetos",
-      value: formatCurrency(totalProjectExpenses),
+      monthValue: null,
+      yearValue: totalProjectExpenses,
       description: `${projectExpenses?.length || 0} projetos`,
       icon: FolderOpen,
       color: "text-purple-600",
@@ -155,15 +129,15 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
     },
     {
       title: "Lucro",
-      value: formatCurrency(yearProfit),
-      description: `Margem: ${yearProfitMargin.toFixed(1)}%`,
+      monthValue: monthProfit,
+      yearValue: yearProfit,
       icon: DollarSign,
-      color: yearProfit >= 0 ? "text-green-600" : "text-red-600",
-      bgColor: yearProfit >= 0 ? "bg-green-50" : "bg-red-50",
+      getColor: (value: number) => value >= 0 ? "text-green-600" : "text-red-600",
     },
     {
       title: "Saldo Total",
-      value: formatCurrency(totalBalance),
+      monthValue: null,
+      yearValue: totalBalance,
       description: `${bankAccounts?.length || 0} contas`,
       icon: Wallet,
       color: "text-blue-600",
@@ -171,61 +145,74 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
     },
   ];
 
-  const renderKpiList = (kpis: typeof monthKpis) => (
-    <div className="divide-y">
-      {kpis.map((kpi) => (
-        <div 
-          key={kpi.title}
-          className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${kpi.bgColor}`}>
-              <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                {kpi.title}
-              </p>
-              {kpi.description && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {kpi.description}
-                </p>
-              )}
-            </div>
+  return (
+    <Card>
+      <CardContent className="p-0">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b bg-muted/30">
+          <div className="w-1/3"></div>
+          <div className="w-1/3 text-center">
+            <span className="text-sm font-semibold text-muted-foreground capitalize">
+              {monthName}
+            </span>
           </div>
-          <div className={`text-2xl font-bold ${kpi.color}`}>
-            {kpi.value}
+          <div className="w-1/3 text-center">
+            <span className="text-sm font-semibold text-muted-foreground">
+              Ano {currentYear}
+            </span>
           </div>
         </div>
-      ))}
-    </div>
-  );
-
-  return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="capitalize">{monthName} {currentYear}</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {renderKpiList(monthKpis)}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            Ano {currentYear}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {renderKpiList(yearKpis)}
-        </CardContent>
-      </Card>
-    </div>
+        
+        {/* KPI Rows */}
+        <div className="divide-y">
+          {kpis.map((kpi) => {
+            const monthColor = kpi.getColor ? kpi.getColor(kpi.monthValue || 0) : kpi.color;
+            const yearColor = kpi.getColor ? kpi.getColor(kpi.yearValue || 0) : kpi.color;
+            
+            return (
+              <div 
+                key={kpi.title}
+                className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+              >
+                {/* Label */}
+                <div className="flex items-center gap-3 w-1/3">
+                  <div className={`p-2 rounded-lg ${kpi.bgColor || (kpi.getColor ? (kpi.yearValue && kpi.yearValue >= 0 ? "bg-green-50" : "bg-red-50") : "bg-gray-50")}`}>
+                    <kpi.icon className={`h-5 w-5 ${yearColor}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {kpi.title}
+                    </p>
+                    {kpi.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {kpi.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Month Value */}
+                <div className="w-1/3 text-center">
+                  {kpi.monthValue !== null ? (
+                    <span className={`text-xl font-bold ${monthColor}`}>
+                      {formatCurrency(kpi.monthValue)}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </div>
+                
+                {/* Year Value */}
+                <div className="w-1/3 text-center">
+                  <span className={`text-xl font-bold ${yearColor}`}>
+                    {formatCurrency(kpi.yearValue)}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
