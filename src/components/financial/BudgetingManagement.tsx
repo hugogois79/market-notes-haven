@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
-import { Save, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { Save, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Copy } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface BudgetingManagementProps {
   companyId: string;
@@ -178,6 +179,19 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     });
   };
 
+  const handleReplicateToAllMonths = async (projectId: string, categoryId: string | null, sourceMonth: number) => {
+    const value = getBudgetValue(projectId, categoryId, sourceMonth);
+    if (value === 0) return;
+    
+    // Save for all months
+    for (let m = 1; m <= 12; m++) {
+      if (m !== sourceMonth) {
+        await saveMutation.mutateAsync({ projectId, categoryId, month: m, amount: value });
+      }
+    }
+    toast.success("Valor replicado para todos os meses");
+  };
+
   const getProjectTotals = (projectId: string) => {
     const projectCategories = getProjectCategories(projectId);
     let totalBudget = 0;
@@ -330,7 +344,7 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                             </div>
                           ) : (
                             <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-1 justify-center">
+                              <div className="flex items-center gap-0.5 justify-center">
                                 <Input
                                   type="number"
                                   value={getBudgetValue(project.id, null, month)}
@@ -342,11 +356,30 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6"
+                                    className="h-5 w-5"
                                     onClick={() => handleSave(project.id, null, month)}
                                   >
                                     <Save className="h-3 w-3" />
                                   </Button>
+                                )}
+                                {month === 1 && getBudgetValue(project.id, null, 1) > 0 && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-5 w-5"
+                                          onClick={() => handleReplicateToAllMonths(project.id, null, 1)}
+                                        >
+                                          <Copy className="h-3 w-3" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Replicar para todos os meses</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 )}
                               </div>
                               {expenseValue > 0 && (
@@ -395,7 +428,7 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                           return (
                             <td key={month} className="p-1 text-center">
                               <div className="flex flex-col gap-1">
-                                <div className="flex items-center gap-1 justify-center">
+                                <div className="flex items-center gap-0.5 justify-center">
                                   <Input
                                     type="number"
                                     value={budgetValue}
@@ -407,11 +440,30 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-5 w-5"
+                                      className="h-4 w-4"
                                       onClick={() => handleSave(project.id, category.id, month)}
                                     >
-                                      <Save className="h-3 w-3" />
+                                      <Save className="h-2.5 w-2.5" />
                                     </Button>
+                                  )}
+                                  {month === 1 && budgetValue > 0 && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-4 w-4"
+                                            onClick={() => handleReplicateToAllMonths(project.id, category.id, 1)}
+                                          >
+                                            <Copy className="h-2.5 w-2.5" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Replicar para todos os meses</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
                                   )}
                                 </div>
                                 {expenseValue > 0 && (
