@@ -22,8 +22,10 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [editingBudgets, setEditingBudgets] = useState<Record<string, number>>({});
   const [editingRevenues, setEditingRevenues] = useState<Record<string, number>>({});
+  const [editingInvestments, setEditingInvestments] = useState<Record<string, number>>({});
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [expandedRevenueProjects, setExpandedRevenueProjects] = useState<Set<string>>(new Set());
+  const [expandedInvestmentProjects, setExpandedInvestmentProjects] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
 
   const { data: projects } = useQuery({
@@ -72,6 +74,19 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     queryFn: async () => {
       const { data, error } = await supabase
         .from("project_monthly_revenues")
+        .select("*")
+        .eq("year", selectedYear);
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: investments } = useQuery({
+    queryKey: ["project-investments", selectedYear],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_monthly_investments")
         .select("*")
         .eq("year", selectedYear);
       
@@ -147,6 +162,31 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     },
   });
 
+  const saveInvestmentMutation = useMutation({
+    mutationFn: async ({ projectId, categoryId, month, amount }: { projectId: string; categoryId: string | null; month: number; amount: number }) => {
+      const { error } = await supabase
+        .from("project_monthly_investments")
+        .upsert({
+          project_id: projectId,
+          category_id: categoryId,
+          year: selectedYear,
+          month,
+          budgeted_amount: amount,
+        }, {
+          onConflict: 'project_id,category_id,year,month'
+        });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-investments"] });
+      toast.success("Investimento guardado");
+    },
+    onError: () => {
+      toast.error("Erro ao guardar investimento");
+    },
+  });
+
   const toggleProject = (projectId: string) => {
     setExpandedProjects(prev => {
       const next = new Set(prev);
@@ -182,6 +222,18 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     });
   };
 
+  const toggleInvestmentProject = (projectId: string) => {
+    setExpandedInvestmentProjects(prev => {
+      const next = new Set(prev);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
+  };
+
   const getBudgetValue = (projectId: string, categoryId: string | null, month: number) => {
     const key = `${projectId}-${categoryId || 'null'}-${month}`;
     if (editingBudgets[key] !== undefined) {
@@ -206,6 +258,19 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
       r.month === month
     );
     return revenue?.budgeted_amount ?? 0;
+  };
+
+  const getInvestmentValue = (projectId: string, categoryId: string | null, month: number) => {
+    const key = `investment-${projectId}-${categoryId || 'null'}-${month}`;
+    if (editingInvestments[key] !== undefined) {
+      return editingInvestments[key];
+    }
+    const investment = investments?.find(i => 
+      i.project_id === projectId && 
+      i.category_id === categoryId &&
+      i.month === month
+    );
+    return investment?.budgeted_amount ?? 0;
   };
 
   const getExpenseValue = (projectId: string, categoryId: string | null, month: number) => {
@@ -243,6 +308,12 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     setEditingRevenues(prev => ({ ...prev, [key]: numValue }));
   };
 
+  const handleInvestmentChange = (projectId: string, categoryId: string | null, month: number, value: string) => {
+    const key = `investment-${projectId}-${categoryId || 'null'}-${month}`;
+    const numValue = parseFloat(value) || 0;
+    setEditingInvestments(prev => ({ ...prev, [key]: numValue }));
+  };
+
   const handleSave = (projectId: string, categoryId: string | null, month: number) => {
     const key = `${projectId}-${categoryId || 'null'}-${month}`;
     const amount = editingBudgets[key] ?? getBudgetValue(projectId, categoryId, month);
@@ -265,6 +336,17 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     });
   };
 
+  const handleInvestmentSave = (projectId: string, categoryId: string | null, month: number) => {
+    const key = `investment-${projectId}-${categoryId || 'null'}-${month}`;
+    const amount = editingInvestments[key] ?? getInvestmentValue(projectId, categoryId, month);
+    saveInvestmentMutation.mutate({ projectId, categoryId, month, amount });
+    setEditingInvestments(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
   const handleReplicateToAllMonths = async (projectId: string, categoryId: string | null, sourceMonth: number) => {
     const value = getBudgetValue(projectId, categoryId, sourceMonth);
     if (value === 0) return;
@@ -281,9 +363,18 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     const value = getRevenueValue(projectId, categoryId, sourceMonth);
     if (value === 0) return;
     
-    // Save all months including source month
     for (let m = 1; m <= 12; m++) {
       await saveRevenueMutation.mutateAsync({ projectId, categoryId, month: m, amount: value });
+    }
+    toast.success("Valor replicado para todos os meses");
+  };
+
+  const handleReplicateInvestmentToAllMonths = async (projectId: string, categoryId: string | null, sourceMonth: number) => {
+    const value = getInvestmentValue(projectId, categoryId, sourceMonth);
+    if (value === 0) return;
+    
+    for (let m = 1; m <= 12; m++) {
+      await saveInvestmentMutation.mutateAsync({ projectId, categoryId, month: m, amount: value });
     }
     toast.success("Valor replicado para todos os meses");
   };
@@ -330,6 +421,14 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     return total;
   };
 
+  const getProjectInvestmentTotals = (projectId: string) => {
+    let total = 0;
+    for (let m = 1; m <= 12; m++) {
+      total += Number(getInvestmentValue(projectId, null, m));
+    }
+    return total;
+  };
+
   const getProjectRevenueForMonth = (projectId: string, month: number) => {
     const revenueCategories = getProjectCategories(projectId, true);
     if (revenueCategories.length === 0) {
@@ -338,6 +437,10 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     return revenueCategories.reduce((sum, cat) => 
       sum + Number(getRevenueValue(projectId, cat.id, month)), 0
     );
+  };
+
+  const getProjectInvestmentForMonth = (projectId: string, month: number) => {
+    return Number(getInvestmentValue(projectId, null, month));
   };
 
   const getCategoryTotals = (projectId: string, categoryId: string) => {
@@ -389,10 +492,25 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     return total;
   };
 
+  const getGlobalInvestmentTotals = () => {
+    let total = 0;
+    investmentProjects?.forEach(project => {
+      total += getProjectInvestmentTotals(project.id);
+    });
+    return total;
+  };
+
   const getGlobalMonthlyRevenue = (month: number) => {
     if (!revenueProjects) return 0;
     return revenueProjects.reduce((sum, project) => 
       sum + getProjectRevenueForMonth(project.id, month), 0
+    );
+  };
+
+  const getGlobalMonthlyInvestment = (month: number) => {
+    if (!investmentProjects) return 0;
+    return investmentProjects.reduce((sum, project) => 
+      sum + getProjectInvestmentForMonth(project.id, month), 0
     );
   };
 
@@ -410,8 +528,9 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     );
   };
 
-  // Filter projects that have revenue
+  // Filter projects that have revenue or investment
   const revenueProjects = projects?.filter(p => p.has_revenue);
+  const investmentProjects = projects?.filter(p => (p as any).has_investment);
 
   return (
     <Card>
@@ -550,8 +669,6 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                             {MONTHS.map((_, monthIndex) => {
                               const month = monthIndex + 1;
                               const revenueValue = getRevenueValue(project.id, category.id, month);
-                              const key = `revenue-${project.id}-${category.id}-${month}`;
-                              const isEditing = editingRevenues[key] !== undefined;
                               
                               return (
                                 <td key={month} className="p-1 text-center">
@@ -617,6 +734,104 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                   })}
                   <td className="p-2 text-center text-sm font-bold text-green-600">
                     {formatCurrency(getGlobalRevenueTotals())}
+                  </td>
+                  <td className="p-2 text-center">-</td>
+                  <td className="p-2 text-center">-</td>
+                </tr>
+                <tr>
+                  <td colSpan={16} className="h-4"></td>
+                </tr>
+              </>
+            )}
+
+            {/* Investment Section */}
+            {investmentProjects && investmentProjects.length > 0 && (
+              <>
+                <tr className="bg-orange-50 dark:bg-orange-950/30">
+                  <td colSpan={16} className="p-2 font-semibold text-orange-700 dark:text-orange-400 sticky left-0 bg-orange-50 dark:bg-orange-950/30">
+                    Investimentos
+                  </td>
+                </tr>
+                {investmentProjects.map(project => {
+                  const totalInvestment = getProjectInvestmentTotals(project.id);
+                  
+                  return (
+                    <tr key={`investment-${project.id}`} className="border-b hover:bg-muted/50 bg-orange-50/50 dark:bg-orange-950/20">
+                      <td className="p-2 sticky left-0 bg-orange-50/50 dark:bg-orange-950/20">
+                        <div className="flex items-center gap-2">
+                          <span 
+                            className="px-2 py-1 rounded text-white text-xs font-medium"
+                            style={{ backgroundColor: project.color || '#3878B5' }}
+                          >
+                            {project.name}
+                          </span>
+                        </div>
+                      </td>
+                      {MONTHS.map((_, monthIndex) => {
+                        const month = monthIndex + 1;
+                        const investmentValue = getInvestmentValue(project.id, null, month);
+                        
+                        return (
+                          <td key={month} className="p-1 text-center">
+                            <div className="flex items-center gap-0.5 justify-center">
+                              <Input
+                                type="number"
+                                value={investmentValue}
+                                onChange={(e) => handleInvestmentChange(project.id, null, month, e.target.value)}
+                                className="h-5 text-[10px] text-center w-12 px-1 border-orange-200 focus:border-orange-400"
+                                placeholder="0"
+                                onBlur={() => handleInvestmentSave(project.id, null, month)}
+                              />
+                              {month === 1 && investmentValue > 0 && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-4 w-4"
+                                        onClick={() => handleReplicateInvestmentToAllMonths(project.id, null, 1)}
+                                      >
+                                        <Copy className="h-2.5 w-2.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Replicar para todos os meses</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
+                          </td>
+                        );
+                      })}
+                      <td className="p-2 text-center font-medium text-orange-600">
+                        {formatCurrency(totalInvestment)}
+                      </td>
+                      <td className="p-2 text-center">-</td>
+                      <td className="p-2 text-center">-</td>
+                    </tr>
+                  );
+                })}
+                {/* Investment Total Row */}
+                <tr className="border-b bg-orange-100/50 dark:bg-orange-950/40 font-semibold">
+                  <td className="p-2 sticky left-0 bg-orange-100/50 dark:bg-orange-950/40">
+                    <span className="text-sm font-bold text-orange-700 dark:text-orange-400">Total Investimentos</span>
+                  </td>
+                  {MONTHS.map((_, monthIndex) => {
+                    const month = monthIndex + 1;
+                    const monthlyInvestment = getGlobalMonthlyInvestment(month);
+                    
+                    return (
+                      <td key={month} className="p-1 text-center">
+                        <span className="text-xs font-bold text-orange-600">
+                          {monthlyInvestment > 0 ? formatCurrency(monthlyInvestment) : '-'}
+                        </span>
+                      </td>
+                    );
+                  })}
+                  <td className="p-2 text-center text-sm font-bold text-orange-600">
+                    {formatCurrency(getGlobalInvestmentTotals())}
                   </td>
                   <td className="p-2 text-center">-</td>
                   <td className="p-2 text-center">-</td>
@@ -873,7 +1088,7 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
               );
             })()}
 
-            {/* Monthly Balance Row (Revenue - Expenses) */}
+            {/* Monthly Balance Row (Revenue - Investments - Expenses) */}
             {projects && projects.length > 0 && (() => {
               let totalBalance = 0;
               return (
@@ -884,8 +1099,9 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                   {MONTHS.map((_, monthIndex) => {
                     const month = monthIndex + 1;
                     const revenueValue = getGlobalMonthlyRevenue(month);
+                    const investmentValue = getGlobalMonthlyInvestment(month);
                     const expenseValue = getGlobalMonthlyBudget(month);
-                    const balance = revenueValue - expenseValue;
+                    const balance = revenueValue - investmentValue - expenseValue;
                     totalBalance += balance;
                     
                     return (
@@ -913,8 +1129,9 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
               // Calculate cumulative balances for each month
               for (let m = 1; m <= 12; m++) {
                 const revenueValue = getGlobalMonthlyRevenue(m);
+                const investmentValue = getGlobalMonthlyInvestment(m);
                 const expenseValue = getGlobalMonthlyBudget(m);
-                cumulativeBalance += revenueValue - expenseValue;
+                cumulativeBalance += revenueValue - investmentValue - expenseValue;
                 monthlyEvolutions.push(cumulativeBalance);
               }
               
