@@ -373,7 +373,7 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                                     type="number"
                                     value={budgetValue}
                                     onChange={(e) => handleBudgetChange(project.id, category.id, month, e.target.value)}
-                                    className="h-6 text-xs text-center w-14"
+                                    className="h-5 text-[10px] text-center w-12 px-1"
                                     placeholder="0"
                                   />
                                   {isEditing && (
