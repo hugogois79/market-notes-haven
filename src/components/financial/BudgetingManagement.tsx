@@ -351,6 +351,14 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     return { totalBudget, totalExpense, variance: totalBudget - totalExpense };
   };
 
+  const getCategoryRevenueTotals = (projectId: string, categoryId: string) => {
+    let total = 0;
+    for (let m = 1; m <= 12; m++) {
+      total += Number(getRevenueValue(projectId, categoryId, m));
+    }
+    return total;
+  };
+
   const getProjectBudgetForMonth = (projectId: string, month: number) => {
     const projectCategories = getProjectCategories(projectId);
     if (projectCategories.length === 0) {
@@ -444,72 +452,129 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                 </tr>
                 {revenueProjects.map(project => {
                   const totalRevenue = getProjectRevenueTotals(project.id);
+                  const isExpanded = expandedRevenueProjects.has(project.id);
+                  const revenueCategories = getProjectCategories(project.id, true);
+                  const hasCategories = revenueCategories.length > 0;
                   
                   return (
-                    <tr key={`revenue-${project.id}`} className="border-b hover:bg-muted/50 bg-green-50/50 dark:bg-green-950/20">
-                      <td className="p-2 sticky left-0 bg-green-50/50 dark:bg-green-950/20">
-                        <span 
-                          className="px-2 py-1 rounded text-white text-xs font-medium"
-                          style={{ backgroundColor: project.color || '#3878B5' }}
-                        >
-                          {project.name}
-                        </span>
-                      </td>
-                      {MONTHS.map((_, monthIndex) => {
-                        const month = monthIndex + 1;
-                        const revenueValue = getRevenueValue(project.id, null, month);
-                        const key = `revenue-${project.id}-null-${month}`;
-                        const isEditing = editingRevenues[key] !== undefined;
-                        
+                    <>
+                      {/* Revenue Project Row */}
+                      <tr key={`revenue-${project.id}`} className="border-b hover:bg-muted/50 bg-green-50/50 dark:bg-green-950/20">
+                        <td className="p-2 sticky left-0 bg-green-50/50 dark:bg-green-950/20">
+                          <div className="flex items-center gap-2">
+                            {hasCategories && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => toggleRevenueProject(project.id)}
+                              >
+                                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                              </Button>
+                            )}
+                            <span 
+                              className="px-2 py-1 rounded text-white text-xs font-medium cursor-pointer"
+                              style={{ backgroundColor: project.color || '#3878B5' }}
+                              onClick={() => hasCategories && toggleRevenueProject(project.id)}
+                            >
+                              {project.name}
+                            </span>
+                          </div>
+                        </td>
+                        {MONTHS.map((_, monthIndex) => {
+                          const month = monthIndex + 1;
+                          const monthlyRevenue = getProjectRevenueForMonth(project.id, month);
+                          
+                          return (
+                            <td key={month} className="p-1 text-center">
+                              {hasCategories ? (
+                                <span className="text-xs font-medium">
+                                  {monthlyRevenue > 0 ? formatCurrency(monthlyRevenue) : '-'}
+                                </span>
+                              ) : (
+                                <Input
+                                  type="number"
+                                  value={getRevenueValue(project.id, null, month)}
+                                  onChange={(e) => handleRevenueChange(project.id, null, month, e.target.value)}
+                                  className="h-7 text-xs text-center w-16 border-green-200 focus:border-green-400"
+                                  placeholder="0"
+                                  onBlur={() => handleRevenueSave(project.id, null, month)}
+                                />
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="p-2 text-center font-medium text-green-600">
+                          {formatCurrency(totalRevenue)}
+                        </td>
+                        <td className="p-2 text-center">-</td>
+                        <td className="p-2 text-center">-</td>
+                      </tr>
+
+                      {/* Revenue Category Rows */}
+                      {isExpanded && revenueCategories.map(category => {
+                        const catTotals = getCategoryRevenueTotals(project.id, category.id);
+
                         return (
-                          <td key={month} className="p-1 text-center">
-                            <div className="flex items-center gap-0.5 justify-center">
-                              <Input
-                                type="number"
-                                value={revenueValue}
-                                onChange={(e) => handleRevenueChange(project.id, null, month, e.target.value)}
-                                className="h-7 text-xs text-center w-16 border-green-200 focus:border-green-400"
-                                placeholder="0"
-                              />
-                              {isEditing && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-5 w-5"
-                                  onClick={() => handleRevenueSave(project.id, null, month)}
-                                >
-                                  <Save className="h-3 w-3" />
-                                </Button>
-                              )}
-                              {month === 1 && revenueValue > 0 && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-5 w-5"
-                                        onClick={() => handleReplicateRevenueToAllMonths(project.id, null, 1)}
-                                      >
-                                        <Copy className="h-3 w-3" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Replicar para todos os meses</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
-                            </div>
-                          </td>
+                          <tr key={`revenue-cat-${category.id}`} className="border-b bg-green-50/30 dark:bg-green-950/10">
+                            <td className="p-2 pl-12 sticky left-0 bg-green-50/30 dark:bg-green-950/10">
+                              <div className="flex items-center gap-2">
+                                <span 
+                                  className="w-2 h-2 rounded-full"
+                                  style={{ backgroundColor: category.color || '#3878B5' }}
+                                />
+                                <span className="text-sm">{category.name}</span>
+                              </div>
+                            </td>
+                            {MONTHS.map((_, monthIndex) => {
+                              const month = monthIndex + 1;
+                              const revenueValue = getRevenueValue(project.id, category.id, month);
+                              const key = `revenue-${project.id}-${category.id}-${month}`;
+                              const isEditing = editingRevenues[key] !== undefined;
+                              
+                              return (
+                                <td key={month} className="p-1 text-center">
+                                  <div className="flex items-center gap-0.5 justify-center">
+                                    <Input
+                                      type="number"
+                                      value={revenueValue}
+                                      onChange={(e) => handleRevenueChange(project.id, category.id, month, e.target.value)}
+                                      className="h-7 text-xs text-center w-16 border-green-200 focus:border-green-400"
+                                      placeholder="0"
+                                      onBlur={() => handleRevenueSave(project.id, category.id, month)}
+                                    />
+                                    {month === 1 && revenueValue > 0 && (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-5 w-5"
+                                              onClick={() => handleReplicateRevenueToAllMonths(project.id, category.id, 1)}
+                                            >
+                                              <Copy className="h-3 w-3" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>Replicar para todos os meses</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    )}
+                                  </div>
+                                </td>
+                              );
+                            })}
+                            <td className="p-2 text-center font-medium text-green-600">
+                              {formatCurrency(catTotals)}
+                            </td>
+                            <td className="p-2 text-center">-</td>
+                            <td className="p-2 text-center">-</td>
+                          </tr>
                         );
                       })}
-                      <td className="p-2 text-center font-medium text-green-600">
-                        {formatCurrency(totalRevenue)}
-                      </td>
-                      <td className="p-2 text-center">-</td>
-                      <td className="p-2 text-center">-</td>
-                    </tr>
+                    </>
                   );
                 })}
                 {/* Revenue Total Row */}
