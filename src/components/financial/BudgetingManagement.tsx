@@ -832,7 +832,7 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
               );
             })}
             
-            {/* Total Row */}
+            {/* Total Expenses Row */}
             {projects && projects.length > 0 && (() => {
               const globalTotals = getGlobalTotals();
               return (
@@ -869,6 +869,76 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                   <td className={`p-2 text-center text-sm font-bold ${globalTotals.variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {formatCurrency(globalTotals.variance)}
                   </td>
+                </tr>
+              );
+            })()}
+
+            {/* Monthly Balance Row (Revenue - Expenses) */}
+            {projects && projects.length > 0 && (() => {
+              let totalBalance = 0;
+              return (
+                <tr className="bg-blue-50 dark:bg-blue-950/30 font-semibold">
+                  <td className="p-2 sticky left-0 bg-blue-50 dark:bg-blue-950/30">
+                    <span className="text-sm font-bold text-blue-700 dark:text-blue-400">Saldo Mensal</span>
+                  </td>
+                  {MONTHS.map((_, monthIndex) => {
+                    const month = monthIndex + 1;
+                    const revenueValue = getGlobalMonthlyRevenue(month);
+                    const expenseValue = getGlobalMonthlyBudget(month);
+                    const balance = revenueValue - expenseValue;
+                    totalBalance += balance;
+                    
+                    return (
+                      <td key={month} className="p-1 text-center">
+                        <span className={`text-xs font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatCurrency(balance)}
+                        </span>
+                      </td>
+                    );
+                  })}
+                  <td className={`p-2 text-center text-sm font-bold ${totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatCurrency(totalBalance)}
+                  </td>
+                  <td className="p-2 text-center">-</td>
+                  <td className="p-2 text-center">-</td>
+                </tr>
+              );
+            })()}
+
+            {/* Monthly Evolution Row (Cumulative Balance) */}
+            {projects && projects.length > 0 && (() => {
+              let cumulativeBalance = 0;
+              const monthlyEvolutions: number[] = [];
+              
+              // Calculate cumulative balances for each month
+              for (let m = 1; m <= 12; m++) {
+                const revenueValue = getGlobalMonthlyRevenue(m);
+                const expenseValue = getGlobalMonthlyBudget(m);
+                cumulativeBalance += revenueValue - expenseValue;
+                monthlyEvolutions.push(cumulativeBalance);
+              }
+              
+              return (
+                <tr className="bg-purple-50 dark:bg-purple-950/30 font-semibold">
+                  <td className="p-2 sticky left-0 bg-purple-50 dark:bg-purple-950/30">
+                    <span className="text-sm font-bold text-purple-700 dark:text-purple-400">Evolução Mensal</span>
+                  </td>
+                  {MONTHS.map((_, monthIndex) => {
+                    const evolution = monthlyEvolutions[monthIndex];
+                    
+                    return (
+                      <td key={monthIndex} className="p-1 text-center">
+                        <span className={`text-xs font-bold ${evolution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatCurrency(evolution)}
+                        </span>
+                      </td>
+                    );
+                  })}
+                  <td className={`p-2 text-center text-sm font-bold ${cumulativeBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatCurrency(cumulativeBalance)}
+                  </td>
+                  <td className="p-2 text-center">-</td>
+                  <td className="p-2 text-center">-</td>
                 </tr>
               );
             })()}
