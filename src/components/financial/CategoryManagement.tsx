@@ -2,12 +2,12 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Tag, Edit, Trash2, FolderKanban } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Tag, Edit, Trash2, FolderKanban, Search } from "lucide-react";
 import { toast } from "sonner";
 import CategoryDialog from "./CategoryDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
 interface ExpenseCategory {
   id: string;
   name: string;
@@ -28,6 +28,7 @@ interface ExpenseProject {
 export default function CategoryManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<ExpenseCategory | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const queryClient = useQueryClient();
 
   const { data: categories } = useQuery({
@@ -80,21 +81,37 @@ export default function CategoryManagement() {
     return projects.filter(p => projectIds.includes(p.id)).map(p => p.name);
   };
 
+  const filteredCategories = categories?.filter(category =>
+    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (category.description && category.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold">Categories</h2>
           <p className="text-muted-foreground">Manage expense categories and assign them to projects</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Category
-        </Button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Pesquisar categoria..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Category
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {categories?.map((category) => (
+        {filteredCategories?.map((category) => (
           <Card key={category.id}>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
