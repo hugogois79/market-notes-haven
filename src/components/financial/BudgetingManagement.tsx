@@ -281,10 +281,9 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     const value = getRevenueValue(projectId, categoryId, sourceMonth);
     if (value === 0) return;
     
+    // Save all months including source month
     for (let m = 1; m <= 12; m++) {
-      if (m !== sourceMonth) {
-        await saveRevenueMutation.mutateAsync({ projectId, categoryId, month: m, amount: value });
-      }
+      await saveRevenueMutation.mutateAsync({ projectId, categoryId, month: m, amount: value });
     }
     toast.success("Valor replicado para todos os meses");
   };
