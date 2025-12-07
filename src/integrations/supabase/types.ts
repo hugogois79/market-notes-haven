@@ -448,6 +448,7 @@ export type Database = {
       expense_categories: {
         Row: {
           assigned_project_ids: string[] | null
+          category_type: string | null
           color: string | null
           created_at: string
           description: string | null
@@ -460,6 +461,7 @@ export type Database = {
         }
         Insert: {
           assigned_project_ids?: string[] | null
+          category_type?: string | null
           color?: string | null
           created_at?: string
           description?: string | null
@@ -472,6 +474,7 @@ export type Database = {
         }
         Update: {
           assigned_project_ids?: string[] | null
+          category_type?: string | null
           color?: string | null
           created_at?: string
           description?: string | null
@@ -2099,6 +2102,7 @@ export type Database = {
       project_monthly_revenues: {
         Row: {
           budgeted_amount: number | null
+          category_id: string | null
           created_at: string | null
           id: string
           month: number
@@ -2109,6 +2113,7 @@ export type Database = {
         }
         Insert: {
           budgeted_amount?: number | null
+          category_id?: string | null
           created_at?: string | null
           id?: string
           month: number
@@ -2119,6 +2124,7 @@ export type Database = {
         }
         Update: {
           budgeted_amount?: number | null
+          category_id?: string | null
           created_at?: string | null
           id?: string
           month?: number
@@ -2128,6 +2134,13 @@ export type Database = {
           year?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "project_monthly_revenues_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_monthly_revenues_project_id_fkey"
             columns: ["project_id"]

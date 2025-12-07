@@ -17,6 +17,7 @@ interface ExpenseCategory {
   is_active: boolean | null;
   user_id: string | null;
   assigned_project_ids?: string[];
+  category_type?: string;
 }
 
 interface ExpenseProject {
@@ -137,10 +138,18 @@ export default function CategoryManagement() {
                   {category.description}
                 </div>
               )}
-              <div className="flex items-center gap-1 text-sm">
+              <div className="flex items-center gap-2 text-sm">
                 <span className="font-medium">Status:</span>
                 <Badge variant={category.is_active ? "default" : "secondary"}>
                   {category.is_active ? "Active" : "Inactive"}
+                </Badge>
+                <Badge variant="outline" className={
+                  category.category_type === 'revenue' ? 'border-green-500 text-green-600' :
+                  category.category_type === 'both' ? 'border-purple-500 text-purple-600' :
+                  'border-red-500 text-red-600'
+                }>
+                  {category.category_type === 'revenue' ? 'Receita' :
+                   category.category_type === 'both' ? 'Ambos' : 'Despesa'}
                 </Badge>
               </div>
               {category.assigned_project_ids && category.assigned_project_ids.length > 0 && (
