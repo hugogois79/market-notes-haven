@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Fragment } from "react";
 import { DocumentDialog } from "./components/DocumentDialog";
 import { FilterBar } from "./components/FilterBar";
 
@@ -243,127 +243,120 @@ export default function LegalPage() {
             </TableHeader>
             <TableBody>
               {Object.entries(groupedDocuments).map(([caseTitle, docs]) => {
-                const isCaseOpen = openCases[caseTitle];
+                const isCaseOpen = openCases[caseTitle] ?? false;
                 
                 return (
-                  <Collapsible 
-                    key={caseTitle} 
-                    open={isCaseOpen}
-                    onOpenChange={() => toggleCase(caseTitle)}
-                    asChild
-                  >
-                    <>
-                      {/* Airtable-style separator row */}
-                      <TableRow className="bg-amber-50 dark:bg-amber-950/30 border-t-2 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/50">
-                        <TableCell colSpan={8} className="py-2">
-                          <CollapsibleTrigger className="flex items-center gap-3 text-left w-full">
-                            {isCaseOpen ? (
-                              <ChevronDown className="w-4 h-4 text-amber-600" />
-                            ) : (
-                              <ChevronRight className="w-4 h-4 text-amber-600" />
-                            )}
-                            <span className="uppercase text-[10px] font-medium text-amber-600 dark:text-amber-500 tracking-wider">
-                              CASES
-                            </span>
-                            <span className="font-semibold text-foreground">
-                              {caseTitle}
-                            </span>
-                            <Badge variant="secondary" className="ml-2 bg-muted text-muted-foreground text-xs">
-                              {docs.length}
+                  <Fragment key={caseTitle}>
+                    {/* Airtable-style separator row */}
+                    <TableRow 
+                      key={`case-${caseTitle}`}
+                      className="bg-amber-50 dark:bg-amber-950/30 border-t-2 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/50 cursor-pointer"
+                      onClick={() => toggleCase(caseTitle)}
+                    >
+                      <TableCell colSpan={8} className="py-2">
+                        <div className="flex items-center gap-3 text-left w-full">
+                          {isCaseOpen ? (
+                            <ChevronDown className="w-4 h-4 text-amber-600" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-amber-600" />
+                          )}
+                          <span className="uppercase text-[10px] font-medium text-amber-600 dark:text-amber-500 tracking-wider">
+                            CASES
+                          </span>
+                          <span className="font-semibold text-foreground">
+                            {caseTitle}
+                          </span>
+                          <Badge variant="secondary" className="ml-2 bg-muted text-muted-foreground text-xs">
+                            {docs.length}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {isCaseOpen && docs.map((doc, idx) => (
+                      <TableRow 
+                        key={doc.id} 
+                        className="hover:bg-accent/30 cursor-pointer"
+                        onClick={() => handleEditDocument(doc)}
+                      >
+                        <TableCell className="text-muted-foreground text-sm">
+                          {idx + 1}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {doc.title}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={documentTypeBadgeColors[doc.document_type] || ""}
+                            variant="outline"
+                          >
+                            {doc.document_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                          {doc.attachment_url && (
+                            <button
+                              onClick={async (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                try {
+                                  const filePath = doc.attachment_url!.includes('legal-documents/')
+                                    ? doc.attachment_url!.split('legal-documents/')[1]
+                                    : doc.attachment_url!;
+                                  
+                                  const { data, error } = await supabase.storage
+                                    .from("legal-documents")
+                                    .createSignedUrl(filePath, 3600);
+                                  
+                                  if (error) throw error;
+                                  if (data?.signedUrl) {
+                                    window.open(data.signedUrl, '_blank');
+                                  }
+                                } catch (error) {
+                                  console.error("Error getting signed URL:", error);
+                                  toast.error("Erro ao abrir ficheiro");
+                                }
+                              }}
+                              className="text-primary hover:text-primary/80 inline-flex"
+                            >
+                              <Paperclip className="w-4 h-4" />
+                            </button>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground max-w-md">
+                          <div className="line-clamp-2">
+                            {doc.description || "-"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(doc.created_date).toLocaleDateString("pt-PT")}
+                        </TableCell>
+                        <TableCell>
+                          {doc.legal_contacts && (
+                            <Badge 
+                              variant="secondary" 
+                              className="text-xs"
+                              title={doc.legal_contacts.role}
+                            >
+                              {doc.legal_contacts.name}
                             </Badge>
-                          </CollapsibleTrigger>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditDocument(doc);
+                            }}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
-                      <CollapsibleContent asChild>
-                        <>
-                          {docs.map((doc, idx) => (
-                            <TableRow 
-                              key={doc.id} 
-                              className="hover:bg-accent/30 cursor-pointer"
-                              onClick={() => handleEditDocument(doc)}
-                            >
-                              <TableCell className="text-muted-foreground text-sm">
-                                {idx + 1}
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                {doc.title}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  className={documentTypeBadgeColors[doc.document_type] || ""}
-                                  variant="outline"
-                                >
-                                  {doc.document_type}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                                {doc.attachment_url && (
-                                  <button
-                                    onClick={async (e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      try {
-                                        const filePath = doc.attachment_url!.includes('legal-documents/')
-                                          ? doc.attachment_url!.split('legal-documents/')[1]
-                                          : doc.attachment_url!;
-                                        
-                                        const { data, error } = await supabase.storage
-                                          .from("legal-documents")
-                                          .createSignedUrl(filePath, 3600);
-                                        
-                                        if (error) throw error;
-                                        if (data?.signedUrl) {
-                                          window.open(data.signedUrl, '_blank');
-                                        }
-                                      } catch (error) {
-                                        console.error("Error getting signed URL:", error);
-                                        toast.error("Erro ao abrir ficheiro");
-                                      }
-                                    }}
-                                    className="text-primary hover:text-primary/80 inline-flex"
-                                  >
-                                    <Paperclip className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-sm text-muted-foreground max-w-md">
-                                <div className="line-clamp-2">
-                                  {doc.description || "-"}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
-                                {new Date(doc.created_date).toLocaleDateString("pt-PT")}
-                              </TableCell>
-                              <TableCell>
-                                {doc.legal_contacts && (
-                                  <Badge 
-                                    variant="secondary" 
-                                    className="text-xs"
-                                    title={doc.legal_contacts.role}
-                                  >
-                                    {doc.legal_contacts.name}
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditDocument(doc);
-                                  }}
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </>
-                      </CollapsibleContent>
-                    </>
-                  </Collapsible>
+                    ))}
+                  </Fragment>
                 );
               })}
             </TableBody>
