@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, DollarSign, Wallet, FolderOpen } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Wallet } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 interface FinancialDashboardProps {
@@ -53,14 +53,16 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
   const income = transactions?.filter(t => t.type === 'income')
     .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
   
-  const expenses = transactions?.filter(t => t.type === 'expense')
+  const transactionExpenses = transactions?.filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
 
   const projectExpenses = expenseProjects?.reduce(
     (sum, p) => sum + Number(p.total_cost || 0), 0
   ) || 0;
+
+  const expenses = transactionExpenses + projectExpenses;
   
-  const profit = income - expenses - projectExpenses;
+  const profit = income - expenses;
   const profitMargin = income > 0 ? (profit / income) * 100 : 0;
   
   const totalBalance = bankAccounts?.reduce(
@@ -81,14 +83,6 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
       icon: TrendingDown,
       color: "text-red-600",
       bgColor: "bg-red-50",
-    },
-    {
-      title: "Despesas Projetos",
-      value: formatCurrency(projectExpenses),
-      description: `${expenseProjects?.length || 0} projetos`,
-      icon: FolderOpen,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
     },
     {
       title: "Lucro",
