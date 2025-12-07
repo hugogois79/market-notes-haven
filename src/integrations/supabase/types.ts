@@ -2045,6 +2045,7 @@ export type Database = {
       project_monthly_budgets: {
         Row: {
           budgeted_amount: number
+          category_id: string | null
           created_at: string
           id: string
           month: number
@@ -2055,6 +2056,7 @@ export type Database = {
         }
         Insert: {
           budgeted_amount?: number
+          category_id?: string | null
           created_at?: string
           id?: string
           month: number
@@ -2065,6 +2067,7 @@ export type Database = {
         }
         Update: {
           budgeted_amount?: number
+          category_id?: string | null
           created_at?: string
           id?: string
           month?: number
@@ -2074,6 +2077,13 @@ export type Database = {
           year?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "project_monthly_budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_monthly_budgets_project_id_fkey"
             columns: ["project_id"]
