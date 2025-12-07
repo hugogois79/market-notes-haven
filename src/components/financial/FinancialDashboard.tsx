@@ -47,26 +47,15 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
     },
   });
 
-  // Fetch project expenses for current year (from expense_projects total)
+  // Fetch project expenses for current year
   const { data: projectExpenses } = useQuery({
     queryKey: ["project-expenses-dashboard", currentYear],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expense_projects")
-        .select("total_cost, start_date, created_at");
-      
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Fetch actual expenses by date for monthly breakdown
-  const { data: expenseItems } = useQuery({
-    queryKey: ["expense-items-dashboard", currentYear, currentMonth],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("expenses")
-        .select("amount, expense_date");
+        .select("total_cost, start_date, created_at")
+        .gte("created_at", startOfYear)
+        .lte("created_at", endOfYear);
       
       if (error) throw error;
       return data;
@@ -107,16 +96,10 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
     (sum, acc) => sum + Number(acc.current_balance), 0
   ) || 0;
 
-  // Calculate total project expenses for the year (from expense_projects)
+  // Calculate total project expenses for the year
   const totalProjectExpenses = projectExpenses?.reduce(
     (sum, proj) => sum + Number(proj.total_cost || 0), 0
   ) || 0;
-
-  // Calculate monthly project expenses from actual expense items
-  const monthProjectExpenses = expenseItems?.filter(exp => {
-    const expDate = new Date(exp.expense_date);
-    return expDate.getFullYear() === currentYear && expDate.getMonth() === currentMonth;
-  }).reduce((sum, exp) => sum + Number(exp.amount || 0), 0) || 0;
 
   const kpis = [
     {
@@ -137,7 +120,7 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
     },
     {
       title: "Despesas Projetos",
-      monthValue: monthProjectExpenses,
+      monthValue: null,
       yearValue: totalProjectExpenses,
       description: `${projectExpenses?.length || 0} projetos`,
       icon: FolderOpen,
