@@ -45,13 +45,14 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
     },
   });
 
-  const { data: expenseProjects } = useQuery({
-    queryKey: ["expense-projects-dashboard"],
+  const { data: expenseClaimsExpenses } = useQuery({
+    queryKey: ["expense-claims-expenses-dashboard", startOfYear, endOfMonth],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("expense_projects")
-        .select("total_cost")
-        .eq("is_active", true);
+        .from("expenses")
+        .select("amount, expense_date")
+        .gte("expense_date", startOfYear)
+        .lte("expense_date", endOfMonth);
       
       if (error) throw error;
       return data;
@@ -72,20 +73,29 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
   const yearTransactionExpenses = yearTransactions.filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + Number(t.total_amount), 0);
 
-  const projectExpenses = expenseProjects?.reduce(
-    (sum, p) => sum + Number(p.total_cost || 0), 0
+  // Calculate expenses from expense claims (by period)
+  const yearClaimsExpenses = expenseClaimsExpenses?.reduce(
+    (sum, e) => sum + Number(e.amount || 0), 0
   ) || 0;
 
-  const yearExpenses = yearTransactionExpenses + projectExpenses;
-  const yearProfit = yearIncome - yearExpenses;
-  const yearMargin = yearIncome > 0 ? (yearProfit / yearIncome) * 100 : 0;
+  const monthClaimsExpenses = expenseClaimsExpenses?.filter(e => {
+    const date = e.expense_date;
+    return date >= startOfMonth && date <= endOfMonth;
+  }).reduce((sum, e) => sum + Number(e.amount || 0), 0) || 0;
 
+  const yearExpenses = yearTransactionExpenses + yearClaimsExpenses;
+  
   // Calculate Monthly KPIs
   const monthIncome = monthTransactions.filter(t => t.type === 'income')
     .reduce((sum, t) => sum + Number(t.total_amount), 0);
   
-  const monthExpenses = monthTransactions.filter(t => t.type === 'expense')
+  const monthTransactionExpenses = monthTransactions.filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + Number(t.total_amount), 0);
+
+  const monthExpenses = monthTransactionExpenses + monthClaimsExpenses;
+
+  const yearProfit = yearIncome - yearExpenses;
+  const yearMargin = yearIncome > 0 ? (yearProfit / yearIncome) * 100 : 0;
 
   const monthProfit = monthIncome - monthExpenses;
   const monthMargin = monthIncome > 0 ? (monthProfit / monthIncome) * 100 : 0;
