@@ -104,10 +104,7 @@ const AppRoutes = () => {
             path="editor/new"
             element={
               <ProtectedRoute>
-                <Editor 
-                  onSaveNote={handleSaveNote} 
-                  onDeleteNote={handleDeleteNote} 
-                />
+                <EditorWrapper />
               </ProtectedRoute>
             }
           />
@@ -115,10 +112,7 @@ const AppRoutes = () => {
             path="editor/:id"
             element={
               <ProtectedRoute>
-                <Editor 
-                  onSaveNote={handleSaveNote} 
-                  onDeleteNote={handleDeleteNote} 
-                />
+                <EditorWrapper />
               </ProtectedRoute>
             }
           />
