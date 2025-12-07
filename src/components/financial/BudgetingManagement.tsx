@@ -224,6 +224,33 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     );
   };
 
+  const getGlobalTotals = () => {
+    let totalBudget = 0;
+    let totalExpense = 0;
+    
+    projects?.forEach(project => {
+      const projectTotals = getProjectTotals(project.id);
+      totalBudget += projectTotals.totalBudget;
+      totalExpense += projectTotals.totalExpense;
+    });
+    
+    return { totalBudget, totalExpense, variance: totalBudget - totalExpense };
+  };
+
+  const getGlobalMonthlyBudget = (month: number) => {
+    if (!projects) return 0;
+    return projects.reduce((sum, project) => 
+      sum + getProjectBudgetForMonth(project.id, month), 0
+    );
+  };
+
+  const getGlobalMonthlyExpense = (month: number) => {
+    if (!projects) return 0;
+    return projects.reduce((sum, project) => 
+      sum + getProjectExpenseValue(project.id, month), 0
+    );
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -411,6 +438,47 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                 </>
               );
             })}
+            
+            {/* Total Row */}
+            {projects && projects.length > 0 && (() => {
+              const globalTotals = getGlobalTotals();
+              return (
+                <tr className="border-t-2 border-primary bg-muted/50 font-semibold">
+                  <td className="p-2 sticky left-0 bg-muted/50">
+                    <span className="text-sm font-bold">Total Geral</span>
+                  </td>
+                  {MONTHS.map((_, monthIndex) => {
+                    const month = monthIndex + 1;
+                    const budgetValue = getGlobalMonthlyBudget(month);
+                    const expenseValue = getGlobalMonthlyExpense(month);
+                    
+                    return (
+                      <td key={month} className="p-1 text-center">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-bold">
+                            {budgetValue > 0 ? formatCurrency(budgetValue) : '-'}
+                          </span>
+                          {expenseValue > 0 && (
+                            <span className={`text-xs ${expenseValue > budgetValue && budgetValue > 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
+                              {formatCurrency(expenseValue)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  })}
+                  <td className="p-2 text-center text-sm font-bold">
+                    {formatCurrency(globalTotals.totalBudget)}
+                  </td>
+                  <td className="p-2 text-center text-sm font-bold text-red-600">
+                    {formatCurrency(globalTotals.totalExpense)}
+                  </td>
+                  <td className={`p-2 text-center text-sm font-bold ${globalTotals.variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatCurrency(globalTotals.variance)}
+                  </td>
+                </tr>
+              );
+            })()}
           </tbody>
         </table>
       </CardContent>
