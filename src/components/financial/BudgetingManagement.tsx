@@ -484,6 +484,7 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                         {MONTHS.map((_, monthIndex) => {
                           const month = monthIndex + 1;
                           const monthlyRevenue = getProjectRevenueForMonth(project.id, month);
+                          const revenueValue = getRevenueValue(project.id, null, month);
                           
                           return (
                             <td key={month} className="p-1 text-center">
@@ -492,14 +493,35 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                                   {monthlyRevenue > 0 ? formatCurrency(monthlyRevenue) : '-'}
                                 </span>
                               ) : (
-                                <Input
-                                  type="number"
-                                  value={getRevenueValue(project.id, null, month)}
-                                  onChange={(e) => handleRevenueChange(project.id, null, month, e.target.value)}
-                                  className="h-7 text-xs text-center w-16 border-green-200 focus:border-green-400"
-                                  placeholder="0"
-                                  onBlur={() => handleRevenueSave(project.id, null, month)}
-                                />
+                                <div className="flex items-center gap-0.5 justify-center">
+                                  <Input
+                                    type="number"
+                                    value={revenueValue}
+                                    onChange={(e) => handleRevenueChange(project.id, null, month, e.target.value)}
+                                    className="h-5 text-[10px] text-center w-12 px-1 border-green-200 focus:border-green-400"
+                                    placeholder="0"
+                                    onBlur={() => handleRevenueSave(project.id, null, month)}
+                                  />
+                                  {month === 1 && revenueValue > 0 && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-4 w-4"
+                                            onClick={() => handleReplicateRevenueToAllMonths(project.id, null, 1)}
+                                          >
+                                            <Copy className="h-2.5 w-2.5" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Replicar para todos os meses</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
                               )}
                             </td>
                           );
@@ -517,13 +539,13 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
 
                         return (
                           <tr key={`revenue-cat-${category.id}`} className="border-b bg-green-50/30 dark:bg-green-950/10">
-                            <td className="p-2 pl-12 sticky left-0 bg-green-50/30 dark:bg-green-950/10">
+                            <td className="p-2 pl-10 sticky left-0 bg-green-50/30 dark:bg-green-950/10">
                               <div className="flex items-center gap-2">
-                                <span 
-                                  className="w-2 h-2 rounded-full"
+                                <div 
+                                  className="w-2 h-2 rounded-full flex-shrink-0"
                                   style={{ backgroundColor: category.color || '#3878B5' }}
                                 />
-                                <span className="text-sm">{category.name}</span>
+                                <span className="text-xs truncate max-w-[120px]">{category.name}</span>
                               </div>
                             </td>
                             {MONTHS.map((_, monthIndex) => {
@@ -539,7 +561,7 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                                       type="number"
                                       value={revenueValue}
                                       onChange={(e) => handleRevenueChange(project.id, category.id, month, e.target.value)}
-                                      className="h-7 text-xs text-center w-16 border-green-200 focus:border-green-400"
+                                      className="h-5 text-[10px] text-center w-12 px-1 border-green-200 focus:border-green-400"
                                       placeholder="0"
                                       onBlur={() => handleRevenueSave(project.id, category.id, month)}
                                     />
@@ -550,10 +572,10 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                                             <Button
                                               variant="ghost"
                                               size="icon"
-                                              className="h-5 w-5"
+                                              className="h-4 w-4"
                                               onClick={() => handleReplicateRevenueToAllMonths(project.id, category.id, 1)}
                                             >
-                                              <Copy className="h-3 w-3" />
+                                              <Copy className="h-2.5 w-2.5" />
                                             </Button>
                                           </TooltipTrigger>
                                           <TooltipContent>
