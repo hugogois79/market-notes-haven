@@ -546,6 +546,7 @@ export type Database = {
           end_date: string | null
           id: string
           is_active: boolean
+          monthly_budget: number | null
           name: string
           start_date: string | null
           total_cost: number | null
@@ -559,6 +560,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           is_active?: boolean
+          monthly_budget?: number | null
           name: string
           start_date?: string | null
           total_cost?: number | null
@@ -572,6 +574,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           is_active?: boolean
+          monthly_budget?: number | null
           name?: string
           start_date?: string | null
           total_cost?: number | null
@@ -2035,6 +2038,47 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_monthly_budgets: {
+        Row: {
+          budgeted_amount: number
+          created_at: string
+          id: string
+          month: number
+          notes: string | null
+          project_id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          budgeted_amount?: number
+          created_at?: string
+          id?: string
+          month: number
+          notes?: string | null
+          project_id: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          budgeted_amount?: number
+          created_at?: string
+          id?: string
+          month?: number
+          notes?: string | null
+          project_id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_monthly_budgets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "expense_projects"
             referencedColumns: ["id"]
           },
         ]
