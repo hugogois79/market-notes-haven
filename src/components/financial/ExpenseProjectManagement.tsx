@@ -34,6 +34,7 @@ interface ExpenseProject {
   start_date: string | null;
   end_date: string | null;
   total_cost: number | null;
+  has_revenue: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -47,6 +48,7 @@ export default function ExpenseProjectManagement() {
     description: "",
     color: "#3878B5",
     is_active: true,
+    has_revenue: false,
     start_date: "",
     end_date: "",
     total_cost: "",
@@ -75,6 +77,7 @@ export default function ExpenseProjectManagement() {
           description: data.description || null,
           color: data.color,
           is_active: data.is_active,
+          has_revenue: data.has_revenue,
           start_date: data.start_date || null,
           end_date: data.end_date || null,
           total_cost: data.total_cost ? parseFloat(data.total_cost) : null,
@@ -101,6 +104,7 @@ export default function ExpenseProjectManagement() {
           description: data.description || null,
           color: data.color,
           is_active: data.is_active,
+          has_revenue: data.has_revenue,
           start_date: data.start_date || null,
           end_date: data.end_date || null,
           total_cost: data.total_cost ? parseFloat(data.total_cost) : null,
@@ -145,6 +149,7 @@ export default function ExpenseProjectManagement() {
       description: "",
       color: "#3878B5",
       is_active: true,
+      has_revenue: false,
       start_date: "",
       end_date: "",
       total_cost: "",
@@ -157,6 +162,7 @@ export default function ExpenseProjectManagement() {
       description: "",
       color: "#3878B5",
       is_active: true,
+      has_revenue: false,
       start_date: "",
       end_date: "",
       total_cost: "",
@@ -171,6 +177,7 @@ export default function ExpenseProjectManagement() {
       description: project.description || "",
       color: project.color,
       is_active: project.is_active,
+      has_revenue: project.has_revenue ?? false,
       start_date: project.start_date || "",
       end_date: project.end_date || "",
       total_cost: project.total_cost?.toString() || "",
@@ -379,13 +386,23 @@ export default function ExpenseProjectManagement() {
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                id="is_active"
-                checked={formData.is_active}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-              />
-              <Label htmlFor="is_active">Ativo</Label>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="is_active"
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                />
+                <Label htmlFor="is_active">Ativo</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="has_revenue"
+                  checked={formData.has_revenue}
+                  onCheckedChange={(checked) => setFormData({ ...formData, has_revenue: checked })}
+                />
+                <Label htmlFor="has_revenue">Gera Receita</Label>
+              </div>
             </div>
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={handleCloseDialog}>

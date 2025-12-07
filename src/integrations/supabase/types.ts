@@ -544,6 +544,7 @@ export type Database = {
           created_at: string
           description: string | null
           end_date: string | null
+          has_revenue: boolean | null
           id: string
           is_active: boolean
           monthly_budget: number | null
@@ -558,6 +559,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           end_date?: string | null
+          has_revenue?: boolean | null
           id?: string
           is_active?: boolean
           monthly_budget?: number | null
@@ -572,6 +574,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           end_date?: string | null
+          has_revenue?: boolean | null
           id?: string
           is_active?: boolean
           monthly_budget?: number | null
@@ -2086,6 +2089,47 @@ export type Database = {
           },
           {
             foreignKeyName: "project_monthly_budgets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "expense_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_monthly_revenues: {
+        Row: {
+          budgeted_amount: number | null
+          created_at: string | null
+          id: string
+          month: number
+          notes: string | null
+          project_id: string
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          budgeted_amount?: number | null
+          created_at?: string | null
+          id?: string
+          month: number
+          notes?: string | null
+          project_id: string
+          updated_at?: string | null
+          year: number
+        }
+        Update: {
+          budgeted_amount?: number | null
+          created_at?: string | null
+          id?: string
+          month?: number
+          notes?: string | null
+          project_id?: string
+          updated_at?: string | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_monthly_revenues_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "expense_projects"
