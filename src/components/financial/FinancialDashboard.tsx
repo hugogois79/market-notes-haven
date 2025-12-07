@@ -1,14 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, DollarSign, Wallet, FolderOpen } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { format, startOfMonth, endOfMonth } from "date-fns";
+import { pt } from "date-fns/locale";
 
 interface FinancialDashboardProps {
   companyId: string;
 }
 
 export default function FinancialDashboard({ companyId }: FinancialDashboardProps) {
+  const now = new Date();
+  const monthStart = format(startOfMonth(now), 'yyyy-MM-dd');
+  const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd');
+  const currentMonthName = format(now, 'MMMM', { locale: pt });
+
   const { data: transactions } = useQuery({
     queryKey: ["transactions-dashboard", companyId],
     queryFn: async () => {
@@ -37,7 +44,6 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
   });
 
   // Fetch all project expenses (total_cost is calculated from expenses)
-  
   const { data: projectExpenses } = useQuery({
     queryKey: ["project-expenses-dashboard"],
     queryFn: async () => {
@@ -50,43 +56,82 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
     },
   });
 
-  // Calculate KPIs
-  const income = transactions?.filter(t => t.type === 'income')
+  // Fetch expenses for current month (from expenses table)
+  const { data: monthlyExpenses } = useQuery({
+    queryKey: ["monthly-expenses-dashboard", monthStart, monthEnd],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expenses")
+        .select("amount, expense_date")
+        .gte("expense_date", monthStart)
+        .lte("expense_date", monthEnd);
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Filter transactions for current month
+  const monthlyTransactions = transactions?.filter(t => {
+    const date = t.date;
+    return date >= monthStart && date <= monthEnd;
+  }) || [];
+
+  // Calculate yearly KPIs
+  const yearlyIncome = transactions?.filter(t => t.type === 'income')
     .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
   
-  const expenses = transactions?.filter(t => t.type === 'expense')
+  const yearlyExpenses = transactions?.filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
   
-  const profit = income - expenses;
-  const profitMargin = income > 0 ? (profit / income) * 100 : 0;
+  const yearlyProfit = yearlyIncome - yearlyExpenses;
+  const yearlyProfitMargin = yearlyIncome > 0 ? (yearlyProfit / yearlyIncome) * 100 : 0;
+
+  // Calculate monthly KPIs
+  const monthlyIncome = monthlyTransactions.filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+  
+  const monthlyExpensesTotal = monthlyTransactions.filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+  
+  const monthlyProfit = monthlyIncome - monthlyExpensesTotal;
+  const monthlyProfitMargin = monthlyIncome > 0 ? (monthlyProfit / monthlyIncome) * 100 : 0;
   
   const totalBalance = bankAccounts?.reduce(
     (sum, acc) => sum + Number(acc.current_balance), 0
   ) || 0;
 
-  // Calculate total project expenses for the year
+  // Calculate total project expenses
   const totalProjectExpenses = projectExpenses?.reduce(
     (sum, proj) => sum + Number(proj.total_cost || 0), 0
+  ) || 0;
+
+  // Calculate monthly project expenses
+  const monthlyProjectExpenses = monthlyExpenses?.reduce(
+    (sum, exp) => sum + Number(exp.amount || 0), 0
   ) || 0;
 
   const kpis = [
     {
       title: "Receitas",
-      value: formatCurrency(income),
+      monthlyValue: formatCurrency(monthlyIncome),
+      yearlyValue: formatCurrency(yearlyIncome),
       icon: TrendingUp,
       color: "text-green-600",
       bgColor: "bg-green-50",
     },
     {
       title: "Despesas",
-      value: formatCurrency(expenses),
+      monthlyValue: formatCurrency(monthlyExpensesTotal),
+      yearlyValue: formatCurrency(yearlyExpenses),
       icon: TrendingDown,
       color: "text-red-600",
       bgColor: "bg-red-50",
     },
     {
       title: "Despesas Projetos",
-      value: formatCurrency(totalProjectExpenses),
+      monthlyValue: formatCurrency(monthlyProjectExpenses),
+      yearlyValue: formatCurrency(totalProjectExpenses),
       description: `${projectExpenses?.length || 0} projetos`,
       icon: FolderOpen,
       color: "text-purple-600",
@@ -94,15 +139,17 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
     },
     {
       title: "Lucro",
-      value: formatCurrency(profit),
-      description: `Margem: ${profitMargin.toFixed(1)}%`,
+      monthlyValue: formatCurrency(monthlyProfit),
+      yearlyValue: formatCurrency(yearlyProfit),
+      description: `Margem: ${yearlyProfitMargin.toFixed(1)}%`,
       icon: DollarSign,
-      color: profit >= 0 ? "text-green-600" : "text-red-600",
-      bgColor: profit >= 0 ? "bg-green-50" : "bg-red-50",
+      color: yearlyProfit >= 0 ? "text-green-600" : "text-red-600",
+      bgColor: yearlyProfit >= 0 ? "bg-green-50" : "bg-red-50",
     },
     {
       title: "Saldo Total",
-      value: formatCurrency(totalBalance),
+      monthlyValue: "-",
+      yearlyValue: formatCurrency(totalBalance),
       description: `${bankAccounts?.length || 0} contas`,
       icon: Wallet,
       color: "text-blue-600",
@@ -113,13 +160,25 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
   return (
     <Card>
       <CardContent className="p-0">
+        {/* Header */}
+        <div className="flex items-center border-b bg-muted/30 px-4 py-3">
+          <div className="flex-1" />
+          <div className="w-32 text-center text-sm font-semibold text-muted-foreground capitalize">
+            {currentMonthName}
+          </div>
+          <div className="w-32 text-center text-sm font-semibold text-muted-foreground">
+            Total
+          </div>
+        </div>
+        
+        {/* KPI Rows */}
         <div className="divide-y">
-          {kpis.map((kpi, index) => (
+          {kpis.map((kpi) => (
             <div 
               key={kpi.title}
-              className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+              className="flex items-center p-4 hover:bg-muted/50 transition-colors"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-1">
                 <div className={`p-2 rounded-lg ${kpi.bgColor}`}>
                   <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
                 </div>
@@ -134,8 +193,11 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
                   )}
                 </div>
               </div>
-              <div className={`text-2xl font-bold ${kpi.color}`}>
-                {kpi.value}
+              <div className={`w-32 text-center text-lg font-bold ${kpi.color}`}>
+                {kpi.monthlyValue}
+              </div>
+              <div className={`w-32 text-center text-lg font-bold ${kpi.color}`}>
+                {kpi.yearlyValue}
               </div>
             </div>
           ))}
