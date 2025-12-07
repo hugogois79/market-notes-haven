@@ -23,6 +23,7 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
   const [editingBudgets, setEditingBudgets] = useState<Record<string, number>>({});
   const [editingRevenues, setEditingRevenues] = useState<Record<string, number>>({});
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [expandedRevenueProjects, setExpandedRevenueProjects] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
 
   const { data: projects } = useQuery({
@@ -122,16 +123,17 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
   });
 
   const saveRevenueMutation = useMutation({
-    mutationFn: async ({ projectId, month, amount }: { projectId: string; month: number; amount: number }) => {
+    mutationFn: async ({ projectId, categoryId, month, amount }: { projectId: string; categoryId: string | null; month: number; amount: number }) => {
       const { error } = await supabase
         .from("project_monthly_revenues")
         .upsert({
           project_id: projectId,
+          category_id: categoryId,
           year: selectedYear,
           month,
           budgeted_amount: amount,
         }, {
-          onConflict: 'project_id,year,month'
+          onConflict: 'project_id,category_id,year,month'
         });
       
       if (error) throw error;
@@ -157,11 +159,27 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     });
   };
 
-  const getProjectCategories = (projectId: string) => {
+  const getProjectCategories = (projectId: string, forRevenue = false) => {
     if (!categories) return [];
-    return categories.filter(cat => 
-      cat.assigned_project_ids?.includes(projectId)
-    );
+    return categories.filter(cat => {
+      if (!cat.assigned_project_ids?.includes(projectId)) return false;
+      if (forRevenue) {
+        return cat.category_type === 'revenue' || cat.category_type === 'both';
+      }
+      return cat.category_type === 'expense' || cat.category_type === 'both';
+    });
+  };
+
+  const toggleRevenueProject = (projectId: string) => {
+    setExpandedRevenueProjects(prev => {
+      const next = new Set(prev);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
   };
 
   const getBudgetValue = (projectId: string, categoryId: string | null, month: number) => {
@@ -177,13 +195,14 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     return budget?.budgeted_amount ?? 0;
   };
 
-  const getRevenueValue = (projectId: string, month: number) => {
-    const key = `${projectId}-${month}`;
+  const getRevenueValue = (projectId: string, categoryId: string | null, month: number) => {
+    const key = `revenue-${projectId}-${categoryId || 'null'}-${month}`;
     if (editingRevenues[key] !== undefined) {
       return editingRevenues[key];
     }
     const revenue = revenues?.find(r => 
       r.project_id === projectId && 
+      r.category_id === categoryId &&
       r.month === month
     );
     return revenue?.budgeted_amount ?? 0;
@@ -218,8 +237,8 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     setEditingBudgets(prev => ({ ...prev, [key]: numValue }));
   };
 
-  const handleRevenueChange = (projectId: string, month: number, value: string) => {
-    const key = `${projectId}-${month}`;
+  const handleRevenueChange = (projectId: string, categoryId: string | null, month: number, value: string) => {
+    const key = `revenue-${projectId}-${categoryId || 'null'}-${month}`;
     const numValue = parseFloat(value) || 0;
     setEditingRevenues(prev => ({ ...prev, [key]: numValue }));
   };
@@ -235,10 +254,10 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     });
   };
 
-  const handleRevenueSave = (projectId: string, month: number) => {
-    const key = `${projectId}-${month}`;
-    const amount = editingRevenues[key] ?? getRevenueValue(projectId, month);
-    saveRevenueMutation.mutate({ projectId, month, amount });
+  const handleRevenueSave = (projectId: string, categoryId: string | null, month: number) => {
+    const key = `revenue-${projectId}-${categoryId || 'null'}-${month}`;
+    const amount = editingRevenues[key] ?? getRevenueValue(projectId, categoryId, month);
+    saveRevenueMutation.mutate({ projectId, categoryId, month, amount });
     setEditingRevenues(prev => {
       const next = { ...prev };
       delete next[key];
@@ -258,13 +277,13 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     toast.success("Valor replicado para todos os meses");
   };
 
-  const handleReplicateRevenueToAllMonths = async (projectId: string, sourceMonth: number) => {
-    const value = getRevenueValue(projectId, sourceMonth);
+  const handleReplicateRevenueToAllMonths = async (projectId: string, categoryId: string | null, sourceMonth: number) => {
+    const value = getRevenueValue(projectId, categoryId, sourceMonth);
     if (value === 0) return;
     
     for (let m = 1; m <= 12; m++) {
       if (m !== sourceMonth) {
-        await saveRevenueMutation.mutateAsync({ projectId, month: m, amount: value });
+        await saveRevenueMutation.mutateAsync({ projectId, categoryId, month: m, amount: value });
       }
     }
     toast.success("Valor replicado para todos os meses");
@@ -295,11 +314,31 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
   };
 
   const getProjectRevenueTotals = (projectId: string) => {
+    const revenueCategories = getProjectCategories(projectId, true);
     let total = 0;
-    for (let m = 1; m <= 12; m++) {
-      total += Number(getRevenueValue(projectId, m));
+    
+    if (revenueCategories.length === 0) {
+      for (let m = 1; m <= 12; m++) {
+        total += Number(getRevenueValue(projectId, null, m));
+      }
+    } else {
+      for (const cat of revenueCategories) {
+        for (let m = 1; m <= 12; m++) {
+          total += Number(getRevenueValue(projectId, cat.id, m));
+        }
+      }
     }
     return total;
+  };
+
+  const getProjectRevenueForMonth = (projectId: string, month: number) => {
+    const revenueCategories = getProjectCategories(projectId, true);
+    if (revenueCategories.length === 0) {
+      return Number(getRevenueValue(projectId, null, month));
+    }
+    return revenueCategories.reduce((sum, cat) => 
+      sum + Number(getRevenueValue(projectId, cat.id, month)), 0
+    );
   };
 
   const getCategoryTotals = (projectId: string, categoryId: string) => {
@@ -346,7 +385,7 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
   const getGlobalMonthlyRevenue = (month: number) => {
     if (!revenueProjects) return 0;
     return revenueProjects.reduce((sum, project) => 
-      sum + Number(getRevenueValue(project.id, month)), 0
+      sum + getProjectRevenueForMonth(project.id, month), 0
     );
   };
 
@@ -418,8 +457,8 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                       </td>
                       {MONTHS.map((_, monthIndex) => {
                         const month = monthIndex + 1;
-                        const revenueValue = getRevenueValue(project.id, month);
-                        const key = `${project.id}-${month}`;
+                        const revenueValue = getRevenueValue(project.id, null, month);
+                        const key = `revenue-${project.id}-null-${month}`;
                         const isEditing = editingRevenues[key] !== undefined;
                         
                         return (
@@ -428,7 +467,7 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                               <Input
                                 type="number"
                                 value={revenueValue}
-                                onChange={(e) => handleRevenueChange(project.id, month, e.target.value)}
+                                onChange={(e) => handleRevenueChange(project.id, null, month, e.target.value)}
                                 className="h-7 text-xs text-center w-16 border-green-200 focus:border-green-400"
                                 placeholder="0"
                               />
@@ -437,7 +476,7 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                                   variant="ghost"
                                   size="icon"
                                   className="h-5 w-5"
-                                  onClick={() => handleRevenueSave(project.id, month)}
+                                  onClick={() => handleRevenueSave(project.id, null, month)}
                                 >
                                   <Save className="h-3 w-3" />
                                 </Button>
@@ -450,7 +489,7 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                                         variant="ghost"
                                         size="icon"
                                         className="h-5 w-5"
-                                        onClick={() => handleReplicateRevenueToAllMonths(project.id, 1)}
+                                        onClick={() => handleReplicateRevenueToAllMonths(project.id, null, 1)}
                                       >
                                         <Copy className="h-3 w-3" />
                                       </Button>

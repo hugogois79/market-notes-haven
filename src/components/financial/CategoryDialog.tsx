@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 interface ExpenseCategory {
@@ -24,6 +25,7 @@ interface ExpenseCategory {
   is_active: boolean | null;
   user_id: string | null;
   assigned_project_ids?: string[];
+  category_type?: string;
 }
 
 interface ExpenseProject {
@@ -59,6 +61,7 @@ export default function CategoryDialog({
     description: "",
     color: "#3878B5",
     is_active: true,
+    category_type: "expense" as string,
     assigned_project_ids: [] as string[],
   });
 
@@ -71,6 +74,7 @@ export default function CategoryDialog({
         description: category.description || "",
         color: category.color || "#3878B5",
         is_active: category.is_active ?? true,
+        category_type: category.category_type || "expense",
         assigned_project_ids: category.assigned_project_ids || [],
       });
     } else {
@@ -79,6 +83,7 @@ export default function CategoryDialog({
         description: "",
         color: "#3878B5",
         is_active: true,
+        category_type: "expense",
         assigned_project_ids: [],
       });
     }
@@ -96,6 +101,7 @@ export default function CategoryDialog({
             description: data.description || null,
             color: data.color,
             is_active: data.is_active,
+            category_type: data.category_type,
             assigned_project_ids: data.assigned_project_ids,
           })
           .eq("id", category.id);
@@ -108,6 +114,7 @@ export default function CategoryDialog({
             description: data.description || null,
             color: data.color,
             is_active: data.is_active,
+            category_type: data.category_type,
             user_id: userData.user?.id,
             assigned_project_ids: data.assigned_project_ids,
           });
@@ -198,6 +205,23 @@ export default function CategoryDialog({
               onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
             />
             <Label htmlFor="is_active">Active</Label>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="category_type">Tipo de Categoria</Label>
+            <Select
+              value={formData.category_type}
+              onValueChange={(value) => setFormData({ ...formData, category_type: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecionar tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="expense">Despesa</SelectItem>
+                <SelectItem value="revenue">Receita</SelectItem>
+                <SelectItem value="both">Ambos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
