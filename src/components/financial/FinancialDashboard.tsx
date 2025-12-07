@@ -36,19 +36,14 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
     },
   });
 
-  // Fetch project expenses for current year
-  const currentYear = new Date().getFullYear();
+  // Fetch all project expenses (total_cost is calculated from expenses)
+  
   const { data: projectExpenses } = useQuery({
-    queryKey: ["project-expenses-dashboard", currentYear],
+    queryKey: ["project-expenses-dashboard"],
     queryFn: async () => {
-      const startOfYear = `${currentYear}-01-01`;
-      const endOfYear = `${currentYear}-12-31`;
-      
       const { data, error } = await supabase
         .from("expense_projects")
-        .select("total_cost, start_date, created_at")
-        .gte("created_at", startOfYear)
-        .lte("created_at", endOfYear);
+        .select("total_cost");
       
       if (error) throw error;
       return data;
@@ -92,7 +87,7 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
     {
       title: "Despesas Projetos",
       value: formatCurrency(totalProjectExpenses),
-      description: `${projectExpenses?.length || 0} projetos em ${currentYear}`,
+      description: `${projectExpenses?.length || 0} projetos`,
       icon: FolderOpen,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
