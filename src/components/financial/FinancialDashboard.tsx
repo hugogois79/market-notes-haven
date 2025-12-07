@@ -161,12 +161,12 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
     <Card>
       <CardContent className="p-0">
         {/* Header */}
-        <div className="grid grid-cols-[1fr_120px_120px] items-center border-b bg-muted/30 px-4 py-3">
-          <div />
-          <div className="text-center text-sm font-semibold text-muted-foreground capitalize">
+        <div className="flex items-center border-b bg-muted/30 px-4 py-3">
+          <div className="flex-1" />
+          <div className="w-32 text-center text-sm font-semibold text-muted-foreground capitalize">
             {currentMonthName}
           </div>
-          <div className="text-center text-sm font-semibold text-muted-foreground">
+          <div className="w-32 text-center text-sm font-semibold text-muted-foreground">
             Total
           </div>
         </div>
@@ -176,9 +176,9 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
           {kpis.map((kpi) => (
             <div 
               key={kpi.title}
-              className="grid grid-cols-[1fr_120px_120px] items-center p-4 hover:bg-muted/50 transition-colors"
+              className="flex items-center p-4 hover:bg-muted/50 transition-colors"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-1">
                 <div className={`p-2 rounded-lg ${kpi.bgColor}`}>
                   <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
                 </div>
@@ -193,10 +193,10 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
                   )}
                 </div>
               </div>
-              <div className={`text-center text-lg font-bold ${kpi.color}`}>
+              <div className={`w-32 text-center text-lg font-bold ${kpi.color}`}>
                 {kpi.monthlyValue}
               </div>
-              <div className={`text-center text-lg font-bold ${kpi.color}`}>
+              <div className={`w-32 text-center text-lg font-bold ${kpi.color}`}>
                 {kpi.yearlyValue}
               </div>
             </div>
