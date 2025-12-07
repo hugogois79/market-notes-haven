@@ -43,13 +43,9 @@ import LegalContactsPage from "@/pages/legal/contacts";
 import LegalBillableItemsPage from "@/pages/legal/billable-items";
 import { useNotes } from "@/contexts/NotesContext";
 
-// Wrapper component for Editor to access NotesContext
-const EditorWrapper = () => {
-  const { handleSaveNote, handleDeleteNote } = useNotes();
-  return <Editor onSaveNote={handleSaveNote} onDeleteNote={handleDeleteNote} />;
-};
-
 const AppRoutes = () => {
+  const { handleSaveNote, handleDeleteNote } = useNotes();
+
   return (
     <>
       <Routes>
@@ -104,7 +100,10 @@ const AppRoutes = () => {
             path="editor/new"
             element={
               <ProtectedRoute>
-                <EditorWrapper />
+                <Editor 
+                  onSaveNote={handleSaveNote} 
+                  onDeleteNote={handleDeleteNote} 
+                />
               </ProtectedRoute>
             }
           />
@@ -112,7 +111,10 @@ const AppRoutes = () => {
             path="editor/:id"
             element={
               <ProtectedRoute>
-                <EditorWrapper />
+                <Editor 
+                  onSaveNote={handleSaveNote} 
+                  onDeleteNote={handleDeleteNote} 
+                />
               </ProtectedRoute>
             }
           />
