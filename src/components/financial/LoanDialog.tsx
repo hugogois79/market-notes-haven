@@ -36,7 +36,6 @@ export default function LoanDialog({
 }: LoanDialogProps) {
   const queryClient = useQueryClient();
   const { register, handleSubmit, reset, watch, setValue } = useForm();
-  const loanType = watch("loan_type", "lending");
 
   const { data: companies } = useQuery({
     queryKey: ["companies"],
@@ -51,34 +50,29 @@ export default function LoanDialog({
     },
   });
 
-  const currentCompany = companies?.find(c => c.id === companyId);
-  const otherCompanies = companies?.filter(c => c.id !== companyId);
-
   useEffect(() => {
     if (loan) {
-      const isLending = loan.lending_company_id === companyId;
       reset({
         ...loan,
-        loan_type: isLending ? "lending" : "borrowing",
-        other_company_id: isLending ? loan.borrowing_company_id : loan.lending_company_id,
+        lending_company_id: loan.lending_company_id,
+        borrowing_company_id: loan.borrowing_company_id,
       });
     } else {
       reset({
         start_date: new Date().toISOString().split('T')[0],
         status: 'active',
         interest_rate: 0,
-        loan_type: 'lending',
-        other_company_id: '',
+        lending_company_id: '',
+        borrowing_company_id: '',
       });
     }
   }, [loan, reset, companyId]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
-      const isLending = data.loan_type === "lending";
       const loanData = {
-        lending_company_id: isLending ? companyId : data.other_company_id,
-        borrowing_company_id: isLending ? data.other_company_id : companyId,
+        lending_company_id: data.lending_company_id,
+        borrowing_company_id: data.borrowing_company_id,
         amount: Number(data.amount),
         interest_rate: Number(data.interest_rate),
         monthly_payment: data.monthly_payment ? Number(data.monthly_payment) : null,
@@ -124,54 +118,43 @@ export default function LoanDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
-          <div>
-            <Label>Tipo de Empréstimo</Label>
-            <Select 
-              onValueChange={(value) => setValue("loan_type", value)}
-              value={loanType}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="lending">Emprestar a outra empresa</SelectItem>
-                <SelectItem value="borrowing">Receber empréstimo de outra empresa</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="text-green-600 font-medium">Quem Empresta</Label>
-              <div className="mt-1 p-2 rounded border bg-muted text-sm">
-                {loanType === "lending" ? currentCompany?.name : "Selecione abaixo"}
-              </div>
+              <Label className="text-green-600 font-medium">Quem Empresta *</Label>
+              <Select 
+                onValueChange={(value) => setValue("lending_company_id", value)}
+                value={watch("lending_company_id")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies?.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <Label className="text-orange-600 font-medium">Quem Recebe</Label>
-              <div className="mt-1 p-2 rounded border bg-muted text-sm">
-                {loanType === "borrowing" ? currentCompany?.name : "Selecione abaixo"}
-              </div>
+              <Label className="text-orange-600 font-medium">Quem Recebe *</Label>
+              <Select 
+                onValueChange={(value) => setValue("borrowing_company_id", value)}
+                value={watch("borrowing_company_id")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies?.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-
-          <div>
-            <Label>{loanType === "lending" ? "Empresa que Recebe *" : "Empresa que Empresta *"}</Label>
-            <Select 
-              onValueChange={(value) => setValue("other_company_id", value)}
-              value={watch("other_company_id")}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a empresa" />
-              </SelectTrigger>
-              <SelectContent>
-                {otherCompanies?.map((company) => (
-                  <SelectItem key={company.id} value={company.id}>
-                    {company.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <div>
