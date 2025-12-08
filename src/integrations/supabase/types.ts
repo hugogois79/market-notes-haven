@@ -139,6 +139,7 @@ export type Database = {
       company_loans: {
         Row: {
           amount: number
+          attachment_url: string | null
           borrowing_company_id: string
           created_at: string
           description: string | null
@@ -153,6 +154,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          attachment_url?: string | null
           borrowing_company_id: string
           created_at?: string
           description?: string | null
@@ -167,6 +169,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          attachment_url?: string | null
           borrowing_company_id?: string
           created_at?: string
           description?: string | null
