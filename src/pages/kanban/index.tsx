@@ -92,9 +92,11 @@ const KanbanPage = () => {
     return boards.filter(board => showArchivedBoards ? board.archived : !board.archived);
   }, [boards, showArchivedBoards]);
 
-  // Filter lists based on archived status
+  // Filter lists based on archived status and sort by position
   const filteredLists = useMemo(() => {
-    return lists.filter(list => showArchivedLists ? list.archived : !list.archived);
+    return lists
+      .filter(list => showArchivedLists ? list.archived : !list.archived)
+      .sort((a, b) => a.position - b.position);
   }, [lists, showArchivedLists]);
 
   // Filter cards based on search query
