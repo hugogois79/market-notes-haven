@@ -108,15 +108,25 @@ const NewExpensePage = () => {
     queryFn: () => supplierService.getSuppliers(),
   });
 
-  // Get expense categories
+  // Get expense categories - filtered by selected project
   const { data: categories } = useQuery({
-    queryKey: ["expense-categories"],
+    queryKey: ["expense-categories", expenseForm.project_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expense_categories")
-        .select("id, name, color")
-        .eq("is_active", true);
+        .select("id, name, color, assigned_project_ids")
+        .eq("is_active", true)
+        .eq("category_type", "despesa");
       if (error) throw error;
+      
+      // Filter by selected project's assigned categories
+      if (expenseForm.project_id && data) {
+        return data.filter(cat => 
+          !cat.assigned_project_ids?.length || 
+          cat.assigned_project_ids.includes(expenseForm.project_id)
+        );
+      }
+      
       return data || [];
     },
   });
