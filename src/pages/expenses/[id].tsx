@@ -719,29 +719,30 @@ const ExpenseDetailPage = () => {
               }
               
               .receipt-header {
-                background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 50%, #4c1d95 100%);
+                background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
                 border-radius: 20px;
                 padding: 24px 32px;
                 margin-bottom: 32px;
-                color: white;
+                color: #1e40af;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                box-shadow: 0 10px 30px rgba(26, 26, 46, 0.2);
+                box-shadow: 0 4px 12px rgba(30, 64, 175, 0.1);
               }
               
               .receipt-header h2 {
                 font-size: 18px;
                 font-weight: 700;
+                color: #1e40af;
               }
               
               .receipt-meta {
-                background: rgba(255,255,255,0.15);
+                background: rgba(30, 64, 175, 0.1);
                 padding: 8px 16px;
                 border-radius: 12px;
                 font-size: 12px;
                 font-weight: 600;
-                backdrop-filter: blur(10px);
+                color: #1e40af;
               }
               
               .receipt-content {
