@@ -19,7 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Upload, Paperclip, X, Loader2 } from "lucide-react";
 
 interface LoanDialogProps {
   open: boolean;
@@ -36,6 +37,9 @@ export default function LoanDialog({
 }: LoanDialogProps) {
   const queryClient = useQueryClient();
   const { register, handleSubmit, reset, watch, setValue } = useForm();
+  const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: companies } = useQuery({
     queryKey: ["companies"],
@@ -57,6 +61,7 @@ export default function LoanDialog({
         lending_company_id: loan.lending_company_id,
         borrowing_company_id: loan.borrowing_company_id,
       });
+      setAttachmentUrl(loan.attachment_url || null);
     } else {
       reset({
         start_date: new Date().toISOString().split('T')[0],
@@ -65,8 +70,46 @@ export default function LoanDialog({
         lending_company_id: '',
         borrowing_company_id: '',
       });
+      setAttachmentUrl(null);
     }
   }, [loan, reset, companyId]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `loans/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('attachments')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('attachments')
+        .getPublicUrl(filePath);
+
+      setAttachmentUrl(publicUrl);
+      toast.success("Ficheiro carregado com sucesso");
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      toast.error("Erro ao carregar ficheiro");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const removeAttachment = () => {
+    setAttachmentUrl(null);
+  };
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -80,6 +123,7 @@ export default function LoanDialog({
         end_date: data.end_date || null,
         status: data.status,
         description: data.description || null,
+        attachment_url: attachmentUrl,
       };
 
       if (loan) {
@@ -99,9 +143,11 @@ export default function LoanDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-loans", companyId] });
+      queryClient.invalidateQueries({ queryKey: ["all-loans"] });
       toast.success(loan ? "Empréstimo atualizado" : "Empréstimo criado");
       onOpenChange(false);
       reset();
+      setAttachmentUrl(null);
     },
     onError: (error: any) => {
       toast.error("Erro: " + error.message);
@@ -110,7 +156,7 @@ export default function LoanDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {loan ? "Editar Empréstimo" : "Novo Empréstimo"}
@@ -204,6 +250,60 @@ export default function LoanDialog({
           <div>
             <Label>Descrição</Label>
             <Textarea {...register("description")} rows={3} />
+          </div>
+
+          <div>
+            <Label>Anexo</Label>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            {attachmentUrl ? (
+              <div className="border rounded-md p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <Paperclip className="h-4 w-4 flex-shrink-0" />
+                  <a 
+                    href={attachmentUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm truncate text-blue-600 hover:underline"
+                  >
+                    {attachmentUrl.split('/').pop()}
+                  </a>
+                </div>
+                <Button 
+                  type="button" 
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                  onClick={removeAttachment}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <Button 
+                type="button"
+                variant="outline" 
+                className="w-full flex items-center justify-center gap-2" 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    A carregar...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4" />
+                    Carregar Ficheiro
+                  </>
+                )}
+              </Button>
+            )}
           </div>
 
           <div className="flex justify-end gap-2">
