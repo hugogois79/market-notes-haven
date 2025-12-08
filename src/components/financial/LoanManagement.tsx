@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, List } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import LoanDialog from "./LoanDialog";
+import LoanPayments from "./LoanPayments";
 
 interface LoanManagementProps {
   companyId: string;
@@ -16,6 +17,7 @@ interface LoanManagementProps {
 export default function LoanManagement({ companyId }: LoanManagementProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingLoan, setEditingLoan] = useState<any>(null);
+  const [selectedLoan, setSelectedLoan] = useState<any>(null);
   const queryClient = useQueryClient();
 
   const { data: loans } = useQuery({
@@ -84,6 +86,16 @@ export default function LoanManagement({ companyId }: LoanManagementProps) {
     return <Badge variant={variants[status]}>{labels[status]}</Badge>;
   };
 
+  // Show payments view if a loan is selected
+  if (selectedLoan) {
+    return (
+      <LoanPayments 
+        loan={selectedLoan} 
+        onBack={() => setSelectedLoan(null)} 
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -108,6 +120,14 @@ export default function LoanManagement({ companyId }: LoanManagementProps) {
                     {isLending ? "Empréstimo a" : "Emprestado de"}
                   </span>
                   <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setSelectedLoan(loan)}
+                      title="Ver movimentos"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
