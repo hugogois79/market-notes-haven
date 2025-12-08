@@ -860,24 +860,60 @@ const EditExpensePage = () => {
             </div>
             <div>
               <Label htmlFor="category">Categoria (opcional)</Label>
-              <Select
-                value={expenseForm.category_id || "none"}
-                onValueChange={(value) =>
-                  setExpenseForm({ ...expenseForm, category_id: value === "none" ? "" : value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhuma</SelectItem>
-                  {categories?.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between font-normal"
+                  >
+                    {expenseForm.category_id
+                      ? categories?.find((c) => c.id === expenseForm.category_id)?.name
+                      : "Selecione uma categoria"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Pesquisar categoria..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="none"
+                          onSelect={() => setExpenseForm({ ...expenseForm, category_id: "" })}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              !expenseForm.category_id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          Nenhuma
+                        </CommandItem>
+                        {categories
+                          ?.slice()
+                          .sort((a, b) => a.name.localeCompare(b.name, 'pt'))
+                          .map((category) => (
+                            <CommandItem
+                              key={category.id}
+                              value={category.name}
+                              onSelect={() => setExpenseForm({ ...expenseForm, category_id: category.id })}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  expenseForm.category_id === category.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {category.name}
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label htmlFor="receipt">Comprovativo (opcional)</Label>
