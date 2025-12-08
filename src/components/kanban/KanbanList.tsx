@@ -57,12 +57,15 @@ export const KanbanList: React.FC<KanbanListProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(list.title);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  const [enabled, setEnabled] = useState(false);
 
   // Fix for react-beautiful-dnd with React 18 strict mode
   useEffect(() => {
-    const timeout = setTimeout(() => setIsMounted(true), 0);
-    return () => clearTimeout(timeout);
+    const animation = requestAnimationFrame(() => setEnabled(true));
+    return () => {
+      cancelAnimationFrame(animation);
+      setEnabled(false);
+    };
   }, []);
 
   const handleAddCard = () => {
@@ -212,7 +215,7 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                 </DropdownMenu>
               </div>
 
-              {isMounted && (
+              {enabled && (
                 <Droppable droppableId={list.id} type="card">
                   {(provided, snapshot) => (
                     <div

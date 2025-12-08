@@ -42,12 +42,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
   const [isAddingList, setIsAddingList] = useState(false);
   const [newListTitle, setNewListTitle] = useState('');
-  const [isMounted, setIsMounted] = useState(false);
+  const [enabled, setEnabled] = useState(false);
 
   // Fix for react-beautiful-dnd with React 18 strict mode
+  // This ensures the droppables/draggables are registered after initial mount
   useEffect(() => {
-    const timeout = setTimeout(() => setIsMounted(true), 0);
-    return () => clearTimeout(timeout);
+    const animation = requestAnimationFrame(() => setEnabled(true));
+    return () => {
+      cancelAnimationFrame(animation);
+      setEnabled(false);
+    };
   }, []);
 
   const handleAddList = () => {
@@ -104,7 +108,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     }
   };
 
-  if (!isMounted) {
+  if (!enabled) {
     return null;
   }
 
