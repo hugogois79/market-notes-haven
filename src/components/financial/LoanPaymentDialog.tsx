@@ -74,6 +74,7 @@ export default function LoanPaymentDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["loan-payments", loan.id] });
+      queryClient.invalidateQueries({ queryKey: ["all-loan-payments"] });
       toast.success(payment ? "Pagamento atualizado" : "Pagamento registado");
       onOpenChange(false);
       reset();
