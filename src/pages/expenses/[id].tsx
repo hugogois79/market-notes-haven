@@ -75,6 +75,23 @@ const ExpenseDetailPage = () => {
     enabled: !!expenses && expenses.length > 0,
   });
 
+  const { data: categories } = useQuery({
+    queryKey: ["expense-categories", expenses],
+    queryFn: async () => {
+      if (!expenses || expenses.length === 0) return [];
+      const categoryIds = [...new Set(expenses.map(e => e.category_id).filter(Boolean))];
+      if (categoryIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from("expense_categories")
+        .select("id, name, color")
+        .in("id", categoryIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!expenses && expenses.length > 0,
+  });
+
   const handleCancelSubmission = async () => {
     if (!id) return;
     setCancellingSubmission(true);
@@ -1127,66 +1144,78 @@ const ExpenseDetailPage = () => {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Fornecedor</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Comprovativo</TableHead>
-                  {claim.status === "rascunho" && <TableHead className="w-[50px]"></TableHead>}
+                <TableRow className="h-8">
+                  <TableHead className="py-1 text-xs">Data</TableHead>
+                  <TableHead className="py-1 text-xs">Descrição</TableHead>
+                  <TableHead className="py-1 text-xs">Fornecedor</TableHead>
+                  <TableHead className="py-1 text-xs">Categoria</TableHead>
+                  <TableHead className="py-1 text-xs">Valor</TableHead>
+                  <TableHead className="py-1 text-xs">Comprovativo</TableHead>
+                  {claim.status === "rascunho" && <TableHead className="w-[50px] py-1"></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {expenses.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell>
-                      {format(new Date(expense.expense_date), "dd/MM/yyyy")}
-                    </TableCell>
-                    <TableCell>{expense.description}</TableCell>
-                    <TableCell>{expense.supplier}</TableCell>
-                    <TableCell className="font-semibold">
-                      {formatCurrency(Number(expense.amount))}
-                    </TableCell>
-                    <TableCell>
-                      {expense.receipt_image_url ? (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleViewReceipt(expense.receipt_image_url!)}
-                            disabled={loadingPreview}
-                            className="text-primary hover:underline"
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Ver
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDownloadReceipt(expense.receipt_image_url!)}
-                            className="text-primary hover:underline"
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </Button>
-                        </div>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    {claim.status === "rascunho" && (
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => navigate(`/expenses/${id}/edit?editExpense=${expense.id}`)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                {expenses.map((expense) => {
+                  const category = categories?.find(c => c.id === expense.category_id);
+                  return (
+                    <TableRow key={expense.id} className="h-8">
+                      <TableCell className="py-1 text-sm">
+                        {format(new Date(expense.expense_date), "dd/MM/yyyy")}
                       </TableCell>
-                    )}
-                  </TableRow>
-                ))}
+                      <TableCell className="py-1 text-sm">{expense.description}</TableCell>
+                      <TableCell className="py-1 text-sm">{expense.supplier}</TableCell>
+                      <TableCell className="py-1 text-sm">
+                        {category ? (
+                          <Badge variant="outline" style={{ borderColor: category.color, color: category.color }}>
+                            {category.name}
+                          </Badge>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell className="py-1 text-sm font-semibold">
+                        {formatCurrency(Number(expense.amount))}
+                      </TableCell>
+                      <TableCell className="py-1">
+                        {expense.receipt_image_url ? (
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleViewReceipt(expense.receipt_image_url!)}
+                              disabled={loadingPreview}
+                              className="text-primary hover:underline h-6 px-2 text-xs"
+                            >
+                              <Eye className="h-3 w-3 mr-1" />
+                              Ver
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDownloadReceipt(expense.receipt_image_url!)}
+                              className="text-primary hover:underline h-6 px-2 text-xs"
+                            >
+                              <Download className="h-3 w-3 mr-1" />
+                              Download
+                            </Button>
+                          </div>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      {claim.status === "rascunho" && (
+                        <TableCell className="py-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => navigate(`/expenses/${id}/edit?editExpense=${expense.id}`)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
