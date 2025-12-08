@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Droppable } from 'react-beautiful-dnd';
 import { KanbanList as KanbanListType, KanbanCard } from '@/services/kanbanService';
 import { KanbanCard as KanbanCardComponent } from './KanbanCard';
@@ -57,6 +57,13 @@ export const KanbanList: React.FC<KanbanListProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(list.title);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Fix for react-beautiful-dnd with React 18 strict mode
+  useEffect(() => {
+    const timeout = setTimeout(() => setIsMounted(true), 0);
+    return () => clearTimeout(timeout);
+  }, []);
 
   const handleAddCard = () => {
     if (newCardTitle.trim()) {
@@ -205,15 +212,16 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                 </DropdownMenu>
               </div>
 
-              <Droppable droppableId={list.id} type="card">
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`min-h-[100px] ${
-                      snapshot.isDraggingOver ? 'bg-muted' : ''
-                    } rounded-md p-2 transition-colors`}
-                  >
+              {isMounted && (
+                <Droppable droppableId={list.id} type="card">
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`min-h-[100px] ${
+                        snapshot.isDraggingOver ? 'bg-muted' : ''
+                      } rounded-md p-2 transition-colors`}
+                    >
                     {cards.map((card, cardIndex) => (
                       <KanbanCardComponent
                         key={card.id}
@@ -241,10 +249,11 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                         }}
                       />
                     ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              )}
 
               {isAddingCard ? (
                 <div className="mt-2 space-y-2">
