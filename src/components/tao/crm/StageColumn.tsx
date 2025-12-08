@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Droppable } from 'react-beautiful-dnd';
+import { Droppable } from '@hello-pangea/dnd';
 import ValidatorCard from "./ValidatorCard";
 import { Button } from "@/components/ui/button";
 import { TaoValidator } from "@/services/taoValidatorService";

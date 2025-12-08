@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { TaoValidator } from "@/services/taoValidatorService";
-import { DragDropContext, DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, DropResult } from '@hello-pangea/dnd';
 import StageColumn from "./crm/StageColumn";
 import { 
   crmStages, 

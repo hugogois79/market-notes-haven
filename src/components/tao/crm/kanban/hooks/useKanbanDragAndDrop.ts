@@ -1,5 +1,5 @@
 
-import { DropResult } from "react-beautiful-dnd";
+import { DropResult } from "@hello-pangea/dnd";
 import { TaoValidator } from "@/services/taoValidatorService";
 import { toast } from "sonner";
 import { updateValidatorStage } from "@/services/taoValidatorService";
