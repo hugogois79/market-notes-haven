@@ -532,13 +532,14 @@ const ExpenseDetailPage = () => {
               }
               
               .table-header {
-                background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
-                padding: 20px 28px;
-                color: white;
+                background: #eff6ff;
+                padding: 14px 20px;
+                color: #1e40af;
+                border-left: 4px solid #3b82f6;
               }
               
               .table-header h2 {
-                font-size: 16px;
+                font-size: 14px;
                 font-weight: 700;
                 letter-spacing: -0.3px;
               }
@@ -551,20 +552,20 @@ const ExpenseDetailPage = () => {
               
               table th {
                 background: #f8fafc;
-                padding: 16px 20px;
+                padding: 10px 16px;
                 text-align: left;
-                font-size: 10px;
+                font-size: 9px;
                 font-weight: 700;
                 color: #64748b;
                 text-transform: uppercase;
-                letter-spacing: 1px;
-                border-bottom: 2px solid #e2e8f0;
+                letter-spacing: 0.8px;
+                border-bottom: 1px solid #e2e8f0;
               }
               
               table td {
-                padding: 18px 20px;
+                padding: 10px 16px;
                 border-bottom: 1px solid #f1f5f9;
-                font-size: 13px;
+                font-size: 12px;
                 color: #374151;
               }
               
@@ -587,9 +588,9 @@ const ExpenseDetailPage = () => {
               }
               
               .amount-cell {
-                font-weight: 800;
+                font-weight: 700;
                 color: #1a1a2e;
-                font-size: 15px;
+                font-size: 13px;
                 font-variant-numeric: tabular-nums;
               }
               
@@ -603,11 +604,11 @@ const ExpenseDetailPage = () => {
               .receipt-badge {
                 display: inline-flex;
                 align-items: center;
-                gap: 6px;
-                font-size: 11px;
+                gap: 4px;
+                font-size: 10px;
                 font-weight: 600;
-                padding: 6px 12px;
-                border-radius: 20px;
+                padding: 4px 10px;
+                border-radius: 12px;
               }
               
               .receipt-attached {
@@ -628,12 +629,13 @@ const ExpenseDetailPage = () => {
               }
               
               .summary-card {
-                background: linear-gradient(145deg, #1a1a2e 0%, #2d2d44 50%, #4c1d95 100%);
-                border-radius: 24px;
-                padding: 28px 36px;
-                color: white;
-                min-width: 340px;
-                box-shadow: 0 20px 40px rgba(26, 26, 46, 0.3);
+                background: #eff6ff;
+                border-radius: 16px;
+                padding: 20px 28px;
+                color: #1e3a5f;
+                min-width: 280px;
+                border-left: 4px solid #3b82f6;
+                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
               }
               
               .summary-row {
@@ -644,42 +646,40 @@ const ExpenseDetailPage = () => {
               }
               
               .summary-row.border-bottom {
-                border-bottom: 1px solid rgba(255,255,255,0.15);
-                margin-bottom: 12px;
-                padding-bottom: 16px;
+                border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+                margin-bottom: 8px;
+                padding-bottom: 12px;
               }
               
               .summary-label {
-                font-size: 13px;
-                opacity: 0.75;
+                font-size: 12px;
+                color: #64748b;
                 font-weight: 500;
               }
               
               .summary-value {
-                font-size: 16px;
+                font-size: 14px;
                 font-weight: 700;
+                color: #1e40af;
                 font-variant-numeric: tabular-nums;
               }
               
               .summary-row.grand-total {
-                margin-top: 8px;
-                padding-top: 16px;
-                border-top: 2px solid rgba(255,255,255,0.2);
+                margin-top: 6px;
+                padding-top: 12px;
+                border-top: 2px solid rgba(59, 130, 246, 0.3);
               }
               
               .summary-row.grand-total .summary-label {
-                font-size: 16px;
+                font-size: 14px;
                 font-weight: 700;
-                opacity: 1;
+                color: #1e3a5f;
               }
               
               .summary-row.grand-total .summary-value {
-                font-size: 32px;
+                font-size: 24px;
                 font-weight: 800;
-                background: linear-gradient(135deg, #a5b4fc 0%, #c4b5fd 100%);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                background-clip: text;
+                color: #1e40af;
               }
               
               /* Footer */
@@ -770,8 +770,8 @@ const ExpenseDetailPage = () => {
                   max-width: 100%;
                 }
                 .summary-row.grand-total .summary-value {
-                  color: white;
-                  -webkit-text-fill-color: white;
+                  color: #1e40af;
+                  -webkit-text-fill-color: #1e40af;
                 }
               }
             </style>
