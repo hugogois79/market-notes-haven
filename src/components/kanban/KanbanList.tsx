@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Droppable } from 'react-beautiful-dnd';
+import React, { useState } from 'react';
+import { Droppable } from '@hello-pangea/dnd';
 import { KanbanList as KanbanListType, KanbanCard } from '@/services/kanbanService';
 import { KanbanCard as KanbanCardComponent } from './KanbanCard';
 import { Button } from '@/components/ui/button';
@@ -57,16 +57,6 @@ export const KanbanList: React.FC<KanbanListProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(list.title);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [enabled, setEnabled] = useState(false);
-
-  // Fix for react-beautiful-dnd with React 18 strict mode
-  useEffect(() => {
-    const animation = requestAnimationFrame(() => setEnabled(true));
-    return () => {
-      cancelAnimationFrame(animation);
-      setEnabled(false);
-    };
-  }, []);
 
   const handleAddCard = () => {
     if (newCardTitle.trim()) {
@@ -215,8 +205,7 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                 </DropdownMenu>
               </div>
 
-              {enabled && (
-                <Droppable droppableId={list.id} type="card">
+              <Droppable droppableId={list.id} type="card">
                   {(provided, snapshot) => (
                     <div
                       ref={provided.innerRef}
@@ -256,7 +245,6 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                     </div>
                   )}
                 </Droppable>
-              )}
 
               {isAddingCard ? (
                 <div className="mt-2 space-y-2">

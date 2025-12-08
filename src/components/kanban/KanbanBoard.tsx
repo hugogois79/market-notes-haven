@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import React, { useState } from 'react';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { KanbanList as KanbanListType, KanbanCard } from '@/services/kanbanService';
 import { KanbanList } from './KanbanList';
 import { KanbanCardModal } from './KanbanCardModal';
@@ -42,17 +42,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
   const [isAddingList, setIsAddingList] = useState(false);
   const [newListTitle, setNewListTitle] = useState('');
-  const [enabled, setEnabled] = useState(false);
-
-  // Fix for react-beautiful-dnd with React 18 strict mode
-  // This ensures the droppables/draggables are registered after initial mount
-  useEffect(() => {
-    const animation = requestAnimationFrame(() => setEnabled(true));
-    return () => {
-      cancelAnimationFrame(animation);
-      setEnabled(false);
-    };
-  }, []);
 
   const handleAddList = () => {
     if (newListTitle.trim()) {
@@ -108,9 +97,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     }
   };
 
-  if (!enabled) {
-    return null;
-  }
 
   return (
     <>
