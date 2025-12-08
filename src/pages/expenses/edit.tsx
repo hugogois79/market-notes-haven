@@ -237,7 +237,7 @@ const EditExpensePage = () => {
         .from("expense_categories")
         .select("id, name, color, assigned_project_ids")
         .eq("is_active", true)
-        .in("category_type", ["expense", "despesa", "ambos"]);
+        .in("category_type", ["expense", "despesa", "ambos", "both"]);
       if (error) throw error;
       
       // Filter by selected project's assigned categories
