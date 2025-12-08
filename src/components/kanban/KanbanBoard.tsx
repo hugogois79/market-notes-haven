@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { KanbanList as KanbanListType, KanbanCard } from '@/services/kanbanService';
 import { KanbanList } from './KanbanList';
@@ -42,6 +42,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
   const [isAddingList, setIsAddingList] = useState(false);
   const [newListTitle, setNewListTitle] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Fix for react-beautiful-dnd with React 18 strict mode
+  useEffect(() => {
+    const timeout = setTimeout(() => setIsMounted(true), 0);
+    return () => clearTimeout(timeout);
+  }, []);
 
   const handleAddList = () => {
     if (newListTitle.trim()) {
@@ -96,6 +103,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       await onMoveCard(cardId, newListId, newPosition);
     }
   };
+
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <>
