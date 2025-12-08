@@ -620,6 +620,16 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                                     placeholder="0"
                                     onBlur={() => handleRevenueSave(project.id, null, month)}
                                   />
+                                  {editingRevenues[`revenue-${project.id}-null-${month}`] !== undefined && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-4 w-4"
+                                      onClick={() => handleRevenueSave(project.id, null, month)}
+                                    >
+                                      <Save className="h-2.5 w-2.5" />
+                                    </Button>
+                                  )}
                                   {month === 1 && revenueValue > 0 && (
                                     <TooltipProvider>
                                       <Tooltip>
@@ -681,6 +691,16 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                                       placeholder="0"
                                       onBlur={() => handleRevenueSave(project.id, category.id, month)}
                                     />
+                                    {editingRevenues[`revenue-${project.id}-${category.id}-${month}`] !== undefined && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-4 w-4"
+                                        onClick={() => handleRevenueSave(project.id, category.id, month)}
+                                      >
+                                        <Save className="h-2.5 w-2.5" />
+                                      </Button>
+                                    )}
                                     {month === 1 && revenueValue > 0 && (
                                       <TooltipProvider>
                                         <Tooltip>
