@@ -27,9 +27,9 @@ serve(async (req) => {
     // Combine title and content for embedding
     let textToEmbed = [title, content].filter(Boolean).join('\n\n');
     
-    // Truncate to ~30,000 chars to stay within OpenAI's 8192 token limit
-    // (roughly 4 chars per token, with safety margin)
-    const MAX_CHARS = 30000;
+    // Truncate to ~20,000 chars to stay within OpenAI's 8192 token limit
+    // (text-embedding-3-small: 8192 tokens, ~4 chars per token = 32k, but using 20k for safety)
+    const MAX_CHARS = 20000;
     if (textToEmbed.length > MAX_CHARS) {
       console.log(`Truncating text from ${textToEmbed.length} to ${MAX_CHARS} characters`);
       textToEmbed = textToEmbed.substring(0, MAX_CHARS);

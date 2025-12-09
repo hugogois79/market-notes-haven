@@ -245,6 +245,11 @@ const Settings = () => {
         }
         
         setEmbeddingProgress({ current: i + 1, total });
+        
+        // Add delay between requests to avoid rate limiting and network issues
+        if (i < notesWithoutEmbeddings.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
       }
       
       if (failCount === 0) {
