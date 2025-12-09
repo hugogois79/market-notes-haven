@@ -13,8 +13,12 @@ import {
   Layout, 
   Bell, 
   Lock, 
-  Cloud
+  Cloud,
+  Database,
+  Loader2
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,6 +69,10 @@ const Settings = () => {
   // Privacy settings
   const [encryptNotes, setEncryptNotes] = useState(false);
   const [anonymousAnalytics, setAnonymousAnalytics] = useState(true);
+  
+  // Bulk embedding state
+  const [isGeneratingEmbeddings, setIsGeneratingEmbeddings] = useState(false);
+  const [embeddingProgress, setEmbeddingProgress] = useState({ current: 0, total: 0 });
   
   // Handle theme change
   const handleThemeChange = (value: "light" | "dark" | "system") => {
@@ -129,6 +137,94 @@ const Settings = () => {
     localStorage.removeItem("app_settings");
     
     toast.success("Settings reset to defaults");
+  };
+
+  // Handle bulk embedding generation
+  const handleBulkEmbeddings = async () => {
+    setIsGeneratingEmbeddings(true);
+    setEmbeddingProgress({ current: 0, total: 0 });
+    
+    try {
+      // Fetch all notes without embeddings
+      const { data: notesWithoutEmbeddings, error: fetchError } = await supabase
+        .from('notes')
+        .select('id, title, content')
+        .is('embedding', null);
+      
+      if (fetchError) {
+        throw fetchError;
+      }
+      
+      if (!notesWithoutEmbeddings || notesWithoutEmbeddings.length === 0) {
+        toast.info("Todas as notas já têm embeddings gerados.");
+        setIsGeneratingEmbeddings(false);
+        return;
+      }
+      
+      const total = notesWithoutEmbeddings.length;
+      setEmbeddingProgress({ current: 0, total });
+      toast.info(`Iniciando geração de embeddings para ${total} notas...`);
+      
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (let i = 0; i < notesWithoutEmbeddings.length; i++) {
+        const note = notesWithoutEmbeddings[i];
+        
+        try {
+          // Strip HTML tags from content
+          const textContent = note.content?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() || '';
+          const textToEmbed = `${note.title || ''}\n\n${textContent}`.trim();
+          
+          if (!textToEmbed) {
+            failCount++;
+            setEmbeddingProgress({ current: i + 1, total });
+            continue;
+          }
+          
+          // Call the embed-note edge function
+          const { data: embeddingData, error: embeddingError } = await supabase.functions.invoke('embed-note', {
+            body: { title: note.title || '', content: textContent }
+          });
+          
+          if (embeddingError || !embeddingData?.embedding) {
+            console.error(`Error generating embedding for note ${note.id}:`, embeddingError);
+            failCount++;
+            setEmbeddingProgress({ current: i + 1, total });
+            continue;
+          }
+          
+          // Update the note with the embedding
+          const { error: updateError } = await supabase
+            .from('notes')
+            .update({ embedding: JSON.stringify(embeddingData.embedding) })
+            .eq('id', note.id);
+          
+          if (updateError) {
+            console.error(`Error updating note ${note.id}:`, updateError);
+            failCount++;
+          } else {
+            successCount++;
+          }
+        } catch (err) {
+          console.error(`Error processing note ${note.id}:`, err);
+          failCount++;
+        }
+        
+        setEmbeddingProgress({ current: i + 1, total });
+      }
+      
+      if (failCount === 0) {
+        toast.success(`Embeddings gerados com sucesso para ${successCount} notas!`);
+      } else {
+        toast.warning(`Processamento concluído: ${successCount} sucesso, ${failCount} falhas.`);
+      }
+    } catch (error) {
+      console.error("Error in bulk embedding generation:", error);
+      toast.error("Erro ao gerar embeddings em massa.");
+    } finally {
+      setIsGeneratingEmbeddings(false);
+    }
   };
   
   return (
@@ -544,6 +640,52 @@ const Settings = () => {
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Gerar Embeddings em Massa
+              </CardTitle>
+              <CardDescription>
+                Gerar embeddings para notas que ainda não os têm (para pesquisa semântica)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isGeneratingEmbeddings && embeddingProgress.total > 0 && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Processando notas...</span>
+                    <span>
+                      {embeddingProgress.current} de {embeddingProgress.total}
+                    </span>
+                  </div>
+                  <Progress 
+                    value={(embeddingProgress.current / embeddingProgress.total) * 100} 
+                    className="h-2"
+                  />
+                </div>
+              )}
+              <Button 
+                variant="outline" 
+                className="w-full gap-2"
+                onClick={handleBulkEmbeddings}
+                disabled={isGeneratingEmbeddings}
+              >
+                {isGeneratingEmbeddings ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <Database className="h-4 w-4" />
+                    Gerar Embeddings em Massa
+                  </>
+                )}
+              </Button>
             </CardContent>
           </Card>
           
