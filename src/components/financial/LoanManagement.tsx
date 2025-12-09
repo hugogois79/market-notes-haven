@@ -326,63 +326,51 @@ export default function LoanManagement({ companyId }: LoanManagementProps) {
                                   Nenhum movimento registado
                                 </p>
                               ) : (
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead className="py-2">Data</TableHead>
-                                      <TableHead className="py-2">Pagador</TableHead>
-                                      <TableHead className="py-2">Recebedor</TableHead>
-                                      <TableHead className="py-2">Montante</TableHead>
-                                      <TableHead className="py-2">Observações</TableHead>
-                                      <TableHead className="py-2 w-[80px]">Ações</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {payments.map((payment) => (
-                                      <TableRow key={payment.id}>
-                                        <TableCell className="py-2">
+                                <div className="space-y-2">
+                                  {payments.map((payment) => (
+                                    <div key={payment.id} className="flex items-center justify-between py-2 px-3 bg-muted/30 rounded-lg">
+                                      <div className="flex items-center gap-4">
+                                        <span className="text-sm font-medium">
                                           {new Date(payment.payment_date).toLocaleDateString("pt-PT")}
-                                        </TableCell>
-                                        <TableCell className="py-2">{payment.paying_company?.name}</TableCell>
-                                        <TableCell className="py-2">{payment.receiving_company?.name}</TableCell>
-                                        <TableCell className="py-2 font-medium">
+                                        </span>
+                                        <span className="text-sm font-semibold text-green-600">
                                           {formatCurrency(Number(payment.amount))}
-                                        </TableCell>
-                                        <TableCell className="py-2 text-muted-foreground max-w-[150px] truncate">
-                                          {payment.notes || "-"}
-                                        </TableCell>
-                                        <TableCell className="py-2">
-                                          <div className="flex gap-1">
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-6 w-6"
-                                              onClick={() => {
-                                                setSelectedLoanForPayment(loan);
-                                                setEditingPayment(payment);
-                                                setPaymentDialogOpen(true);
-                                              }}
-                                            >
-                                              <Edit className="h-3 w-3" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-6 w-6"
-                                              onClick={() => {
-                                                if (confirm("Eliminar pagamento?")) {
-                                                  deletePaymentMutation.mutate(payment.id);
-                                                }
-                                              }}
-                                            >
-                                              <Trash2 className="h-3 w-3" />
-                                            </Button>
-                                          </div>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
+                                        </span>
+                                        {payment.notes && (
+                                          <span className="text-sm text-muted-foreground truncate max-w-[200px]">
+                                            {payment.notes}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6"
+                                          onClick={() => {
+                                            setSelectedLoanForPayment(loan);
+                                            setEditingPayment(payment);
+                                            setPaymentDialogOpen(true);
+                                          }}
+                                        >
+                                          <Edit className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6"
+                                          onClick={() => {
+                                            if (confirm("Eliminar pagamento?")) {
+                                              deletePaymentMutation.mutate(payment.id);
+                                            }
+                                          }}
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
                               )}
                             </div>
                           </CollapsibleContent>
