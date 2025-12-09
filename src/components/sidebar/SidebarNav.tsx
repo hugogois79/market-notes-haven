@@ -14,6 +14,7 @@ import {
   Plus,
   FileCheck,
   Scale,
+  LineChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useMemo } from "react";
@@ -37,6 +38,7 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
   const location = useLocation();
   const { isWorker, loading: roleLoading } = useUserRole();
   const [isProjectsExpanded, setIsProjectsExpanded] = useState(false);
+  const [isTradingExpanded, setIsTradingExpanded] = useState(false);
   const [expandedSpaces, setExpandedSpaces] = useState<Set<string>>(new Set());
   const [spaces, setSpaces] = useState<any[]>([]);
   const [boards, setBoards] = useState<any[]>([]);
@@ -72,7 +74,7 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
     return acc;
   }, {} as Record<string, any[]>);
 
-  const allNavItems: NavItem[] = [
+  const mainNavItems: NavItem[] = [
     {
       title: "Dashboard",
       icon: <LayoutDashboard size={20} />,
@@ -98,12 +100,6 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       workerAllowed: false,
     },
     {
-      title: "Tokens",
-      icon: <Banknote size={20} />,
-      path: "/tokens",
-      workerAllowed: false,
-    },
-    {
       title: "Receipt Generator",
       icon: <FileText size={20} />,
       path: "/receipt-generator",
@@ -125,6 +121,21 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       title: "Legal",
       icon: <Scale size={20} />,
       path: "/legal",
+      workerAllowed: false,
+    },
+    {
+      title: "Profile",
+      icon: <User size={20} />,
+      path: "/profile",
+      workerAllowed: true,
+    },
+  ];
+
+  const tradingNavItems: NavItem[] = [
+    {
+      title: "Tokens",
+      icon: <Banknote size={20} />,
+      path: "/tokens",
       workerAllowed: false,
     },
     {
@@ -153,22 +164,26 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       path: "/tao",
       workerAllowed: false,
     },
-    {
-      title: "Profile",
-      icon: <User size={20} />,
-      path: "/profile",
-      workerAllowed: true,
-    },
   ];
 
   // Filter nav items based on role
   const navItems = useMemo(() => {
     if (roleLoading) return [];
     if (isWorker) {
-      return allNavItems.filter(item => item.workerAllowed);
+      return mainNavItems.filter(item => item.workerAllowed);
     }
-    return allNavItems;
+    return mainNavItems;
   }, [isWorker, roleLoading]);
+
+  const tradingItems = useMemo(() => {
+    if (roleLoading || isWorker) return [];
+    return tradingNavItems;
+  }, [isWorker, roleLoading]);
+
+  // Check if any trading route is active
+  const isTradingActive = tradingNavItems.some(
+    item => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
+  );
 
   // Don't show boards section for workers
   const showBoardsSection = !isWorker;
@@ -195,6 +210,57 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
             </Link>
           </li>
         ))}
+        
+        {/* Trading Section - Only for non-workers */}
+        {tradingItems.length > 0 && (
+          <li>
+            <button
+              onClick={() => setIsTradingExpanded(!isTradingExpanded)}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors",
+                !isExpanded && "justify-center px-2",
+                isTradingActive
+                  ? "bg-brand/20 text-brand font-medium"
+                  : "text-white hover:bg-white/10 hover:text-brand"
+              )}
+              title={!isExpanded ? "Trading" : ""}
+            >
+              <LineChart size={20} />
+              {isExpanded && (
+                <>
+                  <span className="flex-1 text-left">Trading</span>
+                  {isTradingExpanded ? (
+                    <ChevronDown size={16} />
+                  ) : (
+                    <ChevronRight size={16} />
+                  )}
+                </>
+              )}
+            </button>
+            
+            {isExpanded && isTradingExpanded && (
+              <ul className="ml-4 mt-1 space-y-1">
+                {tradingItems.map((item) => (
+                  <li key={item.path}>
+                    <Link
+                      to={item.path}
+                      onClick={() => isMobile && onMobileClose()}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm",
+                        location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
+                          ? "bg-brand/20 text-brand font-medium"
+                          : "text-white/80 hover:bg-white/10 hover:text-brand"
+                      )}
+                    >
+                      {item.icon}
+                      <span className="truncate">{item.title}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        )}
         
         {/* Project Boards with Spaces - Only for non-workers */}
         {showBoardsSection && (
