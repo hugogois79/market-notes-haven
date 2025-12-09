@@ -225,8 +225,6 @@ export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedA
 
 // Update an existing note in Supabase
 export const updateNote = async (note: Note): Promise<{ note: Note | null; embeddingFailed: boolean }> => {
-  let embeddingFailed = false;
-  
   try {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
@@ -235,24 +233,8 @@ export const updateNote = async (note: Note): Promise<{ note: Note | null; embed
     console.log('Updating note with summary:', note.summary);
     console.log('Updating note with attachments:', note.attachments);
 
-    // Only generate a new summary if one wasn't explicitly provided and content has changed
-    let summaryToSave = note.summary;
-    
-    if (!summaryToSave && note.content) {
-      // Generate new summary if content has changed and no summary was provided
-      const generatedSummary = await generateNoteSummary(note.content);
-      console.log('Generated new summary:', generatedSummary);
-      summaryToSave = generatedSummary;
-    } else {
-      console.log('Using provided summary:', summaryToSave);
-    }
-
-    // Generate embedding
-    const embedding = await generateNoteEmbedding(note.title, note.content || '');
-    if (!embedding) {
-      console.warn('Failed to generate embedding for note update');
-      embeddingFailed = true;
-    }
+    // Don't wait for summary generation - save immediately
+    const summaryToSave = note.summary || null;
 
     // Ensure attachments array is properly formatted
     const attachments = note.attachments && Array.isArray(note.attachments) 
@@ -264,23 +246,19 @@ export const updateNote = async (note: Note): Promise<{ note: Note | null; embed
     const updateData: Record<string, unknown> = {
       title: note.title,
       content: note.content || "", // Ensure content is never null
-      summary: summaryToSave, // Use the provided or generated summary
+      summary: summaryToSave,
       tags: note.tags || [],
-      category: note.category, // Don't force default here - let the hook handle it
+      category: note.category,
       updated_at: new Date().toISOString(),
       user_id: userId,
-      attachment_url: attachments.length > 0 ? attachments[0] : null, // For backward compatibility
-      attachments: attachments, // Include all attachments (up to 20)
-      trade_info: tradeInfoToJson(note.tradeInfo), // Convert TradeInfo to JSON
+      attachment_url: attachments.length > 0 ? attachments[0] : null,
+      attachments: attachments,
+      trade_info: tradeInfoToJson(note.tradeInfo),
       has_conclusion: note.hasConclusion,
-      project_id: note.project_id // Include project_id
+      project_id: note.project_id
     };
 
-    // Only update embedding if it was generated successfully
-    if (embedding) {
-      updateData.embedding = JSON.stringify(embedding);
-    }
-
+    // Save the note immediately without waiting for embedding
     const { data, error } = await supabase
       .from('notes')
       .update(updateData)
@@ -290,15 +268,47 @@ export const updateNote = async (note: Note): Promise<{ note: Note | null; embed
 
     if (error) {
       console.error('Error updating note:', error);
-      return { note: null, embeddingFailed };
+      return { note: null, embeddingFailed: false };
     }
 
     console.log('Updated note data:', data);
-    return { note: dbNoteToNote(data as DbNote), embeddingFailed };
+    const savedNote = dbNoteToNote(data as DbNote);
+
+    // Generate embedding in the background (non-blocking)
+    generateNoteEmbeddingInBackground(note.id, note.title, note.content || '');
+
+    return { note: savedNote, embeddingFailed: false };
   } catch (error) {
     console.error('Error updating note:', error);
-    return { note: null, embeddingFailed };
+    return { note: null, embeddingFailed: false };
   }
+};
+
+// Generate embedding in background (non-blocking)
+const generateNoteEmbeddingInBackground = (noteId: string, title: string, content: string) => {
+  // Run embedding generation asynchronously without blocking the save
+  (async () => {
+    try {
+      const embedding = await generateNoteEmbedding(title, content);
+      if (embedding) {
+        // Update the note with the embedding
+        const { error } = await supabase
+          .from('notes')
+          .update({ embedding: JSON.stringify(embedding) })
+          .eq('id', noteId);
+        
+        if (error) {
+          console.error('Error updating note embedding:', error);
+        } else {
+          console.log('Note embedding updated successfully for:', noteId);
+        }
+      } else {
+        console.warn('Failed to generate embedding for note:', noteId);
+      }
+    } catch (error) {
+      console.error('Error in background embedding generation:', error);
+    }
+  })();
 };
 
 // Delete a note from Supabase
