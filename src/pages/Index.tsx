@@ -20,6 +20,7 @@ import TokenBadge from "@/components/TokenBadge";
 import { Token } from "@/types";
 import { useNotes } from "@/contexts/NotesContext";
 import { useSemanticSearch } from "@/hooks/useSemanticSearch";
+import HighlightText from "@/components/HighlightText";
 
 const Index = () => {
   const { notes, loading } = useNotes();
@@ -357,12 +358,14 @@ const Index = () => {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleNoteClick(note.id)}
                   >
-                    <TableCell className="font-medium">{note.title}</TableCell>
+                    <TableCell className="font-medium">
+                      <HighlightText text={note.title} query={searchQuery} />
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">{note.category}</Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm max-w-[300px] truncate">
-                      {getTextPreview(note.content)}
+                      <HighlightText text={getTextPreview(note.content)} query={searchQuery} />
                     </TableCell>
                     <TableCell>
                       {note.tags.length > 0 ? (
