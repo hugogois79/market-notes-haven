@@ -106,7 +106,7 @@ const AIAssistant = () => {
 
   const handleOpenNote = (noteId: string) => {
     setIsOpen(false);
-    navigate(`/notes/editor/${noteId}`);
+    navigate(`/editor/${noteId}`);
   };
 
   return (
