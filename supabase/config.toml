@@ -1,1 +1,10 @@
 project_id = "zyziolikudoczsthyoja"
+
+[functions.summarize-note]
+verify_jwt = false
+
+[functions.trading-assistant]
+verify_jwt = false
+
+[functions.embed-note]
+verify_jwt = false
