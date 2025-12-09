@@ -595,6 +595,7 @@ const Notes = () => {
                 note={note}
                 className={viewMode === "list" ? "flex-row" : ""}
                 tagMapping={tagMapping}
+                searchQuery={searchQuery}
               />
             ))}
           </div>

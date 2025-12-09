@@ -10,6 +10,7 @@ import { getTokensForNote } from "@/services/tokenService";
 import TokenBadge from "./TokenBadge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import HighlightText from "./HighlightText";
 
 interface ExpenseProject {
   id: string;
@@ -23,6 +24,7 @@ interface NoteCardProps {
   tagMapping?: Record<string, string>;
   selectedTokenIds?: string[] | null;
   onTokenMatch?: (noteId: string, tokenId: string, matches: boolean) => void;
+  searchQuery?: string;
 }
 
 const NoteCard = ({ 
@@ -30,7 +32,8 @@ const NoteCard = ({
   className, 
   tagMapping = {},
   selectedTokenIds = null,
-  onTokenMatch
+  onTokenMatch,
+  searchQuery = ""
 }: NoteCardProps) => {
   const navigate = useNavigate();
   const [tokens, setTokens] = useState<Token[]>([]);
@@ -154,7 +157,7 @@ const NoteCard = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
               <h3 className="font-medium text-sm line-clamp-1">
-                {note.title || "Untitled Note"}
+                <HighlightText text={note.title || "Untitled Note"} query={searchQuery} />
               </h3>
               {note.category && (
                 <Badge variant="outline" className="ml-2 text-xs">
@@ -164,7 +167,7 @@ const NoteCard = ({
             </div>
             
             <p className="text-muted-foreground text-xs line-clamp-1 mb-1.5">
-              {getTextPreview(note.content)}
+              <HighlightText text={getTextPreview(note.content)} query={searchQuery} />
             </p>
             
             <div className="flex items-center text-xs text-muted-foreground">
@@ -219,7 +222,7 @@ const NoteCard = ({
           <CardHeader className="p-3 pb-0">
             <div className="flex justify-between items-start gap-2">
               <h3 className="font-medium text-sm line-clamp-1">
-                {note.title || "Untitled Note"}
+                <HighlightText text={note.title || "Untitled Note"} query={searchQuery} />
               </h3>
               {note.category && (
                 <Badge variant="outline" className="shrink-0 text-xs">
@@ -230,7 +233,7 @@ const NoteCard = ({
           </CardHeader>
           <CardContent className="p-3 pt-1.5 pb-0">
             <p className="text-muted-foreground text-xs line-clamp-2">
-              {getTextPreview(note.content)}
+              <HighlightText text={getTextPreview(note.content)} query={searchQuery} />
             </p>
           </CardContent>
           <CardFooter className="p-3 pt-1.5 flex flex-wrap gap-y-1 items-center">
