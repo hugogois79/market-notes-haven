@@ -86,14 +86,16 @@ const NewExpensePage = () => {
       const { data, error } = await supabase
         .from("expense_projects")
         .select("id, name")
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .order("name", { ascending: true });
       if (error) throw error;
       
       // Filter by requester's assigned projects
       if (requesterId && requesters) {
         const selectedRequester = requesters.find(r => r.id === requesterId);
         if (selectedRequester?.assigned_project_ids?.length) {
-          return data?.filter(p => selectedRequester.assigned_project_ids.includes(p.id)) || [];
+          const filtered = data?.filter(p => selectedRequester.assigned_project_ids.includes(p.id)) || [];
+          return filtered.sort((a, b) => a.name.localeCompare(b.name));
         }
       }
       
