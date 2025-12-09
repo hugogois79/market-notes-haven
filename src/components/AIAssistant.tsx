@@ -4,7 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Bot, Send, Loader2, User, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -168,21 +168,23 @@ const AIAssistant = () => {
                   {message.role === "assistant" && message.noteReferences && message.noteReferences.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-border/50">
                       <span className="text-xs text-muted-foreground mr-1">Abrir nota:</span>
-                      {message.noteReferences.map((ref) => (
-                        <Tooltip key={ref.id}>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => handleOpenNote(ref.id)}
-                              className="h-6 w-6 rounded-full bg-primary/20 hover:bg-primary/40 text-primary font-medium text-xs flex items-center justify-center transition-colors"
-                            >
-                              {ref.index}
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-[200px]">
-                            <p className="text-xs truncate">{ref.title}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      ))}
+                      <TooltipProvider>
+                        {message.noteReferences.map((ref) => (
+                          <Tooltip key={ref.id}>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => handleOpenNote(ref.id)}
+                                className="h-6 w-6 rounded-full bg-primary/20 hover:bg-primary/40 text-primary font-medium text-xs flex items-center justify-center transition-colors"
+                              >
+                                {ref.index}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[200px]">
+                              <p className="text-xs truncate">{ref.title}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ))}
+                      </TooltipProvider>
                     </div>
                   )}
                   
