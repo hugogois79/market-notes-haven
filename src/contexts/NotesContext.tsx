@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useQuery } from "@tanstack/react-query";
 import { fetchNotes, createNote, updateNote, deleteNote } from "@/services/supabaseService";
 import { Note, Tag } from "@/types";
+import { toast } from "sonner";
 
 interface NotesContextType {
   notes: Note[];
@@ -36,7 +37,7 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
     }
   }, [notesData]);
 
-  const handleSaveNote = async (note: Note) => {
+  const handleSaveNote = async (note: Note): Promise<Note | null> => {
     try {
       console.log("Saving note:", note);
       
@@ -73,7 +74,7 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
       
       if (note.id.toString().startsWith('temp-')) {
         console.log("Creating new note with content:", noteWithValidFields.content);
-        const newNote = await createNote({
+        const result = await createNote({
           title: noteWithValidFields.title,
           content: noteWithValidFields.content,
           tags: noteWithValidFields.tags,
@@ -82,24 +83,32 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
           hasConclusion: noteWithValidFields.hasConclusion
         });
         
-        if (newNote) {
-          console.log("New note created:", newNote.id);
-          setNotes(prev => [newNote, ...prev]);
+        if (result.embeddingFailed) {
+          toast.warning("Nota guardada, mas a indexação para pesquisa falhou. A pesquisa semântica pode não encontrar esta nota.");
+        }
+        
+        if (result.note) {
+          console.log("New note created:", result.note.id);
+          setNotes(prev => [result.note!, ...prev]);
           await refetch();
-          return newNote;
+          return result.note;
         }
       } else {
         console.log("Updating note:", noteWithValidFields.id, "with title:", noteWithValidFields.title);
         console.log("Tags being saved:", noteWithValidFields.tags);
-        const updatedNote = await updateNote(noteWithValidFields);
+        const result = await updateNote(noteWithValidFields);
         
-        if (updatedNote) {
-          console.log("Note updated:", updatedNote.id);
+        if (result.embeddingFailed) {
+          toast.warning("Nota guardada, mas a indexação para pesquisa falhou. A pesquisa semântica pode não encontrar esta nota.");
+        }
+        
+        if (result.note) {
+          console.log("Note updated:", result.note.id);
           setNotes(prev => 
-            prev.map(n => n.id === updatedNote.id ? updatedNote : n)
+            prev.map(n => n.id === result.note!.id ? result.note! : n)
           );
           await refetch();
-          return updatedNote;
+          return result.note;
         }
       }
     } catch (error) {

@@ -128,8 +128,48 @@ export const generateNoteSummary = async (content: string, noteId?: string): Pro
   }
 };
 
+// Generate embedding for note content using OpenAI
+export const generateNoteEmbedding = async (title: string, content: string): Promise<number[] | null> => {
+  try {
+    // Strip HTML tags for cleaner text
+    const cleanContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    
+    if (!title.trim() && !cleanContent.trim()) {
+      console.log('No content to generate embedding');
+      return null;
+    }
+
+    console.log('Generating embedding for note...');
+    
+    const response = await supabase.functions.invoke('embed-note', {
+      body: {
+        title: title,
+        content: cleanContent
+      }
+    });
+
+    if (response.error) {
+      console.error("Error generating embedding:", response.error);
+      return null;
+    }
+
+    const embedding = response.data?.embedding;
+    if (embedding && Array.isArray(embedding)) {
+      console.log(`Generated embedding with ${embedding.length} dimensions`);
+      return embedding;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error generating embedding:", error);
+    return null;
+  }
+};
+
 // Create a new note in Supabase
-export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>): Promise<Note | null> => {
+export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ note: Note | null; embeddingFailed: boolean }> => {
+  let embeddingFailed = false;
+  
   try {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
@@ -140,7 +180,14 @@ export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedA
     const summary = await generateNoteSummary(note.content);
     console.log('Generated summary:', summary);
 
-    const dbNote = {
+    // Generate embedding
+    const embedding = await generateNoteEmbedding(note.title, note.content || '');
+    if (!embedding) {
+      console.warn('Failed to generate embedding for new note');
+      embeddingFailed = true;
+    }
+
+    const dbNote: Record<string, unknown> = {
       title: note.title,
       content: note.content || "", // Ensure content is never null
       summary: summary, // Add the generated summary
@@ -152,6 +199,11 @@ export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedA
       trade_info: tradeInfoToJson(note.tradeInfo), // Convert TradeInfo to JSON
     };
 
+    // Only add embedding if it was generated successfully
+    if (embedding) {
+      dbNote.embedding = JSON.stringify(embedding);
+    }
+
     const { data, error } = await supabase
       .from('notes')
       .insert([dbNote])
@@ -160,19 +212,21 @@ export const createNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedA
 
     if (error) {
       console.error('Error creating note:', error);
-      return null;
+      return { note: null, embeddingFailed };
     }
 
     console.log('Created note data:', data);
-    return dbNoteToNote(data as DbNote);
+    return { note: dbNoteToNote(data as DbNote), embeddingFailed };
   } catch (error) {
     console.error('Error creating note:', error);
-    return null;
+    return { note: null, embeddingFailed };
   }
 };
 
 // Update an existing note in Supabase
-export const updateNote = async (note: Note): Promise<Note | null> => {
+export const updateNote = async (note: Note): Promise<{ note: Note | null; embeddingFailed: boolean }> => {
+  let embeddingFailed = false;
+  
   try {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
@@ -193,6 +247,13 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
       console.log('Using provided summary:', summaryToSave);
     }
 
+    // Generate embedding
+    const embedding = await generateNoteEmbedding(note.title, note.content || '');
+    if (!embedding) {
+      console.warn('Failed to generate embedding for note update');
+      embeddingFailed = true;
+    }
+
     // Ensure attachments array is properly formatted
     const attachments = note.attachments && Array.isArray(note.attachments) 
       ? note.attachments.slice(0, 20) // Limit to 20 items
@@ -200,36 +261,43 @@ export const updateNote = async (note: Note): Promise<Note | null> => {
 
     console.log('Saving attachments:', attachments);
 
+    const updateData: Record<string, unknown> = {
+      title: note.title,
+      content: note.content || "", // Ensure content is never null
+      summary: summaryToSave, // Use the provided or generated summary
+      tags: note.tags || [],
+      category: note.category, // Don't force default here - let the hook handle it
+      updated_at: new Date().toISOString(),
+      user_id: userId,
+      attachment_url: attachments.length > 0 ? attachments[0] : null, // For backward compatibility
+      attachments: attachments, // Include all attachments (up to 20)
+      trade_info: tradeInfoToJson(note.tradeInfo), // Convert TradeInfo to JSON
+      has_conclusion: note.hasConclusion,
+      project_id: note.project_id // Include project_id
+    };
+
+    // Only update embedding if it was generated successfully
+    if (embedding) {
+      updateData.embedding = JSON.stringify(embedding);
+    }
+
     const { data, error } = await supabase
       .from('notes')
-      .update({
-        title: note.title,
-        content: note.content || "", // Ensure content is never null
-        summary: summaryToSave, // Use the provided or generated summary
-        tags: note.tags || [],
-        category: note.category, // Don't force default here - let the hook handle it
-        updated_at: new Date().toISOString(),
-        user_id: userId,
-        attachment_url: attachments.length > 0 ? attachments[0] : null, // For backward compatibility
-        attachments: attachments, // Include all attachments (up to 20)
-        trade_info: tradeInfoToJson(note.tradeInfo), // Convert TradeInfo to JSON
-        has_conclusion: note.hasConclusion,
-        project_id: note.project_id // Include project_id
-      })
+      .update(updateData)
       .eq('id', note.id)
       .select()
       .single();
 
     if (error) {
       console.error('Error updating note:', error);
-      return null;
+      return { note: null, embeddingFailed };
     }
 
     console.log('Updated note data:', data);
-    return dbNoteToNote(data as DbNote);
+    return { note: dbNoteToNote(data as DbNote), embeddingFailed };
   } catch (error) {
     console.error('Error updating note:', error);
-    return null;
+    return { note: null, embeddingFailed };
   }
 };
 
