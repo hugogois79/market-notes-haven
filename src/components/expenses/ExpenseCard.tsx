@@ -46,7 +46,9 @@ const ExpenseCard = ({ claim }: ExpenseCardProps) => {
   };
 
   const getTypeBadge = (type: string) => {
-    return type === "reembolso" ? "Reembolso" : "Justificação Cartão";
+    if (type === "reembolso") return "Reembolso";
+    if (type === "transferencia_bancaria") return "Transferência";
+    return "Justificação Cartão";
   };
 
   return (

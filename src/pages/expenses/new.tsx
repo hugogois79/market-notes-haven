@@ -477,6 +477,15 @@ const NewExpensePage = () => {
                   Justificação de Cartão de Crédito
                 </Label>
               </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem
+                  value="transferencia_bancaria"
+                  id="transferencia_bancaria"
+                />
+                <Label htmlFor="transferencia_bancaria">
+                  Transferência Bancária
+                </Label>
+              </div>
             </RadioGroup>
           </div>
 
