@@ -1,16 +1,24 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { X, FolderOpen } from "lucide-react";
+import { X, FolderOpen, Check, ChevronsUpDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 interface ExpenseProject {
   id: string;
@@ -31,6 +39,8 @@ const ProjectSection: React.FC<ProjectSectionProps> = ({
   onProjectSelect,
   compact = false
 }) => {
+  const [open, setOpen] = useState(false);
+
   // Fetch all active expense projects
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['expense-projects'],
@@ -54,6 +64,7 @@ const ProjectSection: React.FC<ProjectSectionProps> = ({
     } else {
       onProjectSelect(projectId);
     }
+    setOpen(false);
   };
   
   const handleRemoveProject = () => {
@@ -91,24 +102,58 @@ const ProjectSection: React.FC<ProjectSectionProps> = ({
         </div>
       )}
       
-      {/* Project selector */}
-      <Select 
-        onValueChange={handleSelectProject} 
-        disabled={isLoading}
-        value={selectedProjectId || "none"}
-      >
-        <SelectTrigger className="w-[180px] h-8">
-          <SelectValue placeholder="Selecionar projeto..." />
-        </SelectTrigger>
-        <SelectContent className="z-[100] bg-white dark:bg-gray-900 border border-border shadow-lg">
-          <SelectItem value="none">Sem projeto</SelectItem>
-          {!isLoading && projects.map(project => (
-            <SelectItem key={project.id} value={project.id} className="bg-white dark:bg-gray-900">
-              {project.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {/* Project selector with search */}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-[200px] h-8 justify-between text-sm"
+            disabled={isLoading}
+          >
+            {selectedProject ? selectedProject.name : "Selecionar projeto..."}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[250px] p-0 z-[100]" align="start">
+          <Command>
+            <CommandInput placeholder="Pesquisar projeto..." />
+            <CommandList>
+              <CommandEmpty>Nenhum projeto encontrado.</CommandEmpty>
+              <CommandGroup>
+                <CommandItem
+                  value="none"
+                  onSelect={() => handleSelectProject("none")}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      !selectedProjectId ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  Sem projeto
+                </CommandItem>
+                {projects.map((project) => (
+                  <CommandItem
+                    key={project.id}
+                    value={project.name}
+                    onSelect={() => handleSelectProject(project.id)}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedProjectId === project.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {project.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 };
