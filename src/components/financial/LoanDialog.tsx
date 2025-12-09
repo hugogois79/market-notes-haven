@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useEffect, useRef, useState } from "react";
-import { Upload, Paperclip, X, Loader2 } from "lucide-react";
+import { Upload, Paperclip, X, Loader2, Download } from "lucide-react";
 
 interface LoanDialogProps {
   open: boolean;
@@ -109,6 +109,40 @@ export default function LoanDialog({
 
   const removeAttachment = () => {
     setAttachmentUrl(null);
+  };
+
+  const handleDownloadAttachment = async () => {
+    if (!attachmentUrl) return;
+    
+    try {
+      // Extract file path from the public URL
+      const urlParts = attachmentUrl.split('/attachments/');
+      if (urlParts.length < 2) {
+        window.open(attachmentUrl, '_blank');
+        return;
+      }
+      
+      const filePath = urlParts[1];
+      const { data, error } = await supabase.storage
+        .from('attachments')
+        .download(filePath);
+      
+      if (error) throw error;
+      
+      // Create blob URL and trigger download
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filePath.split('/').pop() || 'attachment';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download error:", error);
+      // Fallback to direct link
+      window.open(attachmentUrl, '_blank');
+    }
   };
 
   const saveMutation = useMutation({
@@ -264,24 +298,34 @@ export default function LoanDialog({
               <div className="border rounded-md p-3 flex items-center justify-between">
                 <div className="flex items-center gap-2 overflow-hidden">
                   <Paperclip className="h-4 w-4 flex-shrink-0" />
-                  <a 
-                    href={attachmentUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-sm truncate text-blue-600 hover:underline"
+                  <button 
+                    type="button"
+                    onClick={handleDownloadAttachment}
+                    className="text-sm truncate text-blue-600 hover:underline text-left"
                   >
                     {attachmentUrl.split('/').pop()}
-                  </a>
+                  </button>
                 </div>
-                <Button 
-                  type="button" 
-                  size="sm" 
-                  variant="ghost" 
-                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                  onClick={removeAttachment}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    variant="ghost" 
+                    className="h-8 w-8 p-0 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                    onClick={handleDownloadAttachment}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    variant="ghost" 
+                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    onClick={removeAttachment}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ) : (
               <Button 
