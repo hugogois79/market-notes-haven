@@ -8,12 +8,7 @@ import { useNoteData } from "./hooks/useNoteData";
 import { useNotes } from "@/contexts/NotesContext";
 import { toast } from "sonner";
 
-interface EditorProps {
-  onSaveNote: (note: Note) => Promise<Note | null>;
-  onDeleteNote: (noteId: string) => Promise<boolean>;
-}
-
-const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
+const Editor = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [hasCreatedNote, setHasCreatedNote] = useState(false);
@@ -30,7 +25,7 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
     allTags,
     handleSave,
     getTagsFilteredByCategory
-  } = useNoteData({ notes, onSaveNote: handleSaveNote || onSaveNote });
+  } = useNoteData({ notes, onSaveNote: handleSaveNote });
 
   // Handle creating a new note from URL params - FIXED to prevent duplicate creations
   useEffect(() => {
@@ -56,8 +51,7 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
       };
       
       // Create and navigate to the new note
-      const saveFunction = handleSaveNote || onSaveNote;
-      saveFunction(newNote).then(savedNote => {
+      handleSaveNote(newNote).then(savedNote => {
         if (savedNote) {
           console.log("New note created with ID:", savedNote.id);
           // Navigate directly to the editor path with the new ID
@@ -75,7 +69,7 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
         setHasCreatedNote(false);
       });
     }
-  }, [isNewNote, currentNote, location.search, onSaveNote, handleSaveNote, navigate, refetch, hasCreatedNote, notes.length]);
+  }, [isNewNote, currentNote, location.search, handleSaveNote, navigate, refetch, hasCreatedNote, notes.length]);
 
   // Reset hasCreatedNote when navigating away from new note route
   useEffect(() => {
@@ -124,8 +118,7 @@ const Editor = ({ onSaveNote, onDeleteNote }: EditorProps) => {
   const handleDeleteWithLoading = async (noteId: string): Promise<boolean> => {
     setIsDeleting(true);
     try {
-      const deleteFunction = handleDeleteNote || onDeleteNote;
-      const result = await deleteFunction(noteId);
+      const result = await handleDeleteNote(noteId);
       if (result) {
         navigate('/notes');
         toast.success("Note deleted successfully");
