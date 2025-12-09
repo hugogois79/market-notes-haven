@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
   FilterX,
   FolderOpen,
   ChevronDown,
+  Loader,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import NoteCard from "@/components/NoteCard";
@@ -22,6 +23,7 @@ import { useNavigate } from "react-router-dom";
 import { fetchTags } from "@/services/tag";
 import { useNotes } from "@/contexts/NotesContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useSemanticSearch } from "@/hooks/useSemanticSearch";
 
 interface ExpenseProject {
   id: string;
@@ -60,6 +62,7 @@ const Notes = () => {
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [tagSearchQuery, setTagSearchQuery] = useState("");
   const [projectSearchQuery, setProjectSearchQuery] = useState("");
+  const { isSearching, searchResults, semanticSearch, clearSearch } = useSemanticSearch();
 
   // Fetch projects for filter
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery({
@@ -91,15 +94,34 @@ const Notes = () => {
     new Set(contextNotes.filter(note => note.category).map(note => note.category))
   );
 
+  // Debounced semantic search
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      clearSearch();
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      semanticSearch(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, semanticSearch, clearSearch]);
+
+  // Use semantic search results if available, otherwise use context notes
+  const baseNotes = searchResults && searchQuery.trim() ? searchResults : contextNotes;
+
   const filteredNotes = useMemo(() => {
-    if (!contextNotes || contextNotes.length === 0) return [];
+    if (!baseNotes || baseNotes.length === 0) return [];
   
-    return contextNotes.filter(note => {
-      const searchMatch =
+    return baseNotes.filter(note => {
+      // If we have semantic search results, skip text matching since it's already done
+      const searchMatch = searchResults && searchQuery.trim() ? true : (
         !searchQuery ||
         (note.title && note.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (note.content &&
-          note.content.toLowerCase().includes(searchQuery.toLowerCase()));
+          note.content.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
 
       const categoryMatch =
         selectedCategories.length === 0 || 
@@ -115,7 +137,7 @@ const Notes = () => {
       
       return searchMatch && categoryMatch && tagMatch && projectMatch;
     });
-  }, [contextNotes, searchQuery, selectedCategories, selectedTags, selectedProjects]);
+  }, [baseNotes, searchQuery, selectedCategories, selectedTags, selectedProjects, searchResults]);
 
   const handleCreateNote = () => {
     navigate("/editor/new");
@@ -433,9 +455,13 @@ const Notes = () => {
       </div>
 
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        {isSearching ? (
+          <Loader className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground animate-spin" />
+        ) : (
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        )}
         <Input
-          placeholder="Search notes..."
+          placeholder="Search notes semantically..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10 h-9"

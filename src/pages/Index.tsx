@@ -3,7 +3,7 @@ import { FileText, Plus, Bookmark, FolderOpen, Clock, Rocket, Loader, Search, Ta
 import { useNavigate } from "react-router-dom";
 import { Note } from "@/types";
 import { toast } from "sonner";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,6 +19,7 @@ import { getTokensForNote } from "@/services/tokenService";
 import TokenBadge from "@/components/TokenBadge";
 import { Token } from "@/types";
 import { useNotes } from "@/contexts/NotesContext";
+import { useSemanticSearch } from "@/hooks/useSemanticSearch";
 
 const Index = () => {
   const { notes, loading } = useNotes();
@@ -29,6 +30,7 @@ const Index = () => {
   const [categories, setCategories] = useState<{name: string, count: number}[]>([]);
   const [tagNameMap, setTagNameMap] = useState<Record<string, string>>({});
   const [noteTokens, setNoteTokens] = useState<Record<string, Token[]>>({});
+  const { isSearching, searchResults, semanticSearch, clearSearch } = useSemanticSearch();
   
   useEffect(() => {
     const loadTags = async () => {
@@ -110,10 +112,30 @@ const Index = () => {
     }
   }, [notes, searchQuery, selectedCategory, selectedTag, tagNameMap]);
   
-  const filteredNotes = notes.filter(note => {
-    const matchesSearch = searchQuery === "" || 
+  // Debounced semantic search
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      clearSearch();
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      semanticSearch(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, semanticSearch, clearSearch]);
+
+  // Use semantic search results if available, otherwise filter notes locally
+  const baseNotes = searchResults && searchQuery.trim() ? searchResults : notes;
+
+  const filteredNotes = baseNotes.filter(note => {
+    // If we have semantic search results, skip text matching since it's already done
+    const matchesSearch = searchResults && searchQuery.trim() ? true : (
+      searchQuery === "" || 
       note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      note.content.toLowerCase().includes(searchQuery.toLowerCase());
+      note.content.toLowerCase().includes(searchQuery.toLowerCase())
+    );
     
     const matchesCategory = selectedCategory === null || 
       note.category === selectedCategory;
@@ -223,9 +245,13 @@ const Index = () => {
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        {isSearching ? (
+          <Loader className="absolute left-3 top-3 h-4 w-4 text-muted-foreground animate-spin" />
+        ) : (
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        )}
         <Input
-          placeholder="Search notes..."
+          placeholder="Search notes semantically..."
           className="pl-9 w-full max-w-md"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
