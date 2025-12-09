@@ -84,9 +84,10 @@ export const fetchNotes = async (): Promise<Note[]> => {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
 
+    // Select specific columns instead of * to avoid fetching the large embedding column
     const { data, error } = await supabase
       .from('notes')
-      .select('*')
+      .select('id, title, content, summary, tags, category, created_at, updated_at, user_id, attachment_url, attachments, trade_info, has_conclusion, project_id')
       .order('updated_at', { ascending: false });
 
     if (error) {
