@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.embed-note]
 verify_jwt = false
+
+[functions.ask-ai]
+verify_jwt = false
