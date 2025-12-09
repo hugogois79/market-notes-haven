@@ -69,11 +69,15 @@ serve(async (req) => {
     const embeddingData = await embeddingResponse.json();
     const queryEmbedding = embeddingData.data[0].embedding;
 
+    // Format embedding as a string for PostgreSQL vector type
+    const embeddingString = `[${queryEmbedding.join(',')}]`;
+
     console.log('Step B: Searching for similar notes...');
 
     // Step B: Call match_notes RPC to find similar notes
+    // Pass embedding as formatted string that PostgreSQL can cast to vector
     const { data: matchedNotes, error: matchError } = await supabase.rpc('match_notes', {
-      query_embedding: queryEmbedding,
+      query_embedding: embeddingString,
       match_threshold: 0.5,
       match_count: 5,
     });
