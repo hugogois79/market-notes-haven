@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { 
   Check, 
@@ -73,6 +73,39 @@ const Settings = () => {
   // Bulk embedding state
   const [isGeneratingEmbeddings, setIsGeneratingEmbeddings] = useState(false);
   const [embeddingProgress, setEmbeddingProgress] = useState({ current: 0, total: 0 });
+  
+  // Categories from database
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  
+  // Fetch categories from database
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name')
+        .order('name');
+      
+      if (error) {
+        console.error('Error fetching categories:', error);
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        setCategories(data);
+        // Set default category if not already set
+        if (!defaultCategory || defaultCategory === 'General') {
+          const generalCategory = data.find(c => c.name === 'General');
+          if (generalCategory) {
+            setDefaultCategory(generalCategory.name);
+          } else {
+            setDefaultCategory(data[0].name);
+          }
+        }
+      }
+    };
+    
+    fetchCategories();
+  }, []);
   
   // Handle theme change
   const handleThemeChange = (value: "light" | "dark" | "system") => {
@@ -368,11 +401,15 @@ const Settings = () => {
                     <SelectValue placeholder="Select a default category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="General">General</SelectItem>
-                    <SelectItem value="Stocks">Stocks</SelectItem>
-                    <SelectItem value="Crypto">Crypto</SelectItem>
-                    <SelectItem value="Forex">Forex</SelectItem>
-                    <SelectItem value="Commodities">Commodities</SelectItem>
+                    {categories.length > 0 ? (
+                      categories.map((category) => (
+                        <SelectItem key={category.id} value={category.name}>
+                          {category.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="General">General</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
