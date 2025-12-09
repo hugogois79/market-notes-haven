@@ -3298,23 +3298,42 @@ export type Database = {
         }
         Returns: boolean
       }
-      match_notes: {
-        Args: {
-          match_count?: number
-          match_threshold?: number
-          query_embedding: string
-        }
-        Returns: {
-          category: string
-          content: string
-          created_at: string
-          id: string
-          similarity: number
-          summary: string
-          title: string
-          updated_at: string
-        }[]
-      }
+      match_notes:
+        | {
+            Args: {
+              match_count?: number
+              match_threshold?: number
+              query_embedding: string
+            }
+            Returns: {
+              category: string
+              content: string
+              created_at: string
+              id: string
+              similarity: number
+              summary: string
+              title: string
+              updated_at: string
+            }[]
+          }
+        | {
+            Args: {
+              match_count?: number
+              match_threshold?: number
+              p_user_id?: string
+              query_embedding: string
+            }
+            Returns: {
+              category: string
+              content: string
+              created_at: string
+              id: string
+              similarity: number
+              summary: string
+              title: string
+              updated_at: string
+            }[]
+          }
       reorder_cards: {
         Args: { card_id: string; new_list_id: string; new_position: number }
         Returns: undefined
