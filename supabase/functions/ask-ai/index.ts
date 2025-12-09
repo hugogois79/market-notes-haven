@@ -38,12 +38,25 @@ serve(async (req) => {
     // Get auth header from request to identify user
     const authHeader = req.headers.get('Authorization');
     
-    // Create Supabase client with user's auth
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      global: {
-        headers: authHeader ? { Authorization: authHeader } : {},
-      },
-    });
+    if (!authHeader) {
+      throw new Error('Authorization header is required');
+    }
+
+    // Extract the JWT token and get the user
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Create Supabase client with service role to bypass RLS
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Decode the JWT to get user ID
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    
+    if (userError || !user) {
+      throw new Error('Invalid authentication token');
+    }
+    
+    const userId = user.id;
+    console.log('Authenticated user:', userId);
 
     console.log('Step A: Generating embedding for query:', query.substring(0, 100));
 
@@ -76,10 +89,12 @@ serve(async (req) => {
 
     // Step B: Call match_notes RPC to find similar notes
     // Pass embedding as formatted string that PostgreSQL can cast to vector
+    // Pass user_id explicitly since we're using service role key
     const { data: matchedNotes, error: matchError } = await supabase.rpc('match_notes', {
       query_embedding: embeddingString,
-      match_threshold: 0.5,
+      match_threshold: 0.3,
       match_count: 5,
+      p_user_id: userId,
     });
 
     if (matchError) {
