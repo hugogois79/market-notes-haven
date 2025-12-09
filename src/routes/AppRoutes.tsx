@@ -41,10 +41,8 @@ import LegalPage from "@/pages/legal";
 import LegalCasesPage from "@/pages/legal/cases";
 import LegalContactsPage from "@/pages/legal/contacts";
 import LegalBillableItemsPage from "@/pages/legal/billable-items";
-import { useNotes } from "@/contexts/NotesContext";
 
 const AppRoutes = () => {
-  const { handleSaveNote, handleDeleteNote } = useNotes();
 
   return (
     <>
@@ -100,10 +98,7 @@ const AppRoutes = () => {
             path="editor/new"
             element={
               <ProtectedRoute>
-                <Editor 
-                  onSaveNote={handleSaveNote} 
-                  onDeleteNote={handleDeleteNote} 
-                />
+                <Editor />
               </ProtectedRoute>
             }
           />
@@ -111,10 +106,7 @@ const AppRoutes = () => {
             path="editor/:id"
             element={
               <ProtectedRoute>
-                <Editor 
-                  onSaveNote={handleSaveNote} 
-                  onDeleteNote={handleDeleteNote} 
-                />
+                <Editor />
               </ProtectedRoute>
             }
           />
