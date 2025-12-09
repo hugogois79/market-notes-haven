@@ -1831,6 +1831,7 @@ export type Database = {
           category: string | null
           content: string | null
           created_at: string | null
+          embedding: string | null
           has_conclusion: boolean | null
           id: string
           project_id: string | null
@@ -1847,6 +1848,7 @@ export type Database = {
           category?: string | null
           content?: string | null
           created_at?: string | null
+          embedding?: string | null
           has_conclusion?: boolean | null
           id?: string
           project_id?: string | null
@@ -1863,6 +1865,7 @@ export type Database = {
           category?: string | null
           content?: string | null
           created_at?: string | null
+          embedding?: string | null
           has_conclusion?: boolean | null
           id?: string
           project_id?: string | null
@@ -3294,6 +3297,23 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      match_notes: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          category: string
+          content: string
+          created_at: string
+          id: string
+          similarity: number
+          summary: string
+          title: string
+          updated_at: string
+        }[]
       }
       reorder_cards: {
         Args: { card_id: string; new_list_id: string; new_position: number }
