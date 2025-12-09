@@ -165,10 +165,18 @@ ${contextText}`;
 
     console.log('AI response generated successfully');
 
+    // Extract note references for navigation
+    const noteReferences = matchedNotes?.map((note: any, index: number) => ({
+      index: index + 1,
+      id: note.id,
+      title: note.title || 'Sem título',
+    })) || [];
+
     return new Response(
       JSON.stringify({ 
         response: aiResponse,
         notesUsed: matchedNotes?.length || 0,
+        noteReferences,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

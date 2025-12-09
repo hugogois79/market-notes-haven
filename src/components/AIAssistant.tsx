@@ -1,21 +1,31 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Bot, Send, Loader2, User, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+interface NoteReference {
+  index: number;
+  id: string;
+  title: string;
+}
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   notesUsed?: number;
+  noteReferences?: NoteReference[];
 }
 
 const AIAssistant = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -68,6 +78,7 @@ const AIAssistant = () => {
         role: "assistant",
         content: data.response,
         notesUsed: data.notesUsed,
+        noteReferences: data.noteReferences,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -91,6 +102,11 @@ const AIAssistant = () => {
       e.preventDefault();
       sendMessage();
     }
+  };
+
+  const handleOpenNote = (noteId: string) => {
+    setIsOpen(false);
+    navigate(`/notes/editor/${noteId}`);
   };
 
   return (
@@ -147,6 +163,29 @@ const AIAssistant = () => {
                   )}
                 >
                   <p className="whitespace-pre-wrap">{message.content}</p>
+                  
+                  {/* Note reference buttons */}
+                  {message.role === "assistant" && message.noteReferences && message.noteReferences.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-border/50">
+                      <span className="text-xs text-muted-foreground mr-1">Abrir nota:</span>
+                      {message.noteReferences.map((ref) => (
+                        <Tooltip key={ref.id}>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => handleOpenNote(ref.id)}
+                              className="h-6 w-6 rounded-full bg-primary/20 hover:bg-primary/40 text-primary font-medium text-xs flex items-center justify-center transition-colors"
+                            >
+                              {ref.index}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[200px]">
+                            <p className="text-xs truncate">{ref.title}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ))}
+                    </div>
+                  )}
+                  
                   {message.role === "assistant" && message.notesUsed !== undefined && (
                     <p className="text-xs opacity-70 mt-1">
                       {message.notesUsed > 0
