@@ -24,7 +24,8 @@ export default function TransactionManagement({ companyId }: TransactionManageme
         .select(`
           *,
           bank_accounts(account_name),
-          expense_projects(name)
+          expense_projects(name),
+          expense_categories(name)
         `)
         .eq("company_id", companyId)
         .order("date", { ascending: false });
