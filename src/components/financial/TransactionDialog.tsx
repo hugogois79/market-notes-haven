@@ -55,18 +55,36 @@ export default function TransactionDialog({
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [supplierSearch, setSupplierSearch] = useState("");
 
+  // Fetch all companies for selection
+  const { data: companies } = useQuery({
+    queryKey: ["companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("*")
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const selectedCompanyId = watch("company_id") || companyId;
+
+  // Filter bank accounts by selected company
   const { data: bankAccounts } = useQuery({
-    queryKey: ["bank-accounts", companyId],
+    queryKey: ["bank-accounts", selectedCompanyId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bank_accounts")
         .select("*")
-        .eq("company_id", companyId)
+        .eq("company_id", selectedCompanyId)
         .eq("is_active", true);
       
       if (error) throw error;
       return data;
     },
+    enabled: !!selectedCompanyId,
   });
 
   // Use expense_projects instead of financial_projects (same as expenses module)
@@ -120,6 +138,7 @@ export default function TransactionDialog({
     if (transaction) {
       reset({
         ...transaction,
+        company_id: transaction.company_id || companyId,
         category_id: transaction.category_id || "",
       });
     } else {
@@ -130,24 +149,37 @@ export default function TransactionDialog({
         category_id: "",
         payment_method: 'bank_transfer',
         vat_rate: 23,
+        company_id: companyId,
       });
     }
-  }, [transaction, reset]);
+  }, [transaction, reset, companyId]);
 
-  const amountNet = watch("amount_net");
+  const totalAmount = watch("total_amount");
   const vatRate = watch("vat_rate");
 
+  // Calculate net amount and VAT from total
   useEffect(() => {
-    if (amountNet && vatRate !== undefined) {
-      const net = Number(amountNet);
+    if (totalAmount && vatRate !== undefined) {
+      const total = Number(totalAmount);
       const rate = Number(vatRate);
-      const vatAmount = net * (rate / 100);
-      const total = net + vatAmount;
       
-      setValue("vat_amount", vatAmount.toFixed(2));
-      setValue("total_amount", total.toFixed(2));
+      if (!isNaN(total) && !isNaN(rate)) {
+        // Reverse calculation: net = total / (1 + rate/100)
+        const net = total / (1 + rate / 100);
+        const vatAmount = total - net;
+        
+        setValue("amount_net", net.toFixed(2));
+        setValue("vat_amount", vatAmount.toFixed(2));
+      }
     }
-  }, [amountNet, vatRate, setValue]);
+  }, [totalAmount, vatRate, setValue]);
+
+  // Clear bank account when company changes
+  useEffect(() => {
+    if (selectedCompanyId !== companyId && !transaction) {
+      setValue("bank_account_id", "");
+    }
+  }, [selectedCompanyId, companyId, setValue, transaction]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -155,7 +187,7 @@ export default function TransactionDialog({
       
       const transactionData = {
         ...data,
-        company_id: companyId,
+        company_id: data.company_id || companyId,
         created_by: user?.id,
         amount_net: Number(data.amount_net),
         vat_rate: Number(data.vat_rate),
@@ -163,6 +195,7 @@ export default function TransactionDialog({
         total_amount: Number(data.total_amount),
         project_id: data.project_id || null,
         category_id: data.category_id || null,
+        bank_account_id: data.bank_account_id || null,
         // Keep default category for the enum field (required)
         category: 'other',
       };
@@ -183,9 +216,9 @@ export default function TransactionDialog({
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions", companyId] });
-      queryClient.invalidateQueries({ queryKey: ["transactions-dashboard", companyId] });
-      queryClient.invalidateQueries({ queryKey: ["bank-accounts-dashboard", companyId] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["bank-accounts-dashboard"] });
       toast.success(transaction ? "Movimento atualizado" : "Movimento criado");
       onOpenChange(false);
       reset();
@@ -225,6 +258,25 @@ export default function TransactionDialog({
             </div>
 
             <div>
+              <Label>Empresa *</Label>
+              <Select 
+                onValueChange={(value) => setValue("company_id", value)} 
+                value={selectedCompanyId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a empresa..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies?.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
               <Label>Projeto</Label>
               <Select 
                 onValueChange={(value) => {
@@ -247,70 +299,70 @@ export default function TransactionDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
-            <div>
-              <Label>Categoria *</Label>
-              <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={categoryOpen}
-                    className="w-full justify-between font-normal"
-                  >
-                    {watch("category_id")
-                      ? expenseCategories?.find((cat) => cat.id === watch("category_id"))?.name
-                      : "Selecione..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0">
-                  <Command>
-                    <CommandInput placeholder="Pesquisar categoria..." />
-                    <CommandList>
-                      <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
-                      <CommandGroup>
-                        {expenseCategories
-                          ?.filter(cat => {
-                            // Filter by transaction type
-                            const typeMatch = transactionType === 'income'
-                              ? (cat.category_type === 'receita' || cat.category_type === 'income' || cat.category_type === 'ambos' || cat.category_type === 'both')
-                              : (cat.category_type === 'despesa' || cat.category_type === 'expense' || cat.category_type === 'ambos' || cat.category_type === 'both' || !cat.category_type);
-                            
-                            if (!typeMatch) return false;
-                            
-                            // Filter by project if one is selected
-                            const selectedProjectId = watch("project_id");
-                            if (selectedProjectId && selectedProjectId !== "none") {
-                              return cat.assigned_project_ids?.includes(selectedProjectId);
-                            }
-                            
-                            return true;
-                          })
-                          .map((category) => (
-                            <CommandItem
-                              key={category.id}
-                              value={category.name}
-                              onSelect={() => {
-                                setValue("category_id", category.id);
-                                setCategoryOpen(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  watch("category_id") === category.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {category.name}
-                            </CommandItem>
-                          ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
+          <div>
+            <Label>Categoria *</Label>
+            <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={categoryOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  {watch("category_id")
+                    ? expenseCategories?.find((cat) => cat.id === watch("category_id"))?.name
+                    : "Selecione..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-0">
+                <Command>
+                  <CommandInput placeholder="Pesquisar categoria..." />
+                  <CommandList>
+                    <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
+                    <CommandGroup>
+                      {expenseCategories
+                        ?.filter(cat => {
+                          // Filter by transaction type
+                          const typeMatch = transactionType === 'income'
+                            ? (cat.category_type === 'receita' || cat.category_type === 'income' || cat.category_type === 'ambos' || cat.category_type === 'both')
+                            : (cat.category_type === 'despesa' || cat.category_type === 'expense' || cat.category_type === 'ambos' || cat.category_type === 'both' || !cat.category_type);
+                          
+                          if (!typeMatch) return false;
+                          
+                          // Filter by project if one is selected
+                          const selectedProjectId = watch("project_id");
+                          if (selectedProjectId && selectedProjectId !== "none") {
+                            return cat.assigned_project_ids?.includes(selectedProjectId);
+                          }
+                          
+                          return true;
+                        })
+                        .map((category) => (
+                          <CommandItem
+                            key={category.id}
+                            value={category.name}
+                            onSelect={() => {
+                              setValue("category_id", category.id);
+                              setCategoryOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                watch("category_id") === category.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {category.name}
+                          </CommandItem>
+                        ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div>
@@ -398,12 +450,18 @@ export default function TransactionDialog({
             </Popover>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <Label>Valor (s/ IVA) *</Label>
-              <Input type="number" step="0.01" {...register("amount_net", { required: true })} />
-            </div>
+          <div>
+            <Label>Total (c/ IVA) *</Label>
+            <Input 
+              type="number" 
+              step="0.01" 
+              {...register("total_amount", { required: true })} 
+              className="font-bold text-lg"
+              placeholder="Introduza o valor total..."
+            />
+          </div>
 
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <Label>Taxa IVA (%)</Label>
               <Input type="number" step="0.01" {...register("vat_rate")} />
@@ -411,13 +469,25 @@ export default function TransactionDialog({
 
             <div>
               <Label>IVA (€)</Label>
-              <Input type="number" step="0.01" {...register("vat_amount")} readOnly />
+              <Input 
+                type="number" 
+                step="0.01" 
+                {...register("vat_amount")} 
+                readOnly 
+                className="bg-muted"
+              />
             </div>
-          </div>
 
-          <div>
-            <Label>Total (c/ IVA) *</Label>
-            <Input type="number" step="0.01" {...register("total_amount")} readOnly className="font-bold" />
+            <div>
+              <Label>Valor (s/ IVA)</Label>
+              <Input 
+                type="number" 
+                step="0.01" 
+                {...register("amount_net")} 
+                readOnly 
+                className="bg-muted"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -441,14 +511,18 @@ export default function TransactionDialog({
 
             <div>
               <Label>Conta Bancária</Label>
-              <Select onValueChange={(value) => setValue("bank_account_id", value)} defaultValue={watch("bank_account_id")}>
+              <Select 
+                onValueChange={(value) => setValue("bank_account_id", value === "none" ? null : value)} 
+                value={watch("bank_account_id") || "none"}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">Sem conta</SelectItem>
                   {bankAccounts?.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
-                      {account.account_name}
+                      {account.account_name} ({account.bank_name})
                     </SelectItem>
                   ))}
                 </SelectContent>
