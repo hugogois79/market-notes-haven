@@ -26,6 +26,7 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [expandedRevenueProjects, setExpandedRevenueProjects] = useState<Set<string>>(new Set());
   const [expandedInvestmentProjects, setExpandedInvestmentProjects] = useState<Set<string>>(new Set());
+  const [allCompaniesExpensesExpanded, setAllCompaniesExpensesExpanded] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: projects } = useQuery({
@@ -121,10 +122,23 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
       
       const { data, error } = await supabase
         .from("financial_transactions")
-        .select("total_amount, date, project_id, type, category, category_id")
+        .select("total_amount, date, project_id, type, category, category_id, company_id")
         .gte("date", startDate)
         .lte("date", endDate);
       
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // All companies for breakdown
+  const { data: companies } = useQuery({
+    queryKey: ["companies-budgeting"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, name")
+        .order("name");
       if (error) throw error;
       return data;
     },
@@ -576,6 +590,42 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
   const revenueProjects = projects?.filter(p => p.has_revenue);
   const investmentProjects = projects?.filter(p => (p as any).has_investment);
 
+  // All companies expenses (financial transactions type 'expense')
+  const getAllCompaniesMonthlyExpense = (month: number) => {
+    return financialTransactions
+      ?.filter(t => {
+        if (t.type !== 'expense') return false;
+        const transactionMonth = new Date(t.date).getMonth() + 1;
+        return transactionMonth === month;
+      })
+      .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+  };
+
+  const getAllCompaniesTotalExpense = () => {
+    return financialTransactions
+      ?.filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+  };
+
+  const getCompanyMonthlyExpense = (companyId: string, month: number) => {
+    return financialTransactions
+      ?.filter(t => {
+        if (t.type !== 'expense') return false;
+        if (t.company_id !== companyId) return false;
+        const transactionMonth = new Date(t.date).getMonth() + 1;
+        return transactionMonth === month;
+      })
+      .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+  };
+
+  const getCompanyTotalExpense = (companyId: string) => {
+    return financialTransactions
+      ?.filter(t => t.type === 'expense' && t.company_id === companyId)
+      .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+  };
+
+  const companiesWithExpenses = companies?.filter(c => getCompanyTotalExpense(c.id) > 0) || [];
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -900,6 +950,81 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
                   <td className="p-2 text-center">-</td>
                   <td className="p-2 text-center">-</td>
                 </tr>
+                <tr>
+                  <td colSpan={16} className="h-4"></td>
+                </tr>
+              </>
+            )}
+
+            {/* All Companies Expenses Section */}
+            {companiesWithExpenses.length > 0 && (
+              <>
+                <tr className="bg-red-50 dark:bg-red-950/30">
+                  <td colSpan={16} className="p-2 font-semibold text-red-700 dark:text-red-400 sticky left-0 bg-red-50 dark:bg-red-950/30">
+                    Despesas (Todas Empresas)
+                  </td>
+                </tr>
+                <tr 
+                  className="border-b hover:bg-muted/50 bg-red-50/50 dark:bg-red-950/20 cursor-pointer"
+                  onClick={() => setAllCompaniesExpensesExpanded(!allCompaniesExpensesExpanded)}
+                >
+                  <td className="p-2 sticky left-0 bg-red-50/50 dark:bg-red-950/20">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                      >
+                        {allCompaniesExpensesExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </Button>
+                      <span className="text-sm font-semibold text-red-700 dark:text-red-400">Total Despesas</span>
+                    </div>
+                  </td>
+                  {MONTHS.map((_, monthIndex) => {
+                    const month = monthIndex + 1;
+                    const monthlyExpense = getAllCompaniesMonthlyExpense(month);
+                    
+                    return (
+                      <td key={month} className="p-1 text-center">
+                        <span className="text-xs font-bold text-red-600">
+                          {monthlyExpense > 0 ? formatCurrency(monthlyExpense) : '-'}
+                        </span>
+                      </td>
+                    );
+                  })}
+                  <td className="p-2 text-center text-sm font-bold text-red-600">
+                    {formatCurrency(getAllCompaniesTotalExpense())}
+                  </td>
+                  <td className="p-2 text-center">-</td>
+                  <td className="p-2 text-center">-</td>
+                </tr>
+
+                {/* Company Breakdown Rows */}
+                {allCompaniesExpensesExpanded && companiesWithExpenses.map(company => (
+                  <tr key={`company-expense-${company.id}`} className="border-b bg-red-50/30 dark:bg-red-950/10">
+                    <td className="p-2 pl-10 sticky left-0 bg-red-50/30 dark:bg-red-950/10">
+                      <span className="text-xs">{company.name}</span>
+                    </td>
+                    {MONTHS.map((_, monthIndex) => {
+                      const month = monthIndex + 1;
+                      const monthlyExpense = getCompanyMonthlyExpense(company.id, month);
+                      
+                      return (
+                        <td key={month} className="p-1 text-center">
+                          <span className="text-xs text-red-600">
+                            {monthlyExpense > 0 ? formatCurrency(monthlyExpense) : '-'}
+                          </span>
+                        </td>
+                      );
+                    })}
+                    <td className="p-2 text-center text-xs text-red-600">
+                      {formatCurrency(getCompanyTotalExpense(company.id))}
+                    </td>
+                    <td className="p-2 text-center">-</td>
+                    <td className="p-2 text-center">-</td>
+                  </tr>
+                ))}
+
                 <tr>
                   <td colSpan={16} className="h-4"></td>
                 </tr>
