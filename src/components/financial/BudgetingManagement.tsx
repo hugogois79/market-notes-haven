@@ -316,7 +316,18 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
       })
       .reduce((sum, e) => sum + Number(e.amount), 0) || 0;
     
-    return expensesTotal;
+    // Financial transactions (type: expense) from the Financial module
+    const transactionsTotal = financialTransactions
+      ?.filter(t => {
+        if (t.project_id !== projectId) return false;
+        if (t.type !== 'expense') return false;
+        if (categoryId !== null && t.category_id !== categoryId) return false;
+        const transactionMonth = new Date(t.date).getMonth() + 1;
+        return transactionMonth === month;
+      })
+      .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+    
+    return expensesTotal + transactionsTotal;
   };
 
   const getProjectExpenseValue = (projectId: string, month: number) => {
