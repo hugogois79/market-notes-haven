@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { CaseDialog } from "../components/CaseDialog";
 import {
   AlertDialog,
@@ -91,6 +91,7 @@ const formatDateToEU = (dateStr: string | null): string => {
 };
 
 export default function LegalCasesPage() {
+  const navigate = useNavigate();
   const [cases, setCases] = useState<LegalCase[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -358,7 +359,12 @@ export default function LegalCasesPage() {
                         className="h-8"
                       />
                     ) : (
-                      <span className="font-medium">{caseItem.title}</span>
+                      <button
+                        onClick={() => navigate(`/legal?case=${caseItem.id}`)}
+                        className="font-medium text-left hover:text-primary hover:underline transition-colors"
+                      >
+                        {caseItem.title}
+                      </button>
                     )}
                   </TableCell>
                   <TableCell>
