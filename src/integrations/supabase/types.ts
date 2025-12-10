@@ -148,6 +148,7 @@ export type Database = {
           interest_rate: number | null
           lending_company_id: string
           monthly_payment: number | null
+          source_transaction_id: string | null
           start_date: string
           status: Database["public"]["Enums"]["loan_status"]
           updated_at: string
@@ -163,6 +164,7 @@ export type Database = {
           interest_rate?: number | null
           lending_company_id: string
           monthly_payment?: number | null
+          source_transaction_id?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["loan_status"]
           updated_at?: string
@@ -178,6 +180,7 @@ export type Database = {
           interest_rate?: number | null
           lending_company_id?: string
           monthly_payment?: number | null
+          source_transaction_id?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["loan_status"]
           updated_at?: string
@@ -195,6 +198,13 @@ export type Database = {
             columns: ["lending_company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_loans_source_transaction_id_fkey"
+            columns: ["source_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
             referencedColumns: ["id"]
           },
         ]
