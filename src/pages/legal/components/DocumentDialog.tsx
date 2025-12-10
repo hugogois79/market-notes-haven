@@ -22,6 +22,7 @@ interface LegalDocument {
   description: string | null;
   document_type: string;
   attachment_url: string | null;
+  attachments: string[] | null;
   created_date: string;
   case_id: string;
   contact_id: string | null;
@@ -48,7 +49,9 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
     created_date: new Date().toISOString().split("T")[0],
   });
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<string[]>([]);
+  const [attachmentsToRemove, setAttachmentsToRemove] = useState<string[]>([]);
   const [contactSelectOpen, setContactSelectOpen] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
 
@@ -64,6 +67,10 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
           case_id: document.case_id,
           created_date: document.created_date,
         });
+        
+        // Load existing attachments
+        const attachments = document.attachments || (document.attachment_url ? [document.attachment_url] : []);
+        setExistingAttachments(attachments);
         
         // Load contacts from junction table
         const { data: contactData } = await supabase
@@ -88,8 +95,10 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
           created_date: new Date().toISOString().split("T")[0],
         });
         setSelectedContactIds([]);
+        setExistingAttachments([]);
       }
-      setFile(null);
+      setFiles([]);
+      setAttachmentsToRemove([]);
     };
 
     if (open) {
@@ -122,10 +131,11 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      let attachmentUrl = document?.attachment_url || null;
+      // Calculate final attachments list
+      let finalAttachments = existingAttachments.filter(a => !attachmentsToRemove.includes(a));
 
-      // Upload file if provided
-      if (file) {
+      // Upload new files
+      for (const file of files) {
         const fileExt = file.name.split(".").pop();
         const fileName = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
         
@@ -134,10 +144,19 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
           .upload(fileName, file);
 
         if (uploadError) throw uploadError;
-
-        // Store the file path, not the public URL (bucket is private)
-        attachmentUrl = fileName;
+        finalAttachments.push(fileName);
       }
+
+      // Delete removed attachments from storage
+      for (const attachmentPath of attachmentsToRemove) {
+        const filePath = attachmentPath.includes('legal-documents/')
+          ? attachmentPath.split('legal-documents/')[1]
+          : attachmentPath;
+        await supabase.storage.from("legal-documents").remove([filePath]);
+      }
+
+      // Use first attachment for backward compatibility with attachment_url
+      const attachmentUrl = finalAttachments.length > 0 ? finalAttachments[0] : null;
 
       if (isEditMode) {
         const { error } = await supabase
@@ -147,9 +166,10 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
             description: formData.description || null,
             document_type: formData.document_type,
             case_id: formData.case_id,
-            contact_id: selectedContactIds[0] || null, // Keep backward compatibility
+            contact_id: selectedContactIds[0] || null,
             created_date: formData.created_date,
             attachment_url: attachmentUrl,
+            attachments: finalAttachments,
           })
           .eq("id", document.id);
 
@@ -173,8 +193,9 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
       } else {
         const { data: newDoc, error } = await supabase.from("legal_documents").insert({
           ...formData,
-          contact_id: selectedContactIds[0] || null, // Keep backward compatibility
+          contact_id: selectedContactIds[0] || null,
           attachment_url: attachmentUrl,
+          attachments: finalAttachments,
           user_id: user.id,
         }).select().single();
 
@@ -377,57 +398,103 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="file">Anexo</Label>
-            {document?.attachment_url && !file && (
-              <div className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
-                <span>Anexo atual:</span>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      const filePath = document.attachment_url!.includes('legal-documents/')
-                        ? document.attachment_url!.split('legal-documents/')[1]
-                        : document.attachment_url!;
-                      
-                      const { data, error } = await supabase.storage
-                        .from("legal-documents")
-                        .download(filePath);
-                      
-                      if (error) throw error;
-                      if (data) {
-                        const url = URL.createObjectURL(data);
-                        const fileName = filePath.split('/').pop() || 'attachment';
-                        const link = window.document.createElement('a');
-                        link.href = url;
-                        link.download = fileName;
-                        window.document.body.appendChild(link);
-                        link.click();
-                        window.document.body.removeChild(link);
-                        URL.revokeObjectURL(url);
-                      }
-                    } catch (error) {
-                      console.error("Error downloading file:", error);
-                      toast.error("Erro ao descarregar ficheiro");
-                    }
-                  }}
-                  className="text-primary underline hover:text-primary/80 truncate max-w-[300px]"
-                  title={document.attachment_url.split('/').pop() || 'ficheiro'}
-                >
-                  {document.attachment_url.split('/').pop() || 'Ver ficheiro'}
-                </button>
+            <Label htmlFor="file">Anexos</Label>
+            
+            {/* Existing attachments */}
+            {existingAttachments.filter(a => !attachmentsToRemove.includes(a)).length > 0 && (
+              <div className="space-y-1">
+                <span className="text-sm text-muted-foreground">Anexos existentes:</span>
+                <div className="flex flex-wrap gap-2">
+                  {existingAttachments.filter(a => !attachmentsToRemove.includes(a)).map((attachment, index) => {
+                    const fileName = attachment.split('/').pop() || 'ficheiro';
+                    return (
+                      <div key={index} className="flex items-center gap-1 bg-muted rounded px-2 py-1">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const filePath = attachment.includes('legal-documents/')
+                                ? attachment.split('legal-documents/')[1]
+                                : attachment;
+                              
+                              const { data, error } = await supabase.storage
+                                .from("legal-documents")
+                                .download(filePath);
+                              
+                              if (error) throw error;
+                              if (data) {
+                                const url = URL.createObjectURL(data);
+                                const link = window.document.createElement('a');
+                                link.href = url;
+                                link.download = fileName;
+                                window.document.body.appendChild(link);
+                                link.click();
+                                window.document.body.removeChild(link);
+                                URL.revokeObjectURL(url);
+                              }
+                            } catch (error) {
+                              console.error("Error downloading file:", error);
+                              toast.error("Erro ao descarregar ficheiro");
+                            }
+                          }}
+                          className="text-primary underline hover:text-primary/80 text-sm truncate max-w-[200px]"
+                          title={fileName}
+                        >
+                          {fileName}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAttachmentsToRemove(prev => [...prev, attachment])}
+                          className="text-destructive hover:text-destructive/80 ml-1"
+                          title="Remover anexo"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
+
+            {/* New files to upload */}
+            {files.length > 0 && (
+              <div className="space-y-1">
+                <span className="text-sm text-muted-foreground">Novos ficheiros:</span>
+                <div className="flex flex-wrap gap-2">
+                  {files.map((f, index) => (
+                    <div key={index} className="flex items-center gap-1 bg-primary/10 rounded px-2 py-1">
+                      <Upload className="w-3 h-3 text-primary" />
+                      <span className="text-sm truncate max-w-[200px]" title={f.name}>{f.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setFiles(prev => prev.filter((_, i) => i !== index))}
+                        className="text-destructive hover:text-destructive/80 ml-1"
+                        title="Remover ficheiro"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center gap-2">
               <Input
                 id="file"
                 type="file"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                multiple
+                onChange={(e) => {
+                  const newFiles = Array.from(e.target.files || []);
+                  setFiles(prev => [...prev, ...newFiles]);
+                  e.target.value = '';
+                }}
                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               />
-              {file && <Upload className="w-4 h-4 text-primary" />}
             </div>
             <p className="text-xs text-muted-foreground">
-              Formatos aceites: PDF, DOC, DOCX, JPG, PNG
+              Formatos aceites: PDF, DOC, DOCX, JPG, PNG (pode selecionar vários ficheiros)
             </p>
           </div>
 
