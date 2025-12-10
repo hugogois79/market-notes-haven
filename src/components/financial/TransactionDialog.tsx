@@ -19,8 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Check, ChevronsUpDown, X, Paperclip, Download } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -54,6 +54,10 @@ export default function TransactionDialog({
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [supplierSearch, setSupplierSearch] = useState("");
+  const [existingAttachment, setExistingAttachment] = useState<string | null>(null);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch all companies for selection
   const { data: companies } = useQuery({
@@ -141,6 +145,8 @@ export default function TransactionDialog({
         company_id: transaction.company_id || companyId,
         category_id: transaction.category_id || "",
       });
+      setExistingAttachment(transaction.invoice_file_url || null);
+      setNewFiles([]);
     } else {
       reset({
         date: new Date().toISOString().split('T')[0],
@@ -151,6 +157,8 @@ export default function TransactionDialog({
         vat_rate: 23,
         company_id: companyId,
       });
+      setExistingAttachment(null);
+      setNewFiles([]);
     }
   }, [transaction, reset, companyId]);
 
@@ -181,10 +189,57 @@ export default function TransactionDialog({
     }
   }, [selectedCompanyId, companyId, setValue, transaction]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      setNewFiles(Array.from(files));
+    }
+  };
+
+  const removeExistingAttachment = () => {
+    setExistingAttachment(null);
+  };
+
+  const removeNewFile = (index: number) => {
+    setNewFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const getFileName = (url: string) => {
+    try {
+      const parts = url.split('/');
+      return decodeURIComponent(parts[parts.length - 1]);
+    } catch {
+      return "ficheiro";
+    }
+  };
+
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      setIsUploading(true);
       const { data: { user } } = await supabase.auth.getUser();
       
+      let fileUrl = existingAttachment;
+
+      // Upload new file if any
+      if (newFiles.length > 0) {
+        const file = newFiles[0];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${crypto.randomUUID()}.${fileExt}`;
+        const filePath = `transactions/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('attachments')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from('attachments')
+          .getPublicUrl(filePath);
+        
+        fileUrl = urlData.publicUrl;
+      }
+
       const transactionData = {
         ...data,
         company_id: data.company_id || companyId,
@@ -196,6 +251,7 @@ export default function TransactionDialog({
         project_id: data.project_id || null,
         category_id: data.category_id || null,
         bank_account_id: data.bank_account_id || null,
+        invoice_file_url: fileUrl,
         // Keep default category for the enum field (required)
         category: 'other',
       };
@@ -216,6 +272,7 @@ export default function TransactionDialog({
       }
     },
     onSuccess: () => {
+      setIsUploading(false);
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["transactions-dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["bank-accounts-dashboard"] });
@@ -224,6 +281,7 @@ export default function TransactionDialog({
       reset();
     },
     onError: (error: any) => {
+      setIsUploading(false);
       toast.error("Erro: " + error.message);
     },
   });
@@ -540,12 +598,75 @@ export default function TransactionDialog({
             <Textarea {...register("notes")} rows={3} />
           </div>
 
+          {/* Attachments Section */}
+          <div className="space-y-2">
+            <Label>Anexo</Label>
+            
+            {existingAttachment && (
+              <div className="text-sm text-muted-foreground mb-2">
+                <span>Anexo existente: </span>
+                <span className="inline-flex items-center gap-1">
+                  <a 
+                    href={existingAttachment} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline truncate max-w-[200px] inline-block align-middle"
+                  >
+                    {getFileName(existingAttachment)}
+                  </a>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0 text-destructive hover:text-destructive"
+                    onClick={removeExistingAttachment}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </span>
+              </div>
+            )}
+
+            {newFiles.length > 0 && (
+              <div className="text-sm text-muted-foreground mb-2">
+                <span>Novo ficheiro: </span>
+                {newFiles.map((file, index) => (
+                  <span key={index} className="inline-flex items-center gap-1">
+                    <span className="truncate max-w-[200px]">{file.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0 text-destructive hover:text-destructive"
+                      onClick={() => removeNewFile(index)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <Input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                onChange={handleFileChange}
+                className="text-sm"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Formatos aceites: PDF, DOC, DOCX, JPG, PNG
+            </p>
+          </div>
+
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={saveMutation.isPending}>
-              {saveMutation.isPending ? "A guardar..." : "Guardar"}
+            <Button type="submit" disabled={saveMutation.isPending || isUploading}>
+              {saveMutation.isPending || isUploading ? "A guardar..." : "Guardar"}
             </Button>
           </div>
         </form>
