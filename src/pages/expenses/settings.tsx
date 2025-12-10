@@ -61,6 +61,7 @@ const ExpenseSettingsPage = () => {
   const [editingUser, setEditingUser] = useState<ExpenseUser | null>(null);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [userPassword, setUserPassword] = useState("");
   const [userSelectedProjectIds, setUserSelectedProjectIds] = useState<string[]>([]);
   const [openUserProjectSelect, setOpenUserProjectSelect] = useState(false);
 
@@ -218,6 +219,7 @@ const ExpenseSettingsPage = () => {
     setEditingUser(null);
     setUserName("");
     setUserEmail("");
+    setUserPassword("");
     setUserSelectedProjectIds([]);
   };
 
@@ -230,10 +232,10 @@ const ExpenseSettingsPage = () => {
   };
 
   const handleSubmitUser = async () => {
-    if (!userName.trim()) {
+    if (!userName.trim() || !userEmail.trim()) {
       toast({
         title: "Erro",
-        description: "O nome é obrigatório.",
+        description: "O nome e email são obrigatórios.",
         variant: "destructive",
       });
       return;
@@ -245,21 +247,19 @@ const ExpenseSettingsPage = () => {
         updates: { name: userName, email: userEmail || null, assigned_project_ids: userSelectedProjectIds },
       });
     } else {
-      // For new users, we need to generate a user_id (use current user for now or prompt)
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      if (!userPassword.trim()) {
         toast({
           title: "Erro",
-          description: "Sessão expirada. Por favor, faça login novamente.",
+          description: "A password é obrigatória para novos utilizadores.",
           variant: "destructive",
         });
         return;
       }
       
       createUserMutation.mutate({ 
-        user_id: user.id, 
         name: userName, 
-        email: userEmail || null, 
+        email: userEmail, 
+        password: userPassword,
         assigned_project_ids: userSelectedProjectIds 
       });
     }
@@ -622,7 +622,7 @@ const ExpenseSettingsPage = () => {
               />
             </div>
             <div>
-              <Label htmlFor="userEmail">Email (opcional)</Label>
+              <Label htmlFor="userEmail">Email *</Label>
               <Input
                 id="userEmail"
                 type="email"
@@ -631,6 +631,18 @@ const ExpenseSettingsPage = () => {
                 placeholder="email@exemplo.com"
               />
             </div>
+            {!editingUser && (
+              <div>
+                <Label htmlFor="userPassword">Password *</Label>
+                <Input
+                  id="userPassword"
+                  type="password"
+                  value={userPassword}
+                  onChange={(e) => setUserPassword(e.target.value)}
+                  placeholder="Password inicial"
+                />
+              </div>
+            )}
             <div>
               <Label>Projectos Assignados</Label>
               <Popover open={openUserProjectSelect} onOpenChange={setOpenUserProjectSelect}>
