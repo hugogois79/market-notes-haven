@@ -25,12 +25,12 @@ export default function TransactionTable({
   onDelete,
 }: TransactionTableProps) {
   if (isLoading) {
-    return <div className="text-center py-8">A carregar...</div>;
+    return <div className="text-center py-4 text-sm">A carregar...</div>;
   }
 
   if (!transactions || transactions.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
+      <div className="text-center py-4 text-sm text-muted-foreground">
         Nenhum movimento registado
       </div>
     );
@@ -41,11 +41,9 @@ export default function TransactionTable({
   };
 
   const getCategoryLabel = (transaction: any) => {
-    // Use enriched category_name from TransactionManagement
     if (transaction.category_name) {
       return transaction.category_name;
     }
-    // Fallback to old category enum
     const labels: Record<string, string> = {
       sales: "Vendas",
       materials: "Materiais",
@@ -59,76 +57,82 @@ export default function TransactionTable({
   };
 
   return (
-    <div className="border rounded-lg">
+    <div className="border rounded-lg overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>Data</TableHead>
-            <TableHead>Tipo</TableHead>
-            <TableHead>Descrição</TableHead>
-            <TableHead>Entidade</TableHead>
-            <TableHead>Categoria</TableHead>
-            <TableHead className="text-right">Valor</TableHead>
-            <TableHead>Projeto</TableHead>
-            <TableHead className="text-right">Ações</TableHead>
+          <TableRow className="bg-muted/30 hover:bg-muted/30">
+            <TableHead className="py-2 px-3 text-xs font-medium">Data</TableHead>
+            <TableHead className="py-2 px-3 text-xs font-medium">Tipo</TableHead>
+            <TableHead className="py-2 px-3 text-xs font-medium">Descrição</TableHead>
+            <TableHead className="py-2 px-3 text-xs font-medium">Entidade</TableHead>
+            <TableHead className="py-2 px-3 text-xs font-medium">Categoria</TableHead>
+            <TableHead className="py-2 px-3 text-xs font-medium text-right">Valor</TableHead>
+            <TableHead className="py-2 px-3 text-xs font-medium">Projeto</TableHead>
+            <TableHead className="py-2 px-3 text-xs font-medium text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {transactions.map((transaction) => (
-            <TableRow key={transaction.id}>
-              <TableCell>{formatDate(transaction.date)}</TableCell>
-              <TableCell>
+            <TableRow key={transaction.id} className="hover:bg-muted/20">
+              <TableCell className="py-1.5 px-3 text-xs">{formatDate(transaction.date)}</TableCell>
+              <TableCell className="py-1.5 px-3">
                 <Badge
                   variant={transaction.type === "income" ? "default" : "destructive"}
-                  className="gap-1"
+                  className="gap-0.5 text-[10px] px-1.5 py-0"
                 >
                   {transaction.type === "income" ? (
                     <>
-                      <ArrowUp className="h-3 w-3" />
+                      <ArrowUp className="h-2.5 w-2.5" />
                       Receita
                     </>
                   ) : (
                     <>
-                      <ArrowDown className="h-3 w-3" />
+                      <ArrowDown className="h-2.5 w-2.5" />
                       Despesa
                     </>
                   )}
                 </Badge>
               </TableCell>
-              <TableCell className="font-medium">{transaction.description}</TableCell>
-              <TableCell>{transaction.entity_name}</TableCell>
-              <TableCell>
-                <Badge variant="outline">
+              <TableCell className="py-1.5 px-3 text-xs font-medium max-w-[150px] truncate">
+                {transaction.description}
+              </TableCell>
+              <TableCell className="py-1.5 px-3 text-xs max-w-[120px] truncate">
+                {transaction.entity_name}
+              </TableCell>
+              <TableCell className="py-1.5 px-3">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                   {getCategoryLabel(transaction)}
                 </Badge>
               </TableCell>
-              <TableCell className="text-right font-medium">
+              <TableCell className="py-1.5 px-3 text-right text-xs font-medium">
                 <span className={transaction.type === "income" ? "text-green-600" : "text-red-600"}>
                   {formatCurrency(Number(transaction.total_amount))}
                 </span>
               </TableCell>
-              <TableCell>
+              <TableCell className="py-1.5 px-3">
                 {transaction.project_name && (
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                     {transaction.project_name}
                   </Badge>
                 )}
               </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
+              <TableCell className="py-1.5 px-3 text-right">
+                <div className="flex justify-end gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="h-6 w-6"
                     onClick={() => onEdit(transaction)}
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-3 w-3" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="h-6 w-6"
                     onClick={() => onDelete(transaction.id)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
               </TableCell>
