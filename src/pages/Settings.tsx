@@ -15,8 +15,16 @@ import {
   Lock, 
   Cloud,
   Database,
-  Loader2
+  Loader2,
+  Users,
+  Plus,
+  Pencil,
+  Trash2
 } from "lucide-react";
+import { expenseUserService, ExpenseUser } from "@/services/expenseUserService";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
@@ -76,6 +84,18 @@ const Settings = () => {
   
   // Categories from database
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+
+  // Expense Users state
+  const [expenseUsers, setExpenseUsers] = useState<ExpenseUser[]>([]);
+  const [expenseProjects, setExpenseProjects] = useState<{ id: string; name: string }[]>([]);
+  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<ExpenseUser | null>(null);
+  const [userFormData, setUserFormData] = useState({
+    name: "",
+    email: "",
+    user_id: "",
+    assigned_project_ids: [] as string[],
+  });
   
   // Fetch categories from database
   useEffect(() => {
@@ -106,6 +126,102 @@ const Settings = () => {
     
     fetchCategories();
   }, []);
+
+  // Fetch expense users and projects
+  useEffect(() => {
+    const fetchExpenseUsersAndProjects = async () => {
+      try {
+        const [users, projectsResult] = await Promise.all([
+          expenseUserService.getUsers(true),
+          supabase.from('expense_projects').select('id, name').order('name')
+        ]);
+        setExpenseUsers(users);
+        if (projectsResult.data) {
+          setExpenseProjects(projectsResult.data);
+        }
+      } catch (error) {
+        console.error('Error fetching expense users:', error);
+      }
+    };
+    fetchExpenseUsersAndProjects();
+  }, []);
+
+  const handleOpenUserDialog = (user?: ExpenseUser) => {
+    if (user) {
+      setEditingUser(user);
+      setUserFormData({
+        name: user.name,
+        email: user.email || "",
+        user_id: user.user_id,
+        assigned_project_ids: user.assigned_project_ids || [],
+      });
+    } else {
+      setEditingUser(null);
+      setUserFormData({
+        name: "",
+        email: "",
+        user_id: "",
+        assigned_project_ids: [],
+      });
+    }
+    setIsUserDialogOpen(true);
+  };
+
+  const handleSaveUser = async () => {
+    try {
+      if (!userFormData.name.trim() || !userFormData.user_id.trim()) {
+        toast.error("Nome e User ID são obrigatórios");
+        return;
+      }
+      if (editingUser) {
+        await expenseUserService.updateUser(editingUser.id, {
+          name: userFormData.name,
+          email: userFormData.email || null,
+          user_id: userFormData.user_id,
+          assigned_project_ids: userFormData.assigned_project_ids,
+        });
+        toast.success("Utilizador atualizado");
+      } else {
+        await expenseUserService.createUser({
+          user_id: userFormData.user_id,
+          name: userFormData.name,
+          email: userFormData.email || null,
+          assigned_project_ids: userFormData.assigned_project_ids,
+        });
+        toast.success("Utilizador criado");
+      }
+      const users = await expenseUserService.getUsers(true);
+      setExpenseUsers(users);
+      setIsUserDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving user:', error);
+      toast.error("Erro ao guardar utilizador");
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      await expenseUserService.deleteUser(userId);
+      toast.success("Utilizador removido");
+      const users = await expenseUserService.getUsers(true);
+      setExpenseUsers(users);
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error("Erro ao remover utilizador");
+    }
+  };
+
+  const handleToggleUserActive = async (user: ExpenseUser) => {
+    try {
+      await expenseUserService.updateUser(user.id, { is_active: !user.is_active });
+      const users = await expenseUserService.getUsers(true);
+      setExpenseUsers(users);
+      toast.success(user.is_active ? "Utilizador desativado" : "Utilizador ativado");
+    } catch (error) {
+      console.error('Error toggling user:', error);
+      toast.error("Erro ao alterar estado do utilizador");
+    }
+  };
   
   // Handle theme change
   const handleThemeChange = (value: "light" | "dark" | "system") => {
@@ -291,12 +407,13 @@ const Settings = () => {
       </div>
       
       <Tabs defaultValue="appearance" className="space-y-4">
-        <TabsList className="grid grid-cols-5 lg:w-[600px]">
+        <TabsList className="grid grid-cols-6 lg:w-[720px]">
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="editor">Editor</TabsTrigger>
           <TabsTrigger value="layout">Layout</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="privacy">Privacy</TabsTrigger>
+          <TabsTrigger value="users">Utilizadores</TabsTrigger>
         </TabsList>
         
         <TabsContent value="appearance" className="space-y-4">
@@ -764,7 +881,165 @@ const Settings = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="users" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Utilizadores</CardTitle>
+                <CardDescription>
+                  Gerir utilizadores e projetos atribuídos
+                </CardDescription>
+              </div>
+              <Button onClick={() => handleOpenUserDialog()} className="gap-2">
+                <Plus size={16} />
+                Novo Utilizador
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {expenseUsers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhum utilizador configurado
+                  </p>
+                ) : (
+                  expenseUsers.map((user) => (
+                    <div
+                      key={user.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        !user.is_active ? "opacity-50" : ""
+                      }`}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{user.name}</span>
+                          {!user.is_active && (
+                            <Badge variant="secondary" className="text-xs">Inativo</Badge>
+                          )}
+                        </div>
+                        {user.email && (
+                          <span className="text-sm text-muted-foreground">{user.email}</span>
+                        )}
+                        {user.assigned_project_ids && user.assigned_project_ids.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {user.assigned_project_ids.map((projectId) => {
+                              const project = expenseProjects.find(p => p.id === projectId);
+                              return project ? (
+                                <Badge key={projectId} variant="outline" className="text-xs">
+                                  {project.name}
+                                </Badge>
+                              ) : null;
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleToggleUserActive(user)}
+                          title={user.is_active ? "Desativar" : "Ativar"}
+                        >
+                          <Users size={16} className={user.is_active ? "text-primary" : "text-muted-foreground"} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenUserDialog(user)}
+                        >
+                          <Pencil size={16} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteUser(user.id)}
+                        >
+                          <Trash2 size={16} className="text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* User Dialog */}
+      <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingUser ? "Editar Utilizador" : "Novo Utilizador"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome *</Label>
+              <Input
+                value={userFormData.name}
+                onChange={(e) => setUserFormData({ ...userFormData, name: e.target.value })}
+                placeholder="Nome do utilizador"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={userFormData.email}
+                onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
+                placeholder="email@exemplo.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>User ID *</Label>
+              <Input
+                value={userFormData.user_id}
+                onChange={(e) => setUserFormData({ ...userFormData, user_id: e.target.value })}
+                placeholder="UUID do utilizador Supabase"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Projetos Atribuídos</Label>
+              <div className="max-h-48 overflow-y-auto border rounded-md p-2 space-y-2">
+                {expenseProjects.map((project) => (
+                  <div key={project.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`project-${project.id}`}
+                      checked={userFormData.assigned_project_ids.includes(project.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setUserFormData({
+                            ...userFormData,
+                            assigned_project_ids: [...userFormData.assigned_project_ids, project.id],
+                          });
+                        } else {
+                          setUserFormData({
+                            ...userFormData,
+                            assigned_project_ids: userFormData.assigned_project_ids.filter(id => id !== project.id),
+                          });
+                        }
+                      }}
+                    />
+                    <label htmlFor={`project-${project.id}`} className="text-sm cursor-pointer">
+                      {project.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUserDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveUser}>
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
