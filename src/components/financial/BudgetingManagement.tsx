@@ -112,6 +112,24 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
     },
   });
 
+  // Financial transactions (from the Financial module) that should be considered in budgeting
+  const { data: financialTransactions } = useQuery({
+    queryKey: ["financial-transactions-budgeting", selectedYear],
+    queryFn: async () => {
+      const startDate = `${selectedYear}-01-01`;
+      const endDate = `${selectedYear}-12-31`;
+      
+      const { data, error } = await supabase
+        .from("financial_transactions")
+        .select("total_amount, date, project_id, type, category")
+        .gte("date", startDate)
+        .lte("date", endDate);
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const saveMutation = useMutation({
     mutationFn: async ({ projectId, categoryId, month, amount }: { projectId: string; categoryId: string | null; month: number; amount: number }) => {
       const { error } = await supabase
@@ -274,26 +292,52 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
   };
 
   const getExpenseValue = (projectId: string, categoryId: string | null, month: number) => {
-    if (!expenses) return 0;
-    return expenses
-      .filter(e => {
+    // Expenses from expense claims
+    const expensesTotal = expenses
+      ?.filter(e => {
         if (e.project_id !== projectId) return false;
         if (categoryId !== null && e.category_id !== categoryId) return false;
         const expenseMonth = new Date(e.expense_date).getMonth() + 1;
         return expenseMonth === month;
       })
-      .reduce((sum, e) => sum + Number(e.amount), 0);
+      .reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+    
+    return expensesTotal;
   };
 
   const getProjectExpenseValue = (projectId: string, month: number) => {
-    if (!expenses) return 0;
-    return expenses
-      .filter(e => {
+    // Expenses from expense claims
+    const expensesTotal = expenses
+      ?.filter(e => {
         if (e.project_id !== projectId) return false;
         const expenseMonth = new Date(e.expense_date).getMonth() + 1;
         return expenseMonth === month;
       })
-      .reduce((sum, e) => sum + Number(e.amount), 0);
+      .reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+    
+    // Financial transactions (type: expense) from the Financial module
+    const transactionsTotal = financialTransactions
+      ?.filter(t => {
+        if (t.project_id !== projectId) return false;
+        if (t.type !== 'expense') return false;
+        const transactionMonth = new Date(t.date).getMonth() + 1;
+        return transactionMonth === month;
+      })
+      .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
+    
+    return expensesTotal + transactionsTotal;
+  };
+
+  // Get financial transaction income for a project in a specific month
+  const getProjectTransactionIncomeValue = (projectId: string, month: number) => {
+    return financialTransactions
+      ?.filter(t => {
+        if (t.project_id !== projectId) return false;
+        if (t.type !== 'income') return false;
+        const transactionMonth = new Date(t.date).getMonth() + 1;
+        return transactionMonth === month;
+      })
+      .reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
   };
 
   const handleBudgetChange = (projectId: string, categoryId: string | null, month: number, value: string) => {
