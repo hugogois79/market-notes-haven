@@ -23,7 +23,6 @@ export default function TransactionManagement({ companyId }: TransactionManageme
         .from("financial_transactions")
         .select(`
           *,
-          bank_accounts(account_name),
           expense_projects(name),
           expense_categories(name)
         `)
