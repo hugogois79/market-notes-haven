@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, ChevronDown, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Edit, Trash2, ChevronDown, ChevronRight, TrendingUp, TrendingDown, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
@@ -15,11 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import LoanDialog from "./LoanDialog";
 import LoanPaymentDialog from "./LoanPaymentDialog";
 
@@ -37,7 +32,7 @@ export default function LoanManagement({ companyId }: LoanManagementProps) {
   const [selectedLoanForPayment, setSelectedLoanForPayment] = useState<any>(null);
   const queryClient = useQueryClient();
 
-  const { data: loans } = useQuery({
+  const { data: loans, isLoading } = useQuery({
     queryKey: ["company-loans", companyId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -163,12 +158,12 @@ export default function LoanManagement({ companyId }: LoanManagementProps) {
     return { totalLent, totalBorrowed, netBalance: totalLent - totalBorrowed, lentCount, borrowedCount };
   }, [loans, companyId]);
 
-  const toggleCompany = (companyId: string) => {
+  const toggleCompany = (otherCompanyId: string) => {
     const newSet = new Set(expandedCompanies);
-    if (newSet.has(companyId)) {
-      newSet.delete(companyId);
+    if (newSet.has(otherCompanyId)) {
+      newSet.delete(otherCompanyId);
     } else {
-      newSet.add(companyId);
+      newSet.add(otherCompanyId);
     }
     setExpandedCompanies(newSet);
   };
@@ -184,7 +179,7 @@ export default function LoanManagement({ companyId }: LoanManagementProps) {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, any> = {
+    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       active: "default",
       paid: "secondary",
       overdue: "destructive",
@@ -196,7 +191,7 @@ export default function LoanManagement({ companyId }: LoanManagementProps) {
       overdue: "Em Atraso",
       cancelled: "Cancelado",
     };
-    return <Badge variant={variants[status]}>{labels[status]}</Badge>;
+    return <Badge variant={variants[status]} className="text-[10px] px-1.5 py-0">{labels[status]}</Badge>;
   };
 
   const getPaymentsForLoan = (loanId: string) => {
@@ -207,7 +202,11 @@ export default function LoanManagement({ companyId }: LoanManagementProps) {
     return getPaymentsForLoan(loanId).reduce((sum, p) => sum + Number(p.amount), 0);
   };
 
-  const renderCompanySection = (title: string, groupedData: Map<string, { company: any; loans: any[] }>, isLending: boolean) => {
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString("pt-PT");
+  };
+
+  const renderLoansTable = (title: string, groupedData: Map<string, { company: any; loans: any[] }>, isLending: boolean) => {
     if (groupedData.size === 0) return null;
     
     const totalAmount = Array.from(groupedData.values())
@@ -216,72 +215,144 @@ export default function LoanManagement({ companyId }: LoanManagementProps) {
       .reduce((sum, l) => sum + Number(l.amount), 0);
 
     return (
-      <div className="space-y-2">
-        <div className={`flex items-center justify-between py-2 px-3 rounded-lg ${isLending ? 'bg-green-50 dark:bg-green-950/30' : 'bg-orange-50 dark:bg-orange-950/30'}`}>
-          <h3 className={`font-semibold ${isLending ? 'text-green-700 dark:text-green-400' : 'text-orange-700 dark:text-orange-400'}`}>
-            {title}
-          </h3>
-          <span className={`font-bold ${isLending ? 'text-green-700 dark:text-green-400' : 'text-orange-700 dark:text-orange-400'}`}>
-            {formatCurrency(totalAmount)}
-          </span>
-        </div>
-        
-        {Array.from(groupedData.entries()).map(([otherCompanyId, { company, loans: companyLoans }]) => {
-          const isCompanyExpanded = expandedCompanies.has(otherCompanyId);
-          const companyTotal = companyLoans.filter(l => l.status === 'active').reduce((sum, l) => sum + Number(l.amount), 0);
-          
-          return (
-            <Collapsible key={otherCompanyId} open={isCompanyExpanded} onOpenChange={() => toggleCompany(otherCompanyId)}>
-              <CollapsibleTrigger asChild>
-                <div className="flex items-center gap-2 py-2 px-3 hover:bg-muted/50 rounded cursor-pointer">
-                  {isCompanyExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  <Badge className={isLending ? 'bg-green-600' : 'bg-orange-600'}>{company?.name || 'Empresa'}</Badge>
-                  <span className="flex-1" />
-                  <span className="font-medium text-sm">{formatCurrency(companyTotal)}</span>
-                </div>
-              </CollapsibleTrigger>
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className={`${isLending ? 'bg-green-50 dark:bg-green-950/30' : 'bg-orange-50 dark:bg-orange-950/30'} hover:bg-opacity-100`}>
+              <TableHead className="py-2 px-3 text-xs font-medium w-8"></TableHead>
+              <TableHead className={`py-2 px-3 text-xs font-semibold ${isLending ? 'text-green-700 dark:text-green-400' : 'text-orange-700 dark:text-orange-400'}`}>
+                {title}
+              </TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium">Data</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium">Status</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium">Descrição</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium text-right">Valor</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium text-right">Pago</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium text-right">Restante</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium text-center">Anexo</TableHead>
+              <TableHead className="py-2 px-3 text-xs font-medium text-right">
+                <span className={`font-bold ${isLending ? 'text-green-700 dark:text-green-400' : 'text-orange-700 dark:text-orange-400'}`}>
+                  {formatCurrency(totalAmount)}
+                </span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from(groupedData.entries()).map(([otherCompanyId, { company, loans: companyLoans }]) => {
+              const isCompanyExpanded = expandedCompanies.has(otherCompanyId);
+              const companyTotal = companyLoans.filter(l => l.status === 'active').reduce((sum, l) => sum + Number(l.amount), 0);
               
-              <CollapsibleContent>
-                <div className="ml-6 space-y-2">
-                  {companyLoans.map(loan => {
+              return (
+                <>
+                  {/* Company Header Row */}
+                  <TableRow 
+                    key={`company-${otherCompanyId}`}
+                    className="bg-muted/50 hover:bg-muted/60 cursor-pointer"
+                    onClick={() => toggleCompany(otherCompanyId)}
+                  >
+                    <TableCell className="py-2 px-3">
+                      {isCompanyExpanded ? (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </TableCell>
+                    <TableCell colSpan={7} className="py-2 px-3">
+                      <div className="flex items-center gap-2">
+                        <Badge className={`${isLending ? 'bg-green-600 hover:bg-green-700' : 'bg-orange-600 hover:bg-orange-700'}`}>
+                          {company?.name || 'Empresa'}
+                        </Badge>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          {companyLoans.length}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-2 px-3 text-right">
+                      <span className={`text-xs font-medium ${isLending ? 'text-green-600' : 'text-orange-600'}`}>
+                        {formatCurrency(companyTotal)}
+                      </span>
+                    </TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+
+                  {/* Loan Rows */}
+                  {isCompanyExpanded && companyLoans.map((loan) => {
                     const isLoanExpanded = expandedLoans.has(loan.id);
                     const payments = getPaymentsForLoan(loan.id);
                     const totalPaid = getTotalPaidForLoan(loan.id);
                     const remaining = Number(loan.amount) - totalPaid;
-                    
+
                     return (
-                      <div key={loan.id} className="border rounded-lg">
-                        <Collapsible open={isLoanExpanded} onOpenChange={() => toggleLoan(loan.id)}>
-                          <div className="flex items-center gap-2 p-3 bg-muted/30">
-                            <CollapsibleTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-6 w-6">
-                                {isLoanExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                              </Button>
-                            </CollapsibleTrigger>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{formatCurrency(Number(loan.amount))}</span>
-                                {getStatusBadge(loan.status)}
-                                {loan.interest_rate > 0 && (
-                                  <span className="text-xs text-muted-foreground">({loan.interest_rate}% juros)</span>
-                                )}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {new Date(loan.start_date).toLocaleDateString("pt-PT")}
-                                {loan.end_date && ` - ${new Date(loan.end_date).toLocaleDateString("pt-PT")}`}
-                              </div>
-                            </div>
-                            <div className="text-right text-sm">
-                              <div className="text-green-600">Pago: {formatCurrency(totalPaid)}</div>
-                              <div className={remaining > 0 ? 'text-orange-600' : 'text-green-600'}>
-                                Restante: {formatCurrency(remaining)}
-                              </div>
-                            </div>
-                            <div className="flex gap-1">
+                      <>
+                        <TableRow key={loan.id} className="hover:bg-muted/20">
+                          <TableCell className="py-1.5 px-3">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleLoan(loan.id);
+                              }}
+                            >
+                              {isLoanExpanded ? (
+                                <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                              ) : (
+                                <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                              )}
+                            </Button>
+                          </TableCell>
+                          <TableCell className="py-1.5 px-3"></TableCell>
+                          <TableCell className="py-1.5 px-3 text-xs">{formatDate(loan.start_date)}</TableCell>
+                          <TableCell className="py-1.5 px-3">{getStatusBadge(loan.status)}</TableCell>
+                          <TableCell className="py-1.5 px-3 text-xs max-w-[200px] truncate">
+                            {loan.description || '-'}
+                          </TableCell>
+                          <TableCell className="py-1.5 px-3 text-right text-xs font-medium">
+                            {formatCurrency(Number(loan.amount))}
+                          </TableCell>
+                          <TableCell className="py-1.5 px-3 text-right text-xs text-green-600">
+                            {formatCurrency(totalPaid)}
+                          </TableCell>
+                          <TableCell className={`py-1.5 px-3 text-right text-xs font-medium ${remaining > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                            {formatCurrency(remaining)}
+                          </TableCell>
+                          <TableCell className="py-1.5 px-3 text-center">
+                            {loan.attachment_url && (
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7"
+                                className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  try {
+                                    const response = await fetch(loan.attachment_url);
+                                    const blob = await response.blob();
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    const filename = loan.attachment_url.split('/').pop() || 'anexo';
+                                    a.download = filename;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    window.URL.revokeObjectURL(url);
+                                  } catch (error) {
+                                    console.error('Error downloading file:', error);
+                                    window.open(loan.attachment_url, '_blank');
+                                  }
+                                }}
+                              >
+                                <Paperclip className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-1.5 px-3 text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedLoanForPayment(loan);
@@ -289,24 +360,24 @@ export default function LoanManagement({ companyId }: LoanManagementProps) {
                                 }}
                                 title="Novo pagamento"
                               >
-                                <Plus className="h-4 w-4" />
+                                <Plus className="h-3 w-3" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7"
+                                className="h-6 w-6"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setEditingLoan(loan);
                                   setDialogOpen(true);
                                 }}
                               >
-                                <Edit className="h-4 w-4" />
+                                <Edit className="h-3 w-3" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7"
+                                className="h-6 w-6"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (confirm("Eliminar empréstimo?")) {
@@ -314,75 +385,80 @@ export default function LoanManagement({ companyId }: LoanManagementProps) {
                                   }
                                 }}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3 w-3" />
                               </Button>
                             </div>
-                          </div>
-                          
-                          <CollapsibleContent>
-                            <div className="p-3 border-t">
-                              {payments.length === 0 ? (
-                                <p className="text-center text-muted-foreground text-sm py-4">
-                                  Nenhum movimento registado
-                                </p>
-                              ) : (
-                                <div className="space-y-2">
-                                  {payments.map((payment) => (
-                                    <div key={payment.id} className="flex items-center justify-between py-2 px-3 bg-muted/30 rounded-lg">
-                                      <div className="flex items-center gap-4">
-                                        <span className="text-sm font-medium">
-                                          {new Date(payment.payment_date).toLocaleDateString("pt-PT")}
-                                        </span>
-                                        <span className="text-sm font-semibold text-green-600">
-                                          {formatCurrency(Number(payment.amount))}
-                                        </span>
-                                        {payment.notes && (
-                                          <span className="text-sm text-muted-foreground truncate max-w-[200px]">
-                                            {payment.notes}
-                                          </span>
-                                        )}
-                                      </div>
-                                      <div className="flex gap-1">
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-6 w-6"
-                                          onClick={() => {
-                                            setSelectedLoanForPayment(loan);
-                                            setEditingPayment(payment);
-                                            setPaymentDialogOpen(true);
-                                          }}
-                                        >
-                                          <Edit className="h-3 w-3" />
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-6 w-6"
-                                          onClick={() => {
-                                            if (confirm("Eliminar pagamento?")) {
-                                              deletePaymentMutation.mutate(payment.id);
-                                            }
-                                          }}
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      </div>
+                          </TableCell>
+                        </TableRow>
+
+                        {/* Payment Rows */}
+                        {isLoanExpanded && payments.map((payment) => (
+                          <TableRow key={payment.id} className="bg-muted/10 hover:bg-muted/20">
+                            <TableCell className="py-1 px-3"></TableCell>
+                            <TableCell className="py-1 px-3"></TableCell>
+                            <TableCell className="py-1 px-3 text-xs text-muted-foreground pl-8">
+                              {formatDate(payment.payment_date)}
+                            </TableCell>
+                            <TableCell className="py-1 px-3">
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-green-600 border-green-300">
+                                Pagamento
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="py-1 px-3 text-xs text-muted-foreground max-w-[200px] truncate">
+                              {payment.notes || '-'}
+                            </TableCell>
+                            <TableCell className="py-1 px-3"></TableCell>
+                            <TableCell className="py-1 px-3 text-right text-xs text-green-600 font-medium">
+                              {formatCurrency(Number(payment.amount))}
+                            </TableCell>
+                            <TableCell className="py-1 px-3"></TableCell>
+                            <TableCell className="py-1 px-3"></TableCell>
+                            <TableCell className="py-1 px-3 text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5"
+                                  onClick={() => {
+                                    setSelectedLoanForPayment(loan);
+                                    setEditingPayment(payment);
+                                    setPaymentDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-2.5 w-2.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5"
+                                  onClick={() => {
+                                    if (confirm("Eliminar pagamento?")) {
+                                      deletePaymentMutation.mutate(payment.id);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-2.5 w-2.5" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+
+                        {isLoanExpanded && payments.length === 0 && (
+                          <TableRow className="bg-muted/10">
+                            <TableCell colSpan={10} className="py-2 px-3 text-center text-xs text-muted-foreground">
+                              Nenhum pagamento registado
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </>
                     );
                   })}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          );
-        })}
+                </>
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
     );
   };
@@ -453,15 +529,15 @@ export default function LoanManagement({ companyId }: LoanManagementProps) {
         </Card>
       </div>
 
-      {/* Loans Table by Company */}
-      <div className="space-y-6 border rounded-lg p-4">
-        {renderCompanySection("A Receber (Empréstimos Concedidos)", groupedLoans.lending, true)}
-        {renderCompanySection("A Pagar (Empréstimos Recebidos)", groupedLoans.borrowing, false)}
+      {/* Loans Tables */}
+      <div className="space-y-4">
+        {renderLoansTable("A Receber (Empréstimos Concedidos)", groupedLoans.lending, true)}
+        {renderLoansTable("A Pagar (Empréstimos Recebidos)", groupedLoans.borrowing, false)}
         
         {groupedLoans.lending.size === 0 && groupedLoans.borrowing.size === 0 && (
-          <p className="text-center text-muted-foreground py-8">
-            Nenhum empréstimo registado
-          </p>
+          <div className="border rounded-lg p-8 text-center text-muted-foreground">
+            {isLoading ? "A carregar..." : "Nenhum empréstimo registado"}
+          </div>
         )}
       </div>
 
