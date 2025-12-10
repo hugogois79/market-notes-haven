@@ -19,7 +19,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Check, ChevronsUpDown } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 interface TransactionDialogProps {
   open: boolean;
@@ -36,6 +51,7 @@ export default function TransactionDialog({
 }: TransactionDialogProps) {
   const queryClient = useQueryClient();
   const { register, handleSubmit, reset, watch, setValue } = useForm();
+  const [categoryOpen, setCategoryOpen] = useState(false);
 
   const { data: bankAccounts } = useQuery({
     queryKey: ["bank-accounts", companyId],
@@ -193,29 +209,56 @@ export default function TransactionDialog({
 
             <div>
               <Label>Categoria *</Label>
-              <Select 
-                onValueChange={(value) => setValue("category_id", value)} 
-                value={watch("category_id") || ""}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {expenseCategories
-                    ?.filter(cat => {
-                      // Filter categories based on transaction type (support both 'expense'/'income' and 'despesa'/'receita')
-                      if (transactionType === 'income') {
-                        return cat.category_type === 'receita' || cat.category_type === 'income' || cat.category_type === 'ambos' || cat.category_type === 'both';
-                      }
-                      return cat.category_type === 'despesa' || cat.category_type === 'expense' || cat.category_type === 'ambos' || cat.category_type === 'both' || !cat.category_type;
-                    })
-                    .map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={categoryOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {watch("category_id")
+                      ? expenseCategories?.find((cat) => cat.id === watch("category_id"))?.name
+                      : "Selecione..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Pesquisar categoria..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
+                      <CommandGroup>
+                        {expenseCategories
+                          ?.filter(cat => {
+                            if (transactionType === 'income') {
+                              return cat.category_type === 'receita' || cat.category_type === 'income' || cat.category_type === 'ambos' || cat.category_type === 'both';
+                            }
+                            return cat.category_type === 'despesa' || cat.category_type === 'expense' || cat.category_type === 'ambos' || cat.category_type === 'both' || !cat.category_type;
+                          })
+                          .map((category) => (
+                            <CommandItem
+                              key={category.id}
+                              value={category.name}
+                              onSelect={() => {
+                                setValue("category_id", category.id);
+                                setCategoryOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  watch("category_id") === category.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {category.name}
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div>
