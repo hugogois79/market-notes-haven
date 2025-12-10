@@ -41,9 +41,9 @@ export default function TransactionTable({
   };
 
   const getCategoryLabel = (transaction: any) => {
-    // Prefer category from expense_categories relation
-    if (transaction.expense_categories?.name) {
-      return transaction.expense_categories.name;
+    // Use enriched category_name from TransactionManagement
+    if (transaction.category_name) {
+      return transaction.category_name;
     }
     // Fallback to old category enum
     const labels: Record<string, string> = {
@@ -108,9 +108,9 @@ export default function TransactionTable({
                 </span>
               </TableCell>
               <TableCell>
-                {transaction.expense_projects?.name && (
+                {transaction.project_name && (
                   <Badge variant="secondary">
-                    {transaction.expense_projects.name}
+                    {transaction.project_name}
                   </Badge>
                 )}
               </TableCell>

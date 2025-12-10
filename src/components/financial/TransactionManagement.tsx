@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -21,11 +21,7 @@ export default function TransactionManagement({ companyId }: TransactionManageme
     queryFn: async () => {
       const { data, error } = await supabase
         .from("financial_transactions")
-        .select(`
-          *,
-          expense_projects(name),
-          expense_categories(name)
-        `)
+        .select("*")
         .eq("company_id", companyId)
         .order("date", { ascending: false });
       
@@ -33,6 +29,38 @@ export default function TransactionManagement({ companyId }: TransactionManageme
       return data;
     },
   });
+
+  const { data: categories } = useQuery({
+    queryKey: ["expense-categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expense_categories")
+        .select("id, name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: projects } = useQuery({
+    queryKey: ["expense-projects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expense_projects")
+        .select("id, name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Enrich transactions with category and project names
+  const enrichedTransactions = useMemo(() => {
+    if (!transactions) return [];
+    return transactions.map((t) => ({
+      ...t,
+      category_name: categories?.find((c) => c.id === t.category_id)?.name,
+      project_name: projects?.find((p) => p.id === t.project_id)?.name,
+    }));
+  }, [transactions, categories, projects]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -80,7 +108,7 @@ export default function TransactionManagement({ companyId }: TransactionManageme
       </div>
 
       <TransactionTable
-        transactions={transactions || []}
+        transactions={enrichedTransactions}
         isLoading={isLoading}
         onEdit={handleEdit}
         onDelete={handleDelete}
