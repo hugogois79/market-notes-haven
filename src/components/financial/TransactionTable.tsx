@@ -119,14 +119,31 @@ export default function TransactionTable({
               </TableCell>
               <TableCell className="py-1.5 px-3 text-center">
                 {transaction.invoice_file_url && (
-                  <a
-                    href={transaction.invoice_file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center text-muted-foreground hover:text-primary"
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-primary"
+                    onClick={async () => {
+                      try {
+                        const response = await fetch(transaction.invoice_file_url);
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        const filename = transaction.invoice_file_url.split('/').pop() || 'anexo';
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                      } catch (error) {
+                        console.error('Error downloading file:', error);
+                        window.open(transaction.invoice_file_url, '_blank');
+                      }
+                    }}
                   >
                     <Paperclip className="h-3.5 w-3.5" />
-                  </a>
+                  </Button>
                 )}
               </TableCell>
               <TableCell className="py-1.5 px-3 text-right">
