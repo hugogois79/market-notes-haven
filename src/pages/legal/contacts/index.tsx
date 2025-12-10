@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ContactDialog } from "../components/ContactDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -70,6 +70,7 @@ const rolesToString = (rolesArr: string[]): string => {
 };
 
 export default function LegalContactsPage() {
+  const navigate = useNavigate();
   const [contacts, setContacts] = useState<LegalContact[]>([]);
   const [allCases, setAllCases] = useState<LegalCase[]>([]);
   const [loading, setLoading] = useState(true);
@@ -390,7 +391,12 @@ export default function LegalContactsPage() {
                         className="h-8"
                       />
                     ) : (
-                      <span className="font-medium">{contact.name}</span>
+                      <button
+                        onClick={() => navigate(`/legal?contact=${contact.id}`)}
+                        className="font-medium text-left hover:text-primary hover:underline transition-colors"
+                      >
+                        {contact.name}
+                      </button>
                     )}
                   </TableCell>
                   <TableCell>

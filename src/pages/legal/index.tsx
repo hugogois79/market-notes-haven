@@ -45,6 +45,7 @@ const documentTypeBadgeColors: Record<string, string> = {
 export default function LegalPage() {
   const [searchParams] = useSearchParams();
   const caseIdFromUrl = searchParams.get("case") || "";
+  const contactIdFromUrl = searchParams.get("contact") || "";
   
   const [documents, setDocuments] = useState<LegalDocument[]>([]);
   const [cases, setCases] = useState<LegalCase[]>([]);
@@ -55,7 +56,7 @@ export default function LegalPage() {
   const [filters, setFilters] = useState({
     caseId: caseIdFromUrl,
     documentType: "",
-    contactId: "",
+    contactId: contactIdFromUrl,
     searchTerm: "",
   });
 
@@ -69,6 +70,12 @@ export default function LegalPage() {
       setFilters(prev => ({ ...prev, caseId: caseIdFromUrl }));
     }
   }, [caseIdFromUrl]);
+
+  useEffect(() => {
+    if (contactIdFromUrl) {
+      setFilters(prev => ({ ...prev, contactId: contactIdFromUrl }));
+    }
+  }, [contactIdFromUrl]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value === "all" ? "" : value }));
