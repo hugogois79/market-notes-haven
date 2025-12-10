@@ -53,6 +53,8 @@ export default function TransactionDialog({
   const { register, handleSubmit, reset, watch, setValue } = useForm();
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
+  const [projectOpen, setProjectOpen] = useState(false);
+  const [projectSearch, setProjectSearch] = useState("");
   const [supplierSearch, setSupplierSearch] = useState("");
   const [existingAttachment, setExistingAttachment] = useState<string | null>(null);
   const [newFiles, setNewFiles] = useState<File[]>([]);
@@ -338,26 +340,74 @@ export default function TransactionDialog({
 
             <div>
               <Label>Projeto</Label>
-              <Select 
-                onValueChange={(value) => {
-                  setValue("project_id", value === "none" ? null : value);
-                  // Clear category when project changes
-                  setValue("category_id", "");
-                }} 
-                value={watch("project_id") || "none"}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem projeto</SelectItem>
-                  {expenseProjects?.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={projectOpen} onOpenChange={setProjectOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={projectOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {watch("project_id")
+                      ? expenseProjects?.find((p) => p.id === watch("project_id"))?.name
+                      : "Sem projeto"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0">
+                  <Command shouldFilter={false}>
+                    <CommandInput 
+                      placeholder="Pesquisar projeto..." 
+                      value={projectSearch}
+                      onValueChange={setProjectSearch}
+                    />
+                    <CommandList>
+                      <CommandEmpty>Nenhum projeto encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="none"
+                          onSelect={() => {
+                            setValue("project_id", null);
+                            setValue("category_id", "");
+                            setProjectSearch("");
+                            setProjectOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              !watch("project_id") ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          Sem projeto
+                        </CommandItem>
+                        {expenseProjects
+                          ?.filter(p => p.name.toLowerCase().includes(projectSearch.toLowerCase()))
+                          .map((project) => (
+                            <CommandItem
+                              key={project.id}
+                              value={project.name}
+                              onSelect={() => {
+                                setValue("project_id", project.id);
+                                setValue("category_id", "");
+                                setProjectSearch("");
+                                setProjectOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  watch("project_id") === project.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {project.name}
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
