@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { Edit, Trash2, ArrowUp, ArrowDown, Paperclip } from "lucide-react";
 
 interface TransactionTableProps {
   transactions: any[];
@@ -68,6 +68,7 @@ export default function TransactionTable({
             <TableHead className="py-2 px-3 text-xs font-medium">Categoria</TableHead>
             <TableHead className="py-2 px-3 text-xs font-medium text-right">Valor</TableHead>
             <TableHead className="py-2 px-3 text-xs font-medium">Projeto</TableHead>
+            <TableHead className="py-2 px-3 text-xs font-medium text-center">Anexo</TableHead>
             <TableHead className="py-2 px-3 text-xs font-medium text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -114,6 +115,18 @@ export default function TransactionTable({
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                     {transaction.project_name}
                   </Badge>
+                )}
+              </TableCell>
+              <TableCell className="py-1.5 px-3 text-center">
+                {transaction.invoice_file_url && (
+                  <a
+                    href={transaction.invoice_file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center text-muted-foreground hover:text-primary"
+                  >
+                    <Paperclip className="h-3.5 w-3.5" />
+                  </a>
                 )}
               </TableCell>
               <TableCell className="py-1.5 px-3 text-right">
