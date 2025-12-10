@@ -19,13 +19,18 @@ export default function TransactionManagement({ companyId }: TransactionManageme
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["transactions", companyId],
     queryFn: async () => {
+      console.log("[TransactionManagement] Fetching transactions for company:", companyId);
       const { data, error } = await supabase
         .from("financial_transactions")
-        .select("*")
+        .select("id, date, type, description, entity_name, category, category_id, project_id, total_amount, amount_net, vat_amount, vat_rate, payment_method, bank_account_id, invoice_number, invoice_file_url, notes, company_id, created_by, created_at, updated_at, subcategory")
         .eq("company_id", companyId)
         .order("date", { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error("[TransactionManagement] Error fetching transactions:", error);
+        throw error;
+      }
+      console.log("[TransactionManagement] Fetched transactions:", data?.length);
       return data;
     },
   });

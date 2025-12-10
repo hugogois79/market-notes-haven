@@ -20,13 +20,18 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
   const { data: transactions } = useQuery({
     queryKey: ["transactions-dashboard", companyId],
     queryFn: async () => {
+      console.log("[FinancialDashboard] Fetching transactions for company:", companyId);
       const { data, error } = await supabase
         .from("financial_transactions")
-        .select("*")
+        .select("id, date, type, total_amount, company_id")
         .eq("company_id", companyId)
         .gte("date", startOfYear);
       
-      if (error) throw error;
+      if (error) {
+        console.error("[FinancialDashboard] Error fetching transactions:", error);
+        throw error;
+      }
+      console.log("[FinancialDashboard] Fetched transactions:", data?.length);
       return data;
     },
   });
