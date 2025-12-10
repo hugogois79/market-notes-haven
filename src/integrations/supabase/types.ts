@@ -3366,7 +3366,7 @@ export type Database = {
     }
     Functions: {
       calculate_account_balance: {
-        Args: { account_id: string; company_id: string }
+        Args: { p_account_id: string; p_company_id: string }
         Returns: number
       }
       get_user_role: {
