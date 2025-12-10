@@ -208,6 +208,30 @@ export default function TransactionDialog({
             </div>
 
             <div>
+              <Label>Projeto</Label>
+              <Select 
+                onValueChange={(value) => {
+                  setValue("project_id", value === "none" ? null : value);
+                  // Clear category when project changes
+                  setValue("category_id", "");
+                }} 
+                value={watch("project_id") || "none"}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem projeto</SelectItem>
+                  {expenseProjects?.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
               <Label>Categoria *</Label>
               <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
                 <PopoverTrigger asChild>
@@ -231,10 +255,20 @@ export default function TransactionDialog({
                       <CommandGroup>
                         {expenseCategories
                           ?.filter(cat => {
-                            if (transactionType === 'income') {
-                              return cat.category_type === 'receita' || cat.category_type === 'income' || cat.category_type === 'ambos' || cat.category_type === 'both';
+                            // Filter by transaction type
+                            const typeMatch = transactionType === 'income'
+                              ? (cat.category_type === 'receita' || cat.category_type === 'income' || cat.category_type === 'ambos' || cat.category_type === 'both')
+                              : (cat.category_type === 'despesa' || cat.category_type === 'expense' || cat.category_type === 'ambos' || cat.category_type === 'both' || !cat.category_type);
+                            
+                            if (!typeMatch) return false;
+                            
+                            // Filter by project if one is selected
+                            const selectedProjectId = watch("project_id");
+                            if (selectedProjectId && selectedProjectId !== "none") {
+                              return cat.assigned_project_ids?.includes(selectedProjectId);
                             }
-                            return cat.category_type === 'despesa' || cat.category_type === 'expense' || cat.category_type === 'ambos' || cat.category_type === 'both' || !cat.category_type;
+                            
+                            return true;
                           })
                           .map((category) => (
                             <CommandItem
@@ -259,26 +293,6 @@ export default function TransactionDialog({
                   </Command>
                 </PopoverContent>
               </Popover>
-            </div>
-
-            <div>
-              <Label>Projeto</Label>
-              <Select 
-                onValueChange={(value) => setValue("project_id", value === "none" ? null : value)} 
-                value={watch("project_id") || "none"}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem projeto</SelectItem>
-                  {expenseProjects?.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
