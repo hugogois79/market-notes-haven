@@ -240,17 +240,20 @@ export default function TransactionDialog({
         fileUrl = urlData.publicUrl;
       }
 
+      // Remove client-side enriched properties that don't exist in the database
+      const { category_name, project_name, ...cleanData } = data;
+      
       const transactionData = {
-        ...data,
-        company_id: data.company_id || companyId,
+        ...cleanData,
+        company_id: cleanData.company_id || companyId,
         created_by: user?.id,
-        amount_net: Number(data.amount_net),
-        vat_rate: Number(data.vat_rate),
-        vat_amount: Number(data.vat_amount),
-        total_amount: Number(data.total_amount),
-        project_id: data.project_id || null,
-        category_id: data.category_id || null,
-        bank_account_id: data.bank_account_id || null,
+        amount_net: Number(cleanData.amount_net),
+        vat_rate: Number(cleanData.vat_rate),
+        vat_amount: Number(cleanData.vat_amount),
+        total_amount: Number(cleanData.total_amount),
+        project_id: cleanData.project_id || null,
+        category_id: cleanData.category_id || null,
+        bank_account_id: cleanData.bank_account_id || null,
         invoice_file_url: fileUrl,
         // Keep default category for the enum field (required)
         category: 'other',
