@@ -40,7 +40,12 @@ export default function TransactionTable({
     return new Date(date).toLocaleDateString("pt-PT");
   };
 
-  const getCategoryLabel = (category: string) => {
+  const getCategoryLabel = (transaction: any) => {
+    // Prefer category from expense_categories relation
+    if (transaction.expense_categories?.name) {
+      return transaction.expense_categories.name;
+    }
+    // Fallback to old category enum
     const labels: Record<string, string> = {
       sales: "Vendas",
       materials: "Materiais",
@@ -50,7 +55,7 @@ export default function TransactionTable({
       utilities: "Utilidades",
       other: "Outro",
     };
-    return labels[category] || category;
+    return labels[transaction.category] || transaction.category;
   };
 
   return (
@@ -94,7 +99,7 @@ export default function TransactionTable({
               <TableCell>{transaction.entity_name}</TableCell>
               <TableCell>
                 <Badge variant="outline">
-                  {getCategoryLabel(transaction.category)}
+                  {getCategoryLabel(transaction)}
                 </Badge>
               </TableCell>
               <TableCell className="text-right font-medium">
