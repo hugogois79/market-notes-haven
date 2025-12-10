@@ -103,9 +103,9 @@ export default function TransactionTable({
                 </span>
               </TableCell>
               <TableCell>
-                {transaction.financial_projects?.name && (
+                {transaction.expense_projects?.name && (
                   <Badge variant="secondary">
-                    {transaction.financial_projects.name}
+                    {transaction.expense_projects.name}
                   </Badge>
                 )}
               </TableCell>
