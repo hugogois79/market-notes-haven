@@ -29,24 +29,24 @@ export const expenseUserService = {
   },
 
   async createUser(userData: {
-    user_id: string;
     name: string;
-    email?: string | null;
+    email: string;
+    password: string;
     assigned_project_ids?: string[];
   }): Promise<ExpenseUser> {
-    const { data, error } = await supabase
-      .from("expense_users")
-      .insert({
-        user_id: userData.user_id,
+    const { data, error } = await supabase.functions.invoke("manage-user", {
+      body: {
+        action: "create",
+        email: userData.email,
+        password: userData.password,
         name: userData.name,
-        email: userData.email || null,
         assigned_project_ids: userData.assigned_project_ids || [],
-      })
-      .select()
-      .single();
+      },
+    });
 
     if (error) throw error;
-    return data;
+    if (data.error) throw new Error(data.error);
+    return data.user;
   },
 
   async updateUser(id: string, updates: Partial<ExpenseUser>): Promise<ExpenseUser> {
@@ -68,6 +68,18 @@ export const expenseUserService = {
       .eq("id", id);
 
     if (error) throw error;
+  },
+
+  async resetPassword(email: string): Promise<void> {
+    const { data, error } = await supabase.functions.invoke("manage-user", {
+      body: {
+        action: "reset_password",
+        email,
+      },
+    });
+
+    if (error) throw error;
+    if (data.error) throw new Error(data.error);
   },
 
   async getCurrentUserExpenseRecord(): Promise<ExpenseUser | null> {
