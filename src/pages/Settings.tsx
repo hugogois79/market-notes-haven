@@ -93,7 +93,7 @@ const Settings = () => {
   const [userFormData, setUserFormData] = useState({
     name: "",
     email: "",
-    user_id: "",
+    password: "",
     assigned_project_ids: [] as string[],
   });
   
@@ -152,7 +152,7 @@ const Settings = () => {
       setUserFormData({
         name: user.name,
         email: user.email || "",
-        user_id: user.user_id,
+        password: "",
         assigned_project_ids: user.assigned_project_ids || [],
       });
     } else {
@@ -160,7 +160,7 @@ const Settings = () => {
       setUserFormData({
         name: "",
         email: "",
-        user_id: "",
+        password: "",
         assigned_project_ids: [],
       });
     }
@@ -169,23 +169,26 @@ const Settings = () => {
 
   const handleSaveUser = async () => {
     try {
-      if (!userFormData.name.trim() || !userFormData.user_id.trim()) {
-        toast.error("Nome e User ID são obrigatórios");
+      if (!userFormData.name.trim() || !userFormData.email.trim()) {
+        toast.error("Nome e Email são obrigatórios");
         return;
       }
       if (editingUser) {
         await expenseUserService.updateUser(editingUser.id, {
           name: userFormData.name,
           email: userFormData.email || null,
-          user_id: userFormData.user_id,
           assigned_project_ids: userFormData.assigned_project_ids,
         });
         toast.success("Utilizador atualizado");
       } else {
+        if (!userFormData.password.trim()) {
+          toast.error("Password é obrigatória para novos utilizadores");
+          return;
+        }
         await expenseUserService.createUser({
-          user_id: userFormData.user_id,
           name: userFormData.name,
-          email: userFormData.email || null,
+          email: userFormData.email,
+          password: userFormData.password,
           assigned_project_ids: userFormData.assigned_project_ids,
         });
         toast.success("Utilizador criado");
@@ -992,14 +995,17 @@ const Settings = () => {
                 placeholder="email@exemplo.com"
               />
             </div>
-            <div className="space-y-2">
-              <Label>User ID *</Label>
-              <Input
-                value={userFormData.user_id}
-                onChange={(e) => setUserFormData({ ...userFormData, user_id: e.target.value })}
-                placeholder="UUID do utilizador Supabase"
-              />
-            </div>
+            {!editingUser && (
+              <div className="space-y-2">
+                <Label>Password *</Label>
+                <Input
+                  type="password"
+                  value={userFormData.password}
+                  onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
+                  placeholder="Password inicial"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Projetos Atribuídos</Label>
               <div className="max-h-48 overflow-y-auto border rounded-md p-2 space-y-2">

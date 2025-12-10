@@ -5,9 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Upload, Trash2 } from "lucide-react";
+import { Upload, Trash2, X, ChevronDown } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface LegalDocument {
   id: string;
@@ -38,35 +45,68 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
     description: "",
     document_type: "",
     case_id: "",
-    contact_id: "",
     created_date: new Date().toISOString().split("T")[0],
   });
+  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
   const [file, setFile] = useState<File | null>(null);
+  const [contactSelectOpen, setContactSelectOpen] = useState(false);
 
   const isEditMode = !!document;
 
   useEffect(() => {
-    if (document) {
-      setFormData({
-        title: document.title,
-        description: document.description || "",
-        document_type: document.document_type,
-        case_id: document.case_id,
-        contact_id: document.contact_id || "",
-        created_date: document.created_date,
-      });
-    } else {
-      setFormData({
-        title: "",
-        description: "",
-        document_type: "",
-        case_id: "",
-        contact_id: "",
-        created_date: new Date().toISOString().split("T")[0],
-      });
+    const loadDocumentData = async () => {
+      if (document) {
+        setFormData({
+          title: document.title,
+          description: document.description || "",
+          document_type: document.document_type,
+          case_id: document.case_id,
+          created_date: document.created_date,
+        });
+        
+        // Load contacts from junction table
+        const { data: contactData } = await supabase
+          .from("legal_document_contacts")
+          .select("contact_id")
+          .eq("document_id", document.id);
+        
+        if (contactData) {
+          setSelectedContactIds(contactData.map(c => c.contact_id));
+        } else if (document.contact_id) {
+          // Fallback to old single contact_id
+          setSelectedContactIds([document.contact_id]);
+        } else {
+          setSelectedContactIds([]);
+        }
+      } else {
+        setFormData({
+          title: "",
+          description: "",
+          document_type: "",
+          case_id: "",
+          created_date: new Date().toISOString().split("T")[0],
+        });
+        setSelectedContactIds([]);
+      }
+      setFile(null);
+    };
+
+    if (open) {
+      loadDocumentData();
     }
-    setFile(null);
   }, [document, open]);
+
+  const handleToggleContact = (contactId: string) => {
+    setSelectedContactIds(prev => 
+      prev.includes(contactId)
+        ? prev.filter(id => id !== contactId)
+        : [...prev, contactId]
+    );
+  };
+
+  const handleRemoveContact = (contactId: string) => {
+    setSelectedContactIds(prev => prev.filter(id => id !== contactId));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,23 +146,48 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
             description: formData.description || null,
             document_type: formData.document_type,
             case_id: formData.case_id,
-            contact_id: formData.contact_id || null,
+            contact_id: selectedContactIds[0] || null, // Keep backward compatibility
             created_date: formData.created_date,
             attachment_url: attachmentUrl,
           })
           .eq("id", document.id);
 
         if (error) throw error;
+
+        // Update junction table
+        await supabase
+          .from("legal_document_contacts")
+          .delete()
+          .eq("document_id", document.id);
+
+        if (selectedContactIds.length > 0) {
+          const contactRelations = selectedContactIds.map(contactId => ({
+            document_id: document.id,
+            contact_id: contactId,
+          }));
+          await supabase.from("legal_document_contacts").insert(contactRelations);
+        }
+
         toast.success("Documento atualizado com sucesso");
       } else {
-        const { error } = await supabase.from("legal_documents").insert({
+        const { data: newDoc, error } = await supabase.from("legal_documents").insert({
           ...formData,
-          contact_id: formData.contact_id || null,
+          contact_id: selectedContactIds[0] || null, // Keep backward compatibility
           attachment_url: attachmentUrl,
           user_id: user.id,
-        });
+        }).select().single();
 
         if (error) throw error;
+
+        // Insert into junction table
+        if (selectedContactIds.length > 0 && newDoc) {
+          const contactRelations = selectedContactIds.map(contactId => ({
+            document_id: newDoc.id,
+            contact_id: contactId,
+          }));
+          await supabase.from("legal_document_contacts").insert(contactRelations);
+        }
+
         toast.success("Documento criado com sucesso");
       }
 
@@ -158,6 +223,8 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
       setLoading(false);
     }
   };
+
+  const selectedContacts = contacts.filter(c => selectedContactIds.includes(c.id));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -218,22 +285,59 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="contact_id">Contato</Label>
-            <Select
-              value={formData.contact_id}
-              onValueChange={(value) => setFormData({ ...formData, contact_id: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o contato (opcional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {contacts.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
+            <Label>Contatos</Label>
+            <Popover open={contactSelectOpen} onOpenChange={setContactSelectOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className="w-full justify-between font-normal"
+                >
+                  {selectedContactIds.length > 0
+                    ? `${selectedContactIds.length} contato(s) selecionado(s)`
+                    : "Selecione os contatos"}
+                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0 bg-background border" align="start">
+                <div className="max-h-60 overflow-y-auto p-2">
+                  {contacts.length === 0 ? (
+                    <p className="text-sm text-muted-foreground p-2">Nenhum contato disponível</p>
+                  ) : (
+                    contacts.map((contact) => (
+                      <div
+                        key={contact.id}
+                        className="flex items-center space-x-2 p-2 hover:bg-muted rounded cursor-pointer"
+                        onClick={() => handleToggleContact(contact.id)}
+                      >
+                        <Checkbox
+                          checked={selectedContactIds.includes(contact.id)}
+                          onCheckedChange={() => handleToggleContact(contact.id)}
+                        />
+                        <span className="text-sm">{contact.name}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+            
+            {selectedContacts.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {selectedContacts.map((contact) => (
+                  <Badge key={contact.id} variant="secondary" className="gap-1">
+                    {contact.name}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveContact(contact.id)}
+                      className="ml-1 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -317,7 +421,7 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
                 Cancelar
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? "A guardar..." : isEditMode ? "Guardar" : "Criar Documento"}
+                {loading ? "A guardar..." : "Guardar"}
               </Button>
             </div>
           </div>

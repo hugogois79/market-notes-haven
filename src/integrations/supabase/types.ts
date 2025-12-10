@@ -1685,6 +1685,42 @@ export type Database = {
         }
         Relationships: []
       }
+      legal_document_contacts: {
+        Row: {
+          contact_id: string
+          created_at: string
+          document_id: string
+          id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          document_id: string
+          id?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          document_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_document_contacts_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "legal_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_document_contacts_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "legal_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_documents: {
         Row: {
           attachment_url: string | null
