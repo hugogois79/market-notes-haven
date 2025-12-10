@@ -69,6 +69,11 @@ export default function TransactionTable({
         : -Number(transaction.total_amount);
     });
 
+    // Sort transactions within each group by date descending (most recent first)
+    Object.values(groups).forEach((group) => {
+      group.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    });
+
     // Sort by month key descending (most recent first)
     return Object.values(groups).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
   }, [transactions]);
