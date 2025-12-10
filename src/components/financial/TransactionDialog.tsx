@@ -75,20 +75,19 @@ export default function TransactionDialog({
 
   const selectedCompanyId = watch("company_id") || companyId;
 
-  // Filter bank accounts by selected company
-  const { data: bankAccounts } = useQuery({
-    queryKey: ["bank-accounts", selectedCompanyId],
+  // Fetch all bank accounts from all companies
+  const { data: allBankAccounts } = useQuery({
+    queryKey: ["bank-accounts-all"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bank_accounts")
-        .select("*")
-        .eq("company_id", selectedCompanyId)
-        .eq("is_active", true);
+        .select("*, companies(name)")
+        .eq("is_active", true)
+        .order("company_id");
       
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedCompanyId,
   });
 
   // Use expense_projects instead of financial_projects (same as expenses module)
@@ -581,9 +580,9 @@ export default function TransactionDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sem conta</SelectItem>
-                  {bankAccounts?.map((account) => (
+                  {allBankAccounts?.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
-                      {account.account_name} ({account.bank_name})
+                      {account.account_name} - {(account as any).companies?.name || account.bank_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
