@@ -53,6 +53,7 @@ export default function TransactionDialog({
   const { register, handleSubmit, reset, watch, setValue } = useForm();
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
+  const [supplierSearch, setSupplierSearch] = useState("");
 
   const { data: bankAccounts } = useQuery({
     queryKey: ["bank-accounts", companyId],
@@ -333,9 +334,42 @@ export default function TransactionDialog({
               </PopoverTrigger>
               <PopoverContent className="w-[400px] p-0">
                 <Command>
-                  <CommandInput placeholder="Pesquisar fornecedor..." />
+                  <CommandInput 
+                    placeholder="Pesquisar ou adicionar fornecedor..." 
+                    value={supplierSearch}
+                    onValueChange={setSupplierSearch}
+                  />
                   <CommandList>
-                    <CommandEmpty>Nenhum fornecedor encontrado.</CommandEmpty>
+                    <CommandEmpty>
+                      {supplierSearch.trim() ? (
+                        <CommandItem
+                          value={supplierSearch}
+                          onSelect={async () => {
+                            const trimmedName = supplierSearch.trim();
+                            // Add new supplier to database
+                            const { error } = await supabase
+                              .from("suppliers")
+                              .insert({ name: trimmedName });
+                            
+                            if (error) {
+                              toast.error("Erro ao adicionar fornecedor");
+                              return;
+                            }
+                            
+                            queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+                            setValue("entity_name", trimmedName);
+                            setSupplierSearch("");
+                            setSupplierOpen(false);
+                            toast.success(`Fornecedor "${trimmedName}" adicionado`);
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <span className="text-primary">+ Adicionar "{supplierSearch.trim()}"</span>
+                        </CommandItem>
+                      ) : (
+                        <span>Nenhum fornecedor encontrado.</span>
+                      )}
+                    </CommandEmpty>
                     <CommandGroup>
                       {suppliers?.map((supplier) => (
                         <CommandItem
@@ -343,6 +377,7 @@ export default function TransactionDialog({
                           value={supplier.name}
                           onSelect={() => {
                             setValue("entity_name", supplier.name);
+                            setSupplierSearch("");
                             setSupplierOpen(false);
                           }}
                         >
