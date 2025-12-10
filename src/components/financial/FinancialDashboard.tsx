@@ -119,12 +119,20 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
       bgColor: "bg-green-50",
     },
     {
-      title: "Despesas",
+      title: "Transações Despesa",
       icon: TrendingDown,
-      monthValue: monthExpenses,
-      yearValue: yearExpenses,
+      monthValue: monthTransactionExpenses,
+      yearValue: yearTransactionExpenses,
       color: "text-red-600",
       bgColor: "bg-red-50",
+    },
+    {
+      title: "Expense Claims",
+      icon: TrendingDown,
+      monthValue: monthClaimsExpenses,
+      yearValue: yearClaimsExpenses,
+      color: "text-orange-600",
+      bgColor: "bg-orange-50",
     },
     {
       title: "Lucro",
