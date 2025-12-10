@@ -219,8 +219,23 @@ export default function TransactionDialog({
             </div>
 
             <div>
-              <Label>Subcategoria</Label>
-              <Input {...register("subcategory")} placeholder="Ex: Marketing" />
+              <Label>Projeto</Label>
+              <Select 
+                onValueChange={(value) => setValue("project_id", value === "none" ? null : value)} 
+                value={watch("project_id") || "none"}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem projeto</SelectItem>
+                  {expenseProjects?.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -233,7 +248,6 @@ export default function TransactionDialog({
             <Label>Fornecedor/Cliente *</Label>
             <Input {...register("entity_name", { required: true })} placeholder="Nome da empresa/pessoa" />
           </div>
-
 
           <div className="grid grid-cols-3 gap-4">
             <div>
@@ -293,31 +307,9 @@ export default function TransactionDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Nº Fatura/Recibo</Label>
-              <Input {...register("invoice_number")} placeholder="FT 2024/001" />
-            </div>
-
-            <div>
-              <Label>Projeto</Label>
-              <Select 
-                onValueChange={(value) => setValue("project_id", value === "none" ? null : value)} 
-                value={watch("project_id") || "none"}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem projeto</SelectItem>
-                  {expenseProjects?.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label>Nº Fatura/Recibo</Label>
+            <Input {...register("invoice_number")} placeholder="FT 2024/001" />
           </div>
 
           <div>
