@@ -344,18 +344,27 @@ export default function LegalPage() {
                                   
                                   const { data, error } = await supabase.storage
                                     .from("legal-documents")
-                                    .createSignedUrl(filePath, 3600);
+                                    .download(filePath);
                                   
                                   if (error) throw error;
-                                  if (data?.signedUrl) {
-                                    window.open(data.signedUrl, '_blank');
+                                  if (data) {
+                                    const url = URL.createObjectURL(data);
+                                    const fileName = filePath.split('/').pop() || 'attachment';
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = fileName;
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                    URL.revokeObjectURL(url);
                                   }
                                 } catch (error) {
-                                  console.error("Error getting signed URL:", error);
-                                  toast.error("Erro ao abrir ficheiro");
+                                  console.error("Error downloading file:", error);
+                                  toast.error("Erro ao descarregar ficheiro");
                                 }
                               }}
                               className="text-primary hover:text-primary/80 inline-flex"
+                              title="Descarregar anexo"
                             >
                               <Paperclip className="w-4 h-4" />
                             </button>
