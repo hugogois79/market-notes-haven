@@ -52,6 +52,7 @@ export default function TransactionDialog({
   const queryClient = useQueryClient();
   const { register, handleSubmit, reset, watch, setValue } = useForm();
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [supplierOpen, setSupplierOpen] = useState(false);
 
   const { data: bankAccounts } = useQuery({
     queryKey: ["bank-accounts", companyId],
@@ -88,6 +89,21 @@ export default function TransactionDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expense_categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Get suppliers (same as expenses module)
+  const { data: suppliers } = useQuery({
+    queryKey: ["suppliers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("suppliers")
         .select("*")
         .eq("is_active", true)
         .order("name");
@@ -303,7 +319,47 @@ export default function TransactionDialog({
 
           <div>
             <Label>Fornecedor/Cliente *</Label>
-            <Input {...register("entity_name", { required: true })} placeholder="Nome da empresa/pessoa" />
+            <Popover open={supplierOpen} onOpenChange={setSupplierOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={supplierOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  {watch("entity_name") || "Selecione..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-0">
+                <Command>
+                  <CommandInput placeholder="Pesquisar fornecedor..." />
+                  <CommandList>
+                    <CommandEmpty>Nenhum fornecedor encontrado.</CommandEmpty>
+                    <CommandGroup>
+                      {suppliers?.map((supplier) => (
+                        <CommandItem
+                          key={supplier.id}
+                          value={supplier.name}
+                          onSelect={() => {
+                            setValue("entity_name", supplier.name);
+                            setSupplierOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              watch("entity_name") === supplier.name ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {supplier.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
