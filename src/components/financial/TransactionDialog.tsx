@@ -609,20 +609,42 @@ export default function TransactionDialog({
               <div className="text-sm text-muted-foreground mb-2">
                 <span>Anexo existente: </span>
                 <span className="inline-flex items-center gap-1">
-                  <a 
-                    href={existingAttachment} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline truncate max-w-[200px] inline-block align-middle"
-                  >
+                  <span className="truncate max-w-[200px] inline-block align-middle">
                     {getFileName(existingAttachment)}
-                  </a>
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0 text-primary hover:text-primary/80"
+                    onClick={async () => {
+                      try {
+                        const response = await fetch(existingAttachment);
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = getFileName(existingAttachment);
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                      } catch (error) {
+                        console.error('Error downloading file:', error);
+                        toast.error('Erro ao descarregar ficheiro');
+                      }
+                    }}
+                    title="Descarregar ficheiro"
+                  >
+                    <Download className="h-3 w-3" />
+                  </Button>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     className="h-5 w-5 p-0 text-destructive hover:text-destructive"
                     onClick={removeExistingAttachment}
+                    title="Remover anexo"
                   >
                     <X className="h-3 w-3" />
                   </Button>
