@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Upload, Trash2, X, ChevronDown } from "lucide-react";
+import { Upload, Trash2, X, ChevronDown, Search } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -50,6 +50,7 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [contactSelectOpen, setContactSelectOpen] = useState(false);
+  const [contactSearch, setContactSearch] = useState("");
 
   const isEditMode = !!document;
 
@@ -225,6 +226,9 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
   };
 
   const selectedContacts = contacts.filter(c => selectedContactIds.includes(c.id));
+  const filteredContacts = contacts.filter(c => 
+    c.name.toLowerCase().includes(contactSearch.toLowerCase())
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -300,11 +304,22 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-full p-0 bg-background border" align="start">
+                <div className="p-2 border-b">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Pesquisar contatos..."
+                      value={contactSearch}
+                      onChange={(e) => setContactSearch(e.target.value)}
+                      className="pl-8 h-8"
+                    />
+                  </div>
+                </div>
                 <div className="max-h-60 overflow-y-auto p-2">
-                  {contacts.length === 0 ? (
-                    <p className="text-sm text-muted-foreground p-2">Nenhum contato disponível</p>
+                  {filteredContacts.length === 0 ? (
+                    <p className="text-sm text-muted-foreground p-2">Nenhum contato encontrado</p>
                   ) : (
-                    contacts.map((contact) => (
+                    filteredContacts.map((contact) => (
                       <div
                         key={contact.id}
                         className="flex items-center space-x-2 p-2 hover:bg-muted rounded cursor-pointer"
