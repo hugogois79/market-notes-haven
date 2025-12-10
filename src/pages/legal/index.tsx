@@ -22,6 +22,11 @@ interface LegalContact {
   role: string;
 }
 
+interface LegalDocumentContact {
+  contact_id: string;
+  legal_contacts: LegalContact;
+}
+
 interface LegalDocument {
   id: string;
   title: string;
@@ -33,6 +38,7 @@ interface LegalDocument {
   contact_id: string | null;
   legal_cases: LegalCase;
   legal_contacts: LegalContact | null;
+  legal_document_contacts?: LegalDocumentContact[];
 }
 
 const documentTypeBadgeColors: Record<string, string> = {
@@ -89,7 +95,14 @@ export default function LegalPage() {
     return documents.filter(doc => {
       if (filters.caseId && doc.case_id !== filters.caseId) return false;
       if (filters.documentType && doc.document_type !== filters.documentType) return false;
-      if (filters.contactId && doc.contact_id !== filters.contactId) return false;
+      if (filters.contactId) {
+        // Check junction table first, then fallback to legacy contact_id
+        const hasContactInJunction = doc.legal_document_contacts?.some(
+          dc => dc.contact_id === filters.contactId
+        );
+        const hasLegacyContact = doc.contact_id === filters.contactId;
+        if (!hasContactInJunction && !hasLegacyContact) return false;
+      }
       if (filters.searchTerm) {
         const search = filters.searchTerm.toLowerCase();
         const matchesTitle = doc.title.toLowerCase().includes(search);
@@ -113,7 +126,8 @@ export default function LegalPage() {
           .select(`
             *,
             legal_cases(id, title, status),
-            legal_contacts(id, name, role)
+            legal_contacts(id, name, role),
+            legal_document_contacts(contact_id, legal_contacts(id, name, role))
           `)
           .eq("user_id", user.id)
           .order("created_date", { ascending: false }),
@@ -356,15 +370,28 @@ export default function LegalPage() {
                           {new Date(doc.created_date).toLocaleDateString("pt-PT")}
                         </TableCell>
                         <TableCell>
-                          {doc.legal_contacts && (
-                            <Badge 
-                              variant="secondary" 
-                              className="text-xs"
-                              title={doc.legal_contacts.role}
-                            >
-                              {doc.legal_contacts.name}
-                            </Badge>
-                          )}
+                          <div className="flex flex-wrap gap-1">
+                            {doc.legal_document_contacts && doc.legal_document_contacts.length > 0 ? (
+                              doc.legal_document_contacts.map((dc) => (
+                                <Badge 
+                                  key={dc.contact_id}
+                                  variant="secondary" 
+                                  className="text-xs"
+                                  title={dc.legal_contacts?.role}
+                                >
+                                  {dc.legal_contacts?.name}
+                                </Badge>
+                              ))
+                            ) : doc.legal_contacts ? (
+                              <Badge 
+                                variant="secondary" 
+                                className="text-xs"
+                                title={doc.legal_contacts.role}
+                              >
+                                {doc.legal_contacts.name}
+                              </Badge>
+                            ) : null}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Button 
