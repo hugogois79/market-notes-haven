@@ -121,7 +121,7 @@ export default function BudgetingManagement({ companyId }: BudgetingManagementPr
       
       const { data, error } = await supabase
         .from("financial_transactions")
-        .select("total_amount, date, project_id, type, category")
+        .select("total_amount, date, project_id, type, category, category_id")
         .gte("date", startDate)
         .lte("date", endDate);
       

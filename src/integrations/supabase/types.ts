@@ -848,6 +848,7 @@ export type Database = {
           amount_net: number
           bank_account_id: string | null
           category: Database["public"]["Enums"]["transaction_category"]
+          category_id: string | null
           company_id: string
           created_at: string
           created_by: string
@@ -871,6 +872,7 @@ export type Database = {
           amount_net: number
           bank_account_id?: string | null
           category: Database["public"]["Enums"]["transaction_category"]
+          category_id?: string | null
           company_id: string
           created_at?: string
           created_by: string
@@ -894,6 +896,7 @@ export type Database = {
           amount_net?: number
           bank_account_id?: string | null
           category?: Database["public"]["Enums"]["transaction_category"]
+          category_id?: string | null
           company_id?: string
           created_at?: string
           created_by?: string
@@ -919,6 +922,13 @@ export type Database = {
             columns: ["bank_account_id"]
             isOneToOne: false
             referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
             referencedColumns: ["id"]
           },
           {

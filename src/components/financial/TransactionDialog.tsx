@@ -51,28 +51,50 @@ export default function TransactionDialog({
     },
   });
 
-  const { data: projects } = useQuery({
-    queryKey: ["financial-projects", companyId],
+  // Use expense_projects instead of financial_projects (same as expenses module)
+  const { data: expenseProjects } = useQuery({
+    queryKey: ["expense-projects-active"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("financial_projects")
+        .from("expense_projects")
         .select("*")
-        .eq("company_id", companyId)
-        .eq("status", "active");
+        .eq("is_active", true)
+        .order("name");
       
       if (error) throw error;
       return data;
     },
   });
 
+  // Get expense categories (same as expenses module)
+  const { data: expenseCategories } = useQuery({
+    queryKey: ["expense-categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expense_categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const transactionType = watch("type");
+
   useEffect(() => {
     if (transaction) {
-      reset(transaction);
+      reset({
+        ...transaction,
+        category_id: transaction.category_id || "",
+      });
     } else {
       reset({
         date: new Date().toISOString().split('T')[0],
         type: 'expense',
         category: 'other',
+        category_id: "",
         payment_method: 'bank_transfer',
         vat_rate: 23,
       });
@@ -106,6 +128,10 @@ export default function TransactionDialog({
         vat_rate: Number(data.vat_rate),
         vat_amount: Number(data.vat_amount),
         total_amount: Number(data.total_amount),
+        project_id: data.project_id || null,
+        category_id: data.category_id || null,
+        // Keep default category for the enum field (required)
+        category: 'other',
       };
 
       if (transaction) {
@@ -167,18 +193,27 @@ export default function TransactionDialog({
 
             <div>
               <Label>Categoria *</Label>
-              <Select onValueChange={(value) => setValue("category", value)} defaultValue={watch("category")}>
+              <Select 
+                onValueChange={(value) => setValue("category_id", value)} 
+                value={watch("category_id") || ""}
+              >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sales">Vendas</SelectItem>
-                  <SelectItem value="materials">Materiais</SelectItem>
-                  <SelectItem value="salaries">Salários</SelectItem>
-                  <SelectItem value="services">Serviços</SelectItem>
-                  <SelectItem value="taxes">Impostos</SelectItem>
-                  <SelectItem value="utilities">Utilidades</SelectItem>
-                  <SelectItem value="other">Outro</SelectItem>
+                  {expenseCategories
+                    ?.filter(cat => {
+                      // Filter categories based on transaction type
+                      if (transactionType === 'income') {
+                        return cat.category_type === 'receita' || cat.category_type === 'ambos';
+                      }
+                      return cat.category_type === 'despesa' || cat.category_type === 'ambos';
+                    })
+                    .map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -195,9 +230,10 @@ export default function TransactionDialog({
           </div>
 
           <div>
-            <Label>Entidade (Cliente/Fornecedor) *</Label>
+            <Label>Fornecedor/Cliente *</Label>
             <Input {...register("entity_name", { required: true })} placeholder="Nome da empresa/pessoa" />
           </div>
+
 
           <div className="grid grid-cols-3 gap-4">
             <div>
@@ -265,12 +301,16 @@ export default function TransactionDialog({
 
             <div>
               <Label>Projeto</Label>
-              <Select onValueChange={(value) => setValue("project_id", value)} defaultValue={watch("project_id")}>
+              <Select 
+                onValueChange={(value) => setValue("project_id", value === "none" ? null : value)} 
+                value={watch("project_id") || "none"}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects?.map((project) => (
+                  <SelectItem value="none">Sem projeto</SelectItem>
+                  {expenseProjects?.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
                     </SelectItem>
