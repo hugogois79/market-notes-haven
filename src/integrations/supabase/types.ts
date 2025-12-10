@@ -1724,6 +1724,7 @@ export type Database = {
       legal_documents: {
         Row: {
           attachment_url: string | null
+          attachments: string[] | null
           case_id: string | null
           contact_id: string | null
           created_at: string | null
@@ -1737,6 +1738,7 @@ export type Database = {
         }
         Insert: {
           attachment_url?: string | null
+          attachments?: string[] | null
           case_id?: string | null
           contact_id?: string | null
           created_at?: string | null
@@ -1750,6 +1752,7 @@ export type Database = {
         }
         Update: {
           attachment_url?: string | null
+          attachments?: string[] | null
           case_id?: string | null
           contact_id?: string | null
           created_at?: string | null

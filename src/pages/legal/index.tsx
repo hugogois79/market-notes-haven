@@ -33,6 +33,7 @@ interface LegalDocument {
   description: string | null;
   document_type: string;
   attachment_url: string | null;
+  attachments: string[] | null;
   created_date: string;
   case_id: string;
   contact_id: string | null;
@@ -332,43 +333,51 @@ export default function LegalPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                          {doc.attachment_url && (
-                            <button
-                              onClick={async (e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                try {
-                                  const filePath = doc.attachment_url!.includes('legal-documents/')
-                                    ? doc.attachment_url!.split('legal-documents/')[1]
-                                    : doc.attachment_url!;
-                                  
-                                  const { data, error } = await supabase.storage
-                                    .from("legal-documents")
-                                    .download(filePath);
-                                  
-                                  if (error) throw error;
-                                  if (data) {
-                                    const url = URL.createObjectURL(data);
-                                    const fileName = filePath.split('/').pop() || 'attachment';
-                                    const link = document.createElement('a');
-                                    link.href = url;
-                                    link.download = fileName;
-                                    document.body.appendChild(link);
-                                    link.click();
-                                    document.body.removeChild(link);
-                                    URL.revokeObjectURL(url);
+                          {(() => {
+                            const attachments = doc.attachments || (doc.attachment_url ? [doc.attachment_url] : []);
+                            if (attachments.length === 0) return null;
+                            return (
+                              <button
+                                onClick={async (e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  // Download first attachment
+                                  try {
+                                    const filePath = attachments[0].includes('legal-documents/')
+                                      ? attachments[0].split('legal-documents/')[1]
+                                      : attachments[0];
+                                    
+                                    const { data, error } = await supabase.storage
+                                      .from("legal-documents")
+                                      .download(filePath);
+                                    
+                                    if (error) throw error;
+                                    if (data) {
+                                      const url = URL.createObjectURL(data);
+                                      const fileName = filePath.split('/').pop() || 'attachment';
+                                      const link = window.document.createElement('a');
+                                      link.href = url;
+                                      link.download = fileName;
+                                      window.document.body.appendChild(link);
+                                      link.click();
+                                      window.document.body.removeChild(link);
+                                      URL.revokeObjectURL(url);
+                                    }
+                                  } catch (error) {
+                                    console.error("Error downloading file:", error);
+                                    toast.error("Erro ao descarregar ficheiro");
                                   }
-                                } catch (error) {
-                                  console.error("Error downloading file:", error);
-                                  toast.error("Erro ao descarregar ficheiro");
-                                }
-                              }}
-                              className="text-primary hover:text-primary/80 inline-flex"
-                              title="Descarregar anexo"
-                            >
-                              <Paperclip className="w-4 h-4" />
-                            </button>
-                          )}
+                                }}
+                                className="text-primary hover:text-primary/80 inline-flex items-center gap-1"
+                                title={attachments.length > 1 ? `${attachments.length} anexos` : "Descarregar anexo"}
+                              >
+                                <Paperclip className="w-4 h-4" />
+                                {attachments.length > 1 && (
+                                  <span className="text-xs font-medium">{attachments.length}</span>
+                                )}
+                              </button>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground max-w-md">
                           <div className="line-clamp-2">
