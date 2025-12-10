@@ -333,20 +333,41 @@ export default function TransactionDialog({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[400px] p-0">
-                <Command>
+                <Command shouldFilter={false}>
                   <CommandInput 
                     placeholder="Pesquisar ou adicionar fornecedor..." 
                     value={supplierSearch}
                     onValueChange={setSupplierSearch}
                   />
                   <CommandList>
-                    <CommandEmpty>
-                      {supplierSearch.trim() ? (
+                    <CommandGroup>
+                      {suppliers
+                        ?.filter(s => s.name.toLowerCase().includes(supplierSearch.toLowerCase()))
+                        .map((supplier) => (
+                          <CommandItem
+                            key={supplier.id}
+                            value={supplier.name}
+                            onSelect={() => {
+                              setValue("entity_name", supplier.name);
+                              setSupplierSearch("");
+                              setSupplierOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                watch("entity_name") === supplier.name ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {supplier.name}
+                          </CommandItem>
+                        ))}
+                      {supplierSearch.trim() && 
+                        !suppliers?.some(s => s.name.toLowerCase() === supplierSearch.trim().toLowerCase()) && (
                         <CommandItem
-                          value={supplierSearch}
+                          value={`add-${supplierSearch}`}
                           onSelect={async () => {
                             const trimmedName = supplierSearch.trim();
-                            // Add new supplier to database
                             const { error } = await supabase
                               .from("suppliers")
                               .insert({ name: trimmedName });
@@ -366,31 +387,11 @@ export default function TransactionDialog({
                         >
                           <span className="text-primary">+ Adicionar "{supplierSearch.trim()}"</span>
                         </CommandItem>
-                      ) : (
-                        <span>Nenhum fornecedor encontrado.</span>
                       )}
-                    </CommandEmpty>
-                    <CommandGroup>
-                      {suppliers?.map((supplier) => (
-                        <CommandItem
-                          key={supplier.id}
-                          value={supplier.name}
-                          onSelect={() => {
-                            setValue("entity_name", supplier.name);
-                            setSupplierSearch("");
-                            setSupplierOpen(false);
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              watch("entity_name") === supplier.name ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {supplier.name}
-                        </CommandItem>
-                      ))}
                     </CommandGroup>
+                    {!supplierSearch && suppliers?.length === 0 && (
+                      <CommandEmpty>Nenhum fornecedor encontrado.</CommandEmpty>
+                    )}
                   </CommandList>
                 </Command>
               </PopoverContent>
