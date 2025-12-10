@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Upload, Paperclip, ChevronDown, ChevronRight, Users, Briefcase, Pencil, Banknote } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -43,6 +43,9 @@ const documentTypeBadgeColors: Record<string, string> = {
 };
 
 export default function LegalPage() {
+  const [searchParams] = useSearchParams();
+  const caseIdFromUrl = searchParams.get("case") || "";
+  
   const [documents, setDocuments] = useState<LegalDocument[]>([]);
   const [cases, setCases] = useState<LegalCase[]>([]);
   const [contacts, setContacts] = useState<LegalContact[]>([]);
@@ -50,7 +53,7 @@ export default function LegalPage() {
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<LegalDocument | null>(null);
   const [filters, setFilters] = useState({
-    caseId: "",
+    caseId: caseIdFromUrl,
     documentType: "",
     contactId: "",
     searchTerm: "",
@@ -59,6 +62,13 @@ export default function LegalPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Update filter when URL param changes
+  useEffect(() => {
+    if (caseIdFromUrl) {
+      setFilters(prev => ({ ...prev, caseId: caseIdFromUrl }));
+    }
+  }, [caseIdFromUrl]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value === "all" ? "" : value }));
@@ -139,11 +149,19 @@ export default function LegalPage() {
 
   const [openCases, setOpenCases] = useState<Record<string, boolean>>({});
 
+  // Auto-expand the filtered case when coming from cases page
+  useEffect(() => {
+    if (caseIdFromUrl && cases.length > 0) {
+      const filteredCase = cases.find(c => c.id === caseIdFromUrl);
+      if (filteredCase) {
+        setOpenCases(prev => ({ ...prev, [filteredCase.title]: true }));
+      }
+    }
+  }, [caseIdFromUrl, cases]);
+
   const toggleCase = (caseTitle: string) => {
     setOpenCases(prev => ({ ...prev, [caseTitle]: !prev[caseTitle] }));
   };
-
-  
 
   const handleEditDocument = (doc: LegalDocument) => {
     setSelectedDocument(doc);
