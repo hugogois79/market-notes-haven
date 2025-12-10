@@ -379,8 +379,8 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
           <div className="space-y-2">
             <Label htmlFor="file">Anexo</Label>
             {document?.attachment_url && !file && (
-              <div className="text-sm text-muted-foreground mb-2">
-                Anexo atual:{" "}
+              <div className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                <span>Anexo atual:</span>
                 <button
                   type="button"
                   onClick={async () => {
@@ -410,9 +410,10 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
                       toast.error("Erro ao descarregar ficheiro");
                     }
                   }}
-                  className="text-primary underline"
+                  className="text-primary underline hover:text-primary/80 truncate max-w-[300px]"
+                  title={document.attachment_url.split('/').pop() || 'ficheiro'}
                 >
-                  Ver ficheiro
+                  {document.attachment_url.split('/').pop() || 'Ver ficheiro'}
                 </button>
               </div>
             )}
