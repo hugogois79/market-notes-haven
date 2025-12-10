@@ -3369,6 +3369,10 @@ export type Database = {
         Args: { p_account_id: string; p_company_id: string }
         Returns: number
       }
+      calculate_account_balance_v2: {
+        Args: { p_account_id: string }
+        Returns: number
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
