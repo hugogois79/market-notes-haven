@@ -6,6 +6,13 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import TransactionDialog from "./TransactionDialog";
 import TransactionTable from "./TransactionTable";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface TransactionManagementProps {
   companyId: string;
@@ -14,6 +21,7 @@ interface TransactionManagementProps {
 export default function TransactionManagement({ companyId }: TransactionManagementProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
   const queryClient = useQueryClient();
 
   const { data: transactions, isLoading } = useQuery({
@@ -51,7 +59,9 @@ export default function TransactionManagement({ companyId }: TransactionManageme
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expense_projects")
-        .select("id, name");
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
       if (error) throw error;
       return data;
     },
@@ -66,6 +76,13 @@ export default function TransactionManagement({ companyId }: TransactionManageme
       project_name: projects?.find((p) => p.id === t.project_id)?.name,
     }));
   }, [transactions, categories, projects]);
+
+  // Filter transactions by project
+  const filteredTransactions = useMemo(() => {
+    if (selectedProjectId === "all") return enrichedTransactions;
+    if (selectedProjectId === "none") return enrichedTransactions.filter(t => !t.project_id);
+    return enrichedTransactions.filter(t => t.project_id === selectedProjectId);
+  }, [enrichedTransactions, selectedProjectId]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -106,14 +123,30 @@ export default function TransactionManagement({ companyId }: TransactionManageme
             Gerir receitas e despesas da empresa
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Movimento
-        </Button>
+        <div className="flex items-center gap-3">
+          <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrar por projeto" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os projetos</SelectItem>
+              <SelectItem value="none">Sem projeto</SelectItem>
+              {projects?.map((project) => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Movimento
+          </Button>
+        </div>
       </div>
 
       <TransactionTable
-        transactions={enrichedTransactions}
+        transactions={filteredTransactions}
         isLoading={isLoading}
         onEdit={handleEdit}
         onDelete={handleDelete}
