@@ -203,11 +203,11 @@ export default function TransactionDialog({
                 <SelectContent>
                   {expenseCategories
                     ?.filter(cat => {
-                      // Filter categories based on transaction type
+                      // Filter categories based on transaction type (support both 'expense'/'income' and 'despesa'/'receita')
                       if (transactionType === 'income') {
-                        return cat.category_type === 'receita' || cat.category_type === 'ambos';
+                        return cat.category_type === 'receita' || cat.category_type === 'income' || cat.category_type === 'ambos' || cat.category_type === 'both';
                       }
-                      return cat.category_type === 'despesa' || cat.category_type === 'ambos';
+                      return cat.category_type === 'despesa' || cat.category_type === 'expense' || cat.category_type === 'ambos' || cat.category_type === 'both' || !cat.category_type;
                     })
                     .map((category) => (
                       <SelectItem key={category.id} value={category.id}>
