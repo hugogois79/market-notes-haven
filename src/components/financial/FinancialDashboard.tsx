@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, DollarSign, Wallet, ChevronDown, ChevronRight } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Wallet, ChevronDown, ChevronRight, Landmark } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -97,6 +97,27 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
       return data;
     },
   });
+
+  // Fetch loans for the selected company
+  const { data: loans } = useQuery({
+    queryKey: ["loans-dashboard", companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("company_loans")
+        .select("id, amount, lending_company_id, borrowing_company_id, status")
+        .or(`lending_company_id.eq.${companyId},borrowing_company_id.eq.${companyId}`);
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Calculate loan totals for selected company
+  const loansLent = loans?.filter(l => l.lending_company_id === companyId && l.status === 'active')
+    .reduce((sum, l) => sum + Number(l.amount), 0) || 0;
+  const loansBorrowed = loans?.filter(l => l.borrowing_company_id === companyId && l.status === 'active')
+    .reduce((sum, l) => sum + Number(l.amount), 0) || 0;
+  const netLoans = loansLent - loansBorrowed;
 
   // Filter transactions by period
   const yearTransactions = transactions || [];
@@ -272,6 +293,29 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
             <div className="w-32 text-center">
               <div className="text-lg font-bold text-orange-600">
                 {formatCurrency(yearClaimsExpenses)}
+              </div>
+            </div>
+          </div>
+
+          {/* Empréstimos */}
+          <div className="flex items-center p-4 hover:bg-muted/50 transition-colors">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="p-2 rounded-lg bg-purple-50">
+                <Landmark className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Empréstimos</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  A receber: {formatCurrency(loansLent)} | A pagar: {formatCurrency(loansBorrowed)}
+                </p>
+              </div>
+            </div>
+            <div className="w-32 text-center text-lg font-bold text-muted-foreground">
+              —
+            </div>
+            <div className="w-32 text-center">
+              <div className={`text-lg font-bold ${netLoans >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {formatCurrency(netLoans)}
               </div>
             </div>
           </div>
