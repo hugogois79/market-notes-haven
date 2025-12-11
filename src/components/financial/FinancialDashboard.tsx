@@ -19,6 +19,7 @@ interface CompanyExpenseBreakdown {
 
 export default function FinancialDashboard({ companyId }: FinancialDashboardProps) {
   const [expensesExpanded, setExpensesExpanded] = useState(false);
+  const [loansExpanded, setLoansExpanded] = useState(false);
   
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -98,26 +99,53 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
     },
   });
 
-  // Fetch loans for the selected company
-  const { data: loans } = useQuery({
-    queryKey: ["loans-dashboard", companyId],
+  // Fetch ALL loans across all companies
+  const { data: allLoans } = useQuery({
+    queryKey: ["all-loans-dashboard"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("company_loans")
-        .select("id, amount, lending_company_id, borrowing_company_id, status")
-        .or(`lending_company_id.eq.${companyId},borrowing_company_id.eq.${companyId}`);
+        .select("id, amount, lending_company_id, borrowing_company_id, status");
       
       if (error) throw error;
       return data;
     },
   });
 
-  // Calculate loan totals for selected company
-  const loansLent = loans?.filter(l => l.lending_company_id === companyId && l.status === 'active')
+  // Calculate total loan amounts across ALL companies
+  const totalLoansLent = allLoans?.filter(l => l.status === 'active')
     .reduce((sum, l) => sum + Number(l.amount), 0) || 0;
-  const loansBorrowed = loans?.filter(l => l.borrowing_company_id === companyId && l.status === 'active')
+  const totalLoansBorrowed = allLoans?.filter(l => l.status === 'active')
     .reduce((sum, l) => sum + Number(l.amount), 0) || 0;
-  const netLoans = loansLent - loansBorrowed;
+  // Net is the same since every loan has a lender and borrower
+  // But we show the total credit (what we lent out) vs debit (what we borrowed)
+  
+  // Calculate breakdown by company (showing net position per company)
+  interface CompanyLoanBreakdown {
+    companyId: string;
+    companyName: string;
+    lent: number;
+    borrowed: number;
+    net: number;
+  }
+  
+  const loanBreakdown: CompanyLoanBreakdown[] = (companies || []).map(company => {
+    const lent = allLoans?.filter(l => l.lending_company_id === company.id && l.status === 'active')
+      .reduce((sum, l) => sum + Number(l.amount), 0) || 0;
+    const borrowed = allLoans?.filter(l => l.borrowing_company_id === company.id && l.status === 'active')
+      .reduce((sum, l) => sum + Number(l.amount), 0) || 0;
+    
+    return {
+      companyId: company.id,
+      companyName: company.name,
+      lent,
+      borrowed,
+      net: lent - borrowed,
+    };
+  }).filter(b => b.lent > 0 || b.borrowed > 0);
+
+  // Calculate net across all companies (should be 0 for internal loans, but useful to show)
+  const netLoansTotal = loanBreakdown.reduce((sum, b) => sum + b.net, 0);
 
   // Filter transactions by period
   const yearTransactions = transactions || [];
@@ -297,28 +325,62 @@ export default function FinancialDashboard({ companyId }: FinancialDashboardProp
             </div>
           </div>
 
-          {/* Empréstimos */}
-          <div className="flex items-center p-4 hover:bg-muted/50 transition-colors">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="p-2 rounded-lg bg-purple-50">
-                <Landmark className="h-5 w-5 text-purple-600" />
+          {/* Empréstimos - Expandable */}
+          <Collapsible open={loansExpanded} onOpenChange={setLoansExpanded}>
+            <CollapsibleTrigger asChild>
+              <div className="flex items-center p-4 hover:bg-muted/50 transition-colors cursor-pointer">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="p-2 rounded-lg bg-purple-50">
+                    <Landmark className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {loansExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Empréstimos</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        A receber: {formatCurrency(totalLoansLent)} | A pagar: {formatCurrency(totalLoansBorrowed)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="w-32 text-center text-lg font-bold text-muted-foreground">
+                  —
+                </div>
+                <div className="w-32 text-center">
+                  <div className={`text-lg font-bold ${netLoansTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatCurrency(netLoansTotal)}
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Empréstimos</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  A receber: {formatCurrency(loansLent)} | A pagar: {formatCurrency(loansBorrowed)}
-                </p>
-              </div>
-            </div>
-            <div className="w-32 text-center text-lg font-bold text-muted-foreground">
-              —
-            </div>
-            <div className="w-32 text-center">
-              <div className={`text-lg font-bold ${netLoans >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(netLoans)}
-              </div>
-            </div>
-          </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              {loanBreakdown.map((company) => (
+                <div 
+                  key={company.companyId}
+                  className="flex items-center p-3 pl-16 bg-muted/20 hover:bg-muted/40 transition-colors"
+                >
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">{company.companyName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      A receber: {formatCurrency(company.lent)} | A pagar: {formatCurrency(company.borrowed)}
+                    </p>
+                  </div>
+                  <div className="w-32 text-center text-sm font-medium text-muted-foreground">
+                    —
+                  </div>
+                  <div className="w-32 text-center">
+                    <div className={`text-sm font-medium ${company.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(company.net)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Lucro */}
           <div className="flex items-center p-4 hover:bg-muted/50 transition-colors">
