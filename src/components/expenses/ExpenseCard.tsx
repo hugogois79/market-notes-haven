@@ -11,14 +11,16 @@ interface ExpenseCardProps {
     id: string;
     claim_number: number;
     created_at: string;
+    claim_date: string;
     claim_type: string;
     description: string | null;
     total_amount: number;
     status: string;
   };
+  requesterName?: string;
 }
 
-const ExpenseCard = ({ claim }: ExpenseCardProps) => {
+const ExpenseCard = ({ claim, requesterName }: ExpenseCardProps) => {
   const navigate = useNavigate();
 
   const getStatusBadge = (status: string) => {
@@ -57,10 +59,17 @@ const ExpenseCard = ({ claim }: ExpenseCardProps) => {
         {/* Header: Date and Status */}
         <div className="flex justify-between items-center">
           <span className="text-sm text-muted-foreground">
-            {format(new Date(claim.created_at), "dd/MM/yyyy")}
+            {format(new Date(claim.claim_date || claim.created_at), "dd/MM/yyyy")}
           </span>
           {getStatusBadge(claim.status)}
         </div>
+
+        {/* Requester */}
+        {requesterName && (
+          <p className="text-xs text-muted-foreground">
+            Requisitante: <span className="font-medium">{requesterName}</span>
+          </p>
+        )}
 
         {/* Body: Description and Type */}
         <div className="space-y-1">
