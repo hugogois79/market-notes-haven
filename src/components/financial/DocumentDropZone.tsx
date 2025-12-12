@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface DocumentAnalysis {
   documentType: "loan" | "transaction" | "unknown";
@@ -36,6 +37,60 @@ export default function DocumentDropZone({ companyId }: DocumentDropZoneProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<DocumentAnalysis | null>(null);
   const [fileName, setFileName] = useState<string>("");
+  const [isCreating, setIsCreating] = useState(false);
+  const queryClient = useQueryClient();
+
+  const createTransactionMutation = useMutation({
+    mutationFn: async (analysisData: DocumentAnalysis) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Utilizador não autenticado");
+      if (!companyId) throw new Error("Empresa não selecionada");
+
+      const extracted = analysisData.extractedData;
+      const totalAmount = extracted.amount || 0;
+      const vatRate = 23; // Default VAT rate
+      const netAmount = totalAmount / (1 + vatRate / 100);
+      const vatAmount = totalAmount - netAmount;
+
+      const transactionData = {
+        company_id: companyId,
+        created_by: user.id,
+        date: extracted.date || new Date().toISOString().split('T')[0],
+        type: (extracted.transactionType || 'expense') as 'income' | 'expense',
+        description: extracted.description || fileName || 'Transação importada',
+        entity_name: extracted.entityName || 'Desconhecido',
+        amount_net: netAmount,
+        vat_rate: vatRate,
+        vat_amount: vatAmount,
+        total_amount: totalAmount,
+        payment_method: 'bank_transfer' as const,
+        category: 'other' as const,
+        invoice_number: extracted.invoiceNumber || null,
+      };
+
+      const { error } = await supabase
+        .from("financial_transactions")
+        .insert([transactionData]);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions-dashboard"] });
+      toast.success("Transação criada com sucesso!");
+      resetAnalysis();
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao criar transação: " + error.message);
+    },
+  });
+
+  const handleCreateTransaction = () => {
+    if (!analysis) return;
+    setIsCreating(true);
+    createTransactionMutation.mutate(analysis);
+    setIsCreating(false);
+  };
 
   const readFileAsText = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -304,13 +359,26 @@ Note: This is an Excel spreadsheet. Please analyze based on the filename.`;
             {/* Action Buttons */}
             {analysis.documentType !== "unknown" && companyId && (
               <div className="flex gap-3 pt-4 border-t">
-                <Button className="flex-1" disabled>
-                  <ArrowRight className="mr-2 h-4 w-4" />
-                  Criar {getDocumentTypeLabel(analysis.documentType)}
-                </Button>
-                <p className="text-xs text-muted-foreground self-center">
-                  (Funcionalidade em desenvolvimento)
-                </p>
+                {analysis.documentType === "transaction" && (
+                  <Button 
+                    className="flex-1" 
+                    onClick={handleCreateTransaction}
+                    disabled={isCreating || createTransactionMutation.isPending}
+                  >
+                    {createTransactionMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ArrowRight className="mr-2 h-4 w-4" />
+                    )}
+                    Criar Transação
+                  </Button>
+                )}
+                {analysis.documentType === "loan" && (
+                  <Button className="flex-1" disabled>
+                    <ArrowRight className="mr-2 h-4 w-4" />
+                    Criar Empréstimo (Em desenvolvimento)
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
