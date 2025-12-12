@@ -135,6 +135,7 @@ const NewExpensePage = () => {
 
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [projectOpen, setProjectOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
 
   const createClaimMutation = useMutation({
     mutationFn: expenseClaimService.createExpenseClaim,
@@ -792,11 +793,12 @@ const NewExpensePage = () => {
             </div>
             <div>
               <Label htmlFor="category">Categoria (opcional)</Label>
-              <Popover>
+              <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     role="combobox"
+                    aria-expanded={categoryOpen}
                     className="w-full justify-between font-normal"
                   >
                     {expenseForm.category_id
@@ -813,7 +815,10 @@ const NewExpensePage = () => {
                       <CommandGroup>
                         <CommandItem
                           value="none"
-                          onSelect={() => setExpenseForm({ ...expenseForm, category_id: "" })}
+                          onSelect={() => {
+                            setExpenseForm({ ...expenseForm, category_id: "" });
+                            setCategoryOpen(false);
+                          }}
                         >
                           <Check
                             className={cn(
@@ -830,7 +835,10 @@ const NewExpensePage = () => {
                             <CommandItem
                               key={category.id}
                               value={category.name}
-                              onSelect={() => setExpenseForm({ ...expenseForm, category_id: category.id })}
+                              onSelect={() => {
+                                setExpenseForm({ ...expenseForm, category_id: category.id });
+                                setCategoryOpen(false);
+                              }}
                             >
                               <Check
                                 className={cn(
