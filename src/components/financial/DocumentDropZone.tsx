@@ -142,16 +142,14 @@ export default function DocumentDropZone({ companyId }: DocumentDropZoneProps) {
 
   const extractPdfText = async (file: File): Promise<string> => {
     try {
-      // Disable worker to avoid CORS issues - use main thread
-      pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+      // Configure worker for pdfjs-dist v5
+      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+        'pdfjs-dist/build/pdf.worker.min.mjs',
+        import.meta.url
+      ).toString();
       
       const arrayBuffer = await file.arrayBuffer();
-      const loadingTask = pdfjsLib.getDocument({ 
-        data: arrayBuffer,
-        useWorkerFetch: false,
-        isEvalSupported: false,
-        useSystemFonts: true,
-      });
+      const loadingTask = pdfjsLib.getDocument(arrayBuffer);
       const pdf = await loadingTask.promise;
       
       let fullText = "";
