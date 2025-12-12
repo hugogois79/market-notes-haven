@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, CreditCard, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +32,7 @@ export default function BankAccountManagement({ companyId }: BankAccountManageme
         .from("bank_accounts")
         .select("*, companies(name)")
         .eq("company_id", companyId)
+        .order("account_type")
         .order("account_name");
       
       if (error) throw error;
@@ -53,42 +54,49 @@ export default function BankAccountManagement({ companyId }: BankAccountManageme
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bank-accounts"] });
-      toast.success("Account deleted");
+      toast.success("Conta eliminada");
     },
     onError: (error) => {
-      toast.error("Error: " + error.message);
+      toast.error("Erro: " + error.message);
     },
   });
 
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Bank Accounts</h2>
-          <p className="text-muted-foreground">Manage company accounts</p>
-        </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Account
-        </Button>
-      </div>
+  const bankAccounts = accounts?.filter(a => a.account_type === 'bank_account' || !a.account_type) || [];
+  const creditCards = accounts?.filter(a => a.account_type === 'credit_card') || [];
 
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
+  const renderAccountTable = (accountsList: any[], isCreditCard: boolean) => (
+    <div className="border rounded-lg">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{isCreditCard ? "Nome do Cartão" : "Nome da Conta"}</TableHead>
+            <TableHead>{isCreditCard ? "Emissor" : "Banco"}</TableHead>
+            <TableHead>{isCreditCard ? "Últimos Dígitos" : "IBAN"}</TableHead>
+            <TableHead className="text-right">{isCreditCard ? "Saldo" : "Saldo Atual"}</TableHead>
+            <TableHead>Estado</TableHead>
+            <TableHead className="text-right">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {accountsList.length === 0 ? (
             <TableRow>
-              <TableHead>Account Name</TableHead>
-              <TableHead>Bank</TableHead>
-              <TableHead>IBAN</TableHead>
-              <TableHead className="text-right">Current Balance</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                {isCreditCard ? "Nenhum cartão de crédito registado" : "Nenhuma conta bancária registada"}
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {accounts?.map((account) => (
+          ) : (
+            accountsList.map((account) => (
               <TableRow key={account.id}>
-                <TableCell className="font-medium">{account.account_name}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    {isCreditCard ? (
+                      <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    {account.account_name}
+                  </div>
+                </TableCell>
                 <TableCell>{account.bank_name}</TableCell>
                 <TableCell>{account.account_number}</TableCell>
                 <TableCell className="text-right font-bold text-primary">
@@ -96,7 +104,7 @@ export default function BankAccountManagement({ companyId }: BankAccountManageme
                 </TableCell>
                 <TableCell>
                   <Badge variant={account.is_active ? "default" : "secondary"}>
-                    {account.is_active ? "Active" : "Inactive"}
+                    {account.is_active ? "Ativo" : "Inativo"}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
@@ -115,7 +123,7 @@ export default function BankAccountManagement({ companyId }: BankAccountManageme
                       variant="ghost"
                       size="icon"
                       onClick={() => {
-                        if (confirm("Delete account?")) {
+                        if (confirm("Eliminar conta?")) {
                           deleteMutation.mutate(account.id);
                         }
                       }}
@@ -125,9 +133,45 @@ export default function BankAccountManagement({ companyId }: BankAccountManageme
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+
+  return (
+    <div className="space-y-8">
+      {/* Bank Accounts Section */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Building2 className="h-6 w-6" />
+              Contas Bancárias
+            </h2>
+            <p className="text-muted-foreground">Gerir contas bancárias da empresa</p>
+          </div>
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Conta
+          </Button>
+        </div>
+        {renderAccountTable(bankAccounts, false)}
+      </div>
+
+      {/* Credit Cards Section */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <CreditCard className="h-6 w-6" />
+              Cartões de Crédito
+            </h2>
+            <p className="text-muted-foreground">Gerir cartões de crédito da empresa</p>
+          </div>
+        </div>
+        {renderAccountTable(creditCards, true)}
       </div>
 
       <BankAccountDialog
