@@ -41,7 +41,6 @@ interface TransactionDialogProps {
   onOpenChange: (open: boolean) => void;
   companyId: string;
   transaction?: any;
-  initialFile?: File | null;
 }
 
 export default function TransactionDialog({
@@ -49,7 +48,6 @@ export default function TransactionDialog({
   onOpenChange,
   companyId,
   transaction,
-  initialFile,
 }: TransactionDialogProps) {
   const queryClient = useQueryClient();
   const { register, handleSubmit, reset, watch, setValue } = useForm();
@@ -161,8 +159,7 @@ export default function TransactionDialog({
     // Reset flag when form loads - don't clear bank account on initial payment method set
     isPaymentMethodUserChange.current = false;
     
-    if (transaction?.id) {
-      // Editing existing transaction
+    if (transaction) {
       reset({
         ...transaction,
         company_id: transaction.company_id || companyId,
@@ -172,27 +169,7 @@ export default function TransactionDialog({
       });
       setExistingAttachment(transaction.invoice_file_url || null);
       setNewFiles([]);
-    } else if (transaction) {
-      // Pre-filled transaction from drag & drop (no id)
-      reset({
-        date: transaction.date || new Date().toISOString().split('T')[0],
-        type: transaction.type || 'expense',
-        category: transaction.category || 'other',
-        category_id: transaction.category_id || "",
-        payment_method: transaction.payment_method || 'bank_transfer',
-        vat_rate: transaction.vat_rate ?? 23,
-        company_id: transaction.company_id || companyId,
-        description: transaction.description || "",
-        entity_name: transaction.entity_name || "",
-        total_amount: transaction.total_amount || "",
-        amount_net: transaction.amount_net || "",
-        vat_amount: transaction.vat_amount || "",
-        project_id: transaction.project_id || "",
-      });
-      setExistingAttachment(null);
-      setNewFiles(initialFile ? [initialFile] : []);
     } else {
-      // New transaction
       reset({
         date: new Date().toISOString().split('T')[0],
         type: 'expense',
@@ -203,9 +180,9 @@ export default function TransactionDialog({
         company_id: companyId,
       });
       setExistingAttachment(null);
-      setNewFiles(initialFile ? [initialFile] : []);
+      setNewFiles([]);
     }
-  }, [transaction, reset, companyId, initialFile]);
+  }, [transaction, reset, companyId]);
 
   const totalAmount = watch("total_amount");
   const vatRate = watch("vat_rate");
@@ -241,14 +218,6 @@ export default function TransactionDialog({
       setValue("bank_account_id", "");
     }
   }, [selectedCompanyId, setValue, transaction]);
-
-  // Auto-select credit card for UBER transactions
-  const entityName = watch("entity_name");
-  useEffect(() => {
-    if (entityName && entityName.toLowerCase().includes("uber")) {
-      setValue("payment_method", "credit_card");
-    }
-  }, [entityName, setValue]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -332,7 +301,7 @@ export default function TransactionDialog({
         category: 'other' as const,
       };
 
-      if (transaction?.id) {
+      if (transaction) {
         const { error } = await supabase
           .from("financial_transactions")
           .update(transactionData)
