@@ -276,24 +276,29 @@ export default function TransactionDialog({
       
       // Helper to convert empty strings and "undefined" to null for UUID fields
       const toUuidOrNull = (value: any) => {
-        if (!value || value === "" || value === "undefined" || value === "none") return null;
+        if (!value || value === "" || value === "undefined" || value === "none" || value === undefined) return null;
         return value;
       };
       
       const transactionData = {
-        ...cleanData,
         company_id: cleanData.company_id || companyId,
         created_by: user?.id,
+        date: cleanData.date,
+        type: cleanData.type,
+        description: cleanData.description,
+        entity_name: cleanData.entity_name,
         amount_net: Number(cleanData.amount_net),
         vat_rate: Number(cleanData.vat_rate),
         vat_amount: Number(cleanData.vat_amount),
         total_amount: Number(cleanData.total_amount),
+        payment_method: cleanData.payment_method,
+        invoice_number: cleanData.invoice_number || null,
+        notes: cleanData.notes || null,
         project_id: toUuidOrNull(cleanData.project_id),
         category_id: toUuidOrNull(cleanData.category_id),
         bank_account_id: toUuidOrNull(cleanData.bank_account_id),
         invoice_file_url: fileUrl,
-        // Keep default category for the enum field (required)
-        category: 'other',
+        category: 'other' as const,
       };
 
       if (transaction) {
