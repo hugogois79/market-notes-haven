@@ -419,26 +419,6 @@ Note: This is an Excel spreadsheet. Please analyze based on the filename.`;
               <p className="text-sm text-muted-foreground">{analysis.reasoning}</p>
             </div>
 
-            {/* Action Buttons */}
-            {analysis.documentType !== "unknown" && companyId && (
-              <div className="flex gap-3 pt-4 border-t">
-                {analysis.documentType === "transaction" && (
-                  <Button 
-                    className="flex-1" 
-                    onClick={handleCreateTransaction}
-                  >
-                    <ArrowRight className="mr-2 h-4 w-4" />
-                    Criar Transação
-                  </Button>
-                )}
-                {analysis.documentType === "loan" && (
-                  <Button className="flex-1" disabled>
-                    <ArrowRight className="mr-2 h-4 w-4" />
-                    Criar Empréstimo (Em desenvolvimento)
-                  </Button>
-                )}
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
