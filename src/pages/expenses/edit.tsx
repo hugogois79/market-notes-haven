@@ -44,6 +44,7 @@ import {
 import { expenseClaimService, Expense } from "@/services/expenseClaimService";
 import { expenseRequesterService } from "@/services/expenseRequesterService";
 import { supplierService } from "@/services/supplierService";
+import { expenseUserService } from "@/services/expenseUserService";
 import { formatCurrency, cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
@@ -200,27 +201,31 @@ const EditExpensePage = () => {
     queryFn: () => expenseRequesterService.getRequesters(),
   });
 
-  // Get projects for dropdown - filtered by requester
+  // Get current user's expense record to filter projects
+  const { data: currentExpenseUser } = useQuery({
+    queryKey: ["current-expense-user"],
+    queryFn: () => expenseUserService.getCurrentUserExpenseRecord(),
+  });
+
+  // Get projects for dropdown - filtered by current user's assigned projects
   const { data: projects } = useQuery({
-    queryKey: ["expense-projects", requesterId],
+    queryKey: ["expense-projects", currentExpenseUser?.assigned_project_ids],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expense_projects")
         .select("id, name")
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .order("name", { ascending: true });
       if (error) throw error;
       
-      // Filter by requester's assigned projects
-      if (requesterId && requesters) {
-        const selectedRequester = requesters.find(r => r.id === requesterId);
-        if (selectedRequester?.assigned_project_ids?.length) {
-          return data?.filter(p => selectedRequester.assigned_project_ids.includes(p.id)) || [];
-        }
+      // Filter by current user's assigned projects
+      if (currentExpenseUser?.assigned_project_ids?.length) {
+        const filtered = data?.filter(p => currentExpenseUser.assigned_project_ids!.includes(p.id)) || [];
+        return filtered.sort((a, b) => a.name.localeCompare(b.name));
       }
       
       return data || [];
     },
-    enabled: !!requesters,
   });
 
   // Get suppliers for autocomplete
