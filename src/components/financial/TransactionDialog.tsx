@@ -60,6 +60,7 @@ export default function TransactionDialog({
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isPaymentMethodUserChange = useRef(false);
 
   // Fetch all companies for selection
   const { data: companies } = useQuery({
@@ -155,6 +156,9 @@ export default function TransactionDialog({
   });
 
   useEffect(() => {
+    // Reset flag when form loads - don't clear bank account on initial payment method set
+    isPaymentMethodUserChange.current = false;
+    
     if (transaction) {
       reset({
         ...transaction,
@@ -632,8 +636,11 @@ export default function TransactionDialog({
               <Select 
                 onValueChange={(value) => {
                   setValue("payment_method", value);
-                  // Clear bank account when payment method changes
-                  setValue("bank_account_id", null);
+                  // Clear bank account only when user manually changes payment method
+                  if (isPaymentMethodUserChange.current) {
+                    setValue("bank_account_id", null);
+                  }
+                  isPaymentMethodUserChange.current = true;
                 }} 
                 value={paymentMethod || "bank_transfer"}
               >
