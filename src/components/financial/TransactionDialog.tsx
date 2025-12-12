@@ -233,8 +233,9 @@ export default function TransactionDialog({
       // Upload new file if any
       if (newFiles.length > 0) {
         const file = newFiles[0];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${crypto.randomUUID()}.${fileExt}`;
+        // Sanitize filename: remove special chars, keep original name with UUID prefix for uniqueness
+        const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const fileName = `${crypto.randomUUID().slice(0, 8)}_${sanitizedName}`;
         const filePath = `transactions/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
