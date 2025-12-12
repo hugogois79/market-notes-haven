@@ -41,6 +41,7 @@ interface TransactionDialogProps {
   onOpenChange: (open: boolean) => void;
   companyId: string;
   transaction?: any;
+  prefilledFile?: File | null;
 }
 
 export default function TransactionDialog({
@@ -48,6 +49,7 @@ export default function TransactionDialog({
   onOpenChange,
   companyId,
   transaction,
+  prefilledFile,
 }: TransactionDialogProps) {
   const queryClient = useQueryClient();
   const { register, handleSubmit, reset, watch, setValue } = useForm();
@@ -180,9 +182,14 @@ export default function TransactionDialog({
         company_id: companyId,
       });
       setExistingAttachment(null);
-      setNewFiles([]);
+      // Use prefilled file if provided
+      if (prefilledFile) {
+        setNewFiles([prefilledFile]);
+      } else {
+        setNewFiles([]);
+      }
     }
-  }, [transaction, reset, companyId]);
+  }, [transaction, reset, companyId, prefilledFile]);
 
   const totalAmount = watch("total_amount");
   const vatRate = watch("vat_rate");
