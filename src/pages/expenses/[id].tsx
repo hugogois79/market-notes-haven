@@ -389,12 +389,15 @@ const ExpenseDetailPage = () => {
               }
               
               .page { 
-                page-break-after: always; 
                 background: white;
                 max-width: 850px;
                 margin: 0 auto;
                 padding: 48px;
                 min-height: 100vh;
+              }
+              
+              .page.has-receipts {
+                page-break-after: always;
               }
               
               /* Elegant Header */
@@ -708,7 +711,6 @@ const ExpenseDetailPage = () => {
               
               /* Receipt Pages */
               .receipt-page {
-                page-break-after: always;
                 background: white;
                 max-width: 850px;
                 margin: 0 auto;
@@ -716,6 +718,10 @@ const ExpenseDetailPage = () => {
                 min-height: 100vh;
                 display: flex;
                 flex-direction: column;
+              }
+              
+              .receipt-page:not(:last-child) {
+                page-break-after: always;
               }
               
               .receipt-header {
@@ -779,7 +785,7 @@ const ExpenseDetailPage = () => {
           </head>
           <body>
             <!-- First Page: Summary -->
-            <div class="page">
+            <div class="page${receipts.length > 0 ? ' has-receipts' : ''}">
               <div class="header">
                 <div class="header-left">
                   <div class="header-logo">
