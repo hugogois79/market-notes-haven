@@ -38,6 +38,7 @@ export default function DocumentDropZone({ companyId }: DocumentDropZoneProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<DocumentAnalysis | null>(null);
   const [fileName, setFileName] = useState<string>("");
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
   const [prefilledTransaction, setPrefilledTransaction] = useState<any>(null);
 
@@ -137,6 +138,7 @@ export default function DocumentDropZone({ companyId }: DocumentDropZoneProps) {
     setIsAnalyzing(true);
     setAnalysis(null);
     setFileName(file.name);
+    setUploadedFile(file);
 
     try {
       let content = "";
@@ -448,6 +450,7 @@ Note: This is an Excel spreadsheet. Please analyze based on the filename.`;
           onOpenChange={handleDialogClose}
           companyId={companyId}
           transaction={prefilledTransaction}
+          prefilledFile={uploadedFile}
         />
       )}
     </div>
