@@ -147,7 +147,7 @@ Note: This is an Excel spreadsheet. Please analyze based on the filename.`;
     }
   };
 
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = useCallback((e: React.DragEvent<HTMLElement>) => {
     e.preventDefault();
     setIsDragging(false);
 
@@ -157,12 +157,12 @@ Note: This is an Excel spreadsheet. Please analyze based on the filename.`;
     }
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLElement>) => {
     e.preventDefault();
     setIsDragging(true);
   }, []);
 
-  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLElement>) => {
     e.preventDefault();
     setIsDragging(false);
   }, []);
@@ -210,12 +210,12 @@ Note: This is an Excel spreadsheet. Please analyze based on the filename.`;
       {/* Drop Zone */}
       <Card>
         <CardContent className="p-8">
-          <div
+          <label
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             className={`
-              border-2 border-dashed rounded-lg p-12 text-center transition-all duration-200
+              block border-2 border-dashed rounded-lg p-12 text-center transition-all duration-200 relative
               ${isDragging 
                 ? "border-primary bg-primary/5" 
                 : "border-muted-foreground/25 hover:border-muted-foreground/50"
@@ -242,15 +242,15 @@ Note: This is an Excel spreadsheet. Please analyze based on the filename.`;
                     ou clique para selecionar
                   </p>
                 </div>
-                <input
-                  type="file"
-                  onChange={handleFileInput}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  accept=".pdf,.txt,.csv,.xlsx,.xls,.json,.doc,.docx"
-                />
               </div>
             )}
-          </div>
+            <input
+              type="file"
+              onChange={handleFileInput}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              accept=".pdf,.txt,.csv,.xlsx,.xls,.json,.doc,.docx"
+            />
+          </label>
         </CardContent>
       </Card>
 
