@@ -142,11 +142,17 @@ export default function DocumentDropZone({ companyId }: DocumentDropZoneProps) {
 
   const extractPdfText = async (file: File): Promise<string> => {
     try {
-      // Set worker source - use unpkg CDN which is more reliable
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+      // Disable worker to avoid CORS issues - use main thread
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "";
       
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const loadingTask = pdfjsLib.getDocument({ 
+        data: arrayBuffer,
+        useWorkerFetch: false,
+        isEvalSupported: false,
+        useSystemFonts: true,
+      });
+      const pdf = await loadingTask.promise;
       
       let fullText = "";
       const maxPages = Math.min(pdf.numPages, 10); // Limit to first 10 pages
