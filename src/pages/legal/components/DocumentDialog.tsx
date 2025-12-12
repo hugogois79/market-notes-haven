@@ -37,7 +37,7 @@ interface DocumentDialogProps {
   document?: LegalDocument | null;
 }
 
-const DOCUMENT_TYPES = ["Notes", "Court Document", "Motion", "Defendant Testimony"];
+const DOCUMENT_TYPES = ["Notes", "Court Document", "Motion", "Defendant Testimony", "Evidence"];
 
 export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess, document }: DocumentDialogProps) {
   const [loading, setLoading] = useState(false);
