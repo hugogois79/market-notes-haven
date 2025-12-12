@@ -529,11 +529,11 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
                   setFiles(prev => [...prev, ...newFiles]);
                   e.target.value = '';
                 }}
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Formatos aceites: PDF, DOC, DOCX, JPG, PNG (pode selecionar vários ficheiros)
+              Formatos aceites: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG (pode selecionar vários ficheiros)
             </p>
           </div>
 
