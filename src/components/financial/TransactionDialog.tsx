@@ -160,6 +160,8 @@ export default function TransactionDialog({
         ...transaction,
         company_id: transaction.company_id || companyId,
         category_id: transaction.category_id || "",
+        payment_method: transaction.payment_method || "bank_transfer",
+        bank_account_id: transaction.bank_account_id || "",
       });
       setExistingAttachment(transaction.invoice_file_url || null);
       setNewFiles([]);
