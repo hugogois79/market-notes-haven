@@ -301,7 +301,7 @@ export default function TransactionDialog({
         category: 'other' as const,
       };
 
-      if (transaction) {
+      if (transaction?.id) {
         const { error } = await supabase
           .from("financial_transactions")
           .update(transactionData)
