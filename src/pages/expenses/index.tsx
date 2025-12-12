@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Plus, Eye, Edit, FileText } from "lucide-react";
+import { Plus, Eye, Edit, FileText, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,9 +13,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { expenseClaimService } from "@/services/expenseClaimService";
+import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
-import { format } from "date-fns";
 import {
   Select,
   SelectContent,
@@ -29,15 +28,83 @@ import ExpenseCard from "@/components/expenses/ExpenseCard";
 const ExpensesPage = () => {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
 
+  // Fetch expense claims with requester info
   const { data: claims, isLoading } = useQuery({
-    queryKey: ["expense-claims", statusFilter],
-    queryFn: () =>
-      expenseClaimService.getExpenseClaims(
-        statusFilter === "all" ? undefined : statusFilter
-      ),
+    queryKey: ["expense-claims-with-requester", statusFilter],
+    queryFn: async () => {
+      let query = supabase
+        .from('expense_claims')
+        .select(`
+          *,
+          expense_requesters (
+            id,
+            name
+          )
+        `)
+        .order('claim_date', { ascending: false });
+
+      if (statusFilter !== "all") {
+        query = query.eq('status', statusFilter);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
   });
+
+  const toggleMonth = (monthKey: string) => {
+    setExpandedMonths((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(monthKey)) {
+        newSet.delete(monthKey);
+      } else {
+        newSet.add(monthKey);
+      }
+      return newSet;
+    });
+  };
+
+  // Group claims by month
+  const groupedClaims = useMemo(() => {
+    if (!claims || claims.length === 0) return [];
+
+    const groups: Record<string, { monthKey: string; label: string; claims: any[]; total: number }> = {};
+
+    claims.forEach((claim) => {
+      const date = new Date(claim.claim_date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      
+      const monthNames = [
+        "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+        "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+      ];
+      const label = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+
+      if (!groups[monthKey]) {
+        groups[monthKey] = {
+          monthKey,
+          label,
+          claims: [],
+          total: 0,
+        };
+      }
+
+      groups[monthKey].claims.push(claim);
+      groups[monthKey].total += Number(claim.total_amount);
+    });
+
+    // Sort claims within each group by date descending
+    Object.values(groups).forEach((group) => {
+      group.claims.sort((a, b) => new Date(b.claim_date).getTime() - new Date(a.claim_date).getTime());
+    });
+
+    // Sort by month key descending
+    return Object.values(groups).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+  }, [claims]);
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
@@ -57,7 +124,7 @@ const ExpensesPage = () => {
     };
 
     return (
-      <Badge className={variants[status]}>
+      <Badge className={`${variants[status]} text-[10px] px-1.5 py-0`}>
         {labels[status]}
       </Badge>
     );
@@ -67,6 +134,10 @@ const ExpensesPage = () => {
     if (type === "reembolso") return "Reembolso";
     if (type === "transferencia_bancaria") return "Transferência";
     return "Justificação Cartão";
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString("pt-PT");
   };
 
   const totalPending = claims
@@ -142,62 +213,117 @@ const ExpensesPage = () => {
             // Mobile Card View
             <div className="space-y-3">
               {claims.map((claim) => (
-                <ExpenseCard key={claim.id} claim={claim} />
+                <ExpenseCard key={claim.id} claim={claim} requesterName={claim.expense_requesters?.name} />
               ))}
             </div>
           ) : (
-            // Desktop Table View
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nº</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {claims.map((claim) => (
-                  <TableRow key={claim.id}>
-                    <TableCell className="font-medium">
-                      #{claim.claim_number}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(claim.claim_date), "dd/MM/yyyy")}
-                    </TableCell>
-                    <TableCell>{getTypeBadge(claim.claim_type)}</TableCell>
-                    <TableCell>{claim.description || "-"}</TableCell>
-                    <TableCell className="font-semibold">
-                      {formatCurrency(Number(claim.total_amount))}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(claim.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => navigate(`/expenses/${claim.id}`)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {claim.status === "rascunho" && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => navigate(`/expenses/${claim.id}/edit`)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
+            // Desktop Table View - Grouped by Month
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableHead className="py-2 px-3 text-xs font-medium w-8"></TableHead>
+                    <TableHead className="py-2 px-3 text-xs font-medium">Nº</TableHead>
+                    <TableHead className="py-2 px-3 text-xs font-medium">Data</TableHead>
+                    <TableHead className="py-2 px-3 text-xs font-medium">Requisitante</TableHead>
+                    <TableHead className="py-2 px-3 text-xs font-medium">Tipo</TableHead>
+                    <TableHead className="py-2 px-3 text-xs font-medium">Descrição</TableHead>
+                    <TableHead className="py-2 px-3 text-xs font-medium text-right">Total</TableHead>
+                    <TableHead className="py-2 px-3 text-xs font-medium">Status</TableHead>
+                    <TableHead className="py-2 px-3 text-xs font-medium text-right">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {groupedClaims.map((group) => {
+                    const isExpanded = expandedMonths.has(group.monthKey);
+                    return (
+                      <>
+                        {/* Month Header Row */}
+                        <TableRow 
+                          key={`month-${group.monthKey}`}
+                          className="bg-muted/50 hover:bg-muted/60 cursor-pointer"
+                          onClick={() => toggleMonth(group.monthKey)}
+                        >
+                          <TableCell className="py-2 px-3">
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </TableCell>
+                          <TableCell colSpan={5} className="py-2 px-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">{group.label}</span>
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                {group.claims.length}
+                              </Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-2 px-3 text-right">
+                            <span className="text-xs font-medium text-red-600">
+                              {formatCurrency(group.total)}
+                            </span>
+                          </TableCell>
+                          <TableCell colSpan={2}></TableCell>
+                        </TableRow>
+
+                        {/* Claim Rows */}
+                        {isExpanded && group.claims.map((claim) => (
+                          <TableRow key={claim.id} className="hover:bg-muted/20">
+                            <TableCell className="py-1.5 px-3"></TableCell>
+                            <TableCell className="py-1.5 px-3 text-xs font-medium">
+                              #{claim.claim_number}
+                            </TableCell>
+                            <TableCell className="py-1.5 px-3 text-xs">
+                              {formatDate(claim.claim_date)}
+                            </TableCell>
+                            <TableCell className="py-1.5 px-3 text-xs max-w-[120px] truncate">
+                              {claim.expense_requesters?.name || "-"}
+                            </TableCell>
+                            <TableCell className="py-1.5 px-3">
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                {getTypeBadge(claim.claim_type)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="py-1.5 px-3 text-xs max-w-[200px] truncate">
+                              {claim.description || "-"}
+                            </TableCell>
+                            <TableCell className="py-1.5 px-3 text-right text-xs font-medium">
+                              {formatCurrency(Number(claim.total_amount))}
+                            </TableCell>
+                            <TableCell className="py-1.5 px-3">
+                              {getStatusBadge(claim.status)}
+                            </TableCell>
+                            <TableCell className="py-1.5 px-3 text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => navigate(`/expenses/${claim.id}`)}
+                                >
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                                {claim.status === "rascunho" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => navigate(`/expenses/${claim.id}/edit`)}
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
