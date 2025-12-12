@@ -101,6 +101,8 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
       }
       setFiles([]);
       setAttachmentsToRemove([]);
+      setContactSearch("");
+      setCaseSearch("");
     };
 
     if (open) {
