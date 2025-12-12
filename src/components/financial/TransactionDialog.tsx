@@ -612,7 +612,14 @@ export default function TransactionDialog({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Método de Pagamento *</Label>
-              <Select onValueChange={(value) => setValue("payment_method", value)} defaultValue={watch("payment_method")}>
+              <Select 
+                onValueChange={(value) => {
+                  setValue("payment_method", value);
+                  // Clear bank account when payment method changes
+                  setValue("bank_account_id", null);
+                }} 
+                value={paymentMethod || "bank_transfer"}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
