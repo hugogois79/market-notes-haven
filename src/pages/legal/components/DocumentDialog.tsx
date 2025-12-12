@@ -146,8 +146,9 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
 
       // Upload new files
       for (const file of files) {
-        const fileExt = file.name.split(".").pop();
-        const fileName = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
+        // Keep original filename but add UUID prefix to avoid collisions
+        const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const fileName = `${user.id}/${crypto.randomUUID()}_${sanitizedName}`;
         
         const { error: uploadError } = await supabase.storage
           .from("legal-documents")
@@ -445,7 +446,11 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
                 <span className="text-sm text-muted-foreground">Anexos existentes:</span>
                 <div className="flex flex-wrap gap-2">
                   {existingAttachments.filter(a => !attachmentsToRemove.includes(a)).map((attachment, index) => {
-                    const fileName = attachment.split('/').pop() || 'ficheiro';
+                    // Extract original filename from path (remove UUID prefix if present)
+                    const fullName = attachment.split('/').pop() || 'ficheiro';
+                    // Match UUID pattern at the start: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx_
+                    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_/i;
+                    const fileName = fullName.replace(uuidPattern, '');
                     return (
                       <div key={index} className="flex items-center gap-1 bg-muted rounded px-2 py-1">
                         <button
