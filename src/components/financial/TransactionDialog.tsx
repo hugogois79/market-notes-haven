@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { Check, ChevronsUpDown, X, Paperclip, Download } from "lucide-react";
 import {
   Popover,
@@ -198,12 +198,20 @@ export default function TransactionDialog({
     }
   }, [totalAmount, vatRate, setValue]);
 
-  // Clear bank account when company changes
+  // Track if this is the initial mount to avoid clearing bank account on load
+  const isInitialMount = useRef(true);
+  
+  // Clear bank account when company changes (only for new transactions, not when editing or on initial load)
   useEffect(() => {
-    if (selectedCompanyId !== companyId && !transaction) {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    // Only clear bank account when user manually changes the company for new transactions
+    if (!transaction) {
       setValue("bank_account_id", "");
     }
-  }, [selectedCompanyId, companyId, setValue, transaction]);
+  }, [selectedCompanyId, setValue, transaction]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
