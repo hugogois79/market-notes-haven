@@ -269,16 +269,16 @@ export default function LegalPage() {
           <Table>
             <TableHeader className="bg-muted/50">
               <TableRow>
-              <TableHead className="w-12">#</TableHead>
-                <TableHead className="w-[28%]">Nome do Documento</TableHead>
-                <TableHead className="w-[10%]">Tipo</TableHead>
-                <TableHead className="w-12 text-center">
-                  <Paperclip className="w-4 h-4 inline-block" />
+              <TableHead className="w-8 py-1.5 px-2 text-xs">#</TableHead>
+                <TableHead className="w-[28%] py-1.5 px-2 text-xs">Nome do Documento</TableHead>
+                <TableHead className="w-[10%] py-1.5 px-2 text-xs">Tipo</TableHead>
+                <TableHead className="w-8 text-center py-1.5 px-2">
+                  <Paperclip className="w-3 h-3 inline-block" />
                 </TableHead>
-                <TableHead className="w-[28%]">Descrição</TableHead>
-                <TableHead className="w-[12%]">Data Criação</TableHead>
-                <TableHead className="w-[12%]">Contatos</TableHead>
-                <TableHead className="w-10"></TableHead>
+                <TableHead className="w-[28%] py-1.5 px-2 text-xs">Descrição</TableHead>
+                <TableHead className="w-[12%] py-1.5 px-2 text-xs">Data Criação</TableHead>
+                <TableHead className="w-[12%] py-1.5 px-2 text-xs">Contatos</TableHead>
+                <TableHead className="w-8 py-1.5 px-2"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -293,20 +293,20 @@ export default function LegalPage() {
                       className="bg-amber-50 dark:bg-amber-950/30 border-t-2 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/50 cursor-pointer"
                       onClick={() => toggleCase(caseTitle)}
                     >
-                      <TableCell colSpan={8} className="py-2">
-                        <div className="flex items-center gap-3 text-left w-full">
+                      <TableCell colSpan={8} className="py-1.5 px-2">
+                        <div className="flex items-center gap-2 text-left w-full">
                           {isCaseOpen ? (
-                            <ChevronDown className="w-4 h-4 text-amber-600" />
+                            <ChevronDown className="w-3 h-3 text-amber-600" />
                           ) : (
-                            <ChevronRight className="w-4 h-4 text-amber-600" />
+                            <ChevronRight className="w-3 h-3 text-amber-600" />
                           )}
-                          <span className="uppercase text-[10px] font-medium text-amber-600 dark:text-amber-500 tracking-wider">
+                          <span className="uppercase text-[9px] font-medium text-amber-600 dark:text-amber-500 tracking-wider">
                             CASES
                           </span>
-                          <span className="font-semibold text-foreground">
+                          <span className="font-medium text-xs text-foreground">
                             {caseTitle}
                           </span>
-                          <Badge variant="secondary" className="ml-2 bg-muted text-muted-foreground text-xs">
+                          <Badge variant="secondary" className="ml-1 bg-muted text-muted-foreground text-[10px] px-1.5 py-0">
                             {docs.length}
                           </Badge>
                         </div>
@@ -318,21 +318,21 @@ export default function LegalPage() {
                         className="hover:bg-accent/30 cursor-pointer"
                         onClick={() => handleEditDocument(doc)}
                       >
-                        <TableCell className="text-muted-foreground text-sm">
+                        <TableCell className="text-muted-foreground text-xs py-1.5 px-2">
                           {idx + 1}
                         </TableCell>
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium text-xs py-1.5 px-2">
                           {doc.title}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-1.5 px-2">
                           <Badge
-                            className={documentTypeBadgeColors[doc.document_type] || ""}
+                            className={`${documentTypeBadgeColors[doc.document_type] || ""} text-[10px] px-1.5 py-0`}
                             variant="outline"
                           >
                             {doc.document_type}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                        <TableCell className="text-center py-1.5 px-2" onClick={(e) => e.stopPropagation()}>
                           {(() => {
                             const attachments = doc.attachments || (doc.attachment_url ? [doc.attachment_url] : []);
                             if (attachments.length === 0) return null;
@@ -371,30 +371,30 @@ export default function LegalPage() {
                                 className="text-primary hover:text-primary/80 inline-flex items-center gap-1"
                                 title={attachments.length > 1 ? `${attachments.length} anexos` : "Descarregar anexo"}
                               >
-                                <Paperclip className="w-4 h-4" />
+                                <Paperclip className="w-3 h-3" />
                                 {attachments.length > 1 && (
-                                  <span className="text-xs font-medium">{attachments.length}</span>
+                                  <span className="text-[10px] font-medium">{attachments.length}</span>
                                 )}
                               </button>
                             );
                           })()}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground max-w-md">
-                          <div className="line-clamp-2">
+                        <TableCell className="text-xs text-muted-foreground max-w-md py-1.5 px-2">
+                          <div className="line-clamp-1">
                             {doc.description || "-"}
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className="text-xs text-muted-foreground py-1.5 px-2">
                           {new Date(doc.created_date).toLocaleDateString("pt-PT")}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
+                        <TableCell className="py-1.5 px-2">
+                          <div className="flex flex-wrap gap-0.5">
                             {doc.legal_document_contacts && doc.legal_document_contacts.length > 0 ? (
                               doc.legal_document_contacts.map((dc) => (
                                 <Badge 
                                   key={dc.contact_id}
                                   variant="secondary" 
-                                  className="text-xs"
+                                  className="text-[10px] px-1 py-0"
                                   title={dc.legal_contacts?.role}
                                 >
                                   {dc.legal_contacts?.name}
@@ -403,7 +403,7 @@ export default function LegalPage() {
                             ) : doc.legal_contacts ? (
                               <Badge 
                                 variant="secondary" 
-                                className="text-xs"
+                                className="text-[10px] px-1 py-0"
                                 title={doc.legal_contacts.role}
                               >
                                 {doc.legal_contacts.name}
@@ -411,17 +411,17 @@ export default function LegalPage() {
                             ) : null}
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-1.5 px-2">
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-8 w-8"
+                            className="h-6 w-6"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleEditDocument(doc);
                             }}
                           >
-                            <Pencil className="w-4 h-4" />
+                            <Pencil className="w-3 h-3" />
                           </Button>
                         </TableCell>
                       </TableRow>
