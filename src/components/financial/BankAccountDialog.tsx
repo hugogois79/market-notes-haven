@@ -37,6 +37,7 @@ export default function BankAccountDialog({
   const queryClient = useQueryClient();
   const { register, handleSubmit, reset, watch, setValue } = useForm();
   const [selectedCompany, setSelectedCompany] = useState(companyId || "");
+  const [accountType, setAccountType] = useState<string>("bank_account");
 
   const { data: companies } = useQuery({
     queryKey: ["companies"],
@@ -55,6 +56,7 @@ export default function BankAccountDialog({
     if (account) {
       reset(account);
       setSelectedCompany(account.company_id);
+      setAccountType(account.account_type || "bank_account");
     } else {
       reset({
         currency: "EUR",
@@ -62,6 +64,7 @@ export default function BankAccountDialog({
         initial_balance: 0,
       });
       setSelectedCompany(companyId || "");
+      setAccountType("bank_account");
     }
   }, [account, companyId, reset]);
 
@@ -74,6 +77,7 @@ export default function BankAccountDialog({
       const accountData = {
         ...data,
         company_id: selectedCompany,
+        account_type: accountType,
         initial_balance: Number(data.initial_balance),
         current_balance: account ? Number(data.current_balance) : Number(data.initial_balance),
       };
@@ -98,13 +102,14 @@ export default function BankAccountDialog({
         queryKey: ["bank-accounts"],
         refetchType: 'all'
       });
-      toast.success(account ? "Account updated" : "Account created");
+      toast.success(account ? "Conta atualizada" : "Conta criada");
       onOpenChange(false);
       reset();
       setSelectedCompany(companyId || "");
+      setAccountType("bank_account");
     },
     onError: (error: any) => {
-      toast.error("Error: " + error.message);
+      toast.error("Erro: " + error.message);
     },
   });
 
@@ -113,16 +118,34 @@ export default function BankAccountDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {account ? "Edit Account" : "New Bank Account"}
+            {account 
+              ? "Editar Conta" 
+              : accountType === "credit_card" 
+                ? "Novo Cartão de Crédito" 
+                : "Nova Conta Bancária"
+            }
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
           <div>
-            <Label>Company *</Label>
+            <Label>Tipo *</Label>
+            <Select value={accountType} onValueChange={setAccountType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bank_account">Conta Bancária</SelectItem>
+                <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Empresa *</Label>
             <Select value={selectedCompany} onValueChange={setSelectedCompany}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a company" />
+                <SelectValue placeholder="Selecione uma empresa" />
               </SelectTrigger>
               <SelectContent>
                 {companies?.map((company) => (
@@ -135,28 +158,37 @@ export default function BankAccountDialog({
           </div>
 
           <div>
-            <Label>Account Name *</Label>
-            <Input {...register("account_name", { required: true })} placeholder="Main Account" />
+            <Label>{accountType === "credit_card" ? "Nome do Cartão *" : "Nome da Conta *"}</Label>
+            <Input 
+              {...register("account_name", { required: true })} 
+              placeholder={accountType === "credit_card" ? "Ex: Visa Business" : "Conta Principal"} 
+            />
           </div>
 
           <div>
-            <Label>Bank</Label>
-            <Input {...register("bank_name")} placeholder="Ex: Millennium BCP" />
+            <Label>{accountType === "credit_card" ? "Emissor" : "Banco"}</Label>
+            <Input 
+              {...register("bank_name")} 
+              placeholder={accountType === "credit_card" ? "Ex: American Express" : "Ex: Millennium BCP"} 
+            />
           </div>
 
           <div>
-            <Label>IBAN / Account Number *</Label>
-            <Input {...register("account_number", { required: true })} placeholder="PT50..." />
+            <Label>{accountType === "credit_card" ? "Últimos 4 dígitos *" : "IBAN / Nº Conta *"}</Label>
+            <Input 
+              {...register("account_number", { required: true })} 
+              placeholder={accountType === "credit_card" ? "1234" : "PT50..."} 
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Initial Balance</Label>
+              <Label>{accountType === "credit_card" ? "Plafond" : "Saldo Inicial"}</Label>
               <Input type="number" step="0.01" {...register("initial_balance")} />
             </div>
 
             <div>
-              <Label>Currency</Label>
+              <Label>Moeda</Label>
               <Input {...register("currency")} disabled />
             </div>
           </div>
@@ -171,16 +203,16 @@ export default function BankAccountDialog({
               htmlFor="is_active"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              Active account
+              {accountType === "credit_card" ? "Cartão ativo" : "Conta ativa"}
             </label>
           </div>
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" disabled={saveMutation.isPending || !selectedCompany}>
-              {saveMutation.isPending ? "Saving..." : "Save"}
+              {saveMutation.isPending ? "A guardar..." : "Guardar"}
             </Button>
           </div>
         </form>
