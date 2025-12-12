@@ -138,6 +138,15 @@ export default function TransactionDialog({
   });
 
   const transactionType = watch("type");
+  const paymentMethod = watch("payment_method");
+
+  // Filter accounts based on payment method - credit card shows only credit cards, others show bank accounts
+  const filteredBankAccounts = allBankAccounts?.filter(account => {
+    if (paymentMethod === 'credit_card') {
+      return account.account_type === 'credit_card';
+    }
+    return account.account_type === 'bank_account';
+  });
 
   useEffect(() => {
     if (transaction) {
@@ -620,7 +629,7 @@ export default function TransactionDialog({
             </div>
 
             <div>
-              <Label>Conta Bancária</Label>
+              <Label>{paymentMethod === 'credit_card' ? 'Cartão de Crédito' : 'Conta Bancária'}</Label>
               <Select 
                 onValueChange={(value) => setValue("bank_account_id", value === "none" ? null : value)} 
                 value={watch("bank_account_id") || "none"}
@@ -629,8 +638,8 @@ export default function TransactionDialog({
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Sem conta</SelectItem>
-                  {allBankAccounts?.map((account) => (
+                  <SelectItem value="none">{paymentMethod === 'credit_card' ? 'Sem cartão' : 'Sem conta'}</SelectItem>
+                  {filteredBankAccounts?.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
                       {account.account_name} - {(account as any).companies?.name || account.bank_name}
                     </SelectItem>
