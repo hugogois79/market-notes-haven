@@ -134,6 +134,7 @@ const NewExpensePage = () => {
   });
 
   const [supplierOpen, setSupplierOpen] = useState(false);
+  const [projectOpen, setProjectOpen] = useState(false);
 
   const createClaimMutation = useMutation({
     mutationFn: expenseClaimService.createExpenseClaim,
@@ -730,24 +731,64 @@ const NewExpensePage = () => {
             </div>
             <div>
               <Label htmlFor="project">Projeto (opcional)</Label>
-              <Select
-                value={expenseForm.project_id || "none"}
-                onValueChange={(value) =>
-                  setExpenseForm({ ...expenseForm, project_id: value === "none" ? "" : value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um projeto" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhum</SelectItem>
-                  {projects?.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={projectOpen} onOpenChange={setProjectOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={projectOpen}
+                    className="w-full justify-between"
+                  >
+                    {expenseForm.project_id
+                      ? projects?.find((p) => p.id === expenseForm.project_id)?.name || "Nenhum"
+                      : "Nenhum"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Procurar projeto..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhum projeto encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="none"
+                          onSelect={() => {
+                            setExpenseForm({ ...expenseForm, project_id: "" });
+                            setProjectOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              !expenseForm.project_id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          Nenhum
+                        </CommandItem>
+                        {projects?.map((project) => (
+                          <CommandItem
+                            key={project.id}
+                            value={project.name}
+                            onSelect={() => {
+                              setExpenseForm({ ...expenseForm, project_id: project.id });
+                              setProjectOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                expenseForm.project_id === project.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {project.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label htmlFor="category">Categoria (opcional)</Label>
