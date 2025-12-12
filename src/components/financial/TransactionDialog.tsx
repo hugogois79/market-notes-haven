@@ -161,7 +161,8 @@ export default function TransactionDialog({
     // Reset flag when form loads - don't clear bank account on initial payment method set
     isPaymentMethodUserChange.current = false;
     
-    if (transaction) {
+    if (transaction?.id) {
+      // Editing existing transaction
       reset({
         ...transaction,
         company_id: transaction.company_id || companyId,
@@ -171,7 +172,27 @@ export default function TransactionDialog({
       });
       setExistingAttachment(transaction.invoice_file_url || null);
       setNewFiles([]);
+    } else if (transaction) {
+      // Pre-filled transaction from drag & drop (no id)
+      reset({
+        date: transaction.date || new Date().toISOString().split('T')[0],
+        type: transaction.type || 'expense',
+        category: transaction.category || 'other',
+        category_id: transaction.category_id || "",
+        payment_method: transaction.payment_method || 'bank_transfer',
+        vat_rate: transaction.vat_rate ?? 23,
+        company_id: transaction.company_id || companyId,
+        description: transaction.description || "",
+        entity_name: transaction.entity_name || "",
+        total_amount: transaction.total_amount || "",
+        amount_net: transaction.amount_net || "",
+        vat_amount: transaction.vat_amount || "",
+        project_id: transaction.project_id || "",
+      });
+      setExistingAttachment(null);
+      setNewFiles(initialFile ? [initialFile] : []);
     } else {
+      // New transaction
       reset({
         date: new Date().toISOString().split('T')[0],
         type: 'expense',
