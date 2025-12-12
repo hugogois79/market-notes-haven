@@ -159,7 +159,7 @@ export default function LegalPage() {
     }
   };
 
-  // Group documents by case only (Airtable style)
+  // Group documents by case only (Airtable style) and sort by date within each group
   const groupedDocuments = filteredDocuments.reduce((acc, doc) => {
     const caseTitle = doc.legal_cases?.title || "Sem Caso";
     if (!acc[caseTitle]) {
@@ -168,6 +168,13 @@ export default function LegalPage() {
     acc[caseTitle].push(doc);
     return acc;
   }, {} as Record<string, LegalDocument[]>);
+
+  // Sort documents within each group by created_date (most recent first)
+  Object.keys(groupedDocuments).forEach(caseTitle => {
+    groupedDocuments[caseTitle].sort((a, b) => 
+      new Date(b.created_date).getTime() - new Date(a.created_date).getTime()
+    );
+  });
 
   const [openCases, setOpenCases] = useState<Record<string, boolean>>({});
 
