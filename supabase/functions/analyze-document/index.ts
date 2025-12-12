@@ -26,16 +26,24 @@ serve(async (req) => {
 
     console.log(`Analyzing document: ${fileName}`);
 
-    const systemPrompt = `You are a financial document analyzer. Analyze the provided document content and determine if it is:
+    const systemPrompt = `You are a financial document analyzer specialized in Portuguese business documents. Analyze the provided document content and determine if it is:
 1. A LOAN document (empréstimo) - contracts, loan agreements, credit agreements
-2. A TRANSACTION document (transação/movimento) - invoices, receipts, payment confirmations, bank statements
+2. A TRANSACTION document (transação/movimento) - invoices, receipts, payment confirmations, bank statements, expense reports
 3. UNKNOWN - if you cannot determine the type
+
+Look carefully for:
+- Tables with expense items (Fornecedor/Despesa, Valor columns)
+- Receipt numbers (Recibo N.º)
+- Beneficiary names (Beneficiário)
+- Total amounts (TOTAL, Total Elegível)
+- Individual expense line items with supplier names and amounts
+- Dates in Portuguese format (DD de Mês de YYYY)
 
 Respond in JSON format with the following structure:
 {
   "documentType": "loan" | "transaction" | "unknown",
   "confidence": number between 0 and 1,
-  "summary": "brief description of the document",
+  "summary": "brief description of the document in Portuguese",
   "extractedData": {
     // For loans:
     "amount": number or null,
@@ -46,14 +54,23 @@ Respond in JSON format with the following structure:
     "borrower": "string" or null,
     
     // For transactions:
-    "amount": number or null,
+    "amount": number or null (total amount),
     "date": "YYYY-MM-DD" or null,
-    "entityName": "string" or null,
+    "entityName": "string" or null (main supplier/beneficiary),
     "description": "string" or null,
     "transactionType": "income" | "expense" | null,
-    "invoiceNumber": "string" or null
+    "invoiceNumber": "string" or null,
+    
+    // For expense reports with multiple items:
+    "expenseItems": [
+      {
+        "supplier": "string",
+        "description": "string",
+        "amount": number
+      }
+    ] or null
   },
-  "reasoning": "explanation of why you classified it this way"
+  "reasoning": "explanation of why you classified it this way (in Portuguese)"
 }`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import TransactionDialog from "./TransactionDialog";
-
+import * as pdfjsLib from "pdfjs-dist";
 interface DocumentAnalysis {
   documentType: "loan" | "transaction" | "unknown";
   confidence: number;
@@ -25,6 +25,11 @@ interface DocumentAnalysis {
     description?: string | null;
     transactionType?: "income" | "expense" | null;
     invoiceNumber?: string | null;
+    expenseItems?: Array<{
+      supplier: string;
+      description: string;
+      amount: number;
+    }> | null;
   };
   reasoning: string;
 }
@@ -135,6 +140,34 @@ export default function DocumentDropZone({ companyId }: DocumentDropZoneProps) {
     });
   };
 
+  const extractPdfText = async (file: File): Promise<string> => {
+    try {
+      // Set worker source
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+      
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      
+      let fullText = "";
+      const maxPages = Math.min(pdf.numPages, 10); // Limit to first 10 pages
+      
+      for (let i = 1; i <= maxPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(" ");
+        fullText += pageText + "\n\n";
+      }
+      
+      console.log(`Extracted ${fullText.length} characters from PDF`);
+      return fullText;
+    } catch (error) {
+      console.error("Error extracting PDF text:", error);
+      return `[Erro ao extrair texto do PDF: ${file.name}]`;
+    }
+  };
+
   const analyzeDocument = async (file: File) => {
     setIsAnalyzing(true);
     setAnalysis(null);
@@ -146,11 +179,11 @@ export default function DocumentDropZone({ companyId }: DocumentDropZoneProps) {
 
       // Handle different file types
       if (file.type === "application/pdf") {
-        // For PDFs, we'll send a message that we can't read the full content
-        content = `[PDF File: ${file.name}, Size: ${(file.size / 1024).toFixed(2)} KB]
-        
-Note: This is a PDF file. Please analyze based on the filename and any metadata available. 
-For full PDF analysis, the file should be converted to text first.`;
+        // Extract text from PDF
+        content = await extractPdfText(file);
+        if (!content || content.length < 50) {
+          content = `[PDF File: ${file.name}, Size: ${(file.size / 1024).toFixed(2)} KB] - Não foi possível extrair texto.`;
+        }
       } else if (file.type.startsWith("text/") || 
                  file.name.endsWith(".txt") || 
                  file.name.endsWith(".csv") ||
@@ -413,6 +446,33 @@ Note: This is an Excel spreadsheet. Please analyze based on the filename.`;
                     </div>
                   )}
                 </div>
+
+                {/* Expense Items */}
+                {analysis.extractedData.expenseItems && analysis.extractedData.expenseItems.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-xs text-muted-foreground mb-2">Itens de Despesa Detetados</p>
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50">
+                          <tr>
+                            <th className="text-left p-2 font-medium">Fornecedor</th>
+                            <th className="text-left p-2 font-medium">Descrição</th>
+                            <th className="text-right p-2 font-medium">Valor</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {analysis.extractedData.expenseItems.map((item, index) => (
+                            <tr key={index} className="border-t">
+                              <td className="p-2">{item.supplier}</td>
+                              <td className="p-2 text-muted-foreground">{item.description}</td>
+                              <td className="p-2 text-right font-medium">{formatCurrency(item.amount)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
