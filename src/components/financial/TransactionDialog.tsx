@@ -141,7 +141,13 @@ export default function TransactionDialog({
   const paymentMethod = watch("payment_method");
 
   // Filter accounts based on payment method - credit card shows only credit cards, others show bank accounts
+  // Also include the currently selected account to prevent it from disappearing
+  const currentBankAccountId = watch("bank_account_id");
   const filteredBankAccounts = allBankAccounts?.filter(account => {
+    // Always include currently selected account
+    if (account.id === currentBankAccountId) {
+      return true;
+    }
     if (paymentMethod === 'credit_card') {
       return account.account_type === 'credit_card';
     }
