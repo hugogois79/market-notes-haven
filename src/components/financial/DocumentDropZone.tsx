@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Upload, FileText, Loader2, CheckCircle, AlertCircle, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import TransactionDialog from "./TransactionDialog";
 
 interface DocumentAnalysis {
   documentType: "loan" | "transaction" | "unknown";
@@ -37,59 +38,90 @@ export default function DocumentDropZone({ companyId }: DocumentDropZoneProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<DocumentAnalysis | null>(null);
   const [fileName, setFileName] = useState<string>("");
-  const [isCreating, setIsCreating] = useState(false);
-  const queryClient = useQueryClient();
+  const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
+  const [prefilledTransaction, setPrefilledTransaction] = useState<any>(null);
 
-  const createTransactionMutation = useMutation({
-    mutationFn: async (analysisData: DocumentAnalysis) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Utilizador não autenticado");
-      if (!companyId) throw new Error("Empresa não selecionada");
-
-      const extracted = analysisData.extractedData;
-      const totalAmount = extracted.amount || 0;
-      const vatRate = 23; // Default VAT rate
-      const netAmount = totalAmount / (1 + vatRate / 100);
-      const vatAmount = totalAmount - netAmount;
-
-      const transactionData = {
-        company_id: companyId,
-        created_by: user.id,
-        date: extracted.date || new Date().toISOString().split('T')[0],
-        type: (extracted.transactionType || 'expense') as 'income' | 'expense',
-        description: extracted.description || fileName || 'Transação importada',
-        entity_name: extracted.entityName || 'Desconhecido',
-        amount_net: netAmount,
-        vat_rate: vatRate,
-        vat_amount: vatAmount,
-        total_amount: totalAmount,
-        payment_method: 'bank_transfer' as const,
-        category: 'other' as const,
-        invoice_number: extracted.invoiceNumber || null,
-      };
-
-      const { error } = await supabase
-        .from("financial_transactions")
-        .insert([transactionData]);
-
+  // Fetch expense projects to match project name from filename
+  const { data: expenseProjects } = useQuery({
+    queryKey: ["expense-projects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expense_projects")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
       if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["transactions-dashboard"] });
-      toast.success("Transação criada com sucesso!");
-      resetAnalysis();
-    },
-    onError: (error: any) => {
-      toast.error("Erro ao criar transação: " + error.message);
+      return data;
     },
   });
 
+  // Extract project name from filename (looks for [PROJECT_NAME] pattern)
+  const extractProjectFromFilename = (filename: string): string | null => {
+    const match = filename.match(/\[([^\]]+)\]/);
+    return match ? match[1] : null;
+  };
+
+  // Find matching project by name (fuzzy match)
+  const findMatchingProject = (projectName: string) => {
+    if (!expenseProjects || !projectName) return null;
+    
+    const normalizedSearch = projectName.toLowerCase().trim();
+    
+    // First try exact match
+    const exactMatch = expenseProjects.find(
+      p => p.name.toLowerCase() === normalizedSearch
+    );
+    if (exactMatch) return exactMatch;
+    
+    // Then try partial match
+    const partialMatch = expenseProjects.find(
+      p => p.name.toLowerCase().includes(normalizedSearch) ||
+           normalizedSearch.includes(p.name.toLowerCase())
+    );
+    return partialMatch || null;
+  };
+
   const handleCreateTransaction = () => {
-    if (!analysis) return;
-    setIsCreating(true);
-    createTransactionMutation.mutate(analysis);
-    setIsCreating(false);
+    if (!analysis || !companyId) return;
+    
+    const extracted = analysis.extractedData;
+    const totalAmount = extracted.amount || 0;
+    const vatRate = 23; // Default VAT rate
+    const netAmount = totalAmount / (1 + vatRate / 100);
+    const vatAmount = totalAmount - netAmount;
+
+    // Try to find project from filename
+    const projectNameFromFile = extractProjectFromFilename(fileName);
+    const matchedProject = projectNameFromFile ? findMatchingProject(projectNameFromFile) : null;
+
+    // Create prefilled transaction object
+    const transactionData = {
+      company_id: companyId,
+      date: extracted.date || new Date().toISOString().split('T')[0],
+      type: extracted.transactionType || 'expense',
+      description: extracted.description || fileName.replace(/\[.*?\]/g, '').trim() || 'Transação importada',
+      entity_name: extracted.entityName || 'Desconhecido',
+      amount_net: netAmount,
+      vat_rate: vatRate,
+      vat_amount: vatAmount,
+      total_amount: totalAmount,
+      payment_method: 'bank_transfer',
+      category: 'other',
+      invoice_number: extracted.invoiceNumber || null,
+      project_id: matchedProject?.id || null,
+    };
+
+    setPrefilledTransaction(transactionData);
+    setTransactionDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setTransactionDialogOpen(open);
+    if (!open) {
+      setPrefilledTransaction(null);
+      // Reset analysis after dialog closes
+      resetAnalysis();
+    }
   };
 
   const readFileAsText = (file: File): Promise<string> => {
@@ -198,6 +230,18 @@ Note: This is an Excel spreadsheet. Please analyze based on the filename.`;
     setFileName("");
   };
 
+  // Get matched project info for display
+  const matchedProjectInfo = useMemo(() => {
+    if (!fileName) return null;
+    const projectNameFromFile = extractProjectFromFilename(fileName);
+    if (!projectNameFromFile) return null;
+    const matched = findMatchingProject(projectNameFromFile);
+    return {
+      searchTerm: projectNameFromFile,
+      matchedProject: matched,
+    };
+  }, [fileName, expenseProjects]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -285,6 +329,25 @@ Note: This is an Excel spreadsheet. Please analyze based on the filename.`;
               </span>
             </div>
 
+            {/* Matched Project Info */}
+            {matchedProjectInfo && (
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-xs text-muted-foreground mb-1">Projeto detetado no nome do ficheiro</p>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">[{matchedProjectInfo.searchTerm}]</Badge>
+                  {matchedProjectInfo.matchedProject ? (
+                    <span className="text-sm text-green-600 font-medium">
+                      → {matchedProjectInfo.matchedProject.name}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-yellow-600">
+                      Nenhum projeto encontrado
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Summary */}
             <div>
               <p className="text-sm font-medium text-muted-foreground mb-1">Resumo</p>
@@ -363,13 +426,8 @@ Note: This is an Excel spreadsheet. Please analyze based on the filename.`;
                   <Button 
                     className="flex-1" 
                     onClick={handleCreateTransaction}
-                    disabled={isCreating || createTransactionMutation.isPending}
                   >
-                    {createTransactionMutation.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <ArrowRight className="mr-2 h-4 w-4" />
-                    )}
+                    <ArrowRight className="mr-2 h-4 w-4" />
                     Criar Transação
                   </Button>
                 )}
@@ -383,6 +441,16 @@ Note: This is an Excel spreadsheet. Please analyze based on the filename.`;
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Transaction Dialog */}
+      {companyId && (
+        <TransactionDialog
+          open={transactionDialogOpen}
+          onOpenChange={handleDialogClose}
+          companyId={companyId}
+          transaction={prefilledTransaction}
+        />
       )}
     </div>
   );
