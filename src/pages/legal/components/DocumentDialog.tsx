@@ -54,6 +54,8 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
   const [attachmentsToRemove, setAttachmentsToRemove] = useState<string[]>([]);
   const [contactSelectOpen, setContactSelectOpen] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
+  const [caseSelectOpen, setCaseSelectOpen] = useState(false);
+  const [caseSearch, setCaseSearch] = useState("");
 
   const isEditMode = !!document;
 
@@ -117,6 +119,12 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
   const handleRemoveContact = (contactId: string) => {
     setSelectedContactIds(prev => prev.filter(id => id !== contactId));
   };
+
+  const filteredCases = cases.filter(c =>
+    c.title.toLowerCase().includes(caseSearch.toLowerCase())
+  );
+
+  const selectedCase = cases.find(c => c.id === formData.case_id);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -291,22 +299,50 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
 
           <div className="space-y-2">
             <Label htmlFor="case_id">Caso *</Label>
-            <Select
-              value={formData.case_id}
-              onValueChange={(value) => setFormData({ ...formData, case_id: value })}
-              required
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o caso" />
-              </SelectTrigger>
-              <SelectContent>
-                {cases.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={caseSelectOpen} onOpenChange={setCaseSelectOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className="w-full justify-between font-normal"
+                >
+                  {selectedCase?.title || "Selecione o caso"}
+                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0 bg-background border" align="start">
+                <div className="p-2 border-b">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Pesquisar casos..."
+                      value={caseSearch}
+                      onChange={(e) => setCaseSearch(e.target.value)}
+                      className="pl-8 h-8"
+                    />
+                  </div>
+                </div>
+                <div className="max-h-60 overflow-y-auto p-2">
+                  {filteredCases.length === 0 ? (
+                    <p className="text-sm text-muted-foreground p-2">Nenhum caso encontrado</p>
+                  ) : (
+                    filteredCases.map((c) => (
+                      <div
+                        key={c.id}
+                        className={`flex items-center p-2 hover:bg-muted rounded cursor-pointer ${formData.case_id === c.id ? 'bg-muted' : ''}`}
+                        onClick={() => {
+                          setFormData({ ...formData, case_id: c.id });
+                          setCaseSelectOpen(false);
+                          setCaseSearch("");
+                        }}
+                      >
+                        <span className="text-sm">{c.title}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="space-y-2">
