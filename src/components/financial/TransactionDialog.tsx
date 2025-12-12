@@ -274,6 +274,12 @@ export default function TransactionDialog({
       // Remove client-side enriched properties that don't exist in the database
       const { category_name, project_name, ...cleanData } = data;
       
+      // Helper to convert empty strings and "undefined" to null for UUID fields
+      const toUuidOrNull = (value: any) => {
+        if (!value || value === "" || value === "undefined" || value === "none") return null;
+        return value;
+      };
+      
       const transactionData = {
         ...cleanData,
         company_id: cleanData.company_id || companyId,
@@ -282,9 +288,9 @@ export default function TransactionDialog({
         vat_rate: Number(cleanData.vat_rate),
         vat_amount: Number(cleanData.vat_amount),
         total_amount: Number(cleanData.total_amount),
-        project_id: cleanData.project_id || null,
-        category_id: cleanData.category_id || null,
-        bank_account_id: cleanData.bank_account_id || null,
+        project_id: toUuidOrNull(cleanData.project_id),
+        category_id: toUuidOrNull(cleanData.category_id),
+        bank_account_id: toUuidOrNull(cleanData.bank_account_id),
         invoice_file_url: fileUrl,
         // Keep default category for the enum field (required)
         category: 'other',
