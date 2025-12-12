@@ -69,6 +69,15 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
   const [tagInput, setTagInput] = useState("");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
+  // Enhanced manual save that includes current content state
+  const handleManualSaveWithContent = useCallback(() => {
+    // First update the content in pending changes
+    if (content !== currentNote.content) {
+      onContentChange(content);
+    }
+    // Then trigger the manual save
+    handleManualSave();
+  }, [content, currentNote.content, onContentChange, handleManualSave]);
   // Debounce the content change handler
   const debouncedContentChange = useDebounce((value: string) => {
     setContent(value);
@@ -174,7 +183,7 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
       onCategoryChange={onCategoryChange}
       isSaving={isSaving}
       lastSaved={lastSaved}
-      handleManualSave={handleManualSave}
+      handleManualSave={handleManualSaveWithContent}
       summary={currentNote.summary}
       onSummaryGenerated={onSummaryGenerated}
       tradeInfo={localTradeInfo}
