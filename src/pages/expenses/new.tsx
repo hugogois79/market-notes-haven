@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Pencil, Trash2, Upload, Settings, FileText, Download } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Upload, FileText, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -418,14 +418,6 @@ const NewExpensePage = () => {
             </p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => navigate("/expenses/settings")}
-        >
-          <Settings className="mr-2 h-4 w-4" />
-          Definições
-        </Button>
       </div>
 
       <Card>

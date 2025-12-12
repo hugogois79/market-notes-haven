@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Plus, Eye, Edit, FileText, Settings } from "lucide-react";
+import { Plus, Eye, Edit, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -84,16 +84,10 @@ const ExpensesPage = () => {
           </p>
         </div>
         {!isMobile && (
-          <div className="flex gap-2">
-            <Button onClick={() => navigate("/expenses/settings")} variant="outline" size="lg">
-              <Settings className="mr-2 h-4 w-4" />
-              Definições
-            </Button>
-            <Button onClick={() => navigate("/expenses/new")} size="lg">
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Requisição
-            </Button>
-          </div>
+          <Button onClick={() => navigate("/expenses/new")} size="lg">
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Requisição
+          </Button>
         )}
       </div>
 
@@ -210,15 +204,7 @@ const ExpensesPage = () => {
 
       {/* Mobile Floating Action Buttons */}
       {isMobile && (
-        <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-50">
-          <Button
-            onClick={() => navigate("/expenses/settings")}
-            variant="outline"
-            size="icon"
-            className="h-12 w-12 rounded-full shadow-lg bg-background"
-          >
-            <Settings className="h-5 w-5" />
-          </Button>
+        <div className="fixed bottom-4 right-4 z-50">
           <Button
             onClick={() => navigate("/expenses/new")}
             size="icon"

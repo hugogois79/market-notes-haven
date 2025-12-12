@@ -35,7 +35,7 @@ import FinancialPage from "@/pages/financial";
 import ExpensesIndex from "@/pages/expenses/index";
 import ExpensesNew from "@/pages/expenses/new";
 import ExpensesEdit from "@/pages/expenses/edit";
-import ExpensesSettings from "@/pages/expenses/settings";
+
 import ExpenseDetail from "@/pages/expenses/[id]";
 import LegalPage from "@/pages/legal";
 import LegalCasesPage from "@/pages/legal/cases";
@@ -187,14 +187,6 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <ExpensesEdit />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="expenses/settings"
-            element={
-              <ProtectedRoute>
-                <ExpensesSettings />
               </ProtectedRoute>
             }
           />
