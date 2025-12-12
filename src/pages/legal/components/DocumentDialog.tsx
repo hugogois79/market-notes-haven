@@ -384,6 +384,7 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
                       >
                         <Checkbox
                           checked={selectedContactIds.includes(contact.id)}
+                          onClick={(e) => e.stopPropagation()}
                           onCheckedChange={() => handleToggleContact(contact.id)}
                         />
                         <span className="text-sm">{contact.name}</span>
