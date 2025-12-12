@@ -219,6 +219,14 @@ export default function TransactionDialog({
     }
   }, [selectedCompanyId, setValue, transaction]);
 
+  // Auto-select credit card for UBER transactions
+  const entityName = watch("entity_name");
+  useEffect(() => {
+    if (entityName && entityName.toLowerCase().includes("uber")) {
+      setValue("payment_method", "credit_card");
+    }
+  }, [entityName, setValue]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
