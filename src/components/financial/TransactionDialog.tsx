@@ -170,8 +170,7 @@ export default function TransactionDialog({
         bank_account_id: transaction.bank_account_id || "",
       });
       setExistingAttachment(transaction.invoice_file_url || null);
-      // Keep initialFile if provided (from drag and drop), otherwise clear
-      setNewFiles(initialFile ? [initialFile] : []);
+      setNewFiles([]);
     } else {
       reset({
         date: new Date().toISOString().split('T')[0],
