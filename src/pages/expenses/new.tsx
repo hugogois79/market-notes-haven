@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { expenseClaimService, Expense } from "@/services/expenseClaimService";
-import { expenseRequesterService } from "@/services/expenseRequesterService";
+
 import { supplierService } from "@/services/supplierService";
 import { expenseUserService } from "@/services/expenseUserService";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -74,21 +74,18 @@ const NewExpensePage = () => {
     category_id: "",
   });
 
-  // Get requesters for dropdown
-  const { data: requesters } = useQuery({
-    queryKey: ["expense-requesters"],
-    queryFn: () => expenseRequesterService.getRequesters(),
+  // Get expense users for dropdown (instead of requesters)
+  const { data: expenseUsers } = useQuery({
+    queryKey: ["expense-users"],
+    queryFn: () => expenseUserService.getUsers(),
   });
 
-  // Get current user's expense record to filter projects
-  const { data: currentExpenseUser } = useQuery({
-    queryKey: ["current-expense-user"],
-    queryFn: () => expenseUserService.getCurrentUserExpenseRecord(),
-  });
+  // Get the selected user's assigned projects
+  const selectedUser = expenseUsers?.find(u => u.id === requesterId);
 
-  // Get projects for dropdown - filtered by current user's assigned projects
+  // Get projects for dropdown - filtered by selected user's assigned projects
   const { data: projects } = useQuery({
-    queryKey: ["expense-projects", currentExpenseUser?.assigned_project_ids],
+    queryKey: ["expense-projects", selectedUser?.assigned_project_ids],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expense_projects")
@@ -97,14 +94,15 @@ const NewExpensePage = () => {
         .order("name", { ascending: true });
       if (error) throw error;
       
-      // Filter by current user's assigned projects
-      if (currentExpenseUser?.assigned_project_ids?.length) {
-        const filtered = data?.filter(p => currentExpenseUser.assigned_project_ids!.includes(p.id)) || [];
+      // Filter by selected user's assigned projects
+      if (selectedUser?.assigned_project_ids?.length) {
+        const filtered = data?.filter(p => selectedUser.assigned_project_ids!.includes(p.id)) || [];
         return filtered.sort((a, b) => a.name.localeCompare(b.name));
       }
       
       return data || [];
     },
+    enabled: !!requesterId,
   });
 
   // Get suppliers for autocomplete
@@ -433,9 +431,9 @@ const NewExpensePage = () => {
                   <SelectValue placeholder="Selecione o requisitante" />
                 </SelectTrigger>
                 <SelectContent>
-                  {requesters?.map((requester) => (
-                    <SelectItem key={requester.id} value={requester.id}>
-                      {requester.name}
+                  {expenseUsers?.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
