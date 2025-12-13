@@ -603,12 +603,17 @@ export default function YearCalendar() {
             ) : (
               visibleMonths.map((monthInfo) => (
                 <>
-                  {/* Sub-header with B, Manhã, Tarde, D labels */}
+                  {/* Empty cell for day letter column */}
                   <div key={`${monthInfo.month}-${monthInfo.year}-dow-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border/30"></div>
-                  <div key={`${monthInfo.month}-${monthInfo.year}-b-header`} className="p-0.5 text-[8px] font-bold text-center border-r border-border/30 bg-amber-200 text-foreground">B</div>
-                  <div key={`${monthInfo.month}-${monthInfo.year}-m-header`} className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30">{monthInfo.label}</div>
-                  <div key={`${monthInfo.month}-${monthInfo.year}-t-header`} className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30"></div>
-                  <div key={`${monthInfo.month}-${monthInfo.year}-d-header`} className="p-0.5 text-[8px] font-bold text-center border-r border-border/30 bg-amber-200 text-foreground">D</div>
+                  {/* Month name spanning B, Morning, Afternoon, D columns */}
+                  <div 
+                    key={`${monthInfo.month}-${monthInfo.year}-month-header`} 
+                    className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30"
+                    style={{ gridColumn: 'span 4' }}
+                  >
+                    {monthInfo.label}
+                  </div>
+                  {/* Empty cell for day letter column after D */}
                   <div key={`${monthInfo.month}-${monthInfo.year}-dow2-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border last:border-r-0"></div>
                 </>
               ))
