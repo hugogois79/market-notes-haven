@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, CalendarDays, MoreHorizontal, Sun, Moon } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, MoreHorizontal, Sun, Moon, Printer } from "lucide-react";
+import "@/styles/calendar-print.css";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -677,14 +678,14 @@ export default function YearCalendar() {
   };
 
   return (
-    <Card>
+    <Card className="calendar-print-area">
       <CardHeader className="py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <CardTitle className="text-lg">
               {showFullYear ? "Calendário Anual" : "Próximos 6 Meses"}
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 no-print">
               <CalendarDays className="h-4 w-4 text-muted-foreground" />
               <Label htmlFor="show-full-year" className="text-xs text-muted-foreground cursor-pointer">
                 Mostrar Ano Completo
@@ -697,6 +698,15 @@ export default function YearCalendar() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1.5 no-print"
+              onClick={() => window.print()}
+            >
+              <Printer className="h-3.5 w-3.5" />
+              <span className="text-xs">Imprimir</span>
+            </Button>
             <CalendarSettingsSheet 
               categories={categories}
               onCategoriesChange={setCategories}
@@ -706,7 +716,7 @@ export default function YearCalendar() {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-7 w-7"
+                  className="h-7 w-7 no-print"
                   onClick={() => setSelectedYear(y => y - 1)}
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -717,7 +727,7 @@ export default function YearCalendar() {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-7 w-7"
+                  className="h-7 w-7 no-print"
                   onClick={() => setSelectedYear(y => y + 1)}
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -726,7 +736,7 @@ export default function YearCalendar() {
             )}
           </div>
         </div>
-        <p className="text-[10px] text-muted-foreground mt-1">
+        <p className="text-[10px] text-muted-foreground mt-1 no-print">
           Clique para editar • Clique direito para definições • Delete apaga evento
         </p>
       </CardHeader>
