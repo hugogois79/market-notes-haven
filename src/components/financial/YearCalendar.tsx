@@ -274,12 +274,8 @@ export default function YearCalendar() {
     const cat = categories.find(c => c.value === category);
     if (!cat) return { bgColor: "", textColor: "" };
     
-    // Map preset colors to text colors
-    const lightBgColors = ["#dcfce7", "#fde047", "#bfdbfe", "#f3e8ff", "#fed7aa", "#fce7f3", "#fecaca", "#fef08a", "#bbf7d0", "#ddd6fe", "#fbcfe8", "#e5e7eb"];
-    const isLightBg = lightBgColors.includes(cat.color);
-    const textColor = isLightBg ? "#1f2937" : "#ffffff";
-    
-    return { bgColor: cat.color, textColor };
+    // Always use black text for better readability
+    return { bgColor: cat.color, textColor: "#000000" };
   };
 
   // Background color for past dates - neutral light gray
