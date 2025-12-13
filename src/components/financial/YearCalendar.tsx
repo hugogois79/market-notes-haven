@@ -278,8 +278,13 @@ export default function YearCalendar() {
     setEditingEvent({});
   };
 
-  // In 6-month view, each month has 2 columns (morning/afternoon)
-  const columnCount = showFullYear ? visibleMonths.length : visibleMonths.length * 2;
+  // In 6-month view, each month has 4 columns: day-letter, morning, afternoon, day-letter
+  const columnCount = showFullYear ? visibleMonths.length : visibleMonths.length * 4;
+  
+  // Grid template for 6-month view: narrow columns for day letters, wider for events
+  const sixMonthGridTemplate = showFullYear 
+    ? `40px repeat(${visibleMonths.length}, 1fr)`
+    : `40px ${visibleMonths.map(() => '16px 1fr 1fr 16px').join(' ')}`;
 
   // Check if cell is being edited
   const isEditing = (day: number, month: number, year: number, period: string) => {
@@ -352,12 +357,23 @@ export default function YearCalendar() {
     const afternoonEvent = isValid ? getEventForDate(day, monthInfo.month, monthInfo.year, 'afternoon') : null;
     const morningStyle = getCategoryStyle(morningEvent?.category || null);
     const afternoonStyle = getCategoryStyle(afternoonEvent?.category || null);
-    const isWeekend = isValid && (getDayOfWeek(day, monthInfo.month, monthInfo.year) === "S" || getDayOfWeek(day, monthInfo.month, monthInfo.year) === "D");
+    const dayOfWeek = isValid ? getDayOfWeek(day, monthInfo.month, monthInfo.year) : "";
+    const isWeekend = dayOfWeek === "S" || dayOfWeek === "D";
     const editingMorning = isEditing(day, monthInfo.month, monthInfo.year, 'morning');
     const editingAfternoon = isEditing(day, monthInfo.month, monthInfo.year, 'afternoon');
 
     return (
       <>
+        {/* Day letter before morning */}
+        <div
+          key={`${day}-${monthInfo.month}-${monthInfo.year}-dow1`}
+          className={`
+            min-h-[22px] text-[8px] font-medium text-muted-foreground text-center flex items-center justify-center border-r border-border/30
+            ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/30' : 'bg-muted/10'}
+          `}
+        >
+          {isValid && dayOfWeek}
+        </div>
         {/* Morning slot */}
         <div
           key={`${day}-${monthInfo.month}-${monthInfo.year}-morning`}
@@ -396,7 +412,7 @@ export default function YearCalendar() {
         <div
           key={`${day}-${monthInfo.month}-${monthInfo.year}-afternoon`}
           className={`
-            border-r border-border last:border-r-0 min-h-[22px] p-0.5 text-[9px] cursor-pointer transition-colors
+            border-r border-border/50 min-h-[22px] p-0.5 text-[9px] cursor-pointer transition-colors
             ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
             ${isValid && afternoonEvent && !editingAfternoon ? afternoonStyle.bgClass : isValid && !editingAfternoon ? 'hover:bg-muted/40' : ''}
           `}
@@ -425,6 +441,16 @@ export default function YearCalendar() {
               </span>
             )
           )}
+        </div>
+        {/* Day letter after afternoon */}
+        <div
+          key={`${day}-${monthInfo.month}-${monthInfo.year}-dow2`}
+          className={`
+            min-h-[22px] text-[8px] font-medium text-muted-foreground text-center flex items-center justify-center border-r border-border last:border-r-0
+            ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/30' : 'bg-muted/10'}
+          `}
+        >
+          {isValid && dayOfWeek}
         </div>
       </>
     );
@@ -485,7 +511,7 @@ export default function YearCalendar() {
             className="border-b border-border sticky top-0 bg-background z-10"
             style={{ 
               display: 'grid', 
-              gridTemplateColumns: `40px repeat(${columnCount}, 1fr)` 
+              gridTemplateColumns: sixMonthGridTemplate 
             }}
           >
             <div className="p-1 text-[10px] font-medium text-muted-foreground text-center border-r border-border">
@@ -504,8 +530,8 @@ export default function YearCalendar() {
               visibleMonths.map((monthInfo) => (
                 <div
                   key={`${monthInfo.month}-${monthInfo.year}`}
-                  className="p-1 text-[10px] font-semibold text-center border-r border-border last:border-r-0 col-span-2"
-                  style={{ gridColumn: 'span 2' }}
+                  className="p-1 text-[10px] font-semibold text-center border-r border-border last:border-r-0"
+                  style={{ gridColumn: 'span 4' }}
                 >
                   {monthInfo.label}
                 </div>
@@ -520,7 +546,7 @@ export default function YearCalendar() {
               className="border-b border-border last:border-b-0"
               style={{ 
                 display: 'grid', 
-                gridTemplateColumns: `40px repeat(${columnCount}, 1fr)` 
+                gridTemplateColumns: sixMonthGridTemplate 
               }}
             >
               {/* Day Number */}
