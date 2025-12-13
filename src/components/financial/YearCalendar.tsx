@@ -337,13 +337,13 @@ export default function YearCalendar() {
     setEditingEvent({});
   };
 
-  // In 6-month view, each month has 5 columns: B (with day letter), morning, afternoon, D, day-letter
-  const columnCount = showFullYear ? visibleMonths.length : visibleMonths.length * 5;
+  // In 6-month view, each month has 4 columns: B (with day letter), morning, afternoon, D
+  const columnCount = showFullYear ? visibleMonths.length : visibleMonths.length * 4;
   
-  // Grid template for 6-month view: narrow columns for B/D and day letters, wider for events
+  // Grid template for 6-month view: narrow columns for B/D, wider for events
   const sixMonthGridTemplate = showFullYear 
     ? `40px repeat(${visibleMonths.length}, 1fr)`
-    : `40px ${visibleMonths.map(() => '20px 1fr 1fr 20px 16px').join(' ')}`;
+    : `40px ${visibleMonths.map(() => '20px 1fr 1fr 20px').join(' ')}`;
 
   // Check if cell is being edited
   const isEditing = (day: number, month: number, year: number, period: string) => {
@@ -558,17 +558,6 @@ export default function YearCalendar() {
           onClick={() => isValid && handleCellClick(day, monthInfo, 'afternoon')}
         >
         </div>
-        {/* Day letter after D - kept empty (no weekday letters) */}
-        <div
-          key={`${day}-${monthInfo.month}-${monthInfo.year}-dow2`}
-          className={`
-            min-h-[22px] text-[8px] font-medium text-muted-foreground text-center flex items-center justify-center border-r border-border last:border-r-0
-            ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/30' : 'bg-muted/10'}
-          `}
-          style={isPast && isValid ? { backgroundColor: PAST_DATE_BG } : undefined}
-        >
-          {/* Empty - no day letters */}
-        </div>
       </>
     );
   };
@@ -663,9 +652,7 @@ export default function YearCalendar() {
                     {monthInfo.label}
                   </div>
                   {/* D column header */}
-                  <div key={`${monthInfo.month}-${monthInfo.year}-d-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border/30">D</div>
-                  {/* Empty cell for day letter column after D */}
-                  <div key={`${monthInfo.month}-${monthInfo.year}-dow2-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border last:border-r-0"></div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-d-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border last:border-r-0">D</div>
                 </>
               ))
             )}
