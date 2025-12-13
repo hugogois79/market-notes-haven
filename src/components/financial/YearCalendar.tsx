@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, CalendarDays, Sun, Moon } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, MoreHorizontal, Sun, Moon } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -193,6 +193,13 @@ export default function YearCalendar() {
     return day <= getDaysInMonth(month, year);
   };
 
+  const isPastDate = (day: number, month: number, year: number) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const cellDate = new Date(year, month - 1, day);
+    return cellDate < today;
+  };
+
   const getEventForDate = (day: number, month: number, year: number, period?: string) => {
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     if (period) {
@@ -212,6 +219,9 @@ export default function YearCalendar() {
     
     return { bgColor: cat.color, textColor };
   };
+
+  // Background color for past dates
+  const PAST_DATE_BG = "#fde8e0";
 
   // Single click - start inline editing
   const handleCellClick = (day: number, monthInfo: MonthInfo, period: string = 'morning') => {
@@ -364,6 +374,13 @@ export default function YearCalendar() {
     const isWeekend = dayOfWeek === "S" || dayOfWeek === "D";
     const editingMorning = isEditing(day, monthInfo.month, monthInfo.year, 'morning');
     const editingAfternoon = isEditing(day, monthInfo.month, monthInfo.year, 'afternoon');
+    const isPast = isValid && isPastDate(day, monthInfo.month, monthInfo.year);
+
+    // Open settings sheet on right-click
+    const handleContextMenu = (e: React.MouseEvent, period: string) => {
+      e.preventDefault();
+      handleCellDoubleClick(day, monthInfo, period);
+    };
 
     return (
       <>
@@ -381,14 +398,18 @@ export default function YearCalendar() {
         <div
           key={`${day}-${monthInfo.month}-${monthInfo.year}-morning`}
           className={`
-            border-r border-border/50 min-h-[22px] p-0.5 text-[9px] cursor-pointer transition-colors
-            ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
+            border-r border-border/50 min-h-[22px] p-0.5 text-[9px] cursor-pointer transition-colors flex items-center justify-center
+            ${!isValid ? 'bg-muted/50' : ''}
             ${isValid && !morningEvent && !editingMorning ? 'hover:bg-muted/40' : ''}
           `}
-          style={isValid && morningEvent && !editingMorning && morningStyle.bgColor ? { backgroundColor: morningStyle.bgColor } : undefined}
+          style={{
+            backgroundColor: isValid && morningEvent && !editingMorning && morningStyle.bgColor 
+              ? morningStyle.bgColor 
+              : isPast && !morningEvent ? PAST_DATE_BG : undefined
+          }}
           onClick={() => isValid && handleCellClick(day, monthInfo, 'morning')}
-          onDoubleClick={() => isValid && handleCellDoubleClick(day, monthInfo, 'morning')}
-          title="Manhã"
+          onContextMenu={(e) => isValid && handleContextMenu(e, 'morning')}
+          title="Manhã - Clique direito para definições"
         >
           {isValid && (
             editingMorning ? (
@@ -399,12 +420,12 @@ export default function YearCalendar() {
                 onChange={(e) => setInlineValue(e.target.value)}
                 onBlur={handleInlineSave}
                 onKeyDown={handleInlineKeyDown}
-                className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none"
+                className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none text-center"
                 placeholder="..."
               />
             ) : (
               <span 
-                className="truncate block"
+                className={`truncate block text-center ${!isPast && morningEvent ? 'font-bold' : ''}`}
                 style={morningEvent && morningStyle.textColor ? { color: morningStyle.textColor } : undefined}
                 title={morningEvent?.title || ''}
               >
@@ -417,14 +438,18 @@ export default function YearCalendar() {
         <div
           key={`${day}-${monthInfo.month}-${monthInfo.year}-afternoon`}
           className={`
-            border-r border-border/50 min-h-[22px] p-0.5 text-[9px] cursor-pointer transition-colors
-            ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
+            border-r border-border/50 min-h-[22px] p-0.5 text-[9px] cursor-pointer transition-colors flex items-center justify-center
+            ${!isValid ? 'bg-muted/50' : ''}
             ${isValid && !afternoonEvent && !editingAfternoon ? 'hover:bg-muted/40' : ''}
           `}
-          style={isValid && afternoonEvent && !editingAfternoon && afternoonStyle.bgColor ? { backgroundColor: afternoonStyle.bgColor } : undefined}
+          style={{
+            backgroundColor: isValid && afternoonEvent && !editingAfternoon && afternoonStyle.bgColor 
+              ? afternoonStyle.bgColor 
+              : isPast && !afternoonEvent ? PAST_DATE_BG : undefined
+          }}
           onClick={() => isValid && handleCellClick(day, monthInfo, 'afternoon')}
-          onDoubleClick={() => isValid && handleCellDoubleClick(day, monthInfo, 'afternoon')}
-          title="Tarde"
+          onContextMenu={(e) => isValid && handleContextMenu(e, 'afternoon')}
+          title="Tarde - Clique direito para definições"
         >
           {isValid && (
             editingAfternoon ? (
@@ -435,12 +460,12 @@ export default function YearCalendar() {
                 onChange={(e) => setInlineValue(e.target.value)}
                 onBlur={handleInlineSave}
                 onKeyDown={handleInlineKeyDown}
-                className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none"
+                className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none text-center"
                 placeholder="..."
               />
             ) : (
               <span 
-                className="truncate block"
+                className={`truncate block text-center ${!isPast && afternoonEvent ? 'font-bold' : ''}`}
                 style={afternoonEvent && afternoonStyle.textColor ? { color: afternoonStyle.textColor } : undefined}
                 title={afternoonEvent?.title || ''}
               >
