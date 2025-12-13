@@ -507,12 +507,12 @@ export default function YearCalendar() {
     const droppedText = e.dataTransfer.getData('text/plain');
     
     if (isObjectiveDrop && droppedText) {
-      // Create new event from objective text
+      // Create new event from objective text with "Forecast" category
       saveMutation.mutate({
         id: existingTargetEvent?.id,
         date: targetDateStr,
         title: droppedText,
-        category: null,
+        category: 'Forecast',
         notes: null,
         period,
       });
