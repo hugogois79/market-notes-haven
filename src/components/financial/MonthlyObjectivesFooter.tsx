@@ -303,15 +303,15 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className={`bg-white border rounded p-2 min-h-[120px] transition-colors ${
+                  className={`bg-white border rounded p-2 h-[100px] transition-colors ${
                     snapshot.isDraggingOver ? "border-blue-400 bg-blue-50" : "border-slate-200"
                   }`}
                 >
                   <div className="text-xs font-semibold text-slate-600 mb-2 border-b pb-1">
                     {next3Months[columnIndex - 1]?.label || `Mês ${columnIndex}`}
                   </div>
-                  <div className="space-y-1">
-                    {getColumnObjectives(columnIndex).map((objective, index) => (
+                  <div className="space-y-0.5">
+                    {getColumnObjectives(columnIndex).slice(0, 5).map((objective, index) => (
                       <Draggable key={objective.id} draggableId={objective.id} index={index}>
                         {(provided, snapshot) => (
                           <div
@@ -403,15 +403,15 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
                           className="flex-1 text-[10px] bg-green-50 border border-green-300 rounded px-1 py-0.5 outline-none"
                         />
                       </div>
-                    ) : (
+                    ) : getColumnObjectives(columnIndex).length < 5 ? (
                       <button
                         onClick={() => handleAddNew(columnIndex)}
-                        className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-600 mt-1 ml-4"
+                        className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-600 mt-0.5 ml-4"
                       >
                         <Plus className="h-3 w-3" />
                         Adicionar
                       </button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               )}
