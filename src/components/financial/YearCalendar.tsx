@@ -416,7 +416,7 @@ export default function YearCalendar() {
           style={
             !isValid ? undefined : 
             isPast ? { backgroundColor: PAST_DATE_BG } : 
-            isWeekend ? { backgroundColor: '#dcfce7' } : 
+            isWeekend ? { backgroundColor: '#ecfdf5' } : 
             { backgroundColor: 'hsl(var(--muted) / 0.1)' }
           }
         >
@@ -464,7 +464,7 @@ export default function YearCalendar() {
               />
             ) : (
               <span 
-                className={`break-words text-center leading-tight w-full ${!isPast && morningEvent ? 'font-bold' : ''} ${morningEvent?.title && morningEvent.title.length > 15 ? 'text-[8px]' : 'text-[9px]'}`}
+                className={`break-words text-center leading-tight w-full text-[9px] ${!isPast && morningEvent ? 'font-bold' : ''}`}
                 style={morningEvent && morningStyle.textColor ? { color: morningStyle.textColor } : undefined}
                 title={morningEvent?.title || ''}
               >
@@ -504,7 +504,7 @@ export default function YearCalendar() {
               />
             ) : (
               <span 
-                className={`break-words text-center leading-tight w-full ${!isPast && afternoonEvent ? 'font-bold' : ''} ${afternoonEvent?.title && afternoonEvent.title.length > 15 ? 'text-[8px]' : 'text-[9px]'}`}
+                className={`break-words text-center leading-tight w-full text-[9px] ${!isPast && afternoonEvent ? 'font-bold' : ''}`}
                 style={afternoonEvent && afternoonStyle.textColor ? { color: afternoonStyle.textColor } : undefined}
                 title={afternoonEvent?.title || ''}
               >
