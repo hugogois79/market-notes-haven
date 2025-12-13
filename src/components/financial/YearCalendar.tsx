@@ -724,7 +724,7 @@ export default function YearCalendar() {
       
       // If custody is set, use that
       if (custody === 'comigo') {
-        return { backgroundColor: '#22c55e', color: '#ffffff' }; // Bright green with white text
+        return { backgroundColor: '#16a34a', color: '#ffffff' }; // Bright green with white text
       }
       if (custody === 'mae') {
         // With mom: weekends show light green, other days show yellow
@@ -748,7 +748,7 @@ export default function YearCalendar() {
       
       // If Diana is with me, show green with white text
       if (diana === 'comigo') {
-        return { backgroundColor: '#22c55e', color: '#ffffff' }; // Bright green with white text
+        return { backgroundColor: '#16a34a', color: '#ffffff' }; // Bright green with white text
       }
       
       // Default: light blue for future dates
