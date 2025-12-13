@@ -320,13 +320,13 @@ export default function YearCalendar() {
     setEditingEvent({});
   };
 
-  // In 6-month view, each month has 6 columns: day-letter, B, morning, afternoon, D, day-letter
-  const columnCount = showFullYear ? visibleMonths.length : visibleMonths.length * 6;
+  // In 6-month view, each month has 5 columns: B (with day letter), morning, afternoon, D, day-letter
+  const columnCount = showFullYear ? visibleMonths.length : visibleMonths.length * 5;
   
-  // Grid template for 6-month view: narrow columns for day letters and B/D, wider for events
+  // Grid template for 6-month view: narrow columns for B/D and day letters, wider for events
   const sixMonthGridTemplate = showFullYear 
     ? `40px repeat(${visibleMonths.length}, 1fr)`
-    : `40px ${visibleMonths.map(() => '16px 20px 1fr 1fr 20px 16px').join(' ')}`;
+    : `40px ${visibleMonths.map(() => '20px 1fr 1fr 20px 16px').join(' ')}`;
 
   // Check if cell is being edited
   const isEditing = (day: number, month: number, year: number, period: string) => {
@@ -423,37 +423,26 @@ export default function YearCalendar() {
 
     return (
       <>
-        {/* Day letter before B */}
-        <div
-          key={`${day}-${monthInfo.month}-${monthInfo.year}-dow1`}
-          className={`
-            min-h-[22px] text-[8px] font-medium text-center flex items-center justify-center border-r border-border/30
-            ${!isValid ? 'bg-muted/50' : ''}
-          `}
-          style={
-            !isValid ? undefined : 
-            isPast ? { backgroundColor: PAST_DATE_BG } : 
-            isWeekend ? { backgroundColor: '#ecfdf5' } : 
-            { backgroundColor: 'hsl(var(--muted) / 0.1)' }
-          }
-        >
-          {isValid && <span className={isWeekend ? 'text-green-700' : 'text-muted-foreground'}>{dayOfWeek}</span>}
-        </div>
-        {/* B column (Beatriz) - green on Wednesdays */}
+        {/* B column (Beatriz) with day letter - green on Wednesdays */}
         <div
           key={`${day}-${monthInfo.month}-${monthInfo.year}-b`}
           className={`
-            min-h-[22px] text-[9px] font-medium text-center flex items-center justify-center border-r border-border/30 cursor-pointer
+            min-h-[22px] text-[8px] font-medium text-center flex items-center justify-center border-r border-border/30 cursor-pointer
             ${!isValid ? 'bg-muted/50' : ''}
           `}
           style={
             !isValid ? undefined :
             isPast ? { backgroundColor: PAST_DATE_BG } :
-            isWednesday(day, monthInfo.month, monthInfo.year) ? { backgroundColor: '#ecfdf5' } :
+            isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend ? { backgroundColor: '#ecfdf5' } :
             { backgroundColor: '#fffbeb' }
           }
           onClick={() => isValid && handleCellClick(day, monthInfo, 'morning')}
         >
+          {isValid && (
+            <span className={isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend ? 'text-green-700' : 'text-muted-foreground'}>
+              {dayOfWeek}
+            </span>
+          )}
         </div>
         {/* Morning slot */}
         <div
@@ -640,8 +629,6 @@ export default function YearCalendar() {
             ) : (
               visibleMonths.map((monthInfo) => (
                 <>
-                  {/* Empty cell for day letter column */}
-                  <div key={`${monthInfo.month}-${monthInfo.year}-dow-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border/30"></div>
                   {/* B column header */}
                   <div key={`${monthInfo.month}-${monthInfo.year}-b-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border/30">B</div>
                   {/* Month name spanning Morning and Afternoon columns */}
