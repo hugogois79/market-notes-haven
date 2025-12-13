@@ -422,7 +422,7 @@ export default function YearCalendar() {
         <div
           key={`${day}-${monthInfo.month}-${monthInfo.year}-morning`}
           className={`
-            border-r border-border/50 min-h-[22px] p-0.5 text-[9px] cursor-pointer transition-colors flex items-center justify-center
+            border-r border-border/50 min-h-[22px] p-0.5 cursor-pointer transition-colors flex items-center justify-center
             ${!isValid ? 'bg-muted/50' : ''}
             ${isValid && !morningEvent && !editingMorning ? 'hover:bg-muted/40' : ''}
           `}
@@ -444,12 +444,12 @@ export default function YearCalendar() {
                 onChange={(e) => setInlineValue(e.target.value)}
                 onBlur={handleInlineSave}
                 onKeyDown={handleInlineKeyDown}
-                className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none text-center"
+                className="w-full h-full bg-background border border-primary text-[11px] px-0.5 outline-none text-center"
                 placeholder="..."
               />
             ) : (
               <span 
-                className={`break-words text-center leading-tight w-full ${!isPast && morningEvent ? 'font-bold' : ''}`}
+                className={`break-words text-center leading-tight w-full ${!isPast && morningEvent ? 'font-bold' : ''} ${morningEvent?.title && morningEvent.title.length > 15 ? 'text-[9px]' : 'text-[11px]'}`}
                 style={morningEvent && morningStyle.textColor ? { color: morningStyle.textColor } : undefined}
                 title={morningEvent?.title || ''}
               >
@@ -462,7 +462,7 @@ export default function YearCalendar() {
         <div
           key={`${day}-${monthInfo.month}-${monthInfo.year}-afternoon`}
           className={`
-            border-r border-border/50 min-h-[22px] p-0.5 text-[9px] cursor-pointer transition-colors flex items-center justify-center
+            border-r border-border/50 min-h-[22px] p-0.5 cursor-pointer transition-colors flex items-center justify-center
             ${!isValid ? 'bg-muted/50' : ''}
             ${isValid && !afternoonEvent && !editingAfternoon ? 'hover:bg-muted/40' : ''}
           `}
@@ -484,12 +484,12 @@ export default function YearCalendar() {
                 onChange={(e) => setInlineValue(e.target.value)}
                 onBlur={handleInlineSave}
                 onKeyDown={handleInlineKeyDown}
-                className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none text-center"
+                className="w-full h-full bg-background border border-primary text-[11px] px-0.5 outline-none text-center"
                 placeholder="..."
               />
             ) : (
               <span 
-                className={`break-words text-center leading-tight w-full ${!isPast && afternoonEvent ? 'font-bold' : ''}`}
+                className={`break-words text-center leading-tight w-full ${!isPast && afternoonEvent ? 'font-bold' : ''} ${afternoonEvent?.title && afternoonEvent.title.length > 15 ? 'text-[9px]' : 'text-[11px]'}`}
                 style={afternoonEvent && afternoonStyle.textColor ? { color: afternoonStyle.textColor } : undefined}
                 title={afternoonEvent?.title || ''}
               >
