@@ -1,0 +1,66 @@
+/* Calendar Print Styles - Landscape Format */
+@media print {
+  @page {
+    size: landscape;
+    margin: 10mm;
+  }
+
+  /* Hide everything except the calendar */
+  body * {
+    visibility: hidden;
+  }
+
+  .calendar-print-area,
+  .calendar-print-area * {
+    visibility: visible !important;
+  }
+
+  .calendar-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* Hide non-printable elements */
+  .no-print,
+  .calendar-print-area .no-print {
+    display: none !important;
+  }
+
+  /* Ensure full width for print */
+  .calendar-print-area .min-w-\[900px\],
+  .calendar-print-area .min-w-\[700px\] {
+    min-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Remove card styling for cleaner print */
+  .calendar-print-area .rounded-lg {
+    border-radius: 0 !important;
+  }
+
+  .calendar-print-area .shadow-sm {
+    box-shadow: none !important;
+  }
+
+  /* Ensure text is readable */
+  .calendar-print-area {
+    font-size: 9px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Ensure borders print */
+  .calendar-print-area [class*="border"] {
+    border-color: #e5e7eb !important;
+  }
+
+  /* Ensure background colors print */
+  .calendar-print-area [style*="background"] {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+}
