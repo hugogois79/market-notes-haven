@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Check, Trash2, GripVertical } from "lucide-react";
+import { Plus, Check, Trash2, GripVertical, Target } from "lucide-react";
 import { toast } from "sonner";
 import {
   DragDropContext,
@@ -26,6 +26,7 @@ interface MonthlyObjective {
   column_index: number;
   display_order: number;
   created_at: string;
+  category: string | null;
 }
 
 interface Child {
@@ -165,6 +166,42 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
     },
   });
 
+  const duplicateAsForecastMutation = useMutation({
+    mutationFn: async ({ sourceId, targetMonth, targetYear }: { sourceId: string; targetMonth: number; targetYear: number }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Find the source objective
+      const sourceObjective = objectives.find(o => o.id === sourceId);
+      if (!sourceObjective) throw new Error("Source objective not found");
+
+      // Get max order for target month
+      const targetObjectives = objectives.filter(o => o.month === targetMonth && o.year === targetYear);
+      const maxOrder = targetObjectives.length > 0 
+        ? Math.max(...targetObjectives.map(o => o.display_order)) 
+        : -1;
+
+      const { error } = await supabase
+        .from("monthly_objectives")
+        .insert({
+          user_id: user.id,
+          year: targetYear,
+          month: targetMonth,
+          content: sourceObjective.content,
+          display_order: maxOrder + 1,
+          category: 'forecast',
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["monthly-objectives"] });
+      toast.success("Objetivo duplicado como forecast");
+    },
+    onError: () => {
+      toast.error("Erro ao duplicar objetivo");
+    },
+  });
+
   const reorderMutation = useMutation({
     mutationFn: async (updates: { id: string; month: number; year: number; display_order: number }[]) => {
       for (const update of updates) {
@@ -231,6 +268,20 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
 
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+
+    // Check if dropped on forecast zone
+    if (destination.droppableId.startsWith("forecast-")) {
+      const destIdx = parseInt(destination.droppableId.replace("forecast-", ""));
+      const destMonthInfo = visibleMonths[destIdx];
+      if (destMonthInfo) {
+        duplicateAsForecastMutation.mutate({
+          sourceId: draggableId,
+          targetMonth: destMonthInfo.month,
+          targetYear: destMonthInfo.year,
+        });
+      }
+      return;
+    }
 
     const sourceIdx = parseInt(source.droppableId.replace("month-", ""));
     const destIdx = parseInt(destination.droppableId.replace("month-", ""));
@@ -309,132 +360,196 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
         <div className="grid grid-cols-4 gap-3">
           {/* 3 Objective Columns */}
           {visibleMonths.map((monthInfo, idx) => (
-            <Droppable key={`${monthInfo.year}-${monthInfo.month}`} droppableId={`month-${idx}`}>
-              {(provided, snapshot) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={`bg-white border rounded p-2 h-[150px] transition-colors ${
-                    snapshot.isDraggingOver ? "border-blue-400 bg-blue-50" : "border-slate-200"
-                  }`}
-                >
-                  <div className="text-xs font-semibold text-slate-600 mb-2 border-b pb-1">
-                    {monthInfo.label}
-                  </div>
-                  <div className="space-y-0.5">
-                    {getMonthObjectives(monthInfo.month, monthInfo.year).slice(0, 5).map((objective, index) => (
-                      <Draggable key={objective.id} draggableId={objective.id} index={index}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            className={`${snapshot.isDragging ? "opacity-90 shadow-lg" : ""}`}
-                          >
-                            <ContextMenu modal={false}>
-                              <ContextMenuTrigger asChild>
-                                <div className="flex items-start gap-1 group">
-                                  <div
-                                    {...provided.dragHandleProps}
-                                    className="flex-shrink-0 cursor-grab text-slate-300 hover:text-slate-500 mt-0.5"
-                                  >
-                                    <GripVertical className="h-3 w-3" />
-                                  </div>
-                                  <span className="text-[10px] text-slate-400 font-mono w-4 flex-shrink-0">
-                                    {index + 1})
-                                  </span>
-                                  {editingId === objective.id ? (
-                                    <input
-                                      ref={inputRef}
-                                      type="text"
-                                      value={editValue}
-                                      onChange={(e) => setEditValue(e.target.value)}
-                                      onBlur={handleSaveEdit}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") handleSaveEdit();
-                                        if (e.key === "Escape") {
-                                          setEditingId(null);
-                                          setEditValue("");
-                                        }
-                                      }}
-                                      className="flex-1 text-[10px] bg-yellow-50 border border-yellow-300 rounded px-1 py-0.5 outline-none"
-                                    />
-                                  ) : (
-                                    <span
-                                      onClick={() => handleEdit(objective)}
-                                      className={`flex-1 text-[10px] cursor-pointer hover:bg-slate-100 rounded px-1 py-0.5 ${
-                                        objective.is_completed
-                                          ? "line-through text-slate-400"
-                                          : "text-slate-800"
-                                      }`}
+            <div key={`col-${monthInfo.year}-${monthInfo.month}`} className="space-y-2">
+              {/* Main objectives droppable */}
+              <Droppable droppableId={`month-${idx}`}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`bg-white border rounded p-2 h-[120px] transition-colors ${
+                      snapshot.isDraggingOver ? "border-blue-400 bg-blue-50" : "border-slate-200"
+                    }`}
+                  >
+                    <div className="text-xs font-semibold text-slate-600 mb-2 border-b pb-1">
+                      {monthInfo.label}
+                    </div>
+                    <div className="space-y-0.5">
+                      {getMonthObjectives(monthInfo.month, monthInfo.year)
+                        .filter(o => o.category !== 'forecast')
+                        .slice(0, 5)
+                        .map((objective, index) => (
+                        <Draggable key={objective.id} draggableId={objective.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              className={`${snapshot.isDragging ? "opacity-90 shadow-lg" : ""}`}
+                            >
+                              <ContextMenu modal={false}>
+                                <ContextMenuTrigger asChild>
+                                  <div className="flex items-start gap-1 group">
+                                    <div
+                                      {...provided.dragHandleProps}
+                                      className="flex-shrink-0 cursor-grab text-slate-300 hover:text-slate-500 mt-0.5"
                                     >
-                                      {objective.content}
+                                      <GripVertical className="h-3 w-3" />
+                                    </div>
+                                    <span className="text-[10px] text-slate-400 font-mono w-4 flex-shrink-0">
+                                      {index + 1})
                                     </span>
-                                  )}
-                                </div>
-                              </ContextMenuTrigger>
-                              <ContextMenuContent className="z-50">
-                                <ContextMenuItem 
-                                  onSelect={(e) => {
-                                    e.preventDefault();
-                                    handleToggleComplete(objective);
-                                  }}
-                                >
-                                  <Check className="h-3 w-3 mr-2" />
-                                  {objective.is_completed ? "Marcar incompleto" : "Marcar completo"}
-                                </ContextMenuItem>
-                                <ContextMenuItem 
-                                  onSelect={(e) => {
-                                    e.preventDefault();
-                                    deleteMutation.mutate(objective.id);
-                                  }}
-                                  className="text-red-600"
-                                >
-                                  <Trash2 className="h-3 w-3 mr-2" />
-                                  Eliminar
-                                </ContextMenuItem>
-                              </ContextMenuContent>
-                            </ContextMenu>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                    
-                    {addingToMonth?.month === monthInfo.month && addingToMonth?.year === monthInfo.year ? (
-                      <div className="flex items-start gap-1">
-                        <span className="text-[10px] text-slate-400 font-mono w-4 flex-shrink-0 ml-4">
-                          {getMonthObjectives(monthInfo.month, monthInfo.year).length + 1})
-                        </span>
-                        <input
-                          ref={inputRef}
-                          type="text"
-                          value={newValue}
-                          onChange={(e) => setNewValue(e.target.value)}
-                          onBlur={handleSaveNew}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleSaveNew();
-                            if (e.key === "Escape") {
-                              setAddingToMonth(null);
-                              setNewValue("");
-                            }
-                          }}
-                          placeholder="Novo objetivo..."
-                          className="flex-1 text-[10px] bg-green-50 border border-green-300 rounded px-1 py-0.5 outline-none"
-                        />
-                      </div>
-                    ) : getMonthObjectives(monthInfo.month, monthInfo.year).length < 5 ? (
-                      <button
-                        onClick={() => handleAddNew(monthInfo)}
-                        className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-600 mt-0.5 ml-4"
-                      >
-                        <Plus className="h-3 w-3" />
-                        Adicionar
-                      </button>
-                    ) : null}
+                                    {editingId === objective.id ? (
+                                      <input
+                                        ref={inputRef}
+                                        type="text"
+                                        value={editValue}
+                                        onChange={(e) => setEditValue(e.target.value)}
+                                        onBlur={handleSaveEdit}
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") handleSaveEdit();
+                                          if (e.key === "Escape") {
+                                            setEditingId(null);
+                                            setEditValue("");
+                                          }
+                                        }}
+                                        className="flex-1 text-[10px] bg-yellow-50 border border-yellow-300 rounded px-1 py-0.5 outline-none"
+                                      />
+                                    ) : (
+                                      <span
+                                        onClick={() => handleEdit(objective)}
+                                        className={`flex-1 text-[10px] cursor-pointer hover:bg-slate-100 rounded px-1 py-0.5 ${
+                                          objective.is_completed
+                                            ? "line-through text-slate-400"
+                                            : "text-slate-800"
+                                        }`}
+                                      >
+                                        {objective.content}
+                                      </span>
+                                    )}
+                                  </div>
+                                </ContextMenuTrigger>
+                                <ContextMenuContent className="z-50">
+                                  <ContextMenuItem 
+                                    onSelect={(e) => {
+                                      e.preventDefault();
+                                      handleToggleComplete(objective);
+                                    }}
+                                  >
+                                    <Check className="h-3 w-3 mr-2" />
+                                    {objective.is_completed ? "Marcar incompleto" : "Marcar completo"}
+                                  </ContextMenuItem>
+                                  <ContextMenuItem 
+                                    onSelect={(e) => {
+                                      e.preventDefault();
+                                      deleteMutation.mutate(objective.id);
+                                    }}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="h-3 w-3 mr-2" />
+                                    Eliminar
+                                  </ContextMenuItem>
+                                </ContextMenuContent>
+                              </ContextMenu>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                      
+                      {addingToMonth?.month === monthInfo.month && addingToMonth?.year === monthInfo.year ? (
+                        <div className="flex items-start gap-1">
+                          <span className="text-[10px] text-slate-400 font-mono w-4 flex-shrink-0 ml-4">
+                            {getMonthObjectives(monthInfo.month, monthInfo.year).filter(o => o.category !== 'forecast').length + 1})
+                          </span>
+                          <input
+                            ref={inputRef}
+                            type="text"
+                            value={newValue}
+                            onChange={(e) => setNewValue(e.target.value)}
+                            onBlur={handleSaveNew}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSaveNew();
+                              if (e.key === "Escape") {
+                                setAddingToMonth(null);
+                                setNewValue("");
+                              }
+                            }}
+                            placeholder="Novo objetivo..."
+                            className="flex-1 text-[10px] bg-green-50 border border-green-300 rounded px-1 py-0.5 outline-none"
+                          />
+                        </div>
+                      ) : getMonthObjectives(monthInfo.month, monthInfo.year).filter(o => o.category !== 'forecast').length < 5 ? (
+                        <button
+                          onClick={() => handleAddNew(monthInfo)}
+                          className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-600 mt-0.5 ml-4"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Adicionar
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              )}
-            </Droppable>
+                )}
+              </Droppable>
+
+              {/* Forecast drop zone */}
+              <Droppable droppableId={`forecast-${idx}`}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`border border-dashed rounded p-1.5 min-h-[28px] transition-colors ${
+                      snapshot.isDraggingOver 
+                        ? "border-purple-400 bg-purple-100" 
+                        : "border-purple-300 bg-purple-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1 text-[9px] text-purple-600">
+                      <Target className="h-3 w-3" />
+                      <span className="font-medium">Forecast</span>
+                    </div>
+                    {/* Show forecast objectives */}
+                    <div className="space-y-0.5 mt-1">
+                      {getMonthObjectives(monthInfo.month, monthInfo.year)
+                        .filter(o => o.category === 'forecast')
+                        .map((objective) => (
+                          <ContextMenu key={objective.id} modal={false}>
+                            <ContextMenuTrigger asChild>
+                              <div className={`text-[9px] text-purple-700 bg-purple-100 rounded px-1 py-0.5 cursor-pointer hover:bg-purple-200 ${
+                                objective.is_completed ? "line-through opacity-60" : ""
+                              }`}>
+                                {objective.content}
+                              </div>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent className="z-50">
+                              <ContextMenuItem 
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  handleToggleComplete(objective);
+                                }}
+                              >
+                                <Check className="h-3 w-3 mr-2" />
+                                {objective.is_completed ? "Marcar incompleto" : "Marcar completo"}
+                              </ContextMenuItem>
+                              <ContextMenuItem 
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  deleteMutation.mutate(objective.id);
+                                }}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="h-3 w-3 mr-2" />
+                                Eliminar
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
+                        ))}
+                    </div>
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </div>
           ))}
 
           {/* Context Box - Assets & Kids Ages */}
