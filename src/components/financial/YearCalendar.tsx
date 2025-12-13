@@ -513,7 +513,11 @@ export default function YearCalendar() {
         return { backgroundColor: '#166534', color: '#ffffff' }; // Dark green with white text
       }
       if (custody === 'mae') {
-        return { backgroundColor: '#fffbeb' }; // Light yellow (with mom)
+        // With mom: weekends show light green, other days show yellow
+        if (isWeekend) {
+          return { backgroundColor: '#ecfdf5' }; // Light green for weekends
+        }
+        return { backgroundColor: '#fffbeb' }; // Light yellow for other days
       }
       
       // Default: green for Wednesday/weekends, yellow otherwise
