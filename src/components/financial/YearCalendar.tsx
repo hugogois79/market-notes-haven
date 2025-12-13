@@ -125,32 +125,47 @@ export default function YearCalendar() {
     },
   });
 
-  // Fetch all unique event titles for autocomplete suggestions
-  const { data: eventSuggestions } = useQuery({
-    queryKey: ["calendar-event-suggestions"],
+  // Query for event templates with their categories
+  const { data: eventTemplates } = useQuery({
+    queryKey: ["calendar-event-templates"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("calendar_events")
-        .select("title")
-        .not("title", "is", null);
+        .from("calendar_event_templates")
+        .select("*");
       
       if (error) throw error;
-      // Get unique non-empty titles
-      const titles = data?.map(e => e.title).filter(Boolean) as string[];
-      return [...new Set(titles)].sort();
+      return data || [];
     },
   });
+
+  // Get unique suggestions from templates
+  const eventSuggestions = useMemo(() => {
+    return eventTemplates?.map(t => t.title).sort() || [];
+  }, [eventTemplates]);
+
+  // Get category for a title from templates
+  const getCategoryForTitle = (title: string): string | null => {
+    const template = eventTemplates?.find(t => t.title.toLowerCase() === title.toLowerCase());
+    return template?.category || null;
+  };
 
   const saveMutation = useMutation({
     mutationFn: async (event: Partial<CalendarEvent>) => {
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+      
+      // Determine category - use provided category, or get from template if title matches
+      let categoryToUse = event.category;
+      if (!categoryToUse && event.title) {
+        categoryToUse = getCategoryForTitle(event.title);
+      }
       
       if (event.id) {
         const { error } = await supabase
           .from("calendar_events")
           .update({
             title: event.title,
-            category: event.category,
+            category: categoryToUse,
             notes: event.notes,
             period: event.period,
           })
@@ -162,16 +177,29 @@ export default function YearCalendar() {
           .insert({
             date: event.date,
             title: event.title,
-            category: event.category,
+            category: categoryToUse,
             notes: event.notes,
             period: event.period || 'morning',
             user_id: user?.id,
           });
         if (error) throw error;
       }
+      
+      // Update template with title and category
+      if (event.title && categoryToUse) {
+        await supabase
+          .from("calendar_event_templates")
+          .upsert({
+            user_id: user.id,
+            title: event.title,
+            category: categoryToUse,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id,title' });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-event-templates"] });
     },
     onError: () => {
       toast.error("Erro ao guardar evento");
