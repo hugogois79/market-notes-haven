@@ -214,6 +214,12 @@ export default function YearCalendar() {
     return events?.find(e => e.date === dateStr);
   };
 
+  // Get all events for a date (both morning and afternoon) - for full year view
+  const getAllEventsForDate = (day: number, month: number, year: number) => {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return events?.filter(e => e.date === dateStr) || [];
+  };
+
   const getCategoryStyle = (category: string | null): { bgColor: string; textColor: string } => {
     const cat = categories.find(c => c.value === category);
     if (!cat) return { bgColor: "", textColor: "" };
@@ -328,8 +334,14 @@ export default function YearCalendar() {
   // Render cell for full year view (single slot per day)
   const renderFullYearCell = (day: number, monthInfo: MonthInfo) => {
     const isValid = isValidDateForMonth(day, monthInfo.month, monthInfo.year);
-    const event = isValid ? getEventForDate(day, monthInfo.month, monthInfo.year) : null;
-    const style = getCategoryStyle(event?.category || null);
+    const allEvents = isValid ? getAllEventsForDate(day, monthInfo.month, monthInfo.year) : [];
+    const hasEvents = allEvents.length > 0;
+    
+    // Use the first event's category for background color, or combine titles
+    const primaryEvent = allEvents[0];
+    const style = getCategoryStyle(primaryEvent?.category || null);
+    const combinedTitle = allEvents.map(e => e.title).filter(Boolean).join(' / ');
+    
     const dayOfWeek = isValid ? getDayOfWeek(day, monthInfo.month, monthInfo.year) : "";
     const isWeekend = isValid && isWeekendDay(day, monthInfo.month, monthInfo.year);
     const editing = isEditing(day, monthInfo.month, monthInfo.year, 'morning');
@@ -341,9 +353,9 @@ export default function YearCalendar() {
           p-0.5 text-[9px] border-r border-border last:border-r-0 min-h-[24px] cursor-pointer
           transition-colors
           ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
-          ${isValid && !event && !editing ? 'hover:bg-muted/40' : ''}
+          ${isValid && !hasEvents && !editing ? 'hover:bg-muted/40' : ''}
         `}
-        style={event && !editing && style.bgColor ? { backgroundColor: style.bgColor } : undefined}
+        style={hasEvents && !editing && style.bgColor ? { backgroundColor: style.bgColor } : undefined}
         onClick={() => handleCellClick(day, monthInfo)}
         onDoubleClick={() => handleCellDoubleClick(day, monthInfo)}
       >
@@ -364,17 +376,17 @@ export default function YearCalendar() {
               <div className="flex items-start gap-0.5">
                 <span 
                   className="text-[8px]"
-                  style={event && style.textColor ? { color: style.textColor } : undefined}
+                  style={hasEvents && style.textColor ? { color: style.textColor } : undefined}
                 >
                   {dayOfWeek}
                 </span>
-                {event?.title && (
+                {combinedTitle && (
                   <span 
                     className="truncate flex-1"
                     style={style.textColor ? { color: style.textColor } : undefined}
-                    title={event.title}
+                    title={combinedTitle}
                   >
-                    {event.title}
+                    {combinedTitle}
                   </span>
                 )}
               </div>
