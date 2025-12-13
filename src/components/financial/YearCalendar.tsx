@@ -195,6 +195,11 @@ export default function YearCalendar() {
     return dayIndex === 0 || dayIndex === 6; // Sunday (0) or Saturday (6)
   };
 
+  const isWednesday = (day: number, month: number, year: number) => {
+    const date = new Date(year, month - 1, day);
+    return date.getDay() === 3; // Wednesday
+  };
+
   const isValidDateForMonth = (day: number, month: number, year: number) => {
     return day <= getDaysInMonth(month, year);
   };
@@ -434,14 +439,19 @@ export default function YearCalendar() {
         >
           {isValid && <span className={isWeekend ? 'text-green-700' : 'text-muted-foreground'}>{dayOfWeek}</span>}
         </div>
-        {/* B column (Beatriz) */}
+        {/* B column (Beatriz) - green on Wednesdays */}
         <div
           key={`${day}-${monthInfo.month}-${monthInfo.year}-b`}
           className={`
             min-h-[22px] text-[9px] font-medium text-center flex items-center justify-center border-r border-border/30 cursor-pointer
-            ${!isValid ? 'bg-muted/50' : 'bg-amber-50 hover:bg-amber-100'}
+            ${!isValid ? 'bg-muted/50' : ''}
           `}
-          style={isPast && isValid ? { backgroundColor: PAST_DATE_BG } : undefined}
+          style={
+            !isValid ? undefined :
+            isPast ? { backgroundColor: PAST_DATE_BG } :
+            isWednesday(day, monthInfo.month, monthInfo.year) ? { backgroundColor: '#ecfdf5' } :
+            { backgroundColor: '#fffbeb' }
+          }
           onClick={() => isValid && handleCellClick(day, monthInfo, 'morning')}
         >
         </div>
