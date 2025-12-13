@@ -24,18 +24,25 @@ const DEFAULT_CATEGORIES: CalendarCategory[] = [
   { value: "personal", label: "Pessoal", bgClass: "bg-pink-100", textClass: "text-pink-900", color: "#fce7f3" },
 ];
 
+// Light colors with black text, dark colors with white text
 const COLOR_PRESETS = [
-  { color: "#ef4444", bgClass: "bg-red-500", textClass: "text-black" },
-  { color: "#f97316", bgClass: "bg-orange-500", textClass: "text-black" },
-  { color: "#facc15", bgClass: "bg-yellow-400", textClass: "text-black" },
-  { color: "#22c55e", bgClass: "bg-green-500", textClass: "text-black" },
-  { color: "#0ea5e9", bgClass: "bg-sky-500", textClass: "text-black" },
-  { color: "#3b82f6", bgClass: "bg-blue-500", textClass: "text-black" },
-  { color: "#1e40af", bgClass: "bg-blue-800", textClass: "text-black" },
-  { color: "#8b5cf6", bgClass: "bg-purple-500", textClass: "text-black" },
-  { color: "#ec4899", bgClass: "bg-pink-500", textClass: "text-black" },
-  { color: "#6b7280", bgClass: "bg-gray-500", textClass: "text-black" },
+  { color: "#fecaca", bgClass: "bg-red-200", textClass: "text-black" },       // Light red
+  { color: "#fed7aa", bgClass: "bg-orange-200", textClass: "text-black" },    // Light orange
+  { color: "#fef08a", bgClass: "bg-yellow-200", textClass: "text-black" },    // Light yellow
+  { color: "#bbf7d0", bgClass: "bg-green-200", textClass: "text-black" },     // Light green
+  { color: "#bae6fd", bgClass: "bg-sky-200", textClass: "text-black" },       // Light sky
+  { color: "#bfdbfe", bgClass: "bg-blue-200", textClass: "text-black" },      // Light blue
+  { color: "#1e40af", bgClass: "bg-blue-800", textClass: "text-white" },      // Dark blue (strong)
+  { color: "#ddd6fe", bgClass: "bg-purple-200", textClass: "text-black" },    // Light purple
+  { color: "#fbcfe8", bgClass: "bg-pink-200", textClass: "text-black" },      // Light pink
+  { color: "#d1d5db", bgClass: "bg-gray-300", textClass: "text-black" },      // Light gray
 ];
+
+// Helper to determine if a color is dark (needs white text)
+const isDarkColor = (color: string): boolean => {
+  const darkColors = ["#1e40af", "#1e3a8a", "#312e81", "#4c1d95", "#831843", "#7f1d1d"];
+  return darkColors.includes(color.toLowerCase());
+};
 
 interface CalendarSettingsSheetProps {
   categories: CalendarCategory[];
@@ -136,10 +143,21 @@ export default function CalendarSettingsSheet({
                   key={category.value}
                   className="flex items-center gap-3 p-2 rounded-lg border border-border bg-card"
                 >
+                  {/* Preview badge */}
+                  <div 
+                    className="px-2 py-1 rounded text-xs font-medium min-w-[80px] text-center"
+                    style={{ 
+                      backgroundColor: category.color,
+                      color: isDarkColor(category.color) ? '#ffffff' : '#000000'
+                    }}
+                  >
+                    {category.label}
+                  </div>
+                  
                   <Input
                     value={category.label}
                     onChange={(e) => handleLabelChange(category.value, e.target.value)}
-                    className="h-8 text-sm w-[140px] min-w-[140px]"
+                    className="h-8 text-sm w-[120px] min-w-[120px]"
                   />
                   
                   <div className="flex gap-1">
