@@ -13,6 +13,12 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import CalendarSettingsSheet, { CalendarCategory, loadCalendarCategories } from "./CalendarSettingsSheet";
 import EventAutocomplete, { EventAutocompleteRef } from "./EventAutocomplete";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const MONTHS = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
@@ -49,6 +55,22 @@ interface EditingCell {
   period: string;
 }
 
+// Custody status type for B column
+type CustodyStatus = 'comigo' | 'mae' | null;
+
+// Key for storing custody status in localStorage
+const CUSTODY_STORAGE_KEY = 'calendar-custody-status';
+
+// Load custody status from localStorage
+const loadCustodyStatus = (): Record<string, CustodyStatus> => {
+  try {
+    const stored = localStorage.getItem(CUSTODY_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+};
+
 export default function YearCalendar() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showFullYear, setShowFullYear] = useState(false);
@@ -57,6 +79,7 @@ export default function YearCalendar() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Partial<CalendarEvent>>({});
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
+  const [custodyStatus, setCustodyStatus] = useState<Record<string, CustodyStatus>>(loadCustodyStatus);
   const [inlineValue, setInlineValue] = useState("");
   const [categories, setCategories] = useState<CalendarCategory[]>(loadCalendarCategories);
   const inputRef = useRef<EventAutocompleteRef>(null);
@@ -284,6 +307,19 @@ export default function YearCalendar() {
   // Background color for past dates - neutral light gray
   const PAST_DATE_BG = "#f1f5f9";
 
+  // Handle custody status change
+  const handleCustodyChange = (dateStr: string, status: CustodyStatus) => {
+    const newCustodyStatus = { ...custodyStatus, [dateStr]: status };
+    setCustodyStatus(newCustodyStatus);
+    localStorage.setItem(CUSTODY_STORAGE_KEY, JSON.stringify(newCustodyStatus));
+  };
+
+  // Get custody status for a date
+  const getCustodyForDate = (day: number, month: number, year: number): CustodyStatus => {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return custodyStatus[dateStr] || null;
+  };
+
   // Single click - start inline editing
   const handleCellClick = (day: number, monthInfo: MonthInfo, period: string = 'morning') => {
     if (!isValidDateForMonth(day, monthInfo.month, monthInfo.year)) return;
@@ -458,6 +494,8 @@ export default function YearCalendar() {
     const editingMorning = isEditing(day, monthInfo.month, monthInfo.year, 'morning');
     const editingAfternoon = isEditing(day, monthInfo.month, monthInfo.year, 'afternoon');
     const isPast = isValid && isPastDate(day, monthInfo.month, monthInfo.year);
+    const dateStr = `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const custody = isValid ? getCustodyForDate(day, monthInfo.month, monthInfo.year) : null;
 
     // Open settings sheet on right-click
     const handleContextMenu = (e: React.MouseEvent, period: string) => {
@@ -465,29 +503,73 @@ export default function YearCalendar() {
       handleCellDoubleClick(day, monthInfo, period);
     };
 
+    // Determine B column background color based on custody status
+    const getBColumnStyle = () => {
+      if (!isValid) return undefined;
+      if (isPast) return { backgroundColor: PAST_DATE_BG };
+      
+      // If custody is set, use that
+      if (custody === 'comigo') {
+        return { backgroundColor: '#166534', color: '#ffffff' }; // Dark green with white text
+      }
+      if (custody === 'mae') {
+        return { backgroundColor: '#fffbeb' }; // Light yellow (with mom)
+      }
+      
+      // Default: green for Wednesday/weekends, yellow otherwise
+      if (isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend) {
+        return { backgroundColor: '#ecfdf5' };
+      }
+      return { backgroundColor: '#fffbeb' };
+    };
+
     return (
       <>
-        {/* B column (Beatriz) with day letter - green on Wednesdays */}
-        <div
-          key={`${day}-${monthInfo.month}-${monthInfo.year}-b`}
-          className={`
-            min-h-[22px] text-[8px] font-medium text-center flex items-center justify-center border-r border-border/30 cursor-pointer
-            ${!isValid ? 'bg-muted/50' : ''}
-          `}
-          style={
-            !isValid ? undefined :
-            isPast ? { backgroundColor: PAST_DATE_BG } :
-            isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend ? { backgroundColor: '#ecfdf5' } :
-            { backgroundColor: '#fffbeb' }
-          }
-          onClick={() => isValid && handleCellClick(day, monthInfo, 'morning')}
-        >
-          {isValid && (
-            <span className={isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend ? 'text-green-700' : 'text-muted-foreground'}>
-              {dayOfWeek}
-            </span>
+        {/* B column (Beatriz) with day letter - dropdown on hover */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div
+              key={`${day}-${monthInfo.month}-${monthInfo.year}-b`}
+              className={`
+                min-h-[22px] text-[8px] font-medium text-center flex items-center justify-center border-r border-border/30 cursor-pointer
+                ${!isValid ? 'bg-muted/50' : ''}
+              `}
+              style={getBColumnStyle()}
+            >
+              {isValid && (
+                <span 
+                  className={custody === 'comigo' ? 'text-white' : (isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend ? 'text-green-700' : 'text-muted-foreground')}
+                >
+                  {dayOfWeek}
+                </span>
+              )}
+            </div>
+          </DropdownMenuTrigger>
+          {isValid && !isPast && (
+            <DropdownMenuContent align="start" className="min-w-[120px]">
+              <DropdownMenuItem 
+                onClick={() => handleCustodyChange(dateStr, 'comigo')}
+                className="text-xs"
+              >
+                <span className="mr-2">🟢</span> Está comigo
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleCustodyChange(dateStr, 'mae')}
+                className="text-xs"
+              >
+                <span className="mr-2">🟡</span> Está com mãe
+              </DropdownMenuItem>
+              {custody && (
+                <DropdownMenuItem 
+                  onClick={() => handleCustodyChange(dateStr, null)}
+                  className="text-xs text-muted-foreground"
+                >
+                  <span className="mr-2">❌</span> Limpar
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
           )}
-        </div>
+        </DropdownMenu>
         {/* Morning slot */}
         <div
           key={`${day}-${monthInfo.month}-${monthInfo.year}-morning`}
