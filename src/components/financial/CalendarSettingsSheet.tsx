@@ -25,15 +25,16 @@ const DEFAULT_CATEGORIES: CalendarCategory[] = [
 ];
 
 const COLOR_PRESETS = [
-  { color: "#ef4444", bgClass: "bg-red-500", textClass: "text-white" },
-  { color: "#f97316", bgClass: "bg-orange-500", textClass: "text-white" },
-  { color: "#eab308", bgClass: "bg-yellow-500", textClass: "text-yellow-900" },
-  { color: "#22c55e", bgClass: "bg-green-500", textClass: "text-white" },
-  { color: "#0ea5e9", bgClass: "bg-sky-500", textClass: "text-white" },
-  { color: "#3b82f6", bgClass: "bg-blue-500", textClass: "text-white" },
-  { color: "#8b5cf6", bgClass: "bg-purple-500", textClass: "text-white" },
-  { color: "#ec4899", bgClass: "bg-pink-500", textClass: "text-white" },
-  { color: "#6b7280", bgClass: "bg-gray-500", textClass: "text-white" },
+  { color: "#ef4444", bgClass: "bg-red-500", textClass: "text-black" },
+  { color: "#f97316", bgClass: "bg-orange-500", textClass: "text-black" },
+  { color: "#facc15", bgClass: "bg-yellow-400", textClass: "text-black" },
+  { color: "#22c55e", bgClass: "bg-green-500", textClass: "text-black" },
+  { color: "#0ea5e9", bgClass: "bg-sky-500", textClass: "text-black" },
+  { color: "#3b82f6", bgClass: "bg-blue-500", textClass: "text-black" },
+  { color: "#1e40af", bgClass: "bg-blue-800", textClass: "text-black" },
+  { color: "#8b5cf6", bgClass: "bg-purple-500", textClass: "text-black" },
+  { color: "#ec4899", bgClass: "bg-pink-500", textClass: "text-black" },
+  { color: "#6b7280", bgClass: "bg-gray-500", textClass: "text-black" },
 ];
 
 interface CalendarSettingsSheetProps {
