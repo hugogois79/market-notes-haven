@@ -43,26 +43,51 @@ interface MonthlyObjectivesFooterProps {
 export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: MonthlyObjectivesFooterProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
-  const [addingToColumn, setAddingToColumn] = useState<number | null>(null);
+  const [addingToMonth, setAddingToMonth] = useState<{ month: number; year: number } | null>(null);
   const [newValue, setNewValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
+  // Calculate the 3 visible months
+  const getVisibleMonths = () => {
+    const today = new Date();
+    const months: { label: string; month: number; year: number }[] = [];
+    for (let i = 0; i < 3; i++) {
+      const date = new Date(today.getFullYear(), today.getMonth() + monthOffset + i, 1);
+      const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
+                          "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+      months.push({
+        label: `${monthNames[date.getMonth()]} ${String(date.getFullYear()).slice(-2)}`,
+        month: date.getMonth() + 1,
+        year: date.getFullYear(),
+      });
+    }
+    return months;
+  };
+
+  const visibleMonths = getVisibleMonths();
+
   const { data: objectives = [] } = useQuery({
-    queryKey: ["monthly-objectives", year],
+    queryKey: ["monthly-objectives", visibleMonths.map(m => `${m.year}-${m.month}`).join(",")],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
       
-      const { data, error } = await supabase
-        .from("monthly_objectives")
-        .select("*")
-        .eq("year", year)
-        .eq("user_id", user.id)
-        .order("display_order", { ascending: true });
-      
-      if (error) throw error;
-      return data as MonthlyObjective[];
+      // Fetch objectives for all visible months
+      const allObjectives: MonthlyObjective[] = [];
+      for (const m of visibleMonths) {
+        const { data, error } = await supabase
+          .from("monthly_objectives")
+          .select("*")
+          .eq("year", m.year)
+          .eq("month", m.month)
+          .eq("user_id", user.id)
+          .order("display_order", { ascending: true });
+        
+        if (error) throw error;
+        if (data) allObjectives.push(...(data as MonthlyObjective[]));
+      }
+      return allObjectives;
     },
   });
 
@@ -92,13 +117,13 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
   });
 
   const createMutation = useMutation({
-    mutationFn: async ({ content, column_index }: { content: string; column_index: number }) => {
+    mutationFn: async ({ content, month, year }: { content: string; month: number; year: number }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const columnObjectives = objectives.filter(o => o.column_index === column_index);
-      const maxOrder = columnObjectives.length > 0 
-        ? Math.max(...columnObjectives.map(o => o.display_order)) 
+      const monthObjectives = objectives.filter(o => o.month === month && o.year === year);
+      const maxOrder = monthObjectives.length > 0 
+        ? Math.max(...monthObjectives.map(o => o.display_order)) 
         : -1;
 
       const { error } = await supabase
@@ -106,15 +131,15 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
         .insert({
           user_id: user.id,
           year,
+          month,
           content,
-          column_index,
           display_order: maxOrder + 1,
         });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["monthly-objectives"] });
-      setAddingToColumn(null);
+      setAddingToMonth(null);
       setNewValue("");
       toast.success("Objetivo adicionado");
     },
@@ -141,11 +166,11 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
   });
 
   const reorderMutation = useMutation({
-    mutationFn: async (updates: { id: string; column_index: number; display_order: number }[]) => {
+    mutationFn: async (updates: { id: string; month: number; year: number; display_order: number }[]) => {
       for (const update of updates) {
         const { error } = await supabase
           .from("monthly_objectives")
-          .update({ column_index: update.column_index, display_order: update.display_order })
+          .update({ month: update.month, year: update.year, display_order: update.display_order })
           .eq("id", update.id);
         if (error) throw error;
       }
@@ -159,10 +184,10 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
   });
 
   useEffect(() => {
-    if ((editingId || addingToColumn !== null) && inputRef.current) {
+    if ((editingId || addingToMonth !== null) && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [editingId, addingToColumn]);
+  }, [editingId, addingToMonth]);
 
   const handleEdit = (objective: MonthlyObjective) => {
     setEditingId(objective.id);
@@ -181,23 +206,23 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
     saveMutation.mutate({ id: objective.id, is_completed: !objective.is_completed });
   };
 
-  const handleAddNew = (columnIndex: number) => {
-    setAddingToColumn(columnIndex);
+  const handleAddNew = (monthInfo: { month: number; year: number }) => {
+    setAddingToMonth(monthInfo);
     setNewValue("");
   };
 
   const handleSaveNew = () => {
-    if (addingToColumn !== null && newValue.trim()) {
-      createMutation.mutate({ content: newValue.trim(), column_index: addingToColumn });
+    if (addingToMonth !== null && newValue.trim()) {
+      createMutation.mutate({ content: newValue.trim(), month: addingToMonth.month, year: addingToMonth.year });
     } else {
-      setAddingToColumn(null);
+      setAddingToMonth(null);
       setNewValue("");
     }
   };
 
-  const getColumnObjectives = (columnIndex: number) => {
+  const getMonthObjectives = (month: number, year: number) => {
     return objectives
-      .filter(o => o.column_index === columnIndex)
+      .filter(o => o.month === month && o.year === year)
       .sort((a, b) => a.display_order - b.display_order);
   };
 
@@ -207,66 +232,52 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    const sourceColumn = parseInt(source.droppableId.replace("column-", ""));
-    const destColumn = parseInt(destination.droppableId.replace("column-", ""));
+    const sourceIdx = parseInt(source.droppableId.replace("month-", ""));
+    const destIdx = parseInt(destination.droppableId.replace("month-", ""));
 
-    // Get all objectives for affected columns
-    const sourceItems = getColumnObjectives(sourceColumn);
-    const destItems = sourceColumn === destColumn ? sourceItems : getColumnObjectives(destColumn);
+    const sourceMonthInfo = visibleMonths[sourceIdx];
+    const destMonthInfo = visibleMonths[destIdx];
+
+    if (!sourceMonthInfo || !destMonthInfo) return;
+
+    // Get all objectives for affected months
+    const sourceItems = getMonthObjectives(sourceMonthInfo.month, sourceMonthInfo.year);
+    const destItems = sourceIdx === destIdx ? sourceItems : getMonthObjectives(destMonthInfo.month, destMonthInfo.year);
 
     // Find the dragged item
     const draggedItem = objectives.find(o => o.id === draggableId);
     if (!draggedItem) return;
 
-    const updates: { id: string; column_index: number; display_order: number }[] = [];
+    const updates: { id: string; month: number; year: number; display_order: number }[] = [];
 
-    if (sourceColumn === destColumn) {
-      // Reorder within same column
+    if (sourceIdx === destIdx) {
+      // Reorder within same month
       const newItems = [...sourceItems];
       const [removed] = newItems.splice(source.index, 1);
       newItems.splice(destination.index, 0, removed);
 
       newItems.forEach((item, index) => {
-        updates.push({ id: item.id, column_index: destColumn, display_order: index });
+        updates.push({ id: item.id, month: destMonthInfo.month, year: destMonthInfo.year, display_order: index });
       });
     } else {
-      // Move between columns
+      // Move between months
       const newSourceItems = sourceItems.filter(item => item.id !== draggableId);
       const newDestItems = [...destItems];
       newDestItems.splice(destination.index, 0, draggedItem);
 
-      // Update source column orders
+      // Update source month orders
       newSourceItems.forEach((item, index) => {
-        updates.push({ id: item.id, column_index: sourceColumn, display_order: index });
+        updates.push({ id: item.id, month: sourceMonthInfo.month, year: sourceMonthInfo.year, display_order: index });
       });
 
-      // Update destination column orders
+      // Update destination month orders
       newDestItems.forEach((item, index) => {
-        updates.push({ id: item.id, column_index: destColumn, display_order: index });
+        updates.push({ id: item.id, month: destMonthInfo.month, year: destMonthInfo.year, display_order: index });
       });
     }
 
     reorderMutation.mutate(updates);
   };
-
-  // Calculate the next 3 months based on offset for column headers
-  const getNext3Months = () => {
-    const today = new Date();
-    const months: { label: string; month: number; year: number }[] = [];
-    for (let i = 0; i < 3; i++) {
-      const date = new Date(today.getFullYear(), today.getMonth() + monthOffset + i, 1);
-      const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
-                          "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-      months.push({
-        label: `${monthNames[date.getMonth()]} ${String(date.getFullYear()).slice(-2)}`,
-        month: date.getMonth() + 1,
-        year: date.getFullYear(),
-      });
-    }
-    return months;
-  };
-
-  const next3Months = getNext3Months();
 
   // Reference date for age calculations (first day of first visible month)
   const referenceDate = new Date(new Date().getFullYear(), new Date().getMonth() + monthOffset, 1);
@@ -297,8 +308,8 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-4 gap-3">
           {/* 3 Objective Columns */}
-          {[1, 2, 3].map((columnIndex) => (
-            <Droppable key={columnIndex} droppableId={`column-${columnIndex}`}>
+          {visibleMonths.map((monthInfo, idx) => (
+            <Droppable key={`${monthInfo.year}-${monthInfo.month}`} droppableId={`month-${idx}`}>
               {(provided, snapshot) => (
                 <div
                   ref={provided.innerRef}
@@ -308,10 +319,10 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
                   }`}
                 >
                   <div className="text-xs font-semibold text-slate-600 mb-2 border-b pb-1">
-                    {next3Months[columnIndex - 1]?.label || `Mês ${columnIndex}`}
+                    {monthInfo.label}
                   </div>
                   <div className="space-y-0.5">
-                    {getColumnObjectives(columnIndex).slice(0, 5).map((objective, index) => (
+                    {getMonthObjectives(monthInfo.month, monthInfo.year).slice(0, 5).map((objective, index) => (
                       <Draggable key={objective.id} draggableId={objective.id} index={index}>
                         {(provided, snapshot) => (
                           <div
@@ -381,10 +392,10 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
                     ))}
                     {provided.placeholder}
                     
-                    {addingToColumn === columnIndex ? (
+                    {addingToMonth?.month === monthInfo.month && addingToMonth?.year === monthInfo.year ? (
                       <div className="flex items-start gap-1">
                         <span className="text-[10px] text-slate-400 font-mono w-4 flex-shrink-0 ml-4">
-                          {getColumnObjectives(columnIndex).length + 1})
+                          {getMonthObjectives(monthInfo.month, monthInfo.year).length + 1})
                         </span>
                         <input
                           ref={inputRef}
@@ -395,7 +406,7 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
                           onKeyDown={(e) => {
                             if (e.key === "Enter") handleSaveNew();
                             if (e.key === "Escape") {
-                              setAddingToColumn(null);
+                              setAddingToMonth(null);
                               setNewValue("");
                             }
                           }}
@@ -403,9 +414,9 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
                           className="flex-1 text-[10px] bg-green-50 border border-green-300 rounded px-1 py-0.5 outline-none"
                         />
                       </div>
-                    ) : getColumnObjectives(columnIndex).length < 5 ? (
+                    ) : getMonthObjectives(monthInfo.month, monthInfo.year).length < 5 ? (
                       <button
-                        onClick={() => handleAddNew(columnIndex)}
+                        onClick={() => handleAddNew(monthInfo)}
                         className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-600 mt-0.5 ml-4"
                       >
                         <Plus className="h-3 w-3" />
