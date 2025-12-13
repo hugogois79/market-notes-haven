@@ -1168,7 +1168,13 @@ export default function YearCalendar() {
             >
               {/* Day Number */}
               <div className={`p-1 text-[10px] font-medium text-muted-foreground text-center border-r border-border bg-muted/30 sticky left-0 ${showFullYear ? '' : 'flex items-center justify-center'}`}>
-                {day}
+                {showFullYear ? (
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-muted-foreground/30 text-[9px]">
+                    {day}
+                  </span>
+                ) : (
+                  day
+                )}
               </div>
 
               {/* Day Cells for each month */}
