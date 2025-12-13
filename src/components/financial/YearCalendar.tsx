@@ -458,7 +458,7 @@ export default function YearCalendar() {
                 placeholder="Evento..."
               />
             ) : (
-              <div className="flex items-start gap-0.5">
+              <div className="flex items-center justify-center gap-0.5 h-full text-center">
                 <span 
                   className="text-[8px] shrink-0"
                   style={hasEvents && style.textColor ? { color: style.textColor } : undefined}
