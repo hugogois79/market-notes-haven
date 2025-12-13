@@ -150,8 +150,8 @@ export default function CalendarSettingsSheet({
                     className="h-8 text-sm flex-1"
                   />
                   
-                  <div className="flex gap-1">
-                    {COLOR_PRESETS.slice(0, 8).map((preset) => (
+                  <div className="flex flex-wrap gap-1 max-w-[200px]">
+                    {COLOR_PRESETS.map((preset) => (
                       <button
                         key={preset.color}
                         type="button"
