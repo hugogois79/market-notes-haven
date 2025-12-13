@@ -199,11 +199,11 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
   // Reference date for age calculations (first day of first visible month)
   const referenceDate = new Date(new Date().getFullYear(), new Date().getMonth() + monthOffset, 1);
 
-  // Children data with birthdays
+  // Children data with birthdays (ages as of Dec 2024: Diana 5, Bea 10, André 23, José 11)
   const children: Child[] = [
     { name: "Diana", birthMonth: 4, birthDay: 21, birthYear: 2019 },
     { name: "Beatriz", birthMonth: 8, birthDay: 5, birthYear: 2014 },
-    { name: "André", birthMonth: 5, birthDay: 1, birthYear: 2002 },
+    { name: "André", birthMonth: 5, birthDay: 1, birthYear: 2001 },
     { name: "José", birthMonth: 8, birthDay: 8, birthYear: 2013 },
   ];
 
