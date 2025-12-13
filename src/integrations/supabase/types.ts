@@ -1945,6 +1945,42 @@ export type Database = {
           },
         ]
       }
+      monthly_objectives: {
+        Row: {
+          column_index: number | null
+          content: string
+          created_at: string | null
+          display_order: number | null
+          id: string
+          is_completed: boolean | null
+          month: number | null
+          user_id: string
+          year: number
+        }
+        Insert: {
+          column_index?: number | null
+          content: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_completed?: boolean | null
+          month?: number | null
+          user_id: string
+          year: number
+        }
+        Update: {
+          column_index?: number | null
+          content?: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_completed?: boolean | null
+          month?: number | null
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       news_articles: {
         Row: {
           content: string

@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import CalendarSettingsSheet, { CalendarCategory, loadCalendarCategories } from "./CalendarSettingsSheet";
+import MonthlyObjectivesFooter from "./MonthlyObjectivesFooter";
 import EventAutocomplete, { EventAutocompleteRef } from "./EventAutocomplete";
 import {
   DropdownMenu,
@@ -1279,6 +1280,9 @@ export default function YearCalendar() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Monthly Objectives Footer */}
+      <MonthlyObjectivesFooter year={showFullYear ? selectedYear : new Date().getFullYear()} />
     </Card>
   );
 }
