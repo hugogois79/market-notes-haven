@@ -43,6 +43,11 @@ interface CalendarEvent {
   period: string | null;
 }
 
+interface ClipboardEvent {
+  title: string;
+  category: string | null;
+}
+
 interface MonthInfo {
   month: number;
   year: number;
@@ -98,6 +103,8 @@ export default function YearCalendar() {
   const [dianaStatus, setDianaStatus] = useState<Record<string, DianaStatus>>(loadDianaStatus);
   const [inlineValue, setInlineValue] = useState("");
   const [categories, setCategories] = useState<CalendarCategory[]>(loadCalendarCategories);
+  const [clipboard, setClipboard] = useState<ClipboardEvent | null>(null);
+  const [selectedCell, setSelectedCell] = useState<EditingCell | null>(null);
   const inputRef = useRef<EventAutocompleteRef>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -265,6 +272,44 @@ export default function YearCalendar() {
     },
   });
 
+  // Global keyboard handler for copy/paste
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle if not editing a cell (not in input mode)
+      if (editingCell) return;
+      
+      // Copy: Ctrl+C or Cmd+C
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedCell) {
+        const event = getEventForDate(selectedCell.day, selectedCell.month, selectedCell.year, selectedCell.period);
+        if (event?.title) {
+          setClipboard({ title: event.title, category: event.category });
+          toast.success(`Copiado: ${event.title}`);
+        }
+        e.preventDefault();
+      }
+      
+      // Paste: Ctrl+V or Cmd+V
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v' && selectedCell && clipboard) {
+        const dateStr = `${selectedCell.year}-${String(selectedCell.month).padStart(2, '0')}-${String(selectedCell.day).padStart(2, '0')}`;
+        const existingEvent = getEventForDate(selectedCell.day, selectedCell.month, selectedCell.year, selectedCell.period);
+        
+        saveMutation.mutate({
+          id: existingEvent?.id,
+          date: dateStr,
+          title: clipboard.title,
+          category: clipboard.category,
+          notes: existingEvent?.notes,
+          period: selectedCell.period,
+        });
+        toast.success(`Colado: ${clipboard.title}`);
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editingCell, selectedCell, clipboard, saveMutation, events]);
+
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month, 0).getDate();
   };
@@ -350,12 +395,15 @@ export default function YearCalendar() {
     return dianaStatus[dateStr] || null;
   };
 
-  // Single click - start inline editing
+  // Single click - start inline editing and set selected cell for copy/paste
   const handleCellClick = (day: number, monthInfo: MonthInfo, period: string = 'morning') => {
     if (!isValidDateForMonth(day, monthInfo.month, monthInfo.year)) return;
     
+    const cellInfo = { day, month: monthInfo.month, year: monthInfo.year, period };
+    setSelectedCell(cellInfo);
+    
     const existingEvent = getEventForDate(day, monthInfo.month, monthInfo.year, period);
-    setEditingCell({ day, month: monthInfo.month, year: monthInfo.year, period });
+    setEditingCell(cellInfo);
     setInlineValue(existingEvent?.title || "");
   };
 
