@@ -71,7 +71,7 @@ interface EditingCell {
 }
 
 // Custody status type for B column (Beatriz)
-type CustodyStatus = 'comigo' | 'mae' | 'feriado' | null;
+type CustodyStatus = 'comigo' | 'mae' | null;
 
 // Diana status type for D column
 type DianaStatus = 'comigo' | null;
@@ -79,6 +79,7 @@ type DianaStatus = 'comigo' | null;
 // Key for storing custody status in localStorage
 const CUSTODY_STORAGE_KEY = 'calendar-custody-status';
 const DIANA_STORAGE_KEY = 'calendar-diana-status';
+const HOLIDAY_STORAGE_KEY = 'calendar-holiday-status';
 
 // Load custody status from localStorage
 const loadCustodyStatus = (): Record<string, CustodyStatus> => {
@@ -100,6 +101,16 @@ const loadDianaStatus = (): Record<string, DianaStatus> => {
   }
 };
 
+// Load holiday status from localStorage
+const loadHolidayStatus = (): Record<string, boolean> => {
+  try {
+    const stored = localStorage.getItem(HOLIDAY_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+};
+
 export default function YearCalendar() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showFullYear, setShowFullYear] = useState(false);
@@ -111,6 +122,7 @@ export default function YearCalendar() {
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [custodyStatus, setCustodyStatus] = useState<Record<string, CustodyStatus>>(loadCustodyStatus);
   const [dianaStatus, setDianaStatus] = useState<Record<string, DianaStatus>>(loadDianaStatus);
+  const [holidayStatus, setHolidayStatus] = useState<Record<string, boolean>>(loadHolidayStatus);
   const [inlineValue, setInlineValue] = useState("");
   const [categories, setCategories] = useState<CalendarCategory[]>(loadCalendarCategories);
   const [clipboard, setClipboard] = useState<ClipboardEvent | null>(null);
@@ -399,6 +411,20 @@ export default function YearCalendar() {
     const newDianaStatus = { ...dianaStatus, [dateStr]: status };
     setDianaStatus(newDianaStatus);
     localStorage.setItem(DIANA_STORAGE_KEY, JSON.stringify(newDianaStatus));
+  };
+
+  // Handle holiday toggle
+  const handleHolidayToggle = (dateStr: string) => {
+    const newHolidayStatus = { ...holidayStatus, [dateStr]: !holidayStatus[dateStr] };
+    if (!newHolidayStatus[dateStr]) delete newHolidayStatus[dateStr];
+    setHolidayStatus(newHolidayStatus);
+    localStorage.setItem(HOLIDAY_STORAGE_KEY, JSON.stringify(newHolidayStatus));
+  };
+
+  // Check if date is a holiday
+  const isHolidayDate = (day: number, month: number, year: number): boolean => {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return !!holidayStatus[dateStr];
   };
 
   // Get custody status for a date (Beatriz)
@@ -731,8 +757,7 @@ export default function YearCalendar() {
     const editing = isEditing(day, monthInfo.month, monthInfo.year, 'morning');
     
     // Check if this day is a holiday
-    const dateStr = isValid ? `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}-${String(day).padStart(2, '0')}` : '';
-    const isHoliday = isValid && custodyStatus[dateStr] === 'feriado';
+    const isHoliday = isValid && isHolidayDate(day, monthInfo.month, monthInfo.year);
 
     return (
       <div
@@ -804,6 +829,7 @@ export default function YearCalendar() {
     const dateStr = `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const custody = isValid ? getCustodyForDate(day, monthInfo.month, monthInfo.year) : null;
     const diana = isValid ? getDianaForDate(day, monthInfo.month, monthInfo.year) : null;
+    const isHoliday = isValid && isHolidayDate(day, monthInfo.month, monthInfo.year);
 
     // Open settings sheet on right-click
     const handleContextMenu = (e: React.MouseEvent, period: string) => {
@@ -826,9 +852,6 @@ export default function YearCalendar() {
           return { backgroundColor: '#ecfdf5' }; // Light green for weekends
         }
         return { backgroundColor: '#fffbeb' }; // Light yellow for other days
-      }
-      if (custody === 'feriado') {
-        return { backgroundColor: '#fef3c7' }; // Light amber for holiday
       }
       
       // Default: green for Wednesday/weekends, yellow otherwise
@@ -869,7 +892,7 @@ export default function YearCalendar() {
                 <span 
                   className={`
                     ${custody === 'comigo' ? 'text-white' : (isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend ? 'text-green-700' : 'text-muted-foreground')}
-                    ${custody === 'feriado' ? 'border border-slate-600 rounded-full w-4 h-4 flex items-center justify-center text-[7px]' : ''}
+                    ${isHoliday ? 'border border-slate-600 rounded-full w-4 h-4 flex items-center justify-center text-[7px]' : ''}
                   `}
                 >
                   {dayOfWeek}
@@ -892,17 +915,17 @@ export default function YearCalendar() {
                 <span className="mr-2">🟡</span> Está com mãe
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => handleCustodyChange(dateStr, 'feriado')}
+                onClick={() => handleHolidayToggle(dateStr)}
                 className="text-xs"
               >
-                <span className="mr-2">🔴</span> Feriado
+                <span className="mr-2">{isHoliday ? '✅' : '🔴'}</span> Feriado
               </DropdownMenuItem>
               {custody && (
                 <DropdownMenuItem 
                   onClick={() => handleCustodyChange(dateStr, null)}
                   className="text-xs text-muted-foreground"
                 >
-                  <span className="mr-2">❌</span> Limpar
+                  <span className="mr-2">❌</span> Limpar Custódia
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
