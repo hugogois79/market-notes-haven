@@ -435,8 +435,8 @@ export default function YearCalendar() {
       <div
         key={`${day}-${monthInfo.month}-${monthInfo.year}`}
         className={`
-          px-1 py-0.5 text-[10px] border-r border-border last:border-r-0 min-h-[28px] cursor-pointer
-          transition-colors flex items-center
+          p-0.5 text-[9px] border-r border-border last:border-r-0 min-h-[24px] cursor-pointer
+          transition-colors
           ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
           ${isValid && !hasEvents && !editing ? 'hover:bg-muted/40' : ''}
         `}
@@ -454,20 +454,20 @@ export default function YearCalendar() {
                 onBlur={handleInlineSave}
                 onKeyDown={handleInlineKeyDown}
                 suggestions={eventSuggestions || []}
-                className="w-full h-full bg-background border border-primary text-[10px] px-1 outline-none"
+                className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none"
                 placeholder="Evento..."
               />
             ) : (
-              <div className="flex items-center gap-1 w-full">
+              <div className="flex items-start gap-0.5">
                 <span 
-                  className="text-[9px] font-medium flex-shrink-0"
+                  className="text-[8px]"
                   style={hasEvents && style.textColor ? { color: style.textColor } : undefined}
                 >
                   {dayOfWeek}
                 </span>
                 {combinedTitle && (
                   <span 
-                    className="truncate flex-1 text-[10px]"
+                    className="truncate flex-1"
                     style={style.textColor ? { color: style.textColor } : undefined}
                     title={combinedTitle}
                   >
@@ -736,14 +736,14 @@ export default function YearCalendar() {
               gridTemplateColumns: sixMonthGridTemplate 
             }}
           >
-            <div className="py-2 px-1 text-[11px] font-bold text-foreground text-center border-r border-border">
+            <div className="p-1 text-[10px] font-bold text-foreground text-center border-r border-border">
               Dia
             </div>
             {showFullYear ? (
               visibleMonths.map((monthInfo) => (
                 <div
                   key={`${monthInfo.month}-${monthInfo.year}`}
-                  className="py-2 px-1 text-[11px] font-bold text-foreground text-center border-r border-border last:border-r-0"
+                  className="p-1 text-[10px] font-bold text-foreground text-center border-r border-border last:border-r-0"
                 >
                   {monthInfo.label}
                 </div>
@@ -752,17 +752,17 @@ export default function YearCalendar() {
               visibleMonths.map((monthInfo) => (
                 <>
                   {/* B column header */}
-                  <div key={`${monthInfo.month}-${monthInfo.year}-b-header`} className="py-1 px-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30">B</div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-b-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border/30">B</div>
                   {/* Month name spanning Morning and Afternoon columns */}
                   <div 
                     key={`${monthInfo.month}-${monthInfo.year}-month-header`} 
-                    className="py-1 px-0.5 text-[10px] font-bold text-foreground text-center border-r border-border/30"
+                    className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30"
                     style={{ gridColumn: 'span 2' }}
                   >
                     {monthInfo.label}
                   </div>
                   {/* D column header - with double border as month separator */}
-                  <div key={`${monthInfo.month}-${monthInfo.year}-d-header`} className="py-1 px-0.5 text-[9px] font-bold text-foreground text-center" style={{ borderRight: '3px double #1e293b' }}>D</div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-d-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center" style={{ borderRight: '3px double #1e293b' }}>D</div>
                 </>
               ))
             )}
@@ -779,7 +779,7 @@ export default function YearCalendar() {
               }}
             >
               {/* Day Number */}
-              <div className={`py-1.5 px-1 text-[11px] font-medium text-muted-foreground text-center border-r border-border bg-muted/30 sticky left-0 ${showFullYear ? 'min-h-[28px] flex items-center justify-center' : 'flex items-center justify-center'}`}>
+              <div className={`p-1 text-[10px] font-medium text-muted-foreground text-center border-r border-border bg-muted/30 sticky left-0 ${showFullYear ? '' : 'flex items-center justify-center'}`}>
                 {day}
               </div>
 
