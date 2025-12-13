@@ -373,12 +373,20 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
                                 </div>
                               </ContextMenuTrigger>
                               <ContextMenuContent className="z-50">
-                                <ContextMenuItem onSelect={() => handleToggleComplete(objective)}>
+                                <ContextMenuItem 
+                                  onSelect={(e) => {
+                                    e.preventDefault();
+                                    handleToggleComplete(objective);
+                                  }}
+                                >
                                   <Check className="h-3 w-3 mr-2" />
                                   {objective.is_completed ? "Marcar incompleto" : "Marcar completo"}
                                 </ContextMenuItem>
                                 <ContextMenuItem 
-                                  onSelect={() => deleteMutation.mutate(objective.id)}
+                                  onSelect={(e) => {
+                                    e.preventDefault();
+                                    deleteMutation.mutate(objective.id);
+                                  }}
                                   className="text-red-600"
                                 >
                                   <Trash2 className="h-3 w-3 mr-2" />
