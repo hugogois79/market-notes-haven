@@ -32,7 +32,7 @@ const COLOR_PRESETS = [
   { color: "#fef08a", bgClass: "bg-yellow-200", textClass: "text-black" },    // Light yellow
   { color: "#bbf7d0", bgClass: "bg-green-200", textClass: "text-black" },     // Light green
   { color: "#bae6fd", bgClass: "bg-sky-200", textClass: "text-black" },       // Light sky
-  { color: "#bfdbfe", bgClass: "bg-blue-200", textClass: "text-black" },      // Light blue
+  { color: "#3b82f6", bgClass: "bg-blue-500", textClass: "text-white" },      // Bright blue (strong)
   { color: "#1e40af", bgClass: "bg-blue-800", textClass: "text-white" },      // Dark blue (strong)
   { color: "#ddd6fe", bgClass: "bg-purple-200", textClass: "text-black" },    // Light purple
   { color: "#7c3aed", bgClass: "bg-violet-600", textClass: "text-white" },    // Dark purple (strong)
@@ -41,7 +41,7 @@ const COLOR_PRESETS = [
 
 // Helper to determine if a color is dark (needs white text)
 const isDarkColor = (color: string): boolean => {
-  const darkColors = ["#1e40af", "#1e3a8a", "#312e81", "#4c1d95", "#831843", "#7f1d1d", "#dc2626", "#b91c1c", "#991b1b", "#7c3aed", "#6d28d9", "#5b21b6"];
+  const darkColors = ["#1e40af", "#1e3a8a", "#312e81", "#4c1d95", "#831843", "#7f1d1d", "#dc2626", "#b91c1c", "#991b1b", "#7c3aed", "#6d28d9", "#5b21b6", "#3b82f6", "#2563eb"];
   return darkColors.includes(color.toLowerCase());
 };
 
