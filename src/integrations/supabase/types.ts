@@ -67,6 +67,39 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          date: string
+          id: string
+          notes: string | null
+          title: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          date: string
+          id?: string
+          notes?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          date?: string
+          id?: string
+          notes?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string

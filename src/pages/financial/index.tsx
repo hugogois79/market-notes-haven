@@ -12,7 +12,8 @@ import LoanManagement from "@/components/financial/LoanManagement";
 import CategoryManagement from "@/components/financial/CategoryManagement";
 import BudgetingManagement from "@/components/financial/BudgetingManagement";
 import DocumentDropZone from "@/components/financial/DocumentDropZone";
-import { Building2, TrendingUp, Briefcase, CreditCard, PiggyBank, Settings, FolderKanban, Tag, Calculator, Upload } from "lucide-react";
+import YearCalendar from "@/components/financial/YearCalendar";
+import { Building2, TrendingUp, Briefcase, CreditCard, PiggyBank, Settings, FolderKanban, Tag, Calculator, Upload, CalendarDays } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function FinancialPage() {
@@ -68,7 +69,7 @@ export default function FinancialPage() {
           </div>
         ) : (
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className={isMobile ? "flex w-full overflow-x-auto overflow-y-hidden whitespace-nowrap pb-px" : "grid w-full grid-cols-7"}>
+            <TabsList className={isMobile ? "flex w-full overflow-x-auto overflow-y-hidden whitespace-nowrap pb-px" : "grid w-full grid-cols-8"}>
               <TabsTrigger value="dashboard" className="flex-shrink-0">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Dashboard
@@ -88,6 +89,10 @@ export default function FinancialPage() {
               <TabsTrigger value="budgeting" className="flex-shrink-0">
                 <Calculator className="h-4 w-4 mr-2" />
                 Budgeting
+              </TabsTrigger>
+              <TabsTrigger value="calendar" className="flex-shrink-0">
+                <CalendarDays className="h-4 w-4 mr-2" />
+                Calendar
               </TabsTrigger>
               <TabsTrigger value="loans" className="flex-shrink-0">
                 <PiggyBank className="h-4 w-4 mr-2" />
@@ -123,6 +128,10 @@ export default function FinancialPage() {
               {selectedCompanyId && (
                 <BudgetingManagement companyId={selectedCompanyId} />
               )}
+            </TabsContent>
+
+            <TabsContent value="calendar" className="space-y-4">
+              <YearCalendar />
             </TabsContent>
 
             <TabsContent value="loans" className="space-y-4">
