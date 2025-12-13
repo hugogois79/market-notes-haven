@@ -303,7 +303,7 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className={`bg-white border rounded p-2 h-[130px] transition-colors ${
+                  className={`bg-white border rounded p-2 h-[150px] transition-colors ${
                     snapshot.isDraggingOver ? "border-blue-400 bg-blue-50" : "border-slate-200"
                   }`}
                 >
@@ -319,8 +319,8 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
                             {...provided.draggableProps}
                             className={`${snapshot.isDragging ? "opacity-90 shadow-lg" : ""}`}
                           >
-                            <ContextMenu>
-                              <ContextMenuTrigger>
+                            <ContextMenu modal={false}>
+                              <ContextMenuTrigger asChild>
                                 <div className="flex items-start gap-1 group">
                                   <div
                                     {...provided.dragHandleProps}
@@ -361,13 +361,13 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
                                   )}
                                 </div>
                               </ContextMenuTrigger>
-                              <ContextMenuContent>
-                                <ContextMenuItem onClick={() => handleToggleComplete(objective)}>
+                              <ContextMenuContent className="z-50">
+                                <ContextMenuItem onSelect={() => handleToggleComplete(objective)}>
                                   <Check className="h-3 w-3 mr-2" />
                                   {objective.is_completed ? "Marcar incompleto" : "Marcar completo"}
                                 </ContextMenuItem>
                                 <ContextMenuItem 
-                                  onClick={() => deleteMutation.mutate(objective.id)}
+                                  onSelect={() => deleteMutation.mutate(objective.id)}
                                   className="text-red-600"
                                 >
                                   <Trash2 className="h-3 w-3 mr-2" />
