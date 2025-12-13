@@ -103,6 +103,7 @@ const loadDianaStatus = (): Record<string, DianaStatus> => {
 export default function YearCalendar() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showFullYear, setShowFullYear] = useState(false);
+  const [monthOffset, setMonthOffset] = useState(0); // Offset for 6-month view navigation
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("morning");
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -139,16 +140,16 @@ export default function YearCalendar() {
       const today = new Date();
       const months: MonthInfo[] = [];
       for (let i = 0; i < 6; i++) {
-        const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+        const date = new Date(today.getFullYear(), today.getMonth() + monthOffset + i, 1);
         months.push({
           month: date.getMonth() + 1,
           year: date.getFullYear(),
-          label: `${MONTHS[date.getMonth()]} ${date.getFullYear() !== today.getFullYear() ? date.getFullYear() : ''}`.trim(),
+          label: `${MONTHS[date.getMonth()]} ${date.getFullYear()}`,
         });
       }
       return months;
     }
-  }, [showFullYear, selectedYear]);
+  }, [showFullYear, selectedYear, monthOffset]);
 
   // Calculate date range for query
   const dateRange = useMemo(() => {
@@ -159,14 +160,14 @@ export default function YearCalendar() {
       };
     } else {
       const today = new Date();
-      const start = new Date(today.getFullYear(), today.getMonth(), 1);
-      const end = new Date(today.getFullYear(), today.getMonth() + 6, 0);
+      const start = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + monthOffset + 6, 0);
       return {
         start: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01`,
         end: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`,
       };
     }
-  }, [showFullYear, selectedYear]);
+  }, [showFullYear, selectedYear, monthOffset]);
 
   const { data: events } = useQuery({
     queryKey: ["calendar-events", dateRange.start, dateRange.end],
@@ -1057,7 +1058,7 @@ export default function YearCalendar() {
               categories={categories}
               onCategoriesChange={setCategories}
             />
-            {showFullYear && (
+            {showFullYear ? (
               <>
                 <Button
                   variant="outline"
@@ -1075,6 +1076,33 @@ export default function YearCalendar() {
                   size="icon"
                   className="h-7 w-7 no-print"
                   onClick={() => setSelectedYear(y => y + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 no-print"
+                  onClick={() => setMonthOffset(o => o - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs no-print"
+                  onClick={() => setMonthOffset(0)}
+                >
+                  Hoje
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 no-print"
+                  onClick={() => setMonthOffset(o => o + 1)}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
