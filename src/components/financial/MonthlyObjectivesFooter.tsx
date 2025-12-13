@@ -201,10 +201,10 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
 
   // Children data with birthdays (ages as of Dec 2024: Diana 5, Bea 10, André 23, José 11)
   const children: Child[] = [
-    { name: "Diana", birthMonth: 4, birthDay: 21, birthYear: 2019 },
-    { name: "Beatriz", birthMonth: 8, birthDay: 5, birthYear: 2014 },
-    { name: "André", birthMonth: 5, birthDay: 1, birthYear: 2001 },
-    { name: "José", birthMonth: 8, birthDay: 8, birthYear: 2013 },
+    { name: "Diana", birthMonth: 4, birthDay: 21, birthYear: 2020 },
+    { name: "Beatriz", birthMonth: 8, birthDay: 5, birthYear: 2015 },
+    { name: "André", birthMonth: 5, birthDay: 1, birthYear: 2002 },
+    { name: "José", birthMonth: 8, birthDay: 8, birthYear: 2014 },
   ];
 
   // Calculate age based on birthday and reference date (first visible month)
