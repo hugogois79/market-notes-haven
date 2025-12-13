@@ -31,9 +31,10 @@ interface Child {
 
 interface MonthlyObjectivesFooterProps {
   year: number;
+  monthOffset?: number;
 }
 
-export default function MonthlyObjectivesFooter({ year }: MonthlyObjectivesFooterProps) {
+export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: MonthlyObjectivesFooterProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [addingToColumn, setAddingToColumn] = useState<number | null>(null);
@@ -176,12 +177,12 @@ export default function MonthlyObjectivesFooter({ year }: MonthlyObjectivesFoote
       .sort((a, b) => a.display_order - b.display_order);
   };
 
-  // Calculate the next 3 months for column headers
+  // Calculate the next 3 months based on offset for column headers
   const getNext3Months = () => {
     const today = new Date();
     const months: { label: string; month: number; year: number }[] = [];
     for (let i = 0; i < 3; i++) {
-      const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      const date = new Date(today.getFullYear(), today.getMonth() + monthOffset + i, 1);
       const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
                           "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
       months.push({
@@ -195,6 +196,9 @@ export default function MonthlyObjectivesFooter({ year }: MonthlyObjectivesFoote
 
   const next3Months = getNext3Months();
 
+  // Reference date for age calculations (first day of first visible month)
+  const referenceDate = new Date(new Date().getFullYear(), new Date().getMonth() + monthOffset, 1);
+
   // Children data with birthdays
   const children: Child[] = [
     { name: "Diana", birthMonth: 4, birthDay: 21, birthYear: 2019 },
@@ -203,13 +207,12 @@ export default function MonthlyObjectivesFooter({ year }: MonthlyObjectivesFoote
     { name: "José", birthMonth: 8, birthDay: 8, birthYear: 2013 },
   ];
 
-  // Calculate age based on birthday
+  // Calculate age based on birthday and reference date (first visible month)
   const calculateAge = (child: Child): number => {
-    const today = new Date();
-    let age = today.getFullYear() - child.birthYear;
+    let age = referenceDate.getFullYear() - child.birthYear;
     const hasBirthdayPassed = 
-      today.getMonth() + 1 > child.birthMonth || 
-      (today.getMonth() + 1 === child.birthMonth && today.getDate() >= child.birthDay);
+      referenceDate.getMonth() + 1 > child.birthMonth || 
+      (referenceDate.getMonth() + 1 === child.birthMonth && referenceDate.getDate() >= child.birthDay);
     if (!hasBirthdayPassed) {
       age--;
     }
