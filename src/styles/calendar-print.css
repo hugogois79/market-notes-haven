@@ -5,35 +5,40 @@
     margin: 5mm;
   }
 
-  /* Hide sidebar, header, and other non-calendar elements */
-  aside,
-  nav,
-  header,
-  .sidebar,
-  [data-sidebar],
+  /* Ensure colors print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Hide sidebar */
+  aside {
+    display: none !important;
+  }
+
+  /* Hide elements marked as no-print */
   .no-print {
     display: none !important;
   }
 
-  /* Reset the main content area */
-  main,
-  #root,
-  body,
-  html {
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    height: auto !important;
-    overflow: visible !important;
-    background: white !important;
+  /* Reset layout margins */
+  .md\:ml-80,
+  .md\:ml-24,
+  [class*="md:ml-"] {
+    margin-left: 0 !important;
   }
 
-  /* Make calendar take full width */
-  .calendar-print-area {
-    position: relative !important;
+  /* Full width main content */
+  main {
     width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
+  }
+
+  /* Calendar print area styling */
+  .calendar-print-area {
+    width: 100% !important;
     box-shadow: none !important;
     border: none !important;
   }
@@ -44,18 +49,7 @@
     width: 100% !important;
   }
 
-  /* Ensure colors print */
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
-  }
-
   /* Compact text for printing */
-  .calendar-print-area {
-    font-size: 8px !important;
-  }
-
   .calendar-print-area .text-\[9px\] {
     font-size: 7px !important;
   }
@@ -73,34 +67,13 @@
     min-height: 18px !important;
   }
 
-  /* Ensure grid borders print */
-  .calendar-print-area [class*="border"] {
-    border-color: #d1d5db !important;
-  }
-
   /* Remove overflow hidden */
   .calendar-print-area .overflow-x-auto {
     overflow: visible !important;
   }
 
-  /* Hide interactive elements */
-  .calendar-print-area button,
-  .calendar-print-area input,
-  .calendar-print-area [role="button"] {
-    display: none !important;
-  }
-
-  /* But show the content divs */
-  .calendar-print-area div {
-    display: block;
-  }
-
-  /* Keep grid display */
-  .calendar-print-area [style*="display: grid"] {
-    display: grid !important;
-  }
-
-  .calendar-print-area [style*="grid"] {
-    display: grid !important;
+  /* Ensure grid borders print */
+  .calendar-print-area [class*="border"] {
+    border-color: #d1d5db !important;
   }
 }
