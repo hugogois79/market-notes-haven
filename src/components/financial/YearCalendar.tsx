@@ -201,9 +201,16 @@ export default function YearCalendar() {
     return events?.find(e => e.date === dateStr);
   };
 
-  const getCategoryStyle = (category: string | null) => {
+  const getCategoryStyle = (category: string | null): { bgColor: string; textColor: string } => {
     const cat = categories.find(c => c.value === category);
-    return cat || { bgClass: "", textClass: "text-foreground" };
+    if (!cat) return { bgColor: "", textColor: "" };
+    
+    // Map preset colors to text colors
+    const lightBgColors = ["#dcfce7", "#fde047", "#bfdbfe", "#f3e8ff", "#fed7aa", "#fce7f3", "#fecaca", "#fef08a", "#bbf7d0", "#ddd6fe", "#fbcfe8", "#e5e7eb"];
+    const isLightBg = lightBgColors.includes(cat.color);
+    const textColor = isLightBg ? "#1f2937" : "#ffffff";
+    
+    return { bgColor: cat.color, textColor };
   };
 
   // Single click - start inline editing
@@ -303,8 +310,8 @@ export default function YearCalendar() {
           transition-colors
           ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
           ${isValid && !event && !editing ? 'hover:bg-muted/40' : ''}
-          ${event && !editing ? style.bgClass : ''}
         `}
+        style={event && !editing && style.bgColor ? { backgroundColor: style.bgColor } : undefined}
         onClick={() => handleCellClick(day, monthInfo)}
         onDoubleClick={() => handleCellDoubleClick(day, monthInfo)}
       >
@@ -323,12 +330,16 @@ export default function YearCalendar() {
               />
             ) : (
               <div className="flex items-start gap-0.5">
-                <span className={`text-[8px] text-muted-foreground ${event ? style.textClass : ''}`}>
+                <span 
+                  className="text-[8px]"
+                  style={event && style.textColor ? { color: style.textColor } : undefined}
+                >
                   {dayOfWeek}
                 </span>
                 {event?.title && (
                   <span 
-                    className={`truncate flex-1 ${style.textClass}`}
+                    className="truncate flex-1"
+                    style={style.textColor ? { color: style.textColor } : undefined}
                     title={event.title}
                   >
                     {event.title}
@@ -372,8 +383,9 @@ export default function YearCalendar() {
           className={`
             border-r border-border/50 min-h-[22px] p-0.5 text-[9px] cursor-pointer transition-colors
             ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
-            ${isValid && morningEvent && !editingMorning ? morningStyle.bgClass : isValid && !editingMorning ? 'hover:bg-muted/40' : ''}
+            ${isValid && !morningEvent && !editingMorning ? 'hover:bg-muted/40' : ''}
           `}
+          style={isValid && morningEvent && !editingMorning && morningStyle.bgColor ? { backgroundColor: morningStyle.bgColor } : undefined}
           onClick={() => isValid && handleCellClick(day, monthInfo, 'morning')}
           onDoubleClick={() => isValid && handleCellDoubleClick(day, monthInfo, 'morning')}
           title="Manhã"
@@ -392,7 +404,8 @@ export default function YearCalendar() {
               />
             ) : (
               <span 
-                className={`truncate block ${morningEvent ? morningStyle.textClass : ''}`}
+                className="truncate block"
+                style={morningEvent && morningStyle.textColor ? { color: morningStyle.textColor } : undefined}
                 title={morningEvent?.title || ''}
               >
                 {morningEvent?.title || ''}
@@ -406,8 +419,9 @@ export default function YearCalendar() {
           className={`
             border-r border-border/50 min-h-[22px] p-0.5 text-[9px] cursor-pointer transition-colors
             ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
-            ${isValid && afternoonEvent && !editingAfternoon ? afternoonStyle.bgClass : isValid && !editingAfternoon ? 'hover:bg-muted/40' : ''}
+            ${isValid && !afternoonEvent && !editingAfternoon ? 'hover:bg-muted/40' : ''}
           `}
+          style={isValid && afternoonEvent && !editingAfternoon && afternoonStyle.bgColor ? { backgroundColor: afternoonStyle.bgColor } : undefined}
           onClick={() => isValid && handleCellClick(day, monthInfo, 'afternoon')}
           onDoubleClick={() => isValid && handleCellDoubleClick(day, monthInfo, 'afternoon')}
           title="Tarde"
@@ -426,7 +440,8 @@ export default function YearCalendar() {
               />
             ) : (
               <span 
-                className={`truncate block ${afternoonEvent ? afternoonStyle.textClass : ''}`}
+                className="truncate block"
+                style={afternoonEvent && afternoonStyle.textColor ? { color: afternoonStyle.textColor } : undefined}
                 title={afternoonEvent?.title || ''}
               >
                 {afternoonEvent?.title || ''}
