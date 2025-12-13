@@ -71,7 +71,7 @@ interface EditingCell {
 }
 
 // Custody status type for B column (Beatriz)
-type CustodyStatus = 'comigo' | 'mae' | null;
+type CustodyStatus = 'comigo' | 'mae' | 'feriado' | null;
 
 // Diana status type for D column
 type DianaStatus = 'comigo' | null;
@@ -819,6 +819,9 @@ export default function YearCalendar() {
         }
         return { backgroundColor: '#fffbeb' }; // Light yellow for other days
       }
+      if (custody === 'feriado') {
+        return { backgroundColor: '#fef3c7' }; // Light amber for holiday
+      }
       
       // Default: green for Wednesday/weekends, yellow otherwise
       if (isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend) {
@@ -856,7 +859,10 @@ export default function YearCalendar() {
             >
               {isValid && (
                 <span 
-                  className={custody === 'comigo' ? 'text-white' : (isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend ? 'text-green-700' : 'text-muted-foreground')}
+                  className={`
+                    ${custody === 'comigo' ? 'text-white' : (isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend ? 'text-green-700' : 'text-muted-foreground')}
+                    ${custody === 'feriado' ? 'bg-amber-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[7px]' : ''}
+                  `}
                 >
                   {dayOfWeek}
                 </span>
@@ -876,6 +882,12 @@ export default function YearCalendar() {
                 className="text-xs"
               >
                 <span className="mr-2">🟡</span> Está com mãe
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleCustodyChange(dateStr, 'feriado')}
+                className="text-xs"
+              >
+                <span className="mr-2">🔴</span> Feriado
               </DropdownMenuItem>
               {custody && (
                 <DropdownMenuItem 
