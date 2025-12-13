@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, Sun, Moon } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +29,11 @@ const CATEGORIES = [
   { value: "personal", label: "Pessoal", bgClass: "bg-pink-100", textClass: "text-pink-900" },
 ];
 
+const PERIODS = [
+  { value: "morning", label: "Manhã", icon: Sun },
+  { value: "afternoon", label: "Tarde", icon: Moon },
+];
+
 interface CalendarEvent {
   id: string;
   date: string;
@@ -36,6 +41,7 @@ interface CalendarEvent {
   category: string | null;
   notes: string | null;
   user_id: string | null;
+  period: string | null;
 }
 
 interface MonthInfo {
@@ -48,6 +54,7 @@ export default function YearCalendar() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showFullYear, setShowFullYear] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("morning");
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Partial<CalendarEvent>>({});
   const queryClient = useQueryClient();
@@ -119,6 +126,7 @@ export default function YearCalendar() {
             title: event.title,
             category: event.category,
             notes: event.notes,
+            period: event.period,
           })
           .eq("id", event.id);
         if (error) throw error;
@@ -130,6 +138,7 @@ export default function YearCalendar() {
             title: event.title,
             category: event.category,
             notes: event.notes,
+            period: event.period || 'morning',
             user_id: user?.id,
           });
         if (error) throw error;
@@ -178,9 +187,17 @@ export default function YearCalendar() {
     return day <= getDaysInMonth(month, year);
   };
 
-  const getEventForDate = (day: number, month: number, year: number) => {
+  const getEventForDate = (day: number, month: number, year: number, period?: string) => {
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    if (period) {
+      return events?.find(e => e.date === dateStr && e.period === period);
+    }
     return events?.find(e => e.date === dateStr);
+  };
+
+  const getEventsForDate = (day: number, month: number, year: number) => {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return events?.filter(e => e.date === dateStr) || [];
   };
 
   const getCategoryStyle = (category: string | null) => {
@@ -188,14 +205,16 @@ export default function YearCalendar() {
     return cat || { bgClass: "", textClass: "text-foreground" };
   };
 
-  const handleCellClick = (day: number, monthInfo: MonthInfo) => {
+  const handleCellClick = (day: number, monthInfo: MonthInfo, period?: string) => {
     if (!isValidDateForMonth(day, monthInfo.month, monthInfo.year)) return;
     
     const dateStr = `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const existingEvent = getEventForDate(day, monthInfo.month, monthInfo.year);
+    const periodToUse = period || 'morning';
+    const existingEvent = getEventForDate(day, monthInfo.month, monthInfo.year, periodToUse);
     
     setSelectedDate(dateStr);
-    setEditingEvent(existingEvent || { date: dateStr });
+    setSelectedPeriod(periodToUse);
+    setEditingEvent(existingEvent || { date: dateStr, period: periodToUse });
     setIsSheetOpen(true);
   };
 
@@ -205,6 +224,114 @@ export default function YearCalendar() {
   };
 
   const columnCount = visibleMonths.length;
+
+  // Render cell for full year view (single slot per day)
+  const renderFullYearCell = (day: number, monthInfo: MonthInfo) => {
+    const isValid = isValidDateForMonth(day, monthInfo.month, monthInfo.year);
+    const dayEvents = isValid ? getEventsForDate(day, monthInfo.month, monthInfo.year) : [];
+    const event = dayEvents[0]; // Take first event for display
+    const style = getCategoryStyle(event?.category || null);
+    const dayOfWeek = isValid ? getDayOfWeek(day, monthInfo.month, monthInfo.year) : "";
+    const isWeekend = dayOfWeek === "S" || dayOfWeek === "D";
+
+    return (
+      <div
+        key={`${day}-${monthInfo.month}-${monthInfo.year}`}
+        className={`
+          p-0.5 text-[9px] border-r border-border last:border-r-0 min-h-[24px] cursor-pointer
+          transition-colors
+          ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
+          ${isValid && !event ? 'hover:bg-muted/40' : ''}
+          ${event ? style.bgClass : ''}
+        `}
+        onClick={() => handleCellClick(day, monthInfo)}
+      >
+        {isValid && (
+          <div className="flex items-start gap-0.5">
+            <span className={`text-[8px] text-muted-foreground ${event ? style.textClass : ''}`}>
+              {dayOfWeek}
+            </span>
+            {event?.title && (
+              <span 
+                className={`truncate flex-1 ${style.textClass}`}
+                title={event.title}
+              >
+                {event.title}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Render cell for 6-month view (two slots per day: morning/afternoon)
+  const renderSixMonthCell = (day: number, monthInfo: MonthInfo) => {
+    const isValid = isValidDateForMonth(day, monthInfo.month, monthInfo.year);
+    const morningEvent = isValid ? getEventForDate(day, monthInfo.month, monthInfo.year, 'morning') : null;
+    const afternoonEvent = isValid ? getEventForDate(day, monthInfo.month, monthInfo.year, 'afternoon') : null;
+    const morningStyle = getCategoryStyle(morningEvent?.category || null);
+    const afternoonStyle = getCategoryStyle(afternoonEvent?.category || null);
+    const dayOfWeek = isValid ? getDayOfWeek(day, monthInfo.month, monthInfo.year) : "";
+    const isWeekend = dayOfWeek === "S" || dayOfWeek === "D";
+
+    return (
+      <div
+        key={`${day}-${monthInfo.month}-${monthInfo.year}`}
+        className={`
+          border-r border-border last:border-r-0 min-h-[44px]
+          ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
+        `}
+      >
+        {isValid && (
+          <div className="flex flex-col h-full">
+            {/* Morning slot */}
+            <div
+              className={`
+                flex-1 p-0.5 text-[9px] border-b border-border/50 cursor-pointer transition-colors
+                ${morningEvent ? morningStyle.bgClass : 'hover:bg-muted/40'}
+              `}
+              onClick={() => handleCellClick(day, monthInfo, 'morning')}
+              title="Manhã"
+            >
+              <div className="flex items-start gap-0.5">
+                <Sun className={`h-2 w-2 flex-shrink-0 ${morningEvent ? morningStyle.textClass : 'text-muted-foreground'}`} />
+                {morningEvent?.title && (
+                  <span 
+                    className={`truncate flex-1 ${morningStyle.textClass}`}
+                    title={morningEvent.title}
+                  >
+                    {morningEvent.title}
+                  </span>
+                )}
+              </div>
+            </div>
+            {/* Afternoon slot */}
+            <div
+              className={`
+                flex-1 p-0.5 text-[9px] cursor-pointer transition-colors
+                ${afternoonEvent ? afternoonStyle.bgClass : 'hover:bg-muted/40'}
+              `}
+              onClick={() => handleCellClick(day, monthInfo, 'afternoon')}
+              title="Tarde"
+            >
+              <div className="flex items-start gap-0.5">
+                <Moon className={`h-2 w-2 flex-shrink-0 ${afternoonEvent ? afternoonStyle.textClass : 'text-muted-foreground'}`} />
+                {afternoonEvent?.title && (
+                  <span 
+                    className={`truncate flex-1 ${afternoonStyle.textClass}`}
+                    title={afternoonEvent.title}
+                  >
+                    {afternoonEvent.title}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <Card>
@@ -252,7 +379,7 @@ export default function YearCalendar() {
         </div>
       </CardHeader>
       <CardContent className="p-2 overflow-x-auto">
-        <div className={showFullYear ? "min-w-[900px]" : "min-w-[500px]"}>
+        <div className={showFullYear ? "min-w-[900px]" : "min-w-[700px]"}>
           {/* Grid Header */}
           <div 
             className="border-b border-border sticky top-0 bg-background z-10"
@@ -264,7 +391,7 @@ export default function YearCalendar() {
             <div className="p-1 text-[10px] font-medium text-muted-foreground text-center border-r border-border">
               Dia
             </div>
-            {visibleMonths.map((monthInfo, idx) => (
+            {visibleMonths.map((monthInfo) => (
               <div
                 key={`${monthInfo.month}-${monthInfo.year}`}
                 className="p-1 text-[10px] font-semibold text-center border-r border-border last:border-r-0"
@@ -285,48 +412,16 @@ export default function YearCalendar() {
               }}
             >
               {/* Day Number */}
-              <div className="p-1 text-[10px] font-medium text-muted-foreground text-center border-r border-border bg-muted/30 sticky left-0">
+              <div className={`p-1 text-[10px] font-medium text-muted-foreground text-center border-r border-border bg-muted/30 sticky left-0 ${showFullYear ? '' : 'flex items-center justify-center'}`}>
                 {day}
               </div>
 
               {/* Day Cells for each month */}
-              {visibleMonths.map((monthInfo) => {
-                const isValid = isValidDateForMonth(day, monthInfo.month, monthInfo.year);
-                const event = isValid ? getEventForDate(day, monthInfo.month, monthInfo.year) : null;
-                const style = getCategoryStyle(event?.category || null);
-                const dayOfWeek = isValid ? getDayOfWeek(day, monthInfo.month, monthInfo.year) : "";
-                const isWeekend = dayOfWeek === "S" || dayOfWeek === "D";
-
-                return (
-                  <div
-                    key={`${day}-${monthInfo.month}-${monthInfo.year}`}
-                    className={`
-                      p-0.5 text-[9px] border-r border-border last:border-r-0 min-h-[24px] cursor-pointer
-                      transition-colors
-                      ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
-                      ${isValid && !event ? 'hover:bg-muted/40' : ''}
-                      ${event ? style.bgClass : ''}
-                    `}
-                    onClick={() => handleCellClick(day, monthInfo)}
-                  >
-                    {isValid && (
-                      <div className="flex items-start gap-0.5">
-                        <span className={`text-[8px] text-muted-foreground ${event ? style.textClass : ''}`}>
-                          {dayOfWeek}
-                        </span>
-                        {event?.title && (
-                          <span 
-                            className={`truncate flex-1 ${style.textClass}`}
-                            title={event.title}
-                          >
-                            {event.title}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              {visibleMonths.map((monthInfo) => 
+                showFullYear 
+                  ? renderFullYearCell(day, monthInfo)
+                  : renderSixMonthCell(day, monthInfo)
+              )}
             </div>
           ))}
         </div>
@@ -339,6 +434,19 @@ export default function YearCalendar() {
               <span className="text-[10px] text-muted-foreground">{cat.label}</span>
             </div>
           ))}
+          {!showFullYear && (
+            <>
+              <div className="w-px h-4 bg-border mx-2" />
+              <div className="flex items-center gap-1">
+                <Sun className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground">Manhã</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Moon className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground">Tarde</span>
+              </div>
+            </>
+          )}
         </div>
       </CardContent>
 
@@ -352,13 +460,38 @@ export default function YearCalendar() {
           </SheetHeader>
           
           <div className="space-y-4 mt-4">
-            <div>
-              <Label>Data</Label>
-              <Input
-                value={selectedDate || ""}
-                disabled
-                className="mt-1"
-              />
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Label>Data</Label>
+                <Input
+                  value={selectedDate || ""}
+                  disabled
+                  className="mt-1"
+                />
+              </div>
+              {!showFullYear && (
+                <div className="w-32">
+                  <Label>Período</Label>
+                  <Select
+                    value={editingEvent.period || selectedPeriod}
+                    onValueChange={(value) => setEditingEvent(prev => ({ ...prev, period: value }))}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PERIODS.map(p => (
+                        <SelectItem key={p.value} value={p.value}>
+                          <div className="flex items-center gap-2">
+                            <p.icon className="h-3 w-3" />
+                            {p.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div>
