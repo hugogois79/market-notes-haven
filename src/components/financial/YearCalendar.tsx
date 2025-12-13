@@ -1379,7 +1379,11 @@ export default function YearCalendar() {
 
       {/* Monthly Objectives Footer - only show in 6-month view */}
       {!showFullYear && (
-        <MonthlyObjectivesFooter year={new Date().getFullYear()} monthOffset={monthOffset} />
+        <MonthlyObjectivesFooter 
+          year={new Date().getFullYear()} 
+          monthOffset={monthOffset} 
+          scheduledTitles={events?.map(e => e.title).filter(Boolean) as string[] || []}
+        />
       )}
     </Card>
   );
