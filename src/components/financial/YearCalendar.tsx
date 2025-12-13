@@ -546,9 +546,15 @@ export default function YearCalendar() {
           key={`${day}-${monthInfo.month}-${monthInfo.year}-d`}
           className={`
             min-h-[22px] text-[9px] font-medium text-center flex items-center justify-center border-r border-border/30 cursor-pointer
-            ${!isValid ? 'bg-muted/50' : 'bg-amber-50 hover:bg-amber-100'}
+            ${!isValid ? 'bg-muted/50' : ''}
           `}
-          style={isPast && isValid ? { backgroundColor: PAST_DATE_BG } : undefined}
+          style={{
+            backgroundColor: !isValid 
+              ? undefined 
+              : isPast 
+                ? PAST_DATE_BG 
+                : '#dbeafe' // light blue for future dates
+          }}
           onClick={() => isValid && handleCellClick(day, monthInfo, 'afternoon')}
         >
         </div>
