@@ -759,8 +759,8 @@ export default function YearCalendar() {
             ) : (
               <div className="flex items-center justify-center gap-0.5 h-full text-center">
                 <span 
-                  className="text-[8px] shrink-0 font-bold"
-                  style={hasEvents && style.textColor ? { color: style.textColor } : undefined}
+                  className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-current text-[7px] font-bold shrink-0"
+                  style={hasEvents && style.textColor ? { color: style.textColor, borderColor: style.textColor } : undefined}
                 >
                   {dayOfWeek}
                 </span>
@@ -1168,13 +1168,7 @@ export default function YearCalendar() {
             >
               {/* Day Number */}
               <div className={`p-1 text-[10px] font-medium text-muted-foreground text-center border-r border-border bg-muted/30 sticky left-0 ${showFullYear ? '' : 'flex items-center justify-center'}`}>
-                {showFullYear ? (
-                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-muted-foreground/30 text-[9px]">
-                    {day}
-                  </span>
-                ) : (
-                  day
-                )}
+                {day}
               </div>
 
               {/* Day Cells for each month */}
