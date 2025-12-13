@@ -48,6 +48,14 @@ interface ClipboardEvent {
   category: string | null;
 }
 
+interface DraggedEvent {
+  event: CalendarEvent;
+  sourceDay: number;
+  sourceMonth: number;
+  sourceYear: number;
+  sourcePeriod: string;
+}
+
 interface MonthInfo {
   month: number;
   year: number;
@@ -105,6 +113,7 @@ export default function YearCalendar() {
   const [categories, setCategories] = useState<CalendarCategory[]>(loadCalendarCategories);
   const [clipboard, setClipboard] = useState<ClipboardEvent | null>(null);
   const [selectedCell, setSelectedCell] = useState<EditingCell | null>(null);
+  const [draggedEvent, setDraggedEvent] = useState<DraggedEvent | null>(null);
   const inputRef = useRef<EventAutocompleteRef>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -421,7 +430,75 @@ export default function YearCalendar() {
     setIsSheetOpen(true);
   };
 
-  // Save inline edit
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, day: number, monthInfo: MonthInfo, period: string) => {
+    const event = getEventForDate(day, monthInfo.month, monthInfo.year, period);
+    if (!event?.title) {
+      e.preventDefault();
+      return;
+    }
+    
+    setDraggedEvent({
+      event,
+      sourceDay: day,
+      sourceMonth: monthInfo.month,
+      sourceYear: monthInfo.year,
+      sourcePeriod: period,
+    });
+    
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', event.title);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, day: number, monthInfo: MonthInfo, period: string) => {
+    e.preventDefault();
+    
+    if (!draggedEvent || !isValidDateForMonth(day, monthInfo.month, monthInfo.year)) {
+      setDraggedEvent(null);
+      return;
+    }
+    
+    // Don't do anything if dropping on the same cell
+    if (
+      draggedEvent.sourceDay === day &&
+      draggedEvent.sourceMonth === monthInfo.month &&
+      draggedEvent.sourceYear === monthInfo.year &&
+      draggedEvent.sourcePeriod === period
+    ) {
+      setDraggedEvent(null);
+      return;
+    }
+    
+    const targetDateStr = `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const existingTargetEvent = getEventForDate(day, monthInfo.month, monthInfo.year, period);
+    
+    // Move the event to the new location
+    saveMutation.mutate({
+      id: existingTargetEvent?.id,
+      date: targetDateStr,
+      title: draggedEvent.event.title,
+      category: draggedEvent.event.category,
+      notes: draggedEvent.event.notes,
+      period,
+    });
+    
+    // Delete the original event if it had an ID
+    if (draggedEvent.event.id) {
+      deleteMutation.mutate(draggedEvent.event.id);
+    }
+    
+    toast.success(`Movido: ${draggedEvent.event.title}`);
+    setDraggedEvent(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedEvent(null);
+  };
   const handleInlineSave = () => {
     if (!editingCell) return;
     
@@ -809,15 +886,21 @@ export default function YearCalendar() {
             border-r border-border/50 min-h-[22px] p-0.5 cursor-pointer transition-colors flex items-center justify-center
             ${!isValid ? 'bg-muted/50' : ''}
             ${isValid && !morningEvent && !editingMorning ? 'hover:bg-muted/40' : ''}
+            ${isValid && morningEvent && !editingMorning ? 'cursor-grab active:cursor-grabbing' : ''}
           `}
           style={{
             backgroundColor: isPast && isValid 
               ? PAST_DATE_BG 
               : (isValid && morningEvent && !editingMorning && morningStyle.bgColor ? morningStyle.bgColor : undefined)
           }}
+          draggable={isValid && !!morningEvent && !editingMorning}
+          onDragStart={(e) => isValid && handleDragStart(e, day, monthInfo, 'morning')}
+          onDragOver={handleDragOver}
+          onDrop={(e) => isValid && handleDrop(e, day, monthInfo, 'morning')}
+          onDragEnd={handleDragEnd}
           onClick={() => isValid && handleCellClick(day, monthInfo, 'morning')}
           onContextMenu={(e) => isValid && handleContextMenu(e, 'morning')}
-          title="Manhã - Clique direito para definições"
+          title="Manhã - Arraste para mover"
         >
           {isValid && (
             editingMorning ? (
@@ -849,15 +932,21 @@ export default function YearCalendar() {
             border-r border-border/50 min-h-[22px] p-0.5 cursor-pointer transition-colors flex items-center justify-center
             ${!isValid ? 'bg-muted/50' : ''}
             ${isValid && !afternoonEvent && !editingAfternoon ? 'hover:bg-muted/40' : ''}
+            ${isValid && afternoonEvent && !editingAfternoon ? 'cursor-grab active:cursor-grabbing' : ''}
           `}
           style={{
             backgroundColor: isPast && isValid 
               ? PAST_DATE_BG 
               : (isValid && afternoonEvent && !editingAfternoon && afternoonStyle.bgColor ? afternoonStyle.bgColor : undefined)
           }}
+          draggable={isValid && !!afternoonEvent && !editingAfternoon}
+          onDragStart={(e) => isValid && handleDragStart(e, day, monthInfo, 'afternoon')}
+          onDragOver={handleDragOver}
+          onDrop={(e) => isValid && handleDrop(e, day, monthInfo, 'afternoon')}
+          onDragEnd={handleDragEnd}
           onClick={() => isValid && handleCellClick(day, monthInfo, 'afternoon')}
           onContextMenu={(e) => isValid && handleContextMenu(e, 'afternoon')}
-          title="Tarde - Clique direito para definições"
+          title="Tarde - Arraste para mover"
         >
           {isValid && (
             editingAfternoon ? (
