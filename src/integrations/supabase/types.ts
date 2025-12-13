@@ -1947,7 +1947,6 @@ export type Database = {
       }
       monthly_objectives: {
         Row: {
-          category: string | null
           column_index: number | null
           content: string
           created_at: string | null
@@ -1959,7 +1958,6 @@ export type Database = {
           year: number
         }
         Insert: {
-          category?: string | null
           column_index?: number | null
           content: string
           created_at?: string | null
@@ -1971,7 +1969,6 @@ export type Database = {
           year: number
         }
         Update: {
-          category?: string | null
           column_index?: number | null
           content?: string
           created_at?: string | null
