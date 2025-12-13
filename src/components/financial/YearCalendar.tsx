@@ -493,7 +493,34 @@ export default function YearCalendar() {
   const handleDrop = (e: React.DragEvent, day: number, monthInfo: MonthInfo, period: string) => {
     e.preventDefault();
     
-    if (!draggedEvent || !isValidDateForMonth(day, monthInfo.month, monthInfo.year)) {
+    if (!isValidDateForMonth(day, monthInfo.month, monthInfo.year)) {
+      setDraggedEvent(null);
+      return;
+    }
+
+    const targetDateStr = `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const existingTargetEvent = getEventForDate(day, monthInfo.month, monthInfo.year, period);
+    
+    // Check if this is an objective being dropped from the footer
+    const isObjectiveDrop = e.dataTransfer.getData('application/x-objective') === 'true';
+    const droppedText = e.dataTransfer.getData('text/plain');
+    
+    if (isObjectiveDrop && droppedText) {
+      // Create new event from objective text
+      saveMutation.mutate({
+        id: existingTargetEvent?.id,
+        date: targetDateStr,
+        title: droppedText,
+        category: null,
+        notes: null,
+        period,
+      });
+      toast.success(`Adicionado: ${droppedText}`);
+      return;
+    }
+    
+    // Handle internal calendar drag
+    if (!draggedEvent) {
       setDraggedEvent(null);
       return;
     }
@@ -508,9 +535,6 @@ export default function YearCalendar() {
       setDraggedEvent(null);
       return;
     }
-    
-    const targetDateStr = `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const existingTargetEvent = getEventForDate(day, monthInfo.month, monthInfo.year, period);
     
     // Move the event to the new location
     saveMutation.mutate({
