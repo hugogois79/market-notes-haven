@@ -404,12 +404,17 @@ export default function YearCalendar() {
         <div
           key={`${day}-${monthInfo.month}-${monthInfo.year}-dow1`}
           className={`
-            min-h-[22px] text-[8px] font-medium text-muted-foreground text-center flex items-center justify-center border-r border-border/30
-            ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/30' : 'bg-muted/10'}
+            min-h-[22px] text-[8px] font-medium text-center flex items-center justify-center border-r border-border/30
+            ${!isValid ? 'bg-muted/50' : ''}
           `}
-          style={isPast && isValid ? { backgroundColor: PAST_DATE_BG } : undefined}
+          style={
+            !isValid ? undefined : 
+            isPast ? { backgroundColor: PAST_DATE_BG } : 
+            isWeekend ? { backgroundColor: '#dcfce7' } : 
+            { backgroundColor: 'hsl(var(--muted) / 0.1)' }
+          }
         >
-          {isValid && dayOfWeek}
+          {isValid && <span className={isWeekend ? 'text-green-700' : 'text-muted-foreground'}>{dayOfWeek}</span>}
         </div>
         {/* B column (Beatriz) */}
         <div
