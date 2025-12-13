@@ -1,66 +1,106 @@
 /* Calendar Print Styles - Landscape Format */
 @media print {
   @page {
-    size: landscape;
-    margin: 10mm;
+    size: A4 landscape;
+    margin: 5mm;
   }
 
-  /* Hide everything except the calendar */
-  body * {
-    visibility: hidden;
-  }
-
-  .calendar-print-area,
-  .calendar-print-area * {
-    visibility: visible !important;
-  }
-
-  .calendar-print-area {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-  }
-
-  /* Hide non-printable elements */
-  .no-print,
-  .calendar-print-area .no-print {
+  /* Hide sidebar, header, and other non-calendar elements */
+  aside,
+  nav,
+  header,
+  .sidebar,
+  [data-sidebar],
+  .no-print {
     display: none !important;
   }
 
-  /* Ensure full width for print */
+  /* Reset the main content area */
+  main,
+  #root,
+  body,
+  html {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  /* Make calendar take full width */
+  .calendar-print-area {
+    position: relative !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
   .calendar-print-area .min-w-\[900px\],
   .calendar-print-area .min-w-\[700px\] {
     min-width: 100% !important;
     width: 100% !important;
   }
 
-  /* Remove card styling for cleaner print */
-  .calendar-print-area .rounded-lg {
-    border-radius: 0 !important;
+  /* Ensure colors print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
 
-  .calendar-print-area .shadow-sm {
-    box-shadow: none !important;
-  }
-
-  /* Ensure text is readable */
+  /* Compact text for printing */
   .calendar-print-area {
-    font-size: 9px !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
+    font-size: 8px !important;
   }
 
-  /* Ensure borders print */
+  .calendar-print-area .text-\[9px\] {
+    font-size: 7px !important;
+  }
+
+  .calendar-print-area .text-\[8px\] {
+    font-size: 6px !important;
+  }
+
+  .calendar-print-area .text-\[10px\] {
+    font-size: 8px !important;
+  }
+
+  /* Reduce cell heights for fitting on one page */
+  .calendar-print-area .min-h-\[32px\] {
+    min-height: 18px !important;
+  }
+
+  /* Ensure grid borders print */
   .calendar-print-area [class*="border"] {
-    border-color: #e5e7eb !important;
+    border-color: #d1d5db !important;
   }
 
-  /* Ensure background colors print */
-  .calendar-print-area [style*="background"] {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
+  /* Remove overflow hidden */
+  .calendar-print-area .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  /* Hide interactive elements */
+  .calendar-print-area button,
+  .calendar-print-area input,
+  .calendar-print-area [role="button"] {
+    display: none !important;
+  }
+
+  /* But show the content divs */
+  .calendar-print-area div {
+    display: block;
+  }
+
+  /* Keep grid display */
+  .calendar-print-area [style*="display: grid"] {
+    display: grid !important;
+  }
+
+  .calendar-print-area [style*="grid"] {
+    display: grid !important;
   }
 }
