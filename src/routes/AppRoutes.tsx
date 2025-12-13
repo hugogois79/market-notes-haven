@@ -32,6 +32,7 @@ import TAOValidatorRelationshipManagement from "@/pages/tao/validator-relationsh
 import InvestorOpportunitiesPage from "@/pages/tao/investor-opportunities";
 import FollowUpSequencesPage from "@/pages/tao/follow-up-sequences";
 import FinancialPage from "@/pages/financial";
+import CalendarPage from "@/pages/Calendar";
 import ExpensesIndex from "@/pages/expenses/index";
 import ExpensesNew from "@/pages/expenses/new";
 import ExpensesEdit from "@/pages/expenses/edit";
@@ -163,6 +164,14 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <FinancialPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="calendar"
+            element={
+              <ProtectedRoute>
+                <CalendarPage />
               </ProtectedRoute>
             }
           />
