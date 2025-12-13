@@ -332,7 +332,6 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
               <thead>
                 <tr className="border-b border-emerald-200">
                   <th className="text-left text-emerald-600 font-medium py-0.5">Nome</th>
-                  <th className="text-center text-emerald-600 font-medium py-0.5">Aniv.</th>
                   <th className="text-right text-emerald-600 font-medium py-0.5">Idade</th>
                 </tr>
               </thead>
@@ -340,7 +339,6 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
                 {children.map((child) => (
                   <tr key={child.name} className="border-b border-emerald-100 last:border-0">
                     <td className="text-emerald-700 py-0.5">{child.name}</td>
-                    <td className="text-center text-emerald-600 py-0.5">{formatBirthday(child)}</td>
                     <td className="text-right font-semibold text-emerald-800 py-0.5">{calculateAge(child)}</td>
                   </tr>
                 ))}
@@ -367,12 +365,6 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
                 <span className="font-mono">-</span>
               </div>
             </div>
-          </div>
-
-          {/* Year indicator */}
-          <div className="bg-slate-100 border border-slate-200 rounded p-2 text-center">
-            <div className="text-lg font-bold text-slate-700">{year}</div>
-            <div className="text-[9px] text-slate-500">Ano Ativo</div>
           </div>
         </div>
       </div>
