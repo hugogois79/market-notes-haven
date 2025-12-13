@@ -402,7 +402,7 @@ export default function YearCalendar() {
     setEditingEvent({});
   };
 
-  // Print function that opens calendar in new window
+  // Print function that opens calendar in new window with full styling
   const handlePrint = () => {
     if (!calendarRef.current) return;
     
@@ -412,8 +412,30 @@ export default function YearCalendar() {
       return;
     }
 
-    const calendarContent = calendarRef.current.innerHTML;
+    // Clone the calendar content and remove input elements
+    const clone = calendarRef.current.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll('input, textarea').forEach(el => el.remove());
+    
+    const calendarContent = clone.innerHTML;
     const title = showFullYear ? `Calendário Anual ${selectedYear}` : 'Próximos 6 Meses';
+    const gridTemplate = sixMonthGridTemplate;
+
+    // Generate category legend HTML
+    const legendHTML = categories.map(cat => {
+      const bgColor = cat.bgClass.includes('bg-red-600') ? '#dc2626' :
+                      cat.bgClass.includes('bg-purple-600') ? '#7c3aed' :
+                      cat.bgClass.includes('bg-blue-500') ? '#3b82f6' :
+                      cat.bgClass.includes('bg-green-500') ? '#22c55e' :
+                      cat.bgClass.includes('bg-yellow-400') ? '#facc15' :
+                      cat.bgClass.includes('bg-orange-500') ? '#f97316' :
+                      cat.bgClass.includes('bg-pink-500') ? '#ec4899' :
+                      cat.bgClass.includes('bg-cyan-500') ? '#06b6d4' :
+                      cat.bgClass.includes('bg-gray-400') ? '#9ca3af' : '#e5e7eb';
+      return `<div style="display: flex; align-items: center; gap: 4px;">
+        <div style="width: 12px; height: 12px; border-radius: 2px; background-color: ${bgColor};"></div>
+        <span style="font-size: 8px; color: #666;">${cat.label}</span>
+      </div>`;
+    }).join('');
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -423,7 +445,7 @@ export default function YearCalendar() {
           <style>
             @page {
               size: A4 landscape;
-              margin: 5mm;
+              margin: 8mm;
             }
             * {
               margin: 0;
@@ -431,38 +453,92 @@ export default function YearCalendar() {
               box-sizing: border-box;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
+              color-adjust: exact !important;
             }
             body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-              font-size: 8px;
-              line-height: 1.2;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+              font-size: 7px;
+              line-height: 1.1;
+              padding: 0;
             }
-            h1 {
-              font-size: 14px;
-              margin-bottom: 8px;
+            .print-header {
               text-align: center;
+              margin-bottom: 8px;
+              padding-bottom: 6px;
+              border-bottom: 2px solid #1e293b;
+            }
+            .print-header h1 {
+              font-size: 16px;
+              font-weight: 700;
+              color: #1e293b;
+              margin: 0;
+            }
+            .print-header .subtitle {
+              font-size: 9px;
+              color: #64748b;
+              margin-top: 2px;
+            }
+            .calendar-container {
+              width: 100%;
+              border: 1px solid #cbd5e1;
+              border-radius: 4px;
+              overflow: hidden;
             }
             .calendar-grid {
               width: 100%;
-              border-collapse: collapse;
             }
             .calendar-grid > div {
               display: grid !important;
+              grid-template-columns: ${gridTemplate};
             }
-            [style*="border"] {
-              border-color: #d1d5db !important;
+            .calendar-grid > div > div {
+              border-right: 1px solid #e2e8f0;
+              border-bottom: 1px solid #e2e8f0;
+              padding: 1px 2px;
+              min-height: 16px;
+              font-size: 7px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              text-align: center;
+              word-break: break-word;
+              overflow: hidden;
+            }
+            .legend {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 12px;
+              margin-top: 10px;
+              padding-top: 8px;
+              border-top: 1px solid #e2e8f0;
+              justify-content: center;
+            }
+            /* Force background colors */
+            [style*="background"] {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
           </style>
         </head>
         <body>
-          <h1>${title}</h1>
-          <div class="calendar-grid">${calendarContent}</div>
+          <div class="print-header">
+            <h1>${title}</h1>
+            <div class="subtitle">Gerado em ${new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+          </div>
+          <div class="calendar-container">
+            <div class="calendar-grid">${calendarContent}</div>
+          </div>
+          <div class="legend">
+            ${legendHTML}
+          </div>
           <script>
             window.onload = function() {
-              window.print();
-              window.onafterprint = function() {
-                window.close();
-              };
+              setTimeout(function() {
+                window.print();
+                window.onafterprint = function() {
+                  window.close();
+                };
+              }, 100);
             };
           </script>
         </body>
