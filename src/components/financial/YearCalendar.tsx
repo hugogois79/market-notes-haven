@@ -189,6 +189,12 @@ export default function YearCalendar() {
     return DAYS_OF_WEEK[date.getDay()];
   };
 
+  const isWeekendDay = (day: number, month: number, year: number) => {
+    const date = new Date(year, month - 1, day);
+    const dayIndex = date.getDay();
+    return dayIndex === 0 || dayIndex === 6; // Sunday (0) or Saturday (6)
+  };
+
   const isValidDateForMonth = (day: number, month: number, year: number) => {
     return day <= getDaysInMonth(month, year);
   };
@@ -325,7 +331,7 @@ export default function YearCalendar() {
     const event = isValid ? getEventForDate(day, monthInfo.month, monthInfo.year) : null;
     const style = getCategoryStyle(event?.category || null);
     const dayOfWeek = isValid ? getDayOfWeek(day, monthInfo.month, monthInfo.year) : "";
-    const isWeekend = dayOfWeek === "S" || dayOfWeek === "D";
+    const isWeekend = isValid && isWeekendDay(day, monthInfo.month, monthInfo.year);
     const editing = isEditing(day, monthInfo.month, monthInfo.year, 'morning');
 
     return (
@@ -387,7 +393,7 @@ export default function YearCalendar() {
     const morningStyle = getCategoryStyle(morningEvent?.category || null);
     const afternoonStyle = getCategoryStyle(afternoonEvent?.category || null);
     const dayOfWeek = isValid ? getDayOfWeek(day, monthInfo.month, monthInfo.year) : "";
-    const isWeekend = dayOfWeek === "S" || dayOfWeek === "D";
+    const isWeekend = isValid && isWeekendDay(day, monthInfo.month, monthInfo.year);
     const editingMorning = isEditing(day, monthInfo.month, monthInfo.year, 'morning');
     const editingAfternoon = isEditing(day, monthInfo.month, monthInfo.year, 'afternoon');
     const isPast = isValid && isPastDate(day, monthInfo.month, monthInfo.year);
