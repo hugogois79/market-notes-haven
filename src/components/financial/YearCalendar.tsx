@@ -541,11 +541,11 @@ export default function YearCalendar() {
             )
           )}
         </div>
-        {/* D column (Diana) */}
+        {/* D column (Diana) - with double border as month separator */}
         <div
           key={`${day}-${monthInfo.month}-${monthInfo.year}-d`}
           className={`
-            min-h-[22px] text-[9px] font-medium text-center flex items-center justify-center border-r border-border/30 cursor-pointer
+            min-h-[22px] text-[9px] font-medium text-center flex items-center justify-center cursor-pointer
             ${!isValid ? 'bg-muted/50' : ''}
           `}
           style={{
@@ -553,7 +553,8 @@ export default function YearCalendar() {
               ? undefined 
               : isPast 
                 ? PAST_DATE_BG 
-                : '#dbeafe' // light blue for future dates
+                : '#dbeafe', // light blue for future dates
+            borderRight: '3px double #64748b' // double line separator between months
           }}
           onClick={() => isValid && handleCellClick(day, monthInfo, 'afternoon')}
         >
@@ -651,8 +652,8 @@ export default function YearCalendar() {
                   >
                     {monthInfo.label}
                   </div>
-                  {/* D column header */}
-                  <div key={`${monthInfo.month}-${monthInfo.year}-d-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border last:border-r-0">D</div>
+                  {/* D column header - with double border as month separator */}
+                  <div key={`${monthInfo.month}-${monthInfo.year}-d-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center" style={{ borderRight: '3px double #64748b' }}>D</div>
                 </>
               ))
             )}
