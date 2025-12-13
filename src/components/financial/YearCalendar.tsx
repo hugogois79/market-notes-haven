@@ -84,6 +84,7 @@ export default function YearCalendar() {
   const [inlineValue, setInlineValue] = useState("");
   const [categories, setCategories] = useState<CalendarCategory[]>(loadCalendarCategories);
   const inputRef = useRef<EventAutocompleteRef>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
   // Focus input when editing cell changes
@@ -401,7 +402,75 @@ export default function YearCalendar() {
     setEditingEvent({});
   };
 
-  // In 6-month view, each month has 4 columns: B (with day letter), morning, afternoon, D
+  // Print function that opens calendar in new window
+  const handlePrint = () => {
+    if (!calendarRef.current) return;
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error("Não foi possível abrir a janela de impressão. Verifique se os popups estão bloqueados.");
+      return;
+    }
+
+    const calendarContent = calendarRef.current.innerHTML;
+    const title = showFullYear ? `Calendário Anual ${selectedYear}` : 'Próximos 6 Meses';
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${title}</title>
+          <style>
+            @page {
+              size: A4 landscape;
+              margin: 5mm;
+            }
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              font-size: 8px;
+              line-height: 1.2;
+            }
+            h1 {
+              font-size: 14px;
+              margin-bottom: 8px;
+              text-align: center;
+            }
+            .calendar-grid {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            .calendar-grid > div {
+              display: grid !important;
+            }
+            [style*="border"] {
+              border-color: #d1d5db !important;
+            }
+          </style>
+        </head>
+        <body>
+          <h1>${title}</h1>
+          <div class="calendar-grid">${calendarContent}</div>
+          <script>
+            window.onload = function() {
+              window.print();
+              window.onafterprint = function() {
+                window.close();
+              };
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   const columnCount = showFullYear ? visibleMonths.length : visibleMonths.length * 4;
   
   // Grid template for 6-month view: narrow columns for B/D, wider for events
@@ -701,8 +770,8 @@ export default function YearCalendar() {
             <Button
               variant="outline"
               size="sm"
-              className="h-7 gap-1.5 no-print"
-              onClick={() => window.print()}
+              className="h-7 gap-1.5"
+              onClick={handlePrint}
             >
               <Printer className="h-3.5 w-3.5" />
               <span className="text-xs">Imprimir</span>
@@ -741,7 +810,7 @@ export default function YearCalendar() {
         </p>
       </CardHeader>
       <CardContent className="p-2 overflow-x-auto">
-        <div className={showFullYear ? "min-w-[900px]" : "min-w-[700px]"}>
+        <div ref={calendarRef} className={showFullYear ? "min-w-[900px]" : "min-w-[700px]"}>
           {/* Grid Header */}
           <div 
             className="border-b border-border sticky top-0 bg-slate-300 z-10"
