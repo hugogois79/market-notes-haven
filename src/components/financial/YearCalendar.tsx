@@ -440,7 +440,7 @@ export default function YearCalendar() {
 
     return (
       <>
-        {/* B column (Beatriz) with day letter - green on Wednesdays */}
+        {/* B column (Beatriz) with day letter - green on Wednesdays/weekends ONLY if has event */}
         <div
           key={`${day}-${monthInfo.month}-${monthInfo.year}-b`}
           className={`
@@ -450,13 +450,14 @@ export default function YearCalendar() {
           style={
             !isValid ? undefined :
             isPast ? { backgroundColor: PAST_DATE_BG } :
-            isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend ? { backgroundColor: '#ecfdf5' } :
-            { backgroundColor: '#fffbeb' }
+            (isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend) && morningEvent?.title ? { backgroundColor: '#ecfdf5' } :
+            morningEvent?.title ? { backgroundColor: '#fffbeb' } :
+            undefined
           }
           onClick={() => isValid && handleCellClick(day, monthInfo, 'morning')}
         >
           {isValid && (
-            <span className={isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend ? 'text-green-700' : 'text-muted-foreground'}>
+            <span className={(isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend) && morningEvent?.title ? 'text-green-700' : 'text-muted-foreground'}>
               {dayOfWeek}
             </span>
           )}
@@ -541,14 +542,18 @@ export default function YearCalendar() {
             )
           )}
         </div>
-        {/* D column (Diana) */}
+        {/* D column (Diana) - light blue for future dates by default */}
         <div
           key={`${day}-${monthInfo.month}-${monthInfo.year}-d`}
           className={`
             min-h-[22px] text-[9px] font-medium text-center flex items-center justify-center border-r border-border/30 cursor-pointer
-            ${!isValid ? 'bg-muted/50' : 'bg-amber-50 hover:bg-amber-100'}
+            ${!isValid ? 'bg-muted/50' : ''}
           `}
-          style={isPast && isValid ? { backgroundColor: PAST_DATE_BG } : undefined}
+          style={
+            !isValid ? undefined :
+            isPast ? { backgroundColor: PAST_DATE_BG } :
+            { backgroundColor: '#eff6ff' }
+          }
           onClick={() => isValid && handleCellClick(day, monthInfo, 'afternoon')}
         >
         </div>
