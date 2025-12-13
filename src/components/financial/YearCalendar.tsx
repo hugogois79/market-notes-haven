@@ -605,14 +605,18 @@ export default function YearCalendar() {
                 <>
                   {/* Empty cell for day letter column */}
                   <div key={`${monthInfo.month}-${monthInfo.year}-dow-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border/30"></div>
-                  {/* Month name spanning B, Morning, Afternoon, D columns */}
+                  {/* B column header */}
+                  <div key={`${monthInfo.month}-${monthInfo.year}-b-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border/30">B</div>
+                  {/* Month name spanning Morning and Afternoon columns */}
                   <div 
                     key={`${monthInfo.month}-${monthInfo.year}-month-header`} 
                     className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30"
-                    style={{ gridColumn: 'span 4' }}
+                    style={{ gridColumn: 'span 2' }}
                   >
                     {monthInfo.label}
                   </div>
+                  {/* D column header */}
+                  <div key={`${monthInfo.month}-${monthInfo.year}-d-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border/30">D</div>
                   {/* Empty cell for day letter column after D */}
                   <div key={`${monthInfo.month}-${monthInfo.year}-dow2-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border last:border-r-0"></div>
                 </>
