@@ -275,7 +275,7 @@ export default function YearCalendar() {
     if (!cat) return { bgColor: "", textColor: "" };
     
     // Dark colors need white text, light colors need black text
-    const darkColors = ["#1e40af", "#1e3a8a", "#312e81", "#4c1d95", "#831843", "#7f1d1d"];
+    const darkColors = ["#1e40af", "#1e3a8a", "#312e81", "#4c1d95", "#831843", "#7f1d1d", "#dc2626", "#b91c1c", "#991b1b"];
     const textColor = darkColors.includes(cat.color.toLowerCase()) ? "#ffffff" : "#000000";
     
     return { bgColor: cat.color, textColor };

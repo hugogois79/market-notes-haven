@@ -27,6 +27,7 @@ const DEFAULT_CATEGORIES: CalendarCategory[] = [
 // Light colors with black text, dark colors with white text
 const COLOR_PRESETS = [
   { color: "#fecaca", bgClass: "bg-red-200", textClass: "text-black" },       // Light red
+  { color: "#dc2626", bgClass: "bg-red-600", textClass: "text-white" },       // Dark red (strong)
   { color: "#fed7aa", bgClass: "bg-orange-200", textClass: "text-black" },    // Light orange
   { color: "#fef08a", bgClass: "bg-yellow-200", textClass: "text-black" },    // Light yellow
   { color: "#bbf7d0", bgClass: "bg-green-200", textClass: "text-black" },     // Light green
@@ -35,12 +36,11 @@ const COLOR_PRESETS = [
   { color: "#1e40af", bgClass: "bg-blue-800", textClass: "text-white" },      // Dark blue (strong)
   { color: "#ddd6fe", bgClass: "bg-purple-200", textClass: "text-black" },    // Light purple
   { color: "#fbcfe8", bgClass: "bg-pink-200", textClass: "text-black" },      // Light pink
-  { color: "#d1d5db", bgClass: "bg-gray-300", textClass: "text-black" },      // Light gray
 ];
 
 // Helper to determine if a color is dark (needs white text)
 const isDarkColor = (color: string): boolean => {
-  const darkColors = ["#1e40af", "#1e3a8a", "#312e81", "#4c1d95", "#831843", "#7f1d1d"];
+  const darkColors = ["#1e40af", "#1e3a8a", "#312e81", "#4c1d95", "#831843", "#7f1d1d", "#dc2626", "#b91c1c", "#991b1b"];
   return darkColors.includes(color.toLowerCase());
 };
 
