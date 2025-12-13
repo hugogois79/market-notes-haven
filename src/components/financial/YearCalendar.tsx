@@ -1309,8 +1309,10 @@ export default function YearCalendar() {
         </SheetContent>
       </Sheet>
 
-      {/* Monthly Objectives Footer */}
-      <MonthlyObjectivesFooter year={showFullYear ? selectedYear : new Date().getFullYear()} monthOffset={monthOffset} />
+      {/* Monthly Objectives Footer - only show in 6-month view */}
+      {!showFullYear && (
+        <MonthlyObjectivesFooter year={new Date().getFullYear()} monthOffset={monthOffset} />
+      )}
     </Card>
   );
 }
