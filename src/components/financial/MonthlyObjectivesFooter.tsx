@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Check, Trash2, GripVertical } from "lucide-react";
+import { Plus, Check, Trash2, GripVertical, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import {
   DragDropContext,
@@ -360,24 +360,31 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
                                       className="flex-1 text-[10px] bg-yellow-50 border border-yellow-300 rounded px-1 py-0.5 outline-none"
                                     />
                                   ) : (
-                                    <span
-                                      draggable
-                                      onDragStart={(e) => {
-                                        e.stopPropagation();
-                                        e.dataTransfer.setData('text/plain', objective.content);
-                                        e.dataTransfer.setData('application/x-objective', 'true');
-                                        e.dataTransfer.effectAllowed = 'copy';
-                                      }}
-                                      onClick={() => handleEdit(objective)}
-                                      className={`flex-1 text-[10px] cursor-grab hover:bg-slate-100 rounded px-1 py-0.5 ${
-                                        objective.is_completed
-                                          ? "line-through text-slate-400"
-                                          : "text-slate-800"
-                                      }`}
-                                      title="Arraste para o calendário"
-                                    >
-                                      {objective.content}
-                                    </span>
+                                    <>
+                                      <span
+                                        onClick={() => handleEdit(objective)}
+                                        className={`flex-1 text-[10px] cursor-pointer hover:bg-slate-100 rounded px-1 py-0.5 ${
+                                          objective.is_completed
+                                            ? "line-through text-slate-400"
+                                            : "text-slate-800"
+                                        }`}
+                                      >
+                                        {objective.content}
+                                      </span>
+                                      <div
+                                        draggable
+                                        onDragStart={(e) => {
+                                          e.stopPropagation();
+                                          e.dataTransfer.setData('text/plain', objective.content);
+                                          e.dataTransfer.setData('application/x-objective', 'true');
+                                          e.dataTransfer.effectAllowed = 'copy';
+                                        }}
+                                        className="flex-shrink-0 cursor-grab text-blue-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        title="Arraste para o calendário"
+                                      >
+                                        <Calendar className="h-3 w-3" />
+                                      </div>
+                                    </>
                                   )}
                                 </div>
                               </ContextMenuTrigger>
