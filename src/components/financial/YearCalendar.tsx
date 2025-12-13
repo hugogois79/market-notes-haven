@@ -729,6 +729,10 @@ export default function YearCalendar() {
     const dayOfWeek = isValid ? getDayOfWeek(day, monthInfo.month, monthInfo.year) : "";
     const isWeekend = isValid && isWeekendDay(day, monthInfo.month, monthInfo.year);
     const editing = isEditing(day, monthInfo.month, monthInfo.year, 'morning');
+    
+    // Check if this day is a holiday
+    const dateStr = isValid ? `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}-${String(day).padStart(2, '0')}` : '';
+    const isHoliday = isValid && custodyStatus[dateStr] === 'feriado';
 
     return (
       <div
@@ -759,8 +763,12 @@ export default function YearCalendar() {
             ) : (
               <div className="flex items-center justify-center gap-0.5 h-full text-center">
                 <span 
-                  className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-current text-[7px] font-bold shrink-0"
-                  style={hasEvents && style.textColor ? { color: style.textColor, borderColor: style.textColor } : undefined}
+                  className={`inline-flex items-center justify-center w-4 h-4 rounded-full text-[7px] font-bold shrink-0 ${
+                    isHoliday 
+                      ? 'bg-slate-600 text-white border-0' 
+                      : 'border border-current'
+                  }`}
+                  style={!isHoliday && hasEvents && style.textColor ? { color: style.textColor, borderColor: style.textColor } : undefined}
                 >
                   {dayOfWeek}
                 </span>
