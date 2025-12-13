@@ -15,6 +15,7 @@ import {
   FileCheck,
   Scale,
   LineChart,
+  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useMemo } from "react";
@@ -109,6 +110,12 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       title: "Finance",
       icon: <Coins size={20} />,
       path: "/financeiro",
+      workerAllowed: false,
+    },
+    {
+      title: "Calendar",
+      icon: <CalendarDays size={20} />,
+      path: "/calendar",
       workerAllowed: false,
     },
     {
