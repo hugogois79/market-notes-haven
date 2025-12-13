@@ -41,18 +41,20 @@ const COLOR_PRESETS = [
 
 // Helper to determine if a color is dark (needs white text)
 const isDarkColor = (color: string): boolean => {
-  const darkColors = ["#1e40af", "#1e3a8a", "#312e81", "#4c1d95", "#831843", "#7f1d1d", "#dc2626", "#b91c1c", "#991b1b", "#7c3aed", "#6d28d9", "#5b21b6", "#3b82f6", "#2563eb"];
+  const darkColors = ["#1e40af", "#1e3a8a", "#312e81", "#4c1d95", "#831843", "#7f1d1d", "#dc2626", "#b91c1c", "#991b1b", "#7c3aed", "#6d28d9", "#5b21b6", "#3b82f6", "#2563eb", "#ef4444"];
   return darkColors.includes(color.toLowerCase());
 };
 
 interface CalendarSettingsSheetProps {
   categories: CalendarCategory[];
   onCategoriesChange: (categories: CalendarCategory[]) => void;
+  isSaving?: boolean;
 }
 
 export default function CalendarSettingsSheet({ 
   categories, 
-  onCategoriesChange 
+  onCategoriesChange,
+  isSaving = false,
 }: CalendarSettingsSheetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [localCategories, setLocalCategories] = useState<CalendarCategory[]>(categories);
@@ -106,16 +108,12 @@ export default function CalendarSettingsSheet({
 
   const handleSave = () => {
     onCategoriesChange(localCategories);
-    localStorage.setItem('calendar_categories', JSON.stringify(localCategories));
-    toast.success("Configurações guardadas");
     setIsOpen(false);
   };
 
   const handleReset = () => {
     setLocalCategories(DEFAULT_CATEGORIES);
     onCategoriesChange(DEFAULT_CATEGORIES);
-    localStorage.removeItem('calendar_categories');
-    toast.success("Categorias restauradas");
   };
 
   return (
@@ -214,8 +212,8 @@ export default function CalendarSettingsSheet({
             <Button variant="ghost" size="sm" onClick={handleReset}>
               Restaurar padrões
             </Button>
-            <Button size="sm" onClick={handleSave}>
-              Guardar
+            <Button size="sm" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? "A guardar..." : "Guardar"}
             </Button>
           </div>
         </div>
@@ -224,14 +222,4 @@ export default function CalendarSettingsSheet({
   );
 }
 
-export function loadCalendarCategories(): CalendarCategory[] {
-  try {
-    const stored = localStorage.getItem('calendar_categories');
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (e) {
-    console.error('Error loading calendar categories:', e);
-  }
-  return DEFAULT_CATEGORIES;
-}
+export { DEFAULT_CATEGORIES };

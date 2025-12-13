@@ -94,6 +94,39 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_day_status: {
+        Row: {
+          beatriz_status: string | null
+          created_at: string
+          date: string
+          diana_status: string | null
+          id: string
+          is_holiday: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          beatriz_status?: string | null
+          created_at?: string
+          date: string
+          diana_status?: string | null
+          id?: string
+          is_holiday?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          beatriz_status?: string | null
+          created_at?: string
+          date?: string
+          diana_status?: string | null
+          id?: string
+          is_holiday?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       calendar_event_templates: {
         Row: {
           category: string | null
