@@ -502,21 +502,13 @@ export default function YearCalendar() {
               ))
             ) : (
               visibleMonths.map((monthInfo) => (
-                <>
-                  <div
-                    key={`${monthInfo.month}-${monthInfo.year}-m`}
-                    className="p-1 text-[10px] font-semibold text-center border-r border-border/50 flex items-center justify-center gap-1"
-                  >
-                    <Sun className="h-3 w-3" />
-                    <span>{monthInfo.label}</span>
-                  </div>
-                  <div
-                    key={`${monthInfo.month}-${monthInfo.year}-a`}
-                    className="p-1 text-[10px] font-semibold text-center border-r border-border last:border-r-0 flex items-center justify-center gap-1"
-                  >
-                    <Moon className="h-3 w-3" />
-                  </div>
-                </>
+                <div
+                  key={`${monthInfo.month}-${monthInfo.year}`}
+                  className="p-1 text-[10px] font-semibold text-center border-r border-border last:border-r-0 col-span-2"
+                  style={{ gridColumn: 'span 2' }}
+                >
+                  {monthInfo.label}
+                </div>
               ))
             )}
           </div>
