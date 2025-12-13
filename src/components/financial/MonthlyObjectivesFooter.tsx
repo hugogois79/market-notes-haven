@@ -208,12 +208,13 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
   ];
 
   // Calculate age based on birthday and reference date (first visible month)
+  // Age increases when the first visible month is >= the birthday month
   const calculateAge = (child: Child): number => {
     let age = referenceDate.getFullYear() - child.birthYear;
-    const hasBirthdayPassed = 
-      referenceDate.getMonth() + 1 > child.birthMonth || 
-      (referenceDate.getMonth() + 1 === child.birthMonth && referenceDate.getDate() >= child.birthDay);
-    if (!hasBirthdayPassed) {
+    const referenceMonth = referenceDate.getMonth() + 1; // 1-12
+    
+    // Only increase age when we've reached or passed the birthday month
+    if (referenceMonth < child.birthMonth) {
       age--;
     }
     return age;
