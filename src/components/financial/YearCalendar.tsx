@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import CalendarSettingsSheet, { CalendarCategory, loadCalendarCategories } from "./CalendarSettingsSheet";
 
 const MONTHS = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
@@ -18,16 +19,6 @@ const MONTHS = [
 ];
 
 const DAYS_OF_WEEK = ["D", "S", "T", "Q", "Q", "S", "S"];
-
-const CATEGORIES = [
-  { value: "legal", label: "Legal", bgClass: "bg-red-500", textClass: "text-white" },
-  { value: "family", label: "Família", bgClass: "bg-green-100", textClass: "text-green-900" },
-  { value: "holidays", label: "Férias", bgClass: "bg-yellow-300", textClass: "text-yellow-900" },
-  { value: "finance", label: "Finanças", bgClass: "bg-blue-200", textClass: "text-blue-900" },
-  { value: "health", label: "Saúde", bgClass: "bg-purple-100", textClass: "text-purple-900" },
-  { value: "work", label: "Trabalho", bgClass: "bg-orange-200", textClass: "text-orange-900" },
-  { value: "personal", label: "Pessoal", bgClass: "bg-pink-100", textClass: "text-pink-900" },
-];
 
 const PERIODS = [
   { value: "morning", label: "Manhã", icon: Sun },
@@ -66,6 +57,7 @@ export default function YearCalendar() {
   const [editingEvent, setEditingEvent] = useState<Partial<CalendarEvent>>({});
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [inlineValue, setInlineValue] = useState("");
+  const [categories, setCategories] = useState<CalendarCategory[]>(loadCalendarCategories);
   const inputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -210,7 +202,7 @@ export default function YearCalendar() {
   };
 
   const getCategoryStyle = (category: string | null) => {
-    const cat = CATEGORIES.find(c => c.value === category);
+    const cat = categories.find(c => c.value === category);
     return cat || { bgClass: "", textClass: "text-foreground" };
   };
 
@@ -476,29 +468,35 @@ export default function YearCalendar() {
               />
             </div>
           </div>
-          {showFullYear && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setSelectedYear(y => y - 1)}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm font-semibold min-w-[50px] text-center">
-                {selectedYear}
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setSelectedYear(y => y + 1)}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <CalendarSettingsSheet 
+              categories={categories}
+              onCategoriesChange={setCategories}
+            />
+            {showFullYear && (
+              <>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setSelectedYear(y => y - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-semibold min-w-[50px] text-center">
+                  {selectedYear}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setSelectedYear(y => y + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1">
           Clique para editar • Duplo clique para detalhes
@@ -566,7 +564,7 @@ export default function YearCalendar() {
 
         {/* Legend */}
         <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-border">
-          {CATEGORIES.map(cat => (
+          {categories.map(cat => (
             <div key={cat.value} className="flex items-center gap-1">
               <div className={`w-3 h-3 rounded ${cat.bgClass}`} />
               <span className="text-[10px] text-muted-foreground">{cat.label}</span>
@@ -652,7 +650,7 @@ export default function YearCalendar() {
                   <SelectValue placeholder="Selecione categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map(cat => (
+                  {categories.map(cat => (
                     <SelectItem key={cat.value} value={cat.value}>
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded ${cat.bgClass}`} />
