@@ -435,7 +435,7 @@ export default function YearCalendar() {
       <div
         key={`${day}-${monthInfo.month}-${monthInfo.year}`}
         className={`
-          p-0.5 text-[9px] border-r border-border last:border-r-0 min-h-[24px] cursor-pointer
+          p-0.5 text-[9px] border-r border-border last:border-r-0 min-h-[32px] cursor-pointer
           transition-colors
           ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
           ${isValid && !hasEvents && !editing ? 'hover:bg-muted/40' : ''}
@@ -460,14 +460,14 @@ export default function YearCalendar() {
             ) : (
               <div className="flex items-start gap-0.5">
                 <span 
-                  className="text-[8px]"
+                  className="text-[8px] shrink-0"
                   style={hasEvents && style.textColor ? { color: style.textColor } : undefined}
                 >
                   {dayOfWeek}
                 </span>
                 {combinedTitle && (
                   <span 
-                    className="truncate flex-1"
+                    className="flex-1 break-words leading-tight"
                     style={style.textColor ? { color: style.textColor } : undefined}
                     title={combinedTitle}
                   >
