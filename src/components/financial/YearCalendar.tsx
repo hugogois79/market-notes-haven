@@ -447,7 +447,7 @@ export default function YearCalendar() {
               />
             ) : (
               <span 
-                className={`truncate block text-center ${!isPast && morningEvent ? 'font-bold' : ''}`}
+                className={`break-words text-center leading-tight w-full ${!isPast && morningEvent ? 'font-bold' : ''}`}
                 style={morningEvent && morningStyle.textColor ? { color: morningStyle.textColor } : undefined}
                 title={morningEvent?.title || ''}
               >
@@ -487,7 +487,7 @@ export default function YearCalendar() {
               />
             ) : (
               <span 
-                className={`truncate block text-center ${!isPast && afternoonEvent ? 'font-bold' : ''}`}
+                className={`break-words text-center leading-tight w-full ${!isPast && afternoonEvent ? 'font-bold' : ''}`}
                 style={afternoonEvent && afternoonStyle.textColor ? { color: afternoonStyle.textColor } : undefined}
                 title={afternoonEvent?.title || ''}
               >
