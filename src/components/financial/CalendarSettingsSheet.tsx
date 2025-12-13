@@ -138,7 +138,7 @@ export default function CalendarSettingsSheet({
               Personalize as categorias e cores do calendário
             </p>
             
-            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
               {localCategories.map((category) => (
                 <div 
                   key={category.value}
