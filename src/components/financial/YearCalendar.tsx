@@ -653,7 +653,7 @@ export default function YearCalendar() {
                     {monthInfo.label}
                   </div>
                   {/* D column header - with double border as month separator */}
-                  <div key={`${monthInfo.month}-${monthInfo.year}-d-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center" style={{ borderRight: '3px double #64748b' }}>D</div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-d-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center" style={{ borderRight: '3px double #1e293b' }}>D</div>
                 </>
               ))
             )}
