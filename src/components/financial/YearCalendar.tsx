@@ -50,7 +50,7 @@ interface EditingCell {
 
 export default function YearCalendar() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [showFullYear, setShowFullYear] = useState(true);
+  const [showFullYear, setShowFullYear] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("morning");
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -276,6 +276,18 @@ export default function YearCalendar() {
     } else if (e.key === 'Escape') {
       setEditingCell(null);
       setInlineValue("");
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      // If there's an existing event, delete it completely
+      if (editingCell) {
+        const { day, month, year, period } = editingCell;
+        const existingEvent = getEventForDate(day, month, year, period);
+        if (existingEvent?.id) {
+          deleteMutation.mutate(existingEvent.id);
+          setEditingCell(null);
+          setInlineValue("");
+          e.preventDefault();
+        }
+      }
     }
   };
 
@@ -287,13 +299,13 @@ export default function YearCalendar() {
     setEditingEvent({});
   };
 
-  // In 6-month view, each month has 4 columns: day-letter, morning, afternoon, day-letter
-  const columnCount = showFullYear ? visibleMonths.length : visibleMonths.length * 4;
+  // In 6-month view, each month has 6 columns: day-letter, B, morning, afternoon, D, day-letter
+  const columnCount = showFullYear ? visibleMonths.length : visibleMonths.length * 6;
   
-  // Grid template for 6-month view: narrow columns for day letters, wider for events
+  // Grid template for 6-month view: narrow columns for day letters and B/D, wider for events
   const sixMonthGridTemplate = showFullYear 
     ? `40px repeat(${visibleMonths.length}, 1fr)`
-    : `40px ${visibleMonths.map(() => '16px 1fr 1fr 16px').join(' ')}`;
+    : `40px ${visibleMonths.map(() => '16px 20px 1fr 1fr 20px 16px').join(' ')}`;
 
   // Check if cell is being edited
   const isEditing = (day: number, month: number, year: number, period: string) => {
@@ -384,7 +396,7 @@ export default function YearCalendar() {
 
     return (
       <>
-        {/* Day letter before morning */}
+        {/* Day letter before B */}
         <div
           key={`${day}-${monthInfo.month}-${monthInfo.year}-dow1`}
           className={`
@@ -393,6 +405,16 @@ export default function YearCalendar() {
           `}
         >
           {isValid && dayOfWeek}
+        </div>
+        {/* B column (Beatriz) */}
+        <div
+          key={`${day}-${monthInfo.month}-${monthInfo.year}-b`}
+          className={`
+            min-h-[22px] text-[9px] font-medium text-center flex items-center justify-center border-r border-border/30 cursor-pointer
+            ${!isValid ? 'bg-muted/50' : 'bg-pink-50 hover:bg-pink-100'}
+          `}
+          style={isPast && isValid ? { backgroundColor: PAST_DATE_BG } : undefined}
+        >
         </div>
         {/* Morning slot */}
         <div
@@ -474,7 +496,17 @@ export default function YearCalendar() {
             )
           )}
         </div>
-        {/* Day letter after afternoon */}
+        {/* D column (Diana) */}
+        <div
+          key={`${day}-${monthInfo.month}-${monthInfo.year}-d`}
+          className={`
+            min-h-[22px] text-[9px] font-medium text-center flex items-center justify-center border-r border-border/30 cursor-pointer
+            ${!isValid ? 'bg-muted/50' : 'bg-purple-50 hover:bg-purple-100'}
+          `}
+          style={isPast && isValid ? { backgroundColor: PAST_DATE_BG } : undefined}
+        >
+        </div>
+        {/* Day letter after D */}
         <div
           key={`${day}-${monthInfo.month}-${monthInfo.year}-dow2`}
           className={`
@@ -539,7 +571,7 @@ export default function YearCalendar() {
           </div>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1">
-          Clique para editar • Duplo clique para detalhes
+          Clique para editar • Clique direito para definições • Delete apaga evento
         </p>
       </CardHeader>
       <CardContent className="p-2 overflow-x-auto">
@@ -566,13 +598,15 @@ export default function YearCalendar() {
               ))
             ) : (
               visibleMonths.map((monthInfo) => (
-                <div
-                  key={`${monthInfo.month}-${monthInfo.year}`}
-                  className="p-1 text-[10px] font-semibold text-center border-r border-border last:border-r-0"
-                  style={{ gridColumn: 'span 4' }}
-                >
-                  {monthInfo.label}
-                </div>
+                <>
+                  {/* Sub-header with B, Manhã, Tarde, D labels */}
+                  <div key={`${monthInfo.month}-${monthInfo.year}-dow-header`} className="p-0.5 text-[8px] text-muted-foreground text-center border-r border-border/30"></div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-b-header`} className="p-0.5 text-[8px] font-semibold text-center border-r border-border/30 bg-pink-100 text-pink-700">B</div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-m-header`} className="p-0.5 text-[9px] font-semibold text-center border-r border-border/30">{monthInfo.label}</div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-t-header`} className="p-0.5 text-[9px] font-semibold text-center border-r border-border/30"></div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-d-header`} className="p-0.5 text-[8px] font-semibold text-center border-r border-border/30 bg-purple-100 text-purple-700">D</div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-dow2-header`} className="p-0.5 text-[8px] text-muted-foreground text-center border-r border-border last:border-r-0"></div>
+                </>
               ))
             )}
           </div>
