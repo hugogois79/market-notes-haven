@@ -29,20 +29,11 @@ const COLOR_PRESETS = [
   { color: "#f97316", bgClass: "bg-orange-500", textClass: "text-white" },
   { color: "#eab308", bgClass: "bg-yellow-500", textClass: "text-yellow-900" },
   { color: "#22c55e", bgClass: "bg-green-500", textClass: "text-white" },
-  { color: "#0ea5e9", bgClass: "bg-sky-500", textClass: "text-white" }, // bright light blue
+  { color: "#0ea5e9", bgClass: "bg-sky-500", textClass: "text-white" },
   { color: "#3b82f6", bgClass: "bg-blue-500", textClass: "text-white" },
   { color: "#8b5cf6", bgClass: "bg-purple-500", textClass: "text-white" },
   { color: "#ec4899", bgClass: "bg-pink-500", textClass: "text-white" },
   { color: "#6b7280", bgClass: "bg-gray-500", textClass: "text-white" },
-  { color: "#fecaca", bgClass: "bg-red-200", textClass: "text-red-900" },
-  { color: "#fed7aa", bgClass: "bg-orange-200", textClass: "text-orange-900" },
-  { color: "#fef08a", bgClass: "bg-yellow-200", textClass: "text-yellow-900" },
-  { color: "#bbf7d0", bgClass: "bg-green-200", textClass: "text-green-900" },
-  { color: "#7dd3fc", bgClass: "bg-sky-300", textClass: "text-sky-900" }, // light sky blue
-  { color: "#bfdbfe", bgClass: "bg-blue-200", textClass: "text-blue-900" },
-  { color: "#ddd6fe", bgClass: "bg-purple-200", textClass: "text-purple-900" },
-  { color: "#fbcfe8", bgClass: "bg-pink-200", textClass: "text-pink-900" },
-  { color: "#e5e7eb", bgClass: "bg-gray-200", textClass: "text-gray-900" },
 ];
 
 interface CalendarSettingsSheetProps {
@@ -142,15 +133,15 @@ export default function CalendarSettingsSheet({
               {localCategories.map((category) => (
                 <div 
                   key={category.value}
-                  className="flex items-center gap-2 p-2 rounded-lg border border-border bg-card"
+                  className="flex items-center gap-3 p-2 rounded-lg border border-border bg-card"
                 >
                   <Input
                     value={category.label}
                     onChange={(e) => handleLabelChange(category.value, e.target.value)}
-                    className="h-8 text-sm flex-1"
+                    className="h-8 text-sm w-[140px] min-w-[140px]"
                   />
                   
-                  <div className="flex flex-wrap gap-1 max-w-[200px]">
+                  <div className="flex gap-1">
                     {COLOR_PRESETS.map((preset) => (
                       <button
                         key={preset.color}
