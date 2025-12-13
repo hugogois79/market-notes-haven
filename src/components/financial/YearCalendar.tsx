@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +50,13 @@ interface MonthInfo {
   label: string;
 }
 
+interface EditingCell {
+  day: number;
+  month: number;
+  year: number;
+  period: string;
+}
+
 export default function YearCalendar() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showFullYear, setShowFullYear] = useState(true);
@@ -57,7 +64,18 @@ export default function YearCalendar() {
   const [selectedPeriod, setSelectedPeriod] = useState<string>("morning");
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Partial<CalendarEvent>>({});
+  const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
+  const [inlineValue, setInlineValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+
+  // Focus input when editing cell changes
+  useEffect(() => {
+    if (editingCell && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editingCell]);
 
   // Calculate visible months based on toggle
   const visibleMonths = useMemo((): MonthInfo[] => {
@@ -68,7 +86,6 @@ export default function YearCalendar() {
         label: MONTHS[i],
       }));
     } else {
-      // Next 6 months from current date
       const today = new Date();
       const months: MonthInfo[] = [];
       for (let i = 0; i < 6; i++) {
@@ -146,9 +163,6 @@ export default function YearCalendar() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
-      toast.success("Evento guardado");
-      setIsSheetOpen(false);
-      setEditingEvent({});
     },
     onError: () => {
       toast.error("Erro ao guardar evento");
@@ -195,44 +209,93 @@ export default function YearCalendar() {
     return events?.find(e => e.date === dateStr);
   };
 
-  const getEventsForDate = (day: number, month: number, year: number) => {
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return events?.filter(e => e.date === dateStr) || [];
-  };
-
   const getCategoryStyle = (category: string | null) => {
     const cat = CATEGORIES.find(c => c.value === category);
     return cat || { bgClass: "", textClass: "text-foreground" };
   };
 
-  const handleCellClick = (day: number, monthInfo: MonthInfo, period?: string) => {
+  // Single click - start inline editing
+  const handleCellClick = (day: number, monthInfo: MonthInfo, period: string = 'morning') => {
     if (!isValidDateForMonth(day, monthInfo.month, monthInfo.year)) return;
     
+    const existingEvent = getEventForDate(day, monthInfo.month, monthInfo.year, period);
+    setEditingCell({ day, month: monthInfo.month, year: monthInfo.year, period });
+    setInlineValue(existingEvent?.title || "");
+  };
+
+  // Double click - open detailed sheet
+  const handleCellDoubleClick = (day: number, monthInfo: MonthInfo, period: string = 'morning') => {
+    if (!isValidDateForMonth(day, monthInfo.month, monthInfo.year)) return;
+    
+    setEditingCell(null);
     const dateStr = `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const periodToUse = period || 'morning';
-    const existingEvent = getEventForDate(day, monthInfo.month, monthInfo.year, periodToUse);
+    const existingEvent = getEventForDate(day, monthInfo.month, monthInfo.year, period);
     
     setSelectedDate(dateStr);
-    setSelectedPeriod(periodToUse);
-    setEditingEvent(existingEvent || { date: dateStr, period: periodToUse });
+    setSelectedPeriod(period);
+    setEditingEvent(existingEvent || { date: dateStr, period });
     setIsSheetOpen(true);
+  };
+
+  // Save inline edit
+  const handleInlineSave = () => {
+    if (!editingCell) return;
+    
+    const { day, month, year, period } = editingCell;
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const existingEvent = getEventForDate(day, month, year, period);
+    
+    if (inlineValue.trim() || existingEvent) {
+      saveMutation.mutate({
+        id: existingEvent?.id,
+        date: dateStr,
+        title: inlineValue.trim() || null,
+        category: existingEvent?.category,
+        notes: existingEvent?.notes,
+        period,
+      });
+    }
+    
+    setEditingCell(null);
+    setInlineValue("");
+  };
+
+  // Handle keyboard events in inline edit
+  const handleInlineKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleInlineSave();
+    } else if (e.key === 'Escape') {
+      setEditingCell(null);
+      setInlineValue("");
+    }
   };
 
   const handleSave = () => {
     if (!editingEvent.date) return;
     saveMutation.mutate(editingEvent);
+    toast.success("Evento guardado");
+    setIsSheetOpen(false);
+    setEditingEvent({});
   };
 
   const columnCount = visibleMonths.length;
 
+  // Check if cell is being edited
+  const isEditing = (day: number, month: number, year: number, period: string) => {
+    return editingCell?.day === day && 
+           editingCell?.month === month && 
+           editingCell?.year === year && 
+           editingCell?.period === period;
+  };
+
   // Render cell for full year view (single slot per day)
   const renderFullYearCell = (day: number, monthInfo: MonthInfo) => {
     const isValid = isValidDateForMonth(day, monthInfo.month, monthInfo.year);
-    const dayEvents = isValid ? getEventsForDate(day, monthInfo.month, monthInfo.year) : [];
-    const event = dayEvents[0]; // Take first event for display
+    const event = isValid ? getEventForDate(day, monthInfo.month, monthInfo.year) : null;
     const style = getCategoryStyle(event?.category || null);
     const dayOfWeek = isValid ? getDayOfWeek(day, monthInfo.month, monthInfo.year) : "";
     const isWeekend = dayOfWeek === "S" || dayOfWeek === "D";
+    const editing = isEditing(day, monthInfo.month, monthInfo.year, 'morning');
 
     return (
       <div
@@ -241,25 +304,41 @@ export default function YearCalendar() {
           p-0.5 text-[9px] border-r border-border last:border-r-0 min-h-[24px] cursor-pointer
           transition-colors
           ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
-          ${isValid && !event ? 'hover:bg-muted/40' : ''}
-          ${event ? style.bgClass : ''}
+          ${isValid && !event && !editing ? 'hover:bg-muted/40' : ''}
+          ${event && !editing ? style.bgClass : ''}
         `}
         onClick={() => handleCellClick(day, monthInfo)}
+        onDoubleClick={() => handleCellDoubleClick(day, monthInfo)}
       >
         {isValid && (
-          <div className="flex items-start gap-0.5">
-            <span className={`text-[8px] text-muted-foreground ${event ? style.textClass : ''}`}>
-              {dayOfWeek}
-            </span>
-            {event?.title && (
-              <span 
-                className={`truncate flex-1 ${style.textClass}`}
-                title={event.title}
-              >
-                {event.title}
-              </span>
+          <>
+            {editing ? (
+              <input
+                ref={inputRef}
+                type="text"
+                value={inlineValue}
+                onChange={(e) => setInlineValue(e.target.value)}
+                onBlur={handleInlineSave}
+                onKeyDown={handleInlineKeyDown}
+                className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none"
+                placeholder="Evento..."
+              />
+            ) : (
+              <div className="flex items-start gap-0.5">
+                <span className={`text-[8px] text-muted-foreground ${event ? style.textClass : ''}`}>
+                  {dayOfWeek}
+                </span>
+                {event?.title && (
+                  <span 
+                    className={`truncate flex-1 ${style.textClass}`}
+                    title={event.title}
+                  >
+                    {event.title}
+                  </span>
+                )}
+              </div>
             )}
-          </div>
+          </>
         )}
       </div>
     );
@@ -272,8 +351,9 @@ export default function YearCalendar() {
     const afternoonEvent = isValid ? getEventForDate(day, monthInfo.month, monthInfo.year, 'afternoon') : null;
     const morningStyle = getCategoryStyle(morningEvent?.category || null);
     const afternoonStyle = getCategoryStyle(afternoonEvent?.category || null);
-    const dayOfWeek = isValid ? getDayOfWeek(day, monthInfo.month, monthInfo.year) : "";
-    const isWeekend = dayOfWeek === "S" || dayOfWeek === "D";
+    const isWeekend = isValid && (getDayOfWeek(day, monthInfo.month, monthInfo.year) === "S" || getDayOfWeek(day, monthInfo.month, monthInfo.year) === "D");
+    const editingMorning = isEditing(day, monthInfo.month, monthInfo.year, 'morning');
+    const editingAfternoon = isEditing(day, monthInfo.month, monthInfo.year, 'afternoon');
 
     return (
       <div
@@ -289,43 +369,71 @@ export default function YearCalendar() {
             <div
               className={`
                 flex-1 p-0.5 text-[9px] border-b border-border/50 cursor-pointer transition-colors
-                ${morningEvent ? morningStyle.bgClass : 'hover:bg-muted/40'}
+                ${morningEvent && !editingMorning ? morningStyle.bgClass : !editingMorning ? 'hover:bg-muted/40' : ''}
               `}
               onClick={() => handleCellClick(day, monthInfo, 'morning')}
+              onDoubleClick={() => handleCellDoubleClick(day, monthInfo, 'morning')}
               title="Manhã"
             >
-              <div className="flex items-start gap-0.5">
-                <Sun className={`h-2 w-2 flex-shrink-0 ${morningEvent ? morningStyle.textClass : 'text-muted-foreground'}`} />
-                {morningEvent?.title && (
-                  <span 
-                    className={`truncate flex-1 ${morningStyle.textClass}`}
-                    title={morningEvent.title}
-                  >
-                    {morningEvent.title}
-                  </span>
-                )}
-              </div>
+              {editingMorning ? (
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={inlineValue}
+                  onChange={(e) => setInlineValue(e.target.value)}
+                  onBlur={handleInlineSave}
+                  onKeyDown={handleInlineKeyDown}
+                  className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none"
+                  placeholder="Manhã..."
+                />
+              ) : (
+                <div className="flex items-start gap-0.5">
+                  <Sun className={`h-2 w-2 flex-shrink-0 ${morningEvent ? morningStyle.textClass : 'text-muted-foreground'}`} />
+                  {morningEvent?.title && (
+                    <span 
+                      className={`truncate flex-1 ${morningStyle.textClass}`}
+                      title={morningEvent.title}
+                    >
+                      {morningEvent.title}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             {/* Afternoon slot */}
             <div
               className={`
                 flex-1 p-0.5 text-[9px] cursor-pointer transition-colors
-                ${afternoonEvent ? afternoonStyle.bgClass : 'hover:bg-muted/40'}
+                ${afternoonEvent && !editingAfternoon ? afternoonStyle.bgClass : !editingAfternoon ? 'hover:bg-muted/40' : ''}
               `}
               onClick={() => handleCellClick(day, monthInfo, 'afternoon')}
+              onDoubleClick={() => handleCellDoubleClick(day, monthInfo, 'afternoon')}
               title="Tarde"
             >
-              <div className="flex items-start gap-0.5">
-                <Moon className={`h-2 w-2 flex-shrink-0 ${afternoonEvent ? afternoonStyle.textClass : 'text-muted-foreground'}`} />
-                {afternoonEvent?.title && (
-                  <span 
-                    className={`truncate flex-1 ${afternoonStyle.textClass}`}
-                    title={afternoonEvent.title}
-                  >
-                    {afternoonEvent.title}
-                  </span>
-                )}
-              </div>
+              {editingAfternoon ? (
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={inlineValue}
+                  onChange={(e) => setInlineValue(e.target.value)}
+                  onBlur={handleInlineSave}
+                  onKeyDown={handleInlineKeyDown}
+                  className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none"
+                  placeholder="Tarde..."
+                />
+              ) : (
+                <div className="flex items-start gap-0.5">
+                  <Moon className={`h-2 w-2 flex-shrink-0 ${afternoonEvent ? afternoonStyle.textClass : 'text-muted-foreground'}`} />
+                  {afternoonEvent?.title && (
+                    <span 
+                      className={`truncate flex-1 ${afternoonStyle.textClass}`}
+                      title={afternoonEvent.title}
+                    >
+                      {afternoonEvent.title}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -377,6 +485,9 @@ export default function YearCalendar() {
             </div>
           )}
         </div>
+        <p className="text-[10px] text-muted-foreground mt-1">
+          Clique para editar • Duplo clique para detalhes
+        </p>
       </CardHeader>
       <CardContent className="p-2 overflow-x-auto">
         <div className={showFullYear ? "min-w-[900px]" : "min-w-[700px]"}>
@@ -450,12 +561,12 @@ export default function YearCalendar() {
         </div>
       </CardContent>
 
-      {/* Event Edit Sheet */}
+      {/* Event Detail Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent>
           <SheetHeader>
             <SheetTitle>
-              {editingEvent.id ? "Editar Evento" : "Novo Evento"}
+              {editingEvent.id ? "Detalhes do Evento" : "Novo Evento"}
             </SheetTitle>
           </SheetHeader>
           
