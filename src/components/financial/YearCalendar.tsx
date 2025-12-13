@@ -883,8 +883,8 @@ export default function YearCalendar() {
             <div
               key={`${day}-${monthInfo.month}-${monthInfo.year}-b`}
               className={`
-                min-h-[22px] text-[8px] font-medium text-center flex items-center justify-center border-r border-border/30 cursor-pointer
-                ${!isValid ? 'bg-muted/50' : ''}
+            min-h-[22px] text-[8px] font-medium text-center flex items-center justify-center border-r border-border/30 cursor-pointer
+                ${!isValid ? 'bg-slate-300' : ''}
               `}
               style={getBColumnStyle()}
             >
@@ -936,7 +936,7 @@ export default function YearCalendar() {
           key={`${day}-${monthInfo.month}-${monthInfo.year}-morning`}
           className={`
             border-r border-border/50 min-h-[22px] p-0.5 cursor-pointer transition-colors flex items-center justify-center
-            ${!isValid ? 'bg-muted/50' : ''}
+            ${!isValid ? 'bg-slate-300' : ''}
             ${isValid && !morningEvent && !editingMorning ? 'hover:bg-muted/40' : ''}
             ${isValid && morningEvent && !editingMorning ? 'cursor-grab active:cursor-grabbing' : ''}
           `}
@@ -982,7 +982,7 @@ export default function YearCalendar() {
           key={`${day}-${monthInfo.month}-${monthInfo.year}-afternoon`}
           className={`
             border-r border-border/50 min-h-[22px] p-0.5 cursor-pointer transition-colors flex items-center justify-center
-            ${!isValid ? 'bg-muted/50' : ''}
+            ${!isValid ? 'bg-slate-300' : ''}
             ${isValid && !afternoonEvent && !editingAfternoon ? 'hover:bg-muted/40' : ''}
             ${isValid && afternoonEvent && !editingAfternoon ? 'cursor-grab active:cursor-grabbing' : ''}
           `}
@@ -1030,7 +1030,7 @@ export default function YearCalendar() {
               key={`${day}-${monthInfo.month}-${monthInfo.year}-d`}
               className={`
                 min-h-[22px] text-[8px] font-medium text-center flex items-center justify-center cursor-pointer
-                ${!isValid ? 'bg-muted/50' : ''}
+                ${!isValid ? 'bg-slate-300' : ''}
               `}
               style={{
                 ...getDColumnStyle(),
