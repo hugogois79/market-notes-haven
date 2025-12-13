@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import CalendarSettingsSheet, { CalendarCategory, loadCalendarCategories } from "./CalendarSettingsSheet";
+import CalendarSettingsSheet, { CalendarCategory } from "./CalendarSettingsSheet";
 import MonthlyObjectivesFooter from "./MonthlyObjectivesFooter";
 import EventAutocomplete, { EventAutocompleteRef } from "./EventAutocomplete";
 import {
@@ -21,6 +21,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCalendarDayStatus } from "@/hooks/useCalendarDayStatus";
+import { useCalendarCategories } from "@/hooks/useCalendarCategories";
 
 const MONTHS = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
@@ -76,41 +78,6 @@ type CustodyStatus = 'comigo' | 'mae' | null;
 // Diana status type for D column
 type DianaStatus = 'comigo' | null;
 
-// Key for storing custody status in localStorage
-const CUSTODY_STORAGE_KEY = 'calendar-custody-status';
-const DIANA_STORAGE_KEY = 'calendar-diana-status';
-const HOLIDAY_STORAGE_KEY = 'calendar-holiday-status';
-
-// Load custody status from localStorage
-const loadCustodyStatus = (): Record<string, CustodyStatus> => {
-  try {
-    const stored = localStorage.getItem(CUSTODY_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : {};
-  } catch {
-    return {};
-  }
-};
-
-// Load Diana status from localStorage
-const loadDianaStatus = (): Record<string, DianaStatus> => {
-  try {
-    const stored = localStorage.getItem(DIANA_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : {};
-  } catch {
-    return {};
-  }
-};
-
-// Load holiday status from localStorage
-const loadHolidayStatus = (): Record<string, boolean> => {
-  try {
-    const stored = localStorage.getItem(HOLIDAY_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : {};
-  } catch {
-    return {};
-  }
-};
-
 export default function YearCalendar() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showFullYear, setShowFullYear] = useState(false);
@@ -120,17 +87,16 @@ export default function YearCalendar() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Partial<CalendarEvent>>({});
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
-  const [custodyStatus, setCustodyStatus] = useState<Record<string, CustodyStatus>>(loadCustodyStatus);
-  const [dianaStatus, setDianaStatus] = useState<Record<string, DianaStatus>>(loadDianaStatus);
-  const [holidayStatus, setHolidayStatus] = useState<Record<string, boolean>>(loadHolidayStatus);
   const [inlineValue, setInlineValue] = useState("");
-  const [categories, setCategories] = useState<CalendarCategory[]>(loadCalendarCategories);
   const [clipboard, setClipboard] = useState<ClipboardEvent | null>(null);
   const [selectedCell, setSelectedCell] = useState<EditingCell | null>(null);
   const [draggedEvent, setDraggedEvent] = useState<DraggedEvent | null>(null);
   const inputRef = useRef<EventAutocompleteRef>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+
+  // Use categories from Supabase
+  const { categories, saveCategories, isSaving: isSavingCategories } = useCalendarCategories();
 
   // Focus input when editing cell changes
   useEffect(() => {
@@ -180,6 +146,16 @@ export default function YearCalendar() {
       };
     }
   }, [showFullYear, selectedYear, monthOffset]);
+
+  // Use day status hook for custody and holidays from Supabase
+  const {
+    getCustodyForDate: getCustodyForDateStr,
+    getDianaForDate: getDianaForDateStr,
+    isHolidayDate: isHolidayDateStr,
+    handleCustodyChange,
+    handleDianaChange,
+    handleHolidayToggle,
+  } = useCalendarDayStatus(dateRange);
 
   const { data: events } = useQuery({
     queryKey: ["calendar-events", dateRange.start, dateRange.end],
@@ -399,44 +375,22 @@ export default function YearCalendar() {
   // Background color for past dates - neutral light gray
   const PAST_DATE_BG = "#f1f5f9";
 
-  // Handle custody status change (Beatriz)
-  const handleCustodyChange = (dateStr: string, status: CustodyStatus) => {
-    const newCustodyStatus = { ...custodyStatus, [dateStr]: status };
-    setCustodyStatus(newCustodyStatus);
-    localStorage.setItem(CUSTODY_STORAGE_KEY, JSON.stringify(newCustodyStatus));
-  };
-
-  // Handle Diana status change
-  const handleDianaChange = (dateStr: string, status: DianaStatus) => {
-    const newDianaStatus = { ...dianaStatus, [dateStr]: status };
-    setDianaStatus(newDianaStatus);
-    localStorage.setItem(DIANA_STORAGE_KEY, JSON.stringify(newDianaStatus));
-  };
-
-  // Handle holiday toggle
-  const handleHolidayToggle = (dateStr: string) => {
-    const newHolidayStatus = { ...holidayStatus, [dateStr]: !holidayStatus[dateStr] };
-    if (!newHolidayStatus[dateStr]) delete newHolidayStatus[dateStr];
-    setHolidayStatus(newHolidayStatus);
-    localStorage.setItem(HOLIDAY_STORAGE_KEY, JSON.stringify(newHolidayStatus));
-  };
-
   // Check if date is a holiday
   const isHolidayDate = (day: number, month: number, year: number): boolean => {
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return !!holidayStatus[dateStr];
+    return isHolidayDateStr(dateStr);
   };
 
   // Get custody status for a date (Beatriz)
   const getCustodyForDate = (day: number, month: number, year: number): CustodyStatus => {
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return custodyStatus[dateStr] || null;
+    return getCustodyForDateStr(dateStr);
   };
 
   // Get Diana status for a date
   const getDianaForDate = (day: number, month: number, year: number): DianaStatus => {
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return dianaStatus[dateStr] || null;
+    return getDianaForDateStr(dateStr);
   };
 
   // Single click - start inline editing and set selected cell for copy/paste
@@ -1124,7 +1078,8 @@ export default function YearCalendar() {
             </Button>
             <CalendarSettingsSheet 
               categories={categories}
-              onCategoriesChange={setCategories}
+              onCategoriesChange={saveCategories}
+              isSaving={isSavingCategories}
             />
             {showFullYear ? (
               <>
