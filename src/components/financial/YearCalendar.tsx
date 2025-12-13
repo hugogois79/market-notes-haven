@@ -411,9 +411,10 @@ export default function YearCalendar() {
           key={`${day}-${monthInfo.month}-${monthInfo.year}-b`}
           className={`
             min-h-[22px] text-[9px] font-medium text-center flex items-center justify-center border-r border-border/30 cursor-pointer
-            ${!isValid ? 'bg-muted/50' : 'bg-yellow-100 hover:bg-yellow-200'}
+            ${!isValid ? 'bg-muted/50' : 'bg-amber-50 hover:bg-amber-100'}
           `}
           style={isPast && isValid ? { backgroundColor: PAST_DATE_BG } : undefined}
+          onClick={() => isValid && handleCellClick(day, monthInfo, 'morning')}
         >
         </div>
         {/* Morning slot */}
@@ -501,9 +502,10 @@ export default function YearCalendar() {
           key={`${day}-${monthInfo.month}-${monthInfo.year}-d`}
           className={`
             min-h-[22px] text-[9px] font-medium text-center flex items-center justify-center border-r border-border/30 cursor-pointer
-            ${!isValid ? 'bg-muted/50' : 'bg-yellow-100 hover:bg-yellow-200'}
+            ${!isValid ? 'bg-muted/50' : 'bg-amber-50 hover:bg-amber-100'}
           `}
           style={isPast && isValid ? { backgroundColor: PAST_DATE_BG } : undefined}
+          onClick={() => isValid && handleCellClick(day, monthInfo, 'afternoon')}
         >
         </div>
         {/* Day letter after D */}
@@ -601,10 +603,10 @@ export default function YearCalendar() {
                 <>
                   {/* Sub-header with B, Manhã, Tarde, D labels */}
                   <div key={`${monthInfo.month}-${monthInfo.year}-dow-header`} className="p-0.5 text-[8px] text-muted-foreground text-center border-r border-border/30"></div>
-                  <div key={`${monthInfo.month}-${monthInfo.year}-b-header`} className="p-0.5 text-[8px] font-semibold text-center border-r border-border/30 bg-yellow-200 text-yellow-800">B</div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-b-header`} className="p-0.5 text-[8px] font-semibold text-center border-r border-border/30 bg-amber-100 text-amber-700">B</div>
                   <div key={`${monthInfo.month}-${monthInfo.year}-m-header`} className="p-0.5 text-[9px] font-semibold text-center border-r border-border/30">{monthInfo.label}</div>
                   <div key={`${monthInfo.month}-${monthInfo.year}-t-header`} className="p-0.5 text-[9px] font-semibold text-center border-r border-border/30"></div>
-                  <div key={`${monthInfo.month}-${monthInfo.year}-d-header`} className="p-0.5 text-[8px] font-semibold text-center border-r border-border/30 bg-yellow-200 text-yellow-800">D</div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-d-header`} className="p-0.5 text-[8px] font-semibold text-center border-r border-border/30 bg-amber-100 text-amber-700">D</div>
                   <div key={`${monthInfo.month}-${monthInfo.year}-dow2-header`} className="p-0.5 text-[8px] text-muted-foreground text-center border-r border-border last:border-r-0"></div>
                 </>
               ))
