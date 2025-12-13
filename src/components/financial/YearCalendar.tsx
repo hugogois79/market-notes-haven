@@ -420,20 +420,11 @@ export default function YearCalendar() {
     const title = showFullYear ? `Calendário Anual ${selectedYear}` : 'Próximos 6 Meses';
     const gridTemplate = sixMonthGridTemplate;
 
-    // Generate category legend HTML
+    // Generate category legend HTML using the actual category color
     const legendHTML = categories.map(cat => {
-      const bgColor = cat.bgClass.includes('bg-red-600') ? '#dc2626' :
-                      cat.bgClass.includes('bg-purple-600') ? '#7c3aed' :
-                      cat.bgClass.includes('bg-blue-500') ? '#3b82f6' :
-                      cat.bgClass.includes('bg-green-500') ? '#22c55e' :
-                      cat.bgClass.includes('bg-yellow-400') ? '#facc15' :
-                      cat.bgClass.includes('bg-orange-500') ? '#f97316' :
-                      cat.bgClass.includes('bg-pink-500') ? '#ec4899' :
-                      cat.bgClass.includes('bg-cyan-500') ? '#06b6d4' :
-                      cat.bgClass.includes('bg-gray-400') ? '#9ca3af' : '#e5e7eb';
-      return `<div style="display: flex; align-items: center; gap: 4px;">
-        <div style="width: 12px; height: 12px; border-radius: 2px; background-color: ${bgColor};"></div>
-        <span style="font-size: 8px; color: #666;">${cat.label}</span>
+      return `<div style="display: flex; align-items: center; gap: 6px;">
+        <div style="width: 12px; height: 12px; border-radius: 50%; background-color: ${cat.color}; border: 1px solid rgba(0,0,0,0.1);"></div>
+        <span style="font-size: 9px; color: #374151;">${cat.label}</span>
       </div>`;
     }).join('');
 
