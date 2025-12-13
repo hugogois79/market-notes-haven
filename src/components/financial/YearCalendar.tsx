@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import CalendarSettingsSheet, { CalendarCategory, loadCalendarCategories } from "./CalendarSettingsSheet";
+import EventAutocomplete, { EventAutocompleteRef } from "./EventAutocomplete";
 
 const MONTHS = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
@@ -58,7 +59,7 @@ export default function YearCalendar() {
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [inlineValue, setInlineValue] = useState("");
   const [categories, setCategories] = useState<CalendarCategory[]>(loadCalendarCategories);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<EventAutocompleteRef>(null);
   const queryClient = useQueryClient();
 
   // Focus input when editing cell changes
@@ -121,6 +122,22 @@ export default function YearCalendar() {
       
       if (error) throw error;
       return data as CalendarEvent[];
+    },
+  });
+
+  // Fetch all unique event titles for autocomplete suggestions
+  const { data: eventSuggestions } = useQuery({
+    queryKey: ["calendar-event-suggestions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("calendar_events")
+        .select("title")
+        .not("title", "is", null);
+      
+      if (error) throw error;
+      // Get unique non-empty titles
+      const titles = data?.map(e => e.title).filter(Boolean) as string[];
+      return [...new Set(titles)].sort();
     },
   });
 
@@ -367,13 +384,13 @@ export default function YearCalendar() {
         {isValid && (
           <>
             {editing ? (
-              <input
+              <EventAutocomplete
                 ref={inputRef}
-                type="text"
                 value={inlineValue}
-                onChange={(e) => setInlineValue(e.target.value)}
+                onChange={setInlineValue}
                 onBlur={handleInlineSave}
                 onKeyDown={handleInlineKeyDown}
+                suggestions={eventSuggestions || []}
                 className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none"
                 placeholder="Evento..."
               />
@@ -463,13 +480,13 @@ export default function YearCalendar() {
         >
           {isValid && (
             editingMorning ? (
-              <input
+              <EventAutocomplete
                 ref={inputRef}
-                type="text"
                 value={inlineValue}
-                onChange={(e) => setInlineValue(e.target.value)}
+                onChange={setInlineValue}
                 onBlur={handleInlineSave}
                 onKeyDown={handleInlineKeyDown}
+                suggestions={eventSuggestions || []}
                 className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none text-center"
                 placeholder="..."
               />
@@ -503,13 +520,13 @@ export default function YearCalendar() {
         >
           {isValid && (
             editingAfternoon ? (
-              <input
+              <EventAutocomplete
                 ref={inputRef}
-                type="text"
                 value={inlineValue}
-                onChange={(e) => setInlineValue(e.target.value)}
+                onChange={setInlineValue}
                 onBlur={handleInlineSave}
                 onKeyDown={handleInlineKeyDown}
+                suggestions={eventSuggestions || []}
                 className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none text-center"
                 placeholder="..."
               />
