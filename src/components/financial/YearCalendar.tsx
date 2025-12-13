@@ -582,20 +582,20 @@ export default function YearCalendar() {
         <div className={showFullYear ? "min-w-[900px]" : "min-w-[700px]"}>
           {/* Grid Header */}
           <div 
-            className="border-b border-border sticky top-0 bg-background z-10"
+            className="border-b border-border sticky top-0 bg-slate-300 z-10"
             style={{ 
               display: 'grid', 
               gridTemplateColumns: sixMonthGridTemplate 
             }}
           >
-            <div className="p-1 text-[10px] font-medium text-muted-foreground text-center border-r border-border">
+            <div className="p-1 text-[10px] font-bold text-foreground text-center border-r border-border">
               Dia
             </div>
             {showFullYear ? (
               visibleMonths.map((monthInfo) => (
                 <div
                   key={`${monthInfo.month}-${monthInfo.year}`}
-                  className="p-1 text-[10px] font-semibold text-center border-r border-border last:border-r-0"
+                  className="p-1 text-[10px] font-bold text-foreground text-center border-r border-border last:border-r-0"
                 >
                   {monthInfo.label}
                 </div>
@@ -604,12 +604,12 @@ export default function YearCalendar() {
               visibleMonths.map((monthInfo) => (
                 <>
                   {/* Sub-header with B, Manhã, Tarde, D labels */}
-                  <div key={`${monthInfo.month}-${monthInfo.year}-dow-header`} className="p-0.5 text-[8px] text-muted-foreground text-center border-r border-border/30"></div>
-                  <div key={`${monthInfo.month}-${monthInfo.year}-b-header`} className="p-0.5 text-[8px] font-semibold text-center border-r border-border/30 bg-amber-100 text-amber-700">B</div>
-                  <div key={`${monthInfo.month}-${monthInfo.year}-m-header`} className="p-0.5 text-[9px] font-semibold text-center border-r border-border/30">{monthInfo.label}</div>
-                  <div key={`${monthInfo.month}-${monthInfo.year}-t-header`} className="p-0.5 text-[9px] font-semibold text-center border-r border-border/30"></div>
-                  <div key={`${monthInfo.month}-${monthInfo.year}-d-header`} className="p-0.5 text-[8px] font-semibold text-center border-r border-border/30 bg-amber-100 text-amber-700">D</div>
-                  <div key={`${monthInfo.month}-${monthInfo.year}-dow2-header`} className="p-0.5 text-[8px] text-muted-foreground text-center border-r border-border last:border-r-0"></div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-dow-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border/30"></div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-b-header`} className="p-0.5 text-[8px] font-bold text-center border-r border-border/30 bg-amber-200 text-foreground">B</div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-m-header`} className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30">{monthInfo.label}</div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-t-header`} className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30"></div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-d-header`} className="p-0.5 text-[8px] font-bold text-center border-r border-border/30 bg-amber-200 text-foreground">D</div>
+                  <div key={`${monthInfo.month}-${monthInfo.year}-dow2-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border last:border-r-0"></div>
                 </>
               ))
             )}
