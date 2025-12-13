@@ -303,7 +303,7 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className={`bg-white border rounded p-2 h-[100px] transition-colors ${
+                  className={`bg-white border rounded p-2 h-[130px] transition-colors ${
                     snapshot.isDraggingOver ? "border-blue-400 bg-blue-50" : "border-slate-200"
                   }`}
                 >
