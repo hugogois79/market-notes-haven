@@ -861,7 +861,7 @@ export default function YearCalendar() {
                 <span 
                   className={`
                     ${custody === 'comigo' ? 'text-white' : (isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend ? 'text-green-700' : 'text-muted-foreground')}
-                    ${custody === 'feriado' ? 'bg-amber-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[7px]' : ''}
+                    ${custody === 'feriado' ? 'border border-slate-600 rounded-full w-4 h-4 flex items-center justify-center text-[7px]' : ''}
                   `}
                 >
                   {dayOfWeek}
