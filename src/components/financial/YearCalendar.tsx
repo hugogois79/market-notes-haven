@@ -220,8 +220,8 @@ export default function YearCalendar() {
     return { bgColor: cat.color, textColor };
   };
 
-  // Background color for past dates
-  const PAST_DATE_BG = "#fde8e0";
+  // Background color for past dates - neutral light gray
+  const PAST_DATE_BG = "#f1f5f9";
 
   // Single click - start inline editing
   const handleCellClick = (day: number, monthInfo: MonthInfo, period: string = 'morning') => {
@@ -403,6 +403,7 @@ export default function YearCalendar() {
             min-h-[22px] text-[8px] font-medium text-muted-foreground text-center flex items-center justify-center border-r border-border/30
             ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/30' : 'bg-muted/10'}
           `}
+          style={isPast && isValid ? { backgroundColor: PAST_DATE_BG } : undefined}
         >
           {isValid && dayOfWeek}
         </div>
@@ -515,6 +516,7 @@ export default function YearCalendar() {
             min-h-[22px] text-[8px] font-medium text-muted-foreground text-center flex items-center justify-center border-r border-border last:border-r-0
             ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/30' : 'bg-muted/10'}
           `}
+          style={isPast && isValid ? { backgroundColor: PAST_DATE_BG } : undefined}
         >
           {isValid && dayOfWeek}
         </div>
