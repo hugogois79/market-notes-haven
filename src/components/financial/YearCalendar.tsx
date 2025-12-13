@@ -459,12 +459,12 @@ export default function YearCalendar() {
                 onChange={(e) => setInlineValue(e.target.value)}
                 onBlur={handleInlineSave}
                 onKeyDown={handleInlineKeyDown}
-                className="w-full h-full bg-background border border-primary text-[11px] px-0.5 outline-none text-center"
+                className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none text-center"
                 placeholder="..."
               />
             ) : (
               <span 
-                className={`break-words text-center leading-tight w-full ${!isPast && morningEvent ? 'font-bold' : ''} ${morningEvent?.title && morningEvent.title.length > 15 ? 'text-[9px]' : 'text-[11px]'}`}
+                className={`break-words text-center leading-tight w-full ${!isPast && morningEvent ? 'font-bold' : ''} ${morningEvent?.title && morningEvent.title.length > 15 ? 'text-[8px]' : 'text-[9px]'}`}
                 style={morningEvent && morningStyle.textColor ? { color: morningStyle.textColor } : undefined}
                 title={morningEvent?.title || ''}
               >
@@ -499,12 +499,12 @@ export default function YearCalendar() {
                 onChange={(e) => setInlineValue(e.target.value)}
                 onBlur={handleInlineSave}
                 onKeyDown={handleInlineKeyDown}
-                className="w-full h-full bg-background border border-primary text-[11px] px-0.5 outline-none text-center"
+                className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none text-center"
                 placeholder="..."
               />
             ) : (
               <span 
-                className={`break-words text-center leading-tight w-full ${!isPast && afternoonEvent ? 'font-bold' : ''} ${afternoonEvent?.title && afternoonEvent.title.length > 15 ? 'text-[9px]' : 'text-[11px]'}`}
+                className={`break-words text-center leading-tight w-full ${!isPast && afternoonEvent ? 'font-bold' : ''} ${afternoonEvent?.title && afternoonEvent.title.length > 15 ? 'text-[8px]' : 'text-[9px]'}`}
                 style={afternoonEvent && afternoonStyle.textColor ? { color: afternoonStyle.textColor } : undefined}
                 title={afternoonEvent?.title || ''}
               >
