@@ -22,6 +22,13 @@ interface MonthlyObjective {
   created_at: string;
 }
 
+interface Child {
+  name: string;
+  birthMonth: number;
+  birthDay: number;
+  birthYear: number;
+}
+
 interface MonthlyObjectivesFooterProps {
   year: number;
 }
@@ -169,12 +176,49 @@ export default function MonthlyObjectivesFooter({ year }: MonthlyObjectivesFoote
       .sort((a, b) => a.display_order - b.display_order);
   };
 
-  const columnTitles = ["Objetivos 1", "Objetivos 2", "Objetivos 3"];
+  // Calculate the next 3 months for column headers
+  const getNext3Months = () => {
+    const today = new Date();
+    const months: { label: string; month: number; year: number }[] = [];
+    for (let i = 0; i < 3; i++) {
+      const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
+                          "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+      months.push({
+        label: `${monthNames[date.getMonth()]} ${String(date.getFullYear()).slice(-2)}`,
+        month: date.getMonth() + 1,
+        year: date.getFullYear(),
+      });
+    }
+    return months;
+  };
 
-  // Calculate kids' ages based on birth years
-  const currentYear = new Date().getFullYear();
-  const beatrizAge = currentYear - 2017;
-  const dianaAge = currentYear - 2021;
+  const next3Months = getNext3Months();
+
+  // Children data with birthdays
+  const children: Child[] = [
+    { name: "Diana", birthMonth: 4, birthDay: 21, birthYear: 2019 },
+    { name: "Beatriz", birthMonth: 8, birthDay: 5, birthYear: 2014 },
+    { name: "André", birthMonth: 5, birthDay: 1, birthYear: 2002 },
+    { name: "José", birthMonth: 8, birthDay: 8, birthYear: 2013 },
+  ];
+
+  // Calculate age based on birthday
+  const calculateAge = (child: Child): number => {
+    const today = new Date();
+    let age = today.getFullYear() - child.birthYear;
+    const hasBirthdayPassed = 
+      today.getMonth() + 1 > child.birthMonth || 
+      (today.getMonth() + 1 === child.birthMonth && today.getDate() >= child.birthDay);
+    if (!hasBirthdayPassed) {
+      age--;
+    }
+    return age;
+  };
+
+  const formatBirthday = (child: Child): string => {
+    return `${child.birthDay}/${child.birthMonth}`;
+  };
 
   return (
     <div className="mt-4 border-t-2 border-slate-300 bg-slate-50 p-3 print:mt-2 print:p-2">
@@ -183,7 +227,7 @@ export default function MonthlyObjectivesFooter({ year }: MonthlyObjectivesFoote
         {[1, 2, 3].map((columnIndex) => (
           <div key={columnIndex} className="bg-white border border-slate-200 rounded p-2">
             <div className="text-xs font-semibold text-slate-600 mb-2 border-b pb-1">
-              {columnTitles[columnIndex - 1]}
+              {next3Months[columnIndex - 1]?.label || `Mês ${columnIndex}`}
             </div>
             <div className="space-y-1">
               {getColumnObjectives(columnIndex).map((objective, index) => (
@@ -276,21 +320,29 @@ export default function MonthlyObjectivesFooter({ year }: MonthlyObjectivesFoote
 
         {/* Context Box - Assets & Kids Ages */}
         <div className="space-y-2">
-          {/* Kids Ages */}
+          {/* Kids Ages Table */}
           <div className="bg-emerald-50 border border-emerald-200 rounded p-2">
             <div className="text-[10px] font-semibold text-emerald-700 mb-1">
               Idade Filhos
             </div>
-            <div className="space-y-0.5">
-              <div className="flex justify-between text-[10px]">
-                <span className="text-emerald-600">Beatriz:</span>
-                <span className="font-semibold text-emerald-800">{beatrizAge} anos</span>
-              </div>
-              <div className="flex justify-between text-[10px]">
-                <span className="text-emerald-600">Diana:</span>
-                <span className="font-semibold text-emerald-800">{dianaAge} anos</span>
-              </div>
-            </div>
+            <table className="w-full text-[10px]">
+              <thead>
+                <tr className="border-b border-emerald-200">
+                  <th className="text-left text-emerald-600 font-medium py-0.5">Nome</th>
+                  <th className="text-center text-emerald-600 font-medium py-0.5">Aniv.</th>
+                  <th className="text-right text-emerald-600 font-medium py-0.5">Idade</th>
+                </tr>
+              </thead>
+              <tbody>
+                {children.map((child) => (
+                  <tr key={child.name} className="border-b border-emerald-100 last:border-0">
+                    <td className="text-emerald-700 py-0.5">{child.name}</td>
+                    <td className="text-center text-emerald-600 py-0.5">{formatBirthday(child)}</td>
+                    <td className="text-right font-semibold text-emerald-800 py-0.5">{calculateAge(child)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           {/* Assets Summary */}
