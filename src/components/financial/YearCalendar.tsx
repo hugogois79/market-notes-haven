@@ -281,9 +281,16 @@ export default function YearCalendar() {
     },
   });
 
-  // Global keyboard handler for copy/paste
+  // Global keyboard handler for copy/paste and print
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Print: Ctrl+P or Cmd+P
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        window.print();
+        return;
+      }
+      
       // Only handle if not editing a cell (not in input mode)
       if (editingCell) return;
       
