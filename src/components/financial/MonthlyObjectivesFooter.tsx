@@ -332,10 +332,19 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
                           >
                             <ContextMenu modal={false}>
                               <ContextMenuTrigger asChild>
-                                <div className="flex items-start gap-1 group">
+                                <div 
+                                  className="flex items-start gap-1 group"
+                                  draggable
+                                  onDragStart={(e) => {
+                                    e.dataTransfer.setData('text/plain', objective.content);
+                                    e.dataTransfer.setData('application/x-objective', 'true');
+                                    e.dataTransfer.effectAllowed = 'copy';
+                                  }}
+                                >
                                   <div
                                     {...provided.dragHandleProps}
                                     className="flex-shrink-0 cursor-grab text-slate-300 hover:text-slate-500 mt-0.5"
+                                    title="Arraste para mover entre meses ou para o calendário"
                                   >
                                     <GripVertical className="h-3 w-3" />
                                   </div>
