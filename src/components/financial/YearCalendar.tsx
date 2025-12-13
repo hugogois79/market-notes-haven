@@ -427,9 +427,9 @@ export default function YearCalendar() {
             ${isValid && !morningEvent && !editingMorning ? 'hover:bg-muted/40' : ''}
           `}
           style={{
-            backgroundColor: isValid && morningEvent && !editingMorning && morningStyle.bgColor 
-              ? morningStyle.bgColor 
-              : isPast && !morningEvent ? PAST_DATE_BG : undefined
+            backgroundColor: isPast && isValid 
+              ? PAST_DATE_BG 
+              : (isValid && morningEvent && !editingMorning && morningStyle.bgColor ? morningStyle.bgColor : undefined)
           }}
           onClick={() => isValid && handleCellClick(day, monthInfo, 'morning')}
           onContextMenu={(e) => isValid && handleContextMenu(e, 'morning')}
@@ -467,9 +467,9 @@ export default function YearCalendar() {
             ${isValid && !afternoonEvent && !editingAfternoon ? 'hover:bg-muted/40' : ''}
           `}
           style={{
-            backgroundColor: isValid && afternoonEvent && !editingAfternoon && afternoonStyle.bgColor 
-              ? afternoonStyle.bgColor 
-              : isPast && !afternoonEvent ? PAST_DATE_BG : undefined
+            backgroundColor: isPast && isValid 
+              ? PAST_DATE_BG 
+              : (isValid && afternoonEvent && !editingAfternoon && afternoonStyle.bgColor ? afternoonStyle.bgColor : undefined)
           }}
           onClick={() => isValid && handleCellClick(day, monthInfo, 'afternoon')}
           onContextMenu={(e) => isValid && handleContextMenu(e, 'afternoon')}
