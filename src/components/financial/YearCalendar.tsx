@@ -254,11 +254,15 @@ export default function YearCalendar() {
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const existingEvent = getEventForDate(day, month, year, period);
     
-    if (inlineValue.trim() || existingEvent) {
+    // If text is empty and event exists, delete it
+    if (!inlineValue.trim() && existingEvent?.id) {
+      deleteMutation.mutate(existingEvent.id);
+    } else if (inlineValue.trim()) {
+      // Only save if there's text
       saveMutation.mutate({
         id: existingEvent?.id,
         date: dateStr,
-        title: inlineValue.trim() || null,
+        title: inlineValue.trim(),
         category: existingEvent?.category,
         notes: existingEvent?.notes,
         period,
@@ -509,7 +513,7 @@ export default function YearCalendar() {
           onClick={() => isValid && handleCellClick(day, monthInfo, 'afternoon')}
         >
         </div>
-        {/* Day letter after D */}
+        {/* Day letter after D - kept empty (no weekday letters) */}
         <div
           key={`${day}-${monthInfo.month}-${monthInfo.year}-dow2`}
           className={`
@@ -518,7 +522,7 @@ export default function YearCalendar() {
           `}
           style={isPast && isValid ? { backgroundColor: PAST_DATE_BG } : undefined}
         >
-          {isValid && dayOfWeek}
+          {/* Empty - no day letters */}
         </div>
       </>
     );
