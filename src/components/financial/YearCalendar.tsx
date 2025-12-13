@@ -278,7 +278,8 @@ export default function YearCalendar() {
     setEditingEvent({});
   };
 
-  const columnCount = visibleMonths.length;
+  // In 6-month view, each month has 2 columns (morning/afternoon)
+  const columnCount = showFullYear ? visibleMonths.length : visibleMonths.length * 2;
 
   // Check if cell is being edited
   const isEditing = (day: number, month: number, year: number, period: string) => {
@@ -356,88 +357,76 @@ export default function YearCalendar() {
     const editingAfternoon = isEditing(day, monthInfo.month, monthInfo.year, 'afternoon');
 
     return (
-      <div
-        key={`${day}-${monthInfo.month}-${monthInfo.year}`}
-        className={`
-          border-r border-border last:border-r-0 min-h-[44px]
-          ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
-        `}
-      >
-        {isValid && (
-          <div className="flex flex-col h-full">
-            {/* Morning slot */}
-            <div
-              className={`
-                flex-1 p-0.5 text-[9px] border-b border-border/50 cursor-pointer transition-colors
-                ${morningEvent && !editingMorning ? morningStyle.bgClass : !editingMorning ? 'hover:bg-muted/40' : ''}
-              `}
-              onClick={() => handleCellClick(day, monthInfo, 'morning')}
-              onDoubleClick={() => handleCellDoubleClick(day, monthInfo, 'morning')}
-              title="Manhã"
-            >
-              {editingMorning ? (
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={inlineValue}
-                  onChange={(e) => setInlineValue(e.target.value)}
-                  onBlur={handleInlineSave}
-                  onKeyDown={handleInlineKeyDown}
-                  className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none"
-                  placeholder="Manhã..."
-                />
-              ) : (
-                <div className="flex items-start gap-0.5">
-                  <Sun className={`h-2 w-2 flex-shrink-0 ${morningEvent ? morningStyle.textClass : 'text-muted-foreground'}`} />
-                  {morningEvent?.title && (
-                    <span 
-                      className={`truncate flex-1 ${morningStyle.textClass}`}
-                      title={morningEvent.title}
-                    >
-                      {morningEvent.title}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-            {/* Afternoon slot */}
-            <div
-              className={`
-                flex-1 p-0.5 text-[9px] cursor-pointer transition-colors
-                ${afternoonEvent && !editingAfternoon ? afternoonStyle.bgClass : !editingAfternoon ? 'hover:bg-muted/40' : ''}
-              `}
-              onClick={() => handleCellClick(day, monthInfo, 'afternoon')}
-              onDoubleClick={() => handleCellDoubleClick(day, monthInfo, 'afternoon')}
-              title="Tarde"
-            >
-              {editingAfternoon ? (
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={inlineValue}
-                  onChange={(e) => setInlineValue(e.target.value)}
-                  onBlur={handleInlineSave}
-                  onKeyDown={handleInlineKeyDown}
-                  className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none"
-                  placeholder="Tarde..."
-                />
-              ) : (
-                <div className="flex items-start gap-0.5">
-                  <Moon className={`h-2 w-2 flex-shrink-0 ${afternoonEvent ? afternoonStyle.textClass : 'text-muted-foreground'}`} />
-                  {afternoonEvent?.title && (
-                    <span 
-                      className={`truncate flex-1 ${afternoonStyle.textClass}`}
-                      title={afternoonEvent.title}
-                    >
-                      {afternoonEvent.title}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+      <>
+        {/* Morning slot */}
+        <div
+          key={`${day}-${monthInfo.month}-${monthInfo.year}-morning`}
+          className={`
+            border-r border-border/50 min-h-[22px] p-0.5 text-[9px] cursor-pointer transition-colors
+            ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
+            ${isValid && morningEvent && !editingMorning ? morningStyle.bgClass : isValid && !editingMorning ? 'hover:bg-muted/40' : ''}
+          `}
+          onClick={() => isValid && handleCellClick(day, monthInfo, 'morning')}
+          onDoubleClick={() => isValid && handleCellDoubleClick(day, monthInfo, 'morning')}
+          title="Manhã"
+        >
+          {isValid && (
+            editingMorning ? (
+              <input
+                ref={inputRef}
+                type="text"
+                value={inlineValue}
+                onChange={(e) => setInlineValue(e.target.value)}
+                onBlur={handleInlineSave}
+                onKeyDown={handleInlineKeyDown}
+                className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none"
+                placeholder="..."
+              />
+            ) : (
+              <span 
+                className={`truncate block ${morningEvent ? morningStyle.textClass : ''}`}
+                title={morningEvent?.title || ''}
+              >
+                {morningEvent?.title || ''}
+              </span>
+            )
+          )}
+        </div>
+        {/* Afternoon slot */}
+        <div
+          key={`${day}-${monthInfo.month}-${monthInfo.year}-afternoon`}
+          className={`
+            border-r border-border last:border-r-0 min-h-[22px] p-0.5 text-[9px] cursor-pointer transition-colors
+            ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
+            ${isValid && afternoonEvent && !editingAfternoon ? afternoonStyle.bgClass : isValid && !editingAfternoon ? 'hover:bg-muted/40' : ''}
+          `}
+          onClick={() => isValid && handleCellClick(day, monthInfo, 'afternoon')}
+          onDoubleClick={() => isValid && handleCellDoubleClick(day, monthInfo, 'afternoon')}
+          title="Tarde"
+        >
+          {isValid && (
+            editingAfternoon ? (
+              <input
+                ref={inputRef}
+                type="text"
+                value={inlineValue}
+                onChange={(e) => setInlineValue(e.target.value)}
+                onBlur={handleInlineSave}
+                onKeyDown={handleInlineKeyDown}
+                className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none"
+                placeholder="..."
+              />
+            ) : (
+              <span 
+                className={`truncate block ${afternoonEvent ? afternoonStyle.textClass : ''}`}
+                title={afternoonEvent?.title || ''}
+              >
+                {afternoonEvent?.title || ''}
+              </span>
+            )
+          )}
+        </div>
+      </>
     );
   };
 
@@ -502,14 +491,34 @@ export default function YearCalendar() {
             <div className="p-1 text-[10px] font-medium text-muted-foreground text-center border-r border-border">
               Dia
             </div>
-            {visibleMonths.map((monthInfo) => (
-              <div
-                key={`${monthInfo.month}-${monthInfo.year}`}
-                className="p-1 text-[10px] font-semibold text-center border-r border-border last:border-r-0"
-              >
-                {monthInfo.label}
-              </div>
-            ))}
+            {showFullYear ? (
+              visibleMonths.map((monthInfo) => (
+                <div
+                  key={`${monthInfo.month}-${monthInfo.year}`}
+                  className="p-1 text-[10px] font-semibold text-center border-r border-border last:border-r-0"
+                >
+                  {monthInfo.label}
+                </div>
+              ))
+            ) : (
+              visibleMonths.map((monthInfo) => (
+                <>
+                  <div
+                    key={`${monthInfo.month}-${monthInfo.year}-m`}
+                    className="p-1 text-[10px] font-semibold text-center border-r border-border/50 flex items-center justify-center gap-1"
+                  >
+                    <Sun className="h-3 w-3" />
+                    <span>{monthInfo.label}</span>
+                  </div>
+                  <div
+                    key={`${monthInfo.month}-${monthInfo.year}-a`}
+                    className="p-1 text-[10px] font-semibold text-center border-r border-border last:border-r-0 flex items-center justify-center gap-1"
+                  >
+                    <Moon className="h-3 w-3" />
+                  </div>
+                </>
+              ))
+            )}
           </div>
 
           {/* Grid Body */}
