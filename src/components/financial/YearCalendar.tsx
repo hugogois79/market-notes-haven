@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 const MONTHS = [
@@ -37,24 +38,70 @@ interface CalendarEvent {
   user_id: string | null;
 }
 
+interface MonthInfo {
+  month: number;
+  year: number;
+  label: string;
+}
+
 export default function YearCalendar() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [showFullYear, setShowFullYear] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Partial<CalendarEvent>>({});
   const queryClient = useQueryClient();
 
+  // Calculate visible months based on toggle
+  const visibleMonths = useMemo((): MonthInfo[] => {
+    if (showFullYear) {
+      return Array.from({ length: 12 }, (_, i) => ({
+        month: i + 1,
+        year: selectedYear,
+        label: MONTHS[i],
+      }));
+    } else {
+      // Next 6 months from current date
+      const today = new Date();
+      const months: MonthInfo[] = [];
+      for (let i = 0; i < 6; i++) {
+        const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+        months.push({
+          month: date.getMonth() + 1,
+          year: date.getFullYear(),
+          label: `${MONTHS[date.getMonth()]} ${date.getFullYear() !== today.getFullYear() ? date.getFullYear() : ''}`.trim(),
+        });
+      }
+      return months;
+    }
+  }, [showFullYear, selectedYear]);
+
+  // Calculate date range for query
+  const dateRange = useMemo(() => {
+    if (showFullYear) {
+      return {
+        start: `${selectedYear}-01-01`,
+        end: `${selectedYear}-12-31`,
+      };
+    } else {
+      const today = new Date();
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + 6, 0);
+      return {
+        start: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01`,
+        end: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`,
+      };
+    }
+  }, [showFullYear, selectedYear]);
+
   const { data: events } = useQuery({
-    queryKey: ["calendar-events", selectedYear],
+    queryKey: ["calendar-events", dateRange.start, dateRange.end],
     queryFn: async () => {
-      const startDate = `${selectedYear}-01-01`;
-      const endDate = `${selectedYear}-12-31`;
-      
       const { data, error } = await supabase
         .from("calendar_events")
         .select("*")
-        .gte("date", startDate)
-        .lte("date", endDate);
+        .gte("date", dateRange.start)
+        .lte("date", dateRange.end);
       
       if (error) throw error;
       return data as CalendarEvent[];
@@ -127,12 +174,12 @@ export default function YearCalendar() {
     return DAYS_OF_WEEK[date.getDay()];
   };
 
-  const isValidDate = (day: number, month: number) => {
-    return day <= getDaysInMonth(month, selectedYear);
+  const isValidDateForMonth = (day: number, month: number, year: number) => {
+    return day <= getDaysInMonth(month, year);
   };
 
-  const getEventForDate = (day: number, month: number) => {
-    const dateStr = `${selectedYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const getEventForDate = (day: number, month: number, year: number) => {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     return events?.find(e => e.date === dateStr);
   };
 
@@ -141,11 +188,11 @@ export default function YearCalendar() {
     return cat || { bgClass: "", textClass: "text-foreground" };
   };
 
-  const handleCellClick = (day: number, month: number) => {
-    if (!isValidDate(day, month)) return;
+  const handleCellClick = (day: number, monthInfo: MonthInfo) => {
+    if (!isValidDateForMonth(day, monthInfo.month, monthInfo.year)) return;
     
-    const dateStr = `${selectedYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const existingEvent = getEventForDate(day, month);
+    const dateStr = `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const existingEvent = getEventForDate(day, monthInfo.month, monthInfo.year);
     
     setSelectedDate(dateStr);
     setEditingEvent(existingEvent || { date: dateStr });
@@ -157,47 +204,72 @@ export default function YearCalendar() {
     saveMutation.mutate(editingEvent);
   };
 
+  const columnCount = visibleMonths.length;
+
   return (
     <Card>
       <CardHeader className="py-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Calendário Anual</CardTitle>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => setSelectedYear(y => y - 1)}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm font-semibold min-w-[50px] text-center">
-              {selectedYear}
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => setSelectedYear(y => y + 1)}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+          <div className="flex items-center gap-4">
+            <CardTitle className="text-lg">
+              {showFullYear ? "Calendário Anual" : "Próximos 6 Meses"}
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="show-full-year" className="text-xs text-muted-foreground cursor-pointer">
+                Mostrar Ano Completo
+              </Label>
+              <Switch
+                id="show-full-year"
+                checked={showFullYear}
+                onCheckedChange={setShowFullYear}
+              />
+            </div>
           </div>
+          {showFullYear && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setSelectedYear(y => y - 1)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm font-semibold min-w-[50px] text-center">
+                {selectedYear}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setSelectedYear(y => y + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent className="p-2 overflow-x-auto">
-        <div className="min-w-[900px]">
+        <div className={showFullYear ? "min-w-[900px]" : "min-w-[500px]"}>
           {/* Grid Header */}
-          <div className="grid grid-cols-[40px_repeat(12,1fr)] border-b border-border sticky top-0 bg-background z-10">
+          <div 
+            className="border-b border-border sticky top-0 bg-background z-10"
+            style={{ 
+              display: 'grid', 
+              gridTemplateColumns: `40px repeat(${columnCount}, 1fr)` 
+            }}
+          >
             <div className="p-1 text-[10px] font-medium text-muted-foreground text-center border-r border-border">
               Dia
             </div>
-            {MONTHS.map((month, idx) => (
+            {visibleMonths.map((monthInfo, idx) => (
               <div
-                key={month}
+                key={`${monthInfo.month}-${monthInfo.year}`}
                 className="p-1 text-[10px] font-semibold text-center border-r border-border last:border-r-0"
               >
-                {month}
+                {monthInfo.label}
               </div>
             ))}
           </div>
@@ -206,7 +278,11 @@ export default function YearCalendar() {
           {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
             <div
               key={day}
-              className="grid grid-cols-[40px_repeat(12,1fr)] border-b border-border last:border-b-0"
+              className="border-b border-border last:border-b-0"
+              style={{ 
+                display: 'grid', 
+                gridTemplateColumns: `40px repeat(${columnCount}, 1fr)` 
+              }}
             >
               {/* Day Number */}
               <div className="p-1 text-[10px] font-medium text-muted-foreground text-center border-r border-border bg-muted/30 sticky left-0">
@@ -214,16 +290,16 @@ export default function YearCalendar() {
               </div>
 
               {/* Day Cells for each month */}
-              {Array.from({ length: 12 }, (_, monthIdx) => monthIdx + 1).map(month => {
-                const isValid = isValidDate(day, month);
-                const event = isValid ? getEventForDate(day, month) : null;
+              {visibleMonths.map((monthInfo) => {
+                const isValid = isValidDateForMonth(day, monthInfo.month, monthInfo.year);
+                const event = isValid ? getEventForDate(day, monthInfo.month, monthInfo.year) : null;
                 const style = getCategoryStyle(event?.category || null);
-                const dayOfWeek = isValid ? getDayOfWeek(day, month, selectedYear) : "";
+                const dayOfWeek = isValid ? getDayOfWeek(day, monthInfo.month, monthInfo.year) : "";
                 const isWeekend = dayOfWeek === "S" || dayOfWeek === "D";
 
                 return (
                   <div
-                    key={`${day}-${month}`}
+                    key={`${day}-${monthInfo.month}-${monthInfo.year}`}
                     className={`
                       p-0.5 text-[9px] border-r border-border last:border-r-0 min-h-[24px] cursor-pointer
                       transition-colors
@@ -231,7 +307,7 @@ export default function YearCalendar() {
                       ${isValid && !event ? 'hover:bg-muted/40' : ''}
                       ${event ? style.bgClass : ''}
                     `}
-                    onClick={() => handleCellClick(day, month)}
+                    onClick={() => handleCellClick(day, monthInfo)}
                   >
                     {isValid && (
                       <div className="flex items-start gap-0.5">
