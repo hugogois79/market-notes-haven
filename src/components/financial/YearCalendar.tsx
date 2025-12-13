@@ -56,16 +56,30 @@ interface EditingCell {
   period: string;
 }
 
-// Custody status type for B column
+// Custody status type for B column (Beatriz)
 type CustodyStatus = 'comigo' | 'mae' | null;
+
+// Diana status type for D column
+type DianaStatus = 'comigo' | null;
 
 // Key for storing custody status in localStorage
 const CUSTODY_STORAGE_KEY = 'calendar-custody-status';
+const DIANA_STORAGE_KEY = 'calendar-diana-status';
 
 // Load custody status from localStorage
 const loadCustodyStatus = (): Record<string, CustodyStatus> => {
   try {
     const stored = localStorage.getItem(CUSTODY_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+};
+
+// Load Diana status from localStorage
+const loadDianaStatus = (): Record<string, DianaStatus> => {
+  try {
+    const stored = localStorage.getItem(DIANA_STORAGE_KEY);
     return stored ? JSON.parse(stored) : {};
   } catch {
     return {};
@@ -81,6 +95,7 @@ export default function YearCalendar() {
   const [editingEvent, setEditingEvent] = useState<Partial<CalendarEvent>>({});
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [custodyStatus, setCustodyStatus] = useState<Record<string, CustodyStatus>>(loadCustodyStatus);
+  const [dianaStatus, setDianaStatus] = useState<Record<string, DianaStatus>>(loadDianaStatus);
   const [inlineValue, setInlineValue] = useState("");
   const [categories, setCategories] = useState<CalendarCategory[]>(loadCalendarCategories);
   const inputRef = useRef<EventAutocompleteRef>(null);
@@ -309,17 +324,30 @@ export default function YearCalendar() {
   // Background color for past dates - neutral light gray
   const PAST_DATE_BG = "#f1f5f9";
 
-  // Handle custody status change
+  // Handle custody status change (Beatriz)
   const handleCustodyChange = (dateStr: string, status: CustodyStatus) => {
     const newCustodyStatus = { ...custodyStatus, [dateStr]: status };
     setCustodyStatus(newCustodyStatus);
     localStorage.setItem(CUSTODY_STORAGE_KEY, JSON.stringify(newCustodyStatus));
   };
 
-  // Get custody status for a date
+  // Handle Diana status change
+  const handleDianaChange = (dateStr: string, status: DianaStatus) => {
+    const newDianaStatus = { ...dianaStatus, [dateStr]: status };
+    setDianaStatus(newDianaStatus);
+    localStorage.setItem(DIANA_STORAGE_KEY, JSON.stringify(newDianaStatus));
+  };
+
+  // Get custody status for a date (Beatriz)
   const getCustodyForDate = (day: number, month: number, year: number): CustodyStatus => {
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     return custodyStatus[dateStr] || null;
+  };
+
+  // Get Diana status for a date
+  const getDianaForDate = (day: number, month: number, year: number): DianaStatus => {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return dianaStatus[dateStr] || null;
   };
 
   // Single click - start inline editing
@@ -633,6 +661,7 @@ export default function YearCalendar() {
     const isPast = isValid && isPastDate(day, monthInfo.month, monthInfo.year);
     const dateStr = `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const custody = isValid ? getCustodyForDate(day, monthInfo.month, monthInfo.year) : null;
+    const diana = isValid ? getDianaForDate(day, monthInfo.month, monthInfo.year) : null;
 
     // Open settings sheet on right-click
     const handleContextMenu = (e: React.MouseEvent, period: string) => {
@@ -662,6 +691,20 @@ export default function YearCalendar() {
         return { backgroundColor: '#ecfdf5' };
       }
       return { backgroundColor: '#fffbeb' };
+    };
+
+    // Determine D column background color based on Diana status
+    const getDColumnStyle = () => {
+      if (!isValid) return undefined;
+      if (isPast) return { backgroundColor: PAST_DATE_BG };
+      
+      // If Diana is with me, show green with white text
+      if (diana === 'comigo') {
+        return { backgroundColor: '#166534', color: '#ffffff' }; // Dark green with white text
+      }
+      
+      // Default: light blue for future dates
+      return { backgroundColor: '#dbeafe' };
     };
 
     return (
@@ -791,24 +834,46 @@ export default function YearCalendar() {
             )
           )}
         </div>
-        {/* D column (Diana) - with double border as month separator */}
-        <div
-          key={`${day}-${monthInfo.month}-${monthInfo.year}-d`}
-          className={`
-            min-h-[22px] text-[9px] font-medium text-center flex items-center justify-center cursor-pointer
-            ${!isValid ? 'bg-muted/50' : ''}
-          `}
-          style={{
-            backgroundColor: !isValid 
-              ? undefined 
-              : isPast 
-                ? PAST_DATE_BG 
-                : '#dbeafe', // light blue for future dates
-            borderRight: '3px double #64748b' // double line separator between months
-          }}
-          onClick={() => isValid && handleCellClick(day, monthInfo, 'afternoon')}
-        >
-        </div>
+        {/* D column (Diana) - dropdown with status options */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div
+              key={`${day}-${monthInfo.month}-${monthInfo.year}-d`}
+              className={`
+                min-h-[22px] text-[8px] font-medium text-center flex items-center justify-center cursor-pointer
+                ${!isValid ? 'bg-muted/50' : ''}
+              `}
+              style={{
+                ...getDColumnStyle(),
+                borderRight: '3px double #64748b' // double line separator between months
+              }}
+            >
+              {isValid && diana === 'comigo' && (
+                <span className="text-white">
+                  {dayOfWeek}
+                </span>
+              )}
+            </div>
+          </DropdownMenuTrigger>
+          {isValid && !isPast && (
+            <DropdownMenuContent align="end" className="min-w-[120px]">
+              <DropdownMenuItem 
+                onClick={() => handleDianaChange(dateStr, 'comigo')}
+                className="text-xs"
+              >
+                <span className="mr-2">🟢</span> Está comigo
+              </DropdownMenuItem>
+              {diana && (
+                <DropdownMenuItem 
+                  onClick={() => handleDianaChange(dateStr, null)}
+                  className="text-xs text-muted-foreground"
+                >
+                  <span className="mr-2">❌</span> Limpar
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          )}
+        </DropdownMenu>
       </>
     );
   };
