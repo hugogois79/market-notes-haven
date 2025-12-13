@@ -460,7 +460,7 @@ export default function YearCalendar() {
             ) : (
               <div className="flex items-center justify-center gap-0.5 h-full text-center">
                 <span 
-                  className="text-[8px] shrink-0"
+                  className="text-[8px] shrink-0 font-bold"
                   style={hasEvents && style.textColor ? { color: style.textColor } : undefined}
                 >
                   {dayOfWeek}
