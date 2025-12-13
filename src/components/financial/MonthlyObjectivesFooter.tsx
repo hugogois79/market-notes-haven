@@ -38,9 +38,10 @@ interface Child {
 interface MonthlyObjectivesFooterProps {
   year: number;
   monthOffset?: number;
+  scheduledTitles?: string[];
 }
 
-export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: MonthlyObjectivesFooterProps) {
+export default function MonthlyObjectivesFooter({ year, monthOffset = 0, scheduledTitles = [] }: MonthlyObjectivesFooterProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [addingToMonth, setAddingToMonth] = useState<{ month: number; year: number } | null>(null);
@@ -366,7 +367,9 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0 }: Month
                                         className={`flex-1 text-[10px] cursor-pointer hover:bg-slate-100 rounded px-1 py-0.5 ${
                                           objective.is_completed
                                             ? "line-through text-slate-400"
-                                            : "text-slate-800"
+                                            : scheduledTitles.some(t => t?.toLowerCase() === objective.content.toLowerCase())
+                                              ? "underline text-slate-800"
+                                              : "text-slate-800"
                                         }`}
                                       >
                                         {objective.content}
