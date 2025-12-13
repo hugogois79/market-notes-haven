@@ -126,7 +126,7 @@ export default function CalendarSettingsSheet({
           <span className="text-xs">Configurações</span>
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-[400px] sm:w-[540px]">
+      <SheetContent className="w-[500px] sm:w-[600px]">
         <SheetHeader>
           <SheetTitle>Configurações do Calendário</SheetTitle>
         </SheetHeader>
