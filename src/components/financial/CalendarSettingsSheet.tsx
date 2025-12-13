@@ -29,6 +29,7 @@ const COLOR_PRESETS = [
   { color: "#f97316", bgClass: "bg-orange-500", textClass: "text-white" },
   { color: "#eab308", bgClass: "bg-yellow-500", textClass: "text-yellow-900" },
   { color: "#22c55e", bgClass: "bg-green-500", textClass: "text-white" },
+  { color: "#0ea5e9", bgClass: "bg-sky-500", textClass: "text-white" }, // bright light blue
   { color: "#3b82f6", bgClass: "bg-blue-500", textClass: "text-white" },
   { color: "#8b5cf6", bgClass: "bg-purple-500", textClass: "text-white" },
   { color: "#ec4899", bgClass: "bg-pink-500", textClass: "text-white" },
@@ -37,6 +38,7 @@ const COLOR_PRESETS = [
   { color: "#fed7aa", bgClass: "bg-orange-200", textClass: "text-orange-900" },
   { color: "#fef08a", bgClass: "bg-yellow-200", textClass: "text-yellow-900" },
   { color: "#bbf7d0", bgClass: "bg-green-200", textClass: "text-green-900" },
+  { color: "#7dd3fc", bgClass: "bg-sky-300", textClass: "text-sky-900" }, // light sky blue
   { color: "#bfdbfe", bgClass: "bg-blue-200", textClass: "text-blue-900" },
   { color: "#ddd6fe", bgClass: "bg-purple-200", textClass: "text-purple-900" },
   { color: "#fbcfe8", bgClass: "bg-pink-200", textClass: "text-pink-900" },
