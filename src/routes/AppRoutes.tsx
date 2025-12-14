@@ -1,8 +1,6 @@
 
 import React from "react";
 import { Route, Routes } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as SonnerToaster } from "sonner";
 
 import MainLayout from "@/layouts/MainLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -263,8 +261,6 @@ const AppRoutes = () => {
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
-      <Toaster />
-      <SonnerToaster position="top-right" />
     </>
   );
 };
