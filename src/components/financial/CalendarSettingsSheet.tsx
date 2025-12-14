@@ -32,6 +32,7 @@ const COLOR_PRESETS = [
   { color: "#fef08a", bgClass: "bg-yellow-200", textClass: "text-black" },    // Light yellow
   { color: "#bbf7d0", bgClass: "bg-green-200", textClass: "text-black" },     // Light green
   { color: "#bae6fd", bgClass: "bg-sky-200", textClass: "text-black" },       // Light sky
+  { color: "#93c5fd", bgClass: "bg-blue-300", textClass: "text-black" },      // Light blue (new for Férias)
   { color: "#3b82f6", bgClass: "bg-blue-500", textClass: "text-white" },      // Bright blue (strong)
   { color: "#1e40af", bgClass: "bg-blue-800", textClass: "text-white" },      // Dark blue (strong)
   { color: "#ddd6fe", bgClass: "bg-purple-200", textClass: "text-black" },    // Light purple
