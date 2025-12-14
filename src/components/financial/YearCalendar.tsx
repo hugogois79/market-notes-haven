@@ -361,13 +361,18 @@ export default function YearCalendar() {
     return events?.filter(e => e.date === dateStr) || [];
   };
 
+  // Helper to determine if a color is dark (needs white text)
+  const isDarkColor = (color: string): boolean => {
+    const darkColors = ["#1e40af", "#1e3a8a", "#312e81", "#4c1d95", "#831843", "#7f1d1d", "#dc2626", "#b91c1c", "#991b1b", "#7c3aed", "#6d28d9", "#5b21b6", "#3b82f6", "#2563eb", "#ef4444"];
+    return darkColors.includes(color.toLowerCase());
+  };
+
   const getCategoryStyle = (category: string | null): { bgColor: string; textColor: string } => {
     const cat = categories.find(c => c.value === category);
     if (!cat) return { bgColor: "", textColor: "" };
     
     // Dark colors need white text, light colors need black text
-    const darkColors = ["#1e40af", "#1e3a8a", "#312e81", "#4c1d95", "#831843", "#7f1d1d", "#dc2626", "#b91c1c", "#991b1b", "#7c3aed", "#6d28d9", "#5b21b6", "#3b82f6", "#2563eb"];
-    const textColor = darkColors.includes(cat.color.toLowerCase()) ? "#ffffff" : "#000000";
+    const textColor = isDarkColor(cat.color) ? "#ffffff" : "#000000";
     
     return { bgColor: cat.color, textColor };
   };
@@ -1286,24 +1291,26 @@ export default function YearCalendar() {
 
             <div>
               <Label>Categoria</Label>
-              <Select
-                value={editingEvent.category || ""}
-                onValueChange={(value) => setEditingEvent(prev => ({ ...prev, category: value }))}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Selecione categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(cat => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded ${cat.bgClass}`} />
-                        {cat.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {categories.map(cat => (
+                  <button
+                    key={cat.value}
+                    type="button"
+                    onClick={() => setEditingEvent(prev => ({ ...prev, category: cat.value }))}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all border-2 ${
+                      editingEvent.category === cat.value
+                        ? 'ring-2 ring-offset-2 ring-primary border-primary'
+                        : 'border-transparent hover:opacity-80'
+                    }`}
+                    style={{ 
+                      backgroundColor: cat.color,
+                      color: isDarkColor(cat.color) ? 'white' : 'black'
+                    }}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div>
