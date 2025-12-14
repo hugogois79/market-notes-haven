@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, CalendarDays, MoreHorizontal, Sun, Moon, Printer } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, MoreHorizontal, Sun, Moon, Printer, Pencil } from "lucide-react";
 import "@/styles/calendar-print.css";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
@@ -811,7 +811,32 @@ export default function YearCalendar() {
           </HoverCardTrigger>
           <HoverCardContent className="w-80 p-4" side="right" align="start">
             <div className="space-y-4">
-              <h4 className="font-semibold text-base">Detalhes do Evento</h4>
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-base">Detalhes do Evento</h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5"
+                  onClick={() => {
+                    const firstEvent = allEvents[0];
+                    if (firstEvent) {
+                      setSelectedDate(dateStr);
+                      setSelectedPeriod(firstEvent.period || 'morning');
+                      setEditingEvent({
+                        id: firstEvent.id,
+                        title: firstEvent.title,
+                        category: firstEvent.category,
+                        notes: firstEvent.notes,
+                        period: firstEvent.period
+                      });
+                      setIsSheetOpen(true);
+                    }
+                  }}
+                >
+                  <Pencil className="h-3 w-3" />
+                  <span className="text-xs">Editar</span>
+                </Button>
+              </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
