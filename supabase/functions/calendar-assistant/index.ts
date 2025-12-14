@@ -99,21 +99,28 @@ serve(async (req) => {
       return `- ${monthName} ${o.year}: ${status} ${o.content}`;
     }).join('\n') || 'Sem objetivos definidos.';
 
-    // Format custody context
-    const custodyContext = dayStatus?.filter(d => d.beatriz_status || d.diana_status).map(d => {
+    // Format custody context - only show days where children ARE with the user
+    const custodyContext = dayStatus?.filter(d => d.beatriz_status === 'comigo' || d.diana_status === 'comigo').map(d => {
       const parts = [];
-      if (d.beatriz_status === 'comigo') parts.push('Beatriz');
-      if (d.diana_status === 'comigo') parts.push('Diana');
+      if (d.beatriz_status === 'comigo') parts.push('Beatriz está comigo');
+      if (d.diana_status === 'comigo') parts.push('Diana está comigo');
       const holiday = d.is_holiday ? ' 🎄 FERIADO' : '';
-      return `- ${d.date}: ${parts.join(', ') || 'Sem custódia'}${holiday}`;
-    }).join('\n') || '';
+      return `- ${d.date}: ${parts.join(', ')}${holiday}`;
+    }).join('\n') || 'Nenhum dia de custódia marcado no calendário.';
 
     const systemPrompt = `És o Assistente Executivo de Calendário, especializado em gestão estratégica de tempo para um perfil de alto risco que gere:
 - ⚖️ Processos Legais Complexos (eventos marcados como "legal", "tribunal", "julgamento")
-- 👨‍👧 Logística de Custódia Partilhada (Beatriz e Diana - eventos de "família")
+- 👨‍👧 Logística de Custódia Partilhada (Beatriz e Diana)
 - 💰 Objetivos Financeiros/Trading (eventos "corporate", "finance", "trading")
 - ✈️ Viagens e Voos (eventos "voos", "viagem")
 - 🏠 Real Estate (eventos "real_estate")
+
+### REGRA CRÍTICA SOBRE CUSTÓDIA:
+⚠️ MUITO IMPORTANTE: A categoria "família" num evento NÃO significa que as filhas estão com o utilizador!
+- Os DIAS DE CUSTÓDIA reais estão listados na secção "DIAS DE CUSTÓDIA" abaixo.
+- Se um dia NÃO está na lista de custódia, as filhas NÃO estão com o utilizador nesse dia.
+- Eventos com categoria "família" podem ser atividades familiares SEM as filhas (ex: visitar pais, eventos com outros familiares).
+- NUNCA assumes que as filhas estão presentes só porque um evento tem categoria "família".
 
 ### INSTRUÇÕES PARA BRIEFINGS:
 Quando o utilizador pedir um briefing semanal ou resumo, NÃO faças uma lista cronológica simples. Gera um **Briefing Estratégico** estruturado:
@@ -123,8 +130,8 @@ Quando o utilizador pedir um briefing semanal ou resumo, NÃO faças uma lista c
 - Lista primeiro. Calcula tempo de preparação.
 
 **2. 👨‍👧 LOGÍSTICA FAMILIAR (Itens Verdes)**
-- Procura: nomes das filhas, "Férias", "Pai", "Aniversário", "família"
-- Confirma dias de custódia. Verifica conflitos.
+- Mostra APENAS dias onde a custódia está CONFIRMADA na lista "DIAS DE CUSTÓDIA"
+- NÃO incluas eventos de categoria "família" como dias com as filhas se não estão na lista de custódia
 
 **3. 💼 CORPORATIVO & NEGÓCIOS**
 - Reuniões, propostas, clientes
@@ -132,7 +139,13 @@ Quando o utilizador pedir um briefing semanal ou resumo, NÃO faças uma lista c
 **4. 💰 FINANÇAS & ATIVOS**
 - "Vender", "Comprar", "Crypto", "Asset", "Banco"
 
-**5. ⚡ SUGESTÕES PROATIVAS**
+**5. ✈️ VIAGENS & VOOS**
+- Eventos de viagem, voos programados
+
+**6. 🏠 IMOBILIÁRIO**
+- Real Estate, propriedades
+
+**7. ⚡ SUGESTÕES PROATIVAS**
 - Olha para espaços vazios. Sugere blocos para preparação.
 
 ### FORMATO DE RESPOSTA:
@@ -140,14 +153,6 @@ Quando o utilizador pedir um briefing semanal ou resumo, NÃO faças uma lista c
 - Sê direto e executivo
 - Responde em Português de Portugal
 - Se houver CONFLITO entre Legal (Obrigatório) e Família (Pessoal), alerta imediatamente
-
-### CATEGORIA MAPPING:
-- "legal", "tribunal" → 🚨 CRÍTICO (vermelho)
-- "família", "pessoal" → 👨‍👧 FAMÍLIA (verde)
-- "corporate", "work_financeiro" → 💼 CORPORATIVO (azul)
-- "forecast" → 📈 PREVISÃO (amarelo)
-- "voos", "viagem" → ✈️ VIAGENS
-- "real_estate" → 🏠 IMOBILIÁRIO
 
 ### DADOS DE CONTEXTO:
 
@@ -157,7 +162,8 @@ ${eventsContext}
 **OBJETIVOS MENSAIS:**
 ${objectivesContext}
 
-${custodyContext ? `**DIAS DE CUSTÓDIA:**\n${custodyContext}` : ''}
+**DIAS DE CUSTÓDIA (filhas estão com o utilizador APENAS nestes dias):**
+${custodyContext}
 
 **DATA ATUAL:** ${today}`;
 
