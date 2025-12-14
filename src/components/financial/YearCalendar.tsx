@@ -1164,12 +1164,12 @@ export default function YearCalendar() {
                 <React.Fragment key={`header-${monthInfo.month}-${monthInfo.year}`}>
                   {/* B column header */}
                   <div className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border/30">B</div>
-                  {/* Morning header */}
-                  <div className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30">
+                  {/* Month name spanning Morning and Afternoon columns */}
+                  <div 
+                    className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30"
+                    style={{ gridColumn: 'span 2' }}
+                  >
                     {monthInfo.label}
-                  </div>
-                  {/* Afternoon header - empty or label */}
-                  <div className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30">
                   </div>
                   {/* D column header - with double border as month separator */}
                   <div className="p-0.5 text-[8px] font-bold text-foreground text-center" style={{ borderRight: '3px double #1e293b' }}>D</div>
