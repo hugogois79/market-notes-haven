@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { Bot, Send, Loader2, User, Sparkles, CalendarDays, FileText } from "lucide-react";
+import { Bot, Send, Loader2, User, Sparkles, CalendarDays, FileText, Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,43 @@ interface QuickAction {
   label: string;
   prompt: string;
 }
+
+const CopyButton = ({ text }: { text: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success("Copiado!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error("Erro ao copiar");
+    }
+  };
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={handleCopy}
+            className="h-6 w-6 rounded hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {copied ? (
+              <Check className="h-3.5 w-3.5 text-green-500" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p className="text-xs">{copied ? "Copiado!" : "Copiar resposta"}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
 
 const AIAssistant = () => {
   const navigate = useNavigate();
@@ -420,12 +457,18 @@ const AIAssistant = () => {
                     </div>
                   )}
                   
-                  {message.role === "assistant" && message.notesUsed !== undefined && (
-                    <p className="text-xs opacity-70 mt-1 px-3">
-                      {message.notesUsed > 0
-                        ? `Baseado em ${message.notesUsed} nota${message.notesUsed > 1 ? "s" : ""}`
-                        : "Sem notas relevantes encontradas"}
-                    </p>
+                  {/* Copy button for assistant messages */}
+                  {message.role === "assistant" && (
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
+                      <CopyButton text={message.content} />
+                      {message.notesUsed !== undefined && (
+                        <span className="text-xs opacity-70">
+                          {message.notesUsed > 0
+                            ? `Baseado em ${message.notesUsed} nota${message.notesUsed > 1 ? "s" : ""}`
+                            : "Sem notas relevantes encontradas"}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
                 {message.role === "user" && (
