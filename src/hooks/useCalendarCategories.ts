@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 export interface CalendarCategory {
   value: string;
@@ -47,41 +48,91 @@ const dbToCategory = (db: DbCalendarCategory): CalendarCategory => ({
 export function useCalendarCategories() {
   const queryClient = useQueryClient();
 
-  const { data: categories = DEFAULT_CATEGORIES, isLoading } = useQuery({
+  const { data: queryResult, isLoading, refetch } = useQuery({
     queryKey: ["calendar-categories"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return DEFAULT_CATEGORIES;
+      if (!user) {
+        console.log("useCalendarCategories: No user authenticated");
+        return { categories: DEFAULT_CATEGORIES, needsInit: false };
+      }
 
       const { data, error } = await supabase
         .from("calendar_categories")
         .select("*")
         .eq("user_id", user.id);
 
-      if (error) throw error;
-
-      // If no categories in DB, return defaults
-      if (!data || data.length === 0) {
-        return DEFAULT_CATEGORIES;
+      if (error) {
+        console.error("useCalendarCategories: Error fetching categories", error);
+        throw error;
       }
 
-      return data.map(dbToCategory);
+      console.log("useCalendarCategories: Fetched categories from DB", data?.length || 0);
+
+      // If no categories in DB, signal that we need to initialize
+      if (!data || data.length === 0) {
+        return { categories: DEFAULT_CATEGORIES, needsInit: true };
+      }
+
+      return { categories: data.map(dbToCategory), needsInit: false };
     },
   });
+
+  const categories = queryResult?.categories ?? DEFAULT_CATEGORIES;
+  const needsInit = queryResult?.needsInit ?? false;
+
+  // Initialize default categories in DB if needed
+  useEffect(() => {
+    const initializeDefaults = async () => {
+      if (!needsInit) return;
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      console.log("useCalendarCategories: Initializing default categories for user");
+      
+      const { error } = await supabase
+        .from("calendar_categories")
+        .insert(
+          DEFAULT_CATEGORIES.map(cat => ({
+            user_id: user.id,
+            name: cat.label,
+            color: cat.color,
+          }))
+        );
+
+      if (error) {
+        console.error("useCalendarCategories: Error initializing defaults", error);
+      } else {
+        console.log("useCalendarCategories: Default categories initialized successfully");
+        // Refetch to get the actual DB entries with IDs
+        refetch();
+      }
+    };
+
+    initializeDefaults();
+  }, [needsInit, refetch]);
 
   const saveCategoriesMutation = useMutation({
     mutationFn: async (newCategories: CalendarCategory[]) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
+      console.log("useCalendarCategories: Saving categories", newCategories.length);
+
       // Delete all existing categories for user
-      await supabase
+      const { error: deleteError } = await supabase
         .from("calendar_categories")
         .delete()
         .eq("user_id", user.id);
 
+      if (deleteError) {
+        console.error("useCalendarCategories: Error deleting categories", deleteError);
+        throw deleteError;
+      }
+
       // Insert new categories
-      const { error } = await supabase
+      const { error: insertError } = await supabase
         .from("calendar_categories")
         .insert(
           newCategories.map(cat => ({
@@ -91,13 +142,19 @@ export function useCalendarCategories() {
           }))
         );
 
-      if (error) throw error;
+      if (insertError) {
+        console.error("useCalendarCategories: Error inserting categories", insertError);
+        throw insertError;
+      }
+
+      console.log("useCalendarCategories: Categories saved successfully");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["calendar-categories"] });
       toast.success("Categorias guardadas");
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("useCalendarCategories: Save mutation error", error);
       toast.error("Erro ao guardar categorias");
     },
   });
