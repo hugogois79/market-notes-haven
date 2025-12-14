@@ -1056,6 +1056,11 @@ export default function YearCalendar() {
       <CardHeader className="py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
+            <CalendarSettingsSheet 
+              categories={categories}
+              onCategoriesChange={saveCategories}
+              isSaving={isSavingCategories}
+            />
             <CardTitle className="text-lg">
               {showFullYear ? "Calendário Anual" : "Próximos 6 Meses"}
             </CardTitle>
@@ -1081,11 +1086,6 @@ export default function YearCalendar() {
               <Printer className="h-3.5 w-3.5" />
               <span className="text-xs">Imprimir</span>
             </Button>
-            <CalendarSettingsSheet 
-              categories={categories}
-              onCategoriesChange={saveCategories}
-              isSaving={isSavingCategories}
-            />
             {showFullYear ? (
               <>
                 <Button
