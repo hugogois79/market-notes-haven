@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +77,7 @@ const CopyButton = ({ text }: { text: string }) => {
 const AIAssistant = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -142,6 +144,12 @@ const AIAssistant = () => {
 
       if (error) throw new Error(error.message);
       if (data.error) throw new Error(data.error);
+
+      // If an event was created, refresh the calendar data
+      if (data.eventCreated) {
+        queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+        toast.success("Evento criado no calendário!");
+      }
 
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
