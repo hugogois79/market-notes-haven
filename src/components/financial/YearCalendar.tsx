@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1161,20 +1161,19 @@ export default function YearCalendar() {
               ))
             ) : (
               visibleMonths.map((monthInfo) => (
-                <>
+                <React.Fragment key={`header-${monthInfo.month}-${monthInfo.year}`}>
                   {/* B column header */}
-                  <div key={`${monthInfo.month}-${monthInfo.year}-b-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border/30">B</div>
-                  {/* Month name spanning Morning and Afternoon columns */}
-                  <div 
-                    key={`${monthInfo.month}-${monthInfo.year}-month-header`} 
-                    className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30"
-                    style={{ gridColumn: 'span 2' }}
-                  >
+                  <div className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border/30">B</div>
+                  {/* Morning header */}
+                  <div className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30">
                     {monthInfo.label}
                   </div>
+                  {/* Afternoon header - empty or label */}
+                  <div className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30">
+                  </div>
                   {/* D column header - with double border as month separator */}
-                  <div key={`${monthInfo.month}-${monthInfo.year}-d-header`} className="p-0.5 text-[8px] font-bold text-foreground text-center" style={{ borderRight: '3px double #1e293b' }}>D</div>
-                </>
+                  <div className="p-0.5 text-[8px] font-bold text-foreground text-center" style={{ borderRight: '3px double #1e293b' }}>D</div>
+                </React.Fragment>
               ))
             )}
           </div>
@@ -1195,11 +1194,14 @@ export default function YearCalendar() {
               </div>
 
               {/* Day Cells for each month */}
-              {visibleMonths.map((monthInfo) => 
-                showFullYear 
-                  ? renderFullYearCell(day, monthInfo)
-                  : renderSixMonthCell(day, monthInfo)
-              )}
+              {visibleMonths.map((monthInfo) => (
+                <React.Fragment key={`row-${day}-${monthInfo.month}-${monthInfo.year}`}>
+                  {showFullYear 
+                    ? renderFullYearCell(day, monthInfo)
+                    : renderSixMonthCell(day, monthInfo)
+                  }
+                </React.Fragment>
+              ))}
             </div>
           ))}
         </div>
