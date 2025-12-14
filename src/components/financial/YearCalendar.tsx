@@ -21,6 +21,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import { useCalendarDayStatus } from "@/hooks/useCalendarDayStatus";
 import { useCalendarCategories } from "@/hooks/useCalendarCategories";
 
@@ -743,12 +748,13 @@ export default function YearCalendar() {
     // Check if this day is a holiday
     const isHoliday = isValid && isHolidayDate(day, monthInfo.month, monthInfo.year);
 
-    return (
+    const dateStr = `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+    const cellContent = (
       <div
-        key={`${day}-${monthInfo.month}-${monthInfo.year}`}
         className={`
           p-0.5 text-[9px] border-r border-border last:border-r-0 min-h-[32px] cursor-pointer
-          transition-colors
+          transition-colors w-full h-full
           ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
           ${isValid && !hasEvents && !editing ? 'hover:bg-muted/40' : ''}
         `}
@@ -785,7 +791,6 @@ export default function YearCalendar() {
                   <span 
                     className="flex-1 break-words leading-tight"
                     style={style.textColor ? { color: style.textColor } : undefined}
-                    title={combinedTitle}
                   >
                     {combinedTitle}
                   </span>
@@ -796,6 +801,74 @@ export default function YearCalendar() {
         )}
       </div>
     );
+
+    // If there are events, wrap in HoverCard
+    if (hasEvents && !editing) {
+      return (
+        <HoverCard key={`${day}-${monthInfo.month}-${monthInfo.year}`} openDelay={200} closeDelay={100}>
+          <HoverCardTrigger asChild>
+            {cellContent}
+          </HoverCardTrigger>
+          <HoverCardContent className="w-80 p-4" side="right" align="start">
+            <div className="space-y-4">
+              <h4 className="font-semibold text-base">Detalhes do Evento</h4>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Data</Label>
+                  <div className="text-sm font-medium mt-1">{dateStr}</div>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Período</Label>
+                  <div className="text-sm font-medium mt-1">
+                    {allEvents.map(e => e.period === 'morning' ? 'Manhã' : 'Tarde').join(', ')}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs text-muted-foreground">Título</Label>
+                <div className="text-sm font-medium mt-1">{combinedTitle}</div>
+              </div>
+
+              <div>
+                <Label className="text-xs text-muted-foreground">Categoria</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {categories.map(cat => {
+                    const isActive = allEvents.some(e => e.category === cat.value);
+                    return (
+                      <span
+                        key={cat.value}
+                        className={`px-3 py-1 rounded-md text-xs font-medium ${
+                          isActive ? 'ring-2 ring-offset-1 ring-primary' : 'opacity-40'
+                        }`}
+                        style={{ 
+                          backgroundColor: cat.color,
+                          color: isDarkColor(cat.color) ? 'white' : 'black'
+                        }}
+                      >
+                        {cat.label}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {allEvents.some(e => e.notes) && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Notas</Label>
+                  <div className="text-sm mt-1 text-muted-foreground">
+                    {allEvents.map(e => e.notes).filter(Boolean).join(' | ')}
+                  </div>
+                </div>
+              )}
+            </div>
+          </HoverCardContent>
+        </HoverCard>
+      );
+    }
+
+    return <div key={`${day}-${monthInfo.month}-${monthInfo.year}`}>{cellContent}</div>;
   };
 
   // Render cell for 6-month view (two slots per day: morning/afternoon)
