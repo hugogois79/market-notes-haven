@@ -12,18 +12,21 @@ const tools = [
   {
     type: "function",
     function: {
-      name: "create_calendar_event",
-      description: "Cria um novo evento no calendário. Usa esta função quando o utilizador pedir para adicionar, criar ou agendar um evento.",
+      name: "create_calendar_events",
+      description: "Cria um ou mais eventos no calendário. Usa esta função quando o utilizador pedir para adicionar, criar ou agendar eventos. Quando o utilizador pedir para criar eventos em múltiplos dias (ex: 'todos os dias de julho', 'de dia 10 a dia 15', 'dia 1, 2, 3 e 4'), DEVES fornecer TODAS as datas no array 'dates'.",
       parameters: {
         type: "object",
         properties: {
           title: {
             type: "string",
-            description: "O título/nome do evento"
+            description: "O título/nome do evento (será aplicado a todos os dias)"
           },
-          date: {
-            type: "string",
-            description: "A data do evento no formato YYYY-MM-DD"
+          dates: {
+            type: "array",
+            items: {
+              type: "string"
+            },
+            description: "Array de datas no formato YYYY-MM-DD. Para múltiplos dias, inclui TODAS as datas. Exemplo: para 'todos os dias de julho 2026', inclui ['2026-07-01', '2026-07-02', ..., '2026-07-31']"
           },
           period: {
             type: "string",
@@ -40,7 +43,7 @@ const tools = [
             description: "Notas adicionais sobre o evento (opcional)"
           }
         },
-        required: ["title", "date", "period"]
+        required: ["title", "dates", "period"]
       }
     }
   }
@@ -156,8 +159,9 @@ serve(async (req) => {
 
 ### CAPACIDADE DE CRIAR EVENTOS:
 ⚠️ **PODES E DEVES CRIAR EVENTOS quando o utilizador pedir!**
-- Se o utilizador disser "adiciona", "cria", "agenda", "marca", "põe", "mete" um evento, USA IMEDIATAMENTE a função create_calendar_event.
+- Se o utilizador disser "adiciona", "cria", "agenda", "marca", "põe", "mete" um evento, USA IMEDIATAMENTE a função create_calendar_events.
 - NÃO recuses criar eventos - isso é uma das tuas funções principais!
+- **MÚLTIPLOS DIAS:** Se o utilizador pedir para criar eventos em vários dias (ex: "todos os dias de julho", "dia 10, 11, 12", "de dia 1 a dia 15"), DEVES incluir TODAS as datas no array 'dates'. Gera o array completo de datas!
 - Interpreta datas relativas: "amanhã", "próxima segunda", "dia 25", "25 de dezembro", etc.
 - Se não especificar período, assume "morning" (manhã).
 - Se não especificar categoria, escolhe a mais apropriada com base no título.
@@ -264,42 +268,52 @@ ${custodyContext}
 
       console.log('Function call:', functionName, functionArgs);
 
-      if (functionName === 'create_calendar_event') {
-        // Create the event
-        const { title, date, period, category, notes } = functionArgs;
+      if (functionName === 'create_calendar_events') {
+        // Create multiple events
+        const { title, dates, period, category, notes } = functionArgs;
         
-        const { data: newEvent, error: insertError } = await supabase
+        // Ensure dates is an array
+        const datesArray = Array.isArray(dates) ? dates : [dates];
+        
+        console.log(`Creating ${datesArray.length} events...`);
+        
+        const eventsToInsert = datesArray.map((date: string) => ({
+          user_id: userId,
+          title,
+          date,
+          period: period || 'morning',
+          category: category || null,
+          notes: notes || null
+        }));
+
+        const { data: newEvents, error: insertError } = await supabase
           .from('calendar_events')
-          .insert({
-            user_id: userId,
-            title,
-            date,
-            period: period || 'morning',
-            category: category || null,
-            notes: notes || null
-          })
-          .select()
-          .single();
+          .insert(eventsToInsert)
+          .select();
 
         if (insertError) {
-          console.error('Error creating event:', insertError);
+          console.error('Error creating events:', insertError);
           return new Response(
             JSON.stringify({ 
-              response: `❌ Erro ao criar o evento: ${insertError.message}`,
+              response: `❌ Erro ao criar os eventos: ${insertError.message}`,
               eventCreated: false
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
-        console.log('Event created:', newEvent);
+        console.log(`${newEvents?.length || 0} events created`);
 
         // Format confirmation message
         const periodLabel = period === 'afternoon' ? 'Tarde' : 'Manhã';
         const categoryLabel = getCategoryLabel(category);
-        const dateFormatted = formatDatePT(date);
+        const eventCount = datesArray.length;
 
-        const confirmationMessage = `✅ **Evento criado com sucesso!**
+        let confirmationMessage: string;
+        
+        if (eventCount === 1) {
+          const dateFormatted = formatDatePT(datesArray[0]);
+          confirmationMessage = `✅ **Evento criado com sucesso!**
 
 📅 **${title}**
 - 📆 Data: ${dateFormatted}
@@ -308,12 +322,29 @@ ${category ? `- 🏷️ Categoria: ${categoryLabel}` : ''}
 ${notes ? `- 📝 Notas: ${notes}` : ''}
 
 O evento foi adicionado ao teu calendário.`;
+        } else {
+          // Multiple events
+          const firstDate = formatDatePT(datesArray[0]);
+          const lastDate = formatDatePT(datesArray[datesArray.length - 1]);
+          
+          confirmationMessage = `✅ **${eventCount} eventos criados com sucesso!**
+
+📅 **${title}**
+- 📆 Datas: De ${firstDate} até ${lastDate}
+- 📊 Total: ${eventCount} dias
+- ⏰ Período: ${periodLabel}
+${category ? `- 🏷️ Categoria: ${categoryLabel}` : ''}
+${notes ? `- 📝 Notas: ${notes}` : ''}
+
+Todos os eventos foram adicionados ao teu calendário.`;
+        }
 
         return new Response(
           JSON.stringify({ 
             response: confirmationMessage,
             eventCreated: true,
-            event: newEvent
+            eventsCount: eventCount,
+            events: newEvents
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
