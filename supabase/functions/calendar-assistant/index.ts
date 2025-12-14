@@ -7,6 +7,45 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Tool definitions for function calling
+const tools = [
+  {
+    type: "function",
+    function: {
+      name: "create_calendar_event",
+      description: "Cria um novo evento no calendário. Usa esta função quando o utilizador pedir para adicionar, criar ou agendar um evento.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: {
+            type: "string",
+            description: "O título/nome do evento"
+          },
+          date: {
+            type: "string",
+            description: "A data do evento no formato YYYY-MM-DD"
+          },
+          period: {
+            type: "string",
+            enum: ["morning", "afternoon"],
+            description: "O período do dia: 'morning' para manhã, 'afternoon' para tarde"
+          },
+          category: {
+            type: "string",
+            enum: ["legal", "família", "pessoal", "corporate", "work_financeiro", "forecast", "voos", "viagem", "real_estate", "férias"],
+            description: "A categoria do evento"
+          },
+          notes: {
+            type: "string",
+            description: "Notas adicionais sobre o evento (opcional)"
+          }
+        },
+        required: ["title", "date", "period"]
+      }
+    }
+  }
+];
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -115,6 +154,14 @@ serve(async (req) => {
 - ✈️ Viagens e Voos (eventos "voos", "viagem")
 - 🏠 Real Estate (eventos "real_estate")
 
+### CAPACIDADE DE CRIAR EVENTOS:
+Podes criar eventos no calendário quando o utilizador pedir. Usa a função create_calendar_event.
+- Se o utilizador disser "adiciona", "cria", "agenda", "marca" um evento, usa a função.
+- Interpreta datas relativas: "amanhã", "próxima segunda", "dia 25", "25 de dezembro", etc.
+- Se não especificar período, assume "morning" (manhã).
+- Se não especificar categoria, escolhe a mais apropriada com base no título.
+- DATA ATUAL: ${today}
+
 ### REGRAS CRÍTICAS:
 
 ⚠️ **NUNCA INVENTES INFORMAÇÃO!**
@@ -182,7 +229,7 @@ ${custodyContext}
       { role: 'user', content: query }
     ];
 
-    console.log('Calling OpenAI with calendar context...');
+    console.log('Calling OpenAI with calendar context and tools...');
 
     const chatResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -193,6 +240,8 @@ ${custodyContext}
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages,
+        tools,
+        tool_choice: 'auto',
         temperature: 0.7,
         max_tokens: 2000,
       }),
@@ -205,8 +254,74 @@ ${custodyContext}
     }
 
     const chatData = await chatResponse.json();
-    const aiResponse = chatData.choices[0].message.content;
+    const message = chatData.choices[0].message;
 
+    // Check if the model wants to call a function
+    if (message.tool_calls && message.tool_calls.length > 0) {
+      const toolCall = message.tool_calls[0];
+      const functionName = toolCall.function.name;
+      const functionArgs = JSON.parse(toolCall.function.arguments);
+
+      console.log('Function call:', functionName, functionArgs);
+
+      if (functionName === 'create_calendar_event') {
+        // Create the event
+        const { title, date, period, category, notes } = functionArgs;
+        
+        const { data: newEvent, error: insertError } = await supabase
+          .from('calendar_events')
+          .insert({
+            user_id: userId,
+            title,
+            date,
+            period: period || 'morning',
+            category: category || null,
+            notes: notes || null
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error creating event:', insertError);
+          return new Response(
+            JSON.stringify({ 
+              response: `❌ Erro ao criar o evento: ${insertError.message}`,
+              eventCreated: false
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log('Event created:', newEvent);
+
+        // Format confirmation message
+        const periodLabel = period === 'afternoon' ? 'Tarde' : 'Manhã';
+        const categoryLabel = getCategoryLabel(category);
+        const dateFormatted = formatDatePT(date);
+
+        const confirmationMessage = `✅ **Evento criado com sucesso!**
+
+📅 **${title}**
+- 📆 Data: ${dateFormatted}
+- ⏰ Período: ${periodLabel}
+${category ? `- 🏷️ Categoria: ${categoryLabel}` : ''}
+${notes ? `- 📝 Notas: ${notes}` : ''}
+
+O evento foi adicionado ao teu calendário.`;
+
+        return new Response(
+          JSON.stringify({ 
+            response: confirmationMessage,
+            eventCreated: true,
+            event: newEvent
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Regular response (no function call)
+    const aiResponse = message.content;
     console.log('Calendar assistant response generated');
 
     // Parse response for rich rendering hints
@@ -244,6 +359,7 @@ function getCategoryLabel(category: string | null): string {
     'voos': '✈️ Voos',
     'viagem': '✈️ Viagem',
     'real_estate': '🏠 Imobiliário',
+    'férias': '🎄 Férias',
   };
   return labels[category || ''] || category || 'Geral';
 }
@@ -252,6 +368,16 @@ function getMonthName(month: number | null): string {
   const months = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
                   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   return months[month || 0] || '';
+}
+
+function formatDatePT(dateStr: string): string {
+  const date = new Date(dateStr + 'T00:00:00');
+  const day = date.getDate();
+  const month = getMonthName(date.getMonth() + 1);
+  const year = date.getFullYear();
+  const weekdays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+  const weekday = weekdays[date.getDay()];
+  return `${weekday}, ${day} de ${month} de ${year}`;
 }
 
 function parseResponseSections(response: string): Array<{type: string, content: string}> {
