@@ -27,6 +27,7 @@ interface LoanDialogProps {
   onOpenChange: (open: boolean) => void;
   companyId: string;
   loan?: any;
+  initialAttachmentUrl?: string | null;
 }
 
 export default function LoanDialog({
@@ -34,6 +35,7 @@ export default function LoanDialog({
   onOpenChange,
   companyId,
   loan,
+  initialAttachmentUrl,
 }: LoanDialogProps) {
   const queryClient = useQueryClient();
   const { register, handleSubmit, reset, watch, setValue } = useForm();
@@ -70,9 +72,10 @@ export default function LoanDialog({
         lending_company_id: '',
         borrowing_company_id: '',
       });
-      setAttachmentUrl(null);
+      // Use initialAttachmentUrl if provided (e.g., from document analysis)
+      setAttachmentUrl(initialAttachmentUrl || null);
     }
-  }, [loan, reset, companyId]);
+  }, [loan, reset, companyId, initialAttachmentUrl]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
