@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Building2, Search, Edit, Trash2, Eye, AlertTriangle, CheckCircle, AlertCircle, Settings, ChevronDown, X } from "lucide-react";
+import { Plus, Building2, Search, Edit, Trash2, Eye, Settings, ChevronDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import {
@@ -36,16 +36,52 @@ import CompanyDialog from "@/components/financial/CompanyDialog";
 
 type ColumnKey = "name" | "taxId" | "jurisdiction" | "status" | "riskRating" | "actions";
 
+interface ColumnOption {
+  label: string;
+  color: string;
+}
+
 interface ColumnConfig {
   key: ColumnKey;
   label: string;
   required?: boolean;
   editable?: boolean;
-  options?: string[];
+  options?: ColumnOption[];
 }
 
-const DEFAULT_STATUS_OPTIONS = ["Active", "Liquidated", "Under Investigation", "Closed"];
-const DEFAULT_RISK_OPTIONS = ["Low", "Medium", "High", "Critical"];
+const COLOR_PRESETS = [
+  "#fecaca", // Light red
+  "#dc2626", // Dark red
+  "#fed7aa", // Light orange
+  "#fef08a", // Light yellow
+  "#bbf7d0", // Light green
+  "#bae6fd", // Light sky
+  "#93c5fd", // Light blue
+  "#3b82f6", // Bright blue
+  "#1e40af", // Dark blue
+  "#ddd6fe", // Light purple
+  "#7c3aed", // Dark purple
+  "#fbcfe8", // Light pink
+];
+
+const isDarkColor = (color: string): boolean => {
+  const darkColors = ["#1e40af", "#1e3a8a", "#312e81", "#4c1d95", "#831843", "#7f1d1d", "#dc2626", "#b91c1c", "#991b1b", "#7c3aed", "#6d28d9", "#5b21b6", "#3b82f6", "#2563eb", "#ef4444"];
+  return darkColors.includes(color.toLowerCase());
+};
+
+const DEFAULT_STATUS_OPTIONS: ColumnOption[] = [
+  { label: "Active", color: "#bbf7d0" },
+  { label: "Liquidated", color: "#fef08a" },
+  { label: "Under Investigation", color: "#dc2626" },
+  { label: "Closed", color: "#e5e7eb" },
+];
+
+const DEFAULT_RISK_OPTIONS: ColumnOption[] = [
+  { label: "Low", color: "#bbf7d0" },
+  { label: "Medium", color: "#fef08a" },
+  { label: "High", color: "#fed7aa" },
+  { label: "Critical", color: "#dc2626" },
+];
 
 const STORAGE_KEY = "companies-visible-columns";
 const COLUMN_LABELS_KEY = "companies-column-labels";
@@ -71,12 +107,12 @@ export default function CompaniesPage() {
   });
   
   // Custom options for editable columns
-  const [statusOptions, setStatusOptions] = useState<string[]>(() => {
+  const [statusOptions, setStatusOptions] = useState<ColumnOption[]>(() => {
     const saved = localStorage.getItem(STATUS_OPTIONS_KEY);
     return saved ? JSON.parse(saved) : DEFAULT_STATUS_OPTIONS;
   });
   
-  const [riskOptions, setRiskOptions] = useState<string[]>(() => {
+  const [riskOptions, setRiskOptions] = useState<ColumnOption[]>(() => {
     const saved = localStorage.getItem(RISK_OPTIONS_KEY);
     return saved ? JSON.parse(saved) : DEFAULT_RISK_OPTIONS;
   });
@@ -84,7 +120,7 @@ export default function CompaniesPage() {
   // Edit dialogs
   const [editColumnDialog, setEditColumnDialog] = useState<{ open: boolean; column: ColumnKey | null }>({ open: false, column: null });
   const [editColumnName, setEditColumnName] = useState("");
-  const [editColumnOptions, setEditColumnOptions] = useState<string[]>([]);
+  const [editColumnOptions, setEditColumnOptions] = useState<ColumnOption[]>([]);
   const [newOptionInput, setNewOptionInput] = useState("");
   
   const queryClient = useQueryClient();
@@ -168,14 +204,20 @@ export default function CompaniesPage() {
   };
   
   const addOption = () => {
-    if (newOptionInput.trim() && !editColumnOptions.includes(newOptionInput.trim())) {
-      setEditColumnOptions([...editColumnOptions, newOptionInput.trim()]);
+    if (newOptionInput.trim() && !editColumnOptions.some(o => o.label === newOptionInput.trim())) {
+      setEditColumnOptions([...editColumnOptions, { label: newOptionInput.trim(), color: "#e5e7eb" }]);
       setNewOptionInput("");
     }
   };
   
-  const removeOption = (option: string) => {
-    setEditColumnOptions(editColumnOptions.filter(o => o !== option));
+  const removeOption = (label: string) => {
+    setEditColumnOptions(editColumnOptions.filter(o => o.label !== label));
+  };
+
+  const updateOptionColor = (label: string, color: string) => {
+    setEditColumnOptions(editColumnOptions.map(o => 
+      o.label === label ? { ...o, color } : o
+    ));
   };
 
   const { data: companies, isLoading } = useQuery({
@@ -215,33 +257,40 @@ export default function CompaniesPage() {
   );
 
   const getStatusBadge = (status: string | null) => {
-    switch (status) {
-      case "Active":
-        return <Badge className="bg-green-50 text-green-700 border border-green-200 hover:bg-green-50"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>;
-      case "Liquidated":
-        return <Badge className="bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-50"><AlertTriangle className="h-3 w-3 mr-1" />Liquidated</Badge>;
-      case "Under Investigation":
-        return <Badge className="bg-red-50 text-red-700 border border-red-200 hover:bg-red-50"><AlertCircle className="h-3 w-3 mr-1" />Investigation</Badge>;
-      case "Closed":
-        return <Badge className="bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-100">Closed</Badge>;
-      default:
-        return <Badge className="bg-green-50 text-green-700 border border-green-200 hover:bg-green-50"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>;
+    const option = statusOptions.find(o => o.label === status);
+    if (option) {
+      return (
+        <Badge 
+          style={{ 
+            backgroundColor: option.color,
+            color: isDarkColor(option.color) ? '#ffffff' : '#000000',
+            borderColor: option.color
+          }}
+        >
+          {option.label}
+        </Badge>
+      );
     }
+    return <Badge className="bg-slate-100 text-slate-600">{status || "Unknown"}</Badge>;
   };
 
   const getRiskBadge = (risk: string | null) => {
-    switch (risk) {
-      case "Low":
-        return <Badge variant="outline" className="border-green-300 text-green-700 bg-green-50/50">Low</Badge>;
-      case "Medium":
-        return <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50/50">Medium</Badge>;
-      case "High":
-        return <Badge variant="outline" className="border-orange-300 text-orange-700 bg-orange-50/50"><AlertCircle className="h-3 w-3 mr-1" />High</Badge>;
-      case "Critical":
-        return <Badge variant="outline" className="border-red-400 text-red-700 bg-red-50"><AlertCircle className="h-3 w-3 mr-1" />Critical</Badge>;
-      default:
-        return <Badge variant="outline" className="border-green-300 text-green-700 bg-green-50/50">Low</Badge>;
+    const option = riskOptions.find(o => o.label === risk);
+    if (option) {
+      return (
+        <Badge 
+          variant="outline"
+          style={{ 
+            backgroundColor: option.color,
+            color: isDarkColor(option.color) ? '#ffffff' : '#000000',
+            borderColor: option.color
+          }}
+        >
+          {option.label}
+        </Badge>
+      );
     }
+    return <Badge variant="outline" className="bg-slate-50 text-slate-600">{risk || "Unknown"}</Badge>;
   };
 
   const visibleColumnCount = visibleColumns.length;
@@ -264,8 +313,12 @@ export default function CompaniesPage() {
             <DropdownMenuSeparator />
             <div className="px-2 py-1.5 text-xs font-medium text-slate-500">Options:</div>
             {col.options?.map((option) => (
-              <DropdownMenuItem key={option} disabled className="text-sm">
-                {option}
+              <DropdownMenuItem key={option.label} disabled className="text-sm flex items-center gap-2">
+                <span 
+                  className="w-3 h-3 rounded-full" 
+                  style={{ backgroundColor: option.color }}
+                />
+                {option.label}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -478,22 +531,52 @@ export default function CompaniesPage() {
             </div>
             
             {(editColumnDialog.column === "status" || editColumnDialog.column === "riskRating") && (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label>Options</Label>
-                <div className="flex flex-wrap gap-2 mb-2">
+                <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
                   {editColumnOptions.map((option) => (
-                    <Badge key={option} variant="secondary" className="pl-2 pr-1 py-1">
-                      {option}
-                      <button
-                        onClick={() => removeOption(option)}
-                        className="ml-1 hover:text-destructive"
+                    <div 
+                      key={option.label}
+                      className="flex items-center gap-3 p-2 rounded-lg border border-slate-200 bg-white"
+                    >
+                      {/* Preview badge */}
+                      <div 
+                        className="px-2 py-1 rounded text-xs font-medium min-w-[80px] text-center"
+                        style={{ 
+                          backgroundColor: option.color,
+                          color: isDarkColor(option.color) ? '#ffffff' : '#000000'
+                        }}
                       >
-                        <X className="h-3 w-3" />
+                        {option.label}
+                      </div>
+                      
+                      {/* Color presets */}
+                      <div className="flex gap-1 flex-wrap">
+                        {COLOR_PRESETS.map((color) => (
+                          <button
+                            key={color}
+                            type="button"
+                            onClick={() => updateOptionColor(option.label, color)}
+                            className={`w-5 h-5 rounded-full border-2 transition-all ${
+                              option.color === color 
+                                ? 'border-slate-900 scale-110' 
+                                : 'border-transparent hover:scale-105'
+                            }`}
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </div>
+                      
+                      <button
+                        onClick={() => removeOption(option.label)}
+                        className="ml-auto text-slate-400 hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
                       </button>
-                    </Badge>
+                    </div>
                   ))}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 mt-3">
                   <Input
                     value={newOptionInput}
                     onChange={(e) => setNewOptionInput(e.target.value)}
