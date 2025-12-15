@@ -108,19 +108,22 @@ interface ColumnConfig {
 
 const CUSTOM_DOC_COLUMNS_KEY = "company-doc-custom-columns";
 const DOC_CUSTOM_DATA_KEY = "company-doc-custom-data";
+const FOLDER_CATEGORY_OPTIONS_KEY = "company-folder-category-options";
+
+const DEFAULT_CATEGORY_OPTIONS: ColumnOption[] = [
+  { label: "Invoice", color: "#22c55e" },
+  { label: "Contract", color: "#3b82f6" },
+  { label: "Proof", color: "#8b5cf6" },
+  { label: "Expense", color: "#f59e0b" },
+  { label: "Legal", color: "#ef4444" },
+  { label: "Report", color: "#06b6d4" },
+  { label: "Other", color: "#6b7280" },
+];
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "name", label: "File", visible: true, required: true },
   { id: "docDate", label: "Date", visible: true },
-  { id: "category", label: "Category", visible: true, dbField: "document_type", isBuiltIn: true, options: [
-    { label: "Invoice", color: "#f97316" },
-    { label: "Contract", color: "#3b82f6" },
-    { label: "Proof", color: "#8b5cf6" },
-    { label: "Receipt", color: "#22c55e" },
-    { label: "Legal", color: "#ef4444" },
-    { label: "Report", color: "#06b6d4" },
-    { label: "Other", color: "#6b7280" },
-  ]},
+  { id: "category", label: "Category", visible: true, dbField: "document_type", isBuiltIn: true, options: DEFAULT_CATEGORY_OPTIONS },
   { id: "value", label: "Value", visible: true },
   { id: "status", label: "Status", visible: true, dbField: "status", isBuiltIn: true, options: [
     { label: "Draft", color: "#f59e0b" },
@@ -191,12 +194,24 @@ export default function CompanyDetailPage() {
   const [metadataSheetOpen, setMetadataSheetOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   
+  // Folder-specific category options
+  const [folderCategoryOptions, setFolderCategoryOptions] = useState<Record<string, ColumnOption[]>>(() => {
+    const saved = localStorage.getItem(`${FOLDER_CATEGORY_OPTIONS_KEY}-${id}`);
+    return saved ? JSON.parse(saved) : {};
+  });
+  
   // Column management dialogs
   const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
   const [newColumnOptions, setNewColumnOptions] = useState<ColumnOption[]>([]);
   const [editColumnDialogOpen, setEditColumnDialogOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<ColumnConfig | null>(null);
+
+  // Get category options for current folder (folder-specific or default)
+  const getCurrentCategoryOptions = useCallback((): ColumnOption[] => {
+    const folderKey = currentFolderId || 'root';
+    return folderCategoryOptions[folderKey] || DEFAULT_CATEGORY_OPTIONS;
+  }, [currentFolderId, folderCategoryOptions]);
 
   // Save columns to localStorage
   useEffect(() => {
@@ -210,6 +225,10 @@ export default function CompanyDetailPage() {
   useEffect(() => {
     localStorage.setItem(`${DOC_CUSTOM_DATA_KEY}-${id}`, JSON.stringify(customData));
   }, [customData, id]);
+
+  useEffect(() => {
+    localStorage.setItem(`${FOLDER_CATEGORY_OPTIONS_KEY}-${id}`, JSON.stringify(folderCategoryOptions));
+  }, [folderCategoryOptions, id]);
 
   const { data: company, isLoading: companyLoading } = useQuery({
     queryKey: ["company", id],
@@ -409,13 +428,26 @@ export default function CompanyDetailPage() {
   };
 
   const openEditColumnDialog = (column: ColumnConfig) => {
-    setEditingColumn({ ...column });
+    // For category column, use folder-specific options
+    if (column.id === 'category') {
+      setEditingColumn({ ...column, options: getCurrentCategoryOptions() });
+    } else {
+      setEditingColumn({ ...column });
+    }
     setEditColumnDialogOpen(true);
   };
 
   const saveColumnSettings = () => {
     if (!editingColumn) return;
-    if (editingColumn.isBuiltIn) {
+    
+    // For category column, save to folder-specific options
+    if (editingColumn.id === 'category') {
+      const folderKey = currentFolderId || 'root';
+      setFolderCategoryOptions(prev => ({
+        ...prev,
+        [folderKey]: editingColumn.options || DEFAULT_CATEGORY_OPTIONS
+      }));
+    } else if (editingColumn.isBuiltIn) {
       setColumns(columns.map(c => c.id === editingColumn.id ? editingColumn : c));
     } else {
       setCustomColumns(customColumns.map(c => c.id === editingColumn.id ? editingColumn : c));
@@ -472,7 +504,9 @@ export default function CompanyDetailPage() {
 
   const renderCellDropdown = (doc: any, column: ColumnConfig) => {
     const value = getColumnValue(doc, column);
-    const option = column.options?.find(o => o.label === value);
+    // Use folder-specific options for category column
+    const options = column.id === 'category' ? getCurrentCategoryOptions() : column.options;
+    const option = options?.find(o => o.label === value);
     
     return (
       <DropdownMenu>
@@ -496,7 +530,7 @@ export default function CompanyDetailPage() {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
-          {column.options?.map((opt) => (
+          {options?.map((opt) => (
             <DropdownMenuItem
               key={opt.label}
               onClick={() => {
@@ -1667,7 +1701,14 @@ export default function CompanyDetailPage() {
       <Dialog open={editColumnDialogOpen} onOpenChange={setEditColumnDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Column: {editingColumn?.label}</DialogTitle>
+            <DialogTitle>
+              Edit Column: {editingColumn?.label}
+              {editingColumn?.id === 'category' && (
+                <span className="text-xs font-normal text-muted-foreground ml-2">
+                  (for this folder)
+                </span>
+              )}
+            </DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
             {!editingColumn?.isBuiltIn && (
