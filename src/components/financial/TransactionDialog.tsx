@@ -162,13 +162,27 @@ export default function TransactionDialog({
     isPaymentMethodUserChange.current = false;
     
     if (transaction) {
-      reset({
-        ...transaction,
+      // Only extract fields we need, avoiding undefined values propagation
+      const safeTransaction = {
+        date: transaction.date || new Date().toISOString().split('T')[0],
+        type: transaction.type || 'expense',
+        description: transaction.description || '',
+        entity_name: transaction.entity_name || '',
+        amount_net: transaction.amount_net ?? 0,
+        vat_rate: transaction.vat_rate ?? 23,
+        vat_amount: transaction.vat_amount ?? 0,
+        total_amount: transaction.total_amount ?? 0,
+        payment_method: transaction.payment_method || 'bank_transfer',
+        invoice_number: transaction.invoice_number || '',
+        notes: transaction.notes || '',
+        project_id: transaction.project_id || null,
+        category_id: transaction.category_id || '',
+        bank_account_id: transaction.bank_account_id || '',
         company_id: transaction.company_id || companyId,
-        category_id: transaction.category_id || "",
-        payment_method: transaction.payment_method || "bank_transfer",
-        bank_account_id: transaction.bank_account_id || "",
-      });
+        category: transaction.category || 'other',
+        subcategory: transaction.subcategory || null,
+      };
+      reset(safeTransaction);
       setExistingAttachment(transaction.invoice_file_url || null);
       setNewFiles([]);
     } else {
