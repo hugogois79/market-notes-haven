@@ -43,6 +43,7 @@ export default function DocumentDropZone({ companyId }: DocumentDropZoneProps) {
   const [prefilledTransaction, setPrefilledTransaction] = useState<any>(null);
   const [loanDialogOpen, setLoanDialogOpen] = useState(false);
   const [prefilledLoan, setPrefilledLoan] = useState<any>(null);
+  const [loanAttachmentUrl, setLoanAttachmentUrl] = useState<string | null>(null);
   // Fetch expense projects to match project name from filename
   const { data: expenseProjects } = useQuery({
     queryKey: ["expense-projects"],
@@ -149,10 +150,33 @@ export default function DocumentDropZone({ companyId }: DocumentDropZoneProps) {
     return partialMatch || null;
   };
 
-  const handleCreateLoan = () => {
-    if (!analysis || !companyId) return;
+  const handleCreateLoan = async () => {
+    if (!analysis || !companyId || !uploadedFile) return;
     
     const extracted = analysis.extractedData;
+    
+    // Upload the file first
+    let attachmentUrl: string | null = null;
+    try {
+      const fileExt = uploadedFile.name.split('.').pop();
+      const sanitizedName = uploadedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = `loans/${crypto.randomUUID().slice(0, 8)}_${sanitizedName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('attachments')
+        .upload(filePath, uploadedFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('attachments')
+        .getPublicUrl(filePath);
+      
+      attachmentUrl = urlData.publicUrl;
+    } catch (error) {
+      console.error("Error uploading file for loan:", error);
+      toast.error("Erro ao carregar ficheiro");
+    }
     
     // Try to match entity name to a company (lender)
     const entityName = extracted.entityName || extracted.lender || '';
@@ -174,6 +198,7 @@ export default function DocumentDropZone({ companyId }: DocumentDropZoneProps) {
       description: `Transferência de ${entityName} - ${fileName}`,
     };
 
+    setLoanAttachmentUrl(attachmentUrl);
     setPrefilledLoan(loanData);
     setLoanDialogOpen(true);
   };
@@ -191,6 +216,7 @@ export default function DocumentDropZone({ companyId }: DocumentDropZoneProps) {
     setLoanDialogOpen(open);
     if (!open) {
       setPrefilledLoan(null);
+      setLoanAttachmentUrl(null);
       resetAnalysis();
     }
   };
@@ -533,6 +559,7 @@ Note: This is an Excel spreadsheet. Please analyze based on the filename.`;
           onOpenChange={handleLoanDialogClose}
           companyId={companyId}
           loan={prefilledLoan}
+          initialAttachmentUrl={loanAttachmentUrl}
         />
       )}
     </div>
