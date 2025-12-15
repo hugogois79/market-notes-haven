@@ -333,13 +333,17 @@ export default function TransactionDialog({
         subcategory: subcategory || null,
       };
       
-      console.log('Transaction data to save:', transactionData);
 
       if (transaction) {
+        const transactionId = toUuidOrNull(transaction.id);
+        if (!transactionId) {
+          throw new Error("ID do movimento inválido");
+        }
+
         const { error } = await supabase
           .from("financial_transactions")
           .update(transactionData)
-          .eq("id", transaction.id);
+          .eq("id", transactionId);
         
         if (error) throw error;
       } else {
