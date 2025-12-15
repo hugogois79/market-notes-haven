@@ -28,8 +28,8 @@ interface DocumentUploadDialogProps {
   folderId?: string | null;
 }
 
-const DOCUMENT_TYPES = ["Invoice", "Contract", "Proof", "Receipt", "Legal", "Report", "Other"];
-const DOCUMENT_STATUSES = ["Draft", "Final", "Filed", "Archived"];
+const DOCUMENT_TYPES = ["Invoice", "Contract", "Receipt", "Legal", "Report", "Statement", "Certificate", "Correspondence", "Proof", "Other"];
+const DOCUMENT_STATUSES = ["Draft", "Under Review", "Final", "Filed"];
 
 export default function DocumentUploadDialog({
   open,
@@ -232,8 +232,9 @@ export default function DocumentUploadDialog({
           <Button 
             onClick={() => uploadMutation.mutate()}
             disabled={!file || isUploading}
+            className="bg-blue-600 hover:bg-blue-700"
           >
-            {isUploading ? "Uploading..." : "Upload"}
+            {isUploading ? "Uploading..." : "Upload Document"}
           </Button>
         </div>
       </DialogContent>

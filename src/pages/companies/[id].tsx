@@ -32,8 +32,11 @@ import {
   ChevronRight,
   Columns,
   Tag,
-  X
+  X,
+  Edit3,
+  Calendar
 } from "lucide-react";
+import DocumentMetadataSheet from "@/components/companies/DocumentMetadataSheet";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -83,7 +86,7 @@ import { cn } from "@/lib/utils";
 const AVAILABLE_TAGS = ["Important", "Urgent", "Review", "Archive", "Legal", "Finance", "Contract", "Invoice", "Receipt", "Other"];
 
 const DOCUMENT_TYPES = ["All", "Invoice", "Contract", "Proof", "Receipt", "Legal", "Report", "Other"];
-const DOCUMENT_STATUSES = ["All", "Draft", "Final", "Filed", "Archived"];
+const DOCUMENT_STATUSES = ["All", "Draft", "Under Review", "Final", "Filed"];
 
 type SortField = "name" | "updated_at" | "file_size" | "document_type" | "status";
 type SortDirection = "asc" | "desc";
@@ -96,14 +99,14 @@ interface ColumnConfig {
 }
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
-  { id: "name", label: "Name", visible: true, required: true },
-  { id: "modified", label: "Modified", visible: true },
-  { id: "modifiedBy", label: "Modified By", visible: true },
-  { id: "size", label: "Size", visible: false },
-  { id: "type", label: "Document Type", visible: true },
+  { id: "name", label: "File", visible: true, required: true },
+  { id: "docDate", label: "Date", visible: true },
+  { id: "category", label: "Category", visible: true },
+  { id: "value", label: "Value", visible: true },
   { id: "status", label: "Status", visible: true },
-  { id: "value", label: "Financial Value", visible: false },
   { id: "tags", label: "Tags", visible: true },
+  { id: "modified", label: "Modified", visible: false },
+  { id: "size", label: "Size", visible: false },
 ];
 
 export default function CompanyDetailPage() {
@@ -129,6 +132,8 @@ export default function CompanyDetailPage() {
   });
   const [newTagInput, setNewTagInput] = useState("");
   const [tagPopoverOpen, setTagPopoverOpen] = useState<string | null>(null);
+  const [metadataSheetOpen, setMetadataSheetOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
 
   // Save columns to localStorage
   useEffect(() => {
@@ -427,14 +432,14 @@ export default function CompanyDetailPage() {
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      Draft: "bg-amber-100 text-amber-800 border-amber-200",
-      Final: "bg-green-100 text-green-800 border-green-200",
-      Filed: "bg-blue-100 text-blue-800 border-blue-200",
-      Archived: "bg-slate-100 text-slate-700 border-slate-200",
+      Draft: "bg-amber-50 text-amber-700 border-amber-200",
+      "Under Review": "bg-blue-50 text-blue-700 border-blue-200",
+      Final: "bg-green-50 text-green-700 border-green-200",
+      Filed: "bg-slate-100 text-slate-600 border-slate-200",
     };
     return (
       <span className={cn(
-        "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border",
+        "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border",
         styles[status] || styles.Draft
       )}>
         {status}
@@ -567,7 +572,7 @@ export default function CompanyDetailPage() {
               <div className="flex items-center gap-1">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" className="h-8 gap-1">
+                    <Button size="sm" className="h-8 gap-1 bg-blue-600 hover:bg-blue-700">
                       <Plus className="h-4 w-4" />
                       New
                       <ChevronDown className="h-3 w-3" />
@@ -773,56 +778,56 @@ export default function CompanyDetailPage() {
           </div>
 
           {/* SharePoint-style Dense Data Grid */}
-          <div className="bg-background border rounded-b-lg overflow-hidden">
+          <div className="bg-background border border-slate-200 rounded-b-lg overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-muted/30">
-                    <th className="w-10 px-3 py-2">
+                  <tr className="border-b bg-slate-50">
+                    <th className="w-10 px-3 py-2.5">
                       <Checkbox 
                         checked={selectedDocs.size === filteredDocuments?.length && filteredDocuments?.length > 0}
                         onCheckedChange={toggleSelectAll}
                       />
                     </th>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide">
-                      <SortHeader field="name">Name</SortHeader>
+                    <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider">
+                      <SortHeader field="name">File</SortHeader>
                     </th>
-                    {isColumnVisible("modified") && (
-                      <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-32">
-                        <SortHeader field="updated_at">Modified</SortHeader>
+                    {isColumnVisible("docDate") && (
+                      <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
+                        Date
                       </th>
                     )}
-                    {isColumnVisible("modifiedBy") && (
-                      <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-36">
-                        Modified By
-                      </th>
-                    )}
-                    {isColumnVisible("size") && (
-                      <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-24">
-                        <SortHeader field="file_size">Size</SortHeader>
-                      </th>
-                    )}
-                    {isColumnVisible("type") && (
-                      <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-28">
-                        <SortHeader field="document_type">Type</SortHeader>
-                      </th>
-                    )}
-                    {isColumnVisible("status") && (
-                      <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-24">
-                        <SortHeader field="status">Status</SortHeader>
+                    {isColumnVisible("category") && (
+                      <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
+                        <SortHeader field="document_type">Category</SortHeader>
                       </th>
                     )}
                     {isColumnVisible("value") && (
-                      <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-28">
+                      <th className="text-right px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-32">
                         Value
                       </th>
                     )}
+                    {isColumnVisible("status") && (
+                      <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
+                        <SortHeader field="status">Status</SortHeader>
+                      </th>
+                    )}
                     {isColumnVisible("tags") && (
-                      <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-40">
+                      <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-40">
                         Tags
                       </th>
                     )}
-                    <th className="w-10 px-3 py-2"></th>
+                    {isColumnVisible("modified") && (
+                      <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
+                        <SortHeader field="updated_at">Modified</SortHeader>
+                      </th>
+                    )}
+                    {isColumnVisible("size") && (
+                      <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-20">
+                        <SortHeader field="file_size">Size</SortHeader>
+                      </th>
+                    )}
+                    <th className="w-20 px-3 py-2.5"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -905,88 +910,77 @@ export default function CompanyDetailPage() {
                       <tr 
                         key={doc.id} 
                         className={cn(
-                          "border-b border-border/50 hover:bg-muted/50 transition-colors",
-                          selectedDocs.has(doc.id) && "bg-primary/5"
+                          "border-b border-slate-100 hover:bg-slate-50/80 transition-colors group",
+                          selectedDocs.has(doc.id) && "bg-blue-50/50"
                         )}
                       >
-                        <td className="px-3 py-1.5">
+                        <td className="px-3 py-2">
                           <Checkbox 
                             checked={selectedDocs.has(doc.id)}
                             onCheckedChange={() => toggleSelect(doc.id)}
                           />
                         </td>
-                        <td className="px-3 py-1.5">
+                        <td className="px-3 py-2">
                           <div className="flex items-center gap-2">
                             {getFileIcon(doc.mime_type, doc.name)}
                             <button 
                               onClick={() => handleDownload(doc)}
-                              className="font-medium text-primary hover:underline truncate max-w-[280px]"
+                              className="font-medium text-blue-600 hover:text-blue-700 hover:underline truncate max-w-[280px] text-sm"
                             >
                               {doc.name}
                             </button>
                           </div>
                         </td>
-                        {isColumnVisible("modified") && (
-                          <td className="px-3 py-1.5 text-muted-foreground">
-                            {formatModifiedDate(doc.updated_at)}
+                        {isColumnVisible("docDate") && (
+                          <td className="px-3 py-2 text-slate-600 text-sm tabular-nums">
+                            {doc.created_at ? format(new Date(doc.created_at), "dd/MM/yyyy") : "—"}
                           </td>
                         )}
-                        {isColumnVisible("modifiedBy") && (
-                          <td className="px-3 py-1.5">
-                            <div className="flex items-center gap-2">
-                              <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
-                                <User className="h-3 w-3 text-muted-foreground" />
-                              </div>
-                              <span className="text-muted-foreground text-xs">System</span>
-                            </div>
-                          </td>
-                        )}
-                        {isColumnVisible("size") && (
-                          <td className="px-3 py-1.5 text-muted-foreground">
-                            {formatFileSize(doc.file_size)}
-                          </td>
-                        )}
-                        {isColumnVisible("type") && (
-                          <td className="px-3 py-1.5">
-                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                              {doc.document_type || "Other"}
-                            </span>
-                          </td>
-                        )}
-                        {isColumnVisible("status") && (
-                          <td className="px-3 py-1.5">
-                            {getStatusBadge(doc.status || "Draft")}
+                        {isColumnVisible("category") && (
+                          <td className="px-3 py-2">
+                            {doc.document_type ? (
+                              <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                                {doc.document_type}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 text-xs">—</span>
+                            )}
                           </td>
                         )}
                         {isColumnVisible("value") && (
-                          <td className="px-3 py-1.5 font-mono text-xs">
-                            {formatCurrency(doc.financial_value)}
+                          <td className="px-3 py-2 text-right">
+                            {doc.financial_value ? (
+                              <span className="font-mono text-sm font-medium text-slate-800">
+                                {formatCurrency(doc.financial_value)}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 text-xs">—</span>
+                            )}
+                          </td>
+                        )}
+                        {isColumnVisible("status") && (
+                          <td className="px-3 py-2">
+                            {getStatusBadge(doc.status || "Draft")}
                           </td>
                         )}
                         {isColumnVisible("tags") && (
                           <ContextMenu>
                             <ContextMenuTrigger asChild>
-                              <td className="px-3 py-1.5 cursor-context-menu">
+                              <td className="px-3 py-2 cursor-context-menu">
                                 <div className="flex gap-1 flex-wrap min-h-[20px]">
-                                  {doc.tags?.map((tag: string, i: number) => (
+                                  {doc.tags?.slice(0, 2).map((tag: string, i: number) => (
                                     <span 
                                       key={i} 
-                                      className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded inline-flex items-center gap-1 group"
+                                      className="text-xs text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded"
                                     >
                                       {tag}
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleRemoveTag(doc.id, doc.tags, tag);
-                                        }}
-                                        className="opacity-0 group-hover:opacity-100 hover:text-destructive"
-                                      >
-                                        <X className="h-3 w-3" />
-                                      </button>
                                     </span>
                                   ))}
+                                  {doc.tags && doc.tags.length > 2 && (
+                                    <span className="text-xs text-slate-500">+{doc.tags.length - 2}</span>
+                                  )}
                                   {(!doc.tags || doc.tags.length === 0) && (
-                                    <span className="text-xs text-muted-foreground/50 italic">Right-click to add</span>
+                                    <span className="text-xs text-slate-400 italic opacity-0 group-hover:opacity-100">+ Add</span>
                                   )}
                                 </div>
                               </td>
@@ -1047,32 +1041,62 @@ export default function CompanyDetailPage() {
                             </ContextMenuContent>
                           </ContextMenu>
                         )}
-                        <td className="px-3 py-1.5">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleDownload(doc)}>
-                                <Download className="h-4 w-4 mr-2" />
-                                Download
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                className="text-destructive"
-                                onClick={() => {
-                                  if (confirm("Delete this document?")) {
-                                    deleteMutation.mutate([doc.id]);
-                                  }
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                        {isColumnVisible("modified") && (
+                          <td className="px-3 py-2 text-slate-500 text-sm">
+                            {formatModifiedDate(doc.updated_at)}
+                          </td>
+                        )}
+                        {isColumnVisible("size") && (
+                          <td className="px-3 py-2 text-slate-500 text-sm tabular-nums">
+                            {formatFileSize(doc.file_size)}
+                          </td>
+                        )}
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 opacity-0 group-hover:opacity-100"
+                              onClick={() => {
+                                setSelectedDocument(doc);
+                                setMetadataSheetOpen(true);
+                              }}
+                            >
+                              <Edit3 className="h-4 w-4 text-slate-500" />
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => {
+                                  setSelectedDocument(doc);
+                                  setMetadataSheetOpen(true);
+                                }}>
+                                  <Edit3 className="h-4 w-4 mr-2" />
+                                  Edit Properties
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDownload(doc)}>
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Download
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  className="text-destructive"
+                                  onClick={() => {
+                                    if (confirm("Delete this document?")) {
+                                      deleteMutation.mutate([doc.id]);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -1211,6 +1235,13 @@ export default function CompanyDetailPage() {
         onOpenChange={setUploadDialogOpen}
         companyId={id!}
         folderId={currentFolderId}
+      />
+
+      <DocumentMetadataSheet
+        open={metadataSheetOpen}
+        onOpenChange={setMetadataSheetOpen}
+        document={selectedDocument}
+        companyId={id!}
       />
     </div>
   );
