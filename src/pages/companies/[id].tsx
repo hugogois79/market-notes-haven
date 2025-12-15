@@ -442,8 +442,8 @@ export default function CompanyDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#faf9f8]">
-      {/* SharePoint-style Header */}
-      <div className="bg-background border-b px-6 py-3">
+      {/* Breadcrumbs - Top Level */}
+      <div className="bg-background px-6 py-2 border-b">
         <Breadcrumb>
           <BreadcrumbList className="text-sm">
             <BreadcrumbItem>
@@ -504,7 +504,7 @@ export default function CompanyDetailPage() {
       </div>
 
       {/* Company Header */}
-      <div className="bg-background border-b px-6 py-4">
+      <div className="bg-background border-b px-6 py-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/companies")} className="h-8 w-8">
             <ArrowLeft className="h-4 w-4" />
