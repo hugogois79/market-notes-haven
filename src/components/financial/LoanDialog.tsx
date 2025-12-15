@@ -56,14 +56,20 @@ export default function LoanDialog({
     },
   });
 
+  const isEdit = Boolean(loan?.id);
+
   useEffect(() => {
     if (loan) {
+      // If `loan` has no `id`, treat it as prefill data for a new loan
       reset({
+        start_date: new Date().toISOString().split('T')[0],
+        status: 'active',
+        interest_rate: 0,
         ...loan,
-        lending_company_id: loan.lending_company_id,
-        borrowing_company_id: loan.borrowing_company_id,
+        lending_company_id: loan.lending_company_id || '',
+        borrowing_company_id: loan.borrowing_company_id || '',
       });
-      setAttachmentUrl(loan.attachment_url || null);
+      setAttachmentUrl(loan.attachment_url || initialAttachmentUrl || null);
     } else {
       reset({
         start_date: new Date().toISOString().split('T')[0],
@@ -163,7 +169,7 @@ export default function LoanDialog({
         attachment_url: attachmentUrl,
       };
 
-      if (loan) {
+      if (isEdit) {
         const { error } = await supabase
           .from("company_loans")
           .update(loanData)
@@ -181,7 +187,7 @@ export default function LoanDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-loans", companyId] });
       queryClient.invalidateQueries({ queryKey: ["all-loans"] });
-      toast.success(loan ? "Empréstimo atualizado" : "Empréstimo criado");
+      toast.success(isEdit ? "Empréstimo atualizado" : "Empréstimo criado");
       onOpenChange(false);
       reset();
       setAttachmentUrl(null);
@@ -196,7 +202,7 @@ export default function LoanDialog({
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {loan ? "Editar Empréstimo" : "Novo Empréstimo"}
+            {isEdit ? "Editar Empréstimo" : "Novo Empréstimo"}
           </DialogTitle>
         </DialogHeader>
 
