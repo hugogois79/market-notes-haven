@@ -91,23 +91,57 @@ const DOCUMENT_STATUSES = ["All", "Draft", "Under Review", "Final", "Filed"];
 type SortField = "name" | "updated_at" | "file_size" | "document_type" | "status";
 type SortDirection = "asc" | "desc";
 
+interface ColumnOption {
+  label: string;
+  color: string;
+}
+
 interface ColumnConfig {
   id: string;
   label: string;
   visible: boolean;
   required?: boolean;
+  dbField?: string;
+  options?: ColumnOption[];
+  isBuiltIn?: boolean;
 }
+
+const CUSTOM_DOC_COLUMNS_KEY = "company-doc-custom-columns";
+const DOC_CUSTOM_DATA_KEY = "company-doc-custom-data";
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "name", label: "File", visible: true, required: true },
   { id: "docDate", label: "Date", visible: true },
-  { id: "category", label: "Category", visible: true },
+  { id: "category", label: "Category", visible: true, dbField: "document_type", isBuiltIn: true, options: [
+    { label: "Invoice", color: "#f97316" },
+    { label: "Contract", color: "#3b82f6" },
+    { label: "Proof", color: "#8b5cf6" },
+    { label: "Receipt", color: "#22c55e" },
+    { label: "Legal", color: "#ef4444" },
+    { label: "Report", color: "#06b6d4" },
+    { label: "Other", color: "#6b7280" },
+  ]},
   { id: "value", label: "Value", visible: true },
-  { id: "status", label: "Status", visible: true },
+  { id: "status", label: "Status", visible: true, dbField: "status", isBuiltIn: true, options: [
+    { label: "Draft", color: "#f59e0b" },
+    { label: "Under Review", color: "#3b82f6" },
+    { label: "Final", color: "#22c55e" },
+    { label: "Filed", color: "#6b7280" },
+  ]},
   { id: "tags", label: "Tags", visible: true },
   { id: "modified", label: "Modified", visible: false },
   { id: "size", label: "Size", visible: false },
 ];
+
+const isDarkColor = (color: string | undefined): boolean => {
+  if (!color) return false;
+  const hex = color.replace("#", "");
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance < 0.5;
+};
 
 export default function CompanyDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -128,17 +162,52 @@ export default function CompanyDetailPage() {
   const [newFolderName, setNewFolderName] = useState("");
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     const saved = localStorage.getItem(`company-columns-${id}`);
-    return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Merge with defaults to ensure all columns exist with options
+        return DEFAULT_COLUMNS.map(def => {
+          const saved = parsed.find((p: ColumnConfig) => p.id === def.id);
+          return saved ? { ...def, ...saved, options: saved.options || def.options } : def;
+        });
+      } catch {
+        return DEFAULT_COLUMNS;
+      }
+    }
+    return DEFAULT_COLUMNS;
+  });
+  const [customColumns, setCustomColumns] = useState<ColumnConfig[]>(() => {
+    const saved = localStorage.getItem(`${CUSTOM_DOC_COLUMNS_KEY}-${id}`);
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [customData, setCustomData] = useState<Record<string, Record<string, string>>>(() => {
+    const saved = localStorage.getItem(`${DOC_CUSTOM_DATA_KEY}-${id}`);
+    return saved ? JSON.parse(saved) : {};
   });
   const [newTagInput, setNewTagInput] = useState("");
   const [tagPopoverOpen, setTagPopoverOpen] = useState<string | null>(null);
   const [metadataSheetOpen, setMetadataSheetOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  
+  // Column management dialogs
+  const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false);
+  const [newColumnName, setNewColumnName] = useState("");
+  const [newColumnOptions, setNewColumnOptions] = useState<ColumnOption[]>([]);
+  const [editColumnDialogOpen, setEditColumnDialogOpen] = useState(false);
+  const [editingColumn, setEditingColumn] = useState<ColumnConfig | null>(null);
 
   // Save columns to localStorage
   useEffect(() => {
     localStorage.setItem(`company-columns-${id}`, JSON.stringify(columns));
   }, [columns, id]);
+
+  useEffect(() => {
+    localStorage.setItem(`${CUSTOM_DOC_COLUMNS_KEY}-${id}`, JSON.stringify(customColumns));
+  }, [customColumns, id]);
+
+  useEffect(() => {
+    localStorage.setItem(`${DOC_CUSTOM_DATA_KEY}-${id}`, JSON.stringify(customData));
+  }, [customData, id]);
 
   const { data: company, isLoading: companyLoading } = useQuery({
     queryKey: ["company", id],
@@ -300,6 +369,191 @@ export default function CompanyDetailPage() {
       toast.error("Error: " + error.message);
     },
   });
+
+  const updateDocFieldMutation = useMutation({
+    mutationFn: async ({ docId, field, value }: { docId: string; field: string; value: string }) => {
+      const { error } = await supabase
+        .from("company_documents")
+        .update({ [field]: value })
+        .eq("id", docId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-documents", id] });
+      toast.success("Updated");
+    },
+    onError: (error) => {
+      toast.error("Error: " + error.message);
+    },
+  });
+
+  // Column management functions
+  const addNewColumn = () => {
+    if (!newColumnName.trim()) return;
+    const newColumn: ColumnConfig = {
+      id: `custom_${Date.now()}`,
+      label: newColumnName.trim(),
+      visible: true,
+      isBuiltIn: false,
+      options: newColumnOptions.length > 0 ? newColumnOptions : [
+        { label: "Option 1", color: "#3b82f6" },
+        { label: "Option 2", color: "#22c55e" },
+      ],
+    };
+    setCustomColumns([...customColumns, newColumn]);
+    setNewColumnName("");
+    setNewColumnOptions([]);
+    setAddColumnDialogOpen(false);
+  };
+
+  const openEditColumnDialog = (column: ColumnConfig) => {
+    setEditingColumn({ ...column });
+    setEditColumnDialogOpen(true);
+  };
+
+  const saveColumnSettings = () => {
+    if (!editingColumn) return;
+    if (editingColumn.isBuiltIn) {
+      setColumns(columns.map(c => c.id === editingColumn.id ? editingColumn : c));
+    } else {
+      setCustomColumns(customColumns.map(c => c.id === editingColumn.id ? editingColumn : c));
+    }
+    setEditColumnDialogOpen(false);
+    setEditingColumn(null);
+  };
+
+  const deleteColumn = (columnId: string) => {
+    setCustomColumns(customColumns.filter(c => c.id !== columnId));
+    const newData = { ...customData };
+    Object.keys(newData).forEach(docId => {
+      delete newData[docId][columnId];
+    });
+    setCustomData(newData);
+  };
+
+  const addOption = () => {
+    if (editingColumn) {
+      const newOptions = [...(editingColumn.options || []), { label: `Option ${(editingColumn.options?.length || 0) + 1}`, color: "#6b7280" }];
+      setEditingColumn({ ...editingColumn, options: newOptions });
+    }
+  };
+
+  const removeOption = (index: number) => {
+    if (editingColumn && editingColumn.options) {
+      const newOptions = editingColumn.options.filter((_, i) => i !== index);
+      setEditingColumn({ ...editingColumn, options: newOptions });
+    }
+  };
+
+  const updateOptionColor = (index: number, color: string) => {
+    if (editingColumn && editingColumn.options) {
+      const newOptions = [...editingColumn.options];
+      newOptions[index] = { ...newOptions[index], color };
+      setEditingColumn({ ...editingColumn, options: newOptions });
+    }
+  };
+
+  const updateOptionLabel = (index: number, label: string) => {
+    if (editingColumn && editingColumn.options) {
+      const newOptions = [...editingColumn.options];
+      newOptions[index] = { ...newOptions[index], label };
+      setEditingColumn({ ...editingColumn, options: newOptions });
+    }
+  };
+
+  const getColumnValue = (doc: any, column: ColumnConfig) => {
+    if (column.isBuiltIn && column.dbField) {
+      return doc[column.dbField] || null;
+    }
+    return customData[doc.id]?.[column.id] || null;
+  };
+
+  const renderCellDropdown = (doc: any, column: ColumnConfig) => {
+    const value = getColumnValue(doc, column);
+    const option = column.options?.find(o => o.label === value);
+    
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="cursor-pointer hover:opacity-80 transition-opacity">
+            {value ? (
+              <span 
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style={{ 
+                  backgroundColor: option?.color ? `${option.color}20` : '#e5e7eb',
+                  color: option?.color || '#374151',
+                  borderColor: option?.color ? `${option.color}40` : '#d1d5db',
+                  borderWidth: '1px'
+                }}
+              >
+                {value}
+              </span>
+            ) : (
+              <span className="text-slate-400 text-xs">—</span>
+            )}
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {column.options?.map((opt) => (
+            <DropdownMenuItem
+              key={opt.label}
+              onClick={() => {
+                if (column.isBuiltIn && column.dbField) {
+                  updateDocFieldMutation.mutate({ docId: doc.id, field: column.dbField, value: opt.label });
+                } else {
+                  setCustomData(prev => ({
+                    ...prev,
+                    [doc.id]: { ...prev[doc.id], [column.id]: opt.label }
+                  }));
+                }
+              }}
+            >
+              <span 
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style={{ 
+                  backgroundColor: `${opt.color}20`,
+                  color: opt.color,
+                }}
+              >
+                {opt.label}
+              </span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
+  const renderColumnHeader = (column: ColumnConfig, isCustom = false) => {
+    const canEdit = column.options && column.options.length > 0;
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center gap-1 hover:text-foreground transition-colors text-left w-full">
+            {column.label}
+            <ChevronDown className="h-3 w-3" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {canEdit && (
+            <DropdownMenuItem onClick={() => openEditColumnDialog(column)}>
+              <Edit3 className="h-4 w-4 mr-2" />
+              Edit Column
+            </DropdownMenuItem>
+          )}
+          {isCustom && (
+            <DropdownMenuItem 
+              className="text-destructive"
+              onClick={() => deleteColumn(column.id)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Column
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
 
   const handleAddTag = (docId: string, currentTags: string[] | null, newTag: string) => {
     const tags = currentTags || [];
@@ -799,7 +1053,7 @@ export default function CompanyDetailPage() {
                     )}
                     {isColumnVisible("category") && (
                       <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
-                        <SortHeader field="document_type">Category</SortHeader>
+                        {renderColumnHeader(columns.find(c => c.id === "category")!)}
                       </th>
                     )}
                     {isColumnVisible("value") && (
@@ -809,7 +1063,7 @@ export default function CompanyDetailPage() {
                     )}
                     {isColumnVisible("status") && (
                       <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
-                        <SortHeader field="status">Status</SortHeader>
+                        {renderColumnHeader(columns.find(c => c.id === "status")!)}
                       </th>
                     )}
                     {isColumnVisible("tags") && (
@@ -827,6 +1081,23 @@ export default function CompanyDetailPage() {
                         <SortHeader field="file_size">Size</SortHeader>
                       </th>
                     )}
+                    {/* Custom columns headers */}
+                    {customColumns.map((col) => (
+                      <th key={col.id} className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
+                        {renderColumnHeader(col, true)}
+                      </th>
+                    ))}
+                    {/* Add column button */}
+                    <th className="w-10 px-3 py-2.5">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6"
+                        onClick={() => setAddColumnDialogOpen(true)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </th>
                     <th className="w-20 px-3 py-2.5"></th>
                   </tr>
                 </thead>
@@ -938,13 +1209,7 @@ export default function CompanyDetailPage() {
                         )}
                         {isColumnVisible("category") && (
                           <td className="px-3 py-2">
-                            {doc.document_type ? (
-                              <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                                {doc.document_type}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 text-xs">—</span>
-                            )}
+                            {renderCellDropdown(doc, columns.find(c => c.id === "category")!)}
                           </td>
                         )}
                         {isColumnVisible("value") && (
@@ -960,7 +1225,7 @@ export default function CompanyDetailPage() {
                         )}
                         {isColumnVisible("status") && (
                           <td className="px-3 py-2">
-                            {getStatusBadge(doc.status || "Draft")}
+                            {renderCellDropdown(doc, columns.find(c => c.id === "status")!)}
                           </td>
                         )}
                         {isColumnVisible("tags") && (
@@ -1051,6 +1316,14 @@ export default function CompanyDetailPage() {
                             {formatFileSize(doc.file_size)}
                           </td>
                         )}
+                        {/* Custom columns cells */}
+                        {customColumns.map((col) => (
+                          <td key={col.id} className="px-3 py-2">
+                            {renderCellDropdown(doc, col)}
+                          </td>
+                        ))}
+                        {/* Empty cell for add column button */}
+                        <td className="px-3 py-2"></td>
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-1">
                             <Button 
@@ -1243,6 +1516,145 @@ export default function CompanyDetailPage() {
         document={selectedDocument}
         companyId={id!}
       />
+
+      {/* Add Column Dialog */}
+      <Dialog open={addColumnDialogOpen} onOpenChange={setAddColumnDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Custom Column</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div>
+              <Label htmlFor="columnName">Column Name</Label>
+              <Input
+                id="columnName"
+                value={newColumnName}
+                onChange={(e) => setNewColumnName(e.target.value)}
+                placeholder="Enter column name..."
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label>Options</Label>
+              <div className="space-y-2 mt-2">
+                {newColumnOptions.map((opt, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={opt.color}
+                      onChange={(e) => {
+                        const updated = [...newColumnOptions];
+                        updated[i] = { ...updated[i], color: e.target.value };
+                        setNewColumnOptions(updated);
+                      }}
+                      className="h-8 w-8 rounded border cursor-pointer"
+                    />
+                    <Input
+                      value={opt.label}
+                      onChange={(e) => {
+                        const updated = [...newColumnOptions];
+                        updated[i] = { ...updated[i], label: e.target.value };
+                        setNewColumnOptions(updated);
+                      }}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setNewColumnOptions(newColumnOptions.filter((_, idx) => idx !== i))}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setNewColumnOptions([...newColumnOptions, { label: `Option ${newColumnOptions.length + 1}`, color: "#6b7280" }])}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Option
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddColumnDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={addNewColumn} disabled={!newColumnName.trim()}>
+              Add Column
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Column Dialog */}
+      <Dialog open={editColumnDialogOpen} onOpenChange={setEditColumnDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Column: {editingColumn?.label}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            {!editingColumn?.isBuiltIn && (
+              <div>
+                <Label htmlFor="editColumnName">Column Name</Label>
+                <Input
+                  id="editColumnName"
+                  value={editingColumn?.label || ""}
+                  onChange={(e) => setEditingColumn(prev => prev ? { ...prev, label: e.target.value } : null)}
+                  className="mt-2"
+                />
+              </div>
+            )}
+            <div>
+              <Label>Options</Label>
+              <div className="space-y-2 mt-2">
+                {editingColumn?.options?.map((opt, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={opt.color}
+                      onChange={(e) => updateOptionColor(i, e.target.value)}
+                      className="h-8 w-8 rounded border cursor-pointer"
+                    />
+                    <Input
+                      value={opt.label}
+                      onChange={(e) => updateOptionLabel(i, e.target.value)}
+                      className="flex-1"
+                    />
+                    {!editingColumn?.isBuiltIn && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => removeOption(i)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {!editingColumn?.isBuiltIn && (
+                  <Button variant="outline" size="sm" onClick={addOption}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Option
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditColumnDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveColumnSettings}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
