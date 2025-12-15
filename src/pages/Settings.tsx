@@ -22,6 +22,7 @@ import {
   Trash2
 } from "lucide-react";
 import { expenseUserService, ExpenseUser } from "@/services/expenseUserService";
+import ExpenseProjectManagement from "@/components/financial/ExpenseProjectManagement";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -410,13 +411,14 @@ const Settings = () => {
       </div>
       
       <Tabs defaultValue="appearance" className="space-y-4">
-        <TabsList className="grid grid-cols-6 lg:w-[720px]">
+        <TabsList className="grid grid-cols-7 lg:w-[840px]">
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="editor">Editor</TabsTrigger>
           <TabsTrigger value="layout">Layout</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="privacy">Privacy</TabsTrigger>
           <TabsTrigger value="users">Utilizadores</TabsTrigger>
+          <TabsTrigger value="projects">Projetos</TabsTrigger>
         </TabsList>
         
         <TabsContent value="appearance" className="space-y-4">
@@ -966,6 +968,10 @@ const Settings = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="projects" className="space-y-4">
+          <ExpenseProjectManagement />
         </TabsContent>
       </Tabs>
 
