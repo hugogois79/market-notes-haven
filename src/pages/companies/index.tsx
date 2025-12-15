@@ -63,38 +63,42 @@ export default function CompaniesPage() {
   const getStatusBadge = (status: string | null) => {
     switch (status) {
       case "Active":
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>;
-      case "Liquidation":
-        return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100"><AlertTriangle className="h-3 w-3 mr-1" />Liquidation</Badge>;
-      case "Inactive":
-        return <Badge className="bg-slate-100 text-slate-800 hover:bg-slate-100">Inactive</Badge>;
+        return <Badge className="bg-green-50 text-green-700 border border-green-200 hover:bg-green-50"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>;
+      case "Liquidated":
+        return <Badge className="bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-50"><AlertTriangle className="h-3 w-3 mr-1" />Liquidated</Badge>;
+      case "Under Investigation":
+        return <Badge className="bg-red-50 text-red-700 border border-red-200 hover:bg-red-50"><AlertCircle className="h-3 w-3 mr-1" />Investigation</Badge>;
+      case "Closed":
+        return <Badge className="bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-100">Closed</Badge>;
       default:
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>;
+        return <Badge className="bg-green-50 text-green-700 border border-green-200 hover:bg-green-50"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>;
     }
   };
 
   const getRiskBadge = (risk: string | null) => {
     switch (risk) {
       case "Low":
-        return <Badge variant="outline" className="border-green-300 text-green-700">Low</Badge>;
+        return <Badge variant="outline" className="border-green-300 text-green-700 bg-green-50/50">Low</Badge>;
       case "Medium":
-        return <Badge variant="outline" className="border-amber-300 text-amber-700">Medium</Badge>;
+        return <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50/50">Medium</Badge>;
       case "High":
-        return <Badge variant="outline" className="border-red-300 text-red-700"><AlertCircle className="h-3 w-3 mr-1" />High</Badge>;
+        return <Badge variant="outline" className="border-orange-300 text-orange-700 bg-orange-50/50"><AlertCircle className="h-3 w-3 mr-1" />High</Badge>;
+      case "Critical":
+        return <Badge variant="outline" className="border-red-400 text-red-700 bg-red-50"><AlertCircle className="h-3 w-3 mr-1" />Critical</Badge>;
       default:
-        return <Badge variant="outline" className="border-green-300 text-green-700">Low</Badge>;
+        return <Badge variant="outline" className="border-green-300 text-green-700 bg-green-50/50">Low</Badge>;
     }
   };
 
   return (
-    <div className="p-6 space-y-6 bg-background min-h-screen">
+    <div className="p-6 space-y-6 bg-[#faf9f8] min-h-screen">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Companies</h1>
-          <p className="text-muted-foreground text-sm">Manage your corporate entities and assets</p>
+          <h1 className="text-2xl font-semibold text-slate-800">Companies</h1>
+          <p className="text-slate-500 text-sm">Manage corporate entities, assets and recovery dossiers</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} className="bg-primary hover:bg-primary/90">
+        <Button onClick={() => setDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
           <Plus className="h-4 w-4 mr-2" />
           New Company
         </Button>
@@ -112,16 +116,16 @@ export default function CompaniesPage() {
       </div>
 
       {/* Companies Table */}
-      <div className="border rounded-lg bg-card">
+      <div className="border border-slate-200 rounded-lg bg-white shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="font-medium">Company Name</TableHead>
-              <TableHead className="font-medium">Tax ID</TableHead>
-              <TableHead className="font-medium">Jurisdiction</TableHead>
-              <TableHead className="font-medium">Status</TableHead>
-              <TableHead className="font-medium">Risk Rating</TableHead>
-              <TableHead className="font-medium text-right">Actions</TableHead>
+            <TableRow className="bg-slate-50 border-b border-slate-200">
+              <TableHead className="font-semibold text-slate-700">Company Name</TableHead>
+              <TableHead className="font-semibold text-slate-700">Tax ID</TableHead>
+              <TableHead className="font-semibold text-slate-700">Jurisdiction</TableHead>
+              <TableHead className="font-semibold text-slate-700">Status</TableHead>
+              <TableHead className="font-semibold text-slate-700">Risk Rating</TableHead>
+              <TableHead className="font-semibold text-slate-700 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -141,7 +145,7 @@ export default function CompaniesPage() {
               filteredCompanies?.map((company) => (
                 <TableRow 
                   key={company.id} 
-                  className="cursor-pointer hover:bg-muted/50"
+                  className="cursor-pointer hover:bg-slate-50 border-b border-slate-100"
                   onClick={() => navigate(`/companies/${company.id}`)}
                 >
                   <TableCell>
