@@ -211,7 +211,13 @@ export default function LoanDialog({
             <div>
               <Label className="text-green-600 font-medium">Quem Empresta *</Label>
               <Select 
-                onValueChange={(value) => setValue("lending_company_id", value)}
+                onValueChange={(value) => {
+                  setValue("lending_company_id", value);
+                  // Clear borrowing company if it's the same as the new lending company
+                  if (watch("borrowing_company_id") === value) {
+                    setValue("borrowing_company_id", "");
+                  }
+                }}
                 value={watch("lending_company_id")}
               >
                 <SelectTrigger>
