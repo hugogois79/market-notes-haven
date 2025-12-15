@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { Upload, FileText, Loader2, CheckCircle, AlertCircle, ArrowRight } from "lucide-react";
+import { Upload, FileText, Loader2, CheckCircle, AlertCircle, ArrowRight, Handshake } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import TransactionDialog from "./TransactionDialog";
-
+import LoanDialog from "./LoanDialog";
 interface DocumentAnalysis {
   documentType: "loan" | "transaction" | "unknown";
   confidence: number;
@@ -41,7 +41,8 @@ export default function DocumentDropZone({ companyId }: DocumentDropZoneProps) {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
   const [prefilledTransaction, setPrefilledTransaction] = useState<any>(null);
-
+  const [loanDialogOpen, setLoanDialogOpen] = useState(false);
+  const [prefilledLoan, setPrefilledLoan] = useState<any>(null);
   // Fetch expense projects to match project name from filename
   const { data: expenseProjects } = useQuery({
     queryKey: ["expense-projects"],
@@ -56,6 +57,18 @@ export default function DocumentDropZone({ companyId }: DocumentDropZoneProps) {
     },
   });
 
+  // Fetch companies for loan creation
+  const { data: companies } = useQuery({
+    queryKey: ["companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
   // Extract project name from filename (looks for [PROJECT_NAME] pattern)
   const extractProjectFromFilename = (filename: string): string | null => {
     const match = filename.match(/\[([^\]]+)\]/);
@@ -116,11 +129,68 @@ export default function DocumentDropZone({ companyId }: DocumentDropZoneProps) {
     setTransactionDialogOpen(true);
   };
 
+  // Find company by name (fuzzy match)
+  const findCompanyByName = (entityName: string) => {
+    if (!companies || !entityName) return null;
+    
+    const normalizedSearch = entityName.toLowerCase().trim();
+    
+    // First try exact match
+    const exactMatch = companies.find(
+      c => c.name.toLowerCase() === normalizedSearch
+    );
+    if (exactMatch) return exactMatch;
+    
+    // Then try partial match
+    const partialMatch = companies.find(
+      c => c.name.toLowerCase().includes(normalizedSearch) ||
+           normalizedSearch.includes(c.name.toLowerCase())
+    );
+    return partialMatch || null;
+  };
+
+  const handleCreateLoan = () => {
+    if (!analysis || !companyId) return;
+    
+    const extracted = analysis.extractedData;
+    
+    // Try to match entity name to a company (lender)
+    const entityName = extracted.entityName || extracted.lender || '';
+    const lenderCompany = findCompanyByName(entityName);
+    
+    // Try to find "Sustainable Yield" company for borrower
+    const borrowerCompany = companies?.find(c => 
+      c.name.toLowerCase().includes('sustainable yield')
+    );
+
+    const loanData = {
+      lending_company_id: lenderCompany?.id || '',
+      borrowing_company_id: borrowerCompany?.id || '',
+      amount: extracted.amount || 0,
+      interest_rate: extracted.interestRate || 0,
+      start_date: extracted.date || extracted.startDate || new Date().toISOString().split('T')[0],
+      end_date: extracted.endDate || null,
+      status: 'active',
+      description: `Transferência de ${entityName} - ${fileName}`,
+    };
+
+    setPrefilledLoan(loanData);
+    setLoanDialogOpen(true);
+  };
+
   const handleDialogClose = (open: boolean) => {
     setTransactionDialogOpen(open);
     if (!open) {
       setPrefilledTransaction(null);
       // Reset analysis after dialog closes
+      resetAnalysis();
+    }
+  };
+
+  const handleLoanDialogClose = (open: boolean) => {
+    setLoanDialogOpen(open);
+    if (!open) {
+      setPrefilledLoan(null);
       resetAnalysis();
     }
   };
@@ -431,12 +501,14 @@ Note: This is an Excel spreadsheet. Please analyze based on the filename.`;
                   <ArrowRight className="mr-2 h-4 w-4" />
                   Criar Transação
                 </Button>
-                {analysis.documentType === "loan" && (
-                  <Button className="flex-1" disabled>
-                    <ArrowRight className="mr-2 h-4 w-4" />
-                    Criar Empréstimo (Em desenvolvimento)
-                  </Button>
-                )}
+                <Button 
+                  className="flex-1" 
+                  variant="outline"
+                  onClick={handleCreateLoan}
+                >
+                  <Handshake className="mr-2 h-4 w-4" />
+                  Criar Empréstimo
+                </Button>
               </div>
             )}
           </CardContent>
@@ -451,6 +523,16 @@ Note: This is an Excel spreadsheet. Please analyze based on the filename.`;
           companyId={companyId}
           transaction={prefilledTransaction}
           prefilledFile={uploadedFile}
+        />
+      )}
+
+      {/* Loan Dialog */}
+      {companyId && (
+        <LoanDialog
+          open={loanDialogOpen}
+          onOpenChange={handleLoanDialogClose}
+          companyId={companyId}
+          loan={prefilledLoan}
         />
       )}
     </div>
