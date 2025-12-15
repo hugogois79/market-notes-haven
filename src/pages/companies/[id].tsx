@@ -266,6 +266,21 @@ export default function CompanyDetailPage() {
     enabled: !!id,
   });
 
+  // Fetch ALL folders for settings
+  const { data: allFolders } = useQuery({
+    queryKey: ["company-all-folders", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("company_folders")
+        .select("*")
+        .eq("company_id", id)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
   const { data: folderPath } = useQuery({
     queryKey: ["folder-path", currentFolderId],
     queryFn: async () => {
@@ -1577,9 +1592,149 @@ export default function CompanyDetailPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="settings" className="mt-4">
+        <TabsContent value="settings" className="mt-4 space-y-6">
+          {/* Folder Categories Section */}
+          <div className="bg-background border rounded-lg p-6">
+            <h3 className="text-lg font-medium mb-4">Folder Categories</h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              Configure category options for each folder. Files within a folder will use these categories.
+            </p>
+            
+            <div className="space-y-3">
+              {/* Root folder */}
+              <div className="flex items-center justify-between py-3 px-4 border rounded-lg bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <Folder className="h-4 w-4 text-amber-500" />
+                  <div>
+                    <p className="font-medium">Root (Documents)</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(folderCategoryOptions['root'] || DEFAULT_CATEGORY_OPTIONS).length} categories
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const categoryColumn = columns.find(c => c.id === 'category');
+                    setEditingColumn({ 
+                      ...categoryColumn!, 
+                      options: folderCategoryOptions['root'] || DEFAULT_CATEGORY_OPTIONS,
+                      id: 'category-folder-root'
+                    });
+                    setEditColumnDialogOpen(true);
+                  }}
+                >
+                  <Edit3 className="h-3 w-3 mr-1" />
+                  Edit
+                </Button>
+              </div>
+              
+              {/* All folders */}
+              {allFolders?.map((folder) => (
+                <div key={folder.id} className="flex items-center justify-between py-3 px-4 border rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <Folder className="h-4 w-4 text-amber-500" />
+                    <div>
+                      <p className="font-medium">{folder.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(folderCategoryOptions[folder.id] || DEFAULT_CATEGORY_OPTIONS).length} categories
+                        {folderCategoryOptions[folder.id] && (
+                          <span className="ml-1 text-primary">(customized)</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => openEditFolderCategories(folder.id)}
+                  >
+                    <Edit3 className="h-3 w-3 mr-1" />
+                    Edit
+                  </Button>
+                </div>
+              ))}
+              
+              {(!allFolders || allFolders.length === 0) && (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No folders created yet. Create folders in the Document Library.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Custom Columns Section */}
+          <div className="bg-background border rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-medium">Custom Columns</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Add custom columns to track additional document metadata.
+                </p>
+              </div>
+              <Button size="sm" onClick={() => setAddColumnDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add Column
+              </Button>
+            </div>
+            
+            <div className="space-y-3">
+              {customColumns.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No custom columns. Click "Add Column" to create one.
+                </p>
+              ) : (
+                customColumns.map((column) => (
+                  <div key={column.id} className="flex items-center justify-between py-3 px-4 border rounded-lg bg-muted/30">
+                    <div>
+                      <p className="font-medium">{column.label}</p>
+                      <div className="flex gap-1 mt-1">
+                        {column.options?.slice(0, 4).map((opt) => (
+                          <span 
+                            key={opt.label}
+                            className="text-xs px-1.5 py-0.5 rounded"
+                            style={{ backgroundColor: `${opt.color}20`, color: opt.color }}
+                          >
+                            {opt.label}
+                          </span>
+                        ))}
+                        {(column.options?.length || 0) > 4 && (
+                          <span className="text-xs text-muted-foreground">+{(column.options?.length || 0) - 4} more</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => openEditColumnDialog(column)}
+                      >
+                        <Edit3 className="h-3 w-3 mr-1" />
+                        Edit
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => {
+                          if (confirm(`Delete column "${column.label}"?`)) {
+                            deleteColumn(column.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Column Visibility Section */}
           <div className="bg-background border rounded-lg p-6 max-w-2xl">
-            <h3 className="text-lg font-medium mb-4">Column Settings</h3>
+            <h3 className="text-lg font-medium mb-4">Column Visibility</h3>
             <p className="text-sm text-muted-foreground mb-6">
               Choose which columns to display in the Document Library grid.
             </p>
@@ -1742,7 +1897,11 @@ export default function CompanyDetailPage() {
                 <>
                   Edit Categories
                   <span className="text-xs font-normal text-muted-foreground ml-2">
-                    (for folder: {folders?.find(f => f.id === editingColumn.id.replace('category-folder-', ''))?.name})
+                    (for folder: {
+                      editingColumn.id === 'category-folder-root' 
+                        ? 'Root (Documents)' 
+                        : (allFolders?.find(f => f.id === editingColumn.id.replace('category-folder-', ''))?.name || folders?.find(f => f.id === editingColumn.id.replace('category-folder-', ''))?.name)
+                    })
                   </span>
                 </>
               ) : (
