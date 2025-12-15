@@ -86,10 +86,14 @@ export default function TransactionManagement({ companyId }: TransactionManageme
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const safeId = typeof id === "string" && uuidRegex.test(id) ? id : null;
+      if (!safeId) throw new Error("ID do movimento inválido");
+
       const { error } = await supabase
         .from("financial_transactions")
         .delete()
-        .eq("id", id);
+        .eq("id", safeId);
       
       if (error) throw error;
     },

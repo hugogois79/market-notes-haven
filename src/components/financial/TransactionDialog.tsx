@@ -334,23 +334,20 @@ export default function TransactionDialog({
       };
       
 
-      if (transaction) {
-        const transactionId = toUuidOrNull(transaction.id);
-        if (!transactionId) {
-          throw new Error("ID do movimento inválido");
-        }
+      const transactionId = transaction ? toUuidOrNull((transaction as any).id) : null;
 
+      if (transactionId) {
         const { error } = await supabase
           .from("financial_transactions")
           .update(transactionData)
           .eq("id", transactionId);
-        
+
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("financial_transactions")
           .insert(transactionData);
-        
+
         if (error) throw error;
       }
     },
