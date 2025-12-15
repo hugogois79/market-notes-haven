@@ -64,6 +64,16 @@ export default function TransactionDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isPaymentMethodUserChange = useRef(false);
 
+  const isValidUuid = (value: unknown): value is string =>
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      value
+    );
+
+  // `transaction` pode ser um movimento existente (editar) OU apenas valores pre-preenchidos (novo)
+  const isEdit = isValidUuid((transaction as any)?.id);
+
+
   // Fetch all companies for selection
   const { data: companies } = useQuery({
     queryKey: ["companies"],
@@ -160,50 +170,58 @@ export default function TransactionDialog({
   useEffect(() => {
     // Reset flag when form loads - don't clear bank account on initial payment method set
     isPaymentMethodUserChange.current = false;
-    
+
+    // `transaction` pode vir como:
+    // - edição: tem `id`
+    // - prefill: não tem `id` (ex: vindo do DocumentDropZone)
     if (transaction) {
       // Only extract fields we need, avoiding undefined values propagation
       const safeTransaction = {
-        date: transaction.date || new Date().toISOString().split('T')[0],
-        type: transaction.type || 'expense',
-        description: transaction.description || '',
-        entity_name: transaction.entity_name || '',
+        date: transaction.date || new Date().toISOString().split("T")[0],
+        type: transaction.type || "expense",
+        description: transaction.description || "",
+        entity_name: transaction.entity_name || "",
         amount_net: transaction.amount_net ?? 0,
         vat_rate: transaction.vat_rate ?? 23,
         vat_amount: transaction.vat_amount ?? 0,
         total_amount: transaction.total_amount ?? 0,
-        payment_method: transaction.payment_method || 'bank_transfer',
-        invoice_number: transaction.invoice_number || '',
-        notes: transaction.notes || '',
+        payment_method: transaction.payment_method || "bank_transfer",
+        invoice_number: transaction.invoice_number || "",
+        notes: transaction.notes || "",
         project_id: transaction.project_id || null,
-        category_id: transaction.category_id || '',
-        bank_account_id: transaction.bank_account_id || '',
+        category_id: transaction.category_id || "",
+        bank_account_id: transaction.bank_account_id || "",
         company_id: transaction.company_id || companyId,
-        category: transaction.category || 'other',
+        category: transaction.category || "other",
         subcategory: transaction.subcategory || null,
       };
+
       reset(safeTransaction);
-      setExistingAttachment(transaction.invoice_file_url || null);
-      setNewFiles([]);
+
+      if (isEdit) {
+        // edição: manter o anexo existente e não forçar ficheiro novo
+        setExistingAttachment(transaction.invoice_file_url || null);
+        setNewFiles([]);
+      } else {
+        // prefill (novo): usar o ficheiro vindo do drag-and-drop
+        setExistingAttachment(null);
+        setNewFiles(prefilledFile ? [prefilledFile] : []);
+      }
     } else {
       reset({
-        date: new Date().toISOString().split('T')[0],
-        type: 'expense',
-        category: 'other',
+        date: new Date().toISOString().split("T")[0],
+        type: "expense",
+        category: "other",
         category_id: "",
-        payment_method: 'bank_transfer',
+        payment_method: "bank_transfer",
         vat_rate: 23,
         company_id: companyId,
       });
       setExistingAttachment(null);
-      // Use prefilled file if provided
-      if (prefilledFile) {
-        setNewFiles([prefilledFile]);
-      } else {
-        setNewFiles([]);
-      }
+      setNewFiles(prefilledFile ? [prefilledFile] : []);
     }
-  }, [transaction, reset, companyId, prefilledFile]);
+  }, [transaction, reset, companyId, prefilledFile, isEdit]);
+
 
   const totalAmount = watch("total_amount");
   const vatRate = watch("vat_rate");
@@ -370,7 +388,7 @@ export default function TransactionDialog({
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["transactions-dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["bank-accounts-dashboard"] });
-      toast.success(transaction ? "Movimento atualizado" : "Movimento criado");
+      toast.success(isEdit ? "Movimento atualizado" : "Movimento criado");
       onOpenChange(false);
       reset();
     },
@@ -385,7 +403,7 @@ export default function TransactionDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {transaction ? "Editar Movimento" : "Novo Movimento"}
+            {isEdit ? "Editar Movimento" : "Novo Movimento"}
           </DialogTitle>
         </DialogHeader>
 
