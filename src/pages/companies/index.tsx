@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Building2, Search, Edit, Trash2, Eye, AlertTriangle, CheckCircle, AlertCircle, Settings } from "lucide-react";
+import { Plus, Building2, Search, Edit, Trash2, Eye, AlertTriangle, CheckCircle, AlertCircle, Settings, ChevronDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import {
@@ -18,6 +18,20 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import CompanyDialog from "@/components/financial/CompanyDialog";
 
 type ColumnKey = "name" | "taxId" | "jurisdiction" | "status" | "riskRating" | "actions";
@@ -26,36 +40,81 @@ interface ColumnConfig {
   key: ColumnKey;
   label: string;
   required?: boolean;
+  editable?: boolean;
+  options?: string[];
 }
 
-const ALL_COLUMNS: ColumnConfig[] = [
-  { key: "name", label: "Company Name", required: true },
-  { key: "taxId", label: "Tax ID" },
-  { key: "jurisdiction", label: "Jurisdiction" },
-  { key: "status", label: "Status" },
-  { key: "riskRating", label: "Risk Rating" },
-  { key: "actions", label: "Actions", required: true },
-];
-
-const DEFAULT_VISIBLE_COLUMNS: ColumnKey[] = ["name", "taxId", "jurisdiction", "status", "riskRating", "actions"];
+const DEFAULT_STATUS_OPTIONS = ["Active", "Liquidated", "Under Investigation", "Closed"];
+const DEFAULT_RISK_OPTIONS = ["Low", "Medium", "High", "Critical"];
 
 const STORAGE_KEY = "companies-visible-columns";
+const COLUMN_LABELS_KEY = "companies-column-labels";
+const STATUS_OPTIONS_KEY = "companies-status-options";
+const RISK_OPTIONS_KEY = "companies-risk-options";
 
 export default function CompaniesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("list");
+  
+  // Column visibility
   const [visibleColumns, setVisibleColumns] = useState<ColumnKey[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : DEFAULT_VISIBLE_COLUMNS;
+    return saved ? JSON.parse(saved) : ["name", "taxId", "jurisdiction", "status", "riskRating", "actions"];
   });
+  
+  // Custom column labels
+  const [columnLabels, setColumnLabels] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem(COLUMN_LABELS_KEY);
+    return saved ? JSON.parse(saved) : {};
+  });
+  
+  // Custom options for editable columns
+  const [statusOptions, setStatusOptions] = useState<string[]>(() => {
+    const saved = localStorage.getItem(STATUS_OPTIONS_KEY);
+    return saved ? JSON.parse(saved) : DEFAULT_STATUS_OPTIONS;
+  });
+  
+  const [riskOptions, setRiskOptions] = useState<string[]>(() => {
+    const saved = localStorage.getItem(RISK_OPTIONS_KEY);
+    return saved ? JSON.parse(saved) : DEFAULT_RISK_OPTIONS;
+  });
+  
+  // Edit dialogs
+  const [editColumnDialog, setEditColumnDialog] = useState<{ open: boolean; column: ColumnKey | null }>({ open: false, column: null });
+  const [editColumnName, setEditColumnName] = useState("");
+  const [editColumnOptions, setEditColumnOptions] = useState<string[]>([]);
+  const [newOptionInput, setNewOptionInput] = useState("");
+  
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
+  // Persist settings
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(visibleColumns));
   }, [visibleColumns]);
+  
+  useEffect(() => {
+    localStorage.setItem(COLUMN_LABELS_KEY, JSON.stringify(columnLabels));
+  }, [columnLabels]);
+  
+  useEffect(() => {
+    localStorage.setItem(STATUS_OPTIONS_KEY, JSON.stringify(statusOptions));
+  }, [statusOptions]);
+  
+  useEffect(() => {
+    localStorage.setItem(RISK_OPTIONS_KEY, JSON.stringify(riskOptions));
+  }, [riskOptions]);
+
+  const ALL_COLUMNS: ColumnConfig[] = [
+    { key: "name", label: columnLabels["name"] || "Company Name", required: true },
+    { key: "taxId", label: columnLabels["taxId"] || "Tax ID" },
+    { key: "jurisdiction", label: columnLabels["jurisdiction"] || "Jurisdiction" },
+    { key: "status", label: columnLabels["status"] || "Status", editable: true, options: statusOptions },
+    { key: "riskRating", label: columnLabels["riskRating"] || "Risk Rating", editable: true, options: riskOptions },
+    { key: "actions", label: columnLabels["actions"] || "Actions", required: true },
+  ];
 
   const toggleColumn = (key: ColumnKey) => {
     const col = ALL_COLUMNS.find(c => c.key === key);
@@ -66,10 +125,58 @@ export default function CompaniesPage() {
   };
 
   const resetColumns = () => {
-    setVisibleColumns(DEFAULT_VISIBLE_COLUMNS);
+    setVisibleColumns(["name", "taxId", "jurisdiction", "status", "riskRating", "actions"]);
+    setColumnLabels({});
+    setStatusOptions(DEFAULT_STATUS_OPTIONS);
+    setRiskOptions(DEFAULT_RISK_OPTIONS);
   };
 
   const isColumnVisible = (key: ColumnKey) => visibleColumns.includes(key);
+  
+  const openEditColumnDialog = (column: ColumnKey) => {
+    const col = ALL_COLUMNS.find(c => c.key === column);
+    if (!col) return;
+    
+    setEditColumnName(col.label);
+    if (column === "status") {
+      setEditColumnOptions([...statusOptions]);
+    } else if (column === "riskRating") {
+      setEditColumnOptions([...riskOptions]);
+    } else {
+      setEditColumnOptions([]);
+    }
+    setNewOptionInput("");
+    setEditColumnDialog({ open: true, column });
+  };
+  
+  const saveColumnSettings = () => {
+    const column = editColumnDialog.column;
+    if (!column) return;
+    
+    // Save label
+    setColumnLabels(prev => ({ ...prev, [column]: editColumnName }));
+    
+    // Save options
+    if (column === "status") {
+      setStatusOptions(editColumnOptions);
+    } else if (column === "riskRating") {
+      setRiskOptions(editColumnOptions);
+    }
+    
+    setEditColumnDialog({ open: false, column: null });
+    toast.success("Column settings saved");
+  };
+  
+  const addOption = () => {
+    if (newOptionInput.trim() && !editColumnOptions.includes(newOptionInput.trim())) {
+      setEditColumnOptions([...editColumnOptions, newOptionInput.trim()]);
+      setNewOptionInput("");
+    }
+  };
+  
+  const removeOption = (option: string) => {
+    setEditColumnOptions(editColumnOptions.filter(o => o !== option));
+  };
 
   const { data: companies, isLoading } = useQuery({
     queryKey: ["companies"],
@@ -138,6 +245,35 @@ export default function CompaniesPage() {
   };
 
   const visibleColumnCount = visibleColumns.length;
+  
+  const renderColumnHeader = (col: ColumnConfig) => {
+    if (col.editable) {
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-1 font-semibold text-slate-700 hover:text-slate-900">
+              {col.label}
+              <ChevronDown className="h-3 w-3" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            <DropdownMenuItem onClick={() => openEditColumnDialog(col.key)}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Column
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <div className="px-2 py-1.5 text-xs font-medium text-slate-500">Options:</div>
+            {col.options?.map((option) => (
+              <DropdownMenuItem key={option} disabled className="text-sm">
+                {option}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
+    return <span className="font-semibold text-slate-700">{col.label}</span>;
+  };
 
   return (
     <div className="p-6 space-y-6 bg-[#faf9f8] min-h-screen">
@@ -189,12 +325,13 @@ export default function CompaniesPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50 border-b border-slate-200">
-                  {isColumnVisible("name") && <TableHead className="font-semibold text-slate-700">Company Name</TableHead>}
-                  {isColumnVisible("taxId") && <TableHead className="font-semibold text-slate-700">Tax ID</TableHead>}
-                  {isColumnVisible("jurisdiction") && <TableHead className="font-semibold text-slate-700">Jurisdiction</TableHead>}
-                  {isColumnVisible("status") && <TableHead className="font-semibold text-slate-700">Status</TableHead>}
-                  {isColumnVisible("riskRating") && <TableHead className="font-semibold text-slate-700">Risk Rating</TableHead>}
-                  {isColumnVisible("actions") && <TableHead className="font-semibold text-slate-700 text-right">Actions</TableHead>}
+                  {ALL_COLUMNS.map((col) => 
+                    isColumnVisible(col.key) && (
+                      <TableHead key={col.key} className={col.key === "actions" ? "text-right" : ""}>
+                        {renderColumnHeader(col)}
+                      </TableHead>
+                    )
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -295,10 +432,18 @@ export default function CompaniesPage() {
             <div className="space-y-4">
               {ALL_COLUMNS.map((col) => (
                 <div key={col.key} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-                  <Label htmlFor={`col-${col.key}`} className="text-sm font-medium text-slate-700">
-                    {col.label}
-                    {col.required && <span className="text-slate-400 text-xs ml-2">(Required)</span>}
-                  </Label>
+                  <div className="flex items-center gap-3">
+                    <Label htmlFor={`col-${col.key}`} className="text-sm font-medium text-slate-700">
+                      {col.label}
+                      {col.required && <span className="text-slate-400 text-xs ml-2">(Required)</span>}
+                    </Label>
+                    {col.editable && (
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => openEditColumnDialog(col.key)}>
+                        <Edit className="h-3 w-3 mr-1" />
+                        Edit
+                      </Button>
+                    )}
+                  </div>
                   <Switch
                     id={`col-${col.key}`}
                     checked={isColumnVisible(col.key)}
@@ -315,6 +460,63 @@ export default function CompaniesPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Column Dialog */}
+      <Dialog open={editColumnDialog.open} onOpenChange={(open) => setEditColumnDialog({ open, column: open ? editColumnDialog.column : null })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Column</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Column Name</Label>
+              <Input
+                value={editColumnName}
+                onChange={(e) => setEditColumnName(e.target.value)}
+                placeholder="Enter column name"
+              />
+            </div>
+            
+            {(editColumnDialog.column === "status" || editColumnDialog.column === "riskRating") && (
+              <div className="space-y-2">
+                <Label>Options</Label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {editColumnOptions.map((option) => (
+                    <Badge key={option} variant="secondary" className="pl-2 pr-1 py-1">
+                      {option}
+                      <button
+                        onClick={() => removeOption(option)}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={newOptionInput}
+                    onChange={(e) => setNewOptionInput(e.target.value)}
+                    placeholder="Add new option"
+                    onKeyDown={(e) => e.key === "Enter" && addOption()}
+                  />
+                  <Button type="button" variant="outline" onClick={addOption}>
+                    Add
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditColumnDialog({ open: false, column: null })}>
+              Cancel
+            </Button>
+            <Button onClick={saveColumnSettings} className="bg-blue-600 hover:bg-blue-700">
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <CompanyDialog
         open={dialogOpen}
