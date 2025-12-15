@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,7 +29,10 @@ import {
   Folder,
   FolderPlus,
   Settings,
-  ChevronRight
+  ChevronRight,
+  Columns,
+  Tag,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -47,7 +50,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+} from "@/components/ui/context-menu";
 import {
   Dialog,
   DialogContent,
@@ -55,10 +70,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DocumentUploadDialog from "@/components/companies/DocumentUploadDialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+
+const AVAILABLE_TAGS = ["Important", "Urgent", "Review", "Archive", "Legal", "Finance", "Contract", "Invoice", "Receipt", "Other"];
 
 const DOCUMENT_TYPES = ["All", "Invoice", "Contract", "Proof", "Receipt", "Legal", "Report", "Other"];
 const DOCUMENT_STATUSES = ["All", "Draft", "Final", "Filed", "Archived"];
@@ -105,6 +127,8 @@ export default function CompanyDetailPage() {
     const saved = localStorage.getItem(`company-columns-${id}`);
     return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
   });
+  const [newTagInput, setNewTagInput] = useState("");
+  const [tagPopoverOpen, setTagPopoverOpen] = useState<string | null>(null);
 
   // Save columns to localStorage
   useEffect(() => {
@@ -254,6 +278,37 @@ export default function CompanyDetailPage() {
       toast.error("Error: " + error.message);
     },
   });
+
+  const updateDocTagsMutation = useMutation({
+    mutationFn: async ({ docId, tags }: { docId: string; tags: string[] }) => {
+      const { error } = await supabase
+        .from("company_documents")
+        .update({ tags })
+        .eq("id", docId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-documents", id] });
+      toast.success("Tags updated");
+    },
+    onError: (error) => {
+      toast.error("Error: " + error.message);
+    },
+  });
+
+  const handleAddTag = (docId: string, currentTags: string[] | null, newTag: string) => {
+    const tags = currentTags || [];
+    if (!tags.includes(newTag)) {
+      updateDocTagsMutation.mutate({ docId, tags: [...tags, newTag] });
+    }
+    setNewTagInput("");
+    setTagPopoverOpen(null);
+  };
+
+  const handleRemoveTag = (docId: string, currentTags: string[] | null, tagToRemove: string) => {
+    const tags = (currentTags || []).filter(t => t !== tagToRemove);
+    updateDocTagsMutation.mutate({ docId, tags });
+  };
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -442,67 +497,6 @@ export default function CompanyDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#faf9f8]">
-      {/* Breadcrumbs - Top Level */}
-      <div className="bg-background px-6 py-2 border-b">
-        <Breadcrumb>
-          <BreadcrumbList className="text-sm">
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/companies" className="text-primary hover:underline">Companies</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink 
-                href="#" 
-                onClick={(e) => { e.preventDefault(); setCurrentFolderId(null); }}
-                className="text-primary hover:underline"
-              >
-                {company.name}
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            {currentFolderId && (
-              <>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbLink 
-                    href="#" 
-                    onClick={(e) => { e.preventDefault(); setCurrentFolderId(null); }}
-                    className="text-primary hover:underline"
-                  >
-                    Documents
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-              </>
-            )}
-            {folderPath?.map((folder, index) => (
-              <span key={folder.id} className="flex items-center">
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  {index === folderPath.length - 1 ? (
-                    <BreadcrumbPage className="text-foreground font-medium">{folder.name}</BreadcrumbPage>
-                  ) : (
-                    <BreadcrumbLink 
-                      href="#" 
-                      onClick={(e) => { e.preventDefault(); setCurrentFolderId(folder.id); }}
-                      className="text-primary hover:underline"
-                    >
-                      {folder.name}
-                    </BreadcrumbLink>
-                  )}
-                </BreadcrumbItem>
-              </span>
-            ))}
-            {!currentFolderId && (
-              <>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage className="text-foreground font-medium">Documents</BreadcrumbPage>
-                </BreadcrumbItem>
-              </>
-            )}
-          </BreadcrumbList>
-        </Breadcrumb>
-      </div>
-
       {/* Company Header */}
       <div className="bg-background border-b px-6 py-3">
         <div className="flex items-center gap-3">
@@ -609,6 +603,37 @@ export default function CompanyDetailPage() {
                   Share
                 </Button>
 
+                <div className="w-px h-5 bg-border mx-1" />
+
+                {/* Column Settings Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 gap-1">
+                      <Columns className="h-4 w-4" />
+                      Columns
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    <DropdownMenuLabel>Show/Hide Columns</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {columns.map((col) => (
+                      <DropdownMenuCheckboxItem
+                        key={col.id}
+                        checked={col.visible}
+                        disabled={col.required}
+                        onCheckedChange={(checked) => {
+                          setColumns(columns.map(c => 
+                            c.id === col.id ? { ...c, visible: checked } : c
+                          ));
+                        }}
+                      >
+                        {col.label}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 {selectedDocs.size > 0 && (
                   <>
                     <div className="w-px h-5 bg-border mx-1" />
@@ -684,6 +709,67 @@ export default function CompanyDetailPage() {
                 )}
               </div>
             )}
+          </div>
+
+          {/* Breadcrumbs - Above Table */}
+          <div className="px-1 py-2">
+            <Breadcrumb>
+              <BreadcrumbList className="text-sm">
+                <BreadcrumbItem>
+                  <BreadcrumbLink href="/companies" className="text-primary hover:underline">Companies</BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink 
+                    href="#" 
+                    onClick={(e) => { e.preventDefault(); setCurrentFolderId(null); }}
+                    className="text-primary hover:underline"
+                  >
+                    {company.name}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                {currentFolderId && (
+                  <>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbLink 
+                        href="#" 
+                        onClick={(e) => { e.preventDefault(); setCurrentFolderId(null); }}
+                        className="text-primary hover:underline"
+                      >
+                        Documents
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                  </>
+                )}
+                {folderPath?.map((folder, index) => (
+                  <span key={folder.id} className="flex items-center">
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      {index === folderPath.length - 1 ? (
+                        <BreadcrumbPage className="text-foreground font-medium">{folder.name}</BreadcrumbPage>
+                      ) : (
+                        <BreadcrumbLink 
+                          href="#" 
+                          onClick={(e) => { e.preventDefault(); setCurrentFolderId(folder.id); }}
+                          className="text-primary hover:underline"
+                        >
+                          {folder.name}
+                        </BreadcrumbLink>
+                      )}
+                    </BreadcrumbItem>
+                  </span>
+                ))}
+                {!currentFolderId && (
+                  <>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage className="text-foreground font-medium">Documents</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </>
+                )}
+              </BreadcrumbList>
+            </Breadcrumb>
           </div>
 
           {/* SharePoint-style Dense Data Grid */}
@@ -878,18 +964,88 @@ export default function CompanyDetailPage() {
                           </td>
                         )}
                         {isColumnVisible("tags") && (
-                          <td className="px-3 py-1.5">
-                            <div className="flex gap-1 flex-wrap">
-                              {doc.tags?.slice(0, 2).map((tag: string, i: number) => (
-                                <span key={i} className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                                  {tag}
-                                </span>
-                              ))}
-                              {doc.tags && doc.tags.length > 2 && (
-                                <span className="text-xs text-muted-foreground">+{doc.tags.length - 2}</span>
+                          <ContextMenu>
+                            <ContextMenuTrigger asChild>
+                              <td className="px-3 py-1.5 cursor-context-menu">
+                                <div className="flex gap-1 flex-wrap min-h-[20px]">
+                                  {doc.tags?.map((tag: string, i: number) => (
+                                    <span 
+                                      key={i} 
+                                      className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded inline-flex items-center gap-1 group"
+                                    >
+                                      {tag}
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleRemoveTag(doc.id, doc.tags, tag);
+                                        }}
+                                        className="opacity-0 group-hover:opacity-100 hover:text-destructive"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </span>
+                                  ))}
+                                  {(!doc.tags || doc.tags.length === 0) && (
+                                    <span className="text-xs text-muted-foreground/50 italic">Right-click to add</span>
+                                  )}
+                                </div>
+                              </td>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent className="w-48">
+                              <ContextMenuSub>
+                                <ContextMenuSubTrigger>
+                                  <Tag className="h-4 w-4 mr-2" />
+                                  Add Tag
+                                </ContextMenuSubTrigger>
+                                <ContextMenuSubContent className="w-48">
+                                  {AVAILABLE_TAGS.filter(t => !doc.tags?.includes(t)).map((tag) => (
+                                    <ContextMenuItem 
+                                      key={tag}
+                                      onClick={() => handleAddTag(doc.id, doc.tags, tag)}
+                                    >
+                                      {tag}
+                                    </ContextMenuItem>
+                                  ))}
+                                  <ContextMenuSeparator />
+                                  <div className="px-2 py-1.5">
+                                    <Input
+                                      placeholder="New tag..."
+                                      value={newTagInput}
+                                      onChange={(e) => setNewTagInput(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter" && newTagInput.trim()) {
+                                          handleAddTag(doc.id, doc.tags, newTagInput.trim());
+                                        }
+                                      }}
+                                      className="h-7 text-xs"
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                  </div>
+                                </ContextMenuSubContent>
+                              </ContextMenuSub>
+                              {doc.tags && doc.tags.length > 0 && (
+                                <>
+                                  <ContextMenuSeparator />
+                                  <ContextMenuSub>
+                                    <ContextMenuSubTrigger className="text-destructive">
+                                      <X className="h-4 w-4 mr-2" />
+                                      Remove Tag
+                                    </ContextMenuSubTrigger>
+                                    <ContextMenuSubContent>
+                                      {doc.tags.map((tag: string) => (
+                                        <ContextMenuItem 
+                                          key={tag}
+                                          onClick={() => handleRemoveTag(doc.id, doc.tags, tag)}
+                                        >
+                                          {tag}
+                                        </ContextMenuItem>
+                                      ))}
+                                    </ContextMenuSubContent>
+                                  </ContextMenuSub>
+                                </>
                               )}
-                            </div>
-                          </td>
+                            </ContextMenuContent>
+                          </ContextMenu>
                         )}
                         <td className="px-3 py-1.5">
                           <DropdownMenu>
