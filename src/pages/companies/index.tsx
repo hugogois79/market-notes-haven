@@ -64,9 +64,34 @@ const COLOR_PRESETS = [
   "#fbcfe8", // Light pink
 ];
 
-const isDarkColor = (color: string): boolean => {
+const isDarkColor = (color: string | undefined): boolean => {
+  if (!color) return false;
   const darkColors = ["#1e40af", "#1e3a8a", "#312e81", "#4c1d95", "#831843", "#7f1d1d", "#dc2626", "#b91c1c", "#991b1b", "#7c3aed", "#6d28d9", "#5b21b6", "#3b82f6", "#2563eb", "#ef4444"];
   return darkColors.includes(color.toLowerCase());
+};
+
+// Helper to migrate old string options to ColumnOption format
+const migrateOptions = (saved: any, defaults: ColumnOption[]): ColumnOption[] => {
+  if (!saved) return defaults;
+  try {
+    const parsed = JSON.parse(saved);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      // Check if already in new format
+      if (typeof parsed[0] === 'object' && 'label' in parsed[0] && 'color' in parsed[0]) {
+        return parsed;
+      }
+      // Migrate from old string format
+      if (typeof parsed[0] === 'string') {
+        return parsed.map((label: string) => {
+          const existing = defaults.find(d => d.label === label);
+          return { label, color: existing?.color || "#e5e7eb" };
+        });
+      }
+    }
+  } catch {
+    return defaults;
+  }
+  return defaults;
 };
 
 const DEFAULT_STATUS_OPTIONS: ColumnOption[] = [
@@ -108,13 +133,11 @@ export default function CompaniesPage() {
   
   // Custom options for editable columns
   const [statusOptions, setStatusOptions] = useState<ColumnOption[]>(() => {
-    const saved = localStorage.getItem(STATUS_OPTIONS_KEY);
-    return saved ? JSON.parse(saved) : DEFAULT_STATUS_OPTIONS;
+    return migrateOptions(localStorage.getItem(STATUS_OPTIONS_KEY), DEFAULT_STATUS_OPTIONS);
   });
   
   const [riskOptions, setRiskOptions] = useState<ColumnOption[]>(() => {
-    const saved = localStorage.getItem(RISK_OPTIONS_KEY);
-    return saved ? JSON.parse(saved) : DEFAULT_RISK_OPTIONS;
+    return migrateOptions(localStorage.getItem(RISK_OPTIONS_KEY), DEFAULT_RISK_OPTIONS);
   });
   
   // Edit dialogs
