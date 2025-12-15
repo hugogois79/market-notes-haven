@@ -342,27 +342,33 @@ export type Database = {
       }
       company_folders: {
         Row: {
+          category: string | null
           company_id: string
           created_at: string
           id: string
           name: string
           parent_folder_id: string | null
+          status: string | null
           updated_at: string
         }
         Insert: {
+          category?: string | null
           company_id: string
           created_at?: string
           id?: string
           name: string
           parent_folder_id?: string | null
+          status?: string | null
           updated_at?: string
         }
         Update: {
+          category?: string | null
           company_id?: string
           created_at?: string
           id?: string
           name?: string
           parent_folder_id?: string | null
+          status?: string | null
           updated_at?: string
         }
         Relationships: [

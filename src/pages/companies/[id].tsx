@@ -364,6 +364,23 @@ export default function CompanyDetailPage() {
     },
   });
 
+  const updateFolderFieldMutation = useMutation({
+    mutationFn: async ({ folderId, field, value }: { folderId: string; field: string; value: string }) => {
+      const { error } = await supabase
+        .from("company_folders")
+        .update({ [field]: value })
+        .eq("id", folderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-folders", id] });
+      toast.success("Updated");
+    },
+    onError: (error) => {
+      toast.error("Error: " + error.message);
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (docIds: string[]) => {
       for (const docId of docIds) {
@@ -589,6 +606,61 @@ export default function CompanyDetailPage() {
                     [doc.id]: { ...prev[doc.id], [column.id]: opt.label }
                   }));
                 }
+              }}
+            >
+              <span 
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style={{ 
+                  backgroundColor: `${opt.color}20`,
+                  color: opt.color,
+                }}
+              >
+                {opt.label}
+              </span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
+  const renderFolderCellDropdown = (folder: any, column: ColumnConfig) => {
+    const value = folder[column.id] || null;
+    // Use folder-specific options for category column
+    const options = column.id === 'category' ? getCurrentCategoryOptions() : column.options;
+    const option = options?.find(o => o.label === value);
+    
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button 
+            className="cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {value ? (
+              <span 
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style={{ 
+                  backgroundColor: option?.color ? `${option.color}20` : '#e5e7eb',
+                  color: option?.color || '#374151',
+                  borderColor: option?.color ? `${option.color}40` : '#d1d5db',
+                  borderWidth: '1px'
+                }}
+              >
+                {value}
+              </span>
+            ) : (
+              <span className="text-slate-400 text-xs">—</span>
+            )}
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {options?.map((opt) => (
+            <DropdownMenuItem
+              key={opt.label}
+              onClick={(e) => {
+                e.stopPropagation();
+                updateFolderFieldMutation.mutate({ folderId: folder.id, field: column.id, value: opt.label });
               }}
             >
               <span 
@@ -1260,13 +1332,13 @@ export default function CompanyDetailPage() {
                   {folders?.map((folder) => (
                     <tr 
                       key={folder.id} 
-                      className="border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer"
+                      className="border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer group"
                       onDoubleClick={() => setCurrentFolderId(folder.id)}
                     >
                       <td className="px-3 py-1.5">
                         <Checkbox disabled />
                       </td>
-                      <td className="px-3 py-1.5" colSpan={columns.filter(c => c.visible).length + 1}>
+                      <td className="px-3 py-1.5">
                         <div className="flex items-center gap-2">
                           <Folder className="h-4 w-4 text-amber-500" />
                           <button 
@@ -1277,6 +1349,39 @@ export default function CompanyDetailPage() {
                           </button>
                         </div>
                       </td>
+                      {isColumnVisible("docDate") && (
+                        <td className="px-3 py-1.5 text-slate-400 text-xs">—</td>
+                      )}
+                      {isColumnVisible("category") && (
+                        <td className="px-3 py-1.5">
+                          {renderFolderCellDropdown(folder, columns.find(c => c.id === "category")!)}
+                        </td>
+                      )}
+                      {isColumnVisible("value") && (
+                        <td className="px-3 py-1.5 text-slate-400 text-xs">—</td>
+                      )}
+                      {isColumnVisible("status") && (
+                        <td className="px-3 py-1.5">
+                          {renderFolderCellDropdown(folder, columns.find(c => c.id === "status")!)}
+                        </td>
+                      )}
+                      {isColumnVisible("tags") && (
+                        <td className="px-3 py-1.5 text-slate-400 text-xs">—</td>
+                      )}
+                      {isColumnVisible("modified") && (
+                        <td className="px-3 py-1.5 text-slate-500 text-sm">
+                          {formatModifiedDate(folder.updated_at)}
+                        </td>
+                      )}
+                      {isColumnVisible("size") && (
+                        <td className="px-3 py-1.5 text-slate-400 text-xs">—</td>
+                      )}
+                      {/* Custom columns - empty for folders */}
+                      {customColumns.map((col) => (
+                        <td key={col.id} className="px-3 py-1.5 text-slate-400 text-xs">—</td>
+                      ))}
+                      {/* Empty cell for add column button */}
+                      <td className="px-3 py-1.5"></td>
                       <td className="px-3 py-1.5">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -1310,6 +1415,7 @@ export default function CompanyDetailPage() {
                       </td>
                     </tr>
                   ))}
+                  
                   
                   {/* Documents */}
                   {documentsLoading ? (
