@@ -287,9 +287,16 @@ export default function TransactionDialog({
         return value;
       };
       
+      const resolvedCompanyId = toUuidOrNull(cleanData.company_id) || toUuidOrNull(companyId);
+      const resolvedCreatedBy = toUuidOrNull(user?.id);
+      
+      if (!resolvedCompanyId || !resolvedCreatedBy) {
+        throw new Error("Empresa e utilizador são obrigatórios");
+      }
+      
       const transactionData = {
-        company_id: cleanData.company_id || companyId,
-        created_by: user?.id,
+        company_id: resolvedCompanyId,
+        created_by: resolvedCreatedBy,
         date: cleanData.date,
         type: cleanData.type,
         description: cleanData.description,
