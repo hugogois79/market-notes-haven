@@ -160,6 +160,8 @@ export default function CompanyDetailPage() {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [isDropUploading, setIsDropUploading] = useState(false);
+  const [dropUploadProgress, setDropUploadProgress] = useState<{ current: number; total: number } | null>(null);
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
     const saved = localStorage.getItem(`company-columns-${id}`);
     if (saved) {
@@ -579,11 +581,69 @@ export default function CompanyDetailPage() {
     setIsDragOver(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    setUploadDialogOpen(true);
-  }, []);
+    
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+    
+    setIsDropUploading(true);
+    setDropUploadProgress({ current: 0, total: files.length });
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setDropUploadProgress({ current: i + 1, total: files.length });
+        
+        const timestamp = Date.now();
+        const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const filePath = `${id}/${timestamp}-${safeFileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from("company-documents")
+          .upload(filePath, file);
+        
+        if (uploadError) {
+          toast.error(`Failed to upload ${file.name}: ${uploadError.message}`);
+          continue;
+        }
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from("company-documents")
+          .getPublicUrl(filePath);
+        
+        const { error: insertError } = await supabase
+          .from("company_documents")
+          .insert({
+            company_id: id,
+            folder_id: currentFolderId || null,
+            name: file.name,
+            file_url: publicUrl,
+            file_size: file.size,
+            mime_type: file.type,
+            document_type: "Other",
+            status: "Draft",
+            uploaded_by: user.id,
+          });
+        
+        if (insertError) {
+          toast.error(`Failed to save ${file.name}: ${insertError.message}`);
+        }
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["company-documents", id, currentFolderId] });
+      toast.success(`${files.length} file(s) uploaded successfully`);
+    } catch (error: any) {
+      toast.error("Upload failed: " + error.message);
+    } finally {
+      setIsDropUploading(false);
+      setDropUploadProgress(null);
+    }
+  }, [id, currentFolderId, queryClient]);
 
   const handleDownload = async (doc: any) => {
     try {
@@ -808,16 +868,29 @@ export default function CompanyDetailPage() {
               "border-2 border-dashed rounded-lg p-4 text-center transition-colors mb-4",
               isDragOver 
                 ? "border-primary bg-primary/5" 
-                : "border-muted-foreground/20 bg-background"
+                : isDropUploading
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-muted-foreground/20 bg-background"
             )}
           >
-            <Upload className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              Drag files here or{" "}
-              <button onClick={() => setUploadDialogOpen(true)} className="text-primary hover:underline">
-                browse
-              </button>
-            </p>
+            {isDropUploading ? (
+              <>
+                <div className="h-6 w-6 mx-auto mb-1 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm text-blue-600 font-medium">
+                  Uploading {dropUploadProgress?.current} of {dropUploadProgress?.total} files...
+                </p>
+              </>
+            ) : (
+              <>
+                <Upload className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Drag files here or{" "}
+                  <button onClick={() => setUploadDialogOpen(true)} className="text-primary hover:underline">
+                    browse
+                  </button>
+                </p>
+              </>
+            )}
           </div>
 
           {/* SharePoint Command Bar */}
