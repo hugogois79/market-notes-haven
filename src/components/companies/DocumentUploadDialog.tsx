@@ -25,6 +25,7 @@ interface DocumentUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   companyId: string;
+  folderId?: string | null;
 }
 
 const DOCUMENT_TYPES = ["Invoice", "Contract", "Proof", "Receipt", "Legal", "Report", "Other"];
@@ -34,6 +35,7 @@ export default function DocumentUploadDialog({
   open,
   onOpenChange,
   companyId,
+  folderId,
 }: DocumentUploadDialogProps) {
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
@@ -84,6 +86,7 @@ export default function DocumentUploadDialog({
         .from("company_documents")
         .insert({
           company_id: companyId,
+          folder_id: folderId || null,
           name: file.name,
           file_url: publicUrl,
           file_size: file.size,
@@ -99,7 +102,7 @@ export default function DocumentUploadDialog({
       if (insertError) throw insertError;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["company-documents", companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company-documents", companyId, folderId] });
       toast.success("Document uploaded successfully");
       resetForm();
       onOpenChange(false);

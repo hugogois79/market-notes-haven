@@ -1,10 +1,12 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { 
   ArrowLeft, 
   Upload, 
@@ -23,7 +25,11 @@ import {
   File,
   FileSpreadsheet,
   FileImage,
-  User
+  User,
+  Folder,
+  FolderPlus,
+  Settings,
+  ChevronRight
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +48,13 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DocumentUploadDialog from "@/components/companies/DocumentUploadDialog";
 import { format } from "date-fns";
@@ -52,6 +65,24 @@ const DOCUMENT_STATUSES = ["All", "Draft", "Final", "Filed", "Archived"];
 
 type SortField = "name" | "updated_at" | "file_size" | "document_type" | "status";
 type SortDirection = "asc" | "desc";
+
+interface ColumnConfig {
+  id: string;
+  label: string;
+  visible: boolean;
+  required?: boolean;
+}
+
+const DEFAULT_COLUMNS: ColumnConfig[] = [
+  { id: "name", label: "Name", visible: true, required: true },
+  { id: "modified", label: "Modified", visible: true },
+  { id: "modifiedBy", label: "Modified By", visible: true },
+  { id: "size", label: "Size", visible: false },
+  { id: "type", label: "Document Type", visible: true },
+  { id: "status", label: "Status", visible: true },
+  { id: "value", label: "Financial Value", visible: false },
+  { id: "tags", label: "Tags", visible: true },
+];
 
 export default function CompanyDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -67,6 +98,18 @@ export default function CompanyDetailPage() {
   const [sortField, setSortField] = useState<SortField>("updated_at");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [showFilters, setShowFilters] = useState(false);
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [folderDialogOpen, setFolderDialogOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
+    const saved = localStorage.getItem(`company-columns-${id}`);
+    return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
+  });
+
+  // Save columns to localStorage
+  useEffect(() => {
+    localStorage.setItem(`company-columns-${id}`, JSON.stringify(columns));
+  }, [columns, id]);
 
   const { data: company, isLoading: companyLoading } = useQuery({
     queryKey: ["company", id],
@@ -83,19 +126,108 @@ export default function CompanyDetailPage() {
     enabled: !!id,
   });
 
-  const { data: documents, isLoading: documentsLoading } = useQuery({
-    queryKey: ["company-documents", id],
+  const { data: folders } = useQuery({
+    queryKey: ["company-folders", id, currentFolderId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("company_documents")
+      let query = supabase
+        .from("company_folders")
         .select("*")
-        .eq("company_id", id)
-        .order("created_at", { ascending: false });
+        .eq("company_id", id);
       
+      if (currentFolderId) {
+        query = query.eq("parent_folder_id", currentFolderId);
+      } else {
+        query = query.is("parent_folder_id", null);
+      }
+      
+      const { data, error } = await query.order("name");
       if (error) throw error;
       return data;
     },
     enabled: !!id,
+  });
+
+  const { data: folderPath } = useQuery({
+    queryKey: ["folder-path", currentFolderId],
+    queryFn: async () => {
+      if (!currentFolderId) return [];
+      
+      const path: { id: string; name: string }[] = [];
+      let folderId: string | null = currentFolderId;
+      
+      while (folderId) {
+        const { data } = await supabase
+          .from("company_folders")
+          .select("id, name, parent_folder_id")
+          .eq("id", folderId)
+          .single();
+        
+        if (data) {
+          path.unshift({ id: data.id, name: data.name });
+          folderId = data.parent_folder_id;
+        } else {
+          break;
+        }
+      }
+      
+      return path;
+    },
+    enabled: !!currentFolderId,
+  });
+
+  const { data: documents, isLoading: documentsLoading } = useQuery({
+    queryKey: ["company-documents", id, currentFolderId],
+    queryFn: async () => {
+      let query = supabase
+        .from("company_documents")
+        .select("*")
+        .eq("company_id", id);
+      
+      if (currentFolderId) {
+        query = query.eq("folder_id", currentFolderId);
+      } else {
+        query = query.is("folder_id", null);
+      }
+      
+      const { data, error } = await query.order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  const createFolderMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const { error } = await supabase.from("company_folders").insert({
+        company_id: id,
+        name,
+        parent_folder_id: currentFolderId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-folders", id] });
+      setFolderDialogOpen(false);
+      setNewFolderName("");
+      toast.success("Folder created");
+    },
+    onError: (error) => {
+      toast.error("Error: " + error.message);
+    },
+  });
+
+  const deleteFolderMutation = useMutation({
+    mutationFn: async (folderId: string) => {
+      const { error } = await supabase.from("company_folders").delete().eq("id", folderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-folders", id] });
+      toast.success("Folder deleted");
+    },
+    onError: (error) => {
+      toast.error("Error: " + error.message);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -186,6 +318,16 @@ export default function CompanyDetailPage() {
     setSelectedDocs(newSelected);
   };
 
+  const toggleColumn = (columnId: string) => {
+    setColumns(cols => cols.map(col => 
+      col.id === columnId && !col.required ? { ...col, visible: !col.visible } : col
+    ));
+  };
+
+  const resetColumns = () => {
+    setColumns(DEFAULT_COLUMNS);
+  };
+
   const filteredDocuments = documents
     ?.filter(doc => {
       const matchesSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -256,6 +398,20 @@ export default function CompanyDetailPage() {
     return format(d, "MMMM d");
   };
 
+  const formatFileSize = (bytes: number | null) => {
+    if (!bytes) return "—";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const formatCurrency = (value: number | null) => {
+    if (!value) return "—";
+    return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value);
+  };
+
+  const isColumnVisible = (columnId: string) => columns.find(c => c.id === columnId)?.visible ?? true;
+
   const SortHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
     <button
       onClick={() => handleSort(field)}
@@ -295,12 +451,54 @@ export default function CompanyDetailPage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink href={`/companies/${id}`} className="text-primary hover:underline">{company.name}</BreadcrumbLink>
+              <BreadcrumbLink 
+                href="#" 
+                onClick={(e) => { e.preventDefault(); setCurrentFolderId(null); }}
+                className="text-primary hover:underline"
+              >
+                {company.name}
+              </BreadcrumbLink>
             </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="text-foreground font-medium">Documents</BreadcrumbPage>
-            </BreadcrumbItem>
+            {currentFolderId && (
+              <>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink 
+                    href="#" 
+                    onClick={(e) => { e.preventDefault(); setCurrentFolderId(null); }}
+                    className="text-primary hover:underline"
+                  >
+                    Documents
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+              </>
+            )}
+            {folderPath?.map((folder, index) => (
+              <span key={folder.id} className="flex items-center">
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  {index === folderPath.length - 1 ? (
+                    <BreadcrumbPage className="text-foreground font-medium">{folder.name}</BreadcrumbPage>
+                  ) : (
+                    <BreadcrumbLink 
+                      href="#" 
+                      onClick={(e) => { e.preventDefault(); setCurrentFolderId(folder.id); }}
+                      className="text-primary hover:underline"
+                    >
+                      {folder.name}
+                    </BreadcrumbLink>
+                  )}
+                </BreadcrumbItem>
+              </span>
+            ))}
+            {!currentFolderId && (
+              <>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="text-foreground font-medium">Documents</BreadcrumbPage>
+                </BreadcrumbItem>
+              </>
+            )}
           </BreadcrumbList>
         </Breadcrumb>
       </div>
@@ -337,6 +535,13 @@ export default function CompanyDetailPage() {
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-1 pb-2"
           >
             Company Details
+          </TabsTrigger>
+          <TabsTrigger 
+            value="settings"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-1 pb-2"
+          >
+            <Settings className="h-4 w-4 mr-1" />
+            Settings
           </TabsTrigger>
         </TabsList>
 
@@ -375,6 +580,11 @@ export default function CompanyDetailPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => setFolderDialogOpen(true)}>
+                      <FolderPlus className="h-4 w-4 mr-2" />
+                      New Folder
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setUploadDialogOpen(true)}>
                       <Upload className="h-4 w-4 mr-2" />
                       Upload Document
@@ -491,36 +701,117 @@ export default function CompanyDetailPage() {
                     <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide">
                       <SortHeader field="name">Name</SortHeader>
                     </th>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-32">
-                      <SortHeader field="updated_at">Modified</SortHeader>
-                    </th>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-36">
-                      Modified By
-                    </th>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-24">
-                      <SortHeader field="status">Status</SortHeader>
-                    </th>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-40">
-                      Tags
-                    </th>
+                    {isColumnVisible("modified") && (
+                      <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-32">
+                        <SortHeader field="updated_at">Modified</SortHeader>
+                      </th>
+                    )}
+                    {isColumnVisible("modifiedBy") && (
+                      <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-36">
+                        Modified By
+                      </th>
+                    )}
+                    {isColumnVisible("size") && (
+                      <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-24">
+                        <SortHeader field="file_size">Size</SortHeader>
+                      </th>
+                    )}
+                    {isColumnVisible("type") && (
+                      <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-28">
+                        <SortHeader field="document_type">Type</SortHeader>
+                      </th>
+                    )}
+                    {isColumnVisible("status") && (
+                      <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-24">
+                        <SortHeader field="status">Status</SortHeader>
+                      </th>
+                    )}
+                    {isColumnVisible("value") && (
+                      <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-28">
+                        Value
+                      </th>
+                    )}
+                    {isColumnVisible("tags") && (
+                      <th className="text-left px-3 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wide w-40">
+                        Tags
+                      </th>
+                    )}
                     <th className="w-10 px-3 py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Folders */}
+                  {folders?.map((folder) => (
+                    <tr 
+                      key={folder.id} 
+                      className="border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer"
+                      onDoubleClick={() => setCurrentFolderId(folder.id)}
+                    >
+                      <td className="px-3 py-1.5">
+                        <Checkbox disabled />
+                      </td>
+                      <td className="px-3 py-1.5" colSpan={columns.filter(c => c.visible).length + 1}>
+                        <div className="flex items-center gap-2">
+                          <Folder className="h-4 w-4 text-amber-500" />
+                          <button 
+                            onClick={() => setCurrentFolderId(folder.id)}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {folder.name}
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-3 py-1.5">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setCurrentFolderId(folder.id)}>
+                              <ChevronRight className="h-4 w-4 mr-2" />
+                              Open
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => {
+                                if (confirm("Delete this folder and all its contents?")) {
+                                  deleteFolderMutation.mutate(folder.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  ))}
+                  
+                  {/* Documents */}
                   {documentsLoading ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-12 text-muted-foreground">
+                      <td colSpan={10} className="text-center py-12 text-muted-foreground">
                         Loading documents...
                       </td>
                     </tr>
-                  ) : filteredDocuments?.length === 0 ? (
+                  ) : (folders?.length === 0 && filteredDocuments?.length === 0) ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-12 text-muted-foreground">
+                      <td colSpan={10} className="text-center py-12 text-muted-foreground">
                         <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p>No documents found</p>
-                        <Button variant="link" size="sm" onClick={() => setUploadDialogOpen(true)} className="mt-1">
-                          Upload your first document
-                        </Button>
+                        <p>No documents or folders found</p>
+                        <div className="flex items-center justify-center gap-2 mt-2">
+                          <Button variant="link" size="sm" onClick={() => setFolderDialogOpen(true)}>
+                            Create folder
+                          </Button>
+                          <span className="text-muted-foreground">or</span>
+                          <Button variant="link" size="sm" onClick={() => setUploadDialogOpen(true)}>
+                            Upload document
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -549,37 +840,57 @@ export default function CompanyDetailPage() {
                             </button>
                           </div>
                         </td>
-                        <td className="px-3 py-1.5 text-muted-foreground">
-                          {formatModifiedDate(doc.updated_at)}
-                        </td>
-                        <td className="px-3 py-1.5">
-                          <div className="flex items-center gap-2">
-                            <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
-                              <User className="h-3 w-3 text-muted-foreground" />
+                        {isColumnVisible("modified") && (
+                          <td className="px-3 py-1.5 text-muted-foreground">
+                            {formatModifiedDate(doc.updated_at)}
+                          </td>
+                        )}
+                        {isColumnVisible("modifiedBy") && (
+                          <td className="px-3 py-1.5">
+                            <div className="flex items-center gap-2">
+                              <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
+                                <User className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                              <span className="text-muted-foreground text-xs">System</span>
                             </div>
-                            <span className="text-muted-foreground text-xs">System</span>
-                          </div>
-                        </td>
-                        <td className="px-3 py-1.5">
-                          {getStatusBadge(doc.status || "Draft")}
-                        </td>
-                        <td className="px-3 py-1.5">
-                          <div className="flex gap-1 flex-wrap">
-                            {doc.document_type && (
-                              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                                {doc.document_type}
-                              </span>
-                            )}
-                            {doc.tags?.slice(0, 2).map((tag: string, i: number) => (
-                              <span key={i} className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                                {tag}
-                              </span>
-                            ))}
-                            {doc.tags && doc.tags.length > 2 && (
-                              <span className="text-xs text-muted-foreground">+{doc.tags.length - 2}</span>
-                            )}
-                          </div>
-                        </td>
+                          </td>
+                        )}
+                        {isColumnVisible("size") && (
+                          <td className="px-3 py-1.5 text-muted-foreground">
+                            {formatFileSize(doc.file_size)}
+                          </td>
+                        )}
+                        {isColumnVisible("type") && (
+                          <td className="px-3 py-1.5">
+                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                              {doc.document_type || "Other"}
+                            </span>
+                          </td>
+                        )}
+                        {isColumnVisible("status") && (
+                          <td className="px-3 py-1.5">
+                            {getStatusBadge(doc.status || "Draft")}
+                          </td>
+                        )}
+                        {isColumnVisible("value") && (
+                          <td className="px-3 py-1.5 font-mono text-xs">
+                            {formatCurrency(doc.financial_value)}
+                          </td>
+                        )}
+                        {isColumnVisible("tags") && (
+                          <td className="px-3 py-1.5">
+                            <div className="flex gap-1 flex-wrap">
+                              {doc.tags?.slice(0, 2).map((tag: string, i: number) => (
+                                <span key={i} className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                  {tag}
+                                </span>
+                              ))}
+                              {doc.tags && doc.tags.length > 2 && (
+                                <span className="text-xs text-muted-foreground">+{doc.tags.length - 2}</span>
+                              )}
+                            </div>
+                          </td>
+                        )}
                         <td className="px-3 py-1.5">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -615,9 +926,11 @@ export default function CompanyDetailPage() {
             </div>
 
             {/* Footer */}
-            {filteredDocuments && filteredDocuments.length > 0 && (
+            {((folders?.length || 0) + (filteredDocuments?.length || 0)) > 0 && (
               <div className="px-3 py-2 border-t bg-muted/20 text-xs text-muted-foreground">
-                {filteredDocuments.length} item{filteredDocuments.length !== 1 ? 's' : ''}
+                {folders?.length ? `${folders.length} folder${folders.length !== 1 ? 's' : ''}` : ''}
+                {folders?.length && filteredDocuments?.length ? ', ' : ''}
+                {filteredDocuments?.length ? `${filteredDocuments.length} file${filteredDocuments.length !== 1 ? 's' : ''}` : ''}
                 {selectedDocs.size > 0 && ` • ${selectedDocs.size} selected`}
               </div>
             )}
@@ -667,12 +980,81 @@ export default function CompanyDetailPage() {
             </div>
           </div>
         </TabsContent>
+
+        <TabsContent value="settings" className="mt-4">
+          <div className="bg-background border rounded-lg p-6 max-w-2xl">
+            <h3 className="text-lg font-medium mb-4">Column Settings</h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              Choose which columns to display in the Document Library grid.
+            </p>
+            
+            <div className="space-y-4">
+              {columns.map((column) => (
+                <div key={column.id} className="flex items-center justify-between py-2 border-b">
+                  <div>
+                    <Label className="font-medium">{column.label}</Label>
+                    {column.required && (
+                      <span className="ml-2 text-xs text-muted-foreground">(Required)</span>
+                    )}
+                  </div>
+                  <Switch
+                    checked={column.visible}
+                    onCheckedChange={() => toggleColumn(column.id)}
+                    disabled={column.required}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex gap-2">
+              <Button variant="outline" onClick={resetColumns}>
+                Reset to Default
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
       </Tabs>
+
+      {/* New Folder Dialog */}
+      <Dialog open={folderDialogOpen} onOpenChange={setFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Folder</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="folderName">Folder Name</Label>
+            <Input
+              id="folderName"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder="Enter folder name..."
+              className="mt-2"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newFolderName.trim()) {
+                  createFolderMutation.mutate(newFolderName.trim());
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFolderDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => createFolderMutation.mutate(newFolderName.trim())}
+              disabled={!newFolderName.trim() || createFolderMutation.isPending}
+            >
+              Create Folder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <DocumentUploadDialog
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
         companyId={id!}
+        folderId={currentFolderId}
       />
     </div>
   );

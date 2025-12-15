@@ -279,6 +279,7 @@ export type Database = {
           file_size: number | null
           file_url: string
           financial_value: number | null
+          folder_id: string | null
           id: string
           mime_type: string | null
           name: string
@@ -295,6 +296,7 @@ export type Database = {
           file_size?: number | null
           file_url: string
           financial_value?: number | null
+          folder_id?: string | null
           id?: string
           mime_type?: string | null
           name: string
@@ -311,6 +313,7 @@ export type Database = {
           file_size?: number | null
           file_url?: string
           financial_value?: number | null
+          folder_id?: string | null
           id?: string
           mime_type?: string | null
           name?: string
@@ -326,6 +329,55 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_documents_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "company_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_folders: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          name: string
+          parent_folder_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          name: string
+          parent_folder_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          parent_folder_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_folders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_folders_parent_folder_id_fkey"
+            columns: ["parent_folder_id"]
+            isOneToOne: false
+            referencedRelation: "company_folders"
             referencedColumns: ["id"]
           },
         ]
