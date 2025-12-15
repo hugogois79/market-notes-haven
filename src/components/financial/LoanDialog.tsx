@@ -89,9 +89,10 @@ export default function LoanDialog({
 
     setIsUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `loans/${fileName}`;
+      // Keep original filename, just sanitize it and add timestamp to avoid conflicts
+      const timestamp = Date.now();
+      const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const filePath = `loans/${timestamp}-${safeFileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('attachments')
@@ -326,7 +327,12 @@ export default function LoanDialog({
                     onClick={handleDownloadAttachment}
                     className="text-sm truncate text-blue-600 hover:underline text-left"
                   >
-                    {attachmentUrl.split('/').pop()}
+                    {(() => {
+                      const fullName = attachmentUrl.split('/').pop() || '';
+                      // Remove timestamp prefix (e.g., "1234567890-" pattern)
+                      const match = fullName.match(/^\d+-(.+)$/);
+                      return match ? match[1] : fullName;
+                    })()}
                   </button>
                 </div>
                 <div className="flex items-center gap-1">
