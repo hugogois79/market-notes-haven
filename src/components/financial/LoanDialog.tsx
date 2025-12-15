@@ -236,7 +236,7 @@ export default function LoanDialog({
                   <SelectValue placeholder="Selecione a empresa" />
                 </SelectTrigger>
                 <SelectContent>
-                  {companies?.map((company) => (
+                  {companies?.filter(c => c.id !== watch("lending_company_id"))?.map((company) => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.name}
                     </SelectItem>
