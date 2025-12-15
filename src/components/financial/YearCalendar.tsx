@@ -1266,16 +1266,16 @@ export default function YearCalendar() {
               visibleMonths.map((monthInfo) => (
                 <React.Fragment key={`header-${monthInfo.month}-${monthInfo.year}`}>
                   {/* B column header */}
-                  <div className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border/30">B</div>
-                  {/* Month name spanning Morning and Afternoon columns */}
-                  <div 
-                    className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30"
-                    style={{ gridColumn: 'span 2' }}
-                  >
+                  <div className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border/30 flex items-center justify-center">B</div>
+                  {/* Morning column with month name */}
+                  <div className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30 flex items-center justify-center">
                     {monthInfo.label}
                   </div>
+                  {/* Afternoon column - empty or secondary label */}
+                  <div className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30 flex items-center justify-center">
+                  </div>
                   {/* D column header - with double border as month separator */}
-                  <div className="p-0.5 text-[8px] font-bold text-foreground text-center" style={{ borderRight: '3px double #1e293b' }}>D</div>
+                  <div className="p-0.5 text-[8px] font-bold text-foreground text-center flex items-center justify-center" style={{ borderRight: '3px double #1e293b' }}>D</div>
                 </React.Fragment>
               ))
             )}
