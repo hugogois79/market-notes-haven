@@ -40,6 +40,8 @@ import LegalPage from "@/pages/legal";
 import LegalCasesPage from "@/pages/legal/cases";
 import LegalContactsPage from "@/pages/legal/contacts";
 import LegalBillableItemsPage from "@/pages/legal/billable-items";
+import CompaniesPage from "@/pages/companies";
+import CompanyDetailPage from "@/pages/companies/[id]";
 
 const AppRoutes = () => {
 
@@ -234,6 +236,24 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <LegalBillableItemsPage />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Companies Routes */}
+          <Route
+            path="companies"
+            element={
+              <ProtectedRoute>
+                <CompaniesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="companies/:id"
+            element={
+              <ProtectedRoute>
+                <CompanyDetailPage />
               </ProtectedRoute>
             }
           />
