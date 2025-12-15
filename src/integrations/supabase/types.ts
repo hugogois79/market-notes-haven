@@ -227,10 +227,13 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          jurisdiction: string | null
           logo_url: string | null
           name: string
           owner_id: string
           phone: string | null
+          risk_rating: string | null
+          status: string | null
           tax_id: string
           updated_at: string
         }
@@ -240,10 +243,13 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          jurisdiction?: string | null
           logo_url?: string | null
           name: string
           owner_id: string
           phone?: string | null
+          risk_rating?: string | null
+          status?: string | null
           tax_id: string
           updated_at?: string
         }
@@ -253,14 +259,76 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          jurisdiction?: string | null
           logo_url?: string | null
           name?: string
           owner_id?: string
           phone?: string | null
+          risk_rating?: string | null
+          status?: string | null
           tax_id?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      company_documents: {
+        Row: {
+          company_id: string
+          created_at: string
+          document_type: string | null
+          file_size: number | null
+          file_url: string
+          financial_value: number | null
+          id: string
+          mime_type: string | null
+          name: string
+          notes: string | null
+          status: string | null
+          tags: string[] | null
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          document_type?: string | null
+          file_size?: number | null
+          file_url: string
+          financial_value?: number | null
+          id?: string
+          mime_type?: string | null
+          name: string
+          notes?: string | null
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          document_type?: string | null
+          file_size?: number | null
+          file_url?: string
+          financial_value?: number | null
+          id?: string
+          mime_type?: string | null
+          name?: string
+          notes?: string | null
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       company_loans: {
         Row: {
@@ -2676,6 +2744,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reminders: {
+        Row: {
+          chat_id: number
+          created_at: string | null
+          id: number
+          message: string
+          remind_at: string | null
+          status: string | null
+          user_name: string | null
+        }
+        Insert: {
+          chat_id: number
+          created_at?: string | null
+          id?: number
+          message: string
+          remind_at?: string | null
+          status?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          chat_id?: number
+          created_at?: string | null
+          id?: number
+          message?: string
+          remind_at?: string | null
+          status?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
       }
       report_expenses: {
         Row: {

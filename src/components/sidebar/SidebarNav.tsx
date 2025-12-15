@@ -16,6 +16,7 @@ import {
   Scale,
   LineChart,
   CalendarDays,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useMemo } from "react";
@@ -128,6 +129,12 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       title: "Legal",
       icon: <Scale size={20} />,
       path: "/legal",
+      workerAllowed: false,
+    },
+    {
+      title: "Companies",
+      icon: <Building2 size={20} />,
+      path: "/companies",
       workerAllowed: false,
     },
     {
