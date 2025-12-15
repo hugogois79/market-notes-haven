@@ -274,6 +274,24 @@ export default function CompaniesPage() {
     },
   });
 
+  const updateCompanyMutation = useMutation({
+    mutationFn: async ({ id, field, value }: { id: string; field: string; value: string }) => {
+      const { error } = await supabase
+        .from("companies")
+        .update({ [field]: value })
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      toast.success("Updated successfully");
+    },
+    onError: (error) => {
+      toast.error("Error: " + error.message);
+    },
+  });
+
   const filteredCompanies = companies?.filter(company => 
     company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     company.tax_id?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -445,10 +463,64 @@ export default function CompaniesPage() {
                         <TableCell>{(company as any).jurisdiction || company.country || "—"}</TableCell>
                       )}
                       {isColumnVisible("status") && (
-                        <TableCell>{getStatusBadge((company as any).status)}</TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="focus:outline-none">
+                                {getStatusBadge((company as any).status)}
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="min-w-[120px]">
+                              {statusOptions.map((option) => (
+                                <DropdownMenuItem 
+                                  key={option.label}
+                                  onClick={() => updateCompanyMutation.mutate({ 
+                                    id: company.id, 
+                                    field: "status", 
+                                    value: option.label 
+                                  })}
+                                  className="flex items-center gap-2"
+                                >
+                                  <span 
+                                    className="w-3 h-3 rounded-full flex-shrink-0" 
+                                    style={{ backgroundColor: option.color }}
+                                  />
+                                  {option.label}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
                       )}
                       {isColumnVisible("riskRating") && (
-                        <TableCell>{getRiskBadge((company as any).risk_rating)}</TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="focus:outline-none">
+                                {getRiskBadge((company as any).risk_rating)}
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="min-w-[120px]">
+                              {riskOptions.map((option) => (
+                                <DropdownMenuItem 
+                                  key={option.label}
+                                  onClick={() => updateCompanyMutation.mutate({ 
+                                    id: company.id, 
+                                    field: "risk_rating", 
+                                    value: option.label 
+                                  })}
+                                  className="flex items-center gap-2"
+                                >
+                                  <span 
+                                    className="w-3 h-3 rounded-full flex-shrink-0" 
+                                    style={{ backgroundColor: option.color }}
+                                  />
+                                  {option.label}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
                       )}
                       {isColumnVisible("actions") && (
                         <TableCell className="text-right">
