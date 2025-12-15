@@ -293,20 +293,37 @@ export default function TransactionDialog({
       if (newFiles.length > 0) {
         const file = newFiles[0];
         // Sanitize filename: remove special chars, keep original name with UUID prefix for uniqueness
-        const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const fileName = `${crypto.randomUUID().slice(0, 8)}_${sanitizedName}`;
         const filePath = `transactions/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from('attachments')
-          .upload(filePath, file);
+        const tryUpload = async (upsert: boolean) => {
+          const { error } = await supabase.storage
+            .from("attachments")
+            .upload(filePath, file, { upsert });
+          if (error) throw error;
+        };
 
-        if (uploadError) throw uploadError;
+        try {
+          await tryUpload(false);
+        } catch (e: any) {
+          // Some browsers surface transient network issues as a generic TypeError("Failed to fetch")
+          const msg = String(e?.message || e);
+          const shouldRetry =
+            msg.includes("Failed to fetch") ||
+            msg.includes("NetworkError") ||
+            msg.toLowerCase().includes("network");
+
+          if (!shouldRetry) throw e;
+
+          // Single retry with upsert to avoid 409 in case the first request actually reached the server
+          await tryUpload(true);
+        }
 
         const { data: urlData } = supabase.storage
-          .from('attachments')
+          .from("attachments")
           .getPublicUrl(filePath);
-        
+
         fileUrl = urlData.publicUrl;
       }
 
