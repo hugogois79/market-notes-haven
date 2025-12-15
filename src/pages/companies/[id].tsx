@@ -1624,24 +1624,21 @@ export default function CompanyDetailPage() {
                       onChange={(e) => updateOptionLabel(i, e.target.value)}
                       className="flex-1"
                     />
-                    {!editingColumn?.isBuiltIn && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => removeOption(i)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => removeOption(i)}
+                      disabled={(editingColumn?.options?.length || 0) <= 1}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
                 ))}
-                {!editingColumn?.isBuiltIn && (
-                  <Button variant="outline" size="sm" onClick={addOption}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Option
-                  </Button>
-                )}
+                <Button variant="outline" size="sm" onClick={addOption}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Option
+                </Button>
               </div>
             </div>
           </div>
