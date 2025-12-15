@@ -26,16 +26,24 @@ serve(async (req) => {
 
     console.log(`Analyzing document: ${fileName}`);
 
-    const systemPrompt = `You are a financial document analyzer. Analyze the provided document content and determine if it is:
+    const systemPrompt = `You are a financial document analyzer specialized in extracting payment and transaction data. Analyze the provided document content and determine if it is:
 1. A LOAN document (empréstimo) - contracts, loan agreements, credit agreements
-2. A TRANSACTION document (transação/movimento) - invoices, receipts, payment confirmations, bank statements
+2. A TRANSACTION document (transação/movimento) - invoices, receipts, payment confirmations, bank statements, transfer receipts
 3. UNKNOWN - if you cannot determine the type
+
+CRITICAL INSTRUCTIONS FOR ENTITY EXTRACTION:
+- For TRANSACTIONS, "entityName" is the BENEFICIARY/RECIPIENT of the payment (who received the money), NOT the payer or the bank.
+- Look for fields like: "Beneficiário", "Destinatário", "A favor de", "Para", "Nome do beneficiário", "Recipient", "Payee", "To:", "Transferência para".
+- IGNORE the payer's name (who made the payment), bank names, or intermediary entities.
+- If this is a receipt/comprovativo, the entityName is the person/company who RECEIVED the payment.
+- For bank transfers, look specifically for the beneficiary account holder name.
+- Extract the FULL name of the beneficiary as it appears in the document.
 
 Respond in JSON format with the following structure:
 {
   "documentType": "loan" | "transaction" | "unknown",
   "confidence": number between 0 and 1,
-  "summary": "brief description of the document",
+  "summary": "brief description of the document in Portuguese",
   "extractedData": {
     // For loans:
     "amount": number or null,
@@ -48,12 +56,12 @@ Respond in JSON format with the following structure:
     // For transactions:
     "amount": number or null,
     "date": "YYYY-MM-DD" or null,
-    "entityName": "string" or null,
+    "entityName": "string" or null (THE BENEFICIARY/RECIPIENT - who received the money),
     "description": "string" or null,
     "transactionType": "income" | "expense" | null,
     "invoiceNumber": "string" or null
   },
-  "reasoning": "explanation of why you classified it this way"
+  "reasoning": "explanation of why you classified it this way and how you identified the beneficiary"
 }`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
