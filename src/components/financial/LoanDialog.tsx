@@ -156,6 +156,14 @@ export default function LoanDialog({
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Validate required company selections
+      if (!data.lending_company_id || data.lending_company_id === '') {
+        throw new Error("Selecione a empresa que empresta");
+      }
+      if (!data.borrowing_company_id || data.borrowing_company_id === '') {
+        throw new Error("Selecione a empresa que recebe");
+      }
+
       const loanData = {
         lending_company_id: data.lending_company_id,
         borrowing_company_id: data.borrowing_company_id,
