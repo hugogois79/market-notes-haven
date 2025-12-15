@@ -68,7 +68,7 @@ export default function FinancialPage() {
           </div>
         ) : (
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className={isMobile ? "flex w-full overflow-x-auto overflow-y-hidden whitespace-nowrap pb-px" : "grid w-full grid-cols-7"}>
+            <TabsList className={isMobile ? "flex w-full overflow-x-auto overflow-y-hidden whitespace-nowrap pb-px" : "grid w-full grid-cols-6"}>
               <TabsTrigger value="dashboard" className="flex-shrink-0">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Dashboard
@@ -80,10 +80,6 @@ export default function FinancialPage() {
               <TabsTrigger value="transactions" className="flex-shrink-0">
                 <CreditCard className="h-4 w-4 mr-2" />
                 Transactions
-              </TabsTrigger>
-              <TabsTrigger value="projects" className="flex-shrink-0">
-                <FolderKanban className="h-4 w-4 mr-2" />
-                Projects
               </TabsTrigger>
               <TabsTrigger value="budgeting" className="flex-shrink-0">
                 <Calculator className="h-4 w-4 mr-2" />
@@ -115,9 +111,6 @@ export default function FinancialPage() {
               )}
             </TabsContent>
 
-            <TabsContent value="projects" className="space-y-4">
-              <ExpenseProjectManagement />
-            </TabsContent>
 
             <TabsContent value="budgeting" className="space-y-4">
               {selectedCompanyId && (
