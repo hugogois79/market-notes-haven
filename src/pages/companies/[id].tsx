@@ -440,8 +440,15 @@ export default function CompanyDetailPage() {
   const saveColumnSettings = () => {
     if (!editingColumn) return;
     
-    // For category column, save to folder-specific options
-    if (editingColumn.id === 'category') {
+    // Check if it's a folder-specific category edit (from folder menu)
+    if (editingColumn.id.startsWith('category-folder-')) {
+      const folderId = editingColumn.id.replace('category-folder-', '');
+      setFolderCategoryOptions(prev => ({
+        ...prev,
+        [folderId]: editingColumn.options || DEFAULT_CATEGORY_OPTIONS
+      }));
+    } else if (editingColumn.id === 'category') {
+      // For category column, save to folder-specific options (current folder)
       const folderKey = currentFolderId || 'root';
       setFolderCategoryOptions(prev => ({
         ...prev,
@@ -452,6 +459,31 @@ export default function CompanyDetailPage() {
     } else {
       setCustomColumns(customColumns.map(c => c.id === editingColumn.id ? editingColumn : c));
     }
+    setEditColumnDialogOpen(false);
+    setEditingColumn(null);
+  };
+
+  // Edit category options for a specific folder
+  const openEditFolderCategories = (folderId: string) => {
+    const folderKey = folderId;
+    const categoryColumn = columns.find(c => c.id === 'category');
+    const folderOptions = folderCategoryOptions[folderKey] || DEFAULT_CATEGORY_OPTIONS;
+    setEditingColumn({ 
+      ...categoryColumn!, 
+      options: folderOptions,
+      // Store the folder ID temporarily
+      id: `category-folder-${folderId}`
+    });
+    setEditColumnDialogOpen(true);
+  };
+
+  // Override saveColumnSettings to handle folder-specific category edits
+  const saveFolderCategorySettings = (folderId: string) => {
+    if (!editingColumn) return;
+    setFolderCategoryOptions(prev => ({
+      ...prev,
+      [folderId]: editingColumn.options || DEFAULT_CATEGORY_OPTIONS
+    }));
     setEditColumnDialogOpen(false);
     setEditingColumn(null);
   };
@@ -1242,6 +1274,10 @@ export default function CompanyDetailPage() {
                               <ChevronRight className="h-4 w-4 mr-2" />
                               Open
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openEditFolderCategories(folder.id)}>
+                              <Edit3 className="h-4 w-4 mr-2" />
+                              Edit Categories
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="text-destructive"
@@ -1702,16 +1738,27 @@ export default function CompanyDetailPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Edit Column: {editingColumn?.label}
-              {editingColumn?.id === 'category' && (
-                <span className="text-xs font-normal text-muted-foreground ml-2">
-                  (for this folder)
-                </span>
+              {editingColumn?.id.startsWith('category-folder-') ? (
+                <>
+                  Edit Categories
+                  <span className="text-xs font-normal text-muted-foreground ml-2">
+                    (for folder: {folders?.find(f => f.id === editingColumn.id.replace('category-folder-', ''))?.name})
+                  </span>
+                </>
+              ) : (
+                <>
+                  Edit Column: {editingColumn?.label}
+                  {editingColumn?.id === 'category' && (
+                    <span className="text-xs font-normal text-muted-foreground ml-2">
+                      (for this folder)
+                    </span>
+                  )}
+                </>
               )}
             </DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            {!editingColumn?.isBuiltIn && (
+            {!editingColumn?.isBuiltIn && !editingColumn?.id.startsWith('category-folder-') && (
               <div>
                 <Label htmlFor="editColumnName">Column Name</Label>
                 <Input
