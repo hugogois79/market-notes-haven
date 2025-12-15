@@ -1366,7 +1366,7 @@ export default function CompanyDetailPage() {
                         </td>
                       )}
                       {isColumnVisible("tags") && (
-                        <td className="px-3 py-1.5 text-slate-400 text-xs">—</td>
+                        <td className="px-3 py-1.5"></td>
                       )}
                       {isColumnVisible("modified") && (
                         <td className="px-3 py-1.5 text-slate-500 text-sm">
