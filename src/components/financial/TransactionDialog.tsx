@@ -278,8 +278,12 @@ export default function TransactionDialog({
         fileUrl = urlData.publicUrl;
       }
 
-      // Remove client-side enriched properties that don't exist in the database
-      const { category_name, project_name, ...cleanData } = data;
+      // Only extract the fields we need, ignore any extra fields from the form
+      const {
+        date, type, description, entity_name, amount_net, vat_rate, vat_amount,
+        total_amount, payment_method, invoice_number, notes, project_id,
+        category_id, bank_account_id, company_id: formCompanyId, subcategory
+      } = data;
       
       // Helper to convert empty strings and "undefined" to null for UUID fields
       const toUuidOrNull = (value: any): string | null => {
@@ -300,7 +304,7 @@ export default function TransactionDialog({
         return null;
       };
       
-      const resolvedCompanyId = toUuidOrNull(cleanData.company_id) || toUuidOrNull(companyId);
+      const resolvedCompanyId = toUuidOrNull(formCompanyId) || toUuidOrNull(companyId);
       const resolvedCreatedBy = toUuidOrNull(user?.id);
       
       if (!resolvedCompanyId || !resolvedCreatedBy) {
@@ -310,22 +314,23 @@ export default function TransactionDialog({
       const transactionData = {
         company_id: resolvedCompanyId,
         created_by: resolvedCreatedBy,
-        date: cleanData.date,
-        type: cleanData.type,
-        description: cleanData.description,
-        entity_name: cleanData.entity_name,
-        amount_net: Number(cleanData.amount_net),
-        vat_rate: Number(cleanData.vat_rate),
-        vat_amount: Number(cleanData.vat_amount),
-        total_amount: Number(cleanData.total_amount),
-        payment_method: cleanData.payment_method,
-        invoice_number: cleanData.invoice_number || null,
-        notes: cleanData.notes || null,
-        project_id: toUuidOrNull(cleanData.project_id),
-        category_id: toUuidOrNull(cleanData.category_id),
-        bank_account_id: toUuidOrNull(cleanData.bank_account_id),
+        date: date,
+        type: type,
+        description: description,
+        entity_name: entity_name,
+        amount_net: Number(amount_net),
+        vat_rate: Number(vat_rate),
+        vat_amount: Number(vat_amount),
+        total_amount: Number(total_amount),
+        payment_method: payment_method,
+        invoice_number: invoice_number || null,
+        notes: notes || null,
+        project_id: toUuidOrNull(project_id),
+        category_id: toUuidOrNull(category_id),
+        bank_account_id: toUuidOrNull(bank_account_id),
         invoice_file_url: fileUrl,
         category: 'other' as const,
+        subcategory: subcategory || null,
       };
       
       console.log('Transaction data to save:', transactionData);
