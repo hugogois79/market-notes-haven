@@ -282,9 +282,22 @@ export default function TransactionDialog({
       const { category_name, project_name, ...cleanData } = data;
       
       // Helper to convert empty strings and "undefined" to null for UUID fields
-      const toUuidOrNull = (value: any) => {
-        if (!value || value === "" || value === "undefined" || value === "none" || value === undefined) return null;
-        return value;
+      const toUuidOrNull = (value: any): string | null => {
+        if (value === null || value === undefined) return null;
+        if (typeof value === 'string') {
+          const trimmed = value.trim();
+          if (trimmed === '' || trimmed === 'undefined' || trimmed === 'none' || trimmed === 'null') {
+            return null;
+          }
+          // Validate UUID format
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (!uuidRegex.test(trimmed)) {
+            console.warn('Invalid UUID format:', trimmed);
+            return null;
+          }
+          return trimmed;
+        }
+        return null;
       };
       
       const resolvedCompanyId = toUuidOrNull(cleanData.company_id) || toUuidOrNull(companyId);
@@ -314,6 +327,8 @@ export default function TransactionDialog({
         invoice_file_url: fileUrl,
         category: 'other' as const,
       };
+      
+      console.log('Transaction data to save:', transactionData);
 
       if (transaction) {
         const { error } = await supabase
