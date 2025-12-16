@@ -4,7 +4,7 @@ import { KanbanCard as KanbanCardType } from '@/services/kanbanService';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, AlertCircle, CheckCircle2, RotateCcw, Paperclip, ListChecks } from 'lucide-react';
+import { Calendar, AlertCircle, CheckCircle2, RotateCcw, Paperclip, ListChecks, Tag } from 'lucide-react';
 import { format, isPast, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -121,6 +121,13 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
                   {card.attachment_count}
                 </Badge>
               )}
+              
+              {card.tags && card.tags.length > 0 && card.tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                  <Tag className="h-3 w-3 mr-1" />
+                  {tag}
+                </Badge>
+              ))}
             </div>
           </CardContent>
         </Card>
