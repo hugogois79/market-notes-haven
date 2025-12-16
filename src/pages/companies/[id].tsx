@@ -111,6 +111,7 @@ const CUSTOM_DOC_COLUMNS_KEY = "company-doc-custom-columns";
 const DOC_CUSTOM_DATA_KEY = "company-doc-custom-data";
 const FOLDER_CATEGORY_OPTIONS_KEY = "company-folder-category-options";
 const FAVORITE_FOLDERS_KEY = "company-favorite-folders";
+const FOLDER_SORT_SETTINGS_KEY = "company-folder-sort";
 
 // Fixed color palette (10 colors)
 const COLOR_PALETTE = [
@@ -242,6 +243,34 @@ export default function CompanyDetailPage() {
   useEffect(() => {
     localStorage.setItem(`${FAVORITE_FOLDERS_KEY}-${id}`, JSON.stringify([...favoriteFolders]));
   }, [favoriteFolders, id]);
+
+  // Load sort settings when folder changes
+  useEffect(() => {
+    const folderKey = currentFolderId || "root";
+    const saved = localStorage.getItem(`${FOLDER_SORT_SETTINGS_KEY}-${id}-${folderKey}`);
+    if (saved) {
+      try {
+        const { field, direction } = JSON.parse(saved);
+        setSortField(field);
+        setSortDirection(direction);
+      } catch {
+        // Keep default values
+      }
+    } else {
+      // Reset to default for new folders
+      setSortField("updated_at");
+      setSortDirection("desc");
+    }
+  }, [currentFolderId, id]);
+
+  // Save sort settings when they change
+  useEffect(() => {
+    const folderKey = currentFolderId || "root";
+    localStorage.setItem(
+      `${FOLDER_SORT_SETTINGS_KEY}-${id}-${folderKey}`,
+      JSON.stringify({ field: sortField, direction: sortDirection })
+    );
+  }, [sortField, sortDirection, currentFolderId, id]);
 
   const toggleFavorite = (folderId: string) => {
     setFavoriteFolders(prev => {
