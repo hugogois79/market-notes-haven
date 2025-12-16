@@ -1500,7 +1500,7 @@ export default function CompanyDetailPage() {
                       </th>
                     )}
                     {isColumnVisible("type") && (
-                      <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-52">
+                      <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs tracking-wider w-52">
                         Type
                       </th>
                     )}
