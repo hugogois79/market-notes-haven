@@ -249,10 +249,10 @@ export default function CompanyDetailPage() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Merge with defaults to ensure all columns exist with options
+        // Always use DEFAULT_COLUMNS as base to ensure all columns exist (including new ones like Type)
         return DEFAULT_COLUMNS.map(def => {
-          const saved = parsed.find((p: ColumnConfig) => p.id === def.id);
-          return saved ? { ...def, ...saved, options: saved.options || def.options } : def;
+          const savedCol = parsed.find((p: ColumnConfig) => p.id === def.id);
+          return savedCol ? { ...def, visible: savedCol.visible, options: savedCol.options || def.options } : def;
         });
       } catch {
         return DEFAULT_COLUMNS;
