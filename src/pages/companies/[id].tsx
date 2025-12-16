@@ -2830,6 +2830,28 @@ export default function CompanyDetailPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Floating Upload Progress Indicator */}
+      {dropUploadProgress && (
+        <div className="fixed bottom-4 right-4 z-50 bg-background border border-border rounded-lg shadow-lg p-4 min-w-[280px]">
+          <div className="flex items-center gap-3 mb-2">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-sm font-medium">Uploading files...</span>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{dropUploadProgress.current} of {dropUploadProgress.total} files</span>
+              <span>{Math.round((dropUploadProgress.current / dropUploadProgress.total) * 100)}%</span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+              <div 
+                className="bg-primary h-full rounded-full transition-all duration-300"
+                style={{ width: `${(dropUploadProgress.current / dropUploadProgress.total) * 100}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
