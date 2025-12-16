@@ -1388,40 +1388,6 @@ export default function CompanyDetailPage() {
         </TabsList>
 
         <TabsContent value="documents" className="mt-0 pt-4">
-          {/* Drop Zone */}
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={cn(
-              "border-2 border-dashed rounded-lg p-4 text-center transition-colors mb-4",
-              isDragOver 
-                ? "border-primary bg-primary/5" 
-                : isDropUploading
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-muted-foreground/20 bg-background"
-            )}
-          >
-            {isDropUploading ? (
-              <>
-                <div className="h-6 w-6 mx-auto mb-1 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                <p className="text-sm text-blue-600 font-medium">
-                  Uploading {dropUploadProgress?.current} of {dropUploadProgress?.total} files...
-                </p>
-              </>
-            ) : (
-              <>
-                <Upload className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  Drag files here or{" "}
-                  <button onClick={() => setUploadDialogOpen(true)} className="text-primary hover:underline">
-                    browse
-                  </button>
-                </p>
-              </>
-            )}
-          </div>
-
           {/* SharePoint Command Bar */}
           <div className="bg-background border rounded-t-lg border-b-0">
             <div className="flex items-center justify-between px-3 py-2 border-b">
