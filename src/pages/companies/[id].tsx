@@ -214,6 +214,8 @@ export default function CompanyDetailPage() {
   });
   const [newTagInput, setNewTagInput] = useState("");
   const [tagPopoverOpen, setTagPopoverOpen] = useState<string | null>(null);
+  const [valuePopoverOpen, setValuePopoverOpen] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState("");
   const [metadataSheetOpen, setMetadataSheetOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [viewingDocument, setViewingDocument] = useState<any>(null);
@@ -1609,13 +1611,65 @@ export default function CompanyDetailPage() {
                         )}
                         {isColumnVisible("value") && (
                           <td className="px-3 py-2 text-right">
-                            {doc.financial_value ? (
-                              <span className="font-mono text-sm font-medium text-slate-800">
-                                {formatCurrency(doc.financial_value)}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 text-xs">—</span>
-                            )}
+                            <Popover 
+                              open={valuePopoverOpen === doc.id} 
+                              onOpenChange={(open) => {
+                                setValuePopoverOpen(open ? doc.id : null);
+                                if (open) {
+                                  setEditingValue(doc.financial_value?.toString() || "");
+                                }
+                              }}
+                            >
+                              <PopoverTrigger asChild>
+                                <button className="cursor-pointer hover:bg-slate-50 rounded px-1 -mx-1 min-w-[60px] text-right">
+                                  {doc.financial_value ? (
+                                    <span className="font-mono text-sm font-medium text-slate-800">
+                                      {formatCurrency(doc.financial_value)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400 text-xs">—</span>
+                                  )}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-40 p-2" align="end">
+                                <div className="space-y-2">
+                                  <Input
+                                    type="number"
+                                    placeholder="0.00"
+                                    value={editingValue}
+                                    onChange={(e) => setEditingValue(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        const numValue = parseFloat(editingValue) || null;
+                                        updateDocFieldMutation.mutate({
+                                          docId: doc.id,
+                                          field: "financial_value",
+                                          value: numValue as any
+                                        });
+                                        setValuePopoverOpen(null);
+                                      }
+                                    }}
+                                    className="h-8 text-sm font-mono"
+                                  />
+                                  <Button 
+                                    size="sm" 
+                                    className="w-full h-7"
+                                    onClick={() => {
+                                      const numValue = parseFloat(editingValue) || null;
+                                      updateDocFieldMutation.mutate({
+                                        docId: doc.id,
+                                        field: "financial_value",
+                                        value: numValue as any
+                                      });
+                                      setValuePopoverOpen(null);
+                                    }}
+                                  >
+                                    Save
+                                  </Button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
                           </td>
                         )}
                         {isColumnVisible("status") && (
