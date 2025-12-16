@@ -1253,7 +1253,13 @@ export default function CompanyDetailPage() {
             <Breadcrumb>
               <BreadcrumbList className="text-sm">
                 <BreadcrumbItem>
-                  <BreadcrumbLink href="/companies" className="text-primary hover:underline">Companies</BreadcrumbLink>
+                  <BreadcrumbLink 
+                    href="#" 
+                    onClick={(e) => { e.preventDefault(); navigate("/companies"); }}
+                    className="text-primary hover:underline cursor-pointer"
+                  >
+                    Companies
+                  </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
