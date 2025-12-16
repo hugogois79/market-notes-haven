@@ -150,7 +150,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "category", label: "Category", visible: true, dbField: "document_type", isBuiltIn: true, options: DEFAULT_CATEGORY_OPTIONS },
   { id: "value", label: "Value", visible: true },
   { id: "status", label: "Status", visible: true, dbField: "status", isBuiltIn: true, options: DEFAULT_STATUS_OPTIONS },
-  { id: "tags", label: "Tags", visible: true },
   { id: "modified", label: "Modified", visible: false },
   { id: "size", label: "Size", visible: false },
 ];
@@ -1311,11 +1310,6 @@ export default function CompanyDetailPage() {
                         {renderColumnHeader(columns.find(c => c.id === "status")!)}
                       </th>
                     )}
-                    {isColumnVisible("tags") && (
-                      <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-40">
-                        Tags
-                      </th>
-                    )}
                     {isColumnVisible("modified") && (
                       <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
                         <SortHeader field="updated_at">Modified</SortHeader>
@@ -1513,7 +1507,7 @@ export default function CompanyDetailPage() {
                             {getFileIcon(doc.mime_type, doc.name)}
                             <button 
                               onClick={() => handleDownload(doc)}
-                              className="font-medium text-blue-600 hover:text-blue-700 hover:underline truncate max-w-[280px] text-sm"
+                              className="font-medium text-blue-600 hover:text-blue-700 hover:underline text-sm text-left"
                             >
                               {doc.name}
                             </button>
@@ -1544,84 +1538,6 @@ export default function CompanyDetailPage() {
                           <td className="px-3 py-2">
                             {renderCellDropdown(doc, columns.find(c => c.id === "status")!)}
                           </td>
-                        )}
-                        {isColumnVisible("tags") && (
-                          <ContextMenu>
-                            <ContextMenuTrigger asChild>
-                              <td className="px-3 py-2 cursor-context-menu">
-                                <div className="flex gap-1 flex-wrap min-h-[20px]">
-                                  {doc.tags?.slice(0, 2).map((tag: string, i: number) => (
-                                    <span 
-                                      key={i} 
-                                      className="text-xs text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded"
-                                    >
-                                      {tag}
-                                    </span>
-                                  ))}
-                                  {doc.tags && doc.tags.length > 2 && (
-                                    <span className="text-xs text-slate-500">+{doc.tags.length - 2}</span>
-                                  )}
-                                  {(!doc.tags || doc.tags.length === 0) && (
-                                    <span className="text-xs text-slate-400 italic opacity-0 group-hover:opacity-100">+ Add</span>
-                                  )}
-                                </div>
-                              </td>
-                            </ContextMenuTrigger>
-                            <ContextMenuContent className="w-48">
-                              <ContextMenuSub>
-                                <ContextMenuSubTrigger>
-                                  <Tag className="h-4 w-4 mr-2" />
-                                  Add Tag
-                                </ContextMenuSubTrigger>
-                                <ContextMenuSubContent className="w-48">
-                                  {AVAILABLE_TAGS.filter(t => !doc.tags?.includes(t)).map((tag) => (
-                                    <ContextMenuItem 
-                                      key={tag}
-                                      onClick={() => handleAddTag(doc.id, doc.tags, tag)}
-                                    >
-                                      {tag}
-                                    </ContextMenuItem>
-                                  ))}
-                                  <ContextMenuSeparator />
-                                  <div className="px-2 py-1.5">
-                                    <Input
-                                      placeholder="New tag..."
-                                      value={newTagInput}
-                                      onChange={(e) => setNewTagInput(e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter" && newTagInput.trim()) {
-                                          handleAddTag(doc.id, doc.tags, newTagInput.trim());
-                                        }
-                                      }}
-                                      className="h-7 text-xs"
-                                      onClick={(e) => e.stopPropagation()}
-                                    />
-                                  </div>
-                                </ContextMenuSubContent>
-                              </ContextMenuSub>
-                              {doc.tags && doc.tags.length > 0 && (
-                                <>
-                                  <ContextMenuSeparator />
-                                  <ContextMenuSub>
-                                    <ContextMenuSubTrigger className="text-destructive">
-                                      <X className="h-4 w-4 mr-2" />
-                                      Remove Tag
-                                    </ContextMenuSubTrigger>
-                                    <ContextMenuSubContent>
-                                      {doc.tags.map((tag: string) => (
-                                        <ContextMenuItem 
-                                          key={tag}
-                                          onClick={() => handleRemoveTag(doc.id, doc.tags, tag)}
-                                        >
-                                          {tag}
-                                        </ContextMenuItem>
-                                      ))}
-                                    </ContextMenuSubContent>
-                                  </ContextMenuSub>
-                                </>
-                              )}
-                            </ContextMenuContent>
-                          </ContextMenu>
                         )}
                         {isColumnVisible("modified") && (
                           <td className="px-3 py-2 text-slate-500 text-sm">
