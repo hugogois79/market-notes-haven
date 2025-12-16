@@ -178,6 +178,37 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "size", label: "Size", visible: false },
 ];
 
+// Get human-readable file type like Windows Explorer
+const getFileTypeLabel = (mimeType: string | null | undefined, fileName: string): string => {
+  if (!mimeType && !fileName) return "File";
+  
+  // Try to determine by extension if no mime type
+  const ext = fileName?.split('.').pop()?.toLowerCase();
+  
+  // MIME type mappings
+  if (mimeType?.includes("pdf")) return "Documento do Adobe Acrobat";
+  if (mimeType?.includes("word") || ext === "doc" || ext === "docx") return "Documento do Microsoft Word";
+  if (mimeType?.includes("excel") || mimeType?.includes("spreadsheet") || ext === "xls" || ext === "xlsx") return "Folha de Cálculo do Microsoft Excel";
+  if (mimeType?.includes("powerpoint") || mimeType?.includes("presentation") || ext === "ppt" || ext === "pptx") return "Apresentação do Microsoft PowerPoint";
+  if (mimeType?.startsWith("image/jpeg") || ext === "jpg" || ext === "jpeg") return "Ficheiro JPEG";
+  if (mimeType?.startsWith("image/png") || ext === "png") return "Ficheiro PNG";
+  if (mimeType?.startsWith("image/gif") || ext === "gif") return "Ficheiro GIF";
+  if (mimeType?.startsWith("image/svg") || ext === "svg") return "Ficheiro SVG";
+  if (mimeType?.startsWith("image/")) return "Ficheiro de Imagem";
+  if (mimeType?.includes("zip") || ext === "zip") return "Pasta Comprimida (ZIP)";
+  if (mimeType?.includes("rar") || ext === "rar") return "Arquivo RAR";
+  if (mimeType?.includes("7z") || ext === "7z") return "Arquivo 7-Zip";
+  if (mimeType?.includes("text/plain") || ext === "txt") return "Documento de Texto";
+  if (mimeType?.includes("text/csv") || ext === "csv") return "Ficheiro CSV";
+  if (mimeType?.includes("json") || ext === "json") return "Ficheiro JSON";
+  if (mimeType?.includes("xml") || ext === "xml") return "Ficheiro XML";
+  if (mimeType?.includes("html") || ext === "html" || ext === "htm") return "Documento HTML";
+  if (mimeType?.includes("audio/") || ext === "mp3" || ext === "wav" || ext === "ogg") return "Ficheiro de Áudio";
+  if (mimeType?.includes("video/") || ext === "mp4" || ext === "avi" || ext === "mkv" || ext === "mov") return "Ficheiro de Vídeo";
+  
+  return "Ficheiro";
+};
+
 const isDarkColor = (color: string | undefined): boolean => {
   if (!color) return false;
   const hex = color.replace("#", "");
@@ -1418,6 +1449,9 @@ export default function CompanyDetailPage() {
                         Date
                       </th>
                     )}
+                    <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-52">
+                      Type
+                    </th>
                     {isColumnVisible("category") && (
                       <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
                         {renderColumnHeader(columns.find(c => c.id === "category")!)}
@@ -1496,6 +1530,7 @@ export default function CompanyDetailPage() {
                       {isColumnVisible("docDate") && (
                         <td className="px-3 py-1.5 text-slate-400 text-xs">—</td>
                       )}
+                      <td className="px-3 py-1.5 text-slate-500 text-xs">Pasta de Ficheiros</td>
                       {isColumnVisible("category") && (
                         <td className="px-3 py-1.5 text-center">
                           {renderFolderCellDropdown(folder, columns.find(c => c.id === "category")!)}
@@ -1653,6 +1688,9 @@ export default function CompanyDetailPage() {
                             {doc.created_at ? format(new Date(doc.created_at), "dd/MM/yyyy") : "—"}
                           </td>
                         )}
+                        <td className="px-3 py-2 text-slate-500 text-xs">
+                          {getFileTypeLabel(doc.mime_type, doc.name)}
+                        </td>
                         {isColumnVisible("category") && (
                           <td className="px-3 py-2 text-center">
                             {renderCellDropdown(doc, columns.find(c => c.id === "category")!)}
