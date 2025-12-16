@@ -971,23 +971,150 @@ export default function CompanyDetailPage() {
     setIsDragOver(false);
   }, []);
 
+  // Helper to recursively read folder entries
+  const readAllEntries = async (entry: FileSystemEntry, basePath: string = ""): Promise<{ file: File; path: string }[]> => {
+    const results: { file: File; path: string }[] = [];
+    
+    if (entry.isFile) {
+      const fileEntry = entry as FileSystemFileEntry;
+      const file = await new Promise<File>((resolve, reject) => {
+        fileEntry.file(resolve, reject);
+      });
+      results.push({ file, path: basePath });
+    } else if (entry.isDirectory) {
+      const dirEntry = entry as FileSystemDirectoryEntry;
+      const reader = dirEntry.createReader();
+      const entries = await new Promise<FileSystemEntry[]>((resolve, reject) => {
+        const allEntries: FileSystemEntry[] = [];
+        const readBatch = () => {
+          reader.readEntries((batch) => {
+            if (batch.length === 0) {
+              resolve(allEntries);
+            } else {
+              allEntries.push(...batch);
+              readBatch();
+            }
+          }, reject);
+        };
+        readBatch();
+      });
+      
+      for (const childEntry of entries) {
+        const childPath = basePath ? `${basePath}/${entry.name}` : entry.name;
+        const childResults = await readAllEntries(childEntry, childPath);
+        results.push(...childResults);
+      }
+    }
+    
+    return results;
+  };
+
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
     
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length === 0) return;
+    const items = e.dataTransfer.items;
+    const filesToUpload: { file: File; folderPath: string }[] = [];
+    
+    // Check if any item is a folder using webkitGetAsEntry
+    const entries: FileSystemEntry[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const entry = items[i].webkitGetAsEntry?.();
+      if (entry) {
+        entries.push(entry);
+      }
+    }
+    
+    // If no entries (browser doesn't support), fall back to files
+    if (entries.length === 0) {
+      const files = Array.from(e.dataTransfer.files);
+      for (const file of files) {
+        filesToUpload.push({ file, folderPath: "" });
+      }
+    } else {
+      // Process entries (may include folders)
+      for (const entry of entries) {
+        const results = await readAllEntries(entry, "");
+        for (const r of results) {
+          filesToUpload.push({ file: r.file, folderPath: r.path });
+        }
+      }
+    }
+    
+    if (filesToUpload.length === 0) return;
     
     setIsDropUploading(true);
-    setDropUploadProgress({ current: 0, total: files.length });
+    setDropUploadProgress({ current: 0, total: filesToUpload.length });
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        setDropUploadProgress({ current: i + 1, total: files.length });
+      // Track created folders to avoid duplicates
+      const createdFolders: Record<string, string> = {}; // path -> folder id
+      
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const { file, folderPath } = filesToUpload[i];
+        setDropUploadProgress({ current: i + 1, total: filesToUpload.length });
+        
+        // Determine target folder
+        let targetFolderId = currentFolderId;
+        
+        if (folderPath) {
+          // Create nested folder structure if needed
+          const pathParts = folderPath.split("/").filter(Boolean);
+          let parentId = currentFolderId;
+          let currentPath = "";
+          
+          for (const folderName of pathParts) {
+            currentPath = currentPath ? `${currentPath}/${folderName}` : folderName;
+            
+            if (createdFolders[currentPath]) {
+              parentId = createdFolders[currentPath];
+            } else {
+              // Check if folder already exists
+              let folderQuery = supabase
+                .from("company_folders")
+                .select("id")
+                .eq("company_id", id)
+                .eq("name", folderName);
+              
+              if (parentId) {
+                folderQuery = folderQuery.eq("parent_folder_id", parentId);
+              } else {
+                folderQuery = folderQuery.is("parent_folder_id", null);
+              }
+              
+              const { data: existingFolder } = await folderQuery.maybeSingle();
+              
+              if (existingFolder) {
+                createdFolders[currentPath] = existingFolder.id;
+                parentId = existingFolder.id;
+              } else {
+                // Create new folder
+                const { data: newFolder, error: folderError } = await supabase
+                  .from("company_folders")
+                  .insert({
+                    company_id: id,
+                    name: folderName,
+                    parent_folder_id: parentId || null,
+                  })
+                  .select("id")
+                  .single();
+                
+                if (folderError) {
+                  console.error("Failed to create folder:", folderError);
+                  continue;
+                }
+                
+                createdFolders[currentPath] = newFolder.id;
+                parentId = newFolder.id;
+              }
+            }
+          }
+          
+          targetFolderId = parentId;
+        }
         
         // Calculate SHA-256 hash for forensic integrity
         const fileHash = await calculateFileHash(file);
@@ -1013,7 +1140,7 @@ export default function CompanyDetailPage() {
           .from("company_documents")
           .insert({
             company_id: id,
-            folder_id: currentFolderId || null,
+            folder_id: targetFolderId || null,
             name: file.name,
             file_url: publicUrl,
             file_size: file.size,
@@ -1029,8 +1156,9 @@ export default function CompanyDetailPage() {
         }
       }
       
-      queryClient.invalidateQueries({ queryKey: ["company-documents", id, currentFolderId] });
-      toast.success(`${files.length} file(s) uploaded successfully`);
+      queryClient.invalidateQueries({ queryKey: ["company-documents", id] });
+      queryClient.invalidateQueries({ queryKey: ["company-folders", id] });
+      toast.success(`${filesToUpload.length} file(s) uploaded successfully`);
     } catch (error: any) {
       toast.error("Upload failed: " + error.message);
     } finally {
