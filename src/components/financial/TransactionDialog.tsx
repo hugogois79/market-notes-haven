@@ -292,33 +292,43 @@ export default function TransactionDialog({
       // Upload new file if any
       if (newFiles.length > 0) {
         const file = newFiles[0];
-        // Sanitize filename: remove special chars, keep original name with UUID prefix for uniqueness
-        const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const fileName = `${crypto.randomUUID().slice(0, 8)}_${sanitizedName}`;
+        // Sanitize and truncate filename to avoid issues
+        const ext = file.name.split('.').pop() || 'pdf';
+        let baseName = file.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9._-]/g, "_").replace(/undefined/gi, '');
+        // Truncate to max 80 chars to avoid path length issues
+        if (baseName.length > 80) baseName = baseName.slice(0, 80);
+        const fileName = `${crypto.randomUUID().slice(0, 8)}_${baseName}.${ext}`;
         const filePath = `transactions/${fileName}`;
 
         const tryUpload = async (upsert: boolean) => {
           const { error } = await supabase.storage
             .from("attachments")
-            .upload(filePath, file, { upsert });
+            .upload(filePath, file, { upsert, cacheControl: '3600' });
           if (error) throw error;
         };
 
-        try {
-          await tryUpload(false);
-        } catch (e: any) {
-          // Some browsers surface transient network issues as a generic TypeError("Failed to fetch")
-          const msg = String(e?.message || e);
-          const shouldRetry =
-            msg.includes("Failed to fetch") ||
-            msg.includes("NetworkError") ||
-            msg.toLowerCase().includes("network");
+        const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+        
+        let lastError: any;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            await tryUpload(attempt > 0); // Use upsert on retries
+            lastError = null;
+            break;
+          } catch (e: any) {
+            lastError = e;
+            const msg = String(e?.message || e);
+            const isNetworkError =
+              msg.includes("Failed to fetch") ||
+              msg.includes("NetworkError") ||
+              msg.toLowerCase().includes("network");
 
-          if (!shouldRetry) throw e;
-
-          // Single retry with upsert to avoid 409 in case the first request actually reached the server
-          await tryUpload(true);
+            if (!isNetworkError) throw e;
+            
+            if (attempt < 2) await delay(1000 * (attempt + 1)); // Wait 1s, then 2s
+          }
         }
+        if (lastError) throw lastError;
 
         const { data: urlData } = supabase.storage
           .from("attachments")
