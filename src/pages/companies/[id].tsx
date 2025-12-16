@@ -1324,7 +1324,8 @@ export default function CompanyDetailPage() {
       let comparison = 0;
       switch (sortField) {
         case "name":
-          comparison = a.name.localeCompare(b.name);
+          // Use natural sort (numeric: true) so "2" comes before "10"
+          comparison = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
           break;
         case "updated_at":
           comparison = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
@@ -1341,6 +1342,11 @@ export default function CompanyDetailPage() {
       }
       return sortDirection === "asc" ? comparison : -comparison;
     });
+
+  // Sort folders with natural sort (numeric: true) so "2" comes before "10"
+  const sortedFolders = folders
+    ?.slice()
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
   const getFileIcon = (mimeType: string | null, name: string) => {
     const ext = name?.split('.').pop()?.toLowerCase();
@@ -1899,7 +1905,7 @@ export default function CompanyDetailPage() {
                 </thead>
                 <tbody>
                   {/* Folders */}
-                  {folders?.map((folder) => (
+                  {sortedFolders?.map((folder) => (
                     <tr 
                       key={folder.id} 
                       className="border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer group"
