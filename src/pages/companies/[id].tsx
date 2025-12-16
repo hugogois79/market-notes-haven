@@ -754,13 +754,23 @@ export default function CompanyDetailPage() {
             <DropdownMenuItem
               key={opt.label}
               onClick={() => {
+                // If this doc is selected and there are multiple selected, update all selected
+                const docsToUpdate = selectedDocs.has(doc.id) && selectedDocs.size > 1
+                  ? Array.from(selectedDocs)
+                  : [doc.id];
+                
                 if (column.isBuiltIn && column.dbField) {
-                  updateDocFieldMutation.mutate({ docId: doc.id, field: column.dbField, value: opt.label });
+                  docsToUpdate.forEach(docId => {
+                    updateDocFieldMutation.mutate({ docId, field: column.dbField!, value: opt.label });
+                  });
                 } else {
-                  setCustomData(prev => ({
-                    ...prev,
-                    [doc.id]: { ...prev[doc.id], [column.id]: opt.label }
-                  }));
+                  setCustomData(prev => {
+                    const updated = { ...prev };
+                    docsToUpdate.forEach(docId => {
+                      updated[docId] = { ...updated[docId], [column.id]: opt.label };
+                    });
+                    return updated;
+                  });
                 }
               }}
             >
