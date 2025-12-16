@@ -27,18 +27,18 @@ serve(async (req) => {
 
     const folderList = subfolders?.map((f: any) => `- ${f.name}`).join('\n') || 'No subfolders';
 
-    const prompt = `Analyze this folder and provide a brief, insightful summary (2-3 sentences max) in Portuguese.
+    const prompt = `Descreve o conteúdo desta pasta em 1-2 frases curtas em Português.
 
-Company: ${companyName}
-Folder: ${folderName || 'Root'}
+Empresa: ${companyName}
+Pasta: ${folderName || 'Root'}
 
-Documents (${documents?.length || 0}):
+Documentos (${documents?.length || 0}):
 ${docList}
 
-Subfolders (${subfolders?.length || 0}):
+Subpastas (${subfolders?.length || 0}):
 ${folderList}
 
-Provide a concise insight about what this folder contains, its purpose, and any notable patterns. Highlight key document types, dates, or important items. Be specific and actionable.`;
+Sê direto e específico. Menciona datas, valores ou entidades importantes se visíveis nos nomes dos ficheiros. Máximo 40 palavras.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -51,12 +51,12 @@ Provide a concise insight about what this folder contains, its purpose, and any 
         messages: [
           { 
             role: 'system', 
-            content: 'You are a document analysis assistant. Provide brief, professional insights about folder contents in Portuguese. Focus on business value and actionable observations. Keep responses concise - 2-3 sentences maximum.' 
+            content: 'Descreves brevemente o conteúdo de pastas de documentos empresariais em Português. Sê conciso e direto - máximo 40 palavras. Foca no que a pasta contém.' 
           },
           { role: 'user', content: prompt }
         ],
-        max_tokens: 200,
-        temperature: 0.7,
+        max_tokens: 100,
+        temperature: 0.5,
       }),
     });
 
