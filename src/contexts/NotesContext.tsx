@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchNotes, createNote, updateNote, deleteNote } from "@/services/supabaseService";
 import { Note, Tag } from "@/types";
@@ -21,21 +21,15 @@ interface NotesProviderProps {
 }
 
 export const NotesProvider = ({ children }: NotesProviderProps) => {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(true);
-
   const { data: notesData, isLoading, refetch } = useQuery({
     queryKey: ['notes'],
     queryFn: fetchNotes,
+    staleTime: 0, // Always fetch fresh data on mount
   });
 
-  useEffect(() => {
-    if (notesData) {
-      console.log("Fetched notes:", notesData.length);
-      setNotes(notesData);
-      setLoading(false);
-    }
-  }, [notesData]);
+  // Use notesData directly, fallback to empty array
+  const notes = notesData || [];
+  const loading = isLoading;
 
   const handleSaveNote = async (note: Note): Promise<Note | null> => {
     try {
@@ -89,7 +83,6 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
         
         if (result.note) {
           console.log("New note created:", result.note.id);
-          setNotes(prev => [result.note!, ...prev]);
           await refetch();
           return result.note;
         }
@@ -104,9 +97,6 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
         
         if (result.note) {
           console.log("Note updated:", result.note.id);
-          setNotes(prev => 
-            prev.map(n => n.id === result.note!.id ? result.note! : n)
-          );
           await refetch();
           return result.note;
         }
@@ -125,7 +115,6 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
       
       if (success) {
         console.log("Note deleted successfully");
-        setNotes(prev => prev.filter(note => note.id !== noteId));
         await refetch();
         return true;
       }
