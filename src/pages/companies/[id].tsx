@@ -1644,7 +1644,7 @@ export default function CompanyDetailPage() {
                               onClick={() => setViewingDocument(doc)}
                               className="font-medium text-blue-600 hover:text-blue-700 hover:underline text-sm text-left"
                             >
-                              {doc.name}
+                              {doc.name.replace(/\.[^/.]+$/, '')}
                             </button>
                           </div>
                         </td>
