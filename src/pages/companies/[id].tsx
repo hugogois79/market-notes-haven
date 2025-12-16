@@ -297,7 +297,55 @@ export default function CompanyDetailPage() {
   const [insightsExpanded, setInsightsExpanded] = useState(false);
   const [insightsContent, setInsightsContent] = useState<string | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
-  const [insightsFeedback, setInsightsFeedback] = useState<'up' | 'down' | null>(null);
+  const [insightsFeedback, setInsightsFeedback] = useState<'positive' | 'negative' | null>(null);
+  const [insightsLastReviewed, setInsightsLastReviewed] = useState<Date | null>(null);
+  const [insightsId, setInsightsId] = useState<string | null>(null);
+
+  // Load folder insights from database
+  useEffect(() => {
+    const loadFolderInsights = async () => {
+      if (!currentFolderId) {
+        setInsightsContent(null);
+        setInsightsFeedback(null);
+        setInsightsLastReviewed(null);
+        setInsightsId(null);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('folder_insights')
+          .select('*')
+          .eq('folder_id', currentFolderId)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error loading insights:', error);
+          return;
+        }
+
+        if (data) {
+          setInsightsContent(data.insight_text);
+          setInsightsFeedback(data.feedback as 'positive' | 'negative' | null);
+          setInsightsLastReviewed(new Date(data.last_reviewed_at));
+          setInsightsId(data.id);
+        } else {
+          setInsightsContent(null);
+          setInsightsFeedback(null);
+          setInsightsLastReviewed(null);
+          setInsightsId(null);
+        }
+      } catch (error) {
+        console.error('Error loading insights:', error);
+      }
+    };
+
+    loadFolderInsights();
+  }, [currentFolderId]);
+
+  // Check if insights need refresh (>60 days old)
+  const insightsNeedRefresh = !insightsContent || 
+    (insightsLastReviewed && (Date.now() - insightsLastReviewed.getTime()) > 60 * 24 * 60 * 60 * 1000);
 
   // Save columns to localStorage
   useEffect(() => {
@@ -1020,20 +1068,25 @@ export default function CompanyDetailPage() {
     }
   };
 
-  const generateInsights = async () => {
-    if (insightsLoading) return;
+  const generateInsights = async (forceRefresh = false) => {
+    if (insightsLoading || !currentFolderId) return;
+    
+    // Only generate if forced, no content exists, or >60 days old
+    if (!forceRefresh && insightsContent && insightsLastReviewed) {
+      const daysSinceReview = (Date.now() - insightsLastReviewed.getTime()) / (24 * 60 * 60 * 1000);
+      if (daysSinceReview < 60) return;
+    }
+    
     setInsightsLoading(true);
-    setInsightsContent(null);
-    setInsightsFeedback(null);
     
     try {
       const folderName = folderPath?.length ? folderPath[folderPath.length - 1]?.name : 'Root';
       
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/folder-insights`, {
+      const response = await fetch(`https://zyziolikudoczsthyoja.supabase.co/functions/v1/folder-insights`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5emlvbGlrdWRvY3pzdGh5b2phIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkzMjAxMzAsImV4cCI6MjA1NDg5NjEzMH0.d5XzCu7fxA18vPNw8XxkB_heIip9yzsQXh2atSx0OwY`,
         },
         body: JSON.stringify({
           folderName,
@@ -1051,12 +1104,56 @@ export default function CompanyDetailPage() {
       if (!response.ok) throw new Error('Failed to generate insights');
       
       const data = await response.json();
-      setInsightsContent(data.insight);
+      const insightText = data.insight;
+      
+      // Save or update insight in database
+      if (insightsId) {
+        await supabase
+          .from('folder_insights')
+          .update({ 
+            insight_text: insightText, 
+            last_reviewed_at: new Date().toISOString(),
+            feedback: null 
+          })
+          .eq('id', insightsId);
+      } else {
+        const { data: newInsight } = await supabase
+          .from('folder_insights')
+          .insert({ 
+            folder_id: currentFolderId, 
+            insight_text: insightText 
+          })
+          .select()
+          .single();
+        
+        if (newInsight) {
+          setInsightsId(newInsight.id);
+        }
+      }
+      
+      setInsightsContent(insightText);
+      setInsightsFeedback(null);
+      setInsightsLastReviewed(new Date());
     } catch (error: any) {
       console.error('Insights error:', error);
       toast.error('Failed to generate insights');
     } finally {
       setInsightsLoading(false);
+    }
+  };
+
+  const saveFeedback = async (feedback: 'positive' | 'negative' | null) => {
+    if (!insightsId) return;
+    
+    setInsightsFeedback(feedback);
+    
+    try {
+      await supabase
+        .from('folder_insights')
+        .update({ feedback })
+        .eq('id', insightsId);
+    } catch (error) {
+      console.error('Error saving feedback:', error);
     }
   };
 
@@ -1536,7 +1633,7 @@ export default function CompanyDetailPage() {
               <button
                 onClick={() => {
                   setInsightsExpanded(!insightsExpanded);
-                  if (!insightsExpanded && !insightsContent && !insightsLoading) {
+                  if (!insightsExpanded && insightsNeedRefresh && !insightsLoading && currentFolderId) {
                     generateInsights();
                   }
                 }}
@@ -1573,11 +1670,11 @@ export default function CompanyDetailPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setInsightsFeedback(insightsFeedback === 'up' ? null : 'up');
+                            saveFeedback(insightsFeedback === 'positive' ? null : 'positive');
                           }}
                           className={cn(
                             "p-1.5 rounded hover:bg-slate-100 transition-colors",
-                            insightsFeedback === 'up' && "bg-green-100 text-green-600"
+                            insightsFeedback === 'positive' && "bg-green-100 text-green-600"
                           )}
                         >
                           <ThumbsUp className="h-4 w-4" />
@@ -1585,11 +1682,11 @@ export default function CompanyDetailPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setInsightsFeedback(insightsFeedback === 'down' ? null : 'down');
+                            saveFeedback(insightsFeedback === 'negative' ? null : 'negative');
                           }}
                           className={cn(
                             "p-1.5 rounded hover:bg-slate-100 transition-colors",
-                            insightsFeedback === 'down' && "bg-red-100 text-red-600"
+                            insightsFeedback === 'negative' && "bg-red-100 text-red-600"
                           )}
                         >
                           <ThumbsDown className="h-4 w-4" />
@@ -1600,7 +1697,7 @@ export default function CompanyDetailPage() {
                           className="ml-2 h-7 text-xs"
                           onClick={(e) => {
                             e.stopPropagation();
-                            generateInsights();
+                            generateInsights(true);
                           }}
                           disabled={insightsLoading}
                         >
