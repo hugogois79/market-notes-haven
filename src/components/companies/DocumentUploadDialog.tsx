@@ -55,6 +55,14 @@ export default function DocumentUploadDialog({
     setNotes("");
   };
 
+  // Calculate SHA-256 hash for file integrity
+  const calculateFileHash = async (file: File): Promise<string> => {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error("No file selected");
@@ -64,6 +72,9 @@ export default function DocumentUploadDialog({
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
+
+      // Calculate SHA-256 hash for forensic integrity
+      const fileHash = await calculateFileHash(file);
 
       // Upload file to storage
       const timestamp = Date.now();
@@ -97,6 +108,7 @@ export default function DocumentUploadDialog({
           tags: tags ? tags.split(",").map(t => t.trim()).filter(Boolean) : [],
           notes: notes || null,
           uploaded_by: user.id,
+          file_hash: fileHash,
         });
 
       if (insertError) throw insertError;
