@@ -1370,7 +1370,7 @@ export default function CompanyDetailPage() {
                       </th>
                     )}
                     {isColumnVisible("category") && (
-                      <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
+                      <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
                         {renderColumnHeader(columns.find(c => c.id === "category")!)}
                       </th>
                     )}
@@ -1380,7 +1380,7 @@ export default function CompanyDetailPage() {
                       </th>
                     )}
                     {isColumnVisible("status") && (
-                      <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
+                      <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
                         {renderColumnHeader(columns.find(c => c.id === "status")!)}
                       </th>
                     )}
@@ -1448,7 +1448,7 @@ export default function CompanyDetailPage() {
                         <td className="px-3 py-1.5 text-slate-400 text-xs">—</td>
                       )}
                       {isColumnVisible("category") && (
-                        <td className="px-3 py-1.5">
+                        <td className="px-3 py-1.5 text-center">
                           {renderFolderCellDropdown(folder, columns.find(c => c.id === "category")!)}
                         </td>
                       )}
@@ -1456,7 +1456,7 @@ export default function CompanyDetailPage() {
                         <td className="px-3 py-1.5 text-slate-400 text-xs">—</td>
                       )}
                       {isColumnVisible("status") && (
-                        <td className="px-3 py-1.5">
+                        <td className="px-3 py-1.5 text-center">
                           {renderFolderCellDropdown(folder, columns.find(c => c.id === "status")!)}
                         </td>
                       )}
@@ -1605,7 +1605,7 @@ export default function CompanyDetailPage() {
                           </td>
                         )}
                         {isColumnVisible("category") && (
-                          <td className="px-3 py-2">
+                          <td className="px-3 py-2 text-center">
                             {renderCellDropdown(doc, columns.find(c => c.id === "category")!)}
                           </td>
                         )}
@@ -1673,7 +1673,7 @@ export default function CompanyDetailPage() {
                           </td>
                         )}
                         {isColumnVisible("status") && (
-                          <td className="px-3 py-2">
+                          <td className="px-3 py-2 text-center">
                             {renderCellDropdown(doc, columns.find(c => c.id === "status")!)}
                           </td>
                         )}
