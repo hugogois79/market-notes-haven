@@ -154,6 +154,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "category", label: "Category", visible: true, dbField: "document_type", isBuiltIn: true, options: DEFAULT_CATEGORY_OPTIONS },
   { id: "value", label: "Value", visible: true },
   { id: "status", label: "Status", visible: true, dbField: "status", isBuiltIn: true, options: DEFAULT_STATUS_OPTIONS },
+  { id: "tags", label: "Tags", visible: true },
   { id: "modified", label: "Modified", visible: false },
   { id: "size", label: "Size", visible: false },
 ];
@@ -1381,6 +1382,11 @@ export default function CompanyDetailPage() {
                         {renderColumnHeader(columns.find(c => c.id === "status")!)}
                       </th>
                     )}
+                    {isColumnVisible("tags") && (
+                      <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-48">
+                        Tags
+                      </th>
+                    )}
                     {isColumnVisible("modified") && (
                       <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
                         <SortHeader field="updated_at">Modified</SortHeader>
@@ -1615,6 +1621,83 @@ export default function CompanyDetailPage() {
                         {isColumnVisible("status") && (
                           <td className="px-3 py-2">
                             {renderCellDropdown(doc, columns.find(c => c.id === "status")!)}
+                          </td>
+                        )}
+                        {isColumnVisible("tags") && (
+                          <td className="px-3 py-2">
+                            <Popover open={tagPopoverOpen === doc.id} onOpenChange={(open) => setTagPopoverOpen(open ? doc.id : null)}>
+                              <PopoverTrigger asChild>
+                                <button className="flex flex-wrap items-center gap-1 min-h-[24px] cursor-pointer hover:bg-slate-50 rounded px-1 -mx-1">
+                                  {doc.tags && doc.tags.length > 0 ? (
+                                    doc.tags.map((tag: string) => (
+                                      <Badge 
+                                        key={tag} 
+                                        variant="secondary" 
+                                        className="text-xs py-0 px-1.5 gap-1 bg-slate-100 hover:bg-slate-200"
+                                      >
+                                        {tag}
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRemoveTag(doc.id, doc.tags, tag);
+                                          }}
+                                          className="hover:bg-slate-300 rounded-full p-0.5"
+                                        >
+                                          <X className="h-2.5 w-2.5" />
+                                        </button>
+                                      </Badge>
+                                    ))
+                                  ) : (
+                                    <span className="text-slate-400 text-xs flex items-center gap-1">
+                                      <Tag className="h-3 w-3" />
+                                      Add tag
+                                    </span>
+                                  )}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-56 p-2" align="start">
+                                <div className="space-y-2">
+                                  <div className="flex gap-1">
+                                    <Input
+                                      placeholder="New tag..."
+                                      value={newTagInput}
+                                      onChange={(e) => setNewTagInput(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          handleAddTag(doc.id, doc.tags, newTagInput);
+                                        }
+                                      }}
+                                      className="h-7 text-xs"
+                                    />
+                                    <Button 
+                                      size="sm" 
+                                      className="h-7 px-2"
+                                      onClick={() => handleAddTag(doc.id, doc.tags, newTagInput)}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  {AVAILABLE_TAGS.length > 0 && (
+                                    <div className="border-t pt-2">
+                                      <p className="text-xs text-muted-foreground mb-1">Quick add:</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {AVAILABLE_TAGS.filter(t => !doc.tags?.includes(t)).slice(0, 6).map((tag) => (
+                                          <Badge
+                                            key={tag}
+                                            variant="outline"
+                                            className="text-xs py-0 px-1.5 cursor-pointer hover:bg-slate-100"
+                                            onClick={() => handleAddTag(doc.id, doc.tags, tag)}
+                                          >
+                                            {tag}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </PopoverContent>
+                            </Popover>
                           </td>
                         )}
                         {isColumnVisible("modified") && (
