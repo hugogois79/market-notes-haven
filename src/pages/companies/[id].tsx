@@ -83,7 +83,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DocumentUploadDialog from "@/components/companies/DocumentUploadDialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { PdfViewer } from "@/components/PdfViewer";
+import { DocumentPreview } from "@/components/companies/DocumentPreview";
 
 const AVAILABLE_TAGS = ["Important", "Urgent", "Review", "Archive", "Legal", "Finance", "Contract", "Invoice", "Receipt", "Other"];
 
@@ -2186,39 +2186,10 @@ export default function CompanyDetailPage() {
           </DialogHeader>
           {viewingDocument && (
             <div className="flex-1 overflow-hidden h-full">
-              {viewingDocument.mime_type === "application/pdf" ? (
-                <PdfViewer 
-                  url={viewingDocument.file_url} 
-                  filename={viewingDocument.name}
-                />
-              ) : viewingDocument.mime_type?.startsWith("image/") ? (
-                <div className="flex flex-col h-full">
-                  <div className="flex items-center justify-end gap-2 p-4 border-b">
-                    <Button size="sm" onClick={() => handleDownload(viewingDocument)}>
-                      <Download className="h-4 w-4 mr-2" />
-                      Descarregar
-                    </Button>
-                  </div>
-                  <div className="flex-1 overflow-auto bg-muted/20 flex items-center justify-center p-4">
-                    <img 
-                      src={viewingDocument.file_url} 
-                      alt={viewingDocument.name}
-                      className="max-w-full max-h-full object-contain shadow-lg"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full gap-4">
-                  <FileText className="h-16 w-16 text-muted-foreground" />
-                  <p className="text-muted-foreground">
-                    Pré-visualização não disponível para este tipo de ficheiro
-                  </p>
-                  <Button onClick={() => handleDownload(viewingDocument)}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Descarregar
-                  </Button>
-                </div>
-              )}
+              <DocumentPreview 
+                document={viewingDocument}
+                onDownload={() => handleDownload(viewingDocument)}
+              />
             </div>
           )}
         </DialogContent>
