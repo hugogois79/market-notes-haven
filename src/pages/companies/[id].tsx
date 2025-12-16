@@ -1806,7 +1806,24 @@ export default function CompanyDetailPage() {
           </div>
 
           {/* SharePoint-style Dense Data Grid */}
-          <div className="bg-background border border-slate-200 rounded-b-lg overflow-hidden shadow-sm">
+          <div 
+            className={cn(
+              "bg-background border border-slate-200 rounded-b-lg overflow-hidden shadow-sm transition-colors relative",
+              isDragOver && "border-primary border-2 bg-primary/5"
+            )}
+            onDragEnter={(e) => { e.preventDefault(); setIsDragOver(true); }}
+            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+            onDragLeave={(e) => { e.preventDefault(); setIsDragOver(false); }}
+            onDrop={handleDrop}
+          >
+            {isDragOver && (
+              <div className="absolute inset-0 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg z-10 pointer-events-none">
+                <div className="text-center">
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-primary" />
+                  <p className="text-sm font-medium text-primary">Drop files or folders here</p>
+                </div>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
