@@ -110,6 +110,20 @@ const CUSTOM_DOC_COLUMNS_KEY = "company-doc-custom-columns";
 const DOC_CUSTOM_DATA_KEY = "company-doc-custom-data";
 const FOLDER_CATEGORY_OPTIONS_KEY = "company-folder-category-options";
 
+// Fixed color palette (10 colors)
+const COLOR_PALETTE = [
+  "#22c55e", // green
+  "#3b82f6", // blue
+  "#8b5cf6", // purple
+  "#f59e0b", // amber
+  "#ef4444", // red
+  "#06b6d4", // cyan
+  "#ec4899", // pink
+  "#f97316", // orange
+  "#14b8a6", // teal
+  "#6b7280", // gray
+];
+
 const DEFAULT_CATEGORY_OPTIONS: ColumnOption[] = [
   { label: "Invoice", color: "#22c55e" },
   { label: "Contract", color: "#3b82f6" },
@@ -275,11 +289,9 @@ export default function CompanyDetailPage() {
   const getFolderCategoryOptions = useCallback((folderId: string | null): ColumnOption[] => {
     if (!folderId) return DEFAULT_CATEGORY_OPTIONS;
     const folder = allFolders?.find(f => f.id === folderId);
-    if (folder?.category_options && folder.category_options.length > 0) {
-      return folder.category_options.map((label: string) => ({
-        label,
-        color: DEFAULT_CATEGORY_OPTIONS.find(o => o.label === label)?.color || '#6b7280'
-      }));
+    const options = folder?.category_options as unknown as ColumnOption[] | null;
+    if (options && Array.isArray(options) && options.length > 0) {
+      return options;
     }
     return DEFAULT_CATEGORY_OPTIONS;
   }, [allFolders]);
@@ -288,11 +300,9 @@ export default function CompanyDetailPage() {
   const getFolderStatusOptions = useCallback((folderId: string | null): ColumnOption[] => {
     if (!folderId) return DEFAULT_STATUS_OPTIONS;
     const folder = allFolders?.find(f => f.id === folderId);
-    if (folder?.status_options && folder.status_options.length > 0) {
-      return folder.status_options.map((label: string) => ({
-        label,
-        color: DEFAULT_STATUS_OPTIONS.find(o => o.label === label)?.color || '#6b7280'
-      }));
+    const options = folder?.status_options as unknown as ColumnOption[] | null;
+    if (options && Array.isArray(options) && options.length > 0) {
+      return options;
     }
     return DEFAULT_STATUS_OPTIONS;
   }, [allFolders]);
@@ -381,7 +391,7 @@ export default function CompanyDetailPage() {
   });
 
   const updateFolderFieldMutation = useMutation({
-    mutationFn: async ({ folderId, field, value }: { folderId: string; field: string; value: string | string[] }) => {
+    mutationFn: async ({ folderId, field, value }: { folderId: string; field: string; value: unknown }) => {
       const { error } = await supabase
         .from("company_folders")
         .update({ [field]: value })
@@ -495,22 +505,22 @@ export default function CompanyDetailPage() {
     // Check if it's a folder-specific category edit (from folder menu)
     if (editingColumn.id.startsWith('category-folder-')) {
       const folderId = editingColumn.id.replace('category-folder-', '');
-      const labels = (editingColumn.options || DEFAULT_CATEGORY_OPTIONS).map(o => o.label);
+      const options = editingColumn.options || DEFAULT_CATEGORY_OPTIONS;
       if (folderId !== 'root') {
-        await updateFolderFieldMutation.mutateAsync({ folderId, field: 'category_options', value: labels });
+        await updateFolderFieldMutation.mutateAsync({ folderId, field: 'category_options', value: options });
       }
     } else if (editingColumn.id.startsWith('status-folder-')) {
       const folderId = editingColumn.id.replace('status-folder-', '');
-      const labels = (editingColumn.options || DEFAULT_STATUS_OPTIONS).map(o => o.label);
+      const options = editingColumn.options || DEFAULT_STATUS_OPTIONS;
       if (folderId !== 'root') {
-        await updateFolderFieldMutation.mutateAsync({ folderId, field: 'status_options', value: labels });
+        await updateFolderFieldMutation.mutateAsync({ folderId, field: 'status_options', value: options });
       }
     } else if (editingColumn.id === 'category' && editingFolderId) {
-      const labels = (editingColumn.options || DEFAULT_CATEGORY_OPTIONS).map(o => o.label);
-      await updateFolderFieldMutation.mutateAsync({ folderId: editingFolderId, field: 'category_options', value: labels });
+      const options = editingColumn.options || DEFAULT_CATEGORY_OPTIONS;
+      await updateFolderFieldMutation.mutateAsync({ folderId: editingFolderId, field: 'category_options', value: options });
     } else if (editingColumn.id === 'status' && editingFolderId) {
-      const labels = (editingColumn.options || DEFAULT_STATUS_OPTIONS).map(o => o.label);
-      await updateFolderFieldMutation.mutateAsync({ folderId: editingFolderId, field: 'status_options', value: labels });
+      const options = editingColumn.options || DEFAULT_STATUS_OPTIONS;
+      await updateFolderFieldMutation.mutateAsync({ folderId: editingFolderId, field: 'status_options', value: options });
     } else if (editingColumn.isBuiltIn) {
       setColumns(columns.map(c => c.id === editingColumn.id ? editingColumn : c));
     } else {
@@ -1753,7 +1763,7 @@ export default function CompanyDetailPage() {
               {/* All folders */}
               {allFolders?.map((folder) => {
                 const folderCategories = getFolderCategoryOptions(folder.id);
-                const hasCustomOptions = folder.category_options && folder.category_options.length > 0;
+                const hasCustomOptions = folder.category_options && Array.isArray(folder.category_options) && (folder.category_options as unknown as ColumnOption[]).length > 0;
                 return (
                   <div key={folder.id} className="flex items-center justify-between py-3 px-4 border rounded-lg bg-muted/30">
                     <div className="flex items-center gap-3">
@@ -1961,16 +1971,30 @@ export default function CompanyDetailPage() {
               <div className="space-y-2 mt-2">
                 {newColumnOptions.map((opt, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={opt.color}
-                      onChange={(e) => {
-                        const updated = [...newColumnOptions];
-                        updated[i] = { ...updated[i], color: e.target.value };
-                        setNewColumnOptions(updated);
-                      }}
-                      className="h-8 w-8 rounded border cursor-pointer"
-                    />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="h-8 w-8 rounded border cursor-pointer flex-shrink-0"
+                          style={{ backgroundColor: opt.color }}
+                        />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="p-2">
+                        <div className="grid grid-cols-5 gap-1">
+                          {COLOR_PALETTE.map((color) => (
+                            <button
+                              key={color}
+                              className={`h-6 w-6 rounded border-2 ${opt.color === color ? 'border-foreground' : 'border-transparent'}`}
+                              style={{ backgroundColor: color }}
+                              onClick={() => {
+                                const updated = [...newColumnOptions];
+                                updated[i] = { ...updated[i], color };
+                                setNewColumnOptions(updated);
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <Input
                       value={opt.label}
                       onChange={(e) => {
@@ -1993,7 +2017,7 @@ export default function CompanyDetailPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setNewColumnOptions([...newColumnOptions, { label: `Option ${newColumnOptions.length + 1}`, color: "#6b7280" }])}
+                  onClick={() => setNewColumnOptions([...newColumnOptions, { label: `Option ${newColumnOptions.length + 1}`, color: COLOR_PALETTE[newColumnOptions.length % COLOR_PALETTE.length] }])}
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Add Option
@@ -2054,15 +2078,29 @@ export default function CompanyDetailPage() {
             )}
             <div>
               <Label>Options</Label>
-              <div className="space-y-2 mt-2">
+              <div className="space-y-2 mt-2 max-h-[300px] overflow-y-auto">
                 {editingColumn?.options?.map((opt, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={opt.color}
-                      onChange={(e) => updateOptionColor(i, e.target.value)}
-                      className="h-8 w-8 rounded border cursor-pointer"
-                    />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="h-8 w-8 rounded border cursor-pointer flex-shrink-0"
+                          style={{ backgroundColor: opt.color }}
+                        />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="p-2">
+                        <div className="grid grid-cols-5 gap-1">
+                          {COLOR_PALETTE.map((color) => (
+                            <button
+                              key={color}
+                              className={`h-6 w-6 rounded border-2 ${opt.color === color ? 'border-foreground' : 'border-transparent'}`}
+                              style={{ backgroundColor: color }}
+                              onClick={() => updateOptionColor(i, color)}
+                            />
+                          ))}
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <Input
                       value={opt.label}
                       onChange={(e) => updateOptionLabel(i, e.target.value)}

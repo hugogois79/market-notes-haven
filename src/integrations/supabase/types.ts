@@ -343,38 +343,38 @@ export type Database = {
       company_folders: {
         Row: {
           category: string | null
-          category_options: string[] | null
+          category_options: Json | null
           company_id: string
           created_at: string
           id: string
           name: string
           parent_folder_id: string | null
           status: string | null
-          status_options: string[] | null
+          status_options: Json | null
           updated_at: string
         }
         Insert: {
           category?: string | null
-          category_options?: string[] | null
+          category_options?: Json | null
           company_id: string
           created_at?: string
           id?: string
           name: string
           parent_folder_id?: string | null
           status?: string | null
-          status_options?: string[] | null
+          status_options?: Json | null
           updated_at?: string
         }
         Update: {
           category?: string | null
-          category_options?: string[] | null
+          category_options?: Json | null
           company_id?: string
           created_at?: string
           id?: string
           name?: string
           parent_folder_id?: string | null
           status?: string | null
-          status_options?: string[] | null
+          status_options?: Json | null
           updated_at?: string
         }
         Relationships: [
