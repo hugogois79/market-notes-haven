@@ -41,6 +41,7 @@ export interface KanbanCard {
   due_date?: string;
   priority?: 'low' | 'medium' | 'high';
   tasks?: Array<{id: string; text: string; completed: boolean}>;
+  tags?: string[];
   archived?: boolean;
   completed?: boolean;
   completed_at?: string;

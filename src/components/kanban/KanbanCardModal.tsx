@@ -11,7 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download, Plus, Tag } from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -60,6 +61,8 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   const [moveToListId, setMoveToListId] = useState<string>(card.list_id);
   const [moveToBoardId, setMoveToBoardId] = useState<string>(boardId);
   const [showMoveSection, setShowMoveSection] = useState(false);
+  const [tags, setTags] = useState<string[]>((card as any).tags || []);
+  const [tagInput, setTagInput] = useState('');
 
   useEffect(() => {
     if (isOpen && card.id) {
@@ -157,6 +160,18 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     }
   };
 
+  const handleAddTag = () => {
+    const trimmedTag = tagInput.trim();
+    if (trimmedTag && !tags.includes(trimmedTag)) {
+      setTags([...tags, trimmedTag]);
+      setTagInput('');
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter(t => t !== tagToRemove));
+  };
+
   const handleSave = async () => {
     // Check if card should be moved
     if (moveToListId !== card.list_id && onMove) {
@@ -167,7 +182,8 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
           description,
           priority,
           due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
-          tasks: tasks as any
+          tasks: tasks as any,
+          tags: tags as any
         });
         
         // Then move it to the new list
@@ -184,7 +200,8 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
         description,
         priority,
         due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
-        tasks: tasks as any
+        tasks: tasks as any,
+        tags: tags as any
       });
     }
     onClose();
@@ -267,6 +284,45 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
                 <Label htmlFor="high" className="cursor-pointer">High</Label>
               </div>
             </RadioGroup>
+          </div>
+
+          <div>
+            <Label>Tags</Label>
+            <div className="space-y-2">
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                      <Tag className="h-3 w-3" />
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(tag)}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  placeholder="Add a tag..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddTag();
+                    }
+                  }}
+                />
+                <Button type="button" variant="outline" size="icon" onClick={handleAddTag}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
 
           <div>
