@@ -1078,18 +1078,6 @@ export default function CompanyDetailPage() {
 
                 <div className="w-px h-5 bg-border mx-1" />
 
-                <Button variant="ghost" size="sm" className="h-8 gap-1">
-                  <Grid3X3 className="h-4 w-4" />
-                  Edit in grid view
-                </Button>
-
-                <Button variant="ghost" size="sm" className="h-8 gap-1">
-                  <Share2 className="h-4 w-4" />
-                  Share
-                </Button>
-
-                <div className="w-px h-5 bg-border mx-1" />
-
                 {/* Column Settings Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
