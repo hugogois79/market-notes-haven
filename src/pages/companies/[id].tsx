@@ -847,6 +847,14 @@ export default function CompanyDetailPage() {
     updateDocTagsMutation.mutate({ docId, tags });
   };
 
+  // Calculate SHA-256 hash for file integrity
+  const calculateFileHash = async (file: File): Promise<string> => {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(true);
@@ -874,6 +882,9 @@ export default function CompanyDetailPage() {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setDropUploadProgress({ current: i + 1, total: files.length });
+        
+        // Calculate SHA-256 hash for forensic integrity
+        const fileHash = await calculateFileHash(file);
         
         const timestamp = Date.now();
         const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -904,6 +915,7 @@ export default function CompanyDetailPage() {
             document_type: "Other",
             status: "Draft",
             uploaded_by: user.id,
+            file_hash: fileHash,
           });
         
         if (insertError) {
