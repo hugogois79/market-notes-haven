@@ -85,7 +85,26 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DocumentPreview } from "@/components/companies/DocumentPreview";
 
-const AVAILABLE_TAGS = ["Important", "Urgent", "Review", "Archive", "Legal", "Finance", "Contract", "Invoice", "Receipt", "Other"];
+const DEFAULT_TAG_OPTIONS: ColumnOption[] = [
+  { label: "Important", color: "#ef4444" },
+  { label: "Urgent", color: "#f97316" },
+  { label: "Review", color: "#f59e0b" },
+  { label: "Archive", color: "#6b7280" },
+  { label: "Legal", color: "#8b5cf6" },
+  { label: "Finance", color: "#22c55e" },
+  { label: "Contract", color: "#3b82f6" },
+  { label: "Invoice", color: "#06b6d4" },
+  { label: "Receipt", color: "#14b8a6" },
+  { label: "Other", color: "#ec4899" },
+];
+
+const DEFAULT_VALUE_OPTIONS: ColumnOption[] = [
+  { label: "€", color: "#22c55e" },
+  { label: "$", color: "#3b82f6" },
+  { label: "£", color: "#8b5cf6" },
+];
+
+const AVAILABLE_TAGS = DEFAULT_TAG_OPTIONS.map(t => t.label);
 
 const DOCUMENT_TYPES = ["All", "Invoice", "Contract", "Proof", "Receipt", "Legal", "Report", "Other"];
 const DOCUMENT_STATUSES = ["All", "Draft", "Under Review", "Final", "Filed"];
@@ -152,9 +171,9 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "name", label: "File", visible: true, required: true },
   { id: "docDate", label: "Date", visible: true },
   { id: "category", label: "Category", visible: true, dbField: "document_type", isBuiltIn: true, options: DEFAULT_CATEGORY_OPTIONS },
-  { id: "value", label: "Value", visible: true },
+  { id: "value", label: "Value", visible: true, isBuiltIn: true, options: DEFAULT_VALUE_OPTIONS },
   { id: "status", label: "Status", visible: true, dbField: "status", isBuiltIn: true, options: DEFAULT_STATUS_OPTIONS },
-  { id: "tags", label: "Tags", visible: true },
+  { id: "tags", label: "Tags", visible: true, isBuiltIn: true, options: DEFAULT_TAG_OPTIONS },
   { id: "modified", label: "Modified", visible: false },
   { id: "size", label: "Size", visible: false },
 ];
@@ -361,6 +380,24 @@ export default function CompanyDetailPage() {
     }
     return DEFAULT_STATUS_OPTIONS;
   }, [allFolders]);
+
+  // Get tag options - uses column options (editable via Edit Column)
+  const getTagOptions = useCallback((): ColumnOption[] => {
+    const tagsColumn = columns.find(c => c.id === "tags");
+    return tagsColumn?.options || DEFAULT_TAG_OPTIONS;
+  }, [columns]);
+
+  // Get value options - uses column options (editable via Edit Column)
+  const getValueOptions = useCallback((): ColumnOption[] => {
+    const valueColumn = columns.find(c => c.id === "value");
+    return valueColumn?.options || DEFAULT_VALUE_OPTIONS;
+  }, [columns]);
+
+  // Helper to get tag color
+  const getTagColor = useCallback((tag: string): string | undefined => {
+    const options = getTagOptions();
+    return options.find(o => o.label === tag)?.color;
+  }, [getTagOptions]);
 
   const { data: folderPath } = useQuery({
     queryKey: ["folder-path", currentFolderId],
@@ -1683,24 +1720,32 @@ export default function CompanyDetailPage() {
                               <PopoverTrigger asChild>
                                 <button className="flex flex-wrap items-center gap-1 min-h-[24px] cursor-pointer hover:bg-slate-50 rounded px-1 -mx-1">
                                   {doc.tags && doc.tags.length > 0 ? (
-                                    doc.tags.map((tag: string) => (
-                                      <Badge 
-                                        key={tag} 
-                                        variant="secondary" 
-                                        className="text-xs py-0 px-1.5 gap-1 bg-slate-100 hover:bg-slate-200"
-                                      >
-                                        {tag}
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleRemoveTag(doc.id, doc.tags, tag);
+                                    doc.tags.map((tag: string) => {
+                                      const tagColor = getTagColor(tag);
+                                      return (
+                                        <span 
+                                          key={tag}
+                                          className="inline-flex items-center gap-1 px-1.5 py-0 rounded text-xs font-medium"
+                                          style={{ 
+                                            backgroundColor: tagColor ? `${tagColor}20` : '#e5e7eb',
+                                            color: tagColor || '#374151',
+                                            borderColor: tagColor ? `${tagColor}40` : '#d1d5db',
+                                            borderWidth: '1px'
                                           }}
-                                          className="hover:bg-slate-300 rounded-full p-0.5"
                                         >
-                                          <X className="h-2.5 w-2.5" />
-                                        </button>
-                                      </Badge>
-                                    ))
+                                          {tag}
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleRemoveTag(doc.id, doc.tags, tag);
+                                            }}
+                                            className="hover:opacity-70 rounded-full"
+                                          >
+                                            <X className="h-2.5 w-2.5" />
+                                          </button>
+                                        </span>
+                                      );
+                                    })
                                   ) : (
                                     <span className="text-slate-400 text-xs flex items-center gap-1">
                                       <Tag className="h-3 w-3" />
@@ -1732,19 +1777,24 @@ export default function CompanyDetailPage() {
                                       <Plus className="h-3 w-3" />
                                     </Button>
                                   </div>
-                                  {AVAILABLE_TAGS.length > 0 && (
+                                  {getTagOptions().length > 0 && (
                                     <div className="border-t pt-2">
                                       <p className="text-xs text-muted-foreground mb-1">Quick add:</p>
                                       <div className="flex flex-wrap gap-1">
-                                        {AVAILABLE_TAGS.filter(t => !doc.tags?.includes(t)).slice(0, 6).map((tag) => (
-                                          <Badge
-                                            key={tag}
-                                            variant="outline"
-                                            className="text-xs py-0 px-1.5 cursor-pointer hover:bg-slate-100"
-                                            onClick={() => handleAddTag(doc.id, doc.tags, tag)}
+                                        {getTagOptions().filter(t => !doc.tags?.includes(t.label)).slice(0, 6).map((tagOpt) => (
+                                          <span
+                                            key={tagOpt.label}
+                                            className="inline-flex items-center px-1.5 py-0 rounded text-xs font-medium cursor-pointer hover:opacity-80"
+                                            style={{ 
+                                              backgroundColor: `${tagOpt.color}20`,
+                                              color: tagOpt.color,
+                                              borderColor: `${tagOpt.color}40`,
+                                              borderWidth: '1px'
+                                            }}
+                                            onClick={() => handleAddTag(doc.id, doc.tags, tagOpt.label)}
                                           >
-                                            {tag}
-                                          </Badge>
+                                            {tagOpt.label}
+                                          </span>
                                         ))}
                                       </div>
                                     </div>
