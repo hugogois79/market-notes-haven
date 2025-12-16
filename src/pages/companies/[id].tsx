@@ -1426,17 +1426,51 @@ export default function CompanyDetailPage() {
                     </tr>
                   ) : (folders?.length === 0 && filteredDocuments?.length === 0) ? (
                     <tr>
-                      <td colSpan={10} className="text-center py-12 text-muted-foreground">
-                        <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p>No documents or folders found</p>
-                        <div className="flex items-center justify-center gap-2 mt-2">
-                          <Button variant="link" size="sm" onClick={() => setFolderDialogOpen(true)}>
-                            Create folder
-                          </Button>
-                          <span className="text-muted-foreground">or</span>
-                          <Button variant="link" size="sm" onClick={() => setUploadDialogOpen(true)}>
-                            Upload document
-                          </Button>
+                      <td colSpan={10} className="p-4">
+                        <div 
+                          className="border-2 border-dashed border-slate-300 rounded-lg py-12 text-center text-muted-foreground hover:border-primary/50 transition-colors cursor-pointer"
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.classList.add("border-primary", "bg-primary/5");
+                          }}
+                          onDragLeave={(e) => {
+                            e.currentTarget.classList.remove("border-primary", "bg-primary/5");
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.classList.remove("border-primary", "bg-primary/5");
+                            handleDrop(e);
+                          }}
+                          onClick={() => {
+                            const input = document.createElement("input");
+                            input.type = "file";
+                            input.multiple = true;
+                            input.onchange = (e) => {
+                              const files = (e.target as HTMLInputElement).files;
+                              if (files) {
+                                const dataTransfer = new DataTransfer();
+                                Array.from(files).forEach(f => dataTransfer.items.add(f));
+                                const fakeEvent = { preventDefault: () => {}, dataTransfer } as unknown as React.DragEvent;
+                                handleDrop(fakeEvent);
+                              }
+                            };
+                            input.click();
+                          }}
+                        >
+                          <Upload className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p>Drag files here or <span className="text-primary font-medium">browse</span></p>
+                          <div className="flex items-center justify-center gap-2 mt-2">
+                            <Button 
+                              variant="link" 
+                              size="sm" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFolderDialogOpen(true);
+                              }}
+                            >
+                              Create folder
+                            </Button>
+                          </div>
                         </div>
                       </td>
                     </tr>
