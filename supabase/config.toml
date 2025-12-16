@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.analyze-document]
 verify_jwt = false
+
+[functions.folder-insights]
+verify_jwt = false
