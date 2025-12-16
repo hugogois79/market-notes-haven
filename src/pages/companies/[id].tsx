@@ -34,7 +34,8 @@ import {
   Tag,
   X,
   Edit3,
-  Calendar
+  Calendar,
+  Star
 } from "lucide-react";
 import DocumentMetadataSheet from "@/components/companies/DocumentMetadataSheet";
 import { toast } from "sonner";
@@ -109,6 +110,7 @@ interface ColumnConfig {
 const CUSTOM_DOC_COLUMNS_KEY = "company-doc-custom-columns";
 const DOC_CUSTOM_DATA_KEY = "company-doc-custom-data";
 const FOLDER_CATEGORY_OPTIONS_KEY = "company-folder-category-options";
+const FAVORITE_FOLDERS_KEY = "company-favorite-folders";
 
 // Fixed color palette (10 colors)
 const COLOR_PALETTE = [
@@ -219,6 +221,10 @@ export default function CompanyDetailPage() {
   const [editColumnDialogOpen, setEditColumnDialogOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<ColumnConfig | null>(null);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
+  const [favoriteFolders, setFavoriteFolders] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem(`${FAVORITE_FOLDERS_KEY}-${id}`);
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
 
   // Save columns to localStorage
   useEffect(() => {
@@ -232,6 +238,22 @@ export default function CompanyDetailPage() {
   useEffect(() => {
     localStorage.setItem(`${DOC_CUSTOM_DATA_KEY}-${id}`, JSON.stringify(customData));
   }, [customData, id]);
+
+  useEffect(() => {
+    localStorage.setItem(`${FAVORITE_FOLDERS_KEY}-${id}`, JSON.stringify([...favoriteFolders]));
+  }, [favoriteFolders, id]);
+
+  const toggleFavorite = (folderId: string) => {
+    setFavoriteFolders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(folderId)) {
+        newSet.delete(folderId);
+      } else {
+        newSet.add(folderId);
+      }
+      return newSet;
+    });
+  };
 
   const { data: company, isLoading: companyLoading } = useQuery({
     queryKey: ["company", id],
@@ -1353,6 +1375,12 @@ export default function CompanyDetailPage() {
                       </td>
                       <td className="px-3 py-1.5">
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleFavorite(folder.id); }}
+                            className={cn("transition-opacity", favoriteFolders.has(folder.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100")}
+                          >
+                            <Star className={cn("h-3.5 w-3.5", favoriteFolders.has(folder.id) ? "fill-amber-400 text-amber-400" : "text-muted-foreground hover:text-amber-400")} />
+                          </button>
                           <Folder className="h-4 w-4 text-amber-500" />
                           <button 
                             onClick={() => setCurrentFolderId(folder.id)}
@@ -1668,6 +1696,46 @@ export default function CompanyDetailPage() {
         </TabsContent>
 
         <TabsContent value="settings" className="mt-4 space-y-6">
+          {/* Favorite Folders Section */}
+          <div className="bg-background border rounded-lg p-6">
+            <h3 className="text-lg font-medium mb-4">Favorite Folders</h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              Quick access to your most used folders. Click the star icon next to folders to add them here.
+            </p>
+            
+            <div className="space-y-3">
+              {allFolders?.filter(f => favoriteFolders.has(f.id)).map((folder) => (
+                <div key={folder.id} className="flex items-center justify-between py-3 px-4 border rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                    <Folder className="h-4 w-4 text-amber-500" />
+                    <button 
+                      onClick={() => setCurrentFolderId(folder.id)}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {folder.name}
+                    </button>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => toggleFavorite(folder.id)}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Remove
+                  </Button>
+                </div>
+              ))}
+              
+              {(!allFolders || allFolders.filter(f => favoriteFolders.has(f.id)).length === 0) && (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No favorite folders yet. Hover over folders and click the star icon to add favorites.
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* Folder Categories Section */}
           <div className="bg-background border rounded-lg p-6">
             <h3 className="text-lg font-medium mb-4">Folder Categories</h3>
