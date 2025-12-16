@@ -40,7 +40,12 @@ import {
   X,
   Edit3,
   Calendar,
-  Star
+  Star,
+  Sparkles,
+  ThumbsUp,
+  ThumbsDown,
+  Loader2,
+  ListChecks
 } from "lucide-react";
 import DocumentMetadataSheet from "@/components/companies/DocumentMetadataSheet";
 import { toast } from "sonner";
@@ -287,6 +292,12 @@ export default function CompanyDetailPage() {
     const saved = localStorage.getItem(`${FAVORITE_FOLDERS_KEY}-${id}`);
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
+
+  // AI Insights state
+  const [insightsExpanded, setInsightsExpanded] = useState(false);
+  const [insightsContent, setInsightsContent] = useState<string | null>(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsFeedback, setInsightsFeedback] = useState<'up' | 'down' | null>(null);
 
   // Save columns to localStorage
   useEffect(() => {
@@ -1009,6 +1020,46 @@ export default function CompanyDetailPage() {
     }
   };
 
+  const generateInsights = async () => {
+    if (insightsLoading) return;
+    setInsightsLoading(true);
+    setInsightsContent(null);
+    setInsightsFeedback(null);
+    
+    try {
+      const folderName = folderPath?.length ? folderPath[folderPath.length - 1]?.name : 'Root';
+      
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/folder-insights`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          folderName,
+          companyName: company?.name || 'Unknown',
+          documents: documents?.map(d => ({
+            name: d.name,
+            document_type: d.document_type,
+            status: d.status,
+            created_at: d.created_at,
+          })),
+          subfolders: folders?.map(f => ({ name: f.name })),
+        }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to generate insights');
+      
+      const data = await response.json();
+      setInsightsContent(data.insight);
+    } catch (error: any) {
+      console.error('Insights error:', error);
+      toast.error('Failed to generate insights');
+    } finally {
+      setInsightsLoading(false);
+    }
+  };
+
   const toggleSelectAll = () => {
     if (selectedDocs.size === filteredDocuments?.length) {
       setSelectedDocs(new Set());
@@ -1477,6 +1528,90 @@ export default function CompanyDetailPage() {
                 )}
               </BreadcrumbList>
             </Breadcrumb>
+          </div>
+
+          {/* AI Insights Section */}
+          <div className="px-1 py-2">
+            <div className="border border-slate-200 rounded-lg bg-slate-50/50">
+              <button
+                onClick={() => {
+                  setInsightsExpanded(!insightsExpanded);
+                  if (!insightsExpanded && !insightsContent && !insightsLoading) {
+                    generateInsights();
+                  }
+                }}
+                className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-slate-100/50 transition-colors rounded-lg"
+              >
+                <div className="flex items-center gap-2">
+                  <ChevronDown className={cn("h-4 w-4 text-slate-500 transition-transform", insightsExpanded && "rotate-180")} />
+                  <Sparkles className="h-4 w-4 text-purple-500" />
+                  <span className="text-sm font-medium text-slate-700">Insights from GPT</span>
+                </div>
+              </button>
+              
+              {insightsExpanded && (
+                <div className="px-4 pb-4">
+                  <div className="bg-white rounded-lg border border-slate-200 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <ListChecks className="h-4 w-4 text-slate-500" />
+                          <span className="text-sm font-medium text-slate-700">Folder highlights</span>
+                        </div>
+                        {insightsLoading ? (
+                          <div className="flex items-center gap-2 text-slate-500">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="text-sm">Generating insights...</span>
+                          </div>
+                        ) : insightsContent ? (
+                          <p className="text-sm text-slate-600 leading-relaxed">{insightsContent}</p>
+                        ) : (
+                          <p className="text-sm text-slate-400">Click to generate insights about this folder.</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setInsightsFeedback(insightsFeedback === 'up' ? null : 'up');
+                          }}
+                          className={cn(
+                            "p-1.5 rounded hover:bg-slate-100 transition-colors",
+                            insightsFeedback === 'up' && "bg-green-100 text-green-600"
+                          )}
+                        >
+                          <ThumbsUp className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setInsightsFeedback(insightsFeedback === 'down' ? null : 'down');
+                          }}
+                          className={cn(
+                            "p-1.5 rounded hover:bg-slate-100 transition-colors",
+                            insightsFeedback === 'down' && "bg-red-100 text-red-600"
+                          )}
+                        >
+                          <ThumbsDown className="h-4 w-4" />
+                        </button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="ml-2 h-7 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            generateInsights();
+                          }}
+                          disabled={insightsLoading}
+                        >
+                          {insightsLoading ? 'Loading...' : 'Refresh'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* SharePoint-style Dense Data Grid */}

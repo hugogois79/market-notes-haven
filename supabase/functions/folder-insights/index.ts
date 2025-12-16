@@ -1,0 +1,82 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { folderName, companyName, documents, subfolders } = await req.json();
+
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
+
+    // Build context from documents and subfolders
+    const docList = documents?.map((d: any) => 
+      `- ${d.name} (${d.document_type || 'Other'}, ${d.status || 'Draft'})`
+    ).join('\n') || 'No documents';
+
+    const folderList = subfolders?.map((f: any) => `- ${f.name}`).join('\n') || 'No subfolders';
+
+    const prompt = `Analyze this folder and provide a brief, insightful summary (2-3 sentences max) in Portuguese.
+
+Company: ${companyName}
+Folder: ${folderName || 'Root'}
+
+Documents (${documents?.length || 0}):
+${docList}
+
+Subfolders (${subfolders?.length || 0}):
+${folderList}
+
+Provide a concise insight about what this folder contains, its purpose, and any notable patterns. Highlight key document types, dates, or important items. Be specific and actionable.`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are a document analysis assistant. Provide brief, professional insights about folder contents in Portuguese. Focus on business value and actionable observations. Keep responses concise - 2-3 sentences maximum.' 
+          },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 200,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenAI API error:', response.status, errorText);
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const insight = data.choices[0]?.message?.content || 'Unable to generate insights.';
+
+    return new Response(JSON.stringify({ insight }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error in folder-insights function:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});
