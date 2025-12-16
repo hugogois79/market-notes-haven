@@ -1251,6 +1251,41 @@ export type Database = {
           },
         ]
       }
+      folder_insights: {
+        Row: {
+          created_at: string
+          feedback: string | null
+          folder_id: string
+          id: string
+          insight_text: string
+          last_reviewed_at: string
+        }
+        Insert: {
+          created_at?: string
+          feedback?: string | null
+          folder_id: string
+          id?: string
+          insight_text: string
+          last_reviewed_at?: string
+        }
+        Update: {
+          created_at?: string
+          feedback?: string | null
+          folder_id?: string
+          id?: string
+          insight_text?: string
+          last_reviewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folder_insights_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: true
+            referencedRelation: "company_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       investment_preferences: {
         Row: {
           created_at: string
