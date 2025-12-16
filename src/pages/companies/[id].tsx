@@ -25,6 +25,11 @@ import {
   File,
   FileSpreadsheet,
   FileImage,
+  FileVideo,
+  FileAudio,
+  FileArchive,
+  FileCode,
+  FileType2,
   User,
   Folder,
   FolderPlus,
@@ -170,6 +175,7 @@ const DEFAULT_STATUS_OPTIONS: ColumnOption[] = [
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "name", label: "File", visible: true, required: true },
   { id: "docDate", label: "Date", visible: true },
+  { id: "type", label: "Type", visible: true },
   { id: "category", label: "Category", visible: true, dbField: "document_type", isBuiltIn: true, options: DEFAULT_CATEGORY_OPTIONS },
   { id: "value", label: "Value", visible: true, isBuiltIn: true, options: DEFAULT_VALUE_OPTIONS },
   { id: "status", label: "Status", visible: true, dbField: "status", isBuiltIn: true, options: DEFAULT_STATUS_OPTIONS },
@@ -1051,16 +1057,50 @@ export default function CompanyDetailPage() {
     });
 
   const getFileIcon = (mimeType: string | null, name: string) => {
-    if (mimeType?.includes("spreadsheet") || name.endsWith(".xlsx") || name.endsWith(".csv")) {
-      return <FileSpreadsheet className="h-4 w-4 text-green-600" />;
-    }
-    if (mimeType?.includes("image")) {
-      return <FileImage className="h-4 w-4 text-purple-600" />;
-    }
-    if (mimeType?.includes("pdf")) {
+    const ext = name?.split('.').pop()?.toLowerCase();
+    
+    // PDF - red
+    if (mimeType?.includes("pdf") || ext === "pdf") {
       return <File className="h-4 w-4 text-red-600" />;
     }
-    return <FileText className="h-4 w-4 text-blue-600" />;
+    // Spreadsheets - green
+    if (mimeType?.includes("spreadsheet") || mimeType?.includes("excel") || ext === "xlsx" || ext === "xls" || ext === "csv") {
+      return <FileSpreadsheet className="h-4 w-4 text-green-600" />;
+    }
+    // Word documents - blue
+    if (mimeType?.includes("word") || ext === "doc" || ext === "docx") {
+      return <FileText className="h-4 w-4 text-blue-600" />;
+    }
+    // PowerPoint - orange
+    if (mimeType?.includes("powerpoint") || mimeType?.includes("presentation") || ext === "ppt" || ext === "pptx") {
+      return <FileType2 className="h-4 w-4 text-orange-500" />;
+    }
+    // Images - purple
+    if (mimeType?.includes("image") || ["jpg", "jpeg", "png", "gif", "svg", "webp", "bmp"].includes(ext || "")) {
+      return <FileImage className="h-4 w-4 text-purple-600" />;
+    }
+    // Video - pink
+    if (mimeType?.includes("video") || ["mp4", "avi", "mkv", "mov", "wmv", "webm"].includes(ext || "")) {
+      return <FileVideo className="h-4 w-4 text-pink-600" />;
+    }
+    // Audio - cyan
+    if (mimeType?.includes("audio") || ["mp3", "wav", "ogg", "flac", "aac", "m4a"].includes(ext || "")) {
+      return <FileAudio className="h-4 w-4 text-cyan-600" />;
+    }
+    // Archives - amber
+    if (mimeType?.includes("zip") || mimeType?.includes("rar") || mimeType?.includes("7z") || ["zip", "rar", "7z", "tar", "gz"].includes(ext || "")) {
+      return <FileArchive className="h-4 w-4 text-amber-600" />;
+    }
+    // Code files - slate
+    if (["js", "ts", "tsx", "jsx", "html", "css", "json", "xml", "py", "java", "cpp", "c", "h"].includes(ext || "")) {
+      return <FileCode className="h-4 w-4 text-slate-600" />;
+    }
+    // Text files - gray
+    if (mimeType?.includes("text") || ext === "txt") {
+      return <FileText className="h-4 w-4 text-gray-600" />;
+    }
+    // Default
+    return <File className="h-4 w-4 text-slate-500" />;
   };
 
   const getStatusBadge = (status: string) => {
@@ -1449,9 +1489,11 @@ export default function CompanyDetailPage() {
                         Date
                       </th>
                     )}
-                    <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-52">
-                      Type
-                    </th>
+                    {isColumnVisible("type") && (
+                      <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-52">
+                        Type
+                      </th>
+                    )}
                     {isColumnVisible("category") && (
                       <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
                         {renderColumnHeader(columns.find(c => c.id === "category")!)}
@@ -1530,7 +1572,9 @@ export default function CompanyDetailPage() {
                       {isColumnVisible("docDate") && (
                         <td className="px-3 py-1.5 text-slate-400 text-xs">—</td>
                       )}
-                      <td className="px-3 py-1.5 text-slate-500 text-xs">Pasta de Ficheiros</td>
+                      {isColumnVisible("type") && (
+                        <td className="px-3 py-1.5 text-slate-500 text-xs">Pasta de Ficheiros</td>
+                      )}
                       {isColumnVisible("category") && (
                         <td className="px-3 py-1.5 text-center">
                           {renderFolderCellDropdown(folder, columns.find(c => c.id === "category")!)}
@@ -1688,9 +1732,11 @@ export default function CompanyDetailPage() {
                             {doc.created_at ? format(new Date(doc.created_at), "dd/MM/yyyy") : "—"}
                           </td>
                         )}
-                        <td className="px-3 py-2 text-slate-500 text-xs">
-                          {getFileTypeLabel(doc.mime_type, doc.name)}
-                        </td>
+                        {isColumnVisible("type") && (
+                          <td className="px-3 py-2 text-slate-500 text-xs">
+                            {getFileTypeLabel(doc.mime_type, doc.name)}
+                          </td>
+                        )}
                         {isColumnVisible("category") && (
                           <td className="px-3 py-2 text-center">
                             {renderCellDropdown(doc, columns.find(c => c.id === "category")!)}
