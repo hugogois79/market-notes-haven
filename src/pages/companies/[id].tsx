@@ -120,17 +120,22 @@ const DEFAULT_CATEGORY_OPTIONS: ColumnOption[] = [
   { label: "Other", color: "#6b7280" },
 ];
 
+const DEFAULT_STATUS_OPTIONS: ColumnOption[] = [
+  { label: "Draft", color: "#f59e0b" },
+  { label: "Under Review", color: "#3b82f6" },
+  { label: "Final", color: "#22c55e" },
+  { label: "Filed", color: "#6b7280" },
+  { label: "Active", color: "#22c55e" },
+  { label: "Closed", color: "#6b7280" },
+  { label: "Compliance", color: "#8b5cf6" },
+];
+
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "name", label: "File", visible: true, required: true },
   { id: "docDate", label: "Date", visible: true },
   { id: "category", label: "Category", visible: true, dbField: "document_type", isBuiltIn: true, options: DEFAULT_CATEGORY_OPTIONS },
   { id: "value", label: "Value", visible: true },
-  { id: "status", label: "Status", visible: true, dbField: "status", isBuiltIn: true, options: [
-    { label: "Draft", color: "#f59e0b" },
-    { label: "Under Review", color: "#3b82f6" },
-    { label: "Final", color: "#22c55e" },
-    { label: "Filed", color: "#6b7280" },
-  ]},
+  { id: "status", label: "Status", visible: true, dbField: "status", isBuiltIn: true, options: DEFAULT_STATUS_OPTIONS },
   { id: "tags", label: "Tags", visible: true },
   { id: "modified", label: "Modified", visible: false },
   { id: "size", label: "Size", visible: false },
@@ -194,24 +199,13 @@ export default function CompanyDetailPage() {
   const [metadataSheetOpen, setMetadataSheetOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   
-  // Folder-specific category options
-  const [folderCategoryOptions, setFolderCategoryOptions] = useState<Record<string, ColumnOption[]>>(() => {
-    const saved = localStorage.getItem(`${FOLDER_CATEGORY_OPTIONS_KEY}-${id}`);
-    return saved ? JSON.parse(saved) : {};
-  });
-  
   // Column management dialogs
   const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
   const [newColumnOptions, setNewColumnOptions] = useState<ColumnOption[]>([]);
   const [editColumnDialogOpen, setEditColumnDialogOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<ColumnConfig | null>(null);
-
-  // Get category options for current folder (folder-specific or default)
-  const getCurrentCategoryOptions = useCallback((): ColumnOption[] => {
-    const folderKey = currentFolderId || 'root';
-    return folderCategoryOptions[folderKey] || DEFAULT_CATEGORY_OPTIONS;
-  }, [currentFolderId, folderCategoryOptions]);
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
 
   // Save columns to localStorage
   useEffect(() => {
@@ -225,10 +219,6 @@ export default function CompanyDetailPage() {
   useEffect(() => {
     localStorage.setItem(`${DOC_CUSTOM_DATA_KEY}-${id}`, JSON.stringify(customData));
   }, [customData, id]);
-
-  useEffect(() => {
-    localStorage.setItem(`${FOLDER_CATEGORY_OPTIONS_KEY}-${id}`, JSON.stringify(folderCategoryOptions));
-  }, [folderCategoryOptions, id]);
 
   const { data: company, isLoading: companyLoading } = useQuery({
     queryKey: ["company", id],
@@ -280,6 +270,32 @@ export default function CompanyDetailPage() {
     },
     enabled: !!id,
   });
+
+  // Get category options for a specific folder from allFolders data
+  const getFolderCategoryOptions = useCallback((folderId: string | null): ColumnOption[] => {
+    if (!folderId) return DEFAULT_CATEGORY_OPTIONS;
+    const folder = allFolders?.find(f => f.id === folderId);
+    if (folder?.category_options && folder.category_options.length > 0) {
+      return folder.category_options.map((label: string) => ({
+        label,
+        color: DEFAULT_CATEGORY_OPTIONS.find(o => o.label === label)?.color || '#6b7280'
+      }));
+    }
+    return DEFAULT_CATEGORY_OPTIONS;
+  }, [allFolders]);
+
+  // Get status options for a specific folder from allFolders data
+  const getFolderStatusOptions = useCallback((folderId: string | null): ColumnOption[] => {
+    if (!folderId) return DEFAULT_STATUS_OPTIONS;
+    const folder = allFolders?.find(f => f.id === folderId);
+    if (folder?.status_options && folder.status_options.length > 0) {
+      return folder.status_options.map((label: string) => ({
+        label,
+        color: DEFAULT_STATUS_OPTIONS.find(o => o.label === label)?.color || '#6b7280'
+      }));
+    }
+    return DEFAULT_STATUS_OPTIONS;
+  }, [allFolders]);
 
   const { data: folderPath } = useQuery({
     queryKey: ["folder-path", currentFolderId],
@@ -365,7 +381,7 @@ export default function CompanyDetailPage() {
   });
 
   const updateFolderFieldMutation = useMutation({
-    mutationFn: async ({ folderId, field, value }: { folderId: string; field: string; value: string }) => {
+    mutationFn: async ({ folderId, field, value }: { folderId: string; field: string; value: string | string[] }) => {
       const { error } = await supabase
         .from("company_folders")
         .update({ [field]: value })
@@ -374,6 +390,7 @@ export default function CompanyDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-folders", id] });
+      queryClient.invalidateQueries({ queryKey: ["company-all-folders", id] });
       toast.success("Updated");
     },
     onError: (error) => {
@@ -462,30 +479,38 @@ export default function CompanyDetailPage() {
   const openEditColumnDialog = (column: ColumnConfig) => {
     // For category column, use folder-specific options
     if (column.id === 'category') {
-      setEditingColumn({ ...column, options: getCurrentCategoryOptions() });
+      setEditingColumn({ ...column, options: getFolderCategoryOptions(currentFolderId) });
+    } else if (column.id === 'status') {
+      setEditingColumn({ ...column, options: getFolderStatusOptions(currentFolderId) });
     } else {
       setEditingColumn({ ...column });
     }
+    setEditingFolderId(currentFolderId);
     setEditColumnDialogOpen(true);
   };
 
-  const saveColumnSettings = () => {
+  const saveColumnSettings = async () => {
     if (!editingColumn) return;
     
     // Check if it's a folder-specific category edit (from folder menu)
     if (editingColumn.id.startsWith('category-folder-')) {
       const folderId = editingColumn.id.replace('category-folder-', '');
-      setFolderCategoryOptions(prev => ({
-        ...prev,
-        [folderId]: editingColumn.options || DEFAULT_CATEGORY_OPTIONS
-      }));
-    } else if (editingColumn.id === 'category') {
-      // For category column, save to folder-specific options (current folder)
-      const folderKey = currentFolderId || 'root';
-      setFolderCategoryOptions(prev => ({
-        ...prev,
-        [folderKey]: editingColumn.options || DEFAULT_CATEGORY_OPTIONS
-      }));
+      const labels = (editingColumn.options || DEFAULT_CATEGORY_OPTIONS).map(o => o.label);
+      if (folderId !== 'root') {
+        await updateFolderFieldMutation.mutateAsync({ folderId, field: 'category_options', value: labels });
+      }
+    } else if (editingColumn.id.startsWith('status-folder-')) {
+      const folderId = editingColumn.id.replace('status-folder-', '');
+      const labels = (editingColumn.options || DEFAULT_STATUS_OPTIONS).map(o => o.label);
+      if (folderId !== 'root') {
+        await updateFolderFieldMutation.mutateAsync({ folderId, field: 'status_options', value: labels });
+      }
+    } else if (editingColumn.id === 'category' && editingFolderId) {
+      const labels = (editingColumn.options || DEFAULT_CATEGORY_OPTIONS).map(o => o.label);
+      await updateFolderFieldMutation.mutateAsync({ folderId: editingFolderId, field: 'category_options', value: labels });
+    } else if (editingColumn.id === 'status' && editingFolderId) {
+      const labels = (editingColumn.options || DEFAULT_STATUS_OPTIONS).map(o => o.label);
+      await updateFolderFieldMutation.mutateAsync({ folderId: editingFolderId, field: 'status_options', value: labels });
     } else if (editingColumn.isBuiltIn) {
       setColumns(columns.map(c => c.id === editingColumn.id ? editingColumn : c));
     } else {
@@ -493,31 +518,19 @@ export default function CompanyDetailPage() {
     }
     setEditColumnDialogOpen(false);
     setEditingColumn(null);
+    setEditingFolderId(null);
   };
 
   // Edit category options for a specific folder
   const openEditFolderCategories = (folderId: string) => {
-    const folderKey = folderId;
     const categoryColumn = columns.find(c => c.id === 'category');
-    const folderOptions = folderCategoryOptions[folderKey] || DEFAULT_CATEGORY_OPTIONS;
+    const folderOptions = getFolderCategoryOptions(folderId);
     setEditingColumn({ 
       ...categoryColumn!, 
       options: folderOptions,
-      // Store the folder ID temporarily
       id: `category-folder-${folderId}`
     });
     setEditColumnDialogOpen(true);
-  };
-
-  // Override saveColumnSettings to handle folder-specific category edits
-  const saveFolderCategorySettings = (folderId: string) => {
-    if (!editingColumn) return;
-    setFolderCategoryOptions(prev => ({
-      ...prev,
-      [folderId]: editingColumn.options || DEFAULT_CATEGORY_OPTIONS
-    }));
-    setEditColumnDialogOpen(false);
-    setEditingColumn(null);
   };
 
   const deleteColumn = (columnId: string) => {
@@ -568,8 +581,12 @@ export default function CompanyDetailPage() {
 
   const renderCellDropdown = (doc: any, column: ColumnConfig) => {
     const value = getColumnValue(doc, column);
-    // Use folder-specific options for category column
-    const options = column.id === 'category' ? getCurrentCategoryOptions() : column.options;
+    // Use folder-specific options for category/status columns
+    const options = column.id === 'category' 
+      ? getFolderCategoryOptions(currentFolderId)
+      : column.id === 'status'
+        ? getFolderStatusOptions(currentFolderId)
+        : column.options;
     const option = options?.find(o => o.label === value);
     
     return (
@@ -626,8 +643,12 @@ export default function CompanyDetailPage() {
 
   const renderFolderCellDropdown = (folder: any, column: ColumnConfig) => {
     const value = folder[column.id] || null;
-    // Use folder-specific options for category column
-    const options = column.id === 'category' ? getCurrentCategoryOptions() : column.options;
+    // Use folder-specific options for category/status columns
+    const options = column.id === 'category' 
+      ? getFolderCategoryOptions(folder.parent_folder_id)
+      : column.id === 'status'
+        ? getFolderStatusOptions(folder.parent_folder_id)
+        : column.options;
     const option = options?.find(o => o.label === value);
     
     return (
@@ -1729,60 +1750,35 @@ export default function CompanyDetailPage() {
             </p>
             
             <div className="space-y-3">
-              {/* Root folder */}
-              <div className="flex items-center justify-between py-3 px-4 border rounded-lg bg-muted/30">
-                <div className="flex items-center gap-3">
-                  <Folder className="h-4 w-4 text-amber-500" />
-                  <div>
-                    <p className="font-medium">Root (Documents)</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(folderCategoryOptions['root'] || DEFAULT_CATEGORY_OPTIONS).length} categories
-                    </p>
-                  </div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    const categoryColumn = columns.find(c => c.id === 'category');
-                    setEditingColumn({ 
-                      ...categoryColumn!, 
-                      options: folderCategoryOptions['root'] || DEFAULT_CATEGORY_OPTIONS,
-                      id: 'category-folder-root'
-                    });
-                    setEditColumnDialogOpen(true);
-                  }}
-                >
-                  <Edit3 className="h-3 w-3 mr-1" />
-                  Edit
-                </Button>
-              </div>
-              
               {/* All folders */}
-              {allFolders?.map((folder) => (
-                <div key={folder.id} className="flex items-center justify-between py-3 px-4 border rounded-lg bg-muted/30">
-                  <div className="flex items-center gap-3">
-                    <Folder className="h-4 w-4 text-amber-500" />
-                    <div>
-                      <p className="font-medium">{folder.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(folderCategoryOptions[folder.id] || DEFAULT_CATEGORY_OPTIONS).length} categories
-                        {folderCategoryOptions[folder.id] && (
-                          <span className="ml-1 text-primary">(customized)</span>
-                        )}
-                      </p>
+              {allFolders?.map((folder) => {
+                const folderCategories = getFolderCategoryOptions(folder.id);
+                const hasCustomOptions = folder.category_options && folder.category_options.length > 0;
+                return (
+                  <div key={folder.id} className="flex items-center justify-between py-3 px-4 border rounded-lg bg-muted/30">
+                    <div className="flex items-center gap-3">
+                      <Folder className="h-4 w-4 text-amber-500" />
+                      <div>
+                        <p className="font-medium">{folder.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {folderCategories.length} categories
+                          {hasCustomOptions && (
+                            <span className="ml-1 text-primary">(customized)</span>
+                          )}
+                        </p>
+                      </div>
                     </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => openEditFolderCategories(folder.id)}
+                    >
+                      <Edit3 className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => openEditFolderCategories(folder.id)}
-                  >
-                    <Edit3 className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
               
               {(!allFolders || allFolders.length === 0) && (
                 <p className="text-sm text-muted-foreground py-4 text-center">
