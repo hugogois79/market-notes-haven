@@ -94,7 +94,7 @@ const DEFAULT_STATUS_OPTIONS: ColumnOption[] = [
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "name", label: "File", visible: true, required: true },
   { id: "type", label: "Type", visible: true },
-  { id: "date", label: "DATE", visible: true },
+  { id: "date", label: "Date", visible: true },
   { id: "category", label: "Category", visible: true, dbField: "category", isBuiltIn: true, options: DEFAULT_CATEGORY_OPTIONS },
   { id: "status", label: "Status", visible: true, dbField: "status", isBuiltIn: true, options: DEFAULT_STATUS_OPTIONS },
   { id: "size", label: "Size", visible: true },
