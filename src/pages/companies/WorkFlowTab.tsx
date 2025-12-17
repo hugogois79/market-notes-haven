@@ -368,7 +368,7 @@ export default function WorkFlowTab() {
         created_by: user.id,
         type: 'expense' as const,
         category: 'other' as const,
-        payment_method: 'transfer' as const,
+        payment_method: 'bank_transfer' as const,
         date: new Date().toISOString().split('T')[0],
         description: 'Workflow document',
         entity_name: 'Unknown',
