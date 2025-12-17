@@ -1366,8 +1366,8 @@ export default function WorkFlowTab() {
               {isColumnVisible("size") && <td></td>}
               {isColumnVisible("project") && <td></td>}
               {isColumnVisible("value") && (
-                <td className="px-3 py-2 text-right text-xs font-semibold text-foreground">
-                  Total: {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(
+                <td className="px-3 py-2 text-right text-xs text-muted-foreground">
+                  {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(
                     filteredFiles?.reduce((sum, file) => {
                       const value = transactionsByFileUrl?.[file.file_url]?.value || 0;
                       return sum + value;
