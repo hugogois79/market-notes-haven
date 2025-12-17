@@ -447,9 +447,10 @@ export default function TransactionDialog({
     },
     onSuccess: () => {
       setIsUploading(false);
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["transactions-dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["bank-accounts-dashboard"] });
+      // Refresh transaction lists (queries are keyed as ["transactions", companyId])
+      queryClient.invalidateQueries({ queryKey: ["transactions"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["transactions-dashboard"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["bank-accounts-dashboard"], exact: false });
       toast.success(isEdit ? "Movimento atualizado" : "Movimento criado");
       onOpenChange(false);
       reset();
