@@ -676,7 +676,7 @@ export default function TransactionDialog({
                           </CommandItem>
                         ))}
                       {supplierSearch.trim() && 
-                        !suppliers?.some(s => s.name.toLowerCase() === supplierSearch.trim().toLowerCase()) && (
+                        !suppliers?.some(s => s.name?.toLowerCase() === supplierSearch.trim().toLowerCase()) && (
                         <CommandItem
                           value={`add-${supplierSearch}`}
                           onSelect={async () => {
