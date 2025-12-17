@@ -104,6 +104,7 @@ const TABLE_RELATIONS_KEY = "work-table-relations";
 interface StorageLocation {
   id: string;
   companyId: string;
+  year: number;
   month: number; // 1-12 for months
   folderPath: string;
 }
@@ -177,9 +178,14 @@ export default function CompaniesPage() {
   const [storageLocationDialog, setStorageLocationDialog] = useState<{ open: boolean; editingId: string | null }>({ open: false, editingId: null });
   const [storageLocationForm, setStorageLocationForm] = useState<Omit<StorageLocation, 'id'>>({
     companyId: "",
+    year: new Date().getFullYear(),
     month: new Date().getMonth() + 1,
     folderPath: ""
   });
+
+  // Generate year options (current year - 2 to current year + 5)
+  const currentYear = new Date().getFullYear();
+  const YEARS = Array.from({ length: 8 }, (_, i) => currentYear - 2 + i);
 
   // Table relations config
   const [tableRelations, setTableRelations] = useState<TableRelationsConfig>(() => {
@@ -812,7 +818,7 @@ export default function CompaniesPage() {
                     <Button 
                       size="sm" 
                       onClick={() => {
-                        setStorageLocationForm({ companyId: "", month: new Date().getMonth() + 1, folderPath: "" });
+                        setStorageLocationForm({ companyId: "", year: new Date().getFullYear(), month: new Date().getMonth() + 1, folderPath: "" });
                         setStorageLocationDialog({ open: true, editingId: null });
                       }}
                       className="bg-blue-600 hover:bg-blue-700"
@@ -844,6 +850,7 @@ export default function CompaniesPage() {
                         <TableHeader>
                           <TableRow className="bg-slate-50">
                             <TableHead className="text-xs font-medium text-slate-600">Company</TableHead>
+                            <TableHead className="text-xs font-medium text-slate-600">Year</TableHead>
                             <TableHead className="text-xs font-medium text-slate-600">Month</TableHead>
                             <TableHead className="text-xs font-medium text-slate-600">Folder Location</TableHead>
                             <TableHead className="text-xs font-medium text-slate-600 w-20">Actions</TableHead>
@@ -852,7 +859,7 @@ export default function CompaniesPage() {
                         <TableBody>
                           {tableRelations.storageLocations.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={4} className="text-center text-sm text-slate-500 py-8">
+                              <TableCell colSpan={5} className="text-center text-sm text-slate-500 py-8">
                                 No storage locations configured. Click "Add Location" to create one.
                               </TableCell>
                             </TableRow>
@@ -863,6 +870,7 @@ export default function CompaniesPage() {
                               return (
                                 <TableRow key={location.id}>
                                   <TableCell className="text-sm font-medium text-slate-800">{company?.name || "Unknown"}</TableCell>
+                                  <TableCell className="text-sm text-slate-600">{location.year || "-"}</TableCell>
                                   <TableCell className="text-sm text-slate-600">{monthLabel}</TableCell>
                                   <TableCell className="text-sm text-slate-600 font-mono">{location.folderPath || "-"}</TableCell>
                                   <TableCell>
@@ -874,6 +882,7 @@ export default function CompaniesPage() {
                                         onClick={() => {
                                           setStorageLocationForm({
                                             companyId: location.companyId,
+                                            year: location.year || new Date().getFullYear(),
                                             month: location.month,
                                             folderPath: location.folderPath
                                           });
@@ -1064,6 +1073,22 @@ export default function CompaniesPage() {
                 <SelectContent className="bg-white">
                   {companies?.map(company => (
                     <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Year</Label>
+              <Select
+                value={storageLocationForm.year.toString()}
+                onValueChange={(value) => setStorageLocationForm(prev => ({ ...prev, year: parseInt(value) }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  {YEARS.map(year => (
+                    <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
