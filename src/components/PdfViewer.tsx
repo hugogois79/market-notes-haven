@@ -1,12 +1,6 @@
 import { useState } from "react";
-import { Download, FileText, Printer, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, FileText, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
-
-// Configure worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface PdfViewerProps {
   url: string;
@@ -15,8 +9,6 @@ interface PdfViewerProps {
 
 export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) => {
   const [error, setError] = useState(false);
-  const [numPages, setNumPages] = useState<number>(0);
-  const [pageNumber, setPageNumber] = useState(1);
 
   const handleDownload = () => {
     const a = document.createElement('a');
@@ -28,36 +20,12 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
   };
 
   const handlePrint = () => {
-    // Use browser's native download to allow user to print from their PDF viewer
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-    setPageNumber(1);
-    setError(false);
-  };
-
-  const onDocumentLoadError = () => {
-    setError(true);
-  };
-
-  const changePage = (offset: number) => {
-    setPageNumber(prevPageNumber => prevPageNumber + offset);
-  };
-
-  const previousPage = () => {
-    changePage(-1);
-  };
-
-  const nextPage = () => {
-    changePage(1);
+    const printWindow = window.open(url, '_blank');
+    if (printWindow) {
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
   };
 
   if (error) {
@@ -82,66 +50,24 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-4 border-b bg-background/50">
-        <div className="text-sm text-muted-foreground">
-          {numPages > 0 && `Página ${pageNumber} de ${numPages}`}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Imprimir
-          </Button>
-          <Button size="sm" onClick={handleDownload}>
-            <Download className="h-4 w-4 mr-2" />
-            Descarregar
-          </Button>
-        </div>
+      <div className="flex items-center justify-end p-4 border-b bg-background/50 gap-2">
+        <Button size="sm" variant="outline" onClick={handlePrint}>
+          <Printer className="h-4 w-4 mr-2" />
+          Imprimir
+        </Button>
+        <Button size="sm" onClick={handleDownload}>
+          <Download className="h-4 w-4 mr-2" />
+          Descarregar
+        </Button>
       </div>
       
-      <div className="flex-1 overflow-auto bg-muted/20 flex flex-col items-center py-4">
-        <Document
-          file={url}
-          onLoadSuccess={onDocumentLoadSuccess}
-          onLoadError={onDocumentLoadError}
-          loading={
-            <div className="flex items-center justify-center p-8">
-              <div className="text-muted-foreground">A carregar PDF...</div>
-            </div>
-          }
-        >
-          <Page 
-            pageNumber={pageNumber} 
-            renderTextLayer={true}
-            renderAnnotationLayer={true}
-            className="shadow-lg"
-          />
-        </Document>
-        
-        {numPages > 1 && (
-          <div className="flex items-center gap-4 mt-4">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={previousPage}
-              disabled={pageNumber <= 1}
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Anterior
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              {pageNumber} / {numPages}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={nextPage}
-              disabled={pageNumber >= numPages}
-            >
-              Seguinte
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
-        )}
+      <div className="flex-1 overflow-hidden bg-muted/20">
+        <iframe
+          src={url}
+          className="w-full h-full border-0"
+          title="PDF Viewer"
+          onError={() => setError(true)}
+        />
       </div>
     </div>
   );
