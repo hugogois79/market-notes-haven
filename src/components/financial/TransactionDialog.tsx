@@ -533,7 +533,7 @@ export default function TransactionDialog({
                           Sem projeto
                         </CommandItem>
                         {expenseProjects
-                          ?.filter(p => p.name.toLowerCase().includes(projectSearch.toLowerCase()))
+                          ?.filter(p => p.name?.toLowerCase().includes(projectSearch.toLowerCase()))
                           .map((project) => (
                             <CommandItem
                               key={project.id}
@@ -655,7 +655,7 @@ export default function TransactionDialog({
                   <CommandList>
                     <CommandGroup>
                       {suppliers
-                        ?.filter(s => s.name.toLowerCase().includes(supplierSearch.toLowerCase()))
+                        ?.filter(s => s.name?.toLowerCase().includes(supplierSearch.toLowerCase()))
                         .map((supplier) => (
                           <CommandItem
                             key={supplier.id}
