@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useDocumentsPaginated } from "@/hooks/useDocumentsPaginated";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,7 +120,7 @@ const AVAILABLE_TAGS = DEFAULT_TAG_OPTIONS.map(t => t.label);
 const DOCUMENT_TYPES = ["All", "Invoice", "Contract", "Proof", "Receipt", "Legal", "Report", "Other"];
 const DOCUMENT_STATUSES = ["All", "Draft", "Under Review", "Final", "Filed"];
 
-type SortField = "name" | "updated_at" | "file_size" | "document_type" | "status";
+type SortField = "name" | "updated_at" | "created_at" | "file_size" | "document_type" | "status" | "financial_value";
 type SortDirection = "asc" | "desc";
 
 interface ColumnOption {
@@ -523,25 +524,24 @@ export default function CompanyDetailPage() {
     enabled: !!currentFolderId,
   });
 
-  const { data: documents, isLoading: documentsLoading } = useQuery({
-    queryKey: ["company-documents", id, currentFolderId],
-    queryFn: async () => {
-      let query = supabase
-        .from("company_documents")
-        .select("*")
-        .eq("company_id", id);
-      
-      if (currentFolderId) {
-        query = query.eq("folder_id", currentFolderId);
-      } else {
-        query = query.is("folder_id", null);
-      }
-      
-      const { data, error } = await query.order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!id,
+  // Server-side paginated documents with filtering and sorting
+  const { 
+    documents, 
+    totalCount: documentsTotalCount,
+    isLoading: documentsLoading, 
+    hasNextPage,
+    isFetchingNextPage,
+    loadMore,
+    invalidate: invalidateDocuments
+  } = useDocumentsPaginated({
+    companyId: id,
+    folderId: currentFolderId,
+    searchQuery,
+    typeFilter,
+    statusFilter,
+    sortField,
+    sortDirection,
+    pageSize: 50,
   });
 
   const createFolderMutation = useMutation({
@@ -612,7 +612,7 @@ export default function CompanyDetailPage() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["company-documents", id] });
+      invalidateDocuments();
       setSelectedDocs(new Set());
       toast.success("Document(s) deleted");
     },
@@ -630,7 +630,7 @@ export default function CompanyDetailPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["company-documents", id] });
+      invalidateDocuments();
       toast.success("Tags updated");
     },
     onError: (error) => {
@@ -647,7 +647,7 @@ export default function CompanyDetailPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["company-documents", id] });
+      invalidateDocuments();
       toast.success("Updated");
     },
     onError: (error) => {
@@ -1156,7 +1156,7 @@ export default function CompanyDetailPage() {
         }
       }
       
-      queryClient.invalidateQueries({ queryKey: ["company-documents", id] });
+      invalidateDocuments();
       queryClient.invalidateQueries({ queryKey: ["company-folders", id] });
       toast.success(`${filesToUpload.length} file(s) uploaded successfully`);
     } catch (error: any) {
@@ -1286,10 +1286,10 @@ export default function CompanyDetailPage() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedDocs.size === filteredDocuments?.length) {
+    if (selectedDocs.size === documents?.length) {
       setSelectedDocs(new Set());
     } else {
-      setSelectedDocs(new Set(filteredDocuments?.map(d => d.id)));
+      setSelectedDocs(new Set(documents?.map(d => d.id)));
     }
   };
 
@@ -1313,35 +1313,7 @@ export default function CompanyDetailPage() {
     setColumns(DEFAULT_COLUMNS);
   };
 
-  const filteredDocuments = documents
-    ?.filter(doc => {
-      const matchesSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesType = typeFilter === "All" || doc.document_type === typeFilter;
-      const matchesStatus = statusFilter === "All" || doc.status === statusFilter;
-      return matchesSearch && matchesType && matchesStatus;
-    })
-    .sort((a, b) => {
-      let comparison = 0;
-      switch (sortField) {
-        case "name":
-          // Use natural sort (numeric: true) so "2" comes before "10"
-          comparison = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
-          break;
-        case "updated_at":
-          comparison = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
-          break;
-        case "file_size":
-          comparison = (a.file_size || 0) - (b.file_size || 0);
-          break;
-        case "document_type":
-          comparison = (a.document_type || "").localeCompare(b.document_type || "");
-          break;
-        case "status":
-          comparison = (a.status || "").localeCompare(b.status || "");
-          break;
-      }
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
+  // Documents are now filtered and sorted server-side via useDocumentsPaginated
 
   // Sort folders with natural sort (numeric: true) so "2" comes before "10"
   const sortedFolders = folders
@@ -1591,7 +1563,7 @@ export default function CompanyDetailPage() {
                       size="sm" 
                       className="h-8 gap-1 text-primary hover:text-primary"
                       onClick={async () => {
-                        const selectedDocsList = filteredDocuments?.filter(d => selectedDocs.has(d.id)) || [];
+                        const selectedDocsList = documents?.filter(d => selectedDocs.has(d.id)) || [];
                         let successCount = 0;
                         for (const doc of selectedDocsList) {
                           try {
@@ -1881,7 +1853,7 @@ export default function CompanyDetailPage() {
                   <tr className="border-b bg-slate-50">
                     <th className="w-10 px-3 py-2.5">
                       <Checkbox 
-                        checked={selectedDocs.size === filteredDocuments?.length && filteredDocuments?.length > 0}
+                        checked={selectedDocs.size === documents?.length && documents?.length > 0}
                         onCheckedChange={toggleSelectAll}
                       />
                     </th>
@@ -2055,7 +2027,7 @@ export default function CompanyDetailPage() {
                         Loading documents...
                       </td>
                     </tr>
-                  ) : (folders?.length === 0 && filteredDocuments?.length === 0) ? (
+                  ) : (folders?.length === 0 && documents?.length === 0) ? (
                     <tr>
                       <td colSpan={10} className="p-4">
                         <div 
@@ -2106,7 +2078,7 @@ export default function CompanyDetailPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredDocuments?.map((doc) => (
+                    documents?.map((doc) => (
                       <tr 
                         key={doc.id} 
                         className={cn(
@@ -2377,12 +2349,25 @@ export default function CompanyDetailPage() {
             </div>
 
             {/* Footer */}
-            {((folders?.length || 0) + (filteredDocuments?.length || 0)) > 0 && (
-              <div className="px-3 py-2 border-t bg-muted/20 text-xs text-muted-foreground">
-                {folders?.length ? `${folders.length} folder${folders.length !== 1 ? 's' : ''}` : ''}
-                {folders?.length && filteredDocuments?.length ? ', ' : ''}
-                {filteredDocuments?.length ? `${filteredDocuments.length} file${filteredDocuments.length !== 1 ? 's' : ''}` : ''}
-                {selectedDocs.size > 0 && ` • ${selectedDocs.size} selected`}
+            {((folders?.length || 0) + (documents?.length || 0)) > 0 && (
+              <div className="px-3 py-2 border-t bg-muted/20 text-xs text-muted-foreground flex items-center justify-between">
+                <div>
+                  {folders?.length ? `${folders.length} folder${folders.length !== 1 ? 's' : ''}` : ''}
+                  {folders?.length && documents?.length ? ', ' : ''}
+                  {documents?.length ? `${documents.length} of ${documentsTotalCount} file${documentsTotalCount !== 1 ? 's' : ''}` : ''}
+                  {selectedDocs.size > 0 && ` • ${selectedDocs.size} selected`}
+                </div>
+                {hasNextPage && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 text-xs"
+                    onClick={loadMore}
+                    disabled={isFetchingNextPage}
+                  >
+                    {isFetchingNextPage ? "Loading..." : "Load More"}
+                  </Button>
+                )}
               </div>
             )}
           </div>
