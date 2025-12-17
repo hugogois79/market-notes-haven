@@ -103,9 +103,34 @@ const Notes = () => {
     return acc;
   }, {});
 
-  const categories = Array.from(
-    new Set(contextNotes.filter(note => note.category).map(note => note.category))
-  );
+  // Filter categories based on selected project
+  const categories = useMemo(() => {
+    const notesToConsider = selectedProjects.length > 0
+      ? contextNotes.filter(note => note.project_id && selectedProjects.includes(note.project_id))
+      : contextNotes;
+    
+    return Array.from(
+      new Set(notesToConsider.filter(note => note.category).map(note => note.category))
+    );
+  }, [contextNotes, selectedProjects]);
+
+  // Get tags used by notes in selected project(s)
+  const projectFilteredTagIds = useMemo(() => {
+    if (selectedProjects.length === 0) return null; // null means show all tags
+    
+    const notesInProject = contextNotes.filter(
+      note => note.project_id && selectedProjects.includes(note.project_id)
+    );
+    
+    const tagIds = new Set<string>();
+    notesInProject.forEach(note => {
+      if (note.tags) {
+        note.tags.forEach(tagId => tagIds.add(tagId));
+      }
+    });
+    
+    return tagIds;
+  }, [contextNotes, selectedProjects]);
 
   // Debounced semantic search
   useEffect(() => {
@@ -194,10 +219,18 @@ const Notes = () => {
   };
 
   const getAvailableTagsForSelection = () => {
-    return tags.filter(tag => 
-      !selectedTags.includes(tag.id) &&
-      (!tagSearchQuery || tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase()))
-    );
+    return tags.filter(tag => {
+      // Exclude already selected tags
+      if (selectedTags.includes(tag.id)) return false;
+      
+      // Filter by search query
+      if (tagSearchQuery && !tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase())) return false;
+      
+      // If project filter is active, only show tags used in those projects
+      if (projectFilteredTagIds !== null && !projectFilteredTagIds.has(tag.id)) return false;
+      
+      return true;
+    });
   };
 
   const filteredCategories = categories.filter(
