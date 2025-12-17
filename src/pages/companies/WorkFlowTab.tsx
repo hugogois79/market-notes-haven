@@ -1,9 +1,9 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Upload, Search, Trash2, Download, FileText, CheckCircle, Clock, AlertCircle, MoreHorizontal } from "lucide-react";
+import { Upload, Search, Trash2, Download, FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   Table,
@@ -51,6 +51,7 @@ const PRIORITY_OPTIONS = [
 export default function WorkFlowTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -74,7 +75,7 @@ export default function WorkFlowTab() {
 
   // Upload mutation
   const uploadMutation = useMutation({
-    mutationFn: async (files: FileList) => {
+    mutationFn: async (files: FileList | File[]) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -185,6 +186,31 @@ export default function WorkFlowTab() {
     }
   };
 
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+
+    setIsUploading(true);
+    await uploadMutation.mutateAsync(Array.from(files));
+    setIsUploading(false);
+  }, [uploadMutation]);
+
   const handleDownload = async (file: WorkflowFile) => {
     try {
       const url = new URL(file.file_url);
@@ -230,38 +256,52 @@ export default function WorkFlowTab() {
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div className="relative max-w-md flex-1">
+      {/* Top Toolbar */}
+      <div className="flex items-center gap-2">
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileUpload}
+          className="hidden"
+          multiple
+        />
+        <Button 
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          {isUploading ? "Uploading..." : "Upload"}
+        </Button>
+        <div className="flex-1" />
+        <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search files..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 w-64"
           />
-        </div>
-        <div>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            className="hidden"
-            multiple
-          />
-          <Button 
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            {isUploading ? "Uploading..." : "Upload Files"}
-          </Button>
         </div>
       </div>
 
-      {/* Files Table */}
-      <div className="border border-slate-200 rounded-lg bg-white shadow-sm overflow-x-auto">
+      {/* Files Table with Drag & Drop */}
+      <div 
+        className={`border rounded-lg bg-white shadow-sm overflow-x-auto transition-colors ${
+          isDragging ? "border-blue-500 border-2 bg-blue-50" : "border-slate-200"
+        }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {isDragging && (
+          <div className="absolute inset-0 flex items-center justify-center bg-blue-50/80 z-10 pointer-events-none">
+            <div className="text-blue-600 font-medium flex items-center gap-2">
+              <Upload className="h-6 w-6" />
+              Drop files here to upload
+            </div>
+          </div>
+        )}
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50 border-b border-slate-200">
@@ -282,8 +322,11 @@ export default function WorkFlowTab() {
               </TableRow>
             ) : filteredFiles?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  No files found. Upload files to start your workflow.
+                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="h-8 w-8 text-slate-300" />
+                    <span>No files found. Drag & drop files here or click Upload.</span>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
