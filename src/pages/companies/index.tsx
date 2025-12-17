@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Building2, Search, Edit, Trash2, Eye, Settings, ChevronDown, X, ListTodo } from "lucide-react";
+import { Plus, Building2, Search, Edit, Trash2, Eye, Settings, ChevronDown, X, ListTodo, Link2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import WorkFlowTab from "./WorkFlowTab";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -98,6 +99,13 @@ const DEFAULT_COLUMNS: CustomColumn[] = [
 
 const CUSTOM_COLUMNS_KEY = "companies-custom-columns";
 const COMPANY_CUSTOM_DATA_KEY = "companies-custom-data";
+const TABLE_RELATIONS_KEY = "work-table-relations";
+
+interface TableRelationsConfig {
+  defaultCompanyId: string | null;
+  autoCreateTransaction: boolean;
+  linkWorkflowToFinance: boolean;
+}
 
 export default function CompaniesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -141,6 +149,19 @@ export default function CompaniesPage() {
   const [addColumnDialog, setAddColumnDialog] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
   
+  // Table relations config
+  const [tableRelations, setTableRelations] = useState<TableRelationsConfig>(() => {
+    const saved = localStorage.getItem(TABLE_RELATIONS_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
+      }
+    }
+    return { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
+  });
+  
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -153,6 +174,11 @@ export default function CompaniesPage() {
   useEffect(() => {
     localStorage.setItem(COMPANY_CUSTOM_DATA_KEY, JSON.stringify(customData));
   }, [customData]);
+
+  // Persist table relations
+  useEffect(() => {
+    localStorage.setItem(TABLE_RELATIONS_KEY, JSON.stringify(tableRelations));
+  }, [tableRelations]);
 
   const openEditColumnDialog = (columnId: string) => {
     const col = customColumns.find(c => c.id === columnId);
@@ -612,6 +638,72 @@ export default function CompaniesPage() {
               <Plus className="h-4 w-4 mr-2" />
               Add Column
             </Button>
+          </div>
+          
+          {/* Table Relations Section */}
+          <div className="border border-slate-200 rounded-lg bg-white p-6 max-w-2xl mt-6">
+            <div className="flex items-center gap-2 mb-1">
+              <Link2 className="h-5 w-5 text-slate-600" />
+              <h2 className="text-lg font-semibold text-slate-800">Table Relations</h2>
+            </div>
+            <p className="text-sm text-slate-500 mb-6">Configure how WorkFlow, Finance, and Companies are linked.</p>
+            
+            <div className="space-y-6">
+              {/* Default Company */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-slate-700">Default Company for WorkFlow</Label>
+                <p className="text-xs text-slate-500">Files uploaded to WorkFlow will be associated with this company by default.</p>
+                <Select
+                  value={tableRelations.defaultCompanyId || "none"}
+                  onValueChange={(value) => setTableRelations(prev => ({
+                    ...prev,
+                    defaultCompanyId: value === "none" ? null : value
+                  }))}
+                >
+                  <SelectTrigger className="w-full max-w-xs">
+                    <SelectValue placeholder="Select a company..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No default company</SelectItem>
+                    {companies?.map((company) => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Auto-create Transaction */}
+              <div className="flex items-center justify-between py-3 border-t border-slate-100">
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium text-slate-700">Link WorkFlow to Finance</Label>
+                  <p className="text-xs text-slate-500">When assigning a project to a file, automatically create a financial transaction.</p>
+                </div>
+                <Switch
+                  checked={tableRelations.linkWorkflowToFinance}
+                  onCheckedChange={(checked) => setTableRelations(prev => ({
+                    ...prev,
+                    linkWorkflowToFinance: checked
+                  }))}
+                />
+              </div>
+              
+              {/* Auto-create Transaction */}
+              <div className="flex items-center justify-between py-3 border-t border-slate-100">
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium text-slate-700">Auto-create Transaction</Label>
+                  <p className="text-xs text-slate-500">Automatically create a draft transaction when a project is assigned to a workflow file.</p>
+                </div>
+                <Switch
+                  checked={tableRelations.autoCreateTransaction}
+                  onCheckedChange={(checked) => setTableRelations(prev => ({
+                    ...prev,
+                    autoCreateTransaction: checked
+                  }))}
+                />
+              </div>
+            </div>
           </div>
         </TabsContent>
 
