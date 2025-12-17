@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ export default function ExpenseProjectManagement() {
     total_cost: "",
   });
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ["expense-projects"],
@@ -321,7 +323,14 @@ export default function ExpenseProjectManagement() {
                     </p>
                   )}
                   {(notesCounts?.[project.id] ?? 0) > 0 && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <div 
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary cursor-pointer transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/notes?project=${project.id}`);
+                      }}
+                      title="Ver notas deste projeto"
+                    >
                       <FileText className="h-3 w-3" />
                       <span>{notesCounts[project.id]} {notesCounts[project.id] === 1 ? 'nota' : 'notas'}</span>
                     </div>
