@@ -90,11 +90,48 @@ const DEFAULT_STATUS_OPTIONS: ColumnOption[] = [
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "name", label: "File", visible: true, required: true },
+  { id: "type", label: "Type", visible: true },
   { id: "date", label: "DATE", visible: true },
   { id: "category", label: "Category", visible: true, dbField: "category", isBuiltIn: true, options: DEFAULT_CATEGORY_OPTIONS },
   { id: "status", label: "Status", visible: true, dbField: "status", isBuiltIn: true, options: DEFAULT_STATUS_OPTIONS },
   { id: "size", label: "Size", visible: true },
 ];
+
+// Helper to extract file extension
+const getFileExtension = (fileName: string): string => {
+  const lastDot = fileName.lastIndexOf('.');
+  if (lastDot === -1) return '';
+  return fileName.substring(lastDot + 1).toLowerCase();
+};
+
+// Helper to display file name without extension
+const getFileNameWithoutExtension = (fileName: string): string => {
+  const lastDot = fileName.lastIndexOf('.');
+  if (lastDot === -1) return fileName;
+  return fileName.substring(0, lastDot);
+};
+
+// Helper to get file type badge color
+const getFileTypeBadgeStyle = (ext: string): { bg: string; text: string } => {
+  const styles: Record<string, { bg: string; text: string }> = {
+    pdf: { bg: "#ef4444", text: "white" },
+    doc: { bg: "#3b82f6", text: "white" },
+    docx: { bg: "#3b82f6", text: "white" },
+    xls: { bg: "#22c55e", text: "white" },
+    xlsx: { bg: "#22c55e", text: "white" },
+    ppt: { bg: "#f97316", text: "white" },
+    pptx: { bg: "#f97316", text: "white" },
+    jpg: { bg: "#8b5cf6", text: "white" },
+    jpeg: { bg: "#8b5cf6", text: "white" },
+    png: { bg: "#8b5cf6", text: "white" },
+    gif: { bg: "#8b5cf6", text: "white" },
+    txt: { bg: "#6b7280", text: "white" },
+    csv: { bg: "#14b8a6", text: "white" },
+    zip: { bg: "#f59e0b", text: "white" },
+    rar: { bg: "#f59e0b", text: "white" },
+  };
+  return styles[ext] || { bg: "#6b7280", text: "white" };
+};
 
 const WORKFLOW_COLUMNS_KEY = "workflow-columns";
 const WORKFLOW_CUSTOM_COLUMNS_KEY = "workflow-custom-columns";
@@ -636,6 +673,11 @@ export default function WorkFlowTab() {
               <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider">
                 File
               </th>
+              {isColumnVisible("type") && (
+                <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-16">
+                  Type
+                </th>
+              )}
               {isColumnVisible("date") && (
                 <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
                   DATE
@@ -703,10 +745,28 @@ export default function WorkFlowTab() {
                   </td>
                   <td className="px-3 py-1.5">
                     <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-slate-400" />
-                      <span className="font-medium text-blue-600">{file.file_name}</span>
+                      <FileText className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                      <span className="font-medium text-blue-600 truncate max-w-[300px]" title={file.file_name}>
+                        {getFileNameWithoutExtension(file.file_name)}
+                      </span>
                     </div>
                   </td>
+                  {isColumnVisible("type") && (
+                    <td className="px-3 py-1.5 text-center">
+                      {(() => {
+                        const ext = getFileExtension(file.file_name);
+                        const style = getFileTypeBadgeStyle(ext);
+                        return ext ? (
+                          <Badge 
+                            className="text-[10px] px-1.5 py-0 uppercase font-medium"
+                            style={{ backgroundColor: style.bg, color: style.text }}
+                          >
+                            {ext}
+                          </Badge>
+                        ) : <span className="text-slate-400">—</span>;
+                      })()}
+                    </td>
+                  )}
                   {isColumnVisible("date") && (
                     <td className="px-3 py-1.5 text-slate-600 text-sm">
                       {format(new Date(file.created_at), "dd/MM/yyyy")}
