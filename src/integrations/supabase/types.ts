@@ -3723,6 +3723,7 @@ export type Database = {
       }
       workflow_files: {
         Row: {
+          category: string | null
           completed_at: string | null
           created_at: string
           file_name: string
@@ -3737,6 +3738,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          category?: string | null
           completed_at?: string | null
           created_at?: string
           file_name: string
@@ -3751,6 +3753,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          category?: string | null
           completed_at?: string | null
           created_at?: string
           file_name?: string
