@@ -306,7 +306,7 @@ export function WorkflowExpensePanel({ file, onClose, onSaved }: WorkflowExpense
                           Sem projeto
                         </CommandItem>
                         {expenseProjects
-                          ?.filter((p) => p.name.toLowerCase().includes(projectSearch.toLowerCase()))
+                          ?.filter((p) => p.name?.toLowerCase().includes(projectSearch.toLowerCase()))
                           .map((project) => (
                             <CommandItem
                               key={project.id}
@@ -387,7 +387,7 @@ export function WorkflowExpensePanel({ file, onClose, onSaved }: WorkflowExpense
                     </CommandEmpty>
                     <CommandGroup>
                       {suppliers
-                        ?.filter((s) => s.toLowerCase().includes(supplierSearch.toLowerCase()))
+                        ?.filter((s) => s?.toLowerCase().includes(supplierSearch.toLowerCase()))
                         .slice(0, 10)
                         .map((supplier) => (
                           <CommandItem
