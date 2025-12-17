@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,8 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { X, Check, ChevronsUpDown, FileText, Sparkles, Loader2 } from "lucide-react";
-import * as pdfjsLib from "pdfjs-dist";
+import { X, Check, ChevronsUpDown, FileText } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -67,100 +66,6 @@ export function WorkflowExpensePanel({ file, onClose, onSaved }: WorkflowExpense
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [projectSearch, setProjectSearch] = useState("");
   const [supplierSearch, setSupplierSearch] = useState("");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [hasAnalyzed, setHasAnalyzed] = useState(false);
-
-  // PDF text extraction function
-  const extractPdfText = async (url: string): Promise<string> => {
-    try {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-      
-      const response = await fetch(url);
-      const arrayBuffer = await response.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      
-      let fullText = "";
-      for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item: any) => item.str).join(" ");
-        fullText += pageText + "\n";
-      }
-      return fullText;
-    } catch (error) {
-      console.error("Error extracting PDF text:", error);
-      return "";
-    }
-  };
-
-  // AI document analysis function
-  const analyzeDocument = useCallback(async () => {
-    if (hasAnalyzed || isAnalyzing) return;
-    
-    setIsAnalyzing(true);
-    try {
-      let content = "";
-      
-      // Extract content based on file type
-      if (file.mime_type === "application/pdf" || file.file_name.toLowerCase().endsWith(".pdf")) {
-        content = await extractPdfText(file.file_url);
-      } else {
-        // For non-PDF files, use the file URL and name as context
-        content = `[File: ${file.file_name}, URL: ${file.file_url}]`;
-      }
-      
-      if (!content || content.length < 20) {
-        console.log("Not enough content to analyze");
-        setHasAnalyzed(true);
-        return;
-      }
-      
-      const { data, error } = await supabase.functions.invoke("analyze-document", {
-        body: { fileContent: content, fileName: file.file_name }
-      });
-      
-      if (error) throw error;
-      
-      console.log("AI Analysis result:", data);
-      
-      // Auto-fill form with extracted data
-      if (data?.extractedData) {
-        const extracted = data.extractedData;
-        
-        if (extracted.date) {
-          setValue("date", extracted.date);
-        }
-        if (extracted.amount) {
-          setValue("total_amount", extracted.amount.toString());
-        }
-        if (extracted.entityName) {
-          setValue("entity_name", extracted.entityName);
-        }
-        if (extracted.description) {
-          setValue("description", extracted.description);
-        }
-        if (extracted.invoiceNumber) {
-          setValue("invoice_number", extracted.invoiceNumber);
-        }
-        if (extracted.transactionType) {
-          setValue("type", extracted.transactionType);
-        }
-        
-        toast.success("Dados extraídos com IA", {
-          description: `Fornecedor: ${extracted.entityName || "N/A"}, Total: ${extracted.amount || "N/A"}€`
-        });
-      }
-      
-      setHasAnalyzed(true);
-    } catch (error) {
-      console.error("Error analyzing document:", error);
-      toast.error("Erro ao analisar documento");
-    } finally {
-      setIsAnalyzing(false);
-    }
-  }, [file, hasAnalyzed, isAnalyzing, setValue]);
-
-  // Manual analyze triggered by button - no auto-analyze
 
   // Fetch companies
   const { data: companies } = useQuery({
@@ -318,42 +223,10 @@ export function WorkflowExpensePanel({ file, onClose, onSaved }: WorkflowExpense
   return (
     <div className="h-full flex flex-col border-l bg-background">
       <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-base">Novo Movimento</h3>
-          {hasAnalyzed && !isAnalyzing && (
-            <Sparkles className="h-4 w-4 text-amber-500" />
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            type="button" 
-            variant="outline" 
-            size="sm"
-            onClick={analyzeDocument}
-            disabled={isAnalyzing || hasAnalyzed}
-            className="h-8 text-xs"
-          >
-            {isAnalyzing ? (
-              <>
-                <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                A analisar...
-              </>
-            ) : hasAnalyzed ? (
-              <>
-                <Sparkles className="h-3 w-3 mr-1" />
-                Analisado
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-3 w-3 mr-1" />
-                Analisar com IA
-              </>
-            )}
-          </Button>
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        <h3 className="font-semibold text-base">Novo Movimento</h3>
+        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+          <X className="h-4 w-4" />
+        </Button>
       </div>
 
       <ScrollArea className="flex-1">

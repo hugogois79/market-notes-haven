@@ -26,52 +26,42 @@ serve(async (req) => {
 
     console.log(`Analyzing document: ${fileName}`);
 
-    const systemPrompt = `You are a financial document analyzer specialized in extracting payment and transaction data from invoices, receipts, and financial documents. 
-
-DOCUMENT CLASSIFICATION:
-1. LOAN document (empréstimo) - contracts, loan agreements, credit agreements
-2. TRANSACTION document (transação/movimento) - invoices, receipts, payment confirmations, bank statements, transfer receipts, service receipts (Uber, Bolt, etc.)
+    const systemPrompt = `You are a financial document analyzer specialized in extracting payment and transaction data. Analyze the provided document content and determine if it is:
+1. A LOAN document (empréstimo) - contracts, loan agreements, credit agreements
+2. A TRANSACTION document (transação/movimento) - invoices, receipts, payment confirmations, bank statements, transfer receipts
 3. UNKNOWN - if you cannot determine the type
 
-CRITICAL INSTRUCTIONS FOR AMOUNT EXTRACTION:
-- Look for "Total", "Valor Total", "Total a pagar", "Montante", "Amount", "Valor"
-- European format uses COMMA as decimal separator: "23,98 €" means 23.98
-- Convert to number WITHOUT the € symbol: "23,98 €" → 23.98
-- Look for the FINAL TOTAL amount, not subtotals or individual items
-- If multiple amounts exist, use the one labeled "Total" or the largest final amount
-
-CRITICAL INSTRUCTIONS FOR DATE EXTRACTION:
-- Look for transaction/invoice/receipt date, NOT email send dates
-- Common formats: "13/12/2025", "13-12-2025", "13 December 2025", "2025-12-13"
-- European format is DD/MM/YYYY (day first, then month)
-- Convert to YYYY-MM-DD format: "13/12/2025" → "2025-12-13"
-- Look for: "Data", "Date", "Data da viagem", "Data do recibo", timestamps near totals
-
 CRITICAL INSTRUCTIONS FOR ENTITY EXTRACTION:
-- For service receipts (Uber, Bolt, taxi, etc.): entityName is the SERVICE PROVIDER (e.g., "Uber", "Bolt")
-- For invoices: entityName is the company issuing the invoice
-- For bank transfers: entityName is the BENEFICIARY who received the money
-- IGNORE the payer's name, bank names, or email addresses
+- For TRANSACTIONS, "entityName" is the BENEFICIARY/RECIPIENT of the payment (who received the money), NOT the payer or the bank.
+- Look for fields like: "Beneficiário", "Destinatário", "A favor de", "Para", "Nome do beneficiário", "Recipient", "Payee", "To:", "Transferência para".
+- IGNORE the payer's name (who made the payment), bank names, or intermediary entities.
+- If this is a receipt/comprovativo, the entityName is the person/company who RECEIVED the payment.
+- For bank transfers, look specifically for the beneficiary account holder name.
+- Extract the FULL name of the beneficiary as it appears in the document.
 
-Respond in JSON format:
+Respond in JSON format with the following structure:
 {
   "documentType": "loan" | "transaction" | "unknown",
   "confidence": number between 0 and 1,
-  "summary": "brief description in Portuguese",
+  "summary": "brief description of the document in Portuguese",
   "extractedData": {
-    "amount": number or null (MUST extract if visible - convert "23,98 €" to 23.98),
-    "date": "YYYY-MM-DD" or null (MUST extract if visible - convert DD/MM/YYYY to YYYY-MM-DD),
-    "entityName": "string" or null,
-    "description": "string" or null (brief description of what was paid for),
-    "transactionType": "income" | "expense" | null,
-    "invoiceNumber": "string" or null,
+    // For loans:
+    "amount": number or null,
     "interestRate": number or null,
     "startDate": "YYYY-MM-DD" or null,
     "endDate": "YYYY-MM-DD" or null,
     "lender": "string" or null,
-    "borrower": "string" or null
+    "borrower": "string" or null,
+    
+    // For transactions:
+    "amount": number or null,
+    "date": "YYYY-MM-DD" or null,
+    "entityName": "string" or null (THE BENEFICIARY/RECIPIENT - who received the money),
+    "description": "string" or null,
+    "transactionType": "income" | "expense" | null,
+    "invoiceNumber": "string" or null
   },
-  "reasoning": "explain how you found the amount and date"
+  "reasoning": "explanation of why you classified it this way and how you identified the beneficiary"
 }`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
