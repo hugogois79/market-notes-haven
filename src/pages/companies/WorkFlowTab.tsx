@@ -646,14 +646,19 @@ export default function WorkFlowTab() {
 
     // Read table relations settings
     const settingsStr = localStorage.getItem(TABLE_RELATIONS_KEY);
-    const settings: TableRelationsConfig = settingsStr 
-      ? JSON.parse(settingsStr) 
+    const settings: TableRelationsConfig = settingsStr
+      ? JSON.parse(settingsStr)
       : { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
 
-    // Find matching storage location
-    const matchingLocation = storageLocations?.find(
-      loc => loc.month === fileMonth && loc.year === fileYear
-    );
+    // Always query Supabase here to avoid race conditions with cached queries
+    const { data: matchingLocation, error } = await supabase
+      .from("workflow_storage_locations")
+      .select("*")
+      .eq("year", fileYear)
+      .eq("month", fileMonth)
+      .maybeSingle();
+
+    if (error) throw error;
 
     if (!matchingLocation) {
       setFileToComplete(file);
