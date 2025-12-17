@@ -598,115 +598,135 @@ export default function CompaniesPage() {
         </TabsContent>
 
         <TabsContent value="settings" className="mt-6">
-          <div className="border border-slate-200 rounded-lg bg-white p-6 max-w-2xl">
-            <h2 className="text-lg font-semibold text-slate-800 mb-1">Custom Columns</h2>
-            <p className="text-sm text-slate-500 mb-6">Manage editable columns with custom options.</p>
+          <Tabs defaultValue="columns" className="w-full">
+            <TabsList className="bg-transparent border-b border-slate-200 rounded-none h-auto p-0 w-full justify-start">
+              <TabsTrigger 
+                value="columns" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Custom Columns
+              </TabsTrigger>
+              <TabsTrigger 
+                value="relations" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2"
+              >
+                <Link2 className="h-4 w-4 mr-2" />
+                Table Relations
+              </TabsTrigger>
+            </TabsList>
             
-            <div className="space-y-4">
-              {customColumns.map((col) => (
-                <div key={col.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-                  <div className="flex items-center gap-3">
-                    <Label className="text-sm font-medium text-slate-700">
-                      {col.label}
-                      {col.isBuiltIn && <span className="text-slate-400 text-xs ml-2">(Built-in)</span>}
-                    </Label>
-                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => openEditColumnDialog(col.id)}>
-                      <Edit className="h-3 w-3 mr-1" />
-                      Edit
-                    </Button>
-                  </div>
-                  {!col.isBuiltIn && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-6 px-2 text-xs text-destructive hover:text-destructive"
-                      onClick={() => {
-                        if (confirm("Delete this column?")) {
-                          deleteColumn(col.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" />
-                      Delete
-                    </Button>
-                  )}
+            <TabsContent value="columns" className="mt-6">
+              <div className="border border-slate-200 rounded-lg bg-white p-6 max-w-2xl">
+                <h2 className="text-lg font-semibold text-slate-800 mb-1">Custom Columns</h2>
+                <p className="text-sm text-slate-500 mb-6">Manage editable columns with custom options.</p>
+                
+                <div className="space-y-4">
+                  {customColumns.map((col) => (
+                    <div key={col.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
+                      <div className="flex items-center gap-3">
+                        <Label className="text-sm font-medium text-slate-700">
+                          {col.label}
+                          {col.isBuiltIn && <span className="text-slate-400 text-xs ml-2">(Built-in)</span>}
+                        </Label>
+                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => openEditColumnDialog(col.id)}>
+                          <Edit className="h-3 w-3 mr-1" />
+                          Edit
+                        </Button>
+                      </div>
+                      {!col.isBuiltIn && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 px-2 text-xs text-destructive hover:text-destructive"
+                          onClick={() => {
+                            if (confirm("Delete this column?")) {
+                              deleteColumn(col.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Delete
+                        </Button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
 
-            <Button variant="outline" onClick={() => setAddColumnDialog(true)} className="mt-6">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Column
-            </Button>
-          </div>
-          
-          <hr className="my-8 border-t border-slate-300 max-w-2xl" />
-          
-          {/* Table Relations Section */}
-          <div className="border border-slate-200 rounded-lg bg-white p-6 max-w-2xl">
-            <div className="flex items-center gap-2 mb-1">
-              <Link2 className="h-5 w-5 text-slate-600" />
-              <h2 className="text-lg font-semibold text-slate-800">Table Relations</h2>
-            </div>
-            <p className="text-sm text-slate-500 mb-6">Configure how WorkFlow, Finance, and Companies are linked.</p>
+                <Button variant="outline" onClick={() => setAddColumnDialog(true)} className="mt-6">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Column
+                </Button>
+              </div>
+            </TabsContent>
             
-            <div className="space-y-6">
-              {/* Default Company */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-700">Default Company for WorkFlow</Label>
-                <p className="text-xs text-slate-500">Files uploaded to WorkFlow will be associated with this company by default.</p>
-                <Select
-                  value={tableRelations.defaultCompanyId || "none"}
-                  onValueChange={(value) => setTableRelations(prev => ({
-                    ...prev,
-                    defaultCompanyId: value === "none" ? null : value
-                  }))}
-                >
-                  <SelectTrigger className="w-full max-w-xs">
-                    <SelectValue placeholder="Select a company..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No default company</SelectItem>
-                    {companies?.map((company) => (
-                      <SelectItem key={company.id} value={company.id}>
-                        {company.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* Auto-create Transaction */}
-              <div className="flex items-center justify-between py-3 border-t border-slate-100">
-                <div className="space-y-1">
-                  <Label className="text-sm font-medium text-slate-700">Link WorkFlow to Finance</Label>
-                  <p className="text-xs text-slate-500">When assigning a project to a file, automatically create a financial transaction.</p>
+            <TabsContent value="relations" className="mt-6">
+              <div className="border border-slate-200 rounded-lg bg-white p-6 max-w-2xl">
+                <div className="flex items-center gap-2 mb-1">
+                  <Link2 className="h-5 w-5 text-slate-600" />
+                  <h2 className="text-lg font-semibold text-slate-800">Table Relations</h2>
                 </div>
-                <Switch
-                  checked={tableRelations.linkWorkflowToFinance}
-                  onCheckedChange={(checked) => setTableRelations(prev => ({
-                    ...prev,
-                    linkWorkflowToFinance: checked
-                  }))}
-                />
-              </div>
-              
-              {/* Auto-create Transaction */}
-              <div className="flex items-center justify-between py-3 border-t border-slate-100">
-                <div className="space-y-1">
-                  <Label className="text-sm font-medium text-slate-700">Auto-create Transaction</Label>
-                  <p className="text-xs text-slate-500">Automatically create a draft transaction when a project is assigned to a workflow file.</p>
+                <p className="text-sm text-slate-500 mb-6">Configure how WorkFlow, Finance, and Companies are linked.</p>
+                
+                <div className="space-y-6">
+                  {/* Default Company */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700">Default Company for WorkFlow</Label>
+                    <p className="text-xs text-slate-500">Files uploaded to WorkFlow will be associated with this company by default.</p>
+                    <Select
+                      value={tableRelations.defaultCompanyId || "none"}
+                      onValueChange={(value) => setTableRelations(prev => ({
+                        ...prev,
+                        defaultCompanyId: value === "none" ? null : value
+                      }))}
+                    >
+                      <SelectTrigger className="w-full max-w-xs">
+                        <SelectValue placeholder="Select a company..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No default company</SelectItem>
+                        {companies?.map((company) => (
+                          <SelectItem key={company.id} value={company.id}>
+                            {company.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Link WorkFlow to Finance */}
+                  <div className="flex items-center justify-between py-3 border-t border-slate-100">
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium text-slate-700">Link WorkFlow to Finance</Label>
+                      <p className="text-xs text-slate-500">When assigning a project to a file, automatically create a financial transaction.</p>
+                    </div>
+                    <Switch
+                      checked={tableRelations.linkWorkflowToFinance}
+                      onCheckedChange={(checked) => setTableRelations(prev => ({
+                        ...prev,
+                        linkWorkflowToFinance: checked
+                      }))}
+                    />
+                  </div>
+                  
+                  {/* Auto-create Transaction */}
+                  <div className="flex items-center justify-between py-3 border-t border-slate-100">
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium text-slate-700">Auto-create Transaction</Label>
+                      <p className="text-xs text-slate-500">Automatically create a draft transaction when a project is assigned to a workflow file.</p>
+                    </div>
+                    <Switch
+                      checked={tableRelations.autoCreateTransaction}
+                      onCheckedChange={(checked) => setTableRelations(prev => ({
+                        ...prev,
+                        autoCreateTransaction: checked
+                      }))}
+                    />
+                  </div>
                 </div>
-                <Switch
-                  checked={tableRelations.autoCreateTransaction}
-                  onCheckedChange={(checked) => setTableRelations(prev => ({
-                    ...prev,
-                    autoCreateTransaction: checked
-                  }))}
-                />
               </div>
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         <TabsContent value="workflow" className="mt-6">
