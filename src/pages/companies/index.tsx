@@ -105,6 +105,9 @@ interface TableRelationsConfig {
   defaultCompanyId: string | null;
   autoCreateTransaction: boolean;
   linkWorkflowToFinance: boolean;
+  storeFilesInCompanyDocs: boolean;
+  baseFolder: string;
+  dateFolderPattern: "MM MMMM YYYY" | "MMMM YYYY" | "YYYY-MM" | "YYYY";
 }
 
 export default function CompaniesPage() {
@@ -152,14 +155,22 @@ export default function CompaniesPage() {
   // Table relations config
   const [tableRelations, setTableRelations] = useState<TableRelationsConfig>(() => {
     const saved = localStorage.getItem(TABLE_RELATIONS_KEY);
+    const defaults: TableRelationsConfig = { 
+      defaultCompanyId: null, 
+      autoCreateTransaction: true, 
+      linkWorkflowToFinance: true,
+      storeFilesInCompanyDocs: true,
+      baseFolder: "Work",
+      dateFolderPattern: "MM MMMM YYYY"
+    };
     if (saved) {
       try {
-        return JSON.parse(saved);
+        return { ...defaults, ...JSON.parse(saved) };
       } catch {
-        return { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
+        return defaults;
       }
     }
-    return { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
+    return defaults;
   });
   
   const queryClient = useQueryClient();
@@ -722,6 +733,87 @@ export default function CompaniesPage() {
                         autoCreateTransaction: checked
                       }))}
                     />
+                  </div>
+                </div>
+                
+                {/* File Storage Section */}
+                <div className="mt-8 pt-6 border-t border-slate-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Building2 className="h-5 w-5 text-slate-600" />
+                    <h3 className="text-lg font-semibold text-slate-800">File Storage Location</h3>
+                  </div>
+                  <p className="text-sm text-slate-500 mb-6">Configure where workflow files are stored in the company's document library.</p>
+                  
+                  <div className="space-y-6">
+                    {/* Store Files Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <Label className="text-sm font-medium text-slate-700">Copy Files to Company Documents</Label>
+                        <p className="text-xs text-slate-500">When a transaction is created, copy the workflow file to the company's document library.</p>
+                      </div>
+                      <Switch
+                        checked={tableRelations.storeFilesInCompanyDocs}
+                        onCheckedChange={(checked) => setTableRelations(prev => ({
+                          ...prev,
+                          storeFilesInCompanyDocs: checked
+                        }))}
+                      />
+                    </div>
+                    
+                    {tableRelations.storeFilesInCompanyDocs && (
+                      <>
+                        {/* Base Folder */}
+                        <div className="space-y-2 py-3 border-t border-slate-100">
+                          <Label className="text-sm font-medium text-slate-700">Base Folder</Label>
+                          <p className="text-xs text-slate-500">The parent folder where dated subfolders will be created (e.g., "Work" or "Invoices").</p>
+                          <Input
+                            value={tableRelations.baseFolder}
+                            onChange={(e) => setTableRelations(prev => ({
+                              ...prev,
+                              baseFolder: e.target.value
+                            }))}
+                            placeholder="Work"
+                            className="max-w-xs"
+                          />
+                        </div>
+                        
+                        {/* Date Folder Pattern */}
+                        <div className="space-y-2 py-3 border-t border-slate-100">
+                          <Label className="text-sm font-medium text-slate-700">Date Folder Pattern</Label>
+                          <p className="text-xs text-slate-500">How to name the date-based subfolders based on the transaction date.</p>
+                          <Select
+                            value={tableRelations.dateFolderPattern}
+                            onValueChange={(value: "MM MMMM YYYY" | "MMMM YYYY" | "YYYY-MM" | "YYYY") => setTableRelations(prev => ({
+                              ...prev,
+                              dateFolderPattern: value
+                            }))}
+                          >
+                            <SelectTrigger className="w-full max-w-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="MM MMMM YYYY">11 November 2025</SelectItem>
+                              <SelectItem value="MMMM YYYY">November 2025</SelectItem>
+                              <SelectItem value="YYYY-MM">2025-11</SelectItem>
+                              <SelectItem value="YYYY">2025</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {/* Preview */}
+                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                          <Label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Storage Path Preview</Label>
+                          <p className="text-sm text-slate-700 mt-1 font-mono">
+                            Companies → [Company Name] → Documents → <span className="text-blue-600">{tableRelations.baseFolder || "Work"}</span> → <span className="text-blue-600">
+                              {tableRelations.dateFolderPattern === "MM MMMM YYYY" && "11 November 2025"}
+                              {tableRelations.dateFolderPattern === "MMMM YYYY" && "November 2025"}
+                              {tableRelations.dateFolderPattern === "YYYY-MM" && "2025-11"}
+                              {tableRelations.dateFolderPattern === "YYYY" && "2025"}
+                            </span>
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
