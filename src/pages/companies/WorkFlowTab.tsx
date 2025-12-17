@@ -1326,32 +1326,7 @@ export default function WorkFlowTab() {
       <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
         <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
           <DialogHeader className="p-4 pb-0 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-lg">Visualizar Documento</DialogTitle>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (previewFile) {
-                      // Print functionality
-                      const printWindow = window.open(previewFile.file_url, '_blank');
-                      printWindow?.print();
-                    }
-                  }}
-                >
-                  <Printer className="h-4 w-4 mr-2" />
-                  Imprimir
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => previewFile && handleDownload(previewFile)}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Descarregar
-                </Button>
-              </div>
-            </div>
+            <DialogTitle className="text-lg">Visualizar Documento</DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-hidden p-4">
             {previewFile && (
