@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Building2, Search, Edit, Trash2, Eye, Settings, ChevronDown, X, ListTodo, Link2 } from "lucide-react";
@@ -133,6 +134,7 @@ const MONTHS = [
 ];
 
 export default function CompaniesPage() {
+  const { user, loading: authLoading } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -217,19 +219,25 @@ export default function CompaniesPage() {
   });
 
   // Fetch storage locations from Supabase
-  const { data: storageLocations = [], refetch: refetchStorageLocations } = useQuery({
-    queryKey: ['workflow-storage-locations'],
+  const {
+    data: storageLocations = [],
+    refetch: refetchStorageLocations,
+    isLoading: storageLocationsLoading,
+    error: storageLocationsError,
+  } = useQuery({
+    queryKey: ["workflow-storage-locations", user?.id ?? "anon"],
+    enabled: !authLoading && !!user,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('workflow_storage_locations')
-        .select('*')
-        .order('company_id', { ascending: true })
-        .order('year', { ascending: false })
-        .order('month', { ascending: false });
-      
+        .from("workflow_storage_locations")
+        .select("*")
+        .order("company_id", { ascending: true })
+        .order("year", { ascending: false })
+        .order("month", { ascending: false });
+
       if (error) throw error;
       return data as StorageLocation[];
-    }
+    },
   });
 
   // Mutation to create storage location
@@ -401,13 +409,11 @@ export default function CompaniesPage() {
   };
 
   const { data: companies, isLoading } = useQuery({
-    queryKey: ["companies"],
+    queryKey: ["companies", user?.id ?? "anon"],
+    enabled: !authLoading && !!user,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("companies")
-        .select("*")
-        .order("name");
-      
+      const { data, error } = await supabase.from("companies").select("*").order("name");
+
       if (error) throw error;
       return data;
     },
@@ -946,7 +952,19 @@ export default function CompaniesPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {storageLocations.length === 0 ? (
+                          {storageLocationsLoading ? (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center text-sm text-slate-500 py-8">
+                                Loading storage locations...
+                              </TableCell>
+                            </TableRow>
+                          ) : storageLocationsError ? (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center text-sm text-destructive py-8">
+                                Could not load storage locations. Please refresh.
+                              </TableCell>
+                            </TableRow>
+                          ) : storageLocations.length === 0 ? (
                             <TableRow>
                               <TableCell colSpan={5} className="text-center text-sm text-slate-500 py-8">
                                 No storage locations configured. Click "Add Location" to create one.
@@ -954,8 +972,9 @@ export default function CompaniesPage() {
                             </TableRow>
                           ) : (
                             storageLocations.map((location) => {
-                              const company = companies?.find(c => c.id === location.company_id);
-                              const monthLabel = MONTHS.find(m => m.value === location.month)?.label || `Month ${location.month}`;
+                              const company = companies?.find((c) => c.id === location.company_id);
+                              const monthLabel =
+                                MONTHS.find((m) => m.value === location.month)?.label || `Month ${location.month}`;
                               return (
                                 <TableRow key={location.id}>
                                   <TableCell className="text-sm font-medium text-slate-800">{company?.name || "Unknown"}</TableCell>
@@ -974,7 +993,7 @@ export default function CompaniesPage() {
                                             folder_id: location.folder_id,
                                             year: location.year || new Date().getFullYear(),
                                             month: location.month,
-                                            folder_path: location.folder_path || ""
+                                            folder_path: location.folder_path || "",
                                           });
                                           setStorageLocationDialog({ open: true, editingId: location.id });
                                         }}
