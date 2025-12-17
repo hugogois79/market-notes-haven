@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, Search, Trash2, Download, FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Upload, Search, Trash2, Download, FileText, CheckCircle, Clock, AlertCircle, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   Table,
@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
+import { Progress } from "@/components/ui/progress";
 
 interface WorkflowFile {
   id: string;
@@ -33,6 +34,12 @@ interface WorkflowFile {
   priority: string;
   created_at: string;
   completed_at: string | null;
+}
+
+interface UploadProgress {
+  fileName: string;
+  progress: number;
+  status: 'uploading' | 'completed' | 'error';
 }
 
 const STATUS_OPTIONS = [
@@ -48,10 +55,29 @@ const PRIORITY_OPTIONS = [
   { label: "Urgent", color: "#fecaca" },
 ];
 
+// Sanitize filename to remove special characters
+const sanitizeFileName = (fileName: string): string => {
+  // Get file extension
+  const lastDot = fileName.lastIndexOf('.');
+  const ext = lastDot !== -1 ? fileName.substring(lastDot) : '';
+  const nameWithoutExt = lastDot !== -1 ? fileName.substring(0, lastDot) : fileName;
+  
+  // Replace special characters with underscores, keep alphanumeric, dash, underscore
+  const sanitized = nameWithoutExt
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .replace(/[^a-zA-Z0-9-_]/g, '_') // Replace special chars with underscore
+    .replace(/_+/g, '_') // Replace multiple underscores with single
+    .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+  
+  return sanitized + ext;
+};
+
 export default function WorkFlowTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -73,31 +99,54 @@ export default function WorkFlowTab() {
     },
   });
 
-  // Upload mutation
-  const uploadMutation = useMutation({
-    mutationFn: async (files: FileList | File[]) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+  // Upload files with progress tracking
+  const uploadFiles = async (files: FileList | File[]) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
 
-      const uploadedFiles = [];
-      for (const file of Array.from(files)) {
-        const fileName = `${user.id}/${Date.now()}-${file.name}`;
-        
+    const fileArray = Array.from(files);
+    const initialProgress: UploadProgress[] = fileArray.map(f => ({
+      fileName: f.name,
+      progress: 0,
+      status: 'uploading' as const
+    }));
+    
+    setUploadProgress(initialProgress);
+    setIsUploading(true);
+
+    const uploadedFiles: string[] = [];
+    
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      const sanitizedName = sanitizeFileName(file.name);
+      const storagePath = `${user.id}/${Date.now()}-${sanitizedName}`;
+      
+      try {
+        // Update progress to 30% (starting upload)
+        setUploadProgress(prev => prev.map((p, idx) => 
+          idx === i ? { ...p, progress: 30 } : p
+        ));
+
         const { error: uploadError } = await supabase.storage
           .from("attachments")
-          .upload(fileName, file);
+          .upload(storagePath, file);
         
         if (uploadError) throw uploadError;
+
+        // Update progress to 70% (file uploaded, saving to DB)
+        setUploadProgress(prev => prev.map((p, idx) => 
+          idx === i ? { ...p, progress: 70 } : p
+        ));
         
         const { data: { publicUrl } } = supabase.storage
           .from("attachments")
-          .getPublicUrl(fileName);
+          .getPublicUrl(storagePath);
 
         const { error: insertError } = await supabase
           .from("workflow_files")
           .insert({
             user_id: user.id,
-            file_name: file.name,
+            file_name: file.name, // Keep original name for display
             file_url: publicUrl,
             file_size: file.size,
             mime_type: file.type,
@@ -106,17 +155,42 @@ export default function WorkFlowTab() {
           });
         
         if (insertError) throw insertError;
+        
+        // Update progress to 100% (completed)
+        setUploadProgress(prev => prev.map((p, idx) => 
+          idx === i ? { ...p, progress: 100, status: 'completed' } : p
+        ));
+        
         uploadedFiles.push(file.name);
+      } catch (error) {
+        console.error(`Error uploading ${file.name}:`, error);
+        setUploadProgress(prev => prev.map((p, idx) => 
+          idx === i ? { ...p, status: 'error' } : p
+        ));
       }
-      return uploadedFiles;
-    },
-    onSuccess: (files) => {
-      queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
-      toast.success(`Uploaded ${files.length} file(s)`);
-    },
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+    
+    if (uploadedFiles.length > 0) {
+      toast.success(`Uploaded ${uploadedFiles.length} file(s)`);
+    }
+    
+    // Clear progress after 3 seconds
+    setTimeout(() => {
+      setUploadProgress([]);
+      setIsUploading(false);
+    }, 3000);
+  };
+
+  // Upload mutation (kept for compatibility)
+  const uploadMutation = useMutation({
+    mutationFn: uploadFiles,
     onError: (error) => {
       toast.error("Failed to upload files");
       console.error(error);
+      setIsUploading(false);
+      setUploadProgress([]);
     },
   });
 
@@ -177,9 +251,7 @@ export default function WorkFlowTab() {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     
-    setIsUploading(true);
-    await uploadMutation.mutateAsync(files);
-    setIsUploading(false);
+    await uploadFiles(files);
     
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -206,10 +278,8 @@ export default function WorkFlowTab() {
     const files = e.dataTransfer.files;
     if (files.length === 0) return;
 
-    setIsUploading(true);
-    await uploadMutation.mutateAsync(Array.from(files));
-    setIsUploading(false);
-  }, [uploadMutation]);
+    await uploadFiles(Array.from(files));
+  }, []);
 
   const handleDownload = async (file: WorkflowFile) => {
     try {
@@ -433,6 +503,48 @@ export default function WorkFlowTab() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Upload Progress Panel */}
+      {uploadProgress.length > 0 && (
+        <div className="fixed bottom-4 right-4 w-80 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-slate-200 bg-slate-50 rounded-t-lg">
+            <span className="font-medium text-sm text-slate-700">Upload Progress</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => setUploadProgress([])}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="p-3 space-y-3 max-h-60 overflow-y-auto">
+            {uploadProgress.map((item, idx) => (
+              <div key={idx} className="space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="truncate max-w-[200px] text-slate-600" title={item.fileName}>
+                    {item.fileName}
+                  </span>
+                  <span className={`font-medium ${
+                    item.status === 'completed' ? 'text-green-600' : 
+                    item.status === 'error' ? 'text-red-600' : 'text-blue-600'
+                  }`}>
+                    {item.status === 'completed' ? '✓' : 
+                     item.status === 'error' ? 'Error' : `${item.progress}%`}
+                  </span>
+                </div>
+                <Progress 
+                  value={item.progress} 
+                  className={`h-1.5 ${
+                    item.status === 'completed' ? '[&>div]:bg-green-500' : 
+                    item.status === 'error' ? '[&>div]:bg-red-500' : ''
+                  }`}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
