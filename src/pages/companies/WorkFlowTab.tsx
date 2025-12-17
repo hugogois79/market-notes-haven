@@ -666,10 +666,11 @@ export default function WorkFlowTab() {
             )}
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
+        <DropdownMenuContent align="center" className="bg-white z-50">
           {options?.map((opt) => (
             <DropdownMenuItem
               key={opt.label}
+              className="flex justify-center"
               onClick={() => {
                 const filesToUpdate = selectedFiles.has(file.id) && selectedFiles.size > 1
                   ? Array.from(selectedFiles)
