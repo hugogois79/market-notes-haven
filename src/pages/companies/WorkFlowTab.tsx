@@ -398,9 +398,6 @@ export default function WorkFlowTab() {
   const { data: storageLocations } = useQuery({
     queryKey: ["workflow-storage-locations"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-      
       const { data, error } = await supabase
         .from("workflow_storage_locations")
         .select(`
@@ -409,8 +406,7 @@ export default function WorkFlowTab() {
             id,
             name
           )
-        `)
-        .eq("user_id", user.id);
+        `);
       
       if (error) throw error;
       return data;
