@@ -43,6 +43,7 @@ import LegalContactsPage from "@/pages/legal/contacts";
 import LegalBillableItemsPage from "@/pages/legal/billable-items";
 import CompaniesPage from "@/pages/companies";
 import CompanyDetailPage from "@/pages/companies/[id]";
+import ProjectsPage from "@/pages/Projects";
 
 const AppRoutes = () => {
 
@@ -237,6 +238,16 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <LegalBillableItemsPage />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Projects Route */}
+          <Route
+            path="projects"
+            element={
+              <ProtectedRoute>
+                <ProjectsPage />
               </ProtectedRoute>
             }
           />
