@@ -101,13 +101,19 @@ const CUSTOM_COLUMNS_KEY = "companies-custom-columns";
 const COMPANY_CUSTOM_DATA_KEY = "companies-custom-data";
 const TABLE_RELATIONS_KEY = "work-table-relations";
 
+interface StorageLocation {
+  id: string;
+  name: string;
+  baseFolder: string;
+  dateFolderPattern: "MM MMMM YYYY" | "MMMM YYYY" | "YYYY-MM" | "YYYY";
+}
+
 interface TableRelationsConfig {
   defaultCompanyId: string | null;
   autoCreateTransaction: boolean;
   linkWorkflowToFinance: boolean;
   storeFilesInCompanyDocs: boolean;
-  baseFolder: string;
-  dateFolderPattern: "MM MMMM YYYY" | "MMMM YYYY" | "YYYY-MM" | "YYYY";
+  storageLocations: StorageLocation[];
 }
 
 export default function CompaniesPage() {
@@ -152,6 +158,14 @@ export default function CompaniesPage() {
   const [addColumnDialog, setAddColumnDialog] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
   
+  // Storage location dialog
+  const [storageLocationDialog, setStorageLocationDialog] = useState<{ open: boolean; editingId: string | null }>({ open: false, editingId: null });
+  const [storageLocationForm, setStorageLocationForm] = useState<Omit<StorageLocation, 'id'>>({
+    name: "",
+    baseFolder: "",
+    dateFolderPattern: "MM MMMM YYYY"
+  });
+
   // Table relations config
   const [tableRelations, setTableRelations] = useState<TableRelationsConfig>(() => {
     const saved = localStorage.getItem(TABLE_RELATIONS_KEY);
@@ -160,12 +174,24 @@ export default function CompaniesPage() {
       autoCreateTransaction: true, 
       linkWorkflowToFinance: true,
       storeFilesInCompanyDocs: true,
-      baseFolder: "Work",
-      dateFolderPattern: "MM MMMM YYYY"
+      storageLocations: [
+        { id: "default", name: "Work Files", baseFolder: "Work", dateFolderPattern: "MM MMMM YYYY" }
+      ]
     };
     if (saved) {
       try {
-        return { ...defaults, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        // Migration: convert old format to new format
+        if (parsed.baseFolder && !parsed.storageLocations) {
+          return {
+            ...defaults,
+            ...parsed,
+            storageLocations: [
+              { id: "default", name: "Work Files", baseFolder: parsed.baseFolder, dateFolderPattern: parsed.dateFolderPattern || "MM MMMM YYYY" }
+            ]
+          };
+        }
+        return { ...defaults, ...parsed };
       } catch {
         return defaults;
       }
@@ -738,83 +764,114 @@ export default function CompaniesPage() {
                 
                 {/* File Storage Section */}
                 <div className="mt-8 pt-6 border-t border-slate-200">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Building2 className="h-5 w-5 text-slate-600" />
-                    <h3 className="text-lg font-semibold text-slate-800">File Storage Location</h3>
-                  </div>
-                  <p className="text-sm text-slate-500 mb-6">Configure where workflow files are stored in the company's document library.</p>
-                  
-                  <div className="space-y-6">
-                    {/* Store Files Toggle */}
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <Label className="text-sm font-medium text-slate-700">Copy Files to Company Documents</Label>
-                        <p className="text-xs text-slate-500">When a transaction is created, copy the workflow file to the company's document library.</p>
-                      </div>
-                      <Switch
-                        checked={tableRelations.storeFilesInCompanyDocs}
-                        onCheckedChange={(checked) => setTableRelations(prev => ({
-                          ...prev,
-                          storeFilesInCompanyDocs: checked
-                        }))}
-                      />
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-5 w-5 text-slate-600" />
+                      <h3 className="text-lg font-semibold text-slate-800">File Storage Locations</h3>
                     </div>
-                    
-                    {tableRelations.storeFilesInCompanyDocs && (
-                      <>
-                        {/* Base Folder */}
-                        <div className="space-y-2 py-3 border-t border-slate-100">
-                          <Label className="text-sm font-medium text-slate-700">Base Folder</Label>
-                          <p className="text-xs text-slate-500">The parent folder where dated subfolders will be created (e.g., "Work" or "Invoices").</p>
-                          <Input
-                            value={tableRelations.baseFolder}
-                            onChange={(e) => setTableRelations(prev => ({
-                              ...prev,
-                              baseFolder: e.target.value
-                            }))}
-                            placeholder="Work"
-                            className="max-w-xs"
-                          />
-                        </div>
-                        
-                        {/* Date Folder Pattern */}
-                        <div className="space-y-2 py-3 border-t border-slate-100">
-                          <Label className="text-sm font-medium text-slate-700">Date Folder Pattern</Label>
-                          <p className="text-xs text-slate-500">How to name the date-based subfolders based on the transaction date.</p>
-                          <Select
-                            value={tableRelations.dateFolderPattern}
-                            onValueChange={(value: "MM MMMM YYYY" | "MMMM YYYY" | "YYYY-MM" | "YYYY") => setTableRelations(prev => ({
-                              ...prev,
-                              dateFolderPattern: value
-                            }))}
-                          >
-                            <SelectTrigger className="w-full max-w-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="MM MMMM YYYY">11 November 2025</SelectItem>
-                              <SelectItem value="MMMM YYYY">November 2025</SelectItem>
-                              <SelectItem value="YYYY-MM">2025-11</SelectItem>
-                              <SelectItem value="YYYY">2025</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        {/* Preview */}
-                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                          <Label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Storage Path Preview</Label>
-                          <p className="text-sm text-slate-700 mt-1 font-mono">
-                            Companies → [Company Name] → Documents → <span className="text-blue-600">{tableRelations.baseFolder || "Work"}</span> → <span className="text-blue-600">
-                              {tableRelations.dateFolderPattern === "MM MMMM YYYY" && "11 November 2025"}
-                              {tableRelations.dateFolderPattern === "MMMM YYYY" && "November 2025"}
-                              {tableRelations.dateFolderPattern === "YYYY-MM" && "2025-11"}
-                              {tableRelations.dateFolderPattern === "YYYY" && "2025"}
-                            </span>
-                          </p>
-                        </div>
-                      </>
-                    )}
+                    <Button 
+                      size="sm" 
+                      onClick={() => {
+                        setStorageLocationForm({ name: "", baseFolder: "", dateFolderPattern: "MM MMMM YYYY" });
+                        setStorageLocationDialog({ open: true, editingId: null });
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Location
+                    </Button>
                   </div>
+                  <p className="text-sm text-slate-500 mb-4">Configure where workflow files are stored in the company's document library.</p>
+                  
+                  {/* Store Files Toggle */}
+                  <div className="flex items-center justify-between mb-4 p-3 bg-slate-50 rounded-lg">
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium text-slate-700">Copy Files to Company Documents</Label>
+                      <p className="text-xs text-slate-500">When a transaction is created, copy the workflow file to the company's document library.</p>
+                    </div>
+                    <Switch
+                      checked={tableRelations.storeFilesInCompanyDocs}
+                      onCheckedChange={(checked) => setTableRelations(prev => ({
+                        ...prev,
+                        storeFilesInCompanyDocs: checked
+                      }))}
+                    />
+                  </div>
+                  
+                  {tableRelations.storeFilesInCompanyDocs && (
+                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="text-xs font-medium text-slate-600">Name</TableHead>
+                            <TableHead className="text-xs font-medium text-slate-600">Base Folder</TableHead>
+                            <TableHead className="text-xs font-medium text-slate-600">Date Pattern</TableHead>
+                            <TableHead className="text-xs font-medium text-slate-600">Path Preview</TableHead>
+                            <TableHead className="text-xs font-medium text-slate-600 w-20">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {tableRelations.storageLocations.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center text-sm text-slate-500 py-8">
+                                No storage locations configured. Click "Add Location" to create one.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            tableRelations.storageLocations.map((location) => (
+                              <TableRow key={location.id}>
+                                <TableCell className="text-sm font-medium text-slate-800">{location.name}</TableCell>
+                                <TableCell className="text-sm text-slate-600">{location.baseFolder}</TableCell>
+                                <TableCell className="text-sm text-slate-600">
+                                  {location.dateFolderPattern === "MM MMMM YYYY" && "11 November 2025"}
+                                  {location.dateFolderPattern === "MMMM YYYY" && "November 2025"}
+                                  {location.dateFolderPattern === "YYYY-MM" && "2025-11"}
+                                  {location.dateFolderPattern === "YYYY" && "2025"}
+                                </TableCell>
+                                <TableCell className="text-xs text-slate-500 font-mono">
+                                  .../{location.baseFolder}/{location.dateFolderPattern === "MM MMMM YYYY" ? "11 November" : location.dateFolderPattern === "MMMM YYYY" ? "November" : location.dateFolderPattern === "YYYY-MM" ? "2025-11" : "2025"}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7 p-0"
+                                      onClick={() => {
+                                        setStorageLocationForm({
+                                          name: location.name,
+                                          baseFolder: location.baseFolder,
+                                          dateFolderPattern: location.dateFolderPattern
+                                        });
+                                        setStorageLocationDialog({ open: true, editingId: location.id });
+                                      }}
+                                    >
+                                      <Edit className="h-3.5 w-3.5 text-slate-500" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                      onClick={() => {
+                                        if (confirm("Delete this storage location?")) {
+                                          setTableRelations(prev => ({
+                                            ...prev,
+                                            storageLocations: prev.storageLocations.filter(l => l.id !== location.id)
+                                          }));
+                                        }
+                                      }}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -949,6 +1006,108 @@ export default function CompaniesPage() {
                 Save
               </Button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Storage Location Dialog */}
+      <Dialog open={storageLocationDialog.open} onOpenChange={(open) => setStorageLocationDialog({ open, editingId: open ? storageLocationDialog.editingId : null })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{storageLocationDialog.editingId ? "Edit Storage Location" : "Add Storage Location"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Location Name</Label>
+              <Input
+                value={storageLocationForm.name}
+                onChange={(e) => setStorageLocationForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g., Work Files, Invoices"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Base Folder</Label>
+              <p className="text-xs text-slate-500">The parent folder where dated subfolders will be created.</p>
+              <Input
+                value={storageLocationForm.baseFolder}
+                onChange={(e) => setStorageLocationForm(prev => ({ ...prev, baseFolder: e.target.value }))}
+                placeholder="e.g., Work, Invoices"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Date Folder Pattern</Label>
+              <p className="text-xs text-slate-500">How to name date-based subfolders.</p>
+              <Select
+                value={storageLocationForm.dateFolderPattern}
+                onValueChange={(value: "MM MMMM YYYY" | "MMMM YYYY" | "YYYY-MM" | "YYYY") => 
+                  setStorageLocationForm(prev => ({ ...prev, dateFolderPattern: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MM MMMM YYYY">11 November 2025</SelectItem>
+                  <SelectItem value="MMMM YYYY">November 2025</SelectItem>
+                  <SelectItem value="YYYY-MM">2025-11</SelectItem>
+                  <SelectItem value="YYYY">2025</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Preview */}
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <Label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Path Preview</Label>
+              <p className="text-xs text-slate-700 mt-1 font-mono">
+                Companies → [Company] → Documents → <span className="text-blue-600">{storageLocationForm.baseFolder || "..."}</span> → <span className="text-blue-600">
+                  {storageLocationForm.dateFolderPattern === "MM MMMM YYYY" && "11 November 2025"}
+                  {storageLocationForm.dateFolderPattern === "MMMM YYYY" && "November 2025"}
+                  {storageLocationForm.dateFolderPattern === "YYYY-MM" && "2025-11"}
+                  {storageLocationForm.dateFolderPattern === "YYYY" && "2025"}
+                </span>
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStorageLocationDialog({ open: false, editingId: null })}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                if (!storageLocationForm.name || !storageLocationForm.baseFolder) {
+                  toast.error("Please fill in all fields");
+                  return;
+                }
+                
+                if (storageLocationDialog.editingId) {
+                  // Update existing
+                  setTableRelations(prev => ({
+                    ...prev,
+                    storageLocations: prev.storageLocations.map(l => 
+                      l.id === storageLocationDialog.editingId 
+                        ? { ...l, ...storageLocationForm }
+                        : l
+                    )
+                  }));
+                } else {
+                  // Add new
+                  const newLocation: StorageLocation = {
+                    id: crypto.randomUUID(),
+                    ...storageLocationForm
+                  };
+                  setTableRelations(prev => ({
+                    ...prev,
+                    storageLocations: [...prev.storageLocations, newLocation]
+                  }));
+                }
+                
+                setStorageLocationDialog({ open: false, editingId: null });
+                toast.success(storageLocationDialog.editingId ? "Location updated" : "Location added");
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {storageLocationDialog.editingId ? "Save" : "Add"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
