@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Edit, Plus, Trash2, FolderKanban } from "lucide-react";
+import { Edit, Plus, Trash2, FolderKanban, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -44,6 +44,7 @@ export default function ExpenseProjectManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<ExpenseProject | null>(null);
   const [cashflowProject, setCashflowProject] = useState<ExpenseProject | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -214,6 +215,17 @@ export default function ExpenseProjectManagement() {
     }).format(value);
   };
 
+  const filteredProjects = useMemo(() => {
+    if (!projects) return [];
+    if (!searchQuery.trim()) return projects;
+    
+    const query = searchQuery.toLowerCase();
+    return projects.filter(project => 
+      project.name.toLowerCase().includes(query) ||
+      project.description?.toLowerCase().includes(query)
+    );
+  }, [projects, searchQuery]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -227,17 +239,27 @@ export default function ExpenseProjectManagement() {
         </Button>
       </div>
 
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Pesquisar projetos..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-[180px] rounded-lg" />
           ))
-        ) : projects?.length === 0 ? (
+        ) : filteredProjects.length === 0 ? (
           <div className="col-span-full text-center py-12 text-muted-foreground">
-            Nenhum projeto registado
+            {searchQuery ? "Nenhum projeto encontrado" : "Nenhum projeto registado"}
           </div>
         ) : (
-          projects?.map((project) => (
+          filteredProjects.map((project) => (
             <Card 
               key={project.id} 
               className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
