@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, MoreHorizontal, Edit3, Columns, Filter } from "lucide-react";
+import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,6 +23,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
+import { DocumentPreview } from "@/components/companies/DocumentPreview";
 
 interface WorkflowFile {
   id: string;
@@ -136,6 +137,12 @@ const getFileTypeBadgeStyle = (ext: string): { bg: string; text: string } => {
 const WORKFLOW_COLUMNS_KEY = "workflow-columns";
 const WORKFLOW_CUSTOM_COLUMNS_KEY = "workflow-custom-columns";
 const WORKFLOW_CUSTOM_DATA_KEY = "workflow-custom-data";
+const WORKFLOW_SORT_KEY = "workflow-sort";
+
+interface SortConfig {
+  column: string;
+  direction: 'asc' | 'desc';
+}
 
 // Sanitize filename to remove special characters
 const sanitizeFileName = (fileName: string): string => {
@@ -191,6 +198,15 @@ export default function WorkFlowTab() {
     return saved ? JSON.parse(saved) : {};
   });
 
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
+    const saved = localStorage.getItem(WORKFLOW_SORT_KEY);
+    return saved ? JSON.parse(saved) : { column: 'date', direction: 'desc' };
+  });
+
+  // Document preview state
+  const [previewFile, setPreviewFile] = useState<WorkflowFile | null>(null);
+
   // Column management dialogs
   const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
@@ -210,6 +226,10 @@ export default function WorkFlowTab() {
   useEffect(() => {
     localStorage.setItem(WORKFLOW_CUSTOM_DATA_KEY, JSON.stringify(customData));
   }, [customData]);
+
+  useEffect(() => {
+    localStorage.setItem(WORKFLOW_SORT_KEY, JSON.stringify(sortConfig));
+  }, [sortConfig]);
 
   // Fetch workflow files
   const { data: workflowFiles, isLoading } = useQuery({
@@ -420,7 +440,56 @@ export default function WorkFlowTab() {
     }
     
     return matchesSearch && matchesFilter;
+  })?.sort((a, b) => {
+    const { column, direction } = sortConfig;
+    const multiplier = direction === 'asc' ? 1 : -1;
+    
+    let aValue: any;
+    let bValue: any;
+    
+    switch (column) {
+      case 'name':
+        aValue = a.file_name.toLowerCase();
+        bValue = b.file_name.toLowerCase();
+        break;
+      case 'date':
+        aValue = new Date(a.created_at).getTime();
+        bValue = new Date(b.created_at).getTime();
+        break;
+      case 'size':
+        aValue = a.file_size || 0;
+        bValue = b.file_size || 0;
+        break;
+      case 'type':
+        aValue = getFileExtension(a.file_name);
+        bValue = getFileExtension(b.file_name);
+        break;
+      case 'category':
+        aValue = a.category || '';
+        bValue = b.category || '';
+        break;
+      case 'status':
+        aValue = a.status || '';
+        bValue = b.status || '';
+        break;
+      default:
+        // For custom columns
+        aValue = customData[a.id]?.[column] || '';
+        bValue = customData[b.id]?.[column] || '';
+    }
+    
+    if (aValue < bValue) return -1 * multiplier;
+    if (aValue > bValue) return 1 * multiplier;
+    return 0;
   });
+
+  // Sort handler
+  const handleSort = (columnId: string) => {
+    setSortConfig(prev => ({
+      column: columnId,
+      direction: prev.column === columnId && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
 
   // Bulk actions
   const handleBulkDownload = async () => {
@@ -836,32 +905,80 @@ export default function WorkFlowTab() {
                   onCheckedChange={toggleSelectAll}
                 />
               </th>
-              <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider">
-                File
+              <th 
+                className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider cursor-pointer hover:bg-slate-100"
+                onClick={() => handleSort('name')}
+              >
+                <div className="flex items-center gap-1">
+                  File
+                  {sortConfig.column === 'name' && (
+                    sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                  )}
+                </div>
               </th>
               {isColumnVisible("type") && (
-                <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-16">
-                  Type
+                <th 
+                  className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-16 cursor-pointer hover:bg-slate-100"
+                  onClick={() => handleSort('type')}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Type
+                    {sortConfig.column === 'type' && (
+                      sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                    )}
+                  </div>
                 </th>
               )}
               {isColumnVisible("date") && (
-                <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
-                  DATE
+                <th 
+                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28 cursor-pointer hover:bg-slate-100"
+                  onClick={() => handleSort('date')}
+                >
+                  <div className="flex items-center gap-1">
+                    DATE
+                    {sortConfig.column === 'date' && (
+                      sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                    )}
+                  </div>
                 </th>
               )}
               {isColumnVisible("category") && (
-                <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
-                  {renderColumnHeader(columns.find(c => c.id === "category")!)}
+                <th 
+                  className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28 cursor-pointer hover:bg-slate-100"
+                  onClick={() => handleSort('category')}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Category
+                    {sortConfig.column === 'category' && (
+                      sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                    )}
+                  </div>
                 </th>
               )}
               {isColumnVisible("status") && (
-                <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
-                  {renderColumnHeader(columns.find(c => c.id === "status")!)}
+                <th 
+                  className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28 cursor-pointer hover:bg-slate-100"
+                  onClick={() => handleSort('status')}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Status
+                    {sortConfig.column === 'status' && (
+                      sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                    )}
+                  </div>
                 </th>
               )}
               {isColumnVisible("size") && (
-                <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-20">
-                  Size
+                <th 
+                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-20 cursor-pointer hover:bg-slate-100"
+                  onClick={() => handleSort('size')}
+                >
+                  <div className="flex items-center gap-1">
+                    Size
+                    {sortConfig.column === 'size' && (
+                      sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                    )}
+                  </div>
                 </th>
               )}
               {/* Custom columns headers */}
@@ -912,9 +1029,13 @@ export default function WorkFlowTab() {
                   <td className="px-3 py-1.5">
                     <div className="flex items-center gap-2">
                       <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                      <span className="text-xs font-medium text-blue-600 truncate max-w-[600px]" title={file.file_name}>
+                      <button 
+                        className="text-xs font-medium text-blue-600 truncate max-w-[600px] hover:underline cursor-pointer text-left" 
+                        title={file.file_name}
+                        onClick={() => setPreviewFile(file)}
+                      >
                         {getFileNameWithoutExtension(file.file_name)}
-                      </span>
+                      </button>
                     </div>
                   </td>
                   {isColumnVisible("type") && (
@@ -1198,6 +1319,52 @@ export default function WorkFlowTab() {
               Save Changes
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Document Preview Dialog */}
+      <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
+        <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-4 pb-0 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg">Visualizar Documento</DialogTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (previewFile) {
+                      // Print functionality
+                      const printWindow = window.open(previewFile.file_url, '_blank');
+                      printWindow?.print();
+                    }
+                  }}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Imprimir
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => previewFile && handleDownload(previewFile)}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Descarregar
+                </Button>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden p-4">
+            {previewFile && (
+              <DocumentPreview
+                document={{
+                  file_url: previewFile.file_url,
+                  name: previewFile.file_name,
+                  mime_type: previewFile.mime_type,
+                }}
+                onDownload={() => handleDownload(previewFile)}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
