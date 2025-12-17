@@ -1589,6 +1589,34 @@ export default function CompanyDetailPage() {
                     <Button 
                       variant="ghost" 
                       size="sm" 
+                      className="h-8 gap-1 text-primary hover:text-primary"
+                      onClick={async () => {
+                        const selectedDocsList = filteredDocuments?.filter(d => selectedDocs.has(d.id)) || [];
+                        for (const doc of selectedDocsList) {
+                          try {
+                            const response = await fetch(doc.file_url);
+                            const blob = await response.blob();
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = doc.name;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                          } catch (error) {
+                            window.open(doc.file_url, '_blank');
+                          }
+                        }
+                        toast.success(`Downloaded ${selectedDocsList.length} file(s)`);
+                      }}
+                    >
+                      <Download className="h-4 w-4" />
+                      Download ({selectedDocs.size})
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
                       className="h-8 gap-1 text-destructive hover:text-destructive"
                       onClick={() => {
                         if (confirm(`Delete ${selectedDocs.size} document(s)?`)) {
