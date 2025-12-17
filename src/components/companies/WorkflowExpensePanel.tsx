@@ -193,15 +193,18 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     });
   }, [expenseCategories, selectedProjectId, expenseProjects]);
 
-  // Filter bank accounts by payment method
+  // Filter bank accounts by payment method and company
   const paymentMethod = watch("payment_method");
   const filteredBankAccounts = useMemo(() => {
     if (!allBankAccounts) return [];
-    if (paymentMethod === "credit_card") {
-      return allBankAccounts.filter((ba) => ba.account_type === "credit_card");
-    }
-    return allBankAccounts.filter((ba) => ba.account_type === "bank_account");
-  }, [allBankAccounts, paymentMethod]);
+    return allBankAccounts.filter((ba) => {
+      const matchesCompany = !selectedCompanyId || ba.company_id === selectedCompanyId;
+      const matchesType = paymentMethod === "credit_card" 
+        ? ba.account_type === "credit_card" 
+        : ba.account_type === "bank_account";
+      return matchesCompany && matchesType;
+    });
+  }, [allBankAccounts, paymentMethod, selectedCompanyId]);
 
   // Calculate VAT
   const totalAmount = parseFloat(watch("total_amount") || "0");
