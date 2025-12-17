@@ -819,83 +819,82 @@ export default function WorkFlowTab() {
         )}
         
         <div className="flex-1" />
-        <div className="relative max-w-md">
+        
+        {/* Horizontal Filter Controls */}
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2 h-9">
+                <Filter className="h-4 w-4" />
+                {filterColumn ? columns.find(c => c.id === filterColumn)?.label : "Filter"}
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="bg-popover">
+              <DropdownMenuItem onClick={() => { setFilterColumn(""); setFilterValue(""); }}>
+                Clear filter
+              </DropdownMenuItem>
+              {getFilterableColumns().map(col => (
+                <DropdownMenuItem 
+                  key={col.id} 
+                  onClick={() => { setFilterColumn(col.id); setFilterValue(""); }}
+                >
+                  {col.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          {filterColumn && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 h-9">
+                  {filterValue || "Select value"}
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="bg-popover">
+                <DropdownMenuItem onClick={() => setFilterValue("")}>
+                  All
+                </DropdownMenuItem>
+                {columns.find(c => c.id === filterColumn)?.options?.map(opt => (
+                  <DropdownMenuItem 
+                    key={opt.label} 
+                    onClick={() => setFilterValue(opt.label)}
+                  >
+                    <span 
+                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                      style={{ backgroundColor: `${opt.color}20`, color: opt.color }}
+                    >
+                      {opt.label}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          
+          {filterColumn && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-9 w-9"
+              onClick={() => { setFilterColumn(""); setFilterValue(""); }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 w-64"
+            className="pl-10 w-64 h-9"
           />
         </div>
-
-        {/* Filter Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="icon"
-              className={filterColumn ? "text-blue-600" : ""}
-            >
-              <Filter className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <div className="p-2 space-y-2">
-              <Label className="text-xs font-medium">Filter by column</Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between text-sm">
-                    {filterColumn ? columns.find(c => c.id === filterColumn)?.label : "Select column"}
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => { setFilterColumn(""); setFilterValue(""); }}>
-                    Clear filter
-                  </DropdownMenuItem>
-                  {getFilterableColumns().map(col => (
-                    <DropdownMenuItem 
-                      key={col.id} 
-                      onClick={() => { setFilterColumn(col.id); setFilterValue(""); }}
-                    >
-                      {col.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-              {filterColumn && (
-                <>
-                  <Label className="text-xs font-medium">Value</Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="w-full justify-between text-sm">
-                        {filterValue || "Select value"}
-                        <ChevronDown className="h-3 w-3" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      {columns.find(c => c.id === filterColumn)?.options?.map(opt => (
-                        <DropdownMenuItem 
-                          key={opt.label} 
-                          onClick={() => setFilterValue(opt.label)}
-                        >
-                          <span 
-                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium mr-2"
-                            style={{ backgroundColor: `${opt.color}20`, color: opt.color }}
-                          >
-                            {opt.label}
-                          </span>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </>
-              )}
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       {/* Files Table with Drag & Drop */}
