@@ -2,18 +2,18 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Edit, Plus, Trash2 } from "lucide-react";
+import { Edit, Plus, Trash2, FolderKanban } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import ProjectCashflowDialog from "./ProjectCashflowDialog";
 
 interface ExpenseProject {
@@ -214,7 +215,7 @@ export default function ExpenseProjectManagement() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Projetos</h2>
@@ -226,89 +227,83 @@ export default function ExpenseProjectManagement() {
         </Button>
       </div>
 
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Descrição</TableHead>
-              <TableHead>Data Início</TableHead>
-              <TableHead>Data Fim</TableHead>
-              <TableHead>Custo Total</TableHead>
-              
-              <TableHead>Estado</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
-                  A carregar...
-                </TableCell>
-              </TableRow>
-            ) : projects?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  Nenhum projeto registado
-                </TableCell>
-              </TableRow>
-            ) : (
-              projects?.map((project) => (
-                <TableRow key={project.id}>
-                  <TableCell className="text-center">
-                    <button 
-                      type="button"
-                      className="font-medium px-2 py-1 rounded text-white cursor-pointer hover:opacity-80 transition-opacity"
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {isLoading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-[180px] rounded-lg" />
+          ))
+        ) : projects?.length === 0 ? (
+          <div className="col-span-full text-center py-12 text-muted-foreground">
+            Nenhum projeto registado
+          </div>
+        ) : (
+          projects?.map((project) => (
+            <Card 
+              key={project.id} 
+              className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => setCashflowProject(project)}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <FolderKanban 
+                      className="w-5 h-5" 
+                      style={{ color: project.color }}
+                    />
+                    <span 
+                      className="px-2 py-0.5 rounded text-white text-sm font-medium"
                       style={{ backgroundColor: project.color }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setCashflowProject(project);
-                      }}
                     >
                       {project.name}
-                    </button>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {project.description || "-"}
-                  </TableCell>
-                  <TableCell>{formatDate(project.start_date)}</TableCell>
-                  <TableCell>{formatDate(project.end_date)}</TableCell>
-                  <TableCell className="font-medium">
-                    {formatCurrency(project.total_cost)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={project.is_active ? "default" : "secondary"}>
-                      {project.is_active ? "Ativo" : "Inativo"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenEdit(project)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          if (confirm("Eliminar projeto?")) {
-                            deleteMutation.mutate(project.id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                    </span>
+                  </div>
+                  <Badge variant={project.is_active ? "default" : "secondary"}>
+                    {project.is_active ? "Ativo" : "Inativo"}
+                  </Badge>
+                </CardTitle>
+                <CardDescription>
+                  {project.total_cost !== null ? formatCurrency(project.total_cost) : "Sem custo definido"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {project.description || `Gerir despesas do projeto ${project.name}`}
+                </p>
+                {project.start_date && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Início: {formatDate(project.start_date)}
+                    {project.end_date && ` • Fim: ${formatDate(project.end_date)}`}
+                  </p>
+                )}
+              </CardContent>
+              <CardFooter className="flex justify-between border-t pt-4 pb-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenEdit(project);
+                  }}
+                >
+                  <Edit className="w-4 h-4 mr-1" /> Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm("Eliminar projeto?")) {
+                      deleteMutation.mutate(project.id);
+                    }
+                  }}
+                >
+                  <Trash2 className="w-4 h-4 mr-1" /> Delete
+                </Button>
+              </CardFooter>
+            </Card>
+          ))
+        )}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => !open && handleCloseDialog()}>
