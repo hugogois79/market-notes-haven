@@ -471,6 +471,14 @@ export default function TransactionDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
+          {/* Hidden fields to ensure Select-driven values are submitted by react-hook-form */}
+          <input type="hidden" {...register("company_id")} />
+          <input type="hidden" {...register("type")} />
+          <input type="hidden" {...register("payment_method")} />
+          <input type="hidden" {...register("project_id")} />
+          <input type="hidden" {...register("category_id")} />
+          <input type="hidden" {...register("bank_account_id")} />
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Data *</Label>
