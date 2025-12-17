@@ -103,10 +103,11 @@ const TABLE_RELATIONS_KEY = "work-table-relations";
 
 interface StorageLocation {
   id: string;
-  companyId: string;
+  company_id: string;
+  folder_id: string | null;
   year: number;
   month: number; // 1-12 for months
-  folderPath: string;
+  folder_path: string | null;
 }
 
 interface TableRelationsConfig {
@@ -114,7 +115,6 @@ interface TableRelationsConfig {
   autoCreateTransaction: boolean;
   linkWorkflowToFinance: boolean;
   storeFilesInCompanyDocs: boolean;
-  storageLocations: StorageLocation[];
 }
 
 const MONTHS = [
@@ -176,41 +176,130 @@ export default function CompaniesPage() {
   
   // Storage location dialog
   const [storageLocationDialog, setStorageLocationDialog] = useState<{ open: boolean; editingId: string | null }>({ open: false, editingId: null });
-  const [storageLocationForm, setStorageLocationForm] = useState<Omit<StorageLocation, 'id'>>({
-    companyId: "",
+  const [storageLocationForm, setStorageLocationForm] = useState<{
+    company_id: string;
+    folder_id: string | null;
+    year: number;
+    month: number;
+    folder_path: string;
+  }>({
+    company_id: "",
+    folder_id: null,
     year: new Date().getFullYear(),
     month: new Date().getMonth() + 1,
-    folderPath: ""
+    folder_path: ""
   });
 
   // Generate year options (current year - 2 to current year + 5)
   const currentYear = new Date().getFullYear();
   const YEARS = Array.from({ length: 8 }, (_, i) => currentYear - 2 + i);
 
-  // Table relations config
+  // Table relations config (without storageLocations - those are in Supabase now)
   const [tableRelations, setTableRelations] = useState<TableRelationsConfig>(() => {
     const saved = localStorage.getItem(TABLE_RELATIONS_KEY);
     const defaults: TableRelationsConfig = { 
       defaultCompanyId: null, 
       autoCreateTransaction: true, 
       linkWorkflowToFinance: true,
-      storeFilesInCompanyDocs: true,
-      storageLocations: []
+      storeFilesInCompanyDocs: true
     };
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Migration: skip old format entries that don't have companyId
-        if (parsed.storageLocations) {
-          const validLocations = parsed.storageLocations.filter((l: any) => l.companyId);
-          return { ...defaults, ...parsed, storageLocations: validLocations };
-        }
-        return { ...defaults, ...parsed, storageLocations: [] };
+        // Remove storageLocations from localStorage if present (migrated to Supabase)
+        const { storageLocations, ...rest } = parsed;
+        return { ...defaults, ...rest };
       } catch {
         return defaults;
       }
     }
     return defaults;
+  });
+
+  // Fetch storage locations from Supabase
+  const { data: storageLocations = [], refetch: refetchStorageLocations } = useQuery({
+    queryKey: ['workflow-storage-locations'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('workflow_storage_locations')
+        .select('*')
+        .order('company_id', { ascending: true })
+        .order('year', { ascending: false })
+        .order('month', { ascending: false });
+      
+      if (error) throw error;
+      return data as StorageLocation[];
+    }
+  });
+
+  // Mutation to create storage location
+  const createStorageLocationMutation = useMutation({
+    mutationFn: async (location: Omit<StorageLocation, 'id'>) => {
+      const { data, error } = await supabase
+        .from('workflow_storage_locations')
+        .insert(location)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      refetchStorageLocations();
+      toast.success("Location added");
+    },
+    onError: (error: any) => {
+      if (error.code === '23505') {
+        toast.error("A location for this company/year/month already exists");
+      } else {
+        toast.error("Failed to add location");
+      }
+    }
+  });
+
+  // Mutation to update storage location
+  const updateStorageLocationMutation = useMutation({
+    mutationFn: async ({ id, ...location }: StorageLocation) => {
+      const { data, error } = await supabase
+        .from('workflow_storage_locations')
+        .update(location)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      refetchStorageLocations();
+      toast.success("Location updated");
+    },
+    onError: (error: any) => {
+      if (error.code === '23505') {
+        toast.error("A location for this company/year/month already exists");
+      } else {
+        toast.error("Failed to update location");
+      }
+    }
+  });
+
+  // Mutation to delete storage location
+  const deleteStorageLocationMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('workflow_storage_locations')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchStorageLocations();
+      toast.success("Location deleted");
+    },
+    onError: () => {
+      toast.error("Failed to delete location");
+    }
   });
   
   const queryClient = useQueryClient();
@@ -326,19 +415,19 @@ export default function CompaniesPage() {
 
   // Fetch folders for selected company in storage location dialog
   const { data: companyFolders } = useQuery({
-    queryKey: ["company-folders-for-storage", storageLocationForm.companyId],
+    queryKey: ["company-folders-for-storage", storageLocationForm.company_id],
     queryFn: async () => {
-      if (!storageLocationForm.companyId) return [];
+      if (!storageLocationForm.company_id) return [];
       const { data, error } = await supabase
         .from("company_folders")
         .select("*")
-        .eq("company_id", storageLocationForm.companyId)
+        .eq("company_id", storageLocationForm.company_id)
         .order("name");
       
       if (error) throw error;
       return data || [];
     },
-    enabled: !!storageLocationForm.companyId,
+    enabled: !!storageLocationForm.company_id,
   });
 
   // Build folder paths recursively
@@ -818,7 +907,7 @@ export default function CompaniesPage() {
                     <Button 
                       size="sm" 
                       onClick={() => {
-                        setStorageLocationForm({ companyId: "", year: new Date().getFullYear(), month: new Date().getMonth() + 1, folderPath: "" });
+                        setStorageLocationForm({ company_id: "", folder_id: null, year: new Date().getFullYear(), month: new Date().getMonth() + 1, folder_path: "" });
                         setStorageLocationDialog({ open: true, editingId: null });
                       }}
                       className="bg-blue-600 hover:bg-blue-700"
@@ -857,22 +946,22 @@ export default function CompaniesPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {tableRelations.storageLocations.length === 0 ? (
+                          {storageLocations.length === 0 ? (
                             <TableRow>
                               <TableCell colSpan={5} className="text-center text-sm text-slate-500 py-8">
                                 No storage locations configured. Click "Add Location" to create one.
                               </TableCell>
                             </TableRow>
                           ) : (
-                            tableRelations.storageLocations.map((location) => {
-                              const company = companies?.find(c => c.id === location.companyId);
+                            storageLocations.map((location) => {
+                              const company = companies?.find(c => c.id === location.company_id);
                               const monthLabel = MONTHS.find(m => m.value === location.month)?.label || `Month ${location.month}`;
                               return (
                                 <TableRow key={location.id}>
                                   <TableCell className="text-sm font-medium text-slate-800">{company?.name || "Unknown"}</TableCell>
                                   <TableCell className="text-sm text-slate-600">{location.year || "-"}</TableCell>
                                   <TableCell className="text-sm text-slate-600">{monthLabel}</TableCell>
-                                  <TableCell className="text-sm text-slate-600 font-mono">{location.folderPath || "-"}</TableCell>
+                                  <TableCell className="text-sm text-slate-600 font-mono">{location.folder_path || "-"}</TableCell>
                                   <TableCell>
                                     <div className="flex gap-1">
                                       <Button
@@ -881,10 +970,11 @@ export default function CompaniesPage() {
                                         className="h-7 w-7 p-0"
                                         onClick={() => {
                                           setStorageLocationForm({
-                                            companyId: location.companyId,
+                                            company_id: location.company_id,
+                                            folder_id: location.folder_id,
                                             year: location.year || new Date().getFullYear(),
                                             month: location.month,
-                                            folderPath: location.folderPath
+                                            folder_path: location.folder_path || ""
                                           });
                                           setStorageLocationDialog({ open: true, editingId: location.id });
                                         }}
@@ -897,10 +987,7 @@ export default function CompaniesPage() {
                                         className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                                         onClick={() => {
                                           if (confirm("Delete this storage location?")) {
-                                            setTableRelations(prev => ({
-                                              ...prev,
-                                              storageLocations: prev.storageLocations.filter(l => l.id !== location.id)
-                                            }));
+                                            deleteStorageLocationMutation.mutate(location.id);
                                           }
                                         }}
                                       >
@@ -1064,8 +1151,8 @@ export default function CompaniesPage() {
             <div className="space-y-2">
               <Label>Company</Label>
               <Select
-                value={storageLocationForm.companyId}
-                onValueChange={(value) => setStorageLocationForm(prev => ({ ...prev, companyId: value, folderPath: "" }))}
+                value={storageLocationForm.company_id}
+                onValueChange={(value) => setStorageLocationForm(prev => ({ ...prev, company_id: value, folder_id: null, folder_path: "" }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select company..." />
@@ -1113,12 +1200,15 @@ export default function CompaniesPage() {
               <Label>Folder Location</Label>
               <p className="text-xs text-slate-500">Select the folder where files will be stored.</p>
               <Select
-                value={storageLocationForm.folderPath}
-                onValueChange={(value) => setStorageLocationForm(prev => ({ ...prev, folderPath: value }))}
-                disabled={!storageLocationForm.companyId}
+                value={storageLocationForm.folder_path}
+                onValueChange={(value) => {
+                  const folder = folderOptions.find(f => f.path === value);
+                  setStorageLocationForm(prev => ({ ...prev, folder_path: value, folder_id: folder?.id || null }));
+                }}
+                disabled={!storageLocationForm.company_id}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={storageLocationForm.companyId ? "Select folder..." : "Select company first"} />
+                  <SelectValue placeholder={storageLocationForm.company_id ? "Select folder..." : "Select company first"} />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
                   {folderOptions.length === 0 ? (
@@ -1136,7 +1226,7 @@ export default function CompaniesPage() {
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
               <Label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Path Preview</Label>
               <p className="text-xs text-slate-700 mt-1 font-mono">
-                {companies?.find(c => c.id === storageLocationForm.companyId)?.name || "[Company]"} → Documents → <span className="text-blue-600">{storageLocationForm.folderPath || "..."}</span>
+                {companies?.find(c => c.id === storageLocationForm.company_id)?.name || "[Company]"} → Documents → <span className="text-blue-600">{storageLocationForm.folder_path || "..."}</span>
               </p>
             </div>
           </div>
@@ -1146,37 +1236,32 @@ export default function CompaniesPage() {
             </Button>
             <Button 
               onClick={() => {
-                if (!storageLocationForm.companyId || !storageLocationForm.folderPath) {
+                if (!storageLocationForm.company_id || !storageLocationForm.folder_path) {
                   toast.error("Please fill in all fields");
                   return;
                 }
                 
+                const locationData = {
+                  company_id: storageLocationForm.company_id,
+                  folder_id: storageLocationForm.folder_id,
+                  year: storageLocationForm.year,
+                  month: storageLocationForm.month,
+                  folder_path: storageLocationForm.folder_path
+                };
+                
                 if (storageLocationDialog.editingId) {
-                  // Update existing
-                  setTableRelations(prev => ({
-                    ...prev,
-                    storageLocations: prev.storageLocations.map(l => 
-                      l.id === storageLocationDialog.editingId 
-                        ? { ...l, ...storageLocationForm }
-                        : l
-                    )
-                  }));
+                  updateStorageLocationMutation.mutate({
+                    id: storageLocationDialog.editingId,
+                    ...locationData
+                  } as StorageLocation);
                 } else {
-                  // Add new
-                  const newLocation: StorageLocation = {
-                    id: crypto.randomUUID(),
-                    ...storageLocationForm
-                  };
-                  setTableRelations(prev => ({
-                    ...prev,
-                    storageLocations: [...prev.storageLocations, newLocation]
-                  }));
+                  createStorageLocationMutation.mutate(locationData);
                 }
                 
                 setStorageLocationDialog({ open: false, editingId: null });
-                toast.success(storageLocationDialog.editingId ? "Location updated" : "Location added");
               }}
               className="bg-blue-600 hover:bg-blue-700"
+              disabled={createStorageLocationMutation.isPending || updateStorageLocationMutation.isPending}
             >
               {storageLocationDialog.editingId ? "Save" : "Add"}
             </Button>
