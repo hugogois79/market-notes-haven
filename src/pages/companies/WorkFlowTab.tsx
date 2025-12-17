@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer } from "lucide-react";
+import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,12 +14,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
@@ -219,6 +236,11 @@ export default function WorkFlowTab() {
   const [previewFile, setPreviewFile] = useState<WorkflowFile | null>(null);
   const [showExpensePanel, setShowExpensePanel] = useState(false);
 
+  // Mark as completed state
+  const [markCompleteWarningOpen, setMarkCompleteWarningOpen] = useState(false);
+  const [fileToComplete, setFileToComplete] = useState<WorkflowFile | null>(null);
+  const [isCompleting, setIsCompleting] = useState(false);
+
   // Query existing transaction for current file
   const { data: existingTransaction } = useQuery({
     queryKey: ["file-transaction", previewFile?.file_url],
@@ -308,6 +330,43 @@ export default function WorkFlowTab() {
         .from("expense_projects")
         .select("id, name")
         .eq("is_active", true)
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch storage locations for mark as complete
+  const { data: storageLocations } = useQuery({
+    queryKey: ["workflow-storage-locations"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from("workflow_storage_locations")
+        .select(`
+          *,
+          companies:company_id (
+            id,
+            name
+          )
+        `)
+        .eq("user_id", user.id);
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch companies for mark as complete
+  const { data: allCompanies } = useQuery({
+    queryKey: ["all-companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, name")
         .order("name");
       
       if (error) throw error;
@@ -524,6 +583,156 @@ export default function WorkFlowTab() {
       toast.success("File removed");
     },
   });
+
+  // Mark file as completed handler
+  const handleMarkAsComplete = async (file: WorkflowFile) => {
+    // Get file date to find matching storage location
+    const fileDate = new Date(file.created_at);
+    const fileMonth = fileDate.getMonth() + 1; // 1-indexed
+    const fileYear = fileDate.getFullYear();
+
+    // Read table relations settings
+    const settingsStr = localStorage.getItem(TABLE_RELATIONS_KEY);
+    const settings: TableRelationsConfig = settingsStr 
+      ? JSON.parse(settingsStr) 
+      : { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
+
+    // Find matching storage location
+    const matchingLocation = storageLocations?.find(
+      loc => loc.month === fileMonth && loc.year === fileYear
+    );
+
+    if (!matchingLocation) {
+      setFileToComplete(file);
+      setMarkCompleteWarningOpen(true);
+      return;
+    }
+
+    // Proceed with completion
+    await completeFile(file, matchingLocation, settings);
+  };
+
+  const completeFile = async (
+    file: WorkflowFile, 
+    storageLocation: any, 
+    settings: TableRelationsConfig
+  ) => {
+    setIsCompleting(true);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const companyId = storageLocation.company_id;
+
+      // Check if transaction already exists
+      const existingTx = transactionsByFileUrl?.[file.file_url];
+
+      // 1. Create or update financial transaction
+      if (!existingTx) {
+        const transactionData = {
+          invoice_file_url: file.file_url,
+          company_id: companyId,
+          created_by: user.id,
+          type: 'expense' as const,
+          category: 'other' as const,
+          payment_method: 'bank_transfer' as const,
+          date: new Date(file.created_at).toISOString().split('T')[0],
+          description: file.file_name,
+          entity_name: 'Workflow Document',
+          amount_net: 0,
+          total_amount: 0,
+        };
+
+        const { error: txError } = await supabase
+          .from("financial_transactions")
+          .insert(transactionData as any);
+        
+        if (txError) throw txError;
+      }
+
+      // 2. Copy file to company documents if storage location has a folder
+      if (storageLocation.folder_id) {
+        // Fetch the file blob from storage
+        const url = new URL(file.file_url);
+        const pathParts = url.pathname.split('/storage/v1/object/public/');
+        
+        if (pathParts.length > 1) {
+          const [bucket, ...fileParts] = pathParts[1].split('/');
+          const filePath = fileParts.join('/');
+          
+          // Download the file
+          const { data: fileData, error: downloadError } = await supabase.storage
+            .from(bucket)
+            .download(filePath);
+          
+          if (downloadError) {
+            console.error("Download error:", downloadError);
+            // Continue even if download fails - just log it
+          } else if (fileData) {
+            // Upload to company-documents bucket
+            const sanitizedName = sanitizeFileName(file.file_name);
+            const newPath = `${companyId}/${storageLocation.folder_id}/${Date.now()}-${sanitizedName}`;
+            
+            const { error: uploadError } = await supabase.storage
+              .from("company-documents")
+              .upload(newPath, fileData);
+            
+            if (uploadError) {
+              console.error("Upload to company docs error:", uploadError);
+            } else {
+              // Get public URL and insert company document record
+              const { data: { publicUrl } } = supabase.storage
+                .from("company-documents")
+                .getPublicUrl(newPath);
+              
+              const { error: docError } = await supabase
+                .from("company_documents")
+                .insert({
+                  company_id: companyId,
+                  folder_id: storageLocation.folder_id,
+                  name: file.file_name,
+                  file_url: publicUrl,
+                  file_size: file.file_size,
+                  mime_type: file.mime_type,
+                  uploaded_by: user.id,
+                  status: 'Final',
+                });
+              
+              if (docError) {
+                console.error("Company document insert error:", docError);
+              }
+            }
+          }
+        }
+      }
+
+      // 3. Update workflow file status to Completed
+      const { error: updateError } = await supabase
+        .from("workflow_files")
+        .update({ 
+          status: 'Completed',
+          completed_at: new Date().toISOString()
+        })
+        .eq("id", file.id);
+      
+      if (updateError) throw updateError;
+
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+      queryClient.invalidateQueries({ queryKey: ["workflow-linked-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["company-documents"] });
+
+      toast.success("File marked as completed!");
+    } catch (error: any) {
+      console.error("Error completing file:", error);
+      toast.error("Failed to complete file: " + error.message);
+    } finally {
+      setIsCompleting(false);
+      setFileToComplete(null);
+      setMarkCompleteWarningOpen(false);
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -1244,204 +1453,233 @@ export default function WorkFlowTab() {
               </tr>
             ) : (
               filteredFiles?.map((file) => (
-                <tr key={file.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-                  <td className="px-3 py-1.5">
-                    <Checkbox 
-                      checked={selectedFiles.has(file.id)}
-                      onCheckedChange={() => toggleSelect(file.id)}
-                    />
-                  </td>
-                  <td className="px-3 py-1.5">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                      <button 
-                        className="text-xs font-medium text-blue-600 truncate max-w-[600px] hover:underline cursor-pointer text-left" 
-                        title={file.file_name}
-                        onClick={() => setPreviewFile(file)}
-                      >
-                        {getFileNameWithoutExtension(file.file_name)}
-                      </button>
-                    </div>
-                  </td>
-                  {isColumnVisible("type") && (
-                    <td className="px-3 py-1.5 text-center">
-                      {(() => {
-                        const ext = getFileExtension(file.file_name);
-                        const style = getFileTypeBadgeStyle(ext);
-                        return ext ? (
-                          <Badge 
-                            className="text-[10px] px-1.5 py-0 uppercase font-medium"
-                            style={{ backgroundColor: style.bg, color: style.text }}
+                <ContextMenu key={file.id}>
+                  <ContextMenuTrigger asChild>
+                    <tr className="border-b border-border/50 hover:bg-muted/50 transition-colors">
+                      <td className="px-3 py-1.5">
+                        <Checkbox 
+                          checked={selectedFiles.has(file.id)}
+                          onCheckedChange={() => toggleSelect(file.id)}
+                        />
+                      </td>
+                      <td className="px-3 py-1.5">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                          <button 
+                            className="text-xs font-medium text-blue-600 truncate max-w-[600px] hover:underline cursor-pointer text-left" 
+                            title={file.file_name}
+                            onClick={() => setPreviewFile(file)}
                           >
-                            {ext}
-                          </Badge>
-                        ) : <span className="text-slate-400">—</span>;
-                      })()}
-                    </td>
-                  )}
-                  {isColumnVisible("date") && (
-                    <td className="px-3 py-1.5 text-slate-600 text-sm">
-                      {format(new Date(file.created_at), "dd/MM/yyyy")}
-                    </td>
-                  )}
-                  {isColumnVisible("category") && (
-                    <td className="px-3 py-1.5 text-center">
-                      {renderCellDropdown(file, columns.find(c => c.id === "category")!)}
-                    </td>
-                  )}
-                  {isColumnVisible("status") && (
-                    <td className="px-3 py-1.5 text-center">
-                      {renderCellDropdown(file, columns.find(c => c.id === "status")!)}
-                    </td>
-                  )}
-                  {isColumnVisible("size") && (
-                    <td className="px-3 py-1.5 text-slate-600 text-xs">
-                      {formatFileSize(file.file_size)}
-                    </td>
-                  )}
-                  {isColumnVisible("project") && (
-                    <td className="px-3 py-1.5">
-                      {transactionsByFileUrl?.[file.file_url] ? (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="text-left text-xs text-slate-600 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer w-full truncate max-w-[120px]">
-                              {transactionsByFileUrl[file.file_url]?.projectName || <span className="text-slate-400">—</span>}
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-white z-50">
-                            <DropdownMenuItem 
-                              className="flex justify-center"
-                              onClick={() => updateTransactionMutation.mutate({
-                                transactionId: transactionsByFileUrl[file.file_url].transactionId,
-                                updates: { project_id: null }
-                              })}
-                            >
-                              <span className="text-slate-400">— None —</span>
-                            </DropdownMenuItem>
-                            {allProjects?.map((project) => (
-                              <DropdownMenuItem 
-                                key={project.id}
-                                className="flex justify-center"
-                                onClick={() => updateTransactionMutation.mutate({
-                                  transactionId: transactionsByFileUrl[file.file_url].transactionId,
-                                  updates: { project_id: project.id }
-                                })}
-                              >
-                                {project.name}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      ) : (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="text-left text-xs text-slate-400 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer w-full truncate max-w-[120px]">
-                              —
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-white z-50">
-                            {allProjects?.map((project) => (
-                              <DropdownMenuItem 
-                                key={project.id}
-                                className="flex justify-center"
-                                onClick={() => createTransactionForFileMutation.mutate({
-                                  fileUrl: file.file_url,
-                                  projectId: project.id
-                                })}
-                              >
-                                {project.name}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                    </td>
-                  )}
-                  {isColumnVisible("value") && (
-                    <td className="px-3 py-1.5 text-right">
-                      {transactionsByFileUrl?.[file.file_url] ? (
-                        editingCell?.fileUrl === file.file_url && editingCell?.field === 'value' ? (
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onBlur={() => {
-                              const numValue = parseFloat(editValue);
-                              if (!isNaN(numValue)) {
-                                updateTransactionMutation.mutate({
-                                  transactionId: transactionsByFileUrl[file.file_url].transactionId,
-                                  updates: { total_amount: numValue }
-                                });
-                              } else {
-                                setEditingCell(null);
-                              }
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                const numValue = parseFloat(editValue);
-                                if (!isNaN(numValue)) {
-                                  updateTransactionMutation.mutate({
-                                    transactionId: transactionsByFileUrl[file.file_url].transactionId,
-                                    updates: { total_amount: numValue }
-                                  });
-                                } else {
-                                  setEditingCell(null);
-                                }
-                              } else if (e.key === 'Escape') {
-                                setEditingCell(null);
-                              }
-                            }}
-                            className="h-6 w-20 text-xs text-right"
-                            autoFocus
-                          />
-                        ) : (
-                          <button
-                            className="text-xs font-medium hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer"
-                            onClick={() => {
-                              setEditingCell({ fileUrl: file.file_url, field: 'value' });
-                              setEditValue(transactionsByFileUrl[file.file_url].value?.toString() || "0");
-                            }}
-                          >
-                            {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(transactionsByFileUrl[file.file_url].value)}
+                            {getFileNameWithoutExtension(file.file_name)}
                           </button>
-                        )
-                      ) : (
-                        <span className="text-slate-400 text-xs">—</span>
+                        </div>
+                      </td>
+                      {isColumnVisible("type") && (
+                        <td className="px-3 py-1.5 text-center">
+                          {(() => {
+                            const ext = getFileExtension(file.file_name);
+                            const style = getFileTypeBadgeStyle(ext);
+                            return ext ? (
+                              <Badge 
+                                className="text-[10px] px-1.5 py-0 uppercase font-medium"
+                                style={{ backgroundColor: style.bg, color: style.text }}
+                              >
+                                {ext}
+                              </Badge>
+                            ) : <span className="text-slate-400">—</span>;
+                          })()}
+                        </td>
                       )}
-                    </td>
-                  )}
-                  {/* Custom columns */}
-                  {customColumns.map((col) => (
-                    <td key={col.id} className="px-3 py-1.5 text-center">
-                      {renderCellDropdown(file, col)}
-                    </td>
-                  ))}
-                  {/* Empty cell for add column button */}
-                  <td className="px-3 py-1.5"></td>
-                  <td className="px-3 py-1.5">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleDownload(file)}>
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-destructive"
-                          onClick={() => deleteMutation.mutate(file.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
+                      {isColumnVisible("date") && (
+                        <td className="px-3 py-1.5 text-slate-600 text-sm">
+                          {format(new Date(file.created_at), "dd/MM/yyyy")}
+                        </td>
+                      )}
+                      {isColumnVisible("category") && (
+                        <td className="px-3 py-1.5 text-center">
+                          {renderCellDropdown(file, columns.find(c => c.id === "category")!)}
+                        </td>
+                      )}
+                      {isColumnVisible("status") && (
+                        <td className="px-3 py-1.5 text-center">
+                          {renderCellDropdown(file, columns.find(c => c.id === "status")!)}
+                        </td>
+                      )}
+                      {isColumnVisible("size") && (
+                        <td className="px-3 py-1.5 text-slate-600 text-xs">
+                          {formatFileSize(file.file_size)}
+                        </td>
+                      )}
+                      {isColumnVisible("project") && (
+                        <td className="px-3 py-1.5">
+                          {transactionsByFileUrl?.[file.file_url] ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button className="text-left text-xs text-slate-600 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer w-full truncate max-w-[120px]">
+                                  {transactionsByFileUrl[file.file_url]?.projectName || <span className="text-slate-400">—</span>}
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-white z-50">
+                                <DropdownMenuItem 
+                                  className="flex justify-center"
+                                  onClick={() => updateTransactionMutation.mutate({
+                                    transactionId: transactionsByFileUrl[file.file_url].transactionId,
+                                    updates: { project_id: null }
+                                  })}
+                                >
+                                  <span className="text-slate-400">— None —</span>
+                                </DropdownMenuItem>
+                                {allProjects?.map((project) => (
+                                  <DropdownMenuItem 
+                                    key={project.id}
+                                    className="flex justify-center"
+                                    onClick={() => updateTransactionMutation.mutate({
+                                      transactionId: transactionsByFileUrl[file.file_url].transactionId,
+                                      updates: { project_id: project.id }
+                                    })}
+                                  >
+                                    {project.name}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button className="text-left text-xs text-slate-400 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer w-full truncate max-w-[120px]">
+                                  —
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-white z-50">
+                                {allProjects?.map((project) => (
+                                  <DropdownMenuItem 
+                                    key={project.id}
+                                    className="flex justify-center"
+                                    onClick={() => createTransactionForFileMutation.mutate({
+                                      fileUrl: file.file_url,
+                                      projectId: project.id
+                                    })}
+                                  >
+                                    {project.name}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </td>
+                      )}
+                      {isColumnVisible("value") && (
+                        <td className="px-3 py-1.5 text-right">
+                          {transactionsByFileUrl?.[file.file_url] ? (
+                            editingCell?.fileUrl === file.file_url && editingCell?.field === 'value' ? (
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onBlur={() => {
+                                  const numValue = parseFloat(editValue);
+                                  if (!isNaN(numValue)) {
+                                    updateTransactionMutation.mutate({
+                                      transactionId: transactionsByFileUrl[file.file_url].transactionId,
+                                      updates: { total_amount: numValue }
+                                    });
+                                  } else {
+                                    setEditingCell(null);
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    const numValue = parseFloat(editValue);
+                                    if (!isNaN(numValue)) {
+                                      updateTransactionMutation.mutate({
+                                        transactionId: transactionsByFileUrl[file.file_url].transactionId,
+                                        updates: { total_amount: numValue }
+                                      });
+                                    } else {
+                                      setEditingCell(null);
+                                    }
+                                  } else if (e.key === 'Escape') {
+                                    setEditingCell(null);
+                                  }
+                                }}
+                                className="h-6 w-20 text-xs text-right"
+                                autoFocus
+                              />
+                            ) : (
+                              <button
+                                className="text-xs font-medium hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer"
+                                onClick={() => {
+                                  setEditingCell({ fileUrl: file.file_url, field: 'value' });
+                                  setEditValue(transactionsByFileUrl[file.file_url].value?.toString() || "0");
+                                }}
+                              >
+                                {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(transactionsByFileUrl[file.file_url].value)}
+                              </button>
+                            )
+                          ) : (
+                            <span className="text-slate-400 text-xs">—</span>
+                          )}
+                        </td>
+                      )}
+                      {/* Custom columns */}
+                      {customColumns.map((col) => (
+                        <td key={col.id} className="px-3 py-1.5 text-center">
+                          {renderCellDropdown(file, col)}
+                        </td>
+                      ))}
+                      {/* Empty cell for add column button */}
+                      <td className="px-3 py-1.5"></td>
+                      <td className="px-3 py-1.5">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleMarkAsComplete(file)}>
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              Mark as Completed
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDownload(file)}>
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => deleteMutation.mutate(file.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuItem onClick={() => handleMarkAsComplete(file)}>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Mark as Completed
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => handleDownload(file)}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => setPreviewFile(file)}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Preview
+                    </ContextMenuItem>
+                    <ContextMenuItem 
+                      className="text-destructive"
+                      onClick={() => deleteMutation.mutate(file.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
               ))
             )}
           </tbody>
@@ -1743,6 +1981,37 @@ export default function WorkFlowTab() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Mark as Completed Warning Dialog */}
+      <AlertDialog open={markCompleteWarningOpen} onOpenChange={setMarkCompleteWarningOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Cannot Complete File
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                No file storage location is configured for{" "}
+                <strong>
+                  {fileToComplete && format(new Date(fileToComplete.created_at), "MMMM yyyy")}
+                </strong>.
+              </p>
+              <p>
+                Please go to <strong>Settings → Table Relations → File Storage Locations</strong> and add a storage location for this month/year before marking the file as completed.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setMarkCompleteWarningOpen(false);
+              setFileToComplete(null);
+            }}>
+              Close
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
