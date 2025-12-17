@@ -210,6 +210,22 @@ export default function WorkFlowTab() {
   const [previewFile, setPreviewFile] = useState<WorkflowFile | null>(null);
   const [showExpensePanel, setShowExpensePanel] = useState(false);
 
+  // Query existing transaction for current file
+  const { data: existingTransaction } = useQuery({
+    queryKey: ["file-transaction", previewFile?.file_url],
+    queryFn: async () => {
+      if (!previewFile?.file_url) return null;
+      const { data, error } = await supabase
+        .from("financial_transactions")
+        .select("*")
+        .eq("invoice_file_url", previewFile.file_url)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!previewFile?.file_url,
+  });
+
   // Column management dialogs
   const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
@@ -1337,8 +1353,17 @@ export default function WorkFlowTab() {
                 onClick={() => setShowExpensePanel(!showExpensePanel)}
                 className="mr-8"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Movimento
+                {existingTransaction ? (
+                  <>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Editar Movimento
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Movimento
+                  </>
+                )}
               </Button>
             </div>
           </DialogHeader>
@@ -1366,10 +1391,12 @@ export default function WorkFlowTab() {
                     file_url: previewFile.file_url,
                     mime_type: previewFile.mime_type,
                   }}
+                  existingTransaction={existingTransaction}
                   onClose={() => setShowExpensePanel(false)}
                   onSaved={() => {
                     setShowExpensePanel(false);
-                    toast.success("Movimento criado!");
+                    queryClient.invalidateQueries({ queryKey: ["file-transaction", previewFile.file_url] });
+                    toast.success(existingTransaction ? "Movimento atualizado!" : "Movimento criado!");
                   }}
                 />
               </div>
