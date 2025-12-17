@@ -160,12 +160,7 @@ export function WorkflowExpensePanel({ file, onClose, onSaved }: WorkflowExpense
     }
   }, [file, hasAnalyzed, isAnalyzing, setValue]);
 
-  // Auto-analyze when panel opens
-  useEffect(() => {
-    if (!hasAnalyzed && !isAnalyzing) {
-      analyzeDocument();
-    }
-  }, [analyzeDocument, hasAnalyzed, isAnalyzing]);
+  // Manual analyze triggered by button - no auto-analyze
 
   // Fetch companies
   const { data: companies } = useQuery({
@@ -325,19 +320,40 @@ export function WorkflowExpensePanel({ file, onClose, onSaved }: WorkflowExpense
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-base">Novo Movimento</h3>
-          {isAnalyzing && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              <span>A analisar...</span>
-            </div>
-          )}
           {hasAnalyzed && !isAnalyzing && (
             <Sparkles className="h-4 w-4 text-amber-500" />
           )}
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            type="button" 
+            variant="outline" 
+            size="sm"
+            onClick={analyzeDocument}
+            disabled={isAnalyzing || hasAnalyzed}
+            className="h-8 text-xs"
+          >
+            {isAnalyzing ? (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                A analisar...
+              </>
+            ) : hasAnalyzed ? (
+              <>
+                <Sparkles className="h-3 w-3 mr-1" />
+                Analisado
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-3 w-3 mr-1" />
+                Analisar com IA
+              </>
+            )}
+          </Button>
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <ScrollArea className="flex-1">
