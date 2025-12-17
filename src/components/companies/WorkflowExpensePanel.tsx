@@ -284,7 +284,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
             </div>
             <div>
               <Label className="text-xs">Tipo *</Label>
-              <Select onValueChange={(value) => setValue("type", value)} defaultValue="expense">
+              <Select onValueChange={(value) => setValue("type", value)} value={watch("type")}>
                 <SelectTrigger className="h-9 text-sm">
                   <SelectValue />
                 </SelectTrigger>
@@ -300,7 +300,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">Empresa *</Label>
-              <Select onValueChange={(value) => setValue("company_id", value)}>
+              <Select onValueChange={(value) => setValue("company_id", value)} value={watch("company_id")}>
                 <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
@@ -485,7 +485,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">Método Pagamento</Label>
-              <Select onValueChange={(value) => setValue("payment_method", value)} defaultValue="bank_transfer">
+              <Select onValueChange={(value) => setValue("payment_method", value)} value={watch("payment_method")}>
                 <SelectTrigger className="h-9 text-sm">
                   <SelectValue />
                 </SelectTrigger>
@@ -497,7 +497,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
             </div>
             <div>
               <Label className="text-xs">{paymentMethod === "credit_card" ? "Cartão" : "Conta"}</Label>
-              <Select onValueChange={(value) => setValue("bank_account_id", value)}>
+              <Select onValueChange={(value) => setValue("bank_account_id", value)} value={watch("bank_account_id")}>
                 <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
