@@ -153,18 +153,16 @@ export default function TransactionDialog({
   const transactionType = watch("type");
   const paymentMethod = watch("payment_method");
 
-  // Filter accounts based on payment method - credit card shows only credit cards, others show bank accounts
-  // Also include the currently selected account to prevent it from disappearing
+  // Filter accounts based on payment method AND selected company
   const currentBankAccountId = watch("bank_account_id");
-  const filteredBankAccounts = allBankAccounts?.filter(account => {
-    // Always include currently selected account
-    if (account.id === currentBankAccountId) {
-      return true;
+  const filteredBankAccounts = allBankAccounts?.filter((account) => {
+    const matchesCompany = !selectedCompanyId || account.company_id === selectedCompanyId;
+    if (!matchesCompany) return false;
+
+    if (paymentMethod === "credit_card") {
+      return account.account_type === "credit_card";
     }
-    if (paymentMethod === 'credit_card') {
-      return account.account_type === 'credit_card';
-    }
-    return account.account_type === 'bank_account';
+    return account.account_type === "bank_account";
   });
 
   useEffect(() => {
@@ -246,17 +244,19 @@ export default function TransactionDialog({
   // Track if this is the initial mount to avoid clearing bank account on load
   const isInitialMount = useRef(true);
   
-  // Clear bank account when company changes (only for new transactions, not when editing or on initial load)
+  // Clear bank account when company changes and current selection doesn't belong to the new company
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
-    // Only clear bank account when user manually changes the company for new transactions
-    if (!transaction) {
+
+    if (!currentBankAccountId || !allBankAccounts) return;
+    const current = allBankAccounts.find((ba) => ba.id === currentBankAccountId);
+    if (current && current.company_id !== selectedCompanyId) {
       setValue("bank_account_id", "");
     }
-  }, [selectedCompanyId, setValue, transaction]);
+  }, [selectedCompanyId, setValue, currentBankAccountId, allBankAccounts]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -379,34 +379,48 @@ export default function TransactionDialog({
         return null;
       };
       
-      const resolvedCompanyId = toUuidOrNull(formCompanyId) || toUuidOrNull(companyId);
-      const resolvedCreatedBy = toUuidOrNull(user?.id);
-      
-      if (!resolvedCompanyId || !resolvedCreatedBy) {
-        throw new Error("Empresa e utilizador são obrigatórios");
-      }
-      
-      const transactionData = {
-        company_id: resolvedCompanyId,
-        created_by: resolvedCreatedBy,
-        date: date,
-        type: type,
-        description: description,
-        entity_name: entity_name,
-        amount_net: Number(amount_net),
-        vat_rate: Number(vat_rate),
-        vat_amount: Number(vat_amount),
-        total_amount: Number(total_amount),
-        payment_method: payment_method,
-        invoice_number: invoice_number || null,
-        notes: notes || null,
-        project_id: toUuidOrNull(project_id),
-        category_id: toUuidOrNull(category_id),
-        bank_account_id: toUuidOrNull(bank_account_id),
-        invoice_file_url: fileUrl,
-        category: 'other' as const,
-        subcategory: subcategory || null,
-      };
+       const resolvedCompanyId = toUuidOrNull(formCompanyId) || toUuidOrNull(companyId);
+       const resolvedCreatedBy = toUuidOrNull(user?.id);
+       const resolvedBankAccountId = toUuidOrNull(bank_account_id);
+       
+       if (!resolvedCompanyId || !resolvedCreatedBy) {
+         throw new Error("Empresa e utilizador são obrigatórios");
+       }
+
+       // Card details are stored in bank_account_id (credit card account)
+       if (payment_method === "credit_card" && !resolvedBankAccountId) {
+         throw new Error("Selecione o cartão de crédito");
+       }
+
+       // Ensure selected account belongs to the selected company
+       if (resolvedBankAccountId && allBankAccounts) {
+         const selectedAccount = allBankAccounts.find((ba) => ba.id === resolvedBankAccountId);
+         if (selectedAccount && selectedAccount.company_id !== resolvedCompanyId) {
+           throw new Error("O cartão/conta selecionado não pertence à empresa escolhida");
+         }
+       }
+       
+       const transactionData = {
+         company_id: resolvedCompanyId,
+         created_by: resolvedCreatedBy,
+         date: date,
+         type: type,
+         description: description,
+         entity_name: entity_name,
+         amount_net: Number(amount_net),
+         vat_rate: Number(vat_rate),
+         vat_amount: Number(vat_amount),
+         total_amount: Number(total_amount),
+         payment_method: payment_method,
+         invoice_number: invoice_number || null,
+         notes: notes || null,
+         project_id: toUuidOrNull(project_id),
+         category_id: toUuidOrNull(category_id),
+         bank_account_id: resolvedBankAccountId,
+         invoice_file_url: fileUrl,
+         category: 'other' as const,
+         subcategory: subcategory || null,
+       };
       
 
       const transactionId = transaction ? toUuidOrNull((transaction as any).id) : null;
@@ -900,7 +914,14 @@ export default function TransactionDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={saveMutation.isPending || isUploading}>
+            <Button
+              type="submit"
+              disabled={
+                saveMutation.isPending ||
+                isUploading ||
+                (paymentMethod === "credit_card" && (!currentBankAccountId || currentBankAccountId === "none"))
+              }
+            >
               {saveMutation.isPending || isUploading ? "A guardar..." : "Guardar"}
             </Button>
           </div>
