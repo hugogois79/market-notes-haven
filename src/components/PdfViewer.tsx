@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Download, FileText, Printer, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, FileText, Printer, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 
-// Configure worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// Configure worker - use legacy build for better compatibility
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/legacy/build/pdf.worker.min.mjs`;
 
 interface PdfViewerProps {
   url: string;
@@ -112,6 +114,11 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
             renderTextLayer={true}
             renderAnnotationLayer={true}
             className="shadow-lg"
+            loading={
+              <div className="flex items-center justify-center p-8 min-h-[400px]">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            }
           />
         </Document>
         
