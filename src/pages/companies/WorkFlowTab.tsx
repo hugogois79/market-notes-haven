@@ -781,8 +781,8 @@ export default function WorkFlowTab() {
                   </td>
                   <td className="px-3 py-1.5">
                     <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                      <span className="font-medium text-blue-600 truncate max-w-[300px]" title={file.file_name}>
+                      <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                      <span className="text-xs font-medium text-blue-600 truncate max-w-[600px]" title={file.file_name}>
                         {getFileNameWithoutExtension(file.file_name)}
                       </span>
                     </div>
