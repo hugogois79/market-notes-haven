@@ -293,16 +293,57 @@ export default function WorkFlowTab() {
     },
   });
 
+  // Fetch all projects for dropdown
+  const { data: allProjects } = useQuery({
+    queryKey: ["expense-projects-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expense_projects")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Create lookup map for transactions by file_url
   const transactionsByFileUrl = linkedTransactions?.reduce((acc, tx) => {
     if (tx.invoice_file_url) {
       acc[tx.invoice_file_url] = {
+        transactionId: tx.id,
+        projectId: tx.project_id,
         projectName: (tx.expense_projects as any)?.name || null,
         value: tx.total_amount,
       };
     }
     return acc;
-  }, {} as Record<string, { projectName: string | null; value: number }>);
+  }, {} as Record<string, { transactionId: string; projectId: string | null; projectName: string | null; value: number }>);
+
+  // State for inline editing
+  const [editingCell, setEditingCell] = useState<{ fileUrl: string; field: 'project' | 'value' } | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
+
+  // Mutation to update transaction
+  const updateTransactionMutation = useMutation({
+    mutationFn: async ({ transactionId, updates }: { transactionId: string; updates: { project_id?: string | null; total_amount?: number } }) => {
+      const { error } = await supabase
+        .from("financial_transactions")
+        .update(updates)
+        .eq("id", transactionId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workflow-linked-transactions"] });
+      setEditingCell(null);
+      toast.success("Updated successfully");
+    },
+    onError: (error) => {
+      toast.error("Failed to update: " + error.message);
+    },
+  });
 
   // Upload files with progress tracking
   const uploadFiles = async (files: FileList | File[]) => {
@@ -1189,15 +1230,93 @@ export default function WorkFlowTab() {
                     </td>
                   )}
                   {isColumnVisible("project") && (
-                    <td className="px-3 py-1.5 text-slate-600 text-xs truncate max-w-[120px]" title={transactionsByFileUrl?.[file.file_url]?.projectName || ''}>
-                      {transactionsByFileUrl?.[file.file_url]?.projectName || <span className="text-slate-400">—</span>}
+                    <td className="px-3 py-1.5">
+                      {transactionsByFileUrl?.[file.file_url] ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="text-left text-xs text-slate-600 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer w-full truncate max-w-[120px]">
+                              {transactionsByFileUrl[file.file_url]?.projectName || <span className="text-slate-400">—</span>}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-white z-50">
+                            <DropdownMenuItem 
+                              onClick={() => updateTransactionMutation.mutate({
+                                transactionId: transactionsByFileUrl[file.file_url].transactionId,
+                                updates: { project_id: null }
+                              })}
+                            >
+                              <span className="text-slate-400">— None —</span>
+                            </DropdownMenuItem>
+                            {allProjects?.map((project) => (
+                              <DropdownMenuItem 
+                                key={project.id}
+                                onClick={() => updateTransactionMutation.mutate({
+                                  transactionId: transactionsByFileUrl[file.file_url].transactionId,
+                                  updates: { project_id: project.id }
+                                })}
+                              >
+                                {project.name}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <span className="text-slate-400 text-xs">—</span>
+                      )}
                     </td>
                   )}
                   {isColumnVisible("value") && (
-                    <td className="px-3 py-1.5 text-right text-xs font-medium">
-                      {transactionsByFileUrl?.[file.file_url]?.value 
-                        ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(transactionsByFileUrl[file.file_url].value)
-                        : <span className="text-slate-400">—</span>}
+                    <td className="px-3 py-1.5 text-right">
+                      {transactionsByFileUrl?.[file.file_url] ? (
+                        editingCell?.fileUrl === file.file_url && editingCell?.field === 'value' ? (
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={() => {
+                              const numValue = parseFloat(editValue);
+                              if (!isNaN(numValue)) {
+                                updateTransactionMutation.mutate({
+                                  transactionId: transactionsByFileUrl[file.file_url].transactionId,
+                                  updates: { total_amount: numValue }
+                                });
+                              } else {
+                                setEditingCell(null);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const numValue = parseFloat(editValue);
+                                if (!isNaN(numValue)) {
+                                  updateTransactionMutation.mutate({
+                                    transactionId: transactionsByFileUrl[file.file_url].transactionId,
+                                    updates: { total_amount: numValue }
+                                  });
+                                } else {
+                                  setEditingCell(null);
+                                }
+                              } else if (e.key === 'Escape') {
+                                setEditingCell(null);
+                              }
+                            }}
+                            className="h-6 w-20 text-xs text-right"
+                            autoFocus
+                          />
+                        ) : (
+                          <button
+                            className="text-xs font-medium hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer"
+                            onClick={() => {
+                              setEditingCell({ fileUrl: file.file_url, field: 'value' });
+                              setEditValue(transactionsByFileUrl[file.file_url].value?.toString() || "0");
+                            }}
+                          >
+                            {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(transactionsByFileUrl[file.file_url].value)}
+                          </button>
+                        )
+                      ) : (
+                        <span className="text-slate-400 text-xs">—</span>
+                      )}
                     </td>
                   )}
                   {/* Custom columns */}
