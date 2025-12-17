@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, MoreHorizontal, Edit3 } from "lucide-react";
+import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, MoreHorizontal, Edit3, Columns } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -414,6 +414,12 @@ export default function WorkFlowTab() {
 
   const isColumnVisible = (id: string) => columns.find(c => c.id === id)?.visible ?? true;
 
+  const toggleColumnVisibility = (id: string) => {
+    setColumns(columns.map(col => 
+      col.id === id ? { ...col, visible: !col.visible } : col
+    ));
+  };
+
   const getColumnValue = (file: WorkflowFile, column: ColumnConfig) => {
     if (column.isBuiltIn && column.dbField) {
       return (file as any)[column.dbField] || null;
@@ -632,6 +638,36 @@ export default function WorkFlowTab() {
           <Upload className="h-4 w-4 mr-2" />
           {isUploading ? "Uploading..." : "Upload"}
         </Button>
+        
+        {/* Columns Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <Columns className="h-4 w-4" />
+              Columns
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            {columns.filter(col => !col.required).map((col) => (
+              <DropdownMenuItem
+                key={col.id}
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleColumnVisibility(col.id);
+                }}
+                className="flex items-center gap-2"
+              >
+                <Checkbox 
+                  checked={col.visible}
+                  onCheckedChange={() => toggleColumnVisibility(col.id)}
+                />
+                <span>{col.label}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        
         <div className="flex-1" />
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
