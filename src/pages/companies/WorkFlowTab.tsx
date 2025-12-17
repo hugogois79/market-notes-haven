@@ -968,7 +968,7 @@ export default function WorkFlowTab() {
                 />
               </th>
               <th 
-                className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider cursor-pointer hover:bg-slate-100"
+                className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100"
                 onClick={() => handleSort('name')}
               >
                 <div className="flex items-center gap-1">
@@ -980,7 +980,7 @@ export default function WorkFlowTab() {
               </th>
               {isColumnVisible("type") && (
                 <th 
-                  className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-16 cursor-pointer hover:bg-slate-100"
+                  className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs w-16 cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort('type')}
                 >
                   <div className="flex items-center justify-center gap-1">
@@ -993,11 +993,11 @@ export default function WorkFlowTab() {
               )}
               {isColumnVisible("date") && (
                 <th 
-                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28 cursor-pointer hover:bg-slate-100"
+                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs w-28 cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort('date')}
                 >
                   <div className="flex items-center gap-1">
-                    DATE
+                    Date
                     {sortConfig.column === 'date' && (
                       sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                     )}
@@ -1005,7 +1005,7 @@ export default function WorkFlowTab() {
                 </th>
               )}
               {isColumnVisible("category") && (
-                <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
+                <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs w-28">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button 
@@ -1031,7 +1031,7 @@ export default function WorkFlowTab() {
                 </th>
               )}
               {isColumnVisible("status") && (
-                <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
+                <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs w-28">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button 
@@ -1071,7 +1071,7 @@ export default function WorkFlowTab() {
               )}
               {isColumnVisible("project") && (
                 <th 
-                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-32 cursor-pointer hover:bg-slate-100"
+                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs w-32 cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort('project')}
                 >
                   <div className="flex items-center gap-1">
@@ -1084,7 +1084,7 @@ export default function WorkFlowTab() {
               )}
               {isColumnVisible("value") && (
                 <th 
-                  className="text-right px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-24 cursor-pointer hover:bg-slate-100"
+                  className="text-right px-3 py-2.5 font-semibold text-slate-700 text-xs w-24 cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort('value')}
                 >
                   <div className="flex items-center justify-end gap-1">
@@ -1097,7 +1097,7 @@ export default function WorkFlowTab() {
               )}
               {/* Custom columns headers */}
               {customColumns.map((col) => (
-                <th key={col.id} className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
+                <th key={col.id} className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs w-28">
                   {renderColumnHeader(col, true)}
                 </th>
               ))}
