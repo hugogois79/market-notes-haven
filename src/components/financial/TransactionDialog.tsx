@@ -153,16 +153,17 @@ export default function TransactionDialog({
   const transactionType = watch("type");
   const paymentMethod = watch("payment_method");
 
-  // Filter accounts based on payment method AND selected company
+  // Filter accounts based on payment method
+  // For credit cards: show ALL credit cards from all companies (cross-company payment allowed)
+  // For bank transfers: filter by selected company only
   const currentBankAccountId = watch("bank_account_id");
   const filteredBankAccounts = allBankAccounts?.filter((account) => {
-    const matchesCompany = !selectedCompanyId || account.company_id === selectedCompanyId;
-    if (!matchesCompany) return false;
-
     if (paymentMethod === "credit_card") {
       return account.account_type === "credit_card";
     }
-    return account.account_type === "bank_account";
+    // For bank transfer, only show accounts from the selected company
+    const matchesCompany = !selectedCompanyId || account.company_id === selectedCompanyId;
+    return matchesCompany && account.account_type === "bank_account";
   });
 
   useEffect(() => {
@@ -244,19 +245,22 @@ export default function TransactionDialog({
   // Track if this is the initial mount to avoid clearing bank account on load
   const isInitialMount = useRef(true);
   
-  // Clear bank account when company changes and current selection doesn't belong to the new company
+  // Clear bank account when company changes ONLY for bank_transfer (not for credit_card which is cross-company)
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
 
+    // Don't clear credit card selection when company changes – cross-company is allowed
+    if (paymentMethod === "credit_card") return;
+
     if (!currentBankAccountId || !allBankAccounts) return;
     const current = allBankAccounts.find((ba) => ba.id === currentBankAccountId);
     if (current && current.company_id !== selectedCompanyId) {
       setValue("bank_account_id", "");
     }
-  }, [selectedCompanyId, setValue, currentBankAccountId, allBankAccounts]);
+  }, [selectedCompanyId, setValue, currentBankAccountId, allBankAccounts, paymentMethod]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -392,11 +396,12 @@ export default function TransactionDialog({
          throw new Error("Selecione o cartão de crédito");
        }
 
-       // Ensure selected account belongs to the selected company
-       if (resolvedBankAccountId && allBankAccounts) {
+       // For bank_transfer: ensure bank account belongs to the selected company
+       // For credit_card: allow cross-company (loan will be auto-created)
+       if (payment_method !== "credit_card" && resolvedBankAccountId && allBankAccounts) {
          const selectedAccount = allBankAccounts.find((ba) => ba.id === resolvedBankAccountId);
          if (selectedAccount && selectedAccount.company_id !== resolvedCompanyId) {
-           throw new Error("O cartão/conta selecionado não pertence à empresa escolhida");
+           throw new Error("A conta bancária selecionada não pertence à empresa escolhida");
          }
        }
        
