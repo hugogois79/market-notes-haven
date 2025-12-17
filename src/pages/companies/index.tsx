@@ -640,8 +640,10 @@ export default function CompaniesPage() {
             </Button>
           </div>
           
+          <hr className="my-8 border-t border-slate-300 max-w-2xl" />
+          
           {/* Table Relations Section */}
-          <div className="border border-slate-200 rounded-lg bg-white p-6 max-w-2xl mt-6">
+          <div className="border border-slate-200 rounded-lg bg-white p-6 max-w-2xl">
             <div className="flex items-center gap-2 mb-1">
               <Link2 className="h-5 w-5 text-slate-600" />
               <h2 className="text-lg font-semibold text-slate-800">Table Relations</h2>
