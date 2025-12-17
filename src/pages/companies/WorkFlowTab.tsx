@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, MoreHorizontal, Edit3, Columns } from "lucide-react";
+import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, MoreHorizontal, Edit3, Columns, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -159,6 +159,8 @@ export default function WorkFlowTab() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [filterColumn, setFilterColumn] = useState<string>("");
+  const [filterValue, setFilterValue] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -401,9 +403,47 @@ export default function WorkFlowTab() {
     }
   };
 
-  const filteredFiles = workflowFiles?.filter(file => 
-    file.file_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredFiles = workflowFiles?.filter(file => {
+    // Search filter
+    const matchesSearch = file.file_name.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Column filter
+    let matchesFilter = true;
+    if (filterColumn && filterValue) {
+      const col = columns.find(c => c.id === filterColumn);
+      if (col) {
+        const fileValue = col.isBuiltIn && col.dbField 
+          ? (file as any)[col.dbField] 
+          : customData[file.id]?.[filterColumn];
+        matchesFilter = fileValue === filterValue;
+      }
+    }
+    
+    return matchesSearch && matchesFilter;
+  });
+
+  // Bulk actions
+  const handleBulkDownload = async () => {
+    const filesToDownload = workflowFiles?.filter(f => selectedFiles.has(f.id)) || [];
+    for (const file of filesToDownload) {
+      await handleDownload(file);
+    }
+    toast.success(`Downloaded ${filesToDownload.length} files`);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${selectedFiles.size} files?`)) return;
+    
+    for (const id of selectedFiles) {
+      await deleteMutation.mutateAsync(id);
+    }
+    setSelectedFiles(new Set());
+    toast.success(`Deleted ${selectedFiles.size} files`);
+  };
+
+  const getFilterableColumns = () => {
+    return columns.filter(c => c.options && c.options.length > 0);
+  };
 
   const formatFileSize = (bytes: number | null) => {
     if (!bytes) return "—";
@@ -667,6 +707,28 @@ export default function WorkFlowTab() {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Bulk Actions - shown when files selected */}
+        {selectedFiles.size > 0 && (
+          <>
+            <Button 
+              variant="outline" 
+              className="gap-2"
+              onClick={handleBulkDownload}
+            >
+              <Download className="h-4 w-4" />
+              Download ({selectedFiles.size})
+            </Button>
+            <Button 
+              variant="outline" 
+              className="gap-2 text-destructive hover:text-destructive"
+              onClick={handleBulkDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete ({selectedFiles.size})
+            </Button>
+          </>
+        )}
         
         <div className="flex-1" />
         <div className="relative max-w-md">
@@ -678,6 +740,74 @@ export default function WorkFlowTab() {
             className="pl-10 w-64"
           />
         </div>
+
+        {/* Filter Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="icon"
+              className={filterColumn ? "text-blue-600" : ""}
+            >
+              <Filter className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="p-2 space-y-2">
+              <Label className="text-xs font-medium">Filter by column</Label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between text-sm">
+                    {filterColumn ? columns.find(c => c.id === filterColumn)?.label : "Select column"}
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => { setFilterColumn(""); setFilterValue(""); }}>
+                    Clear filter
+                  </DropdownMenuItem>
+                  {getFilterableColumns().map(col => (
+                    <DropdownMenuItem 
+                      key={col.id} 
+                      onClick={() => { setFilterColumn(col.id); setFilterValue(""); }}
+                    >
+                      {col.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              {filterColumn && (
+                <>
+                  <Label className="text-xs font-medium">Value</Label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between text-sm">
+                        {filterValue || "Select value"}
+                        <ChevronDown className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {columns.find(c => c.id === filterColumn)?.options?.map(opt => (
+                        <DropdownMenuItem 
+                          key={opt.label} 
+                          onClick={() => setFilterValue(opt.label)}
+                        >
+                          <span 
+                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium mr-2"
+                            style={{ backgroundColor: `${opt.color}20`, color: opt.color }}
+                          >
+                            {opt.label}
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              )}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Files Table with Drag & Drop */}
