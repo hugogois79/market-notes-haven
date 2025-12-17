@@ -151,7 +151,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         .select("entity_name")
         .not("entity_name", "is", null);
       if (error) throw error;
-      const uniqueSuppliers = [...new Set(data.map((d) => d.entity_name).filter(Boolean))];
+      const uniqueSuppliers = [...new Set(data.map((d) => d.entity_name).filter((s): s is string => typeof s === 'string' && s.length > 0))];
       return uniqueSuppliers.sort();
     },
   });
@@ -411,7 +411,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                     </CommandEmpty>
                     <CommandGroup>
                       {suppliers
-                        ?.filter((s) => s?.toLowerCase().includes(supplierSearch.toLowerCase()))
+                        ?.filter((s) => typeof s === 'string' && s.toLowerCase().includes(supplierSearch.toLowerCase()))
                         .slice(0, 10)
                         .map((supplier) => (
                           <CommandItem
