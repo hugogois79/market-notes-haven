@@ -64,21 +64,42 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   
   const { register, handleSubmit, reset, watch, setValue } = useForm({
     defaultValues: {
-      date: existingTransaction?.date || new Date().toISOString().split("T")[0],
-      type: existingTransaction?.type || "expense",
-      company_id: existingTransaction?.company_id || "",
-      project_id: existingTransaction?.project_id || "",
-      category_id: existingTransaction?.category_id || "",
-      description: existingTransaction?.description || "",
-      entity_name: existingTransaction?.entity_name || "",
-      total_amount: existingTransaction?.total_amount?.toString() || "",
-      vat_rate: existingTransaction?.vat_rate?.toString() || "23",
-      payment_method: existingTransaction?.payment_method || "bank_transfer",
-      bank_account_id: existingTransaction?.bank_account_id || "",
-      invoice_number: existingTransaction?.invoice_number || "",
-      notes: existingTransaction?.notes || "",
+      date: new Date().toISOString().split("T")[0],
+      type: "expense",
+      company_id: "",
+      project_id: "",
+      category_id: "",
+      description: "",
+      entity_name: "",
+      total_amount: "",
+      vat_rate: "23",
+      payment_method: "bank_transfer",
+      bank_account_id: "",
+      invoice_number: "",
+      notes: "",
     },
   });
+
+  // Reset form when existingTransaction changes (loads async)
+  useEffect(() => {
+    if (existingTransaction) {
+      reset({
+        date: existingTransaction.date || new Date().toISOString().split("T")[0],
+        type: existingTransaction.type || "expense",
+        company_id: existingTransaction.company_id || "",
+        project_id: existingTransaction.project_id || "",
+        category_id: existingTransaction.category_id || "",
+        description: existingTransaction.description || "",
+        entity_name: existingTransaction.entity_name || "",
+        total_amount: existingTransaction.total_amount?.toString() || "",
+        vat_rate: existingTransaction.vat_rate?.toString() || "23",
+        payment_method: existingTransaction.payment_method || "bank_transfer",
+        bank_account_id: existingTransaction.bank_account_id || "",
+        invoice_number: existingTransaction.invoice_number || "",
+        notes: existingTransaction.notes || "",
+      });
+    }
+  }, [existingTransaction, reset]);
 
   const [projectOpen, setProjectOpen] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
