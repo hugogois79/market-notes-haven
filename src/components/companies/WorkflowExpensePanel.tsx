@@ -38,27 +38,45 @@ interface WorkflowExpensePanelProps {
     file_url: string;
     mime_type: string | null;
   };
+  existingTransaction?: {
+    id: string;
+    date: string;
+    type: string;
+    company_id: string;
+    project_id: string | null;
+    category_id: string | null;
+    description: string;
+    entity_name: string;
+    total_amount: number;
+    vat_rate: number | null;
+    payment_method: string;
+    bank_account_id: string | null;
+    invoice_number: string | null;
+    notes: string | null;
+  } | null;
   onClose: () => void;
   onSaved?: () => void;
 }
 
-export function WorkflowExpensePanel({ file, onClose, onSaved }: WorkflowExpensePanelProps) {
+export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSaved }: WorkflowExpensePanelProps) {
   const queryClient = useQueryClient();
+  const isEditMode = !!existingTransaction;
+  
   const { register, handleSubmit, reset, watch, setValue } = useForm({
     defaultValues: {
-      date: new Date().toISOString().split("T")[0],
-      type: "expense",
-      company_id: "",
-      project_id: "",
-      category_id: "",
-      description: "",
-      entity_name: "",
-      total_amount: "",
-      vat_rate: "23",
-      payment_method: "bank_transfer",
-      bank_account_id: "",
-      invoice_number: "",
-      notes: "",
+      date: existingTransaction?.date || new Date().toISOString().split("T")[0],
+      type: existingTransaction?.type || "expense",
+      company_id: existingTransaction?.company_id || "",
+      project_id: existingTransaction?.project_id || "",
+      category_id: existingTransaction?.category_id || "",
+      description: existingTransaction?.description || "",
+      entity_name: existingTransaction?.entity_name || "",
+      total_amount: existingTransaction?.total_amount?.toString() || "",
+      vat_rate: existingTransaction?.vat_rate?.toString() || "23",
+      payment_method: existingTransaction?.payment_method || "bank_transfer",
+      bank_account_id: existingTransaction?.bank_account_id || "",
+      invoice_number: existingTransaction?.invoice_number || "",
+      notes: existingTransaction?.notes || "",
     },
   });
 
@@ -191,7 +209,6 @@ export function WorkflowExpensePanel({ file, onClose, onSaved }: WorkflowExpense
         amount_net: netAmount,
         vat_amount: vatAmount,
         vat_rate: parseFloat(data.vat_rate) || 0,
-        created_by: userData.user.id,
         payment_method: data.payment_method,
         invoice_number: data.invoice_number || null,
         notes: data.notes || null,
@@ -202,17 +219,24 @@ export function WorkflowExpensePanel({ file, onClose, onSaved }: WorkflowExpense
         category: "other" as const,
       };
 
-      const { error } = await supabase
-        .from("financial_transactions")
-        .insert(transactionData);
-
-      if (error) throw error;
+      if (isEditMode && existingTransaction) {
+        const { error } = await supabase
+          .from("financial_transactions")
+          .update(transactionData)
+          .eq("id", existingTransaction.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("financial_transactions")
+          .insert({ ...transactionData, created_by: userData.user.id });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["transactions-dashboard"] });
-      toast.success("Movimento criado com sucesso");
-      reset();
+      toast.success(isEditMode ? "Movimento atualizado com sucesso" : "Movimento criado com sucesso");
+      if (!isEditMode) reset();
       onSaved?.();
     },
     onError: (error: any) => {
@@ -223,7 +247,7 @@ export function WorkflowExpensePanel({ file, onClose, onSaved }: WorkflowExpense
   return (
     <div className="h-full flex flex-col border-l bg-background">
       <div className="flex items-center justify-between p-4 border-b">
-        <h3 className="font-semibold text-base">Novo Movimento</h3>
+        <h3 className="font-semibold text-base">{isEditMode ? "Editar Movimento" : "Novo Movimento"}</h3>
         <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
           <X className="h-4 w-4" />
         </Button>
@@ -503,7 +527,7 @@ export function WorkflowExpensePanel({ file, onClose, onSaved }: WorkflowExpense
               disabled={saveMutation.isPending}
               className="flex-1 h-9 text-sm"
             >
-              {saveMutation.isPending ? "A guardar..." : "Guardar"}
+              {saveMutation.isPending ? "A guardar..." : isEditMode ? "Atualizar" : "Guardar"}
             </Button>
           </div>
         </form>
