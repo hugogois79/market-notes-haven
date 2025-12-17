@@ -1014,7 +1014,7 @@ export default function WorkFlowTab() {
               )}
               {isColumnVisible("size") && (
                 <th 
-                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-20 cursor-pointer hover:bg-slate-100"
+                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs w-20 cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort('size')}
                 >
                   <div className="flex items-center gap-1">
@@ -1114,7 +1114,7 @@ export default function WorkFlowTab() {
                     </td>
                   )}
                   {isColumnVisible("size") && (
-                    <td className="px-3 py-1.5 text-slate-600 text-sm">
+                    <td className="px-3 py-1.5 text-slate-600 text-xs">
                       {formatFileSize(file.file_size)}
                     </td>
                   )}
