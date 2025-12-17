@@ -1592,23 +1592,40 @@ export default function CompanyDetailPage() {
                       className="h-8 gap-1 text-primary hover:text-primary"
                       onClick={async () => {
                         const selectedDocsList = filteredDocuments?.filter(d => selectedDocs.has(d.id)) || [];
+                        let successCount = 0;
                         for (const doc of selectedDocsList) {
                           try {
-                            const response = await fetch(doc.file_url);
-                            const blob = await response.blob();
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = doc.name;
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                            URL.revokeObjectURL(url);
+                            // Extract bucket and path from Supabase URL
+                            const url = new URL(doc.file_url);
+                            const pathParts = url.pathname.split('/storage/v1/object/public/');
+                            if (pathParts.length > 1) {
+                              const [bucket, ...fileParts] = pathParts[1].split('/');
+                              const filePath = fileParts.join('/');
+                              
+                              const { data, error } = await supabase.storage
+                                .from(bucket)
+                                .download(filePath);
+                              
+                              if (error) throw error;
+                              
+                              const blobUrl = URL.createObjectURL(data);
+                              const a = document.createElement('a');
+                              a.href = blobUrl;
+                              a.download = doc.name;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              URL.revokeObjectURL(blobUrl);
+                              successCount++;
+                            }
                           } catch (error) {
+                            console.error('Download error:', error);
                             window.open(doc.file_url, '_blank');
                           }
+                          // Small delay between downloads
+                          await new Promise(resolve => setTimeout(resolve, 300));
                         }
-                        toast.success(`Downloaded ${selectedDocsList.length} file(s)`);
+                        toast.success(`Downloaded ${successCount} of ${selectedDocsList.length} file(s)`);
                       }}
                     >
                       <Download className="h-4 w-4" />
