@@ -3931,6 +3931,8 @@ export type Database = {
         Args: { card_id: string; new_list_id: string; new_position: number }
         Returns: undefined
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       user_can_access_company: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
