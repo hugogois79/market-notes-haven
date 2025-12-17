@@ -962,29 +962,55 @@ export default function WorkFlowTab() {
                 </th>
               )}
               {isColumnVisible("category") && (
-                <th 
-                  className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28 cursor-pointer hover:bg-slate-100"
-                  onClick={() => handleSort('category')}
-                >
-                  <div className="flex items-center justify-center gap-1">
-                    Category
-                    {sortConfig.column === 'category' && (
-                      sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-                    )}
-                  </div>
+                <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button 
+                        className="flex items-center justify-center gap-1 w-full hover:text-foreground transition-colors"
+                      >
+                        Category
+                        {sortConfig.column === 'category' && (
+                          sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                        <ChevronDown className="h-3 w-3 opacity-50" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem onClick={() => handleSort('category')}>
+                        {sortConfig.column === 'category' && sortConfig.direction === 'asc' ? 'Sort Z-A' : 'Sort A-Z'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openEditColumnDialog(columns.find(c => c.id === 'category')!)}>
+                        <Edit3 className="h-4 w-4 mr-2" />
+                        Edit Column
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </th>
               )}
               {isColumnVisible("status") && (
-                <th 
-                  className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28 cursor-pointer hover:bg-slate-100"
-                  onClick={() => handleSort('status')}
-                >
-                  <div className="flex items-center justify-center gap-1">
-                    Status
-                    {sortConfig.column === 'status' && (
-                      sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-                    )}
-                  </div>
+                <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button 
+                        className="flex items-center justify-center gap-1 w-full hover:text-foreground transition-colors"
+                      >
+                        Status
+                        {sortConfig.column === 'status' && (
+                          sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                        <ChevronDown className="h-3 w-3 opacity-50" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem onClick={() => handleSort('status')}>
+                        {sortConfig.column === 'status' && sortConfig.direction === 'asc' ? 'Sort Z-A' : 'Sort A-Z'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openEditColumnDialog(columns.find(c => c.id === 'status')!)}>
+                        <Edit3 className="h-4 w-4 mr-2" />
+                        Edit Column
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </th>
               )}
               {isColumnVisible("size") && (
