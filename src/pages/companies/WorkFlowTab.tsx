@@ -24,6 +24,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { DocumentPreview } from "@/components/companies/DocumentPreview";
+import { WorkflowExpensePanel } from "@/components/companies/WorkflowExpensePanel";
+import { cn } from "@/lib/utils";
 
 interface WorkflowFile {
   id: string;
@@ -206,6 +208,7 @@ export default function WorkFlowTab() {
 
   // Document preview state
   const [previewFile, setPreviewFile] = useState<WorkflowFile | null>(null);
+  const [showExpensePanel, setShowExpensePanel] = useState(false);
 
   // Column management dialogs
   const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false);
@@ -1323,21 +1326,53 @@ export default function WorkFlowTab() {
       </Dialog>
 
       {/* Document Preview Dialog */}
-      <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
-        <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
+      <Dialog open={!!previewFile} onOpenChange={(open) => { if (!open) { setPreviewFile(null); setShowExpensePanel(false); } }}>
+        <DialogContent className={cn("h-[90vh] flex flex-col p-0", showExpensePanel ? "max-w-[90vw]" : "max-w-5xl")}>
           <DialogHeader className="p-4 pb-0 flex-shrink-0">
-            <DialogTitle className="text-lg">Visualizar Documento</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg">Visualizar Documento</DialogTitle>
+              <Button
+                variant={showExpensePanel ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowExpensePanel(!showExpensePanel)}
+                className="mr-8"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Movimento
+              </Button>
+            </div>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden p-4">
-            {previewFile && (
-              <DocumentPreview
-                document={{
-                  file_url: previewFile.file_url,
-                  name: previewFile.file_name,
-                  mime_type: previewFile.mime_type,
-                }}
-                onDownload={() => handleDownload(previewFile)}
-              />
+          <div className="flex-1 overflow-hidden flex">
+            {/* Document viewer */}
+            <div className={cn("flex-1 overflow-hidden p-4", showExpensePanel && "border-r")}>
+              {previewFile && (
+                <DocumentPreview
+                  document={{
+                    file_url: previewFile.file_url,
+                    name: previewFile.file_name,
+                    mime_type: previewFile.mime_type,
+                  }}
+                  onDownload={() => handleDownload(previewFile)}
+                />
+              )}
+            </div>
+            {/* Expense panel */}
+            {showExpensePanel && previewFile && (
+              <div className="w-[400px] flex-shrink-0">
+                <WorkflowExpensePanel
+                  file={{
+                    id: previewFile.id,
+                    file_name: previewFile.file_name,
+                    file_url: previewFile.file_url,
+                    mime_type: previewFile.mime_type,
+                  }}
+                  onClose={() => setShowExpensePanel(false)}
+                  onSaved={() => {
+                    setShowExpensePanel(false);
+                    toast.success("Movimento criado!");
+                  }}
+                />
+              </div>
             )}
           </div>
         </DialogContent>
