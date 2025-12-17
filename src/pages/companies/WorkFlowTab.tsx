@@ -98,6 +98,8 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "category", label: "Category", visible: true, dbField: "category", isBuiltIn: true, options: DEFAULT_CATEGORY_OPTIONS },
   { id: "status", label: "Status", visible: true, dbField: "status", isBuiltIn: true, options: DEFAULT_STATUS_OPTIONS },
   { id: "size", label: "Size", visible: true },
+  { id: "project", label: "Project", visible: true, isBuiltIn: true },
+  { id: "value", label: "Value", visible: true, isBuiltIn: true },
 ];
 
 // Helper to extract file extension
@@ -267,6 +269,40 @@ export default function WorkFlowTab() {
       return data as WorkflowFile[];
     },
   });
+
+  // Fetch transactions linked to workflow files (by invoice_file_url)
+  const { data: linkedTransactions } = useQuery({
+    queryKey: ["workflow-linked-transactions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("financial_transactions")
+        .select(`
+          id,
+          invoice_file_url,
+          total_amount,
+          project_id,
+          expense_projects:project_id (
+            id,
+            name
+          )
+        `)
+        .not("invoice_file_url", "is", null);
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Create lookup map for transactions by file_url
+  const transactionsByFileUrl = linkedTransactions?.reduce((acc, tx) => {
+    if (tx.invoice_file_url) {
+      acc[tx.invoice_file_url] = {
+        projectName: (tx.expense_projects as any)?.name || null,
+        value: tx.total_amount,
+      };
+    }
+    return acc;
+  }, {} as Record<string, { projectName: string | null; value: number }>);
 
   // Upload files with progress tracking
   const uploadFiles = async (files: FileList | File[]) => {
@@ -490,6 +526,14 @@ export default function WorkFlowTab() {
       case 'status':
         aValue = a.status || '';
         bValue = b.status || '';
+        break;
+      case 'project':
+        aValue = transactionsByFileUrl?.[a.file_url]?.projectName || '';
+        bValue = transactionsByFileUrl?.[b.file_url]?.projectName || '';
+        break;
+      case 'value':
+        aValue = transactionsByFileUrl?.[a.file_url]?.value || 0;
+        bValue = transactionsByFileUrl?.[b.file_url]?.value || 0;
         break;
       default:
         // For custom columns
@@ -1025,6 +1069,32 @@ export default function WorkFlowTab() {
                   </div>
                 </th>
               )}
+              {isColumnVisible("project") && (
+                <th 
+                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-32 cursor-pointer hover:bg-slate-100"
+                  onClick={() => handleSort('project')}
+                >
+                  <div className="flex items-center gap-1">
+                    Project
+                    {sortConfig.column === 'project' && (
+                      sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                    )}
+                  </div>
+                </th>
+              )}
+              {isColumnVisible("value") && (
+                <th 
+                  className="text-right px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-24 cursor-pointer hover:bg-slate-100"
+                  onClick={() => handleSort('value')}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    Value
+                    {sortConfig.column === 'value' && (
+                      sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                    )}
+                  </div>
+                </th>
+              )}
               {/* Custom columns headers */}
               {customColumns.map((col) => (
                 <th key={col.id} className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
@@ -1116,6 +1186,18 @@ export default function WorkFlowTab() {
                   {isColumnVisible("size") && (
                     <td className="px-3 py-1.5 text-slate-600 text-xs">
                       {formatFileSize(file.file_size)}
+                    </td>
+                  )}
+                  {isColumnVisible("project") && (
+                    <td className="px-3 py-1.5 text-slate-600 text-xs truncate max-w-[120px]" title={transactionsByFileUrl?.[file.file_url]?.projectName || ''}>
+                      {transactionsByFileUrl?.[file.file_url]?.projectName || <span className="text-slate-400">—</span>}
+                    </td>
+                  )}
+                  {isColumnVisible("value") && (
+                    <td className="px-3 py-1.5 text-right text-xs font-medium">
+                      {transactionsByFileUrl?.[file.file_url]?.value 
+                        ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(transactionsByFileUrl[file.file_url].value)
+                        : <span className="text-slate-400">—</span>}
                     </td>
                   )}
                   {/* Custom columns */}

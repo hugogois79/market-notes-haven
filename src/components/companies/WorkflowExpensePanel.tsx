@@ -256,6 +256,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["transactions-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["workflow-linked-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["file-transaction"] });
       toast.success(isEditMode ? "Movimento atualizado com sucesso" : "Movimento criado com sucesso");
       if (!isEditMode) reset();
       onSaved?.();
