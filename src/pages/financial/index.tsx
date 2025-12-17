@@ -6,13 +6,13 @@ import CompanySelector from "@/components/financial/CompanySelector";
 import FinancialDashboard from "@/components/financial/FinancialDashboard";
 import CompanyManagement from "@/components/financial/CompanyManagement";
 import BankAccountManagement from "@/components/financial/BankAccountManagement";
-import ExpenseProjectManagement from "@/components/financial/ExpenseProjectManagement";
+
 import TransactionManagement from "@/components/financial/TransactionManagement";
 import LoanManagement from "@/components/financial/LoanManagement";
 import CategoryManagement from "@/components/financial/CategoryManagement";
 import BudgetingManagement from "@/components/financial/BudgetingManagement";
 import DocumentDropZone from "@/components/financial/DocumentDropZone";
-import { Building2, TrendingUp, Briefcase, CreditCard, PiggyBank, Settings, FolderKanban, Tag, Calculator, Upload } from "lucide-react";
+import { Building2, TrendingUp, CreditCard, PiggyBank, Settings, Tag, Calculator, Upload } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function FinancialPage() {
@@ -135,10 +135,6 @@ export default function FinancialPage() {
                     <PiggyBank className="h-4 w-4 mr-2" />
                     Accounts
                   </TabsTrigger>
-                  <TabsTrigger value="projects">
-                    <Briefcase className="h-4 w-4 mr-2" />
-                    Projects
-                  </TabsTrigger>
                   <TabsTrigger value="categories">
                     <Tag className="h-4 w-4 mr-2" />
                     Categories
@@ -153,10 +149,6 @@ export default function FinancialPage() {
                   {selectedCompanyId && (
                     <BankAccountManagement companyId={selectedCompanyId} />
                   )}
-                </TabsContent>
-
-                <TabsContent value="projects" className="space-y-4 mt-4">
-                  <ExpenseProjectManagement />
                 </TabsContent>
 
                 <TabsContent value="categories" className="space-y-4 mt-4">
