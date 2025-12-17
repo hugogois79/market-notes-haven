@@ -318,6 +318,38 @@ export default function CompaniesPage() {
     },
   });
 
+  // Fetch folders for selected company in storage location dialog
+  const { data: companyFolders } = useQuery({
+    queryKey: ["company-folders-for-storage", storageLocationForm.companyId],
+    queryFn: async () => {
+      if (!storageLocationForm.companyId) return [];
+      const { data, error } = await supabase
+        .from("company_folders")
+        .select("*")
+        .eq("company_id", storageLocationForm.companyId)
+        .order("name");
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!storageLocationForm.companyId,
+  });
+
+  // Build folder paths recursively
+  const getFolderPath = (folderId: string, folders: any[]): string => {
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return "";
+    if (!folder.parent_folder_id) return folder.name;
+    const parentPath = getFolderPath(folder.parent_folder_id, folders);
+    return parentPath ? `${parentPath}/${folder.name}` : folder.name;
+  };
+
+  const folderOptions = companyFolders?.map(folder => ({
+    id: folder.id,
+    name: folder.name,
+    path: getFolderPath(folder.id, companyFolders || [])
+  })).sort((a, b) => a.path.localeCompare(b.path)) || [];
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -1024,12 +1056,12 @@ export default function CompaniesPage() {
               <Label>Company</Label>
               <Select
                 value={storageLocationForm.companyId}
-                onValueChange={(value) => setStorageLocationForm(prev => ({ ...prev, companyId: value }))}
+                onValueChange={(value) => setStorageLocationForm(prev => ({ ...prev, companyId: value, folderPath: "" }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select company..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white">
                   {companies?.map(company => (
                     <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
                   ))}
@@ -1045,7 +1077,7 @@ export default function CompaniesPage() {
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white">
                   {MONTHS.map(month => (
                     <SelectItem key={month.value} value={month.value.toString()}>{month.label}</SelectItem>
                   ))}
@@ -1054,12 +1086,25 @@ export default function CompaniesPage() {
             </div>
             <div className="space-y-2">
               <Label>Folder Location</Label>
-              <p className="text-xs text-slate-500">The folder path where files will be stored (e.g., Work/11 November).</p>
-              <Input
+              <p className="text-xs text-slate-500">Select the folder where files will be stored.</p>
+              <Select
                 value={storageLocationForm.folderPath}
-                onChange={(e) => setStorageLocationForm(prev => ({ ...prev, folderPath: e.target.value }))}
-                placeholder="e.g., Work/11 November"
-              />
+                onValueChange={(value) => setStorageLocationForm(prev => ({ ...prev, folderPath: value }))}
+                disabled={!storageLocationForm.companyId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={storageLocationForm.companyId ? "Select folder..." : "Select company first"} />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  {folderOptions.length === 0 ? (
+                    <SelectItem value="__none__" disabled>No folders found</SelectItem>
+                  ) : (
+                    folderOptions.map(folder => (
+                      <SelectItem key={folder.id} value={folder.path}>{folder.path}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
             
             {/* Preview */}
