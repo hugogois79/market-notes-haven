@@ -248,6 +248,8 @@ export default function CompanyDetailPage() {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+  const [renameFolderName, setRenameFolderName] = useState("");
   const [isDropUploading, setIsDropUploading] = useState(false);
   const [dropUploadProgress, setDropUploadProgress] = useState<{ current: number; total: number } | null>(null);
   const [columns, setColumns] = useState<ColumnConfig[]>(() => {
@@ -1993,6 +1995,13 @@ export default function CompanyDetailPage() {
                               <ChevronRight className="h-4 w-4 mr-2" />
                               Open
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setRenamingFolderId(folder.id);
+                              setRenameFolderName(folder.name);
+                            }}>
+                              <Edit3 className="h-4 w-4 mr-2" />
+                              Rename
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => toggleFavorite(folder.id)}>
                               <Star className={cn("h-4 w-4 mr-2", favoriteFolders.has(folder.id) && "fill-amber-400 text-amber-400")} />
                               {favoriteFolders.has(folder.id) ? "Remove from Favorites" : "Add to Favorites"}
@@ -2636,6 +2645,55 @@ export default function CompanyDetailPage() {
               disabled={!newFolderName.trim() || createFolderMutation.isPending}
             >
               Create Folder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Folder Dialog */}
+      <Dialog open={!!renamingFolderId} onOpenChange={(open) => !open && setRenamingFolderId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Folder</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="renameFolderName">Folder Name</Label>
+            <Input
+              id="renameFolderName"
+              value={renameFolderName}
+              onChange={(e) => setRenameFolderName(e.target.value)}
+              placeholder="Enter new folder name..."
+              className="mt-2"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && renameFolderName.trim() && renamingFolderId) {
+                  updateFolderFieldMutation.mutate({
+                    folderId: renamingFolderId,
+                    field: "name",
+                    value: renameFolderName.trim()
+                  });
+                  setRenamingFolderId(null);
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenamingFolderId(null)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                if (renamingFolderId && renameFolderName.trim()) {
+                  updateFolderFieldMutation.mutate({
+                    folderId: renamingFolderId,
+                    field: "name",
+                    value: renameFolderName.trim()
+                  });
+                  setRenamingFolderId(null);
+                }
+              }}
+              disabled={!renameFolderName.trim() || updateFolderFieldMutation.isPending}
+            >
+              Rename
             </Button>
           </DialogFooter>
         </DialogContent>
