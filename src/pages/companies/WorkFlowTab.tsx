@@ -142,6 +142,13 @@ const WORKFLOW_COLUMNS_KEY = "workflow-columns";
 const WORKFLOW_CUSTOM_COLUMNS_KEY = "workflow-custom-columns";
 const WORKFLOW_CUSTOM_DATA_KEY = "workflow-custom-data";
 const WORKFLOW_SORT_KEY = "workflow-sort";
+const TABLE_RELATIONS_KEY = "work-table-relations";
+
+interface TableRelationsConfig {
+  defaultCompanyId: string | null;
+  autoCreateTransaction: boolean;
+  linkWorkflowToFinance: boolean;
+}
 
 interface SortConfig {
   column: string;
@@ -348,23 +355,39 @@ export default function WorkFlowTab() {
   // Mutation to create transaction with project for unlinked files
   const createTransactionForFileMutation = useMutation({
     mutationFn: async ({ fileUrl, projectId }: { fileUrl: string; projectId: string }) => {
+      // Read table relations settings
+      const settingsStr = localStorage.getItem(TABLE_RELATIONS_KEY);
+      const settings: TableRelationsConfig = settingsStr 
+        ? JSON.parse(settingsStr) 
+        : { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
+      
+      // If auto-create transaction is disabled, just skip silently
+      if (!settings.autoCreateTransaction) {
+        return;
+      }
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get a default company for the transaction
-      const { data: companies } = await supabase
-        .from("companies")
-        .select("id")
-        .limit(1);
+      // Use default company from settings, or fall back to first available
+      let companyId = settings.defaultCompanyId;
+      
+      if (!companyId) {
+        const { data: companies } = await supabase
+          .from("companies")
+          .select("id")
+          .limit(1);
 
-      if (!companies || companies.length === 0) {
-        throw new Error("No company found");
+        if (!companies || companies.length === 0) {
+          throw new Error("No company found. Please configure a default company in Settings.");
+        }
+        companyId = companies[0].id;
       }
 
       const transactionData = {
         invoice_file_url: fileUrl,
         project_id: projectId,
-        company_id: companies[0].id,
+        company_id: companyId,
         created_by: user.id,
         type: 'expense' as const,
         category: 'other' as const,
