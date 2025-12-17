@@ -1356,8 +1356,16 @@ export default function WorkFlowTab() {
         </table>
         
         {/* Footer */}
-        <div className="px-3 py-2 text-xs text-muted-foreground border-t border-slate-200 bg-slate-50">
-          {filteredFiles?.length || 0} file{(filteredFiles?.length || 0) !== 1 ? 's' : ''}
+        <div className="px-3 py-2 text-xs text-muted-foreground border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+          <span>{filteredFiles?.length || 0} file{(filteredFiles?.length || 0) !== 1 ? 's' : ''}</span>
+          <span className="font-medium text-foreground">
+            Total: {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(
+              filteredFiles?.reduce((sum, file) => {
+                const value = transactionsByFileUrl?.[file.file_url]?.value || 0;
+                return sum + value;
+              }, 0) || 0
+            )}
+          </span>
         </div>
       </div>
 
