@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Edit, Plus, Trash2, FolderKanban, Search } from "lucide-react";
+import { Edit, Plus, Trash2, FolderKanban, Search, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -67,6 +67,28 @@ export default function ExpenseProjectManagement() {
       
       if (error) throw error;
       return data as ExpenseProject[];
+    },
+  });
+
+  // Fetch notes count per project
+  const { data: notesCounts } = useQuery({
+    queryKey: ["notes-count-by-project"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("notes")
+        .select("project_id")
+        .not("project_id", "is", null);
+      
+      if (error) throw error;
+      
+      // Count notes per project
+      const counts: Record<string, number> = {};
+      data?.forEach((note) => {
+        if (note.project_id) {
+          counts[note.project_id] = (counts[note.project_id] || 0) + 1;
+        }
+      });
+      return counts;
     },
   });
 
@@ -291,12 +313,20 @@ export default function ExpenseProjectManagement() {
                 <p className="text-sm text-muted-foreground line-clamp-2">
                   {project.description || `Gerir despesas do projeto ${project.name}`}
                 </p>
-                {project.start_date && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Início: {formatDate(project.start_date)}
-                    {project.end_date && ` • Fim: ${formatDate(project.end_date)}`}
-                  </p>
-                )}
+                <div className="flex items-center gap-4 mt-2">
+                  {project.start_date && (
+                    <p className="text-xs text-muted-foreground">
+                      Início: {formatDate(project.start_date)}
+                      {project.end_date && ` • Fim: ${formatDate(project.end_date)}`}
+                    </p>
+                  )}
+                  {(notesCounts?.[project.id] ?? 0) > 0 && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <FileText className="h-3 w-3" />
+                      <span>{notesCounts[project.id]} {notesCounts[project.id] === 1 ? 'nota' : 'notas'}</span>
+                    </div>
+                  )}
+                </div>
               </CardContent>
               <CardFooter className="flex justify-between border-t pt-4 pb-2">
                 <Button 
