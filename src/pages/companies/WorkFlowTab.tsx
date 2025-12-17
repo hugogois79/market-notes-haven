@@ -345,6 +345,52 @@ export default function WorkFlowTab() {
     },
   });
 
+  // Mutation to create transaction with project for unlinked files
+  const createTransactionForFileMutation = useMutation({
+    mutationFn: async ({ fileUrl, projectId }: { fileUrl: string; projectId: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Get a default company for the transaction
+      const { data: companies } = await supabase
+        .from("companies")
+        .select("id")
+        .limit(1);
+
+      if (!companies || companies.length === 0) {
+        throw new Error("No company found");
+      }
+
+      const transactionData = {
+        invoice_file_url: fileUrl,
+        project_id: projectId,
+        company_id: companies[0].id,
+        created_by: user.id,
+        type: 'expense' as const,
+        category: 'other' as const,
+        payment_method: 'transfer' as const,
+        date: new Date().toISOString().split('T')[0],
+        description: 'Workflow document',
+        entity_name: 'Unknown',
+        amount_net: 0,
+        total_amount: 0,
+      };
+
+      const { error } = await supabase
+        .from("financial_transactions")
+        .insert(transactionData as any);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workflow-linked-transactions"] });
+      toast.success("Project assigned");
+    },
+    onError: (error) => {
+      toast.error("Failed to assign project: " + error.message);
+    },
+  });
+
   // Upload files with progress tracking
   const uploadFiles = async (files: FileList | File[]) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -1241,6 +1287,7 @@ export default function WorkFlowTab() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-white z-50">
                             <DropdownMenuItem 
+                              className="flex justify-center"
                               onClick={() => updateTransactionMutation.mutate({
                                 transactionId: transactionsByFileUrl[file.file_url].transactionId,
                                 updates: { project_id: null }
@@ -1251,6 +1298,7 @@ export default function WorkFlowTab() {
                             {allProjects?.map((project) => (
                               <DropdownMenuItem 
                                 key={project.id}
+                                className="flex justify-center"
                                 onClick={() => updateTransactionMutation.mutate({
                                   transactionId: transactionsByFileUrl[file.file_url].transactionId,
                                   updates: { project_id: project.id }
@@ -1262,7 +1310,27 @@ export default function WorkFlowTab() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       ) : (
-                        <span className="text-slate-400 text-xs">—</span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="text-left text-xs text-slate-400 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer w-full truncate max-w-[120px]">
+                              —
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-white z-50">
+                            {allProjects?.map((project) => (
+                              <DropdownMenuItem 
+                                key={project.id}
+                                className="flex justify-center"
+                                onClick={() => createTransactionForFileMutation.mutate({
+                                  fileUrl: file.file_url,
+                                  projectId: project.id
+                                })}
+                              >
+                                {project.name}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                     </td>
                   )}
