@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Search,
   PlusCircle,
@@ -15,6 +16,9 @@ import {
   FolderOpen,
   ChevronDown,
   Loader,
+  FileText,
+  Folder,
+  Tags as TagsIcon,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import NoteCard from "@/components/NoteCard";
@@ -49,9 +53,14 @@ import {
 } from "@/components/ui/select";
 import MetadataSection from "@/components/RichTextEditor/MetadataSection";
 
+// Import Categories and Tags content
+import CategoriesContent from "@/components/notes/CategoriesContent";
+import TagsContent from "@/components/notes/TagsContent";
+
 const Notes = () => {
   const navigate = useNavigate();
   const { notes: contextNotes, isLoading: isLoadingContextNotes, refetch } = useNotes();
+  const [activeMainTab, setActiveMainTab] = useState("notes");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -229,6 +238,24 @@ const Notes = () => {
           New Note
         </Button>
       </div>
+
+      <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="notes" className="flex items-center gap-2">
+            <FileText size={16} />
+            Notes
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="flex items-center gap-2">
+            <Folder size={16} />
+            Categories
+          </TabsTrigger>
+          <TabsTrigger value="tags" className="flex items-center gap-2">
+            <TagsIcon size={16} />
+            Tags
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="notes">
 
       <div className="flex flex-wrap gap-2 mb-4">
         <DropdownMenu>
@@ -601,6 +628,16 @@ const Notes = () => {
           </div>
         )}
       </div>
+        </TabsContent>
+
+        <TabsContent value="categories">
+          <CategoriesContent />
+        </TabsContent>
+
+        <TabsContent value="tags">
+          <TagsContent />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
