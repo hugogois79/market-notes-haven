@@ -2,10 +2,8 @@ import { Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
   FileText, 
-  Tags, 
   TrendingUp, 
   Coins,
-  Folder,
   Banknote,
   User,
   Kanban,
@@ -88,18 +86,6 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       title: "All Notes",
       icon: <FileText size={20} />,
       path: "/notes",
-      workerAllowed: false,
-    },
-    {
-      title: "Categories",
-      icon: <Folder size={20} />,
-      path: "/categories",
-      workerAllowed: false,
-    },
-    {
-      title: "Tags",
-      icon: <Tags size={20} />,
-      path: "/tags",
       workerAllowed: false,
     },
     {
