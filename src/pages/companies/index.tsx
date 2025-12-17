@@ -426,6 +426,13 @@ export default function CompaniesPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="bg-transparent border-b border-slate-200 rounded-none p-0 h-auto w-full justify-start">
           <TabsTrigger 
+            value="workflow" 
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:shadow-none px-4 pb-2"
+          >
+            <ListTodo className="h-4 w-4 mr-2" />
+            WorkFlow
+          </TabsTrigger>
+          <TabsTrigger 
             value="list" 
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:shadow-none px-4 pb-2"
           >
@@ -438,13 +445,6 @@ export default function CompaniesPage() {
           >
             <Settings className="h-4 w-4 mr-2" />
             Settings
-          </TabsTrigger>
-          <TabsTrigger 
-            value="workflow" 
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:shadow-none px-4 pb-2"
-          >
-            <ListTodo className="h-4 w-4 mr-2" />
-            WorkFlow
           </TabsTrigger>
         </TabsList>
 
