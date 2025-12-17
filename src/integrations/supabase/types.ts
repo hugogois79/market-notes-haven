@@ -3769,6 +3769,57 @@ export type Database = {
         }
         Relationships: []
       }
+      workflow_storage_locations: {
+        Row: {
+          company_id: string
+          created_at: string
+          folder_id: string | null
+          folder_path: string | null
+          id: string
+          month: number
+          updated_at: string
+          user_id: string | null
+          year: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          folder_id?: string | null
+          folder_path?: string | null
+          id?: string
+          month: number
+          updated_at?: string
+          user_id?: string | null
+          year: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          folder_id?: string | null
+          folder_path?: string | null
+          id?: string
+          month?: number
+          updated_at?: string
+          user_id?: string | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_storage_locations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_storage_locations_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "company_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       tag_usage_counts: {
