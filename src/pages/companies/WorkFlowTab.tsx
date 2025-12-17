@@ -765,23 +765,34 @@ export default function WorkFlowTab() {
         }
       }
 
-      // 3. Update workflow file status to Completed
-      const { error: updateError } = await supabase
+      // 3. Delete workflow file from storage and database
+      const url = new URL(file.file_url);
+      const pathParts = url.pathname.split('/storage/v1/object/public/');
+      
+      if (pathParts.length > 1) {
+        const [bucket, ...fileParts] = pathParts[1].split('/');
+        const filePath = fileParts.join('/');
+        
+        // Delete from storage
+        await supabase.storage
+          .from(bucket)
+          .remove([filePath]);
+      }
+
+      // Delete workflow file record
+      const { error: deleteError } = await supabase
         .from("workflow_files")
-        .update({ 
-          status: 'Completed',
-          completed_at: new Date().toISOString()
-        })
+        .delete()
         .eq("id", file.id);
       
-      if (updateError) throw updateError;
+      if (deleteError) throw deleteError;
 
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
       queryClient.invalidateQueries({ queryKey: ["workflow-linked-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["company-documents"] });
 
-      toast.success("File marked as completed!");
+      toast.success("Ficheiro movido para documentos da empresa!");
     } catch (error: any) {
       console.error("Error completing file:", error);
       toast.error("Failed to complete file: " + error.message);
