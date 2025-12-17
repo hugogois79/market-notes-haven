@@ -199,22 +199,9 @@ export default function WorkFlowTab() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
-  // Column state
-  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
-    const saved = localStorage.getItem(WORKFLOW_COLUMNS_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return DEFAULT_COLUMNS.map(def => {
-          const savedCol = parsed.find((p: ColumnConfig) => p.id === def.id);
-          return savedCol ? { ...def, visible: savedCol.visible, options: savedCol.options || def.options } : def;
-        });
-      } catch {
-        return DEFAULT_COLUMNS;
-      }
-    }
-    return DEFAULT_COLUMNS;
-  });
+  // Column state - initialize with defaults, will be updated from Supabase
+  const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
+  const [columnsInitialized, setColumnsInitialized] = useState(false);
 
   const [customColumns, setCustomColumns] = useState<ColumnConfig[]>(() => {
     const saved = localStorage.getItem(WORKFLOW_CUSTOM_COLUMNS_KEY);
@@ -264,10 +251,80 @@ export default function WorkFlowTab() {
   const [editColumnDialogOpen, setEditColumnDialogOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<ColumnConfig | null>(null);
 
-  // Save columns to localStorage
+  // Fetch column config from Supabase
+  const { data: columnConfig } = useQuery({
+    queryKey: ["workflow-column-config"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from("workflow_column_config")
+        .select("*")
+        .eq("user_id", user.id);
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Apply column config from Supabase when loaded
   useEffect(() => {
-    localStorage.setItem(WORKFLOW_COLUMNS_KEY, JSON.stringify(columns));
-  }, [columns]);
+    if (columnConfig && !columnsInitialized) {
+      setColumns(prevColumns => {
+        return prevColumns.map(col => {
+          const savedConfig = columnConfig.find(c => c.column_id === col.id);
+          if (savedConfig && savedConfig.options) {
+            return { ...col, options: savedConfig.options as unknown as ColumnOption[] };
+          }
+          return col;
+        });
+      });
+      setColumnsInitialized(true);
+    }
+  }, [columnConfig, columnsInitialized]);
+
+  // Mutation to save column config to Supabase
+  const saveColumnConfigMutation = useMutation({
+    mutationFn: async ({ columnId, options }: { columnId: string; options: ColumnOption[] }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      
+      // Check if config exists
+      const { data: existing } = await supabase
+        .from("workflow_column_config")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("column_id", columnId)
+        .maybeSingle();
+      
+      if (existing) {
+        const { error } = await supabase
+          .from("workflow_column_config")
+          .update({
+            options: options as unknown as any,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("workflow_column_config")
+          .insert({
+            user_id: user.id,
+            column_id: columnId,
+            options: options as unknown as any,
+          });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workflow-column-config"] });
+    },
+    onError: (error) => {
+      toast.error("Failed to save column config: " + error.message);
+    },
+  });
 
   useEffect(() => {
     localStorage.setItem(WORKFLOW_CUSTOM_COLUMNS_KEY, JSON.stringify(customColumns));
@@ -1051,6 +1108,13 @@ export default function WorkFlowTab() {
     
     if (editingColumn.isBuiltIn) {
       setColumns(columns.map(c => c.id === editingColumn.id ? editingColumn : c));
+      // Save to Supabase for built-in columns (category, status)
+      if (editingColumn.options && editingColumn.options.length > 0) {
+        saveColumnConfigMutation.mutate({
+          columnId: editingColumn.id,
+          options: editingColumn.options,
+        });
+      }
     } else {
       setCustomColumns(customColumns.map(c => c.id === editingColumn.id ? editingColumn : c));
     }

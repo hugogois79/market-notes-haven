@@ -3721,6 +3721,33 @@ export type Database = {
           },
         ]
       }
+      workflow_column_config: {
+        Row: {
+          column_id: string
+          created_at: string
+          id: string
+          options: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          column_id: string
+          created_at?: string
+          id?: string
+          options?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          column_id?: string
+          created_at?: string
+          id?: string
+          options?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       workflow_files: {
         Row: {
           category: string | null
