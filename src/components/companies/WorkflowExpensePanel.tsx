@@ -206,6 +206,36 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
 
   // Filter bank accounts by payment method and company
   const paymentMethod = watch("payment_method");
+
+  const availablePaymentMethods = useMemo<Array<"bank_transfer" | "credit_card">>(() => {
+    const both: Array<"bank_transfer" | "credit_card"> = ["bank_transfer", "credit_card"];
+    if (!allBankAccounts || !selectedCompanyId) return both;
+
+    const companyAccounts = allBankAccounts.filter(
+      (ba) => ba.company_id === selectedCompanyId && ba.is_active
+    );
+    const hasBank = companyAccounts.some((ba) => ba.account_type === "bank_account");
+    const hasCard = companyAccounts.some((ba) => ba.account_type === "credit_card");
+
+    const methods: Array<"bank_transfer" | "credit_card"> = [];
+    if (hasBank) methods.push("bank_transfer");
+    if (hasCard) methods.push("credit_card");
+
+    return methods.length ? methods : both;
+  }, [allBankAccounts, selectedCompanyId]);
+
+  // Keep payment method aligned with what's available for the selected company
+  useEffect(() => {
+    if (!selectedCompanyId) return;
+    if (availablePaymentMethods.length === 1) {
+      setValue("payment_method", availablePaymentMethods[0]);
+      return;
+    }
+    if (paymentMethod && !availablePaymentMethods.includes(paymentMethod as any)) {
+      setValue("payment_method", availablePaymentMethods[0]);
+    }
+  }, [availablePaymentMethods, paymentMethod, selectedCompanyId, setValue]);
+
   const filteredBankAccounts = useMemo(() => {
     if (!allBankAccounts) return [];
     return allBankAccounts.filter((ba) => {
@@ -506,8 +536,12 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bank_transfer">Transferência</SelectItem>
-                  <SelectItem value="credit_card">Cartão Crédito</SelectItem>
+                  {availablePaymentMethods.includes("bank_transfer") && (
+                    <SelectItem value="bank_transfer">Transferência</SelectItem>
+                  )}
+                  {availablePaymentMethods.includes("credit_card") && (
+                    <SelectItem value="credit_card">Cartão Crédito</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
