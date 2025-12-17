@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Building2, Search, Edit, Trash2, Eye, Settings, ChevronDown, X } from "lucide-react";
+import { Plus, Building2, Search, Edit, Trash2, Eye, Settings, ChevronDown, X, ListTodo } from "lucide-react";
+import WorkFlowTab from "./WorkFlowTab";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import {
@@ -438,6 +439,13 @@ export default function CompaniesPage() {
             <Settings className="h-4 w-4 mr-2" />
             Settings
           </TabsTrigger>
+          <TabsTrigger 
+            value="workflow" 
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:shadow-none px-4 pb-2"
+          >
+            <ListTodo className="h-4 w-4 mr-2" />
+            WorkFlow
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="list" className="mt-6 space-y-4">
@@ -605,6 +613,10 @@ export default function CompaniesPage() {
               Add Column
             </Button>
           </div>
+        </TabsContent>
+
+        <TabsContent value="workflow" className="mt-6">
+          <WorkFlowTab />
         </TabsContent>
       </Tabs>
 

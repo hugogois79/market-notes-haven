@@ -3721,6 +3721,51 @@ export type Database = {
           },
         ]
       }
+      workflow_files: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          file_name: string
+          file_size: number | null
+          file_url: string
+          id: string
+          mime_type: string | null
+          notes: string | null
+          priority: string | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          file_name: string
+          file_size?: number | null
+          file_url: string
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          priority?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          file_name?: string
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          priority?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       tag_usage_counts: {
