@@ -132,7 +132,7 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       workerAllowed: false,
     },
     {
-      title: "Companies",
+      title: "Work",
       icon: <Building2 size={20} />,
       path: "/companies",
       workerAllowed: false,
