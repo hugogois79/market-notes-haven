@@ -94,7 +94,7 @@ export default function DocumentMetadataSheet({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["company-documents", companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company-documents-paginated", companyId] });
       toast.success("Document metadata updated");
       onOpenChange(false);
     },

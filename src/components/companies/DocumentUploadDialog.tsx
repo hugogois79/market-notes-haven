@@ -114,7 +114,7 @@ export default function DocumentUploadDialog({
       if (insertError) throw insertError;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["company-documents", companyId, folderId] });
+      queryClient.invalidateQueries({ queryKey: ["company-documents-paginated", companyId] });
       toast.success("Document uploaded successfully");
       resetForm();
       onOpenChange(false);
