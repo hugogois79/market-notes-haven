@@ -11,7 +11,8 @@ import {
   Activity,
   Users,
   TrendingUp,
-  MessageSquare
+  MessageSquare,
+  FolderKanban
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -31,7 +32,6 @@ const TaoNavigation: React.FC<TaoNavigationProps> = ({ activeTab, onTabChange })
         navigate('/tao/performance');
         break;
       case 'validators':
-        // When clicking Validators tab, navigate directly to the page with Kanban view
         navigate('/tao/validators');
         break;
       case 'validator-relationship-management':
@@ -43,8 +43,10 @@ const TaoNavigation: React.FC<TaoNavigationProps> = ({ activeTab, onTabChange })
       case 'follow-up-sequences':
         navigate('/tao/follow-up-sequences');
         break;
+      case 'projects':
+        navigate('/tao/projects');
+        break;
       case 'management':
-        // When clicking Management tab, navigate directly to the validators page with Kanban view
         navigate('/tao/validators');
         break;
       default:
@@ -83,6 +85,10 @@ const TaoNavigation: React.FC<TaoNavigationProps> = ({ activeTab, onTabChange })
           <TabsTrigger value="follow-up-sequences" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             Follow-Up Sequences
+          </TabsTrigger>
+          <TabsTrigger value="projects" className="flex items-center gap-2">
+            <FolderKanban className="h-4 w-4" />
+            Projects
           </TabsTrigger>
         </TabsList>
       </Tabs>

@@ -29,6 +29,7 @@ import TAOValidatorManagement from "@/pages/tao/validators"; // Add import for t
 import TAOValidatorRelationshipManagement from "@/pages/tao/validator-relationship-management";
 import InvestorOpportunitiesPage from "@/pages/tao/investor-opportunities";
 import FollowUpSequencesPage from "@/pages/tao/follow-up-sequences";
+import TAOProjects from "@/pages/tao/projects";
 import FinancialPage from "@/pages/financial";
 import CalendarPage from "@/pages/Calendar";
 import ExpensesIndex from "@/pages/expenses/index";
@@ -276,6 +277,7 @@ const AppRoutes = () => {
               path="follow-up-sequences"
               element={<FollowUpSequencesPage />}
             />
+            <Route path="projects" element={<TAOProjects />} />
           </Route>
           
           <Route path="*" element={<NotFound />} />
