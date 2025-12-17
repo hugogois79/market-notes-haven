@@ -1,18 +1,11 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, Search, Trash2, Download, FileText, CheckCircle, Clock, AlertCircle, X } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, MoreHorizontal, Edit3 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -20,6 +13,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 
@@ -34,6 +35,7 @@ interface WorkflowFile {
   priority: string;
   created_at: string;
   completed_at: string | null;
+  category?: string | null;
 }
 
 interface UploadProgress {
@@ -42,33 +44,74 @@ interface UploadProgress {
   status: 'uploading' | 'completed' | 'error';
 }
 
-const STATUS_OPTIONS = [
-  { label: "Pending", color: "#fef08a", icon: Clock },
-  { label: "In Progress", color: "#bae6fd", icon: AlertCircle },
-  { label: "Completed", color: "#bbf7d0", icon: CheckCircle },
+interface ColumnOption {
+  label: string;
+  color: string;
+}
+
+interface ColumnConfig {
+  id: string;
+  label: string;
+  visible: boolean;
+  required?: boolean;
+  dbField?: string;
+  options?: ColumnOption[];
+  isBuiltIn?: boolean;
+}
+
+// Fixed color palette (10 colors)
+const COLOR_PALETTE = [
+  "#22c55e", // green
+  "#3b82f6", // blue
+  "#8b5cf6", // purple
+  "#f59e0b", // amber
+  "#ef4444", // red
+  "#06b6d4", // cyan
+  "#ec4899", // pink
+  "#f97316", // orange
+  "#14b8a6", // teal
+  "#6b7280", // gray
 ];
 
-const PRIORITY_OPTIONS = [
-  { label: "Low", color: "#e5e7eb" },
-  { label: "Normal", color: "#bae6fd" },
-  { label: "High", color: "#fed7aa" },
-  { label: "Urgent", color: "#fecaca" },
+const DEFAULT_CATEGORY_OPTIONS: ColumnOption[] = [
+  { label: "Invoice", color: "#22c55e" },
+  { label: "Contract", color: "#3b82f6" },
+  { label: "Report", color: "#8b5cf6" },
+  { label: "Legal", color: "#ef4444" },
+  { label: "Other", color: "#6b7280" },
 ];
+
+const DEFAULT_STATUS_OPTIONS: ColumnOption[] = [
+  { label: "Pending", color: "#f59e0b" },
+  { label: "In Progress", color: "#3b82f6" },
+  { label: "Completed", color: "#22c55e" },
+  { label: "Archived", color: "#6b7280" },
+];
+
+const DEFAULT_COLUMNS: ColumnConfig[] = [
+  { id: "name", label: "File", visible: true, required: true },
+  { id: "date", label: "DATE", visible: true },
+  { id: "category", label: "Category", visible: true, dbField: "category", isBuiltIn: true, options: DEFAULT_CATEGORY_OPTIONS },
+  { id: "status", label: "Status", visible: true, dbField: "status", isBuiltIn: true, options: DEFAULT_STATUS_OPTIONS },
+  { id: "size", label: "Size", visible: true },
+];
+
+const WORKFLOW_COLUMNS_KEY = "workflow-columns";
+const WORKFLOW_CUSTOM_COLUMNS_KEY = "workflow-custom-columns";
+const WORKFLOW_CUSTOM_DATA_KEY = "workflow-custom-data";
 
 // Sanitize filename to remove special characters
 const sanitizeFileName = (fileName: string): string => {
-  // Get file extension
   const lastDot = fileName.lastIndexOf('.');
   const ext = lastDot !== -1 ? fileName.substring(lastDot) : '';
   const nameWithoutExt = lastDot !== -1 ? fileName.substring(0, lastDot) : fileName;
   
-  // Replace special characters with underscores, keep alphanumeric, dash, underscore
   const sanitized = nameWithoutExt
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
-    .replace(/[^a-zA-Z0-9-_]/g, '_') // Replace special chars with underscore
-    .replace(/_+/g, '_') // Replace multiple underscores with single
-    .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9-_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
   
   return sanitized + ext;
 };
@@ -78,8 +121,56 @@ export default function WorkFlowTab() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+
+  // Column state
+  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
+    const saved = localStorage.getItem(WORKFLOW_COLUMNS_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return DEFAULT_COLUMNS.map(def => {
+          const savedCol = parsed.find((p: ColumnConfig) => p.id === def.id);
+          return savedCol ? { ...def, visible: savedCol.visible, options: savedCol.options || def.options } : def;
+        });
+      } catch {
+        return DEFAULT_COLUMNS;
+      }
+    }
+    return DEFAULT_COLUMNS;
+  });
+
+  const [customColumns, setCustomColumns] = useState<ColumnConfig[]>(() => {
+    const saved = localStorage.getItem(WORKFLOW_CUSTOM_COLUMNS_KEY);
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [customData, setCustomData] = useState<Record<string, Record<string, string>>>(() => {
+    const saved = localStorage.getItem(WORKFLOW_CUSTOM_DATA_KEY);
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  // Column management dialogs
+  const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false);
+  const [newColumnName, setNewColumnName] = useState("");
+  const [newColumnOptions, setNewColumnOptions] = useState<ColumnOption[]>([]);
+  const [editColumnDialogOpen, setEditColumnDialogOpen] = useState(false);
+  const [editingColumn, setEditingColumn] = useState<ColumnConfig | null>(null);
+
+  // Save columns to localStorage
+  useEffect(() => {
+    localStorage.setItem(WORKFLOW_COLUMNS_KEY, JSON.stringify(columns));
+  }, [columns]);
+
+  useEffect(() => {
+    localStorage.setItem(WORKFLOW_CUSTOM_COLUMNS_KEY, JSON.stringify(customColumns));
+  }, [customColumns]);
+
+  useEffect(() => {
+    localStorage.setItem(WORKFLOW_CUSTOM_DATA_KEY, JSON.stringify(customData));
+  }, [customData]);
 
   // Fetch workflow files
   const { data: workflowFiles, isLoading } = useQuery({
@@ -122,7 +213,6 @@ export default function WorkFlowTab() {
       const storagePath = `${user.id}/${Date.now()}-${sanitizedName}`;
       
       try {
-        // Update progress to 30% (starting upload)
         setUploadProgress(prev => prev.map((p, idx) => 
           idx === i ? { ...p, progress: 30 } : p
         ));
@@ -133,7 +223,6 @@ export default function WorkFlowTab() {
         
         if (uploadError) throw uploadError;
 
-        // Update progress to 70% (file uploaded, saving to DB)
         setUploadProgress(prev => prev.map((p, idx) => 
           idx === i ? { ...p, progress: 70 } : p
         ));
@@ -146,17 +235,16 @@ export default function WorkFlowTab() {
           .from("workflow_files")
           .insert({
             user_id: user.id,
-            file_name: file.name, // Keep original name for display
+            file_name: file.name,
             file_url: publicUrl,
             file_size: file.size,
             mime_type: file.type,
-            status: "pending",
+            status: "Pending",
             priority: "normal",
           });
         
         if (insertError) throw insertError;
         
-        // Update progress to 100% (completed)
         setUploadProgress(prev => prev.map((p, idx) => 
           idx === i ? { ...p, progress: 100, status: 'completed' } : p
         ));
@@ -176,52 +264,18 @@ export default function WorkFlowTab() {
       toast.success(`Uploaded ${uploadedFiles.length} file(s)`);
     }
     
-    // Clear progress after 3 seconds
     setTimeout(() => {
       setUploadProgress([]);
       setIsUploading(false);
     }, 3000);
   };
 
-  // Upload mutation (kept for compatibility)
-  const uploadMutation = useMutation({
-    mutationFn: uploadFiles,
-    onError: (error) => {
-      toast.error("Failed to upload files");
-      console.error(error);
-      setIsUploading(false);
-      setUploadProgress([]);
-    },
-  });
-
-  // Update status mutation
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const updateData: any = { status };
-      if (status === "Completed") {
-        updateData.completed_at = new Date().toISOString();
-      } else {
-        updateData.completed_at = null;
-      }
-      
+  // Update field mutation
+  const updateFieldMutation = useMutation({
+    mutationFn: async ({ id, field, value }: { id: string; field: string; value: string }) => {
       const { error } = await supabase
         .from("workflow_files")
-        .update(updateData)
-        .eq("id", id);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
-    },
-  });
-
-  // Update priority mutation
-  const updatePriorityMutation = useMutation({
-    mutationFn: async ({ id, priority }: { id: string; priority: string }) => {
-      const { error } = await supabase
-        .from("workflow_files")
-        .update({ priority })
+        .update({ [field]: value })
         .eq("id", id);
       
       if (error) throw error;
@@ -314,14 +368,212 @@ export default function WorkFlowTab() {
     file.file_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getStatusOption = (status: string) => STATUS_OPTIONS.find(s => s.label.toLowerCase() === status?.toLowerCase()) || STATUS_OPTIONS[0];
-  const getPriorityOption = (priority: string) => PRIORITY_OPTIONS.find(p => p.label.toLowerCase() === priority?.toLowerCase()) || PRIORITY_OPTIONS[1];
-
   const formatFileSize = (bytes: number | null) => {
-    if (!bytes) return "-";
+    if (!bytes) return "—";
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const isColumnVisible = (id: string) => columns.find(c => c.id === id)?.visible ?? true;
+
+  const getColumnValue = (file: WorkflowFile, column: ColumnConfig) => {
+    if (column.isBuiltIn && column.dbField) {
+      return (file as any)[column.dbField] || null;
+    }
+    return customData[file.id]?.[column.id] || null;
+  };
+
+  const renderCellDropdown = (file: WorkflowFile, column: ColumnConfig) => {
+    const value = getColumnValue(file, column);
+    const options = column.options;
+    const option = options?.find(o => o.label === value);
+    
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="cursor-pointer hover:opacity-80 transition-opacity">
+            {value ? (
+              <span 
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style={{ 
+                  backgroundColor: option?.color ? `${option.color}20` : '#e5e7eb',
+                  color: option?.color || '#374151',
+                  borderColor: option?.color ? `${option.color}40` : '#d1d5db',
+                  borderWidth: '1px'
+                }}
+              >
+                {value}
+              </span>
+            ) : (
+              <span className="text-slate-400 text-xs">—</span>
+            )}
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {options?.map((opt) => (
+            <DropdownMenuItem
+              key={opt.label}
+              onClick={() => {
+                const filesToUpdate = selectedFiles.has(file.id) && selectedFiles.size > 1
+                  ? Array.from(selectedFiles)
+                  : [file.id];
+                
+                if (column.isBuiltIn && column.dbField) {
+                  filesToUpdate.forEach(fileId => {
+                    updateFieldMutation.mutate({ id: fileId, field: column.dbField!, value: opt.label });
+                  });
+                } else {
+                  setCustomData(prev => {
+                    const updated = { ...prev };
+                    filesToUpdate.forEach(fileId => {
+                      updated[fileId] = { ...updated[fileId], [column.id]: opt.label };
+                    });
+                    return updated;
+                  });
+                }
+              }}
+            >
+              <span 
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style={{ 
+                  backgroundColor: `${opt.color}20`,
+                  color: opt.color,
+                }}
+              >
+                {opt.label}
+              </span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
+  const renderColumnHeader = (column: ColumnConfig, isCustom = false) => {
+    const canEdit = column.options && column.options.length > 0;
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center gap-1 hover:text-foreground transition-colors text-left w-full">
+            {column.label}
+            <ChevronDown className="h-3 w-3" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {canEdit && (
+            <DropdownMenuItem onClick={() => openEditColumnDialog(column)}>
+              <Edit3 className="h-4 w-4 mr-2" />
+              Edit Column
+            </DropdownMenuItem>
+          )}
+          {isCustom && (
+            <DropdownMenuItem 
+              className="text-destructive"
+              onClick={() => deleteColumn(column.id)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Column
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
+  // Column management functions
+  const addNewColumn = () => {
+    if (!newColumnName.trim()) return;
+    
+    const newCol: ColumnConfig = {
+      id: `custom-${Date.now()}`,
+      label: newColumnName.trim(),
+      visible: true,
+      options: newColumnOptions.length > 0 ? newColumnOptions : [{ label: "Option 1", color: COLOR_PALETTE[0] }],
+    };
+    
+    setCustomColumns([...customColumns, newCol]);
+    setNewColumnName("");
+    setNewColumnOptions([]);
+    setAddColumnDialogOpen(false);
+    toast.success("Column added");
+  };
+
+  const deleteColumn = (columnId: string) => {
+    if (confirm("Delete this column?")) {
+      setCustomColumns(customColumns.filter(c => c.id !== columnId));
+      toast.success("Column deleted");
+    }
+  };
+
+  const openEditColumnDialog = (column: ColumnConfig) => {
+    setEditingColumn({ ...column, options: column.options ? [...column.options] : [] });
+    setEditColumnDialogOpen(true);
+  };
+
+  const saveColumnEdits = () => {
+    if (!editingColumn) return;
+    
+    if (editingColumn.isBuiltIn) {
+      setColumns(columns.map(c => c.id === editingColumn.id ? editingColumn : c));
+    } else {
+      setCustomColumns(customColumns.map(c => c.id === editingColumn.id ? editingColumn : c));
+    }
+    
+    setEditColumnDialogOpen(false);
+    setEditingColumn(null);
+    toast.success("Column updated");
+  };
+
+  const addOption = () => {
+    if (editingColumn) {
+      const newOptions = [...(editingColumn.options || []), { 
+        label: `Option ${(editingColumn.options?.length || 0) + 1}`, 
+        color: COLOR_PALETTE[(editingColumn.options?.length || 0) % COLOR_PALETTE.length] 
+      }];
+      setEditingColumn({ ...editingColumn, options: newOptions });
+    }
+  };
+
+  const removeOption = (index: number) => {
+    if (editingColumn?.options) {
+      const newOptions = editingColumn.options.filter((_, i) => i !== index);
+      setEditingColumn({ ...editingColumn, options: newOptions });
+    }
+  };
+
+  const updateOptionColor = (index: number, color: string) => {
+    if (editingColumn?.options) {
+      const newOptions = [...editingColumn.options];
+      newOptions[index] = { ...newOptions[index], color };
+      setEditingColumn({ ...editingColumn, options: newOptions });
+    }
+  };
+
+  const updateOptionLabel = (index: number, label: string) => {
+    if (editingColumn?.options) {
+      const newOptions = [...editingColumn.options];
+      newOptions[index] = { ...newOptions[index], label };
+      setEditingColumn({ ...editingColumn, options: newOptions });
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedFiles.size === filteredFiles?.length) {
+      setSelectedFiles(new Set());
+    } else {
+      setSelectedFiles(new Set(filteredFiles?.map(f => f.id) || []));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedFiles);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedFiles(newSelected);
   };
 
   return (
@@ -347,7 +599,7 @@ export default function WorkFlowTab() {
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search files..."
+            placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 w-64"
@@ -357,7 +609,7 @@ export default function WorkFlowTab() {
 
       {/* Files Table with Drag & Drop */}
       <div 
-        className={`border rounded-lg bg-white shadow-sm overflow-x-auto transition-colors ${
+        className={`border rounded-lg bg-white shadow-sm overflow-x-auto transition-colors relative ${
           isDragging ? "border-blue-500 border-2 bg-blue-50" : "border-slate-200"
         }`}
         onDragOver={handleDragOver}
@@ -372,143 +624,156 @@ export default function WorkFlowTab() {
             </div>
           </div>
         )}
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-slate-50 border-b border-slate-200">
-              <TableHead className="font-semibold text-slate-700">File Name</TableHead>
-              <TableHead className="font-semibold text-slate-700">Size</TableHead>
-              <TableHead className="font-semibold text-slate-700">Status</TableHead>
-              <TableHead className="font-semibold text-slate-700">Priority</TableHead>
-              <TableHead className="font-semibold text-slate-700">Added</TableHead>
-              <TableHead className="text-right font-semibold text-slate-700">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <table className="w-full">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="w-10 px-3 py-2.5">
+                <Checkbox 
+                  checked={selectedFiles.size > 0 && selectedFiles.size === filteredFiles?.length}
+                  onCheckedChange={toggleSelectAll}
+                />
+              </th>
+              <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider">
+                File
+              </th>
+              {isColumnVisible("date") && (
+                <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
+                  DATE
+                </th>
+              )}
+              {isColumnVisible("category") && (
+                <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
+                  {renderColumnHeader(columns.find(c => c.id === "category")!)}
+                </th>
+              )}
+              {isColumnVisible("status") && (
+                <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
+                  {renderColumnHeader(columns.find(c => c.id === "status")!)}
+                </th>
+              )}
+              {isColumnVisible("size") && (
+                <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-20">
+                  Size
+                </th>
+              )}
+              {/* Custom columns headers */}
+              {customColumns.map((col) => (
+                <th key={col.id} className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
+                  {renderColumnHeader(col, true)}
+                </th>
+              ))}
+              {/* Add column button */}
+              <th className="w-10 px-3 py-2.5">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6"
+                  onClick={() => setAddColumnDialogOpen(true)}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </th>
+              <th className="w-20 px-3 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+              <tr>
+                <td colSpan={10} className="text-center py-8 text-muted-foreground">
                   Loading files...
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ) : filteredFiles?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+              <tr>
+                <td colSpan={10} className="text-center py-12 text-muted-foreground">
                   <div className="flex flex-col items-center gap-2">
                     <Upload className="h-8 w-8 text-slate-300" />
                     <span>No files found. Drag & drop files here or click Upload.</span>
                   </div>
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ) : (
-              filteredFiles?.map((file) => {
-                const statusOpt = getStatusOption(file.status);
-                const priorityOpt = getPriorityOption(file.priority);
-                
-                return (
-                  <TableRow key={file.id} className="hover:bg-slate-50">
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-slate-400" />
-                        <span className="font-medium text-blue-600">{file.file_name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-slate-600">
+              filteredFiles?.map((file) => (
+                <tr key={file.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
+                  <td className="px-3 py-1.5">
+                    <Checkbox 
+                      checked={selectedFiles.has(file.id)}
+                      onCheckedChange={() => toggleSelect(file.id)}
+                    />
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-slate-400" />
+                      <span className="font-medium text-blue-600">{file.file_name}</span>
+                    </div>
+                  </td>
+                  {isColumnVisible("date") && (
+                    <td className="px-3 py-1.5 text-slate-600 text-sm">
+                      {format(new Date(file.created_at), "dd/MM/yyyy")}
+                    </td>
+                  )}
+                  {isColumnVisible("category") && (
+                    <td className="px-3 py-1.5 text-center">
+                      {renderCellDropdown(file, columns.find(c => c.id === "category")!)}
+                    </td>
+                  )}
+                  {isColumnVisible("status") && (
+                    <td className="px-3 py-1.5 text-center">
+                      {renderCellDropdown(file, columns.find(c => c.id === "status")!)}
+                    </td>
+                  )}
+                  {isColumnVisible("size") && (
+                    <td className="px-3 py-1.5 text-slate-600 text-sm">
                       {formatFileSize(file.file_size)}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Badge 
-                            className="cursor-pointer hover:opacity-80 text-slate-800"
-                            style={{ backgroundColor: statusOpt.color }}
-                          >
-                            {file.status || "Pending"}
-                          </Badge>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          {STATUS_OPTIONS.map((opt) => (
-                            <DropdownMenuItem
-                              key={opt.label}
-                              onClick={() => updateStatusMutation.mutate({ id: file.id, status: opt.label })}
-                            >
-                              <div 
-                                className="w-3 h-3 rounded mr-2"
-                                style={{ backgroundColor: opt.color }}
-                              />
-                              {opt.label}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Badge 
-                            className="cursor-pointer hover:opacity-80 text-slate-800"
-                            style={{ backgroundColor: priorityOpt.color }}
-                          >
-                            {file.priority || "Normal"}
-                          </Badge>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          {PRIORITY_OPTIONS.map((opt) => (
-                            <DropdownMenuItem
-                              key={opt.label}
-                              onClick={() => updatePriorityMutation.mutate({ id: file.id, priority: opt.label })}
-                            >
-                              <div 
-                                className="w-3 h-3 rounded mr-2"
-                                style={{ backgroundColor: opt.color }}
-                              />
-                              {opt.label}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                    <TableCell className="text-slate-600">
-                      {format(new Date(file.created_at), "dd/MM/yyyy HH:mm")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-slate-600 hover:text-blue-600"
-                          onClick={() => handleDownload(file)}
-                          title="Download"
-                        >
-                          <Download className="h-4 w-4" />
+                    </td>
+                  )}
+                  {/* Custom columns */}
+                  {customColumns.map((col) => (
+                    <td key={col.id} className="px-3 py-1.5 text-center">
+                      {renderCellDropdown(file, col)}
+                    </td>
+                  ))}
+                  {/* Empty cell for add column button */}
+                  <td className="px-3 py-1.5"></td>
+                  <td className="px-3 py-1.5">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-slate-600 hover:text-destructive"
-                          onClick={() => {
-                            if (confirm("Remove this file from workflow?")) {
-                              deleteMutation.mutate(file.id);
-                            }
-                          }}
-                          title="Delete"
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleDownload(file)}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="text-destructive"
+                          onClick={() => deleteMutation.mutate(file.id)}
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
+              ))
             )}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
+        
+        {/* Footer */}
+        <div className="px-3 py-2 text-xs text-muted-foreground border-t border-slate-200 bg-slate-50">
+          {filteredFiles?.length || 0} file{(filteredFiles?.length || 0) !== 1 ? 's' : ''}
+        </div>
       </div>
 
       {/* Upload Progress Panel */}
       {uploadProgress.length > 0 && (
-        <div className="fixed bottom-4 right-4 w-80 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
-          <div className="flex items-center justify-between px-4 py-2 border-b border-slate-200 bg-slate-50 rounded-t-lg">
-            <span className="font-medium text-sm text-slate-700">Upload Progress</span>
+        <div className="fixed bottom-4 right-4 w-80 bg-white rounded-lg shadow-lg border p-4 z-50">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-medium text-sm">Uploading Files</h4>
             <Button
               variant="ghost"
               size="icon"
@@ -518,24 +783,24 @@ export default function WorkFlowTab() {
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <div className="p-3 space-y-3 max-h-60 overflow-y-auto">
-            {uploadProgress.map((item, idx) => (
-              <div key={idx} className="space-y-1">
+          <div className="space-y-3 max-h-48 overflow-y-auto">
+            {uploadProgress.map((item, i) => (
+              <div key={i} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="truncate max-w-[200px] text-slate-600" title={item.fileName}>
-                    {item.fileName}
-                  </span>
-                  <span className={`font-medium ${
+                  <span className="truncate max-w-[180px]">{item.fileName}</span>
+                  <span className={
                     item.status === 'completed' ? 'text-green-600' : 
-                    item.status === 'error' ? 'text-red-600' : 'text-blue-600'
-                  }`}>
+                    item.status === 'error' ? 'text-red-600' : 
+                    'text-blue-600'
+                  }>
                     {item.status === 'completed' ? '✓' : 
-                     item.status === 'error' ? 'Error' : `${item.progress}%`}
+                     item.status === 'error' ? '✗' : 
+                     `${item.progress}%`}
                   </span>
                 </div>
                 <Progress 
                   value={item.progress} 
-                  className={`h-1.5 ${
+                  className={`h-1 ${
                     item.status === 'completed' ? '[&>div]:bg-green-500' : 
                     item.status === 'error' ? '[&>div]:bg-red-500' : ''
                   }`}
@@ -545,6 +810,170 @@ export default function WorkFlowTab() {
           </div>
         </div>
       )}
+
+      {/* Add Column Dialog */}
+      <Dialog open={addColumnDialogOpen} onOpenChange={setAddColumnDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Custom Column</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div>
+              <Label htmlFor="columnName">Column Name</Label>
+              <Input
+                id="columnName"
+                value={newColumnName}
+                onChange={(e) => setNewColumnName(e.target.value)}
+                placeholder="Enter column name..."
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label>Options</Label>
+              <div className="space-y-2 mt-2">
+                {newColumnOptions.map((opt, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="h-8 w-8 rounded border cursor-pointer flex-shrink-0"
+                          style={{ backgroundColor: opt.color }}
+                        />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="p-2">
+                        <div className="grid grid-cols-5 gap-1">
+                          {COLOR_PALETTE.map((color) => (
+                            <button
+                              key={color}
+                              className={`h-6 w-6 rounded border-2 ${opt.color === color ? 'border-foreground' : 'border-transparent'}`}
+                              style={{ backgroundColor: color }}
+                              onClick={() => {
+                                const updated = [...newColumnOptions];
+                                updated[i] = { ...updated[i], color };
+                                setNewColumnOptions(updated);
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Input
+                      value={opt.label}
+                      onChange={(e) => {
+                        const updated = [...newColumnOptions];
+                        updated[i] = { ...updated[i], label: e.target.value };
+                        setNewColumnOptions(updated);
+                      }}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setNewColumnOptions(newColumnOptions.filter((_, idx) => idx !== i))}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setNewColumnOptions([...newColumnOptions, { label: `Option ${newColumnOptions.length + 1}`, color: COLOR_PALETTE[newColumnOptions.length % COLOR_PALETTE.length] }])}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Option
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddColumnDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={addNewColumn} disabled={!newColumnName.trim()}>
+              Add Column
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Column Dialog */}
+      <Dialog open={editColumnDialogOpen} onOpenChange={setEditColumnDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Column: {editingColumn?.label}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            {!editingColumn?.isBuiltIn && (
+              <div>
+                <Label htmlFor="editColumnName">Column Name</Label>
+                <Input
+                  id="editColumnName"
+                  value={editingColumn?.label || ""}
+                  onChange={(e) => setEditingColumn(prev => prev ? { ...prev, label: e.target.value } : null)}
+                  className="mt-2"
+                />
+              </div>
+            )}
+            <div>
+              <Label>Options</Label>
+              <div className="space-y-2 mt-2 max-h-[300px] overflow-y-auto">
+                {editingColumn?.options?.map((opt, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="h-8 w-8 rounded border cursor-pointer flex-shrink-0"
+                          style={{ backgroundColor: opt.color }}
+                        />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="p-2">
+                        <div className="grid grid-cols-5 gap-1">
+                          {COLOR_PALETTE.map((color) => (
+                            <button
+                              key={color}
+                              className={`h-6 w-6 rounded border-2 ${opt.color === color ? 'border-foreground' : 'border-transparent'}`}
+                              style={{ backgroundColor: color }}
+                              onClick={() => updateOptionColor(i, color)}
+                            />
+                          ))}
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Input
+                      value={opt.label}
+                      onChange={(e) => updateOptionLabel(i, e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => removeOption(i)}
+                      disabled={(editingColumn?.options?.length || 0) <= 1}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={addOption}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Option
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditColumnDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveColumnEdits}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
