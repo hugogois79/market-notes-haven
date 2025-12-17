@@ -292,6 +292,13 @@ export default function TransactionDialog({
       // Upload new file if any
       if (newFiles.length > 0) {
         const file = newFiles[0];
+        
+        // Check file size (max 20MB)
+        const maxSize = 20 * 1024 * 1024;
+        if (file.size > maxSize) {
+          throw new Error(`Ficheiro demasiado grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Máximo: 20MB`);
+        }
+        
         // Sanitize and truncate filename to avoid issues
         const ext = file.name.split('.').pop() || 'pdf';
         let baseName = file.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9._-]/g, "_").replace(/undefined/gi, '');
@@ -301,10 +308,11 @@ export default function TransactionDialog({
         const filePath = `transactions/${fileName}`;
 
         const tryUpload = async (upsert: boolean) => {
-          const { error } = await supabase.storage
+          const { data, error } = await supabase.storage
             .from("attachments")
             .upload(filePath, file, { upsert, cacheControl: '3600' });
           if (error) throw error;
+          return data;
         };
 
         const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -321,14 +329,22 @@ export default function TransactionDialog({
             const isNetworkError =
               msg.includes("Failed to fetch") ||
               msg.includes("NetworkError") ||
-              msg.toLowerCase().includes("network");
+              msg.toLowerCase().includes("network") ||
+              msg.includes("timeout");
 
             if (!isNetworkError) throw e;
             
-            if (attempt < 2) await delay(1000 * (attempt + 1)); // Wait 1s, then 2s
+            console.warn(`Upload attempt ${attempt + 1} failed:`, msg);
+            if (attempt < 2) await delay(1500 * (attempt + 1)); // Wait 1.5s, then 3s
           }
         }
-        if (lastError) throw lastError;
+        if (lastError) {
+          const msg = String(lastError?.message || lastError);
+          if (msg.includes("Failed to fetch")) {
+            throw new Error("Erro de rede ao enviar ficheiro. Verifique a sua ligação e tente novamente.");
+          }
+          throw lastError;
+        }
 
         const { data: urlData } = supabase.storage
           .from("attachments")
