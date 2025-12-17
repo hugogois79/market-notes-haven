@@ -1354,20 +1354,33 @@ export default function WorkFlowTab() {
               ))
             )}
           </tbody>
+          <tfoot>
+            <tr className="border-t border-slate-200 bg-slate-50">
+              <td colSpan={2} className="px-3 py-2 text-xs text-muted-foreground">
+                {filteredFiles?.length || 0} file{(filteredFiles?.length || 0) !== 1 ? 's' : ''}
+              </td>
+              {isColumnVisible("type") && <td></td>}
+              {isColumnVisible("date") && <td></td>}
+              {isColumnVisible("category") && <td></td>}
+              {isColumnVisible("status") && <td></td>}
+              {isColumnVisible("size") && <td></td>}
+              {isColumnVisible("project") && <td></td>}
+              {isColumnVisible("value") && (
+                <td className="px-3 py-2 text-right text-xs font-semibold text-foreground">
+                  Total: {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(
+                    filteredFiles?.reduce((sum, file) => {
+                      const value = transactionsByFileUrl?.[file.file_url]?.value || 0;
+                      return sum + value;
+                    }, 0) || 0
+                  )}
+                </td>
+              )}
+              {customColumns.map((col) => <td key={col.id}></td>)}
+              <td></td>
+              <td></td>
+            </tr>
+          </tfoot>
         </table>
-        
-        {/* Footer */}
-        <div className="px-3 py-2 text-xs text-muted-foreground border-t border-slate-200 bg-slate-50 flex justify-between items-center">
-          <span>{filteredFiles?.length || 0} file{(filteredFiles?.length || 0) !== 1 ? 's' : ''}</span>
-          <span className="font-medium text-foreground">
-            Total: {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(
-              filteredFiles?.reduce((sum, file) => {
-                const value = transactionsByFileUrl?.[file.file_url]?.value || 0;
-                return sum + value;
-              }, 0) || 0
-            )}
-          </span>
-        </div>
       </div>
 
       {/* Upload Progress Panel */}
