@@ -412,7 +412,7 @@ export default function CompaniesPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-800">Companies</h1>
+          <h1 className="text-2xl font-semibold text-slate-800">Work</h1>
           <p className="text-slate-500 text-sm">Manage corporate entities, assets and recovery dossiers</p>
         </div>
         <Button onClick={() => setDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
