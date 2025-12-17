@@ -23,7 +23,7 @@ import {
 import { Card } from "@/components/ui/card";
 import NoteCard from "@/components/NoteCard";
 import { Note, Tag as TagType } from "@/types";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { fetchTags } from "@/services/tag";
 import { useNotes } from "@/contexts/NotesContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,12 +59,16 @@ import TagsContent from "@/components/notes/TagsContent";
 
 const Notes = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { notes: contextNotes, isLoading: isLoadingContextNotes, refetch } = useNotes();
   const [activeMainTab, setActiveMainTab] = useState("notes");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+  const [selectedProjects, setSelectedProjects] = useState<string[]>(() => {
+    const projectFromUrl = searchParams.get("project");
+    return projectFromUrl ? [projectFromUrl] : [];
+  });
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [tagInput, setTagInput] = useState("");
   const [filtersExpanded, setFiltersExpanded] = useState(false);
