@@ -583,10 +583,6 @@ const EditExpensePage = () => {
               <RadioGroupItem value="justificacao_cartao" id="justificacao" />
               <Label htmlFor="justificacao">Justificação de Cartão</Label>
             </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="transferencia_bancaria" id="transferencia_bancaria" />
-              <Label htmlFor="transferencia_bancaria">Transferência Bancária</Label>
-            </div>
           </RadioGroup>
 
           <div>
