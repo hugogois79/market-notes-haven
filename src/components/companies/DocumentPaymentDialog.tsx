@@ -20,12 +20,23 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
-import { Paperclip, X } from "lucide-react";
+import { Paperclip, X, ExternalLink } from "lucide-react";
 
 // Helper to remove file extension
 const removeExtension = (filename: string) => {
   const lastDot = filename.lastIndexOf('.');
   return lastDot > 0 ? filename.substring(0, lastDot) : filename;
+};
+
+// Helper to get filename from URL
+const getFilenameFromUrl = (url: string) => {
+  try {
+    const pathname = new URL(url).pathname;
+    const filename = pathname.split('/').pop() || 'documento';
+    return decodeURIComponent(filename);
+  } catch {
+    return 'documento anexado';
+  }
 };
 
 interface DocumentPaymentDialogProps {
@@ -45,12 +56,15 @@ export default function DocumentPaymentDialog({
 }: DocumentPaymentDialogProps) {
   const queryClient = useQueryClient();
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [existingFileUrl, setExistingFileUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  
+  const isEditing = !!existingTransaction;
   
   const { register, handleSubmit, reset, watch, setValue } = useForm({
     defaultValues: {
       payment_date: new Date().toISOString().split('T')[0],
-      amount: existingTransaction?.total_amount || '',
+      amount: '',
       bank_account_id: '',
       notes: '',
     }
@@ -76,12 +90,13 @@ export default function DocumentPaymentDialog({
   useEffect(() => {
     if (open) {
       reset({
-        payment_date: new Date().toISOString().split('T')[0],
-        amount: existingTransaction?.total_amount || '',
+        payment_date: existingTransaction?.date || new Date().toISOString().split('T')[0],
+        amount: existingTransaction?.total_amount?.toString() || '',
         bank_account_id: existingTransaction?.bank_account_id || '',
-        notes: '',
+        notes: existingTransaction?.notes || '',
       });
       setAttachmentFile(null);
+      setExistingFileUrl(existingTransaction?.invoice_file_url || null);
     }
   }, [open, existingTransaction, reset]);
 
@@ -95,7 +110,7 @@ export default function DocumentPaymentDialog({
       if (!userData.user) throw new Error("Utilizador não autenticado");
 
       // Upload attachment if provided
-      let invoiceFileUrl: string | null = null;
+      let invoiceFileUrl: string | null = existingFileUrl; // Keep existing by default
       if (attachmentFile) {
         setIsUploading(true);
         const fileExt = attachmentFile.name.split('.').pop();
@@ -129,20 +144,32 @@ export default function DocumentPaymentDialog({
         payment_method: bankAccount.account_type === 'credit_card' ? 'credit_card' as const : 'bank_transfer' as const,
         bank_account_id: data.bank_account_id,
         notes: data.notes || null,
-        created_by: userData.user.id,
         invoice_file_url: invoiceFileUrl,
       };
 
-      const { error } = await supabase
-        .from("financial_transactions")
-        .insert(transactionData);
-
-      if (error) throw error;
+      if (isEditing && existingTransaction?.id) {
+        // UPDATE existing transaction
+        const { error } = await supabase
+          .from("financial_transactions")
+          .update(transactionData)
+          .eq("id", existingTransaction.id);
+        if (error) throw error;
+      } else {
+        // INSERT new transaction
+        const { error } = await supabase
+          .from("financial_transactions")
+          .insert({
+            ...transactionData,
+            created_by: userData.user.id,
+          });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["financial-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["all-bank-accounts"] });
-      toast.success("Pagamento registado com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["workflow-transaction"] });
+      toast.success(isEditing ? "Pagamento atualizado com sucesso" : "Pagamento registado com sucesso");
       onOpenChange(false);
       reset();
     },
@@ -154,11 +181,15 @@ export default function DocumentPaymentDialog({
   const selectedBankAccountId = watch("bank_account_id");
   const selectedBankAccount = bankAccounts?.find(ba => ba.id === selectedBankAccountId);
 
+  const handleRemoveExistingFile = () => {
+    setExistingFileUrl(null);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Registar Pagamento</DialogTitle>
+          <DialogTitle>{isEditing ? "Editar Pagamento" : "Registar Pagamento"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
@@ -230,6 +261,31 @@ export default function DocumentPaymentDialog({
                   <X className="h-4 w-4" />
                 </Button>
               </div>
+            ) : existingFileUrl ? (
+              <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50 min-w-0">
+                <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-sm truncate flex-1 min-w-0">{getFilenameFromUrl(existingFileUrl)}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => window.open(existingFileUrl, '_blank')}
+                  title="Abrir ficheiro"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={handleRemoveExistingFile}
+                  title="Remover ficheiro"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             ) : (
               <div className="relative">
                 <Input
@@ -255,7 +311,13 @@ export default function DocumentPaymentDialog({
               Cancelar
             </Button>
             <Button type="submit" disabled={saveMutation.isPending || isUploading}>
-              {isUploading ? "A carregar..." : saveMutation.isPending ? "A guardar..." : "Registar Pagamento"}
+              {isUploading 
+                ? "A carregar..." 
+                : saveMutation.isPending 
+                  ? "A guardar..." 
+                  : isEditing 
+                    ? "Guardar Alterações" 
+                    : "Registar Pagamento"}
             </Button>
           </div>
         </form>
