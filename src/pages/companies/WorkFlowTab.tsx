@@ -640,10 +640,20 @@ export default function WorkFlowTab() {
 
   // Mark file as completed handler
   const handleMarkAsComplete = async (file: WorkflowFile) => {
-    // Get file date to find matching storage location
-    const fileDate = new Date(file.created_at);
-    const fileMonth = fileDate.getMonth() + 1; // 1-indexed
-    const fileYear = fileDate.getFullYear();
+    // First, check if there's an existing transaction for this file to get actual expense date
+    const { data: existingTransaction } = await supabase
+      .from("financial_transactions")
+      .select("date")
+      .eq("invoice_file_url", file.file_url)
+      .maybeSingle();
+
+    // Use transaction date if available, otherwise fall back to file upload date
+    const dateToUse = existingTransaction?.date 
+      ? new Date(existingTransaction.date) 
+      : new Date(file.created_at);
+    
+    const fileMonth = dateToUse.getMonth() + 1; // 1-indexed
+    const fileYear = dateToUse.getFullYear();
 
     // Read table relations settings
     const settingsStr = localStorage.getItem(TABLE_RELATIONS_KEY);
