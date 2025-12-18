@@ -115,6 +115,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "category", label: "Category", visible: true, dbField: "category", isBuiltIn: true, options: DEFAULT_CATEGORY_OPTIONS },
   { id: "status", label: "Status", visible: true, dbField: "status", isBuiltIn: true, options: DEFAULT_STATUS_OPTIONS },
   { id: "size", label: "Size", visible: true },
+  { id: "empresa", label: "Empresa", visible: true, isBuiltIn: true },
   { id: "project", label: "Project", visible: true, isBuiltIn: true },
   { id: "value", label: "Value", visible: true, isBuiltIn: true },
 ];
@@ -368,7 +369,12 @@ export default function WorkFlowTab() {
           invoice_file_url,
           total_amount,
           project_id,
+          company_id,
           expense_projects:project_id (
+            id,
+            name
+          ),
+          companies:company_id (
             id,
             name
           )
@@ -435,11 +441,13 @@ export default function WorkFlowTab() {
         transactionId: tx.id,
         projectId: tx.project_id,
         projectName: (tx.expense_projects as any)?.name || null,
+        companyId: tx.company_id,
+        companyName: (tx.companies as any)?.name || null,
         value: tx.total_amount,
       };
     }
     return acc;
-  }, {} as Record<string, { transactionId: string; projectId: string | null; projectName: string | null; value: number }>);
+  }, {} as Record<string, { transactionId: string; projectId: string | null; projectName: string | null; companyId: string | null; companyName: string | null; value: number }>);
 
   // State for inline editing
   const [editingCell, setEditingCell] = useState<{ fileUrl: string; field: 'project' | 'value' } | null>(null);
@@ -930,6 +938,10 @@ export default function WorkFlowTab() {
       case 'project':
         aValue = transactionsByFileUrl?.[a.file_url]?.projectName || '';
         bValue = transactionsByFileUrl?.[b.file_url]?.projectName || '';
+        break;
+      case 'empresa':
+        aValue = transactionsByFileUrl?.[a.file_url]?.companyName || '';
+        bValue = transactionsByFileUrl?.[b.file_url]?.companyName || '';
         break;
       case 'value':
         aValue = transactionsByFileUrl?.[a.file_url]?.value || 0;
@@ -1500,6 +1512,19 @@ export default function WorkFlowTab() {
                   </div>
                 </th>
               )}
+              {isColumnVisible("empresa") && (
+                <th 
+                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs w-32 cursor-pointer hover:bg-slate-100"
+                  onClick={() => handleSort('empresa')}
+                >
+                  <div className="flex items-center gap-1">
+                    Empresa
+                    {sortConfig.column === 'empresa' && (
+                      sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                    )}
+                  </div>
+                </th>
+              )}
               {isColumnVisible("project") && (
                 <th 
                   className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs w-32 cursor-pointer hover:bg-slate-100"
@@ -1619,6 +1644,13 @@ export default function WorkFlowTab() {
                       {isColumnVisible("size") && (
                         <td className="px-3 py-1.5 text-slate-600 text-xs">
                           {formatFileSize(file.file_size)}
+                        </td>
+                      )}
+                      {isColumnVisible("empresa") && (
+                        <td className="px-3 py-1.5">
+                          <span className="text-xs text-slate-600 truncate max-w-[120px] block">
+                            {transactionsByFileUrl?.[file.file_url]?.companyName || <span className="text-slate-400">—</span>}
+                          </span>
                         </td>
                       )}
                       {isColumnVisible("project") && (
