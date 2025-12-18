@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, ZoomIn, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -160,6 +160,10 @@ const WORKFLOW_CUSTOM_COLUMNS_KEY = "workflow-custom-columns";
 const WORKFLOW_CUSTOM_DATA_KEY = "workflow-custom-data";
 const WORKFLOW_SORT_KEY = "workflow-sort";
 const TABLE_RELATIONS_KEY = "work-table-relations";
+const WORKFLOW_ZOOM_KEY = "workflow-zoom";
+const WORKFLOW_DEFAULT_ZOOM_KEY = "workflow-default-zoom";
+
+const ZOOM_OPTIONS = [50, 75, 85, 100, 110, 125, 150];
 
 interface TableRelationsConfig {
   defaultCompanyId: string | null;
@@ -218,6 +222,19 @@ export default function WorkFlowTab() {
   const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
     const saved = localStorage.getItem(WORKFLOW_SORT_KEY);
     return saved ? JSON.parse(saved) : { column: 'date', direction: 'desc' };
+  });
+
+  // Zoom state - default to 100% or saved default
+  const [zoom, setZoom] = useState<number>(() => {
+    const savedZoom = localStorage.getItem(WORKFLOW_ZOOM_KEY);
+    if (savedZoom) return parseInt(savedZoom);
+    const savedDefault = localStorage.getItem(WORKFLOW_DEFAULT_ZOOM_KEY);
+    return savedDefault ? parseInt(savedDefault) : 100;
+  });
+
+  const [defaultZoom, setDefaultZoom] = useState<number>(() => {
+    const saved = localStorage.getItem(WORKFLOW_DEFAULT_ZOOM_KEY);
+    return saved ? parseInt(saved) : 100;
   });
 
   // Document preview state
@@ -338,6 +355,14 @@ export default function WorkFlowTab() {
   useEffect(() => {
     localStorage.setItem(WORKFLOW_SORT_KEY, JSON.stringify(sortConfig));
   }, [sortConfig]);
+
+  useEffect(() => {
+    localStorage.setItem(WORKFLOW_ZOOM_KEY, zoom.toString());
+  }, [zoom]);
+
+  useEffect(() => {
+    localStorage.setItem(WORKFLOW_DEFAULT_ZOOM_KEY, defaultZoom.toString());
+  }, [defaultZoom]);
 
   // Fetch workflow files
   const { data: workflowFiles, isLoading } = useQuery({
@@ -1339,6 +1364,38 @@ export default function WorkFlowTab() {
           )}
         </div>
 
+        {/* Zoom Control */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2 h-9">
+                <ZoomIn className="h-4 w-4" />
+                {zoom}%
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-popover">
+              {ZOOM_OPTIONS.map(z => (
+                <DropdownMenuItem 
+                  key={z} 
+                  onClick={() => setZoom(z)}
+                  className={zoom === z ? "bg-accent" : ""}
+                >
+                  {z}%
+                  {z === defaultZoom && <span className="ml-2 text-xs text-muted-foreground">(default)</span>}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuItem 
+                onClick={() => {
+                  setDefaultZoom(zoom);
+                  toast.success(`Default zoom set to ${zoom}%`);
+                }}
+                className="border-t mt-1 pt-1"
+              >
+                <Settings2 className="h-4 w-4 mr-2" />
+                Set {zoom}% as default
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -1367,7 +1424,7 @@ export default function WorkFlowTab() {
             </div>
           </div>
         )}
-        <table className="w-full">
+        <table className="w-full" style={{ fontSize: `${zoom}%` }}>
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
               <th className="w-10 px-3 py-2.5">
