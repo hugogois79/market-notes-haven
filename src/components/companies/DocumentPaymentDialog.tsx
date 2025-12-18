@@ -99,7 +99,8 @@ export default function DocumentPaymentDialog({
         notes: existingTransaction?.notes || '',
       });
       setAttachmentFile(null);
-      setExistingFileUrl(existingTransaction?.invoice_file_url || null);
+      // Don't pre-populate payment attachment - it's for uploading new payment receipts only
+      setExistingFileUrl(null);
     }
   }, [open, existingTransaction, reset]);
 
