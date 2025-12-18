@@ -2214,6 +2214,7 @@ export default function WorkFlowTab() {
           onOpenChange={setShowPaymentDialog}
           workflowFileId={previewFile.id}
           fileName={previewFile.file_name}
+          documentFileUrl={previewFile.file_url}
           existingTransaction={existingTransaction}
         />
       )}
