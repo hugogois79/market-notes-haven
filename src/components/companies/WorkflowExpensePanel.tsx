@@ -111,9 +111,23 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     },
   });
 
-  // Reset form when existingTransaction changes - wait for companies/categories to load first
+  // Fetch bank accounts (moved here so useEffect can depend on it)
+  const { data: allBankAccounts } = useQuery({
+    queryKey: ["bank-accounts-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bank_accounts")
+        .select("*, companies(name)")
+        .eq("is_active", true)
+        .order("company_id");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Reset form when existingTransaction changes - wait for all dropdown data to load first
   useEffect(() => {
-    if (existingTransaction && companies && expenseCategories) {
+    if (existingTransaction && companies && expenseCategories && allBankAccounts) {
       reset({
         date: existingTransaction.date || new Date().toISOString().split("T")[0],
         type: existingTransaction.type || "expense",
@@ -130,7 +144,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         notes: existingTransaction.notes || "",
       });
     }
-  }, [existingTransaction, reset, companies, expenseCategories]);
+  }, [existingTransaction, reset, companies, expenseCategories, allBankAccounts]);
 
   const [projectOpen, setProjectOpen] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
@@ -138,20 +152,6 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   const [supplierSearch, setSupplierSearch] = useState("");
 
   const selectedCompanyId = watch("company_id");
-
-  // Fetch bank accounts
-  const { data: allBankAccounts } = useQuery({
-    queryKey: ["bank-accounts-all"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bank_accounts")
-        .select("*, companies(name)")
-        .eq("is_active", true)
-        .order("company_id");
-      if (error) throw error;
-      return data;
-    },
-  });
 
   // Note: We no longer clear bank_account_id when company changes
   // because we allow cross-company payments (which auto-create loans)
