@@ -892,14 +892,22 @@ export default function WorkFlowTab() {
     // Column filter
     let matchesFilter = true;
     if (filterColumn && filterValues.length > 0) {
-      const col = columns.find(c => c.id === filterColumn);
-      if (col) {
-        const fileValue = col.isBuiltIn && col.dbField 
-          ? (file as any)[col.dbField] 
-          : customData[file.id]?.[filterColumn];
-        const isMatch = filterValues.includes(fileValue);
-        matchesFilter = filterMode === 'include' ? isMatch : !isMatch;
+      let fileValue: string | undefined;
+      
+      // Special handling for empresa filter (comes from linked transactions)
+      if (filterColumn === 'empresa') {
+        fileValue = transactionsByFileUrl?.[file.file_url]?.companyName || '';
+      } else {
+        const col = columns.find(c => c.id === filterColumn);
+        if (col) {
+          fileValue = col.isBuiltIn && col.dbField 
+            ? (file as any)[col.dbField] 
+            : customData[file.id]?.[filterColumn];
+        }
       }
+      
+      const isMatch = filterValues.includes(fileValue || '');
+      matchesFilter = filterMode === 'include' ? isMatch : !isMatch;
     }
     
     return matchesSearch && matchesFilter;
@@ -985,8 +993,24 @@ export default function WorkFlowTab() {
     toast.success(`Deleted ${selectedFiles.size} files`);
   };
 
+  // Get unique company names from transactions for empresa filter
+  const uniqueCompanyOptions = (): ColumnOption[] => {
+    if (!transactionsByFileUrl) return [];
+    const companyNames = new Set<string>();
+    Object.values(transactionsByFileUrl).forEach(tx => {
+      if (tx.companyName) companyNames.add(tx.companyName);
+    });
+    return Array.from(companyNames).map(name => ({ label: name, color: "#3b82f6" }));
+  };
+
   const getFilterableColumns = () => {
-    return columns.filter(c => c.options && c.options.length > 0);
+    const filterableCols = columns.filter(c => c.options && c.options.length > 0);
+    // Add empresa as a special filterable column with dynamic options
+    const empresaOptions = uniqueCompanyOptions();
+    if (empresaOptions.length > 0) {
+      filterableCols.push({ id: 'empresa', label: 'Empresa', visible: true, options: empresaOptions });
+    }
+    return filterableCols;
   };
 
   const formatFileSize = (bytes: number | null) => {
@@ -1290,7 +1314,7 @@ export default function WorkFlowTab() {
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2 h-9">
                 <Filter className="h-4 w-4" />
-                {filterColumn ? columns.find(c => c.id === filterColumn)?.label : "Filter"}
+                {filterColumn ? getFilterableColumns().find(c => c.id === filterColumn)?.label : "Filter"}
                 <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
@@ -1332,7 +1356,7 @@ export default function WorkFlowTab() {
                 <DropdownMenuItem onClick={() => setFilterValues([])}>
                   Clear selection
                 </DropdownMenuItem>
-                {columns.find(c => c.id === filterColumn)?.options?.map(opt => {
+                {getFilterableColumns().find(c => c.id === filterColumn)?.options?.map(opt => {
                   const isSelected = filterValues.includes(opt.label);
                   return (
                     <DropdownMenuItem 
