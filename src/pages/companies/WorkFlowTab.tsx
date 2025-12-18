@@ -199,7 +199,7 @@ export default function WorkFlowTab() {
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [filterColumn, setFilterColumn] = useState<string>("");
-  const [filterValue, setFilterValue] = useState<string>("");
+  const [filterValues, setFilterValues] = useState<string[]>([]);
   const [filterMode, setFilterMode] = useState<'include' | 'exclude'>('include');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -898,13 +898,13 @@ export default function WorkFlowTab() {
     
     // Column filter
     let matchesFilter = true;
-    if (filterColumn && filterValue) {
+    if (filterColumn && filterValues.length > 0) {
       const col = columns.find(c => c.id === filterColumn);
       if (col) {
         const fileValue = col.isBuiltIn && col.dbField 
           ? (file as any)[col.dbField] 
           : customData[file.id]?.[filterColumn];
-        const isMatch = fileValue === filterValue;
+        const isMatch = filterValues.includes(fileValue);
         matchesFilter = filterMode === 'include' ? isMatch : !isMatch;
       }
     }
@@ -1298,13 +1298,13 @@ export default function WorkFlowTab() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="bg-popover">
-              <DropdownMenuItem onClick={() => { setFilterColumn(""); setFilterValue(""); setFilterMode('include'); }}>
+              <DropdownMenuItem onClick={() => { setFilterColumn(""); setFilterValues([]); setFilterMode('include'); }}>
                 Clear filter
               </DropdownMenuItem>
               {getFilterableColumns().map(col => (
                 <DropdownMenuItem 
                   key={col.id} 
-                  onClick={() => { setFilterColumn(col.id); setFilterValue(""); }}
+                  onClick={() => { setFilterColumn(col.id); setFilterValues([]); }}
                 >
                   {col.label}
                 </DropdownMenuItem>
@@ -1327,27 +1327,39 @@ export default function WorkFlowTab() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2 h-9">
-                  {filterValue || "Select value"}
+                  {filterValues.length === 0 ? "Select value" : filterValues.length === 1 ? filterValues[0] : `${filterValues.length} selected`}
                   <ChevronDown className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="bg-popover">
-                <DropdownMenuItem onClick={() => setFilterValue("")}>
-                  All
+              <DropdownMenuContent align="start" className="bg-popover min-w-[180px]">
+                <DropdownMenuItem onClick={() => setFilterValues([])}>
+                  Clear selection
                 </DropdownMenuItem>
-                {columns.find(c => c.id === filterColumn)?.options?.map(opt => (
-                  <DropdownMenuItem 
-                    key={opt.label} 
-                    onClick={() => setFilterValue(opt.label)}
-                  >
-                    <span 
-                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
-                      style={{ backgroundColor: `${opt.color}20`, color: opt.color }}
+                {columns.find(c => c.id === filterColumn)?.options?.map(opt => {
+                  const isSelected = filterValues.includes(opt.label);
+                  return (
+                    <DropdownMenuItem 
+                      key={opt.label} 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (isSelected) {
+                          setFilterValues(filterValues.filter(v => v !== opt.label));
+                        } else {
+                          setFilterValues([...filterValues, opt.label]);
+                        }
+                      }}
+                      className="flex items-center gap-2"
                     >
-                      {opt.label}
-                    </span>
-                  </DropdownMenuItem>
-                ))}
+                      <Checkbox checked={isSelected} className="h-4 w-4" />
+                      <span 
+                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                        style={{ backgroundColor: `${opt.color}20`, color: opt.color }}
+                      >
+                        {opt.label}
+                      </span>
+                    </DropdownMenuItem>
+                  );
+                })}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -1357,7 +1369,7 @@ export default function WorkFlowTab() {
               variant="ghost" 
               size="icon" 
               className="h-9 w-9"
-              onClick={() => { setFilterColumn(""); setFilterValue(""); setFilterMode('include'); }}
+              onClick={() => { setFilterColumn(""); setFilterValues([]); setFilterMode('include'); }}
             >
               <X className="h-4 w-4" />
             </Button>
