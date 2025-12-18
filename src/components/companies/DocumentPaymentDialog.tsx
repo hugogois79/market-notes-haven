@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { Paperclip, X, ExternalLink } from "lucide-react";
+import { mergePdfs, isPdfFile, isPdfUrl } from "@/utils/pdfMerger";
 
 // Helper to remove file extension
 const removeExtension = (filename: string) => {
@@ -44,6 +45,7 @@ interface DocumentPaymentDialogProps {
   onOpenChange: (open: boolean) => void;
   workflowFileId: string;
   fileName: string;
+  documentFileUrl: string;
   existingTransaction?: any;
 }
 
@@ -52,6 +54,7 @@ export default function DocumentPaymentDialog({
   onOpenChange,
   workflowFileId,
   fileName,
+  documentFileUrl,
   existingTransaction,
 }: DocumentPaymentDialogProps) {
   const queryClient = useQueryClient();
@@ -109,16 +112,33 @@ export default function DocumentPaymentDialog({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Utilizador não autenticado");
 
-      // Upload attachment if provided
+      // Determine the final file URL
       let invoiceFileUrl: string | null = existingFileUrl; // Keep existing by default
+      
       if (attachmentFile) {
         setIsUploading(true);
-        const fileExt = attachmentFile.name.split('.').pop();
-        const filePath = `payment-attachments/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        
+        let fileToUpload: Blob | File = attachmentFile;
+        let fileExtension = attachmentFile.name.split('.').pop() || 'pdf';
+        
+        // If both the original document and attachment are PDFs, merge them
+        if (isPdfUrl(documentFileUrl) && isPdfFile(attachmentFile)) {
+          try {
+            toast.info("A combinar documentos PDF...");
+            fileToUpload = await mergePdfs(documentFileUrl, attachmentFile);
+            fileExtension = 'pdf';
+          } catch (mergeError) {
+            console.error("PDF merge failed, uploading payment file only:", mergeError);
+            // If merge fails, just upload the payment file
+            toast.warning("Não foi possível combinar os PDFs, a carregar apenas o comprovativo");
+          }
+        }
+        
+        const filePath = `payment-attachments/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
         
         const { error: uploadError } = await supabase.storage
           .from('company-documents')
-          .upload(filePath, attachmentFile);
+          .upload(filePath, fileToUpload);
         
         if (uploadError) throw new Error("Erro ao carregar documento: " + uploadError.message);
         
