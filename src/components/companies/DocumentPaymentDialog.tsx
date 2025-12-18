@@ -166,6 +166,7 @@ export default function DocumentPaymentDialog({
         bank_account_id: data.bank_account_id,
         notes: data.notes || null,
         invoice_file_url: invoiceFileUrl,
+        document_file_id: workflowFileId, // Link to the workflow document
       };
 
       if (isEditing && existingTransaction?.id) {
@@ -189,7 +190,7 @@ export default function DocumentPaymentDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["financial-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["all-bank-accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["workflow-transaction"] });
+      queryClient.invalidateQueries({ queryKey: ["file-transaction"] });
       toast.success(isEditing ? "Pagamento atualizado com sucesso" : "Pagamento registado com sucesso");
       onOpenChange(false);
       reset();

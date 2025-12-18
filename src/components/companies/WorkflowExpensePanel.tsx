@@ -252,6 +252,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         category_id: toUuidOrNull(data.category_id),
         bank_account_id: toUuidOrNull(data.bank_account_id),
         invoice_file_url: attachmentUrl,
+        document_file_id: file.id, // Link to the workflow document
         category: "other" as const,
       };
 

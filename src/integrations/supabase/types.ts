@@ -1158,6 +1158,7 @@ export type Database = {
           created_by: string
           date: string
           description: string
+          document_file_id: string | null
           entity_name: string
           id: string
           invoice_file_url: string | null
@@ -1182,6 +1183,7 @@ export type Database = {
           created_by: string
           date: string
           description: string
+          document_file_id?: string | null
           entity_name: string
           id?: string
           invoice_file_url?: string | null
@@ -1206,6 +1208,7 @@ export type Database = {
           created_by?: string
           date?: string
           description?: string
+          document_file_id?: string | null
           entity_name?: string
           id?: string
           invoice_file_url?: string | null
