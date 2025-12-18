@@ -47,6 +47,7 @@ interface DocumentPaymentDialogProps {
   fileName: string;
   documentFileUrl: string;
   existingTransaction?: any;
+  onDocumentUrlUpdated?: (newUrl: string) => void;
 }
 
 export default function DocumentPaymentDialog({
@@ -56,6 +57,7 @@ export default function DocumentPaymentDialog({
   fileName,
   documentFileUrl,
   existingTransaction,
+  onDocumentUrlUpdated,
 }: DocumentPaymentDialogProps) {
   const queryClient = useQueryClient();
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
@@ -161,6 +163,7 @@ export default function DocumentPaymentDialog({
             console.error('Failed to update document URL:', updateDocError);
           } else {
             console.log('Document updated with merged PDF URL:', invoiceFileUrl);
+            onDocumentUrlUpdated?.(invoiceFileUrl);
             queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
             queryClient.invalidateQueries({ queryKey: ["company-folders"] });
           }
