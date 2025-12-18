@@ -120,7 +120,6 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   });
 
   const selectedCompanyId = watch("company_id");
-  const currentBankAccountId = watch("bank_account_id");
 
   // Fetch bank accounts
   const { data: allBankAccounts } = useQuery({
@@ -136,15 +135,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     },
   });
 
-  // Clear bank account when company changes and account doesn't belong to new company
-  useEffect(() => {
-    if (allBankAccounts && currentBankAccountId && selectedCompanyId) {
-      const currentAccount = allBankAccounts.find(ba => ba.id === currentBankAccountId);
-      if (currentAccount && currentAccount.company_id !== selectedCompanyId) {
-        setValue("bank_account_id", "");
-      }
-    }
-  }, [selectedCompanyId, allBankAccounts, currentBankAccountId, setValue]);
+  // Note: We no longer clear bank_account_id when company changes
+  // because we allow cross-company payments (which auto-create loans)
 
   // Fetch projects
   const { data: expenseProjects } = useQuery({
