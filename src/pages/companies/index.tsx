@@ -178,6 +178,7 @@ export default function CompaniesPage() {
   
   // Storage location dialog
   const [storageLocationDialog, setStorageLocationDialog] = useState<{ open: boolean; editingId: string | null }>({ open: false, editingId: null });
+  const [storageLocationCompanyFilter, setStorageLocationCompanyFilter] = useState<string>("all");
   const [storageLocationForm, setStorageLocationForm] = useState<{
     company_id: string;
     folder_id: string | null;
@@ -940,11 +941,28 @@ export default function CompaniesPage() {
                   </div>
                   
                   {tableRelations.storeFilesInCompanyDocs && (
-                    <div className="border border-slate-200 rounded-lg overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-slate-50">
-                            <TableHead className="text-xs font-medium text-slate-600">Company</TableHead>
+                    <>
+                      {/* Company Filter */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <Label className="text-xs text-slate-500">Filter by company:</Label>
+                        <Select value={storageLocationCompanyFilter} onValueChange={setStorageLocationCompanyFilter}>
+                          <SelectTrigger className="w-64 h-8 text-sm">
+                            <SelectValue placeholder="All companies" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white">
+                            <SelectItem value="all">All companies</SelectItem>
+                            {companies?.map(company => (
+                              <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="border border-slate-200 rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-slate-50">
+                              <TableHead className="text-xs font-medium text-slate-600">Company</TableHead>
                             <TableHead className="text-xs font-medium text-slate-600">Year</TableHead>
                             <TableHead className="text-xs font-medium text-slate-600">Month</TableHead>
                             <TableHead className="text-xs font-medium text-slate-600">Folder Location</TableHead>
@@ -971,7 +989,9 @@ export default function CompaniesPage() {
                               </TableCell>
                             </TableRow>
                           ) : (
-                            storageLocations.map((location) => {
+                            storageLocations
+                              .filter(location => storageLocationCompanyFilter === "all" || location.company_id === storageLocationCompanyFilter)
+                              .map((location) => {
                               const company = companies?.find((c) => c.id === location.company_id);
                               const monthLabel =
                                 MONTHS.find((m) => m.value === location.month)?.label || `Month ${location.month}`;
@@ -1021,6 +1041,7 @@ export default function CompaniesPage() {
                         </TableBody>
                       </Table>
                     </div>
+                  </>
                   )}
                 </div>
               </div>
