@@ -2133,7 +2133,7 @@ export default function WorkFlowTab() {
                   onClick={() => setShowPaymentDialog(true)}
                 >
                   <CreditCard className="h-4 w-4 mr-2" />
-                  Registar Pagamento
+                  {existingTransaction ? "Editar Pagamento" : "Registar Pagamento"}
                 </Button>
               </div>
             </div>
