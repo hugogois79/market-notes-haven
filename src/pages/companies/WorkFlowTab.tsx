@@ -43,7 +43,7 @@ import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { DocumentPreview } from "@/components/companies/DocumentPreview";
 import { WorkflowExpensePanel } from "@/components/companies/WorkflowExpensePanel";
-import LoanPaymentDialog from "@/components/financial/LoanPaymentDialog";
+import DocumentPaymentDialog from "@/components/companies/DocumentPaymentDialog";
 import { cn } from "@/lib/utils";
 
 interface WorkflowFile {
@@ -249,45 +249,6 @@ export default function WorkFlowTab() {
     enabled: !!previewFile?.file_url,
   });
 
-  // Query associated loan for the transaction (cross-company payment creates loan)
-  const { data: associatedLoan } = useQuery({
-    queryKey: ["transaction-loan", existingTransaction?.id],
-    queryFn: async () => {
-      if (!existingTransaction?.id) return null;
-      const { data, error } = await supabase
-        .from("company_loans")
-        .select(`
-          *,
-          lending_company:companies!company_loans_lending_company_id_fkey(id, name),
-          borrowing_company:companies!company_loans_borrowing_company_id_fkey(id, name)
-        `)
-        .eq("source_transaction_id", existingTransaction.id)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!existingTransaction?.id,
-  });
-
-  // Query all active loans for payment registration
-  const { data: allLoans } = useQuery({
-    queryKey: ["all-loans-for-payment"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("company_loans")
-        .select(`
-          *,
-          lending_company:companies!company_loans_lending_company_id_fkey(id, name),
-          borrowing_company:companies!company_loans_borrowing_company_id_fkey(id, name)
-        `)
-        .in("status", ["active", "overdue"])
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const [selectedLoanForPayment, setSelectedLoanForPayment] = useState<any>(null);
 
   // Column management dialogs
   const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false);
@@ -2152,54 +2113,14 @@ export default function WorkFlowTab() {
                     </>
                   )}
                 </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      Registar Pagamento
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
-                    {associatedLoan && (
-                      <>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setSelectedLoanForPayment(associatedLoan);
-                            setShowPaymentDialog(true);
-                          }}
-                        >
-                          <span className="font-medium">Empréstimo associado:</span>
-                          <span className="ml-2 text-muted-foreground">
-                            {associatedLoan.lending_company?.name} → {associatedLoan.borrowing_company?.name}
-                          </span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                      </>
-                    )}
-                    {allLoans && allLoans.length > 0 ? (
-                      allLoans.map((loan: any) => (
-                        <DropdownMenuItem
-                          key={loan.id}
-                          onClick={() => {
-                            setSelectedLoanForPayment(loan);
-                            setShowPaymentDialog(true);
-                          }}
-                        >
-                          <span className="truncate">
-                            {loan.lending_company?.name} → {loan.borrowing_company?.name}
-                          </span>
-                          <span className="ml-auto text-xs text-muted-foreground">
-                            {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(loan.amount)}
-                          </span>
-                        </DropdownMenuItem>
-                      ))
-                    ) : (
-                      <DropdownMenuItem disabled>
-                        Nenhum empréstimo disponível
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPaymentDialog(true)}
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Registar Pagamento
+                </Button>
               </div>
             </div>
           </DialogHeader>
@@ -2272,15 +2193,14 @@ export default function WorkFlowTab() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Loan Payment Dialog */}
-      {selectedLoanForPayment && (
-        <LoanPaymentDialog
+      {/* Document Payment Dialog */}
+      {previewFile && (
+        <DocumentPaymentDialog
           open={showPaymentDialog}
-          onOpenChange={(open) => {
-            setShowPaymentDialog(open);
-            if (!open) setSelectedLoanForPayment(null);
-          }}
-          loan={selectedLoanForPayment}
+          onOpenChange={setShowPaymentDialog}
+          workflowFileId={previewFile.id}
+          fileName={previewFile.file_name}
+          existingTransaction={existingTransaction}
         />
       )}
     </div>
