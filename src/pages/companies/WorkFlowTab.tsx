@@ -11,6 +11,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -267,6 +268,26 @@ export default function WorkFlowTab() {
     },
     enabled: !!existingTransaction?.id,
   });
+
+  // Query all active loans for payment registration
+  const { data: allLoans } = useQuery({
+    queryKey: ["all-loans-for-payment"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("company_loans")
+        .select(`
+          *,
+          lending_company:companies!company_loans_lending_company_id_fkey(id, name),
+          borrowing_company:companies!company_loans_borrowing_company_id_fkey(id, name)
+        `)
+        .in("status", ["active", "overdue"])
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const [selectedLoanForPayment, setSelectedLoanForPayment] = useState<any>(null);
 
   // Column management dialogs
   const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false);
@@ -2131,16 +2152,54 @@ export default function WorkFlowTab() {
                     </>
                   )}
                 </Button>
-                {associatedLoan && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowPaymentDialog(true)}
-                  >
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Registar Pagamento
-                  </Button>
-                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Registar Pagamento
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
+                    {associatedLoan && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedLoanForPayment(associatedLoan);
+                            setShowPaymentDialog(true);
+                          }}
+                        >
+                          <span className="font-medium">Empréstimo associado:</span>
+                          <span className="ml-2 text-muted-foreground">
+                            {associatedLoan.lending_company?.name} → {associatedLoan.borrowing_company?.name}
+                          </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
+                    {allLoans && allLoans.length > 0 ? (
+                      allLoans.map((loan: any) => (
+                        <DropdownMenuItem
+                          key={loan.id}
+                          onClick={() => {
+                            setSelectedLoanForPayment(loan);
+                            setShowPaymentDialog(true);
+                          }}
+                        >
+                          <span className="truncate">
+                            {loan.lending_company?.name} → {loan.borrowing_company?.name}
+                          </span>
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(loan.amount)}
+                          </span>
+                        </DropdownMenuItem>
+                      ))
+                    ) : (
+                      <DropdownMenuItem disabled>
+                        Nenhum empréstimo disponível
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </DialogHeader>
@@ -2214,11 +2273,14 @@ export default function WorkFlowTab() {
       </AlertDialog>
 
       {/* Loan Payment Dialog */}
-      {associatedLoan && (
+      {selectedLoanForPayment && (
         <LoanPaymentDialog
           open={showPaymentDialog}
-          onOpenChange={setShowPaymentDialog}
-          loan={associatedLoan}
+          onOpenChange={(open) => {
+            setShowPaymentDialog(open);
+            if (!open) setSelectedLoanForPayment(null);
+          }}
+          loan={selectedLoanForPayment}
         />
       )}
     </div>
