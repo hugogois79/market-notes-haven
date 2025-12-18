@@ -1229,7 +1229,7 @@ export default function CompaniesPage() {
                 <SelectTrigger>
                   <SelectValue placeholder={storageLocationForm.company_id ? "Select folder..." : "Select company first"} />
                 </SelectTrigger>
-                <SelectContent className="bg-white">
+                <SelectContent className="bg-white max-h-60 overflow-y-auto">
                   {folderOptions.length === 0 ? (
                     <SelectItem value="__none__" disabled>No folders found</SelectItem>
                   ) : (
