@@ -114,22 +114,25 @@ const Notes = () => {
     );
   }, [contextNotes, selectedProjects]);
 
-  // Get tags used by notes in selected project(s)
-  const projectFilteredTagIds = useMemo(() => {
+  // Get tag *names* used by notes in selected project(s)
+  // Notes currently store tags as string[] (names) in `note.tags`.
+  const projectFilteredTagNames = useMemo(() => {
     if (selectedProjects.length === 0) return null; // null means show all tags
-    
+
     const notesInProject = contextNotes.filter(
-      note => note.project_id && selectedProjects.includes(note.project_id)
+      (note) => note.project_id && selectedProjects.includes(note.project_id)
     );
-    
-    const tagIds = new Set<string>();
-    notesInProject.forEach(note => {
-      if (note.tags) {
-        note.tags.forEach(tagId => tagIds.add(tagId));
+
+    const tagNames = new Set<string>();
+    notesInProject.forEach((note) => {
+      if (Array.isArray(note.tags)) {
+        note.tags.forEach((tagName) => {
+          if (typeof tagName === "string" && tagName.trim()) tagNames.add(tagName);
+        });
       }
     });
-    
-    return tagIds;
+
+    return tagNames;
   }, [contextNotes, selectedProjects]);
 
   // Debounced semantic search
@@ -166,8 +169,8 @@ const Notes = () => {
         (note.category && selectedCategories.includes(note.category));
 
       const tagMatch =
-        selectedTags.length === 0 || 
-        (note.tags && note.tags.some(tag => selectedTags.includes(tag)));
+        selectedTags.length === 0 ||
+        (Array.isArray(note.tags) && note.tags.some((t) => selectedTags.includes(t)));
 
       const projectMatch =
         selectedProjects.length === 0 || 
@@ -189,11 +192,9 @@ const Notes = () => {
     );
   };
 
-  const toggleTag = (tagId: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tagId)
-        ? prev.filter(t => t !== tagId)
-        : [...prev, tagId]
+  const toggleTag = (tagName: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tagName) ? prev.filter((t) => t !== tagName) : [...prev, tagName]
     );
   };
 
@@ -210,25 +211,29 @@ const Notes = () => {
   };
 
   const handleRemoveTag = (tagToRemove: string | TagType) => {
-    const tagId = typeof tagToRemove === 'string' ? tagToRemove : tagToRemove.id;
-    toggleTag(tagId);
+    const tagName = typeof tagToRemove === "string" ? tagToRemove : tagToRemove.name;
+    toggleTag(tagName);
   };
 
   const handleSelectTag = (tag: TagType) => {
-    toggleTag(tag.id);
+    toggleTag(tag.name);
   };
 
   const getAvailableTagsForSelection = () => {
-    return tags.filter(tag => {
-      // Exclude already selected tags
-      if (selectedTags.includes(tag.id)) return false;
-      
+    return tags.filter((tag) => {
+      // Exclude already selected tags (by name)
+      if (selectedTags.includes(tag.name)) return false;
+
       // Filter by search query
-      if (tagSearchQuery && !tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase())) return false;
-      
-      // If project filter is active, only show tags used in those projects
-      if (projectFilteredTagIds !== null && !projectFilteredTagIds.has(tag.id)) return false;
-      
+      if (tagSearchQuery && !tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase())) {
+        return false;
+      }
+
+      // If project filter is active, only show tags used in those projects (by name)
+      if (projectFilteredTagNames !== null && !projectFilteredTagNames.has(tag.name)) {
+        return false;
+      }
+
       return true;
     });
   };
@@ -258,8 +263,8 @@ const Notes = () => {
 
   const filteredNoteCount = filteredNotes.length;
 
-  const selectedTagObjects = tags.filter(tag => selectedTags.includes(tag.id));
-  const selectedProjectObjects = projects.filter(project => selectedProjects.includes(project.id));
+  const selectedTagObjects = tags.filter((tag) => selectedTags.includes(tag.name));
+  const selectedProjectObjects = projects.filter((project) => selectedProjects.includes(project.id));
 
   return (
     <div className="container mx-auto py-4">
