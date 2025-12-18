@@ -239,11 +239,13 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   const filteredBankAccounts = useMemo(() => {
     if (!allBankAccounts) return [];
     return allBankAccounts.filter((ba) => {
+      if (paymentMethod === "credit_card") {
+        // Show ALL credit cards from all companies (cross-company payment allowed)
+        return ba.account_type === "credit_card";
+      }
+      // For bank transfer, only show accounts from the selected company
       const matchesCompany = !selectedCompanyId || ba.company_id === selectedCompanyId;
-      const matchesType = paymentMethod === "credit_card" 
-        ? ba.account_type === "credit_card" 
-        : ba.account_type === "bank_account";
-      return matchesCompany && matchesType;
+      return matchesCompany && ba.account_type === "bank_account";
     });
   }, [allBankAccounts, paymentMethod, selectedCompanyId]);
 
