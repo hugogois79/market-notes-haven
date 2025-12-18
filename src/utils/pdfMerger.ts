@@ -1,12 +1,37 @@
 import { PDFDocument } from 'pdf-lib';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Fetches a PDF from a URL and returns its ArrayBuffer
+ * Fetches a PDF from Supabase storage URL and returns its ArrayBuffer
  */
 async function fetchPdfAsArrayBuffer(url: string): Promise<ArrayBuffer> {
-  const response = await fetch(url);
+  console.log('Fetching PDF from URL:', url);
+  
+  // Try to extract the path from the Supabase storage URL
+  const supabaseStorageMatch = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/);
+  
+  if (supabaseStorageMatch) {
+    const bucketName = supabaseStorageMatch[1];
+    const filePath = supabaseStorageMatch[2];
+    console.log(`Downloading from Supabase bucket: ${bucketName}, path: ${filePath}`);
+    
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .download(filePath);
+    
+    if (error) {
+      console.error('Supabase download error:', error);
+      throw new Error(`Failed to download PDF: ${error.message}`);
+    }
+    
+    return data.arrayBuffer();
+  }
+  
+  // Fallback to regular fetch for external URLs
+  console.log('Using regular fetch for URL');
+  const response = await fetch(url, { mode: 'cors' });
   if (!response.ok) {
-    throw new Error(`Failed to fetch PDF from ${url}`);
+    throw new Error(`Failed to fetch PDF from ${url}: ${response.status} ${response.statusText}`);
   }
   return response.arrayBuffer();
 }
@@ -21,27 +46,42 @@ export async function mergePdfs(
   originalPdfUrl: string,
   paymentPdfFile: File
 ): Promise<Blob> {
+  console.log('Starting PDF merge...');
+  console.log('Original PDF URL:', originalPdfUrl);
+  console.log('Payment file:', paymentPdfFile.name, paymentPdfFile.size, 'bytes');
+  
   // Create a new PDF document
   const mergedPdf = await PDFDocument.create();
 
   // Load the original PDF from URL
+  console.log('Loading original PDF...');
   const originalPdfBytes = await fetchPdfAsArrayBuffer(originalPdfUrl);
+  console.log('Original PDF loaded, size:', originalPdfBytes.byteLength, 'bytes');
+  
   const originalPdf = await PDFDocument.load(originalPdfBytes);
+  console.log('Original PDF parsed, pages:', originalPdf.getPageCount());
   
   // Copy all pages from the original PDF
   const originalPages = await mergedPdf.copyPages(originalPdf, originalPdf.getPageIndices());
   originalPages.forEach((page) => mergedPdf.addPage(page));
+  console.log('Added', originalPages.length, 'pages from original PDF');
 
   // Load the payment PDF from the File object
+  console.log('Loading payment PDF...');
   const paymentPdfBytes = await paymentPdfFile.arrayBuffer();
+  console.log('Payment PDF loaded, size:', paymentPdfBytes.byteLength, 'bytes');
+  
   const paymentPdf = await PDFDocument.load(paymentPdfBytes);
+  console.log('Payment PDF parsed, pages:', paymentPdf.getPageCount());
   
   // Copy all pages from the payment PDF
   const paymentPages = await mergedPdf.copyPages(paymentPdf, paymentPdf.getPageIndices());
   paymentPages.forEach((page) => mergedPdf.addPage(page));
+  console.log('Added', paymentPages.length, 'pages from payment PDF');
 
   // Save the merged PDF
   const mergedPdfBytes = await mergedPdf.save();
+  console.log('Merged PDF created, total pages:', mergedPdf.getPageCount(), 'size:', mergedPdfBytes.byteLength, 'bytes');
   
   return new Blob([new Uint8Array(mergedPdfBytes)], { type: 'application/pdf' });
 }
