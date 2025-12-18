@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -42,6 +42,7 @@ import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { DocumentPreview } from "@/components/companies/DocumentPreview";
 import { WorkflowExpensePanel } from "@/components/companies/WorkflowExpensePanel";
+import LoanPaymentDialog from "@/components/financial/LoanPaymentDialog";
 import { cn } from "@/lib/utils";
 
 interface WorkflowFile {
@@ -224,6 +225,7 @@ export default function WorkFlowTab() {
   // Document preview state
   const [previewFile, setPreviewFile] = useState<WorkflowFile | null>(null);
   const [showExpensePanel, setShowExpensePanel] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
   // Mark as completed state
   const [markCompleteWarningOpen, setMarkCompleteWarningOpen] = useState(false);
@@ -244,6 +246,26 @@ export default function WorkFlowTab() {
       return data;
     },
     enabled: !!previewFile?.file_url,
+  });
+
+  // Query associated loan for the transaction (cross-company payment creates loan)
+  const { data: associatedLoan } = useQuery({
+    queryKey: ["transaction-loan", existingTransaction?.id],
+    queryFn: async () => {
+      if (!existingTransaction?.id) return null;
+      const { data, error } = await supabase
+        .from("company_loans")
+        .select(`
+          *,
+          lending_company:companies!company_loans_lending_company_id_fkey(id, name),
+          borrowing_company:companies!company_loans_borrowing_company_id_fkey(id, name)
+        `)
+        .eq("source_transaction_id", existingTransaction.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!existingTransaction?.id,
   });
 
   // Column management dialogs
@@ -2091,24 +2113,35 @@ export default function WorkFlowTab() {
           <DialogHeader className="p-4 pb-0 flex-shrink-0">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-lg">Visualizar Documento</DialogTitle>
-              <Button
-                variant={showExpensePanel ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShowExpensePanel(!showExpensePanel)}
-                className="mr-8"
-              >
-                {existingTransaction ? (
-                  <>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Editar Movimento
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Novo Movimento
-                  </>
+              <div className="flex items-center gap-2 mr-8">
+                <Button
+                  variant={showExpensePanel ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowExpensePanel(!showExpensePanel)}
+                >
+                  {existingTransaction ? (
+                    <>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Editar Movimento
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Novo Movimento
+                    </>
+                  )}
+                </Button>
+                {associatedLoan && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPaymentDialog(true)}
+                  >
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Registar Pagamento
+                  </Button>
                 )}
-              </Button>
+              </div>
             </div>
           </DialogHeader>
           <div className="flex-1 overflow-hidden flex">
@@ -2179,6 +2212,15 @@ export default function WorkFlowTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Loan Payment Dialog */}
+      {associatedLoan && (
+        <LoanPaymentDialog
+          open={showPaymentDialog}
+          onOpenChange={setShowPaymentDialog}
+          loan={associatedLoan}
+        />
+      )}
     </div>
   );
 }
