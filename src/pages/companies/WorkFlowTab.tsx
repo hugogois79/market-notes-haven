@@ -233,20 +233,20 @@ export default function WorkFlowTab() {
   const [fileToComplete, setFileToComplete] = useState<WorkflowFile | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
 
-  // Query existing transaction for current file
+  // Query existing transaction for current file using document_file_id
   const { data: existingTransaction } = useQuery({
-    queryKey: ["file-transaction", previewFile?.file_url],
+    queryKey: ["file-transaction", previewFile?.id],
     queryFn: async () => {
-      if (!previewFile?.file_url) return null;
+      if (!previewFile?.id) return null;
       const { data, error } = await supabase
         .from("financial_transactions")
         .select("*")
-        .eq("invoice_file_url", previewFile.file_url)
+        .eq("document_file_id", previewFile.id)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!previewFile?.file_url,
+    enabled: !!previewFile?.id,
   });
 
 
