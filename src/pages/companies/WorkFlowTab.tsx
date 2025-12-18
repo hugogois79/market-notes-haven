@@ -196,6 +196,7 @@ export default function WorkFlowTab() {
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [filterColumn, setFilterColumn] = useState<string>("");
   const [filterValue, setFilterValue] = useState<string>("");
+  const [filterMode, setFilterMode] = useState<'include' | 'exclude'>('include');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -878,7 +879,8 @@ export default function WorkFlowTab() {
         const fileValue = col.isBuiltIn && col.dbField 
           ? (file as any)[col.dbField] 
           : customData[file.id]?.[filterColumn];
-        matchesFilter = fileValue === filterValue;
+        const isMatch = fileValue === filterValue;
+        matchesFilter = filterMode === 'include' ? isMatch : !isMatch;
       }
     }
     
@@ -1271,7 +1273,7 @@ export default function WorkFlowTab() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="bg-popover">
-              <DropdownMenuItem onClick={() => { setFilterColumn(""); setFilterValue(""); }}>
+              <DropdownMenuItem onClick={() => { setFilterColumn(""); setFilterValue(""); setFilterMode('include'); }}>
                 Clear filter
               </DropdownMenuItem>
               {getFilterableColumns().map(col => (
@@ -1284,6 +1286,17 @@ export default function WorkFlowTab() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          
+          {filterColumn && (
+            <Button
+              variant={filterMode === 'exclude' ? "destructive" : "outline"}
+              size="sm"
+              className="h-9 text-xs"
+              onClick={() => setFilterMode(prev => prev === 'include' ? 'exclude' : 'include')}
+            >
+              {filterMode === 'include' ? 'Incluir' : 'Excluir'}
+            </Button>
+          )}
           
           {filterColumn && (
             <DropdownMenu>
@@ -1319,7 +1332,7 @@ export default function WorkFlowTab() {
               variant="ghost" 
               size="icon" 
               className="h-9 w-9"
-              onClick={() => { setFilterColumn(""); setFilterValue(""); }}
+              onClick={() => { setFilterColumn(""); setFilterValue(""); setFilterMode('include'); }}
             >
               <X className="h-4 w-4" />
             </Button>
