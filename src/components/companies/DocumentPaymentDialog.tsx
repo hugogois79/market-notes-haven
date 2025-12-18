@@ -19,7 +19,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Paperclip, X } from "lucide-react";
+
+// Helper to remove file extension
+const removeExtension = (filename: string) => {
+  const lastDot = filename.lastIndexOf('.');
+  return lastDot > 0 ? filename.substring(0, lastDot) : filename;
+};
 
 interface DocumentPaymentDialogProps {
   open: boolean;
@@ -37,6 +44,9 @@ export default function DocumentPaymentDialog({
   existingTransaction,
 }: DocumentPaymentDialogProps) {
   const queryClient = useQueryClient();
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  
   const { register, handleSubmit, reset, watch, setValue } = useForm({
     defaultValues: {
       payment_date: new Date().toISOString().split('T')[0],
@@ -71,6 +81,7 @@ export default function DocumentPaymentDialog({
         bank_account_id: existingTransaction?.bank_account_id || '',
         notes: '',
       });
+      setAttachmentFile(null);
     }
   }, [open, existingTransaction, reset]);
 
@@ -83,12 +94,33 @@ export default function DocumentPaymentDialog({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Utilizador não autenticado");
 
+      // Upload attachment if provided
+      let invoiceFileUrl: string | null = null;
+      if (attachmentFile) {
+        setIsUploading(true);
+        const fileExt = attachmentFile.name.split('.').pop();
+        const filePath = `payment-attachments/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('company-documents')
+          .upload(filePath, attachmentFile);
+        
+        if (uploadError) throw new Error("Erro ao carregar documento: " + uploadError.message);
+        
+        const { data: urlData } = supabase.storage
+          .from('company-documents')
+          .getPublicUrl(filePath);
+        
+        invoiceFileUrl = urlData.publicUrl;
+        setIsUploading(false);
+      }
+
       const transactionData = {
         company_id: bankAccount.company_id,
         type: 'expense' as const,
         category: 'services' as const,
         date: data.payment_date,
-        description: `Pagamento: ${fileName}`,
+        description: `Pagamento: ${removeExtension(fileName)}`,
         entity_name: existingTransaction?.entity_name || 'Fornecedor',
         total_amount: Number(data.amount),
         amount_net: Number(data.amount),
@@ -98,6 +130,7 @@ export default function DocumentPaymentDialog({
         bank_account_id: data.bank_account_id,
         notes: data.notes || null,
         created_by: userData.user.id,
+        invoice_file_url: invoiceFileUrl,
       };
 
       const { error } = await supabase
@@ -131,7 +164,7 @@ export default function DocumentPaymentDialog({
         <form onSubmit={handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
           <div>
             <Label className="text-xs text-muted-foreground">Documento</Label>
-            <p className="text-sm font-medium truncate">{fileName}</p>
+            <p className="text-sm font-medium truncate">{removeExtension(fileName)}</p>
           </div>
 
           <div>
@@ -182,6 +215,37 @@ export default function DocumentPaymentDialog({
           </div>
 
           <div>
+            <Label>Documento de Pagamento</Label>
+            {attachmentFile ? (
+              <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                <Paperclip className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm truncate flex-1">{attachmentFile.name}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => setAttachmentFile(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="relative">
+                <Input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setAttachmentFile(file);
+                  }}
+                  className="cursor-pointer"
+                />
+              </div>
+            )}
+          </div>
+
+          <div>
             <Label>Observações</Label>
             <Textarea {...register("notes")} rows={2} placeholder="Notas sobre o pagamento..." />
           </div>
@@ -190,8 +254,8 @@ export default function DocumentPaymentDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={saveMutation.isPending}>
-              {saveMutation.isPending ? "A guardar..." : "Registar Pagamento"}
+            <Button type="submit" disabled={saveMutation.isPending || isUploading}>
+              {isUploading ? "A carregar..." : saveMutation.isPending ? "A guardar..." : "Registar Pagamento"}
             </Button>
           </div>
         </form>
