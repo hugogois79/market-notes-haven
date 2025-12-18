@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { X, Check, ChevronsUpDown, FileText } from "lucide-react";
+import { X, Check, ChevronsUpDown, FileText, ExternalLink, Trash2, Upload } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -61,6 +61,10 @@ interface WorkflowExpensePanelProps {
 export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSaved }: WorkflowExpensePanelProps) {
   const queryClient = useQueryClient();
   const isEditMode = !!existingTransaction;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachmentUrl, setAttachmentUrl] = useState<string | null>(file.file_url);
+  const [attachmentName, setAttachmentName] = useState<string>(file.file_name);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   
   const { register, handleSubmit, reset, watch, setValue } = useForm({
     defaultValues: {
@@ -246,7 +250,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         project_id: toUuidOrNull(data.project_id),
         category_id: toUuidOrNull(data.category_id),
         bank_account_id: toUuidOrNull(data.bank_account_id),
-        invoice_file_url: file.file_url,
+        invoice_file_url: attachmentUrl,
         category: "other" as const,
       };
 
@@ -543,10 +547,82 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           {/* Attached file indicator */}
           <div>
             <Label className="text-xs">Anexo</Label>
-            <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50 text-sm">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <span className="truncate flex-1 text-xs">{file.file_name}</span>
-            </div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={async (e) => {
+                const newFile = e.target.files?.[0];
+                if (!newFile) return;
+                setIsUploadingAttachment(true);
+                try {
+                  const { data: userData } = await supabase.auth.getUser();
+                  if (!userData.user) throw new Error("Utilizador não autenticado");
+                  
+                  const fileExt = newFile.name.split('.').pop();
+                  const safeFileName = `${newFile.name.replace(/\.[^/.]+$/, '').replace(/[^\w-]/g, '_')}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+                  
+                  const { error } = await supabase.storage
+                    .from('attachments')
+                    .upload(`transactions/${userData.user.id}/${safeFileName}`, newFile);
+                  
+                  if (error) throw error;
+                  
+                  const { data: urlData } = supabase.storage
+                    .from('attachments')
+                    .getPublicUrl(`transactions/${userData.user.id}/${safeFileName}`);
+                  
+                  setAttachmentUrl(urlData.publicUrl);
+                  setAttachmentName(newFile.name);
+                  toast.success("Ficheiro carregado com sucesso");
+                } catch (err: any) {
+                  toast.error("Erro ao carregar ficheiro: " + err.message);
+                } finally {
+                  setIsUploadingAttachment(false);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }
+              }}
+            />
+            {attachmentUrl ? (
+              <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50 text-sm">
+                <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="truncate flex-1 text-xs">{attachmentName}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 p-0"
+                  onClick={() => window.open(attachmentUrl, '_blank')}
+                  title="Abrir ficheiro"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                  onClick={() => {
+                    setAttachmentUrl(null);
+                    setAttachmentName("");
+                  }}
+                  title="Remover anexo"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-9 text-sm gap-2"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingAttachment}
+              >
+                <Upload className="h-4 w-4" />
+                {isUploadingAttachment ? "A carregar..." : "Carregar ficheiro"}
+              </Button>
+            )}
           </div>
 
           {/* Actions */}
