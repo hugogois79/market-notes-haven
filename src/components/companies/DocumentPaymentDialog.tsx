@@ -156,7 +156,7 @@ export default function DocumentPaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>Registar Pagamento</DialogTitle>
         </DialogHeader>
@@ -164,7 +164,7 @@ export default function DocumentPaymentDialog({
         <form onSubmit={handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
           <div>
             <Label className="text-xs text-muted-foreground">Documento</Label>
-            <p className="text-sm font-medium truncate">{removeExtension(fileName)}</p>
+            <p className="text-sm font-medium">{removeExtension(fileName)}</p>
           </div>
 
           <div>
@@ -217,9 +217,9 @@ export default function DocumentPaymentDialog({
           <div>
             <Label>Documento de Pagamento</Label>
             {attachmentFile ? (
-              <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                <Paperclip className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm truncate flex-1">{attachmentFile.name}</span>
+              <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50 min-w-0">
+                <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-sm truncate flex-1 min-w-0">{attachmentFile.name}</span>
                 <Button
                   type="button"
                   variant="ghost"
