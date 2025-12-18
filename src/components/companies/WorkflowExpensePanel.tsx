@@ -84,9 +84,36 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     },
   });
 
-  // Reset form when existingTransaction changes (loads async)
+  // Fetch companies
+  const { data: companies } = useQuery({
+    queryKey: ["companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch categories
+  const { data: expenseCategories } = useQuery({
+    queryKey: ["expense-categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expense_categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Reset form when existingTransaction changes - wait for companies/categories to load first
   useEffect(() => {
-    if (existingTransaction) {
+    if (existingTransaction && companies && expenseCategories) {
       reset({
         date: existingTransaction.date || new Date().toISOString().split("T")[0],
         type: existingTransaction.type || "expense",
@@ -103,25 +130,12 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         notes: existingTransaction.notes || "",
       });
     }
-  }, [existingTransaction, reset]);
+  }, [existingTransaction, reset, companies, expenseCategories]);
 
   const [projectOpen, setProjectOpen] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [projectSearch, setProjectSearch] = useState("");
   const [supplierSearch, setSupplierSearch] = useState("");
-
-  // Fetch companies
-  const { data: companies } = useQuery({
-    queryKey: ["companies"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("companies")
-        .select("*")
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
 
   const selectedCompanyId = watch("company_id");
 
@@ -156,19 +170,6 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     },
   });
 
-  // Fetch categories
-  const { data: expenseCategories } = useQuery({
-    queryKey: ["expense-categories"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("expense_categories")
-        .select("*")
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
 
   // Fetch suppliers
   const { data: suppliers } = useQuery({
