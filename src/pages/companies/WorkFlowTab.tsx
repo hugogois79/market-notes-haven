@@ -2143,6 +2143,7 @@ export default function WorkFlowTab() {
             <div className={cn("flex-1 overflow-hidden p-4", showExpensePanel && "border-r")}>
               {previewFile && (
                 <DocumentPreview
+                  key={previewFile.file_url}
                   document={{
                     file_url: previewFile.file_url,
                     name: previewFile.file_name,
@@ -2216,6 +2217,9 @@ export default function WorkFlowTab() {
           fileName={previewFile.file_name}
           documentFileUrl={previewFile.file_url}
           existingTransaction={existingTransaction}
+          onDocumentUrlUpdated={(newUrl) => {
+            setPreviewFile((prev) => (prev ? { ...prev, file_url: newUrl } : prev));
+          }}
         />
       )}
     </div>
