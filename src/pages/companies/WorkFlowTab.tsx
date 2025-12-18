@@ -652,10 +652,10 @@ export default function WorkFlowTab() {
 
   // Mark file as completed handler
   const handleMarkAsComplete = async (file: WorkflowFile) => {
-    // First, check if there's an existing transaction for this file to get actual expense date
+    // First, check if there's an existing transaction for this file to get actual expense date AND company
     const { data: existingTransaction } = await supabase
       .from("financial_transactions")
-      .select("date")
+      .select("date, company_id")
       .eq("invoice_file_url", file.file_url)
       .maybeSingle();
 
@@ -673,15 +673,29 @@ export default function WorkFlowTab() {
       ? JSON.parse(settingsStr)
       : { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
 
-    // Always query Supabase here to avoid race conditions with cached queries
-    const { data: matchingLocation, error } = await supabase
+    // Determine the company to use: transaction company > settings default company
+    const targetCompanyId = existingTransaction?.company_id || settings.defaultCompanyId;
+
+    // Query storage locations filtering by company if available
+    let query = supabase
       .from("workflow_storage_locations")
       .select("*")
       .eq("year", fileYear)
-      .eq("month", fileMonth)
-      .maybeSingle();
+      .eq("month", fileMonth);
+    
+    // If we have a target company, filter by it
+    if (targetCompanyId) {
+      query = query.eq("company_id", targetCompanyId);
+    }
+
+    const { data: matchingLocations, error } = await query;
 
     if (error) throw error;
+
+    // Get the first matching location (should be unique per company+month+year)
+    const matchingLocation = matchingLocations && matchingLocations.length > 0 
+      ? matchingLocations[0] 
+      : null;
 
     if (!matchingLocation) {
       setFileToComplete(file);
