@@ -256,8 +256,46 @@ export function DocumentVault({
     setPreviewDoc(null);
   }, []);
 
-  const handleDownload = useCallback((doc: DocumentRow) => {
-    window.open(doc.file_url, "_blank");
+  const handleDownload = useCallback(async (doc: DocumentRow) => {
+    try {
+      // Extract bucket and path from the file URL
+      const url = new URL(doc.file_url);
+      const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/);
+      
+      if (!pathMatch) {
+        // Fallback to opening in new tab if URL doesn't match expected format
+        window.open(doc.file_url, "_blank");
+        return;
+      }
+      
+      const [, bucket, filePath] = pathMatch;
+      
+      // Download the file from Supabase storage
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .download(decodeURIComponent(filePath));
+      
+      if (error || !data) {
+        console.error("Download error:", error);
+        toast.error("Failed to download file");
+        return;
+      }
+      
+      // Create blob URL and trigger download
+      const blobUrl = URL.createObjectURL(data);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = doc.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+      
+      toast.success("Download started");
+    } catch (err) {
+      console.error("Download error:", err);
+      toast.error("Failed to download file");
+    }
   }, []);
 
   const handleUpdate = useCallback(async (docId: string, updates: Partial<DocumentRow>) => {
