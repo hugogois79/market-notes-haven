@@ -1419,52 +1419,34 @@ export default function WorkFlowTab() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Saved Filters Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-sm">
-              <Bookmark className="h-3.5 w-3.5" />
-              Filtros
-              {savedFilters.length > 0 && (
-                <Badge variant="secondary" className="ml-0.5 h-4 px-1 text-[10px]">
-                  {savedFilters.length}
-                </Badge>
+        {/* Saved Filters - Quick Access Buttons */}
+        {savedFilters.map(filter => (
+          <div key={filter.id} className="flex items-center">
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "gap-1.5 h-8 text-sm rounded-r-none border-r-0",
+                filterColumn === filter.filterColumn && 
+                filterValues.length === filter.filterValues.length &&
+                filterValues.every(v => filter.filterValues.includes(v)) &&
+                "bg-blue-50 border-blue-200 text-blue-700"
               )}
-              <ChevronDown className="h-3 w-3" />
+              onClick={() => loadSavedFilter(filter)}
+            >
+              <Bookmark className="h-3.5 w-3.5" />
+              {filter.name}
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48 bg-popover">
-            {savedFilters.length === 0 ? (
-              <div className="px-2 py-2 text-xs text-muted-foreground text-center">
-                Sem filtros guardados
-              </div>
-            ) : (
-              savedFilters.map(filter => (
-                <DropdownMenuItem
-                  key={filter.id}
-                  className="flex items-center justify-between py-1.5 text-sm"
-                  onClick={() => loadSavedFilter(filter)}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Bookmark className="h-3.5 w-3.5 text-blue-500" />
-                    <span className="truncate max-w-[100px]">{filter.name}</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-5 w-5 hover:bg-destructive/10 hover:text-destructive"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteSavedFilter(filter.id);
-                    }}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuItem>
-              ))
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-1.5 rounded-l-none hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+              onClick={() => deleteSavedFilter(filter.id)}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
 
         {/* Bulk Actions - shown when files selected */}
         {selectedFiles.size > 0 && (
