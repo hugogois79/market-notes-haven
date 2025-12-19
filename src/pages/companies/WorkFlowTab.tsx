@@ -214,10 +214,20 @@ export default function WorkFlowTab() {
   // Current filter being edited
   const [currentFilterColumn, setCurrentFilterColumn] = useState<string>("");
   
-  // Saved filters state
+  // Saved filters state - migrate old format if needed
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>(() => {
     const saved = localStorage.getItem(WORKFLOW_SAVED_FILTERS_KEY);
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      // Migrate old format (single filter) to new format (conditions array)
+      return parsed.map((f: any) => ({
+        ...f,
+        conditions: f.conditions || (f.column && f.values ? [{ column: f.column, values: f.values, mode: f.mode || 'include' }] : [])
+      }));
+    } catch {
+      return [];
+    }
   });
   const [saveFilterDialogOpen, setSaveFilterDialogOpen] = useState(false);
   const [newFilterName, setNewFilterName] = useState("");
@@ -398,7 +408,8 @@ export default function WorkFlowTab() {
   };
 
   const loadSavedFilter = (filter: SavedFilter) => {
-    setActiveFilters([...filter.conditions]);
+    const conditions = filter.conditions || [];
+    setActiveFilters([...conditions]);
     setCurrentFilterColumn("");
     toast.success(`Filtro "${filter.name}" aplicado`);
   };
@@ -1457,8 +1468,9 @@ export default function WorkFlowTab() {
         {/* Saved Filters - Quick Access Buttons */}
         {savedFilters.map(filter => {
           // Check if this saved filter matches current active filters
-          const isActive = filter.conditions.length === activeFilters.length &&
-            filter.conditions.every(fc => 
+          const conditions = filter.conditions || [];
+          const isActive = conditions.length > 0 && conditions.length === activeFilters.length &&
+            conditions.every(fc => 
               activeFilters.some(af => 
                 af.column === fc.column && 
                 af.values.length === fc.values.length &&
