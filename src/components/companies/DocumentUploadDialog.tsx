@@ -67,6 +67,11 @@ export default function DocumentUploadDialog({
     mutationFn: async () => {
       if (!file) throw new Error("No file selected");
 
+      // Validate file is readable (not a directory/package)
+      if (file.name.endsWith('.dir') || file.size === 0) {
+        throw new Error("Invalid file: Cannot upload folders or empty files");
+      }
+
       setIsUploading(true);
 
       // Get current user
@@ -74,18 +79,30 @@ export default function DocumentUploadDialog({
       if (!user) throw new Error("Not authenticated");
 
       // Calculate SHA-256 hash for forensic integrity
-      const fileHash = await calculateFileHash(file);
+      let fileHash: string;
+      try {
+        fileHash = await calculateFileHash(file);
+      } catch (e) {
+        throw new Error("Cannot read file. Please ensure it's a valid file and not a folder.");
+      }
 
       // Upload file to storage
       const timestamp = Date.now();
       const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const filePath = `${companyId}/${timestamp}-${safeFileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("company-documents")
-        .upload(filePath, file);
+      try {
+        const { error: uploadError } = await supabase.storage
+          .from("company-documents")
+          .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+        if (uploadError) throw uploadError;
+      } catch (e: any) {
+        if (e.message?.includes('Failed to fetch')) {
+          throw new Error("Upload failed: File may be too large or unreadable. Try a smaller file.");
+        }
+        throw e;
+      }
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
@@ -119,8 +136,9 @@ export default function DocumentUploadDialog({
       resetForm();
       onOpenChange(false);
     },
-    onError: (error) => {
-      toast.error("Upload failed: " + error.message);
+    onError: (error: any) => {
+      const message = error.message || "Unknown error occurred";
+      toast.error(message);
     },
     onSettled: () => {
       setIsUploading(false);
