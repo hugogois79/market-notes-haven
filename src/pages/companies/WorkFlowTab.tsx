@@ -2407,18 +2407,18 @@ export default function WorkFlowTab() {
                   )}
                 </Button>
                           <Button
-                            variant={existingTransaction ? "default" : "outline"}
+                            variant={existingTransaction?.bank_account_id ? "default" : "outline"}
                             size="sm"
                             onClick={() => setShowPaymentDialog(true)}
                             disabled={isLoadingTransaction}
-                            className={existingTransaction ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+                            className={existingTransaction?.bank_account_id ? "bg-green-600 hover:bg-green-700 text-white" : ""}
                           >
-                            {existingTransaction ? (
+                            {existingTransaction?.bank_account_id ? (
                               <CheckCircle2 className="h-4 w-4 mr-2" />
                             ) : (
                               <CreditCard className="h-4 w-4 mr-2" />
                             )}
-                            {isLoadingTransaction ? "..." : (existingTransaction ? "Pagamento Registado" : "Criar Pagamento")}
+                            {isLoadingTransaction ? "..." : (existingTransaction?.bank_account_id ? "Pagamento Registado" : "Registar Pagamento")}
                           </Button>
               </div>
             </div>
