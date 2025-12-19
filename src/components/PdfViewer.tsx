@@ -60,39 +60,59 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
 
   const handlePrint = async () => {
     try {
-      const blob = await downloadAsBlob();
-      const objectUrl = URL.createObjectURL(blob);
-      
-      // Create a hidden iframe to print the PDF
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = 'none';
-      iframe.src = objectUrl;
-      
-      document.body.appendChild(iframe);
-      
-      iframe.onload = () => {
-        setTimeout(() => {
-          try {
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
-          } catch {
-            // If iframe print fails, open in new window
-            window.open(objectUrl, '_blank');
-          }
-          // Cleanup after a delay
-          setTimeout(() => {
-            document.body.removeChild(iframe);
-            URL.revokeObjectURL(objectUrl);
-          }, 1000);
-        }, 500);
-      };
-    } catch {
-      // fallback - open in new window
+      // Print without opening blob URLs (can be blocked by browser extensions)
+      const pdf = pdfRef.current;
+      if (!pdf) throw new Error("PDF ainda a carregar");
+
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) throw new Error("Pop-up bloqueado");
+
+      const images: string[] = [];
+      const printScale = 2;
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: printScale });
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("Canvas indisponível");
+
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+
+        await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+        images.push(canvas.toDataURL("image/png"));
+      }
+
+      printWindow.document.open();
+      printWindow.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Imprimir PDF</title>
+  <style>
+    @page { margin: 10mm; }
+    body { margin: 0; background: white; }
+    img { width: 100%; page-break-after: always; display: block; }
+    img:last-child { page-break-after: auto; }
+  </style>
+</head>
+<body>
+  ${images.map((src) => `<img src="${src}" alt="Página" />`).join("\n")}
+  <script>
+    window.onload = () => {
+      window.focus();
+      window.print();
+      setTimeout(() => window.close(), 250);
+    };
+  </script>
+</body>
+</html>`);
+      printWindow.document.close();
+    } catch (e) {
+      console.error("Print failed:", e);
+      // fallback
       window.open(url, "_blank");
     }
   };
