@@ -1724,10 +1724,10 @@ export default function CompanyDetailPage() {
                 <BreadcrumbItem>
                   <BreadcrumbLink 
                     href="#" 
-                    onClick={(e) => { e.preventDefault(); navigate("/companies"); }}
+                    onClick={(e) => { e.preventDefault(); navigate("/companies?tab=workflow"); }}
                     className="text-primary hover:underline cursor-pointer"
                   >
-                    Companies
+                    Workflow
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
