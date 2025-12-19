@@ -152,10 +152,10 @@ export default function DocumentPaymentDialog({
         invoiceFileUrl = urlData.publicUrl;
         setIsUploading(false);
         
-        // If we merged PDFs, update the original document's file_url to point to the merged file
+        // If we merged PDFs, update the workflow file's file_url to point to the merged file
         if (isPdfUrl(documentFileUrl) && isPdfFile(attachmentFile)) {
           const { error: updateDocError } = await supabase
-            .from('company_documents')
+            .from('workflow_files')
             .update({ file_url: invoiceFileUrl })
             .eq('id', workflowFileId);
           
