@@ -104,16 +104,27 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Imprimir PDF</title>
+  <title></title>
   <style>
-    @page { margin: 10mm; }
-    body { margin: 0; background: white; }
-    img { width: 100%; page-break-after: always; display: block; }
+    @page { 
+      margin: 5mm; 
+      size: auto;
+    }
+    @media print {
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+    body { margin: 0; padding: 0; background: white; }
+    img { width: 100%; page-break-after: always; display: block; margin: 0; padding: 0; }
     img:last-child { page-break-after: auto; }
   </style>
 </head>
 <body>
-  ${images.map((src) => `<img src="${src}" alt="Página" />`).join("\n")}
+  ${images.map((src) => `<img src="${src}" alt="" />`).join("\n")}
   <script>
     window.onload = () => {
       window.focus();
