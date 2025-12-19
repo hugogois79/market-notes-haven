@@ -782,6 +782,9 @@ export default function WorkFlowTab() {
                 .from("company-documents")
                 .getPublicUrl(newPath);
               
+              // Get category from customData (workflow column values)
+              const workflowCategory = customData[file.id]?.category;
+              
               const { error: docError } = await supabase
                 .from("company_documents")
                 .insert({
@@ -793,6 +796,7 @@ export default function WorkFlowTab() {
                   mime_type: file.mime_type,
                   uploaded_by: user.id,
                   status: 'Final',
+                  document_type: workflowCategory || 'Other',
                 });
               
               if (docError) {
