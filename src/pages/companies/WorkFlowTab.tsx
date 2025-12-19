@@ -1478,28 +1478,31 @@ export default function WorkFlowTab() {
               )
             );
           return (
-            <div key={filter.id} className="flex items-center">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 px-1.5 rounded-r-none border-r-0 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
-                onClick={() => deleteSavedFilter(filter.id)}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn(
-                  "gap-1.5 h-8 text-sm rounded-l-none",
-                  isActive && "bg-blue-50 border-blue-200 text-blue-700"
-                )}
-                onClick={() => loadSavedFilter(filter)}
-              >
-                <Bookmark className="h-3.5 w-3.5" />
-                {filter.name}
-              </Button>
-            </div>
+            <ContextMenu key={filter.id}>
+              <ContextMenuTrigger>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "gap-1.5 h-8 text-sm",
+                    isActive && "bg-blue-50 border-blue-200 text-blue-700"
+                  )}
+                  onClick={() => loadSavedFilter(filter)}
+                >
+                  <Bookmark className="h-3.5 w-3.5" />
+                  {filter.name}
+                </Button>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                <ContextMenuItem 
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => deleteSavedFilter(filter.id)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar filtro
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
           );
         })}
 
