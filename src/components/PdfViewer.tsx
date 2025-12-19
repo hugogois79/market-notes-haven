@@ -62,23 +62,38 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
     try {
       const blob = await downloadAsBlob();
       const objectUrl = URL.createObjectURL(blob);
-      const w = window.open(objectUrl, "_blank");
-      if (w) {
-        w.onload = () => {
-          w.print();
+      
+      // Create a hidden iframe to print the PDF
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      iframe.src = objectUrl;
+      
+      document.body.appendChild(iframe);
+      
+      iframe.onload = () => {
+        setTimeout(() => {
+          try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+          } catch {
+            // If iframe print fails, open in new window
+            window.open(objectUrl, '_blank');
+          }
+          // Cleanup after a delay
           setTimeout(() => {
-            try {
-              URL.revokeObjectURL(objectUrl);
-            } catch {
-              // ignore
-            }
-          }, 5000);
-        };
-      }
+            document.body.removeChild(iframe);
+            URL.revokeObjectURL(objectUrl);
+          }, 1000);
+        }, 500);
+      };
     } catch {
-      // fallback
-      const w = window.open(url, "_blank");
-      if (w) w.onload = () => w.print();
+      // fallback - open in new window
+      window.open(url, "_blank");
     }
   };
 
