@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, CreditCard } from "lucide-react";
+import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, CreditCard, Bookmark, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -163,6 +163,7 @@ const WORKFLOW_CUSTOM_COLUMNS_KEY = "workflow-custom-columns";
 const WORKFLOW_CUSTOM_DATA_KEY = "workflow-custom-data";
 const WORKFLOW_SORT_KEY = "workflow-sort";
 const TABLE_RELATIONS_KEY = "work-table-relations";
+const WORKFLOW_SAVED_FILTERS_KEY = "workflow-saved-filters";
 
 interface TableRelationsConfig {
   defaultCompanyId: string | null;
@@ -173,6 +174,14 @@ interface TableRelationsConfig {
 interface SortConfig {
   column: string;
   direction: 'asc' | 'desc';
+}
+
+interface SavedFilter {
+  id: string;
+  name: string;
+  filterColumn: string;
+  filterValues: string[];
+  filterMode: 'include' | 'exclude';
 }
 
 // Sanitize filename to remove special characters
@@ -200,6 +209,15 @@ export default function WorkFlowTab() {
   const [filterColumn, setFilterColumn] = useState<string>("");
   const [filterValues, setFilterValues] = useState<string[]>([]);
   const [filterMode, setFilterMode] = useState<'include' | 'exclude'>('include');
+  
+  // Saved filters state
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>(() => {
+    const saved = localStorage.getItem(WORKFLOW_SAVED_FILTERS_KEY);
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [saveFilterDialogOpen, setSaveFilterDialogOpen] = useState(false);
+  const [newFilterName, setNewFilterName] = useState("");
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -345,6 +363,44 @@ export default function WorkFlowTab() {
   useEffect(() => {
     localStorage.setItem(WORKFLOW_SORT_KEY, JSON.stringify(sortConfig));
   }, [sortConfig]);
+
+  // Persist saved filters
+  useEffect(() => {
+    localStorage.setItem(WORKFLOW_SAVED_FILTERS_KEY, JSON.stringify(savedFilters));
+  }, [savedFilters]);
+
+  // Save filter functions
+  const handleSaveFilter = () => {
+    if (!newFilterName.trim() || !filterColumn || filterValues.length === 0) {
+      toast.error("Por favor selecione um filtro antes de guardar");
+      return;
+    }
+    
+    const newFilter: SavedFilter = {
+      id: `filter-${Date.now()}`,
+      name: newFilterName.trim(),
+      filterColumn,
+      filterValues,
+      filterMode,
+    };
+    
+    setSavedFilters(prev => [...prev, newFilter]);
+    setNewFilterName("");
+    setSaveFilterDialogOpen(false);
+    toast.success("Filtro guardado");
+  };
+
+  const loadSavedFilter = (filter: SavedFilter) => {
+    setFilterColumn(filter.filterColumn);
+    setFilterValues(filter.filterValues);
+    setFilterMode(filter.filterMode);
+    toast.success(`Filtro "${filter.name}" aplicado`);
+  };
+
+  const deleteSavedFilter = (filterId: string) => {
+    setSavedFilters(prev => prev.filter(f => f.id !== filterId));
+    toast.success("Filtro eliminado");
+  };
 
   // Fetch workflow files
   const { data: workflowFiles, isLoading } = useQuery({
@@ -1358,6 +1414,62 @@ export default function WorkFlowTab() {
           </DropdownMenuContent>
         </DropdownMenu>
 
+        {/* Saved Filters Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <Bookmark className="h-4 w-4" />
+              Filtros
+              {savedFilters.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  {savedFilters.length}
+                </Badge>
+              )}
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56 bg-popover">
+            {filterColumn && filterValues.length > 0 && (
+              <>
+                <DropdownMenuItem onClick={() => setSaveFilterDialogOpen(true)}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Guardar filtro atual
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            {savedFilters.length === 0 ? (
+              <div className="px-2 py-3 text-sm text-muted-foreground text-center">
+                Sem filtros guardados
+              </div>
+            ) : (
+              savedFilters.map(filter => (
+                <DropdownMenuItem
+                  key={filter.id}
+                  className="flex items-center justify-between"
+                  onClick={() => loadSavedFilter(filter)}
+                >
+                  <div className="flex items-center gap-2">
+                    <Bookmark className="h-4 w-4 text-blue-500" />
+                    <span>{filter.name}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 hover:bg-destructive/10 hover:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteSavedFilter(filter.id);
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuItem>
+              ))
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         {/* Bulk Actions - shown when files selected */}
         {selectedFiles.size > 0 && (
           <>
@@ -2287,6 +2399,56 @@ export default function WorkFlowTab() {
           }}
         />
       )}
+
+      {/* Save Filter Dialog */}
+      <Dialog open={saveFilterDialogOpen} onOpenChange={setSaveFilterDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Guardar Filtro</DialogTitle>
+            <DialogDescription>
+              Dê um nome ao filtro para o poder reutilizar mais tarde.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="filterName">Nome do filtro</Label>
+              <Input
+                id="filterName"
+                placeholder="Ex: Documentos Pendentes"
+                value={newFilterName}
+                onChange={(e) => setNewFilterName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSaveFilter();
+                  }
+                }}
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <p>Filtro atual:</p>
+              <div className="mt-1 flex items-center gap-2">
+                <Badge variant="outline">
+                  {columns.find(c => c.id === filterColumn)?.label || filterColumn}
+                </Badge>
+                <span className="text-xs">{filterMode === 'include' ? 'Incluir' : 'Excluir'}:</span>
+                {filterValues.map(v => (
+                  <Badge key={v} variant="secondary" className="text-xs">
+                    {v}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveFilterDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveFilter} disabled={!newFilterName.trim()}>
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
