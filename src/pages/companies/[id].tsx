@@ -1864,7 +1864,7 @@ export default function CompanyDetailPage() {
                     </th>
                     {isColumnVisible("docDate") && (
                       <th className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs uppercase tracking-wider w-28">
-                        Date
+                        <SortHeader field="created_at">Date</SortHeader>
                       </th>
                     )}
                     {isColumnVisible("type") && (
