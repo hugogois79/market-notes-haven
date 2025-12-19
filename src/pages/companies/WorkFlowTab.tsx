@@ -1482,22 +1482,22 @@ export default function WorkFlowTab() {
               <Button
                 variant="outline"
                 size="sm"
+                className="h-8 px-1.5 rounded-r-none border-r-0 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                onClick={() => deleteSavedFilter(filter.id)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 className={cn(
-                  "gap-1.5 h-8 text-sm rounded-r-none border-r-0",
+                  "gap-1.5 h-8 text-sm rounded-l-none",
                   isActive && "bg-blue-50 border-blue-200 text-blue-700"
                 )}
                 onClick={() => loadSavedFilter(filter)}
               >
                 <Bookmark className="h-3.5 w-3.5" />
                 {filter.name}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 px-1.5 rounded-l-none hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
-                onClick={() => deleteSavedFilter(filter.id)}
-              >
-                <Trash2 className="h-3 w-3" />
               </Button>
             </div>
           );
