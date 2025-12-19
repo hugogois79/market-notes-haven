@@ -376,6 +376,11 @@ export default function WorkFlowTab() {
       return;
     }
     
+    if (savedFilters.length >= 5) {
+      toast.error("Máximo de 5 filtros guardados. Elimine um para adicionar outro.");
+      return;
+    }
+    
     const newFilter: SavedFilter = {
       id: `filter-${Date.now()}`,
       name: newFilterName.trim(),
@@ -1388,8 +1393,8 @@ export default function WorkFlowTab() {
         {/* Columns Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Columns className="h-4 w-4" />
+            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-sm">
+              <Columns className="h-3.5 w-3.5" />
               Columns
               <ChevronDown className="h-3 w-3" />
             </Button>
@@ -1417,46 +1422,37 @@ export default function WorkFlowTab() {
         {/* Saved Filters Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Bookmark className="h-4 w-4" />
+            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-sm">
+              <Bookmark className="h-3.5 w-3.5" />
               Filtros
               {savedFilters.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                <Badge variant="secondary" className="ml-0.5 h-4 px-1 text-[10px]">
                   {savedFilters.length}
                 </Badge>
               )}
               <ChevronDown className="h-3 w-3" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56 bg-popover">
-            {filterColumn && filterValues.length > 0 && (
-              <>
-                <DropdownMenuItem onClick={() => setSaveFilterDialogOpen(true)}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Guardar filtro atual
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-              </>
-            )}
+          <DropdownMenuContent align="start" className="w-48 bg-popover">
             {savedFilters.length === 0 ? (
-              <div className="px-2 py-3 text-sm text-muted-foreground text-center">
+              <div className="px-2 py-2 text-xs text-muted-foreground text-center">
                 Sem filtros guardados
               </div>
             ) : (
               savedFilters.map(filter => (
                 <DropdownMenuItem
                   key={filter.id}
-                  className="flex items-center justify-between"
+                  className="flex items-center justify-between py-1.5 text-sm"
                   onClick={() => loadSavedFilter(filter)}
                 >
-                  <div className="flex items-center gap-2">
-                    <Bookmark className="h-4 w-4 text-blue-500" />
-                    <span>{filter.name}</span>
+                  <div className="flex items-center gap-1.5">
+                    <Bookmark className="h-3.5 w-3.5 text-blue-500" />
+                    <span className="truncate max-w-[100px]">{filter.name}</span>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 hover:bg-destructive/10 hover:text-destructive"
+                    className="h-5 w-5 hover:bg-destructive/10 hover:text-destructive"
                     onClick={(e) => {
                       e.stopPropagation();
                       deleteSavedFilter(filter.id);
@@ -1542,6 +1538,7 @@ export default function WorkFlowTab() {
                 <DropdownMenuItem onClick={() => setFilterValues([])}>
                   Clear selection
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 {getFilterableColumns().find(c => c.id === filterColumn)?.options?.map(opt => {
                   const isSelected = filterValues.includes(opt.label);
                   return (
@@ -1567,6 +1564,15 @@ export default function WorkFlowTab() {
                     </DropdownMenuItem>
                   );
                 })}
+                {filterValues.length > 0 && savedFilters.length < 5 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setSaveFilterDialogOpen(true)}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Guardar filtro atual
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
