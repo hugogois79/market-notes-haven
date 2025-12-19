@@ -1209,21 +1209,34 @@ export default function CompanyDetailPage() {
 
   const handleDownload = async (doc: any) => {
     try {
-      const path = doc.file_url.split("/").slice(-2).join("/");
-      const { data, error } = await supabase.storage
-        .from("company-documents")
-        .download(path);
-      
-      if (error) throw error;
-      
-      const url = URL.createObjectURL(data);
+      const url = new URL(doc.file_url);
+
+      // Supports both public and private object URLs:
+      // /storage/v1/object/public/<bucket>/<path>
+      // /storage/v1/object/<bucket>/<path>
+      const match = url.pathname.match(/\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)$/);
+      if (!match) {
+        window.open(doc.file_url, "_blank");
+        return;
+      }
+
+      const [, bucket, encodedPath] = match;
+      const filePath = decodeURIComponent(encodedPath);
+
+      const { data, error } = await supabase.storage.from(bucket).download(filePath);
+      if (error || !data) throw error ?? new Error("Unable to download file");
+
+      const blobUrl = URL.createObjectURL(data);
       const a = document.createElement("a");
-      a.href = url;
-      a.download = doc.name;
+      a.href = blobUrl;
+      a.download = doc.name || "document";
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
     } catch (error: any) {
-      toast.error("Download failed: " + error.message);
+      const message = error?.message ? String(error.message) : JSON.stringify(error);
+      toast.error("Download failed: " + message);
     }
   };
 
