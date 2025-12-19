@@ -973,16 +973,20 @@ export default function CompanyDetailPage() {
     setIsDragOver(false);
   }, []);
 
-  // Helper to recursively read folder entries
-  const readAllEntries = async (entry: FileSystemEntry, basePath: string = ""): Promise<{ file: File; path: string }[]> => {
-    const results: { file: File; path: string }[] = [];
+  // Helper to recursively read folder entries - also returns empty folders
+  const readAllEntries = async (
+    entry: FileSystemEntry, 
+    basePath: string = ""
+  ): Promise<{ files: { file: File; path: string }[]; emptyFolders: string[] }> => {
+    const files: { file: File; path: string }[] = [];
+    const emptyFolders: string[] = [];
     
     if (entry.isFile) {
       const fileEntry = entry as FileSystemFileEntry;
       const file = await new Promise<File>((resolve, reject) => {
         fileEntry.file(resolve, reject);
       });
-      results.push({ file, path: basePath });
+      files.push({ file, path: basePath });
     } else if (entry.isDirectory) {
       const dirEntry = entry as FileSystemDirectoryEntry;
       const reader = dirEntry.createReader();
@@ -1001,14 +1005,21 @@ export default function CompanyDetailPage() {
         readBatch();
       });
       
-      for (const childEntry of entries) {
-        const childPath = basePath ? `${basePath}/${entry.name}` : entry.name;
-        const childResults = await readAllEntries(childEntry, childPath);
-        results.push(...childResults);
+      const currentFolderPath = basePath ? `${basePath}/${entry.name}` : entry.name;
+      
+      // If directory is empty, track it as an empty folder
+      if (entries.length === 0) {
+        emptyFolders.push(currentFolderPath);
+      } else {
+        for (const childEntry of entries) {
+          const childResults = await readAllEntries(childEntry, currentFolderPath);
+          files.push(...childResults.files);
+          emptyFolders.push(...childResults.emptyFolders);
+        }
       }
     }
     
-    return results;
+    return { files, emptyFolders };
   };
 
   const handleDrop = useCallback(async (e: React.DragEvent) => {
@@ -1017,6 +1028,7 @@ export default function CompanyDetailPage() {
     
     const items = e.dataTransfer.items;
     const filesToUpload: { file: File; folderPath: string }[] = [];
+    const emptyFoldersToCreate: string[] = [];
     
     // Check if any item is a folder using webkitGetAsEntry
     const entries: FileSystemEntry[] = [];
@@ -1037,16 +1049,19 @@ export default function CompanyDetailPage() {
       // Process entries (may include folders)
       for (const entry of entries) {
         const results = await readAllEntries(entry, "");
-        for (const r of results) {
+        for (const r of results.files) {
           filesToUpload.push({ file: r.file, folderPath: r.path });
         }
+        emptyFoldersToCreate.push(...results.emptyFolders);
       }
     }
     
-    if (filesToUpload.length === 0) return;
+    // Continue even if no files but there are empty folders to create
+    if (filesToUpload.length === 0 && emptyFoldersToCreate.length === 0) return;
     
     setIsDropUploading(true);
-    setDropUploadProgress({ current: 0, total: filesToUpload.length });
+    const totalItems = filesToUpload.length + emptyFoldersToCreate.length;
+    setDropUploadProgress({ current: 0, total: totalItems });
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -1055,67 +1070,81 @@ export default function CompanyDetailPage() {
       // Track created folders to avoid duplicates
       const createdFolders: Record<string, string> = {}; // path -> folder id
       
+      // Helper to create a folder path
+      const createFolderPath = async (folderPath: string) => {
+        const pathParts = folderPath.split("/").filter(Boolean);
+        let parentId = currentFolderId;
+        let currentPath = "";
+        
+        for (const folderName of pathParts) {
+          currentPath = currentPath ? `${currentPath}/${folderName}` : folderName;
+          
+          if (createdFolders[currentPath]) {
+            parentId = createdFolders[currentPath];
+          } else {
+            // Check if folder already exists
+            let folderQuery = supabase
+              .from("company_folders")
+              .select("id")
+              .eq("company_id", id)
+              .eq("name", folderName);
+            
+            if (parentId) {
+              folderQuery = folderQuery.eq("parent_folder_id", parentId);
+            } else {
+              folderQuery = folderQuery.is("parent_folder_id", null);
+            }
+            
+            const { data: existingFolder } = await folderQuery.maybeSingle();
+            
+            if (existingFolder) {
+              createdFolders[currentPath] = existingFolder.id;
+              parentId = existingFolder.id;
+            } else {
+              // Create new folder
+              const { data: newFolder, error: folderError } = await supabase
+                .from("company_folders")
+                .insert({
+                  company_id: id,
+                  name: folderName,
+                  parent_folder_id: parentId || null,
+                })
+                .select("id")
+                .single();
+              
+              if (folderError) {
+                console.error("Failed to create folder:", folderError);
+                return null;
+              }
+              
+              createdFolders[currentPath] = newFolder.id;
+              parentId = newFolder.id;
+            }
+          }
+        }
+        
+        return parentId;
+      };
+      
+      // First, create all empty folders
+      let processedCount = 0;
+      for (const emptyFolderPath of emptyFoldersToCreate) {
+        processedCount++;
+        setDropUploadProgress({ current: processedCount, total: totalItems });
+        await createFolderPath(emptyFolderPath);
+      }
+      
+      // Then process files
       for (let i = 0; i < filesToUpload.length; i++) {
         const { file, folderPath } = filesToUpload[i];
-        setDropUploadProgress({ current: i + 1, total: filesToUpload.length });
+        processedCount++;
+        setDropUploadProgress({ current: processedCount, total: totalItems });
         
         // Determine target folder
         let targetFolderId = currentFolderId;
         
         if (folderPath) {
-          // Create nested folder structure if needed
-          const pathParts = folderPath.split("/").filter(Boolean);
-          let parentId = currentFolderId;
-          let currentPath = "";
-          
-          for (const folderName of pathParts) {
-            currentPath = currentPath ? `${currentPath}/${folderName}` : folderName;
-            
-            if (createdFolders[currentPath]) {
-              parentId = createdFolders[currentPath];
-            } else {
-              // Check if folder already exists
-              let folderQuery = supabase
-                .from("company_folders")
-                .select("id")
-                .eq("company_id", id)
-                .eq("name", folderName);
-              
-              if (parentId) {
-                folderQuery = folderQuery.eq("parent_folder_id", parentId);
-              } else {
-                folderQuery = folderQuery.is("parent_folder_id", null);
-              }
-              
-              const { data: existingFolder } = await folderQuery.maybeSingle();
-              
-              if (existingFolder) {
-                createdFolders[currentPath] = existingFolder.id;
-                parentId = existingFolder.id;
-              } else {
-                // Create new folder
-                const { data: newFolder, error: folderError } = await supabase
-                  .from("company_folders")
-                  .insert({
-                    company_id: id,
-                    name: folderName,
-                    parent_folder_id: parentId || null,
-                  })
-                  .select("id")
-                  .single();
-                
-                if (folderError) {
-                  console.error("Failed to create folder:", folderError);
-                  continue;
-                }
-                
-                createdFolders[currentPath] = newFolder.id;
-                parentId = newFolder.id;
-              }
-            }
-          }
-          
-          targetFolderId = parentId;
+          targetFolderId = await createFolderPath(folderPath);
         }
         
         // Calculate SHA-256 hash for forensic integrity
@@ -1160,7 +1189,16 @@ export default function CompanyDetailPage() {
       
       invalidateDocuments();
       queryClient.invalidateQueries({ queryKey: ["company-folders", id] });
-      toast.success(`${filesToUpload.length} file(s) uploaded successfully`);
+      
+      const foldersCreated = emptyFoldersToCreate.length;
+      const filesUploaded = filesToUpload.length;
+      if (filesUploaded > 0 && foldersCreated > 0) {
+        toast.success(`${filesUploaded} file(s) and ${foldersCreated} folder(s) created`);
+      } else if (foldersCreated > 0) {
+        toast.success(`${foldersCreated} empty folder(s) created`);
+      } else {
+        toast.success(`${filesUploaded} file(s) uploaded successfully`);
+      }
     } catch (error: any) {
       toast.error("Upload failed: " + error.message);
     } finally {
