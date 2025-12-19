@@ -234,7 +234,7 @@ export default function WorkFlowTab() {
   const [isCompleting, setIsCompleting] = useState(false);
 
   // Query existing transaction for current file using document_file_id
-  const { data: existingTransaction } = useQuery({
+  const { data: existingTransaction, isLoading: isLoadingTransaction } = useQuery({
     queryKey: ["file-transaction", previewFile?.id],
     queryFn: async () => {
       if (!previewFile?.id) return null;
@@ -247,6 +247,7 @@ export default function WorkFlowTab() {
       return data;
     },
     enabled: !!previewFile?.id,
+    staleTime: 0, // Always refetch when file changes
   });
 
 
@@ -2131,9 +2132,10 @@ export default function WorkFlowTab() {
                             variant="outline"
                             size="sm"
                             onClick={() => setShowPaymentDialog(true)}
+                            disabled={isLoadingTransaction}
                           >
                             <CreditCard className="h-4 w-4 mr-2" />
-                            {existingTransaction ? "Editar Pagamento" : "Criar Pagamento"}
+                            {isLoadingTransaction ? "..." : (existingTransaction ? "Editar Pagamento" : "Criar Pagamento")}
                           </Button>
               </div>
             </div>
