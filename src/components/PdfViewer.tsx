@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from "pdfjs-dist";
 
 // pdf.js worker (Vite-friendly)
@@ -62,14 +63,15 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
     try {
       // Print without opening blob URLs (can be blocked by browser extensions)
       const pdf = pdfRef.current;
-      if (!pdf) throw new Error("PDF ainda a carregar");
-
-      const printWindow = window.open("", "_blank");
-      if (!printWindow) throw new Error("Pop-up bloqueado");
+      if (!pdf || loading) {
+        toast.error("PDF ainda a carregar, aguarde um momento");
+        return;
+      }
 
       const images: string[] = [];
       const printScale = 2;
 
+      // Render all pages to images first
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const viewport = page.getViewport({ scale: printScale });
@@ -82,6 +84,18 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
 
         await page.render({ canvasContext: ctx, viewport, canvas }).promise;
         images.push(canvas.toDataURL("image/png"));
+      }
+
+      // Only open window after we have all images ready
+      if (images.length === 0) {
+        toast.error("Não foi possível preparar o documento para impressão");
+        return;
+      }
+
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        toast.error("Pop-up bloqueado pelo navegador");
+        return;
       }
 
       printWindow.document.open();
@@ -112,8 +126,7 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
       printWindow.document.close();
     } catch (e) {
       console.error("Print failed:", e);
-      // fallback
-      window.open(url, "_blank");
+      toast.error("Erro ao imprimir: " + (e instanceof Error ? e.message : "erro desconhecido"));
     }
   };
 
