@@ -231,6 +231,7 @@ export default function WorkFlowTab() {
   // Mark as completed state
   const [markCompleteWarningOpen, setMarkCompleteWarningOpen] = useState(false);
   const [fileToComplete, setFileToComplete] = useState<WorkflowFile | null>(null);
+  const [missingStorageCompanyName, setMissingStorageCompanyName] = useState<string | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
 
   // Query existing transaction for current file using document_file_id
@@ -699,6 +700,19 @@ export default function WorkFlowTab() {
       : null;
 
     if (!matchingLocation) {
+      // Fetch company name for the warning message
+      let companyName = "Unknown Company";
+      if (targetCompanyId) {
+        const { data: companyData } = await supabase
+          .from("companies")
+          .select("name")
+          .eq("id", targetCompanyId)
+          .maybeSingle();
+        if (companyData?.name) {
+          companyName = companyData.name;
+        }
+      }
+      setMissingStorageCompanyName(companyName);
       setFileToComplete(file);
       setMarkCompleteWarningOpen(true);
       return;
@@ -901,6 +915,7 @@ export default function WorkFlowTab() {
     } finally {
       setIsCompleting(false);
       setFileToComplete(null);
+      setMissingStorageCompanyName(null);
       setMarkCompleteWarningOpen(false);
     }
   };
@@ -2254,13 +2269,14 @@ export default function WorkFlowTab() {
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
               <p>
-                No file storage location is configured for{" "}
+                No file storage location is configured for company{" "}
+                <strong>{missingStorageCompanyName || "Unknown"}</strong> in{" "}
                 <strong>
                   {fileToComplete && format(new Date(fileToComplete.created_at), "MMMM yyyy")}
                 </strong>.
               </p>
               <p>
-                Please go to <strong>Settings → Table Relations → File Storage Locations</strong> and add a storage location for this month/year before marking the file as completed.
+                Please go to <strong>Settings → Table Relations → File Storage Locations</strong> and add a storage location for this company and month/year before marking the file as completed.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -2268,6 +2284,7 @@ export default function WorkFlowTab() {
             <AlertDialogCancel onClick={() => {
               setMarkCompleteWarningOpen(false);
               setFileToComplete(null);
+              setMissingStorageCompanyName(null);
             }}>
               Close
             </AlertDialogCancel>
