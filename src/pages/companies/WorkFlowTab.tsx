@@ -1465,6 +1465,22 @@ export default function WorkFlowTab() {
           </DropdownMenuContent>
         </DropdownMenu>
 
+        {/* Clear Active Filters Button - only show when filters are active */}
+        {activeFilters.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-2 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+            onClick={() => {
+              setActiveFilters([]);
+              setCurrentFilterColumn("");
+              toast.success("Filtros limpos");
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+
         {/* Saved Filters - Quick Access Buttons */}
         {savedFilters.map(filter => {
           // Check if this saved filter matches current active filters
