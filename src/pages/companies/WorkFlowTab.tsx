@@ -654,10 +654,10 @@ export default function WorkFlowTab() {
 
   // Mark file as completed handler
   const handleMarkAsComplete = async (file: WorkflowFile) => {
-    // First, check if there's an existing transaction for this file to get actual expense date, company AND entity_name
+    // First, check if there's an existing transaction for this file to get actual expense date, company AND bank_account_id
     const { data: existingTransaction } = await supabase
       .from("financial_transactions")
-      .select("date, company_id, entity_name")
+      .select("date, company_id, bank_account_id")
       .eq("invoice_file_url", file.file_url)
       .maybeSingle();
 
@@ -718,39 +718,35 @@ export default function WorkFlowTab() {
       return;
     }
 
-    // Try to find a supplier company matching entity_name (for dual-company copy)
-    let supplierStorageLocation = null;
-    if (existingTransaction?.entity_name && existingTransaction.entity_name !== 'Workflow Document') {
-      // Search for a company with a name similar to entity_name
-      const { data: matchingCompanies } = await supabase
-        .from("companies")
-        .select("id, name")
-        .ilike("name", `%${existingTransaction.entity_name}%`);
+    // Find the company that owns the bank account used for payment (for dual-company copy)
+    let paymentAccountStorageLocation = null;
+    if (existingTransaction?.bank_account_id) {
+      // Get the company_id from the bank account
+      const { data: bankAccount } = await supabase
+        .from("bank_accounts")
+        .select("company_id")
+        .eq("id", existingTransaction.bank_account_id)
+        .maybeSingle();
       
-      // If we found a matching company and it's different from the paying company
-      if (matchingCompanies && matchingCompanies.length > 0) {
-        const supplierCompany = matchingCompanies[0];
+      // If the bank account owner is different from the invoice company
+      if (bankAccount?.company_id && bankAccount.company_id !== targetCompanyId) {
+        // Find storage location for the bank account owner's company
+        const { data: bankAccountOwnerLocation } = await supabase
+          .from("workflow_storage_locations")
+          .select("*")
+          .eq("company_id", bankAccount.company_id)
+          .eq("year", fileYear)
+          .eq("month", fileMonth)
+          .maybeSingle();
         
-        // Only proceed if supplier is different from paying company
-        if (supplierCompany.id !== targetCompanyId) {
-          // Find storage location for the supplier company
-          const { data: supplierLocation } = await supabase
-            .from("workflow_storage_locations")
-            .select("*")
-            .eq("company_id", supplierCompany.id)
-            .eq("year", fileYear)
-            .eq("month", fileMonth)
-            .maybeSingle();
-          
-          if (supplierLocation) {
-            supplierStorageLocation = supplierLocation;
-          }
+        if (bankAccountOwnerLocation) {
+          paymentAccountStorageLocation = bankAccountOwnerLocation;
         }
       }
     }
 
     // Proceed with completion (passing both storage locations)
-    await completeFile(file, matchingLocation, settings, supplierStorageLocation);
+    await completeFile(file, matchingLocation, settings, paymentAccountStorageLocation);
   };
 
   const completeFile = async (
