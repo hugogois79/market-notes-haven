@@ -1645,8 +1645,7 @@ export default function WorkFlowTab() {
                         <div className="flex items-center gap-2">
                           <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
                           <button 
-                            className="text-xs font-medium text-blue-600 truncate max-w-[600px] hover:underline cursor-pointer text-left" 
-                            title={file.file_name}
+                            className="text-xs font-medium text-blue-600 hover:underline cursor-pointer text-left whitespace-nowrap" 
                             onClick={() => setPreviewFile(file)}
                           >
                             {getFileNameWithoutExtension(file.file_name)}
@@ -1691,7 +1690,7 @@ export default function WorkFlowTab() {
                       )}
                       {isColumnVisible("empresa") && (
                         <td className="px-3 py-1.5">
-                          <span className="text-xs text-slate-600 truncate max-w-[120px] block">
+                          <span className="text-xs text-slate-600 whitespace-nowrap">
                             {transactionsByFileUrl?.[file.file_url]?.companyName || <span className="text-slate-400">—</span>}
                           </span>
                         </td>
@@ -1701,7 +1700,7 @@ export default function WorkFlowTab() {
                           {transactionsByFileUrl?.[file.file_url] ? (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <button className="text-left text-xs text-slate-600 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer w-full truncate max-w-[120px]">
+                                <button className="text-left text-xs text-slate-600 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer whitespace-nowrap">
                                   {transactionsByFileUrl[file.file_url]?.projectName || <span className="text-slate-400">—</span>}
                                 </button>
                               </DropdownMenuTrigger>
