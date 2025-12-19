@@ -1748,8 +1748,8 @@ export default function WorkFlowTab() {
                         </td>
                       )}
                       {isColumnVisible("date") && (
-                        <td className="px-3 py-1.5 text-slate-600 text-sm">
-                          {format(new Date(file.created_at), "dd/MM/yyyy")}
+                        <td className="px-3 py-1.5 text-slate-600 text-sm whitespace-nowrap">
+                          {format(new Date(file.created_at), "dd/MM/yyyy HH:mm")}
                         </td>
                       )}
                       {isColumnVisible("category") && (
