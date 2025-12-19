@@ -1734,6 +1734,16 @@ export default function CompanyDetailPage() {
                 <BreadcrumbItem>
                   <BreadcrumbLink 
                     href="#" 
+                    onClick={(e) => { e.preventDefault(); navigate("/companies?tab=entity"); }}
+                    className="text-primary hover:underline cursor-pointer"
+                  >
+                    Entity
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink 
+                    href="#" 
                     onClick={(e) => { e.preventDefault(); setCurrentFolderId(null); }}
                     className="text-primary hover:underline"
                   >
