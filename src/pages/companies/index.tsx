@@ -138,7 +138,7 @@ export default function CompaniesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("list");
+  const [activeTab, setActiveTab] = useState("workflow");
   
   // Custom columns (editable columns with options)
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>(() => {
