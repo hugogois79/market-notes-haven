@@ -228,15 +228,15 @@ export default function DocumentPaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="w-[min(96vw,42rem)] max-w-none overflow-hidden">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Editar Pagamento" : "Registar Pagamento"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
-          <div>
+        <form onSubmit={handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4 min-w-0">
+          <div className="min-w-0">
             <Label className="text-xs text-muted-foreground">Documento</Label>
-            <p className="text-sm font-medium">{removeExtension(fileName)}</p>
+            <p className="text-sm font-medium break-words">{removeExtension(fileName)}</p>
           </div>
 
           <div>
