@@ -511,26 +511,22 @@ export default function WorkFlowTab() {
         companyId = companies[0].id;
       }
 
-      const transactionData = {
-        invoice_file_url: fileUrl,
-        project_id: projectId,
-        company_id: companyId,
-        created_by: user.id,
-        type: 'expense' as const,
-        category: 'other' as const,
-        payment_method: 'bank_transfer' as const,
-        date: new Date().toISOString().split('T')[0],
-        description: 'Workflow document',
-        entity_name: 'Unknown',
-        amount_net: 0,
-        total_amount: 0,
-      };
-
-      const { error } = await supabase
+      // Update existing transaction with project_id if it exists
+      const { data: existingTx } = await supabase
         .from("financial_transactions")
-        .insert(transactionData as any);
-      
-      if (error) throw error;
+        .select("id")
+        .eq("invoice_file_url", fileUrl)
+        .maybeSingle();
+
+      if (existingTx) {
+        const { error } = await supabase
+          .from("financial_transactions")
+          .update({ project_id: projectId })
+          .eq("id", existingTx.id);
+        
+        if (error) throw error;
+      }
+      // If no transaction exists yet, project will be assigned when payment is created
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workflow-linked-transactions"] });
@@ -657,9 +653,17 @@ export default function WorkFlowTab() {
     // First, check if there's an existing transaction for this file to get actual expense date, company AND bank_account_id
     const { data: existingTransaction } = await supabase
       .from("financial_transactions")
-      .select("date, company_id, bank_account_id")
+      .select("date, company_id, bank_account_id, total_amount")
       .eq("invoice_file_url", file.file_url)
       .maybeSingle();
+
+    // If no transaction or transaction has zero value, require payment registration first
+    if (!existingTransaction || existingTransaction.total_amount === 0) {
+      setPreviewFile(file);
+      setShowPaymentDialog(true);
+      toast.info("Por favor registe os detalhes do pagamento antes de concluir");
+      return;
+    }
 
     // Use transaction date if available, otherwise fall back to file upload date
     const dateToUse = existingTransaction?.date 
@@ -763,31 +767,7 @@ export default function WorkFlowTab() {
 
       const companyId = storageLocation.company_id;
 
-      // Check if transaction already exists
-      const existingTx = transactionsByFileUrl?.[file.file_url];
-
-      // 1. Create or update financial transaction
-      if (!existingTx) {
-        const transactionData = {
-          invoice_file_url: file.file_url,
-          company_id: companyId,
-          created_by: user.id,
-          type: 'expense' as const,
-          category: 'other' as const,
-          payment_method: 'bank_transfer' as const,
-          date: new Date(file.created_at).toISOString().split('T')[0],
-          description: file.file_name,
-          entity_name: 'Workflow Document',
-          amount_net: 0,
-          total_amount: 0,
-        };
-
-        const { error: txError } = await supabase
-          .from("financial_transactions")
-          .insert(transactionData as any);
-        
-        if (txError) throw txError;
-      }
+      // Transaction should already exist at this point (created via payment dialog)
 
       // Helper function to copy file to a company's folder
       const copyToCompanyFolder = async (targetStorageLocation: any) => {
