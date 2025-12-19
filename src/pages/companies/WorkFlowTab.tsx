@@ -1881,13 +1881,15 @@ export default function WorkFlowTab() {
               {isColumnVisible("size") && <td></td>}
               {isColumnVisible("project") && <td></td>}
               {isColumnVisible("value") && (
-                <td className="px-3 py-2 text-right text-xs text-muted-foreground">
-                  {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(
-                    filteredFiles?.reduce((sum, file) => {
-                      const value = transactionsByFileUrl?.[file.file_url]?.value || 0;
-                      return sum + value;
-                    }, 0) || 0
-                  )}
+                <td className="px-3 py-2.5 text-right">
+                  <span className="font-semibold text-sm tabular-nums">
+                    {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(
+                      filteredFiles?.reduce((sum, file) => {
+                        const value = transactionsByFileUrl?.[file.file_url]?.value || 0;
+                        return sum + value;
+                      }, 0) || 0
+                    )}
+                  </span>
                 </td>
               )}
               {customColumns.map((col) => <td key={col.id}></td>)}
