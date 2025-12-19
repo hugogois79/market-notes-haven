@@ -176,12 +176,16 @@ interface SortConfig {
   direction: 'asc' | 'desc';
 }
 
+interface FilterCondition {
+  column: string;
+  values: string[];
+  mode: 'include' | 'exclude';
+}
+
 interface SavedFilter {
   id: string;
   name: string;
-  filterColumn: string;
-  filterValues: string[];
-  filterMode: 'include' | 'exclude';
+  conditions: FilterCondition[];
 }
 
 // Sanitize filename to remove special characters
@@ -206,9 +210,9 @@ export default function WorkFlowTab() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-  const [filterColumn, setFilterColumn] = useState<string>("");
-  const [filterValues, setFilterValues] = useState<string[]>([]);
-  const [filterMode, setFilterMode] = useState<'include' | 'exclude'>('include');
+  const [activeFilters, setActiveFilters] = useState<FilterCondition[]>([]);
+  // Current filter being edited
+  const [currentFilterColumn, setCurrentFilterColumn] = useState<string>("");
   
   // Saved filters state
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>(() => {
@@ -371,7 +375,7 @@ export default function WorkFlowTab() {
 
   // Save filter functions
   const handleSaveFilter = () => {
-    if (!newFilterName.trim() || !filterColumn || filterValues.length === 0) {
+    if (!newFilterName.trim() || activeFilters.length === 0) {
       toast.error("Por favor selecione um filtro antes de guardar");
       return;
     }
@@ -384,9 +388,7 @@ export default function WorkFlowTab() {
     const newFilter: SavedFilter = {
       id: `filter-${Date.now()}`,
       name: newFilterName.trim(),
-      filterColumn,
-      filterValues,
-      filterMode,
+      conditions: [...activeFilters],
     };
     
     setSavedFilters(prev => [...prev, newFilter]);
@@ -396,15 +398,43 @@ export default function WorkFlowTab() {
   };
 
   const loadSavedFilter = (filter: SavedFilter) => {
-    setFilterColumn(filter.filterColumn);
-    setFilterValues(filter.filterValues);
-    setFilterMode(filter.filterMode);
+    setActiveFilters([...filter.conditions]);
+    setCurrentFilterColumn("");
     toast.success(`Filtro "${filter.name}" aplicado`);
   };
 
   const deleteSavedFilter = (filterId: string) => {
     setSavedFilters(prev => prev.filter(f => f.id !== filterId));
     toast.success("Filtro eliminado");
+  };
+
+  // Add or update a filter condition
+  const addOrUpdateFilter = (column: string, values: string[], mode: 'include' | 'exclude') => {
+    setActiveFilters(prev => {
+      const existing = prev.findIndex(f => f.column === column);
+      if (existing >= 0) {
+        const updated = [...prev];
+        updated[existing] = { column, values, mode };
+        return updated;
+      }
+      return [...prev, { column, values, mode }];
+    });
+  };
+
+  // Remove a filter condition
+  const removeFilter = (column: string) => {
+    setActiveFilters(prev => prev.filter(f => f.column !== column));
+  };
+
+  // Get current filter for a column
+  const getFilterForColumn = (column: string) => {
+    return activeFilters.find(f => f.column === column);
+  };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setActiveFilters([]);
+    setCurrentFilterColumn("");
   };
 
   // Fetch workflow files
@@ -1024,28 +1054,33 @@ export default function WorkFlowTab() {
     // Search filter
     const matchesSearch = file.file_name.toLowerCase().includes(searchQuery.toLowerCase());
     
-    // Column filter
-    let matchesFilter = true;
-    if (filterColumn && filterValues.length > 0) {
+    // Multiple filter conditions (AND logic)
+    let matchesAllFilters = true;
+    for (const filter of activeFilters) {
       let fileValue: string | undefined;
       
       // Special handling for empresa filter (comes from linked transactions)
-      if (filterColumn === 'empresa') {
+      if (filter.column === 'empresa') {
         fileValue = transactionsByFileUrl?.[file.file_url]?.companyName || '';
       } else {
-        const col = columns.find(c => c.id === filterColumn);
+        const col = columns.find(c => c.id === filter.column);
         if (col) {
           fileValue = col.isBuiltIn && col.dbField 
             ? (file as any)[col.dbField] 
-            : customData[file.id]?.[filterColumn];
+            : customData[file.id]?.[filter.column];
         }
       }
       
-      const isMatch = filterValues.includes(fileValue || '');
-      matchesFilter = filterMode === 'include' ? isMatch : !isMatch;
+      const isMatch = filter.values.includes(fileValue || '');
+      const passesFilter = filter.mode === 'include' ? isMatch : !isMatch;
+      
+      if (!passesFilter) {
+        matchesAllFilters = false;
+        break;
+      }
     }
     
-    return matchesSearch && matchesFilter;
+    return matchesSearch && matchesAllFilters;
   })?.sort((a, b) => {
     const { column, direction } = sortConfig;
     const multiplier = direction === 'asc' ? 1 : -1;
@@ -1420,33 +1455,41 @@ export default function WorkFlowTab() {
         </DropdownMenu>
 
         {/* Saved Filters - Quick Access Buttons */}
-        {savedFilters.map(filter => (
-          <div key={filter.id} className="flex items-center">
-            <Button
-              variant="outline"
-              size="sm"
-              className={cn(
-                "gap-1.5 h-8 text-sm rounded-r-none border-r-0",
-                filterColumn === filter.filterColumn && 
-                filterValues.length === filter.filterValues.length &&
-                filterValues.every(v => filter.filterValues.includes(v)) &&
-                "bg-blue-50 border-blue-200 text-blue-700"
-              )}
-              onClick={() => loadSavedFilter(filter)}
-            >
-              <Bookmark className="h-3.5 w-3.5" />
-              {filter.name}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-1.5 rounded-l-none hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
-              onClick={() => deleteSavedFilter(filter.id)}
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </div>
-        ))}
+        {savedFilters.map(filter => {
+          // Check if this saved filter matches current active filters
+          const isActive = filter.conditions.length === activeFilters.length &&
+            filter.conditions.every(fc => 
+              activeFilters.some(af => 
+                af.column === fc.column && 
+                af.values.length === fc.values.length &&
+                af.values.every(v => fc.values.includes(v))
+              )
+            );
+          return (
+            <div key={filter.id} className="flex items-center">
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "gap-1.5 h-8 text-sm rounded-r-none border-r-0",
+                  isActive && "bg-blue-50 border-blue-200 text-blue-700"
+                )}
+                onClick={() => loadSavedFilter(filter)}
+              >
+                <Bookmark className="h-3.5 w-3.5" />
+                {filter.name}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-1.5 rounded-l-none hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                onClick={() => deleteSavedFilter(filter.id)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          );
+        })}
 
         {/* Bulk Actions - shown when files selected */}
         {selectedFiles.size > 0 && (
@@ -1473,65 +1516,112 @@ export default function WorkFlowTab() {
         <div className="flex-1" />
         
         {/* Horizontal Filter Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Show active filters as badges */}
+          {activeFilters.map(filter => {
+            const col = getFilterableColumns().find(c => c.id === filter.column);
+            return (
+              <div key={filter.column} className="flex items-center gap-1 bg-blue-50 border border-blue-200 rounded-md px-2 py-1">
+                <span className="text-xs text-blue-700 font-medium">{col?.label}:</span>
+                <span className="text-xs text-blue-600">
+                  {filter.mode === 'exclude' && '!'}
+                  {filter.values.join(', ')}
+                </span>
+                <button 
+                  className="ml-1 text-blue-400 hover:text-blue-600"
+                  onClick={() => removeFilter(filter.column)}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            );
+          })}
+          
+          {/* Add filter dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2 h-9">
                 <Filter className="h-4 w-4" />
-                {filterColumn ? getFilterableColumns().find(c => c.id === filterColumn)?.label : "Filter"}
+                {currentFilterColumn ? getFilterableColumns().find(c => c.id === currentFilterColumn)?.label : "Adicionar Filtro"}
                 <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="bg-popover">
-              <DropdownMenuItem onClick={() => { setFilterColumn(""); setFilterValues([]); setFilterMode('include'); }}>
-                Clear filter
-              </DropdownMenuItem>
-              {getFilterableColumns().map(col => (
-                <DropdownMenuItem 
-                  key={col.id} 
-                  onClick={() => { setFilterColumn(col.id); setFilterValues([]); }}
-                >
-                  {col.label}
-                </DropdownMenuItem>
-              ))}
+              {activeFilters.length > 0 && (
+                <>
+                  <DropdownMenuItem onClick={clearAllFilters}>
+                    Limpar todos filtros
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              {getFilterableColumns()
+                .filter(col => !activeFilters.some(f => f.column === col.id))
+                .map(col => (
+                  <DropdownMenuItem 
+                    key={col.id} 
+                    onClick={() => setCurrentFilterColumn(col.id)}
+                  >
+                    {col.label}
+                  </DropdownMenuItem>
+                ))}
             </DropdownMenuContent>
           </DropdownMenu>
           
-          {filterColumn && (
+          {/* Filter mode toggle */}
+          {currentFilterColumn && (
             <Button
-              variant={filterMode === 'exclude' ? "destructive" : "outline"}
+              variant={(getFilterForColumn(currentFilterColumn)?.mode || 'include') === 'exclude' ? "destructive" : "outline"}
               size="sm"
               className="h-9 text-xs"
-              onClick={() => setFilterMode(prev => prev === 'include' ? 'exclude' : 'include')}
+              onClick={() => {
+                const existing = getFilterForColumn(currentFilterColumn);
+                const newMode = (existing?.mode || 'include') === 'include' ? 'exclude' : 'include';
+                if (existing) {
+                  addOrUpdateFilter(currentFilterColumn, existing.values, newMode);
+                }
+              }}
             >
-              {filterMode === 'include' ? 'Incluir' : 'Excluir'}
+              {(getFilterForColumn(currentFilterColumn)?.mode || 'include') === 'include' ? 'Incluir' : 'Excluir'}
             </Button>
           )}
           
-          {filterColumn && (
+          {/* Value selection dropdown */}
+          {currentFilterColumn && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2 h-9">
-                  {filterValues.length === 0 ? "Select value" : filterValues.length === 1 ? filterValues[0] : `${filterValues.length} selected`}
+                  {(() => {
+                    const vals = getFilterForColumn(currentFilterColumn)?.values || [];
+                    return vals.length === 0 ? "Selecionar" : vals.length === 1 ? vals[0] : `${vals.length} selecionados`;
+                  })()}
                   <ChevronDown className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="bg-popover min-w-[180px]">
-                <DropdownMenuItem onClick={() => setFilterValues([])}>
-                  Clear selection
+                <DropdownMenuItem onClick={() => removeFilter(currentFilterColumn)}>
+                  Limpar seleção
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                {getFilterableColumns().find(c => c.id === filterColumn)?.options?.map(opt => {
-                  const isSelected = filterValues.includes(opt.label);
+                {getFilterableColumns().find(c => c.id === currentFilterColumn)?.options?.map(opt => {
+                  const currentFilter = getFilterForColumn(currentFilterColumn);
+                  const isSelected = currentFilter?.values.includes(opt.label) || false;
                   return (
                     <DropdownMenuItem 
                       key={opt.label} 
                       onClick={(e) => {
                         e.preventDefault();
+                        const current = currentFilter?.values || [];
+                        const mode = currentFilter?.mode || 'include';
                         if (isSelected) {
-                          setFilterValues(filterValues.filter(v => v !== opt.label));
+                          const newValues = current.filter(v => v !== opt.label);
+                          if (newValues.length === 0) {
+                            removeFilter(currentFilterColumn);
+                          } else {
+                            addOrUpdateFilter(currentFilterColumn, newValues, mode);
+                          }
                         } else {
-                          setFilterValues([...filterValues, opt.label]);
+                          addOrUpdateFilter(currentFilterColumn, [...current, opt.label], mode);
                         }
                       }}
                       className="flex items-center gap-2"
@@ -1546,7 +1636,7 @@ export default function WorkFlowTab() {
                     </DropdownMenuItem>
                   );
                 })}
-                {filterValues.length > 0 && savedFilters.length < 5 && (
+                {activeFilters.length > 0 && savedFilters.length < 5 && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setSaveFilterDialogOpen(true)}>
@@ -1559,12 +1649,13 @@ export default function WorkFlowTab() {
             </DropdownMenu>
           )}
           
-          {filterColumn && (
+          {/* Clear current filter column selection */}
+          {currentFilterColumn && (
             <Button 
               variant="ghost" 
               size="icon" 
               className="h-9 w-9"
-              onClick={() => { setFilterColumn(""); setFilterValues([]); setFilterMode('include'); }}
+              onClick={() => setCurrentFilterColumn("")}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -2413,17 +2504,22 @@ export default function WorkFlowTab() {
               />
             </div>
             <div className="text-sm text-muted-foreground">
-              <p>Filtro atual:</p>
-              <div className="mt-1 flex items-center gap-2">
-                <Badge variant="outline">
-                  {columns.find(c => c.id === filterColumn)?.label || filterColumn}
-                </Badge>
-                <span className="text-xs">{filterMode === 'include' ? 'Incluir' : 'Excluir'}:</span>
-                {filterValues.map(v => (
-                  <Badge key={v} variant="secondary" className="text-xs">
-                    {v}
-                  </Badge>
-                ))}
+              <p>Filtros ativos:</p>
+              <div className="mt-1 space-y-1">
+                {activeFilters.map(filter => {
+                  const col = columns.find(c => c.id === filter.column);
+                  return (
+                    <div key={filter.column} className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="outline">{col?.label || filter.column}</Badge>
+                      <span className="text-xs">{filter.mode === 'include' ? 'Incluir' : 'Excluir'}:</span>
+                      {filter.values.map(v => (
+                        <Badge key={v} variant="secondary" className="text-xs">
+                          {v}
+                        </Badge>
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
