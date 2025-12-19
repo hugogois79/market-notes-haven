@@ -138,7 +138,10 @@ export function DocumentPreviewPanel({
       {/* Preview */}
       <div className="flex-1 overflow-hidden flex flex-col min-h-0">
         <div className="h-[40%] min-h-[200px] border-b bg-muted/20 overflow-hidden">
-          <DocumentPreview document={document} />
+          <DocumentPreview 
+            document={document} 
+            onDownload={() => onDownload(document)}
+          />
         </div>
 
         {/* Metadata Form */}
