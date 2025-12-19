@@ -653,10 +653,10 @@ export default function WorkFlowTab() {
 
   // Mark file as completed handler
   const handleMarkAsComplete = async (file: WorkflowFile) => {
-    // First, check if there's an existing transaction for this file to get actual expense date AND company
+    // First, check if there's an existing transaction for this file to get actual expense date, company AND entity_name
     const { data: existingTransaction } = await supabase
       .from("financial_transactions")
-      .select("date, company_id")
+      .select("date, company_id, entity_name")
       .eq("invoice_file_url", file.file_url)
       .maybeSingle();
 
@@ -704,14 +704,46 @@ export default function WorkFlowTab() {
       return;
     }
 
-    // Proceed with completion
-    await completeFile(file, matchingLocation, settings);
+    // Try to find a supplier company matching entity_name (for dual-company copy)
+    let supplierStorageLocation = null;
+    if (existingTransaction?.entity_name && existingTransaction.entity_name !== 'Workflow Document') {
+      // Search for a company with a name similar to entity_name
+      const { data: matchingCompanies } = await supabase
+        .from("companies")
+        .select("id, name")
+        .ilike("name", `%${existingTransaction.entity_name}%`);
+      
+      // If we found a matching company and it's different from the paying company
+      if (matchingCompanies && matchingCompanies.length > 0) {
+        const supplierCompany = matchingCompanies[0];
+        
+        // Only proceed if supplier is different from paying company
+        if (supplierCompany.id !== targetCompanyId) {
+          // Find storage location for the supplier company
+          const { data: supplierLocation } = await supabase
+            .from("workflow_storage_locations")
+            .select("*")
+            .eq("company_id", supplierCompany.id)
+            .eq("year", fileYear)
+            .eq("month", fileMonth)
+            .maybeSingle();
+          
+          if (supplierLocation) {
+            supplierStorageLocation = supplierLocation;
+          }
+        }
+      }
+    }
+
+    // Proceed with completion (passing both storage locations)
+    await completeFile(file, matchingLocation, settings, supplierStorageLocation);
   };
 
   const completeFile = async (
     file: WorkflowFile, 
     storageLocation: any, 
-    settings: TableRelationsConfig
+    settings: TableRelationsConfig,
+    supplierStorageLocation?: any
   ) => {
     setIsCompleting(true);
     
@@ -747,8 +779,12 @@ export default function WorkFlowTab() {
         if (txError) throw txError;
       }
 
-      // 2. Copy file to company documents if storage location has a folder
-      if (storageLocation.folder_id) {
+      // Helper function to copy file to a company's folder
+      const copyToCompanyFolder = async (targetStorageLocation: any) => {
+        if (!targetStorageLocation?.folder_id) return false;
+        
+        const targetCompanyId = targetStorageLocation.company_id;
+        
         // Fetch the file blob from storage
         const url = new URL(file.file_url);
         const pathParts = url.pathname.split('/storage/v1/object/public/');
@@ -764,11 +800,13 @@ export default function WorkFlowTab() {
           
           if (downloadError) {
             console.error("Download error:", downloadError);
-            // Continue even if download fails - just log it
-          } else if (fileData) {
+            return false;
+          }
+          
+          if (fileData) {
             // Upload to company-documents bucket
             const sanitizedName = sanitizeFileName(file.file_name);
-            const newPath = `${companyId}/${storageLocation.folder_id}/${Date.now()}-${sanitizedName}`;
+            const newPath = `${targetCompanyId}/${targetStorageLocation.folder_id}/${Date.now()}-${sanitizedName}`;
             
             const { error: uploadError } = await supabase.storage
               .from("company-documents")
@@ -776,38 +814,56 @@ export default function WorkFlowTab() {
             
             if (uploadError) {
               console.error("Upload to company docs error:", uploadError);
-            } else {
-              // Get public URL and insert company document record
-              const { data: { publicUrl } } = supabase.storage
-                .from("company-documents")
-                .getPublicUrl(newPath);
-              
-              // Get category from customData (workflow column values)
-              const workflowCategory = customData[file.id]?.category;
-              
-              const { error: docError } = await supabase
-                .from("company_documents")
-                .insert({
-                  company_id: companyId,
-                  folder_id: storageLocation.folder_id,
-                  name: file.file_name,
-                  file_url: publicUrl,
-                  file_size: file.file_size,
-                  mime_type: file.mime_type,
-                  uploaded_by: user.id,
-                  status: 'Final',
-                  document_type: workflowCategory || 'Other',
-                });
-              
-              if (docError) {
-                console.error("Company document insert error:", docError);
-              }
+              return false;
             }
+            
+            // Get public URL and insert company document record
+            const { data: { publicUrl } } = supabase.storage
+              .from("company-documents")
+              .getPublicUrl(newPath);
+            
+            // Get category from customData (workflow column values)
+            const workflowCategory = customData[file.id]?.category;
+            
+            const { error: docError } = await supabase
+              .from("company_documents")
+              .insert({
+                company_id: targetCompanyId,
+                folder_id: targetStorageLocation.folder_id,
+                name: file.file_name,
+                file_url: publicUrl,
+                file_size: file.file_size,
+                mime_type: file.mime_type,
+                uploaded_by: user.id,
+                status: 'Final',
+                document_type: workflowCategory || 'Other',
+              });
+            
+            if (docError) {
+              console.error("Company document insert error:", docError);
+              return false;
+            }
+            
+            return true;
           }
         }
+        return false;
+      };
+
+      // 2. Copy file to primary company documents
+      let copiedCount = 0;
+      if (storageLocation.folder_id) {
+        const copied = await copyToCompanyFolder(storageLocation);
+        if (copied) copiedCount++;
       }
 
-      // 3. Delete workflow file from storage and database
+      // 3. Copy file to supplier company documents (if available and different)
+      if (supplierStorageLocation && supplierStorageLocation.company_id !== storageLocation.company_id) {
+        const copied = await copyToCompanyFolder(supplierStorageLocation);
+        if (copied) copiedCount++;
+      }
+
+      // 4. Delete workflow file from storage and database
       const url = new URL(file.file_url);
       const pathParts = url.pathname.split('/storage/v1/object/public/');
       
@@ -834,7 +890,11 @@ export default function WorkFlowTab() {
       queryClient.invalidateQueries({ queryKey: ["workflow-linked-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["company-documents"] });
 
-      toast.success("Ficheiro movido para documentos da empresa!");
+      if (copiedCount > 1) {
+        toast.success(`Ficheiro copiado para ${copiedCount} empresas!`);
+      } else {
+        toast.success("Ficheiro movido para documentos da empresa!");
+      }
     } catch (error: any) {
       console.error("Error completing file:", error);
       toast.error("Failed to complete file: " + error.message);
