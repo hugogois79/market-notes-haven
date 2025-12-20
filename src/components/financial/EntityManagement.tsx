@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronRight, TrendingDown, TrendingUp, Users } from "lucide-react";
+import { ChevronDown, ChevronRight, Edit2, TrendingDown, TrendingUp, Users } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
+import TransactionDialog from "./TransactionDialog";
 
 interface EntityManagementProps {
   companyId: string;
@@ -35,20 +36,34 @@ interface EntityGroup {
 
 export default function EntityManagement({ companyId }: EntityManagementProps) {
   const [expandedEntities, setExpandedEntities] = useState<Set<string>>(new Set());
+  const [editingTransaction, setEditingTransaction] = useState<any>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["entity-transactions", companyId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("financial_transactions")
-        .select("id, entity_name, type, total_amount, date, description, category")
+        .select("*")
         .eq("company_id", companyId)
         .order("date", { ascending: false });
 
       if (error) throw error;
-      return data as Transaction[];
+      return data;
     },
   });
+
+  const handleEditTransaction = (tx: any) => {
+    setEditingTransaction(tx);
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setEditingTransaction(null);
+    }
+  };
 
   const entityGroups = useMemo(() => {
     if (!transactions) return [];
@@ -282,8 +297,14 @@ export default function EntityManagement({ companyId }: EntityManagementProps) {
                     <CollapsibleContent asChild>
                       <>
                         {group.transactions.map((tx) => (
-                          <TableRow key={tx.id} className="bg-muted/30">
-                            <TableCell></TableCell>
+                          <TableRow 
+                            key={tx.id} 
+                            className="bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                            onClick={() => handleEditTransaction(tx)}
+                          >
+                            <TableCell>
+                              <Edit2 className="h-3 w-3 text-muted-foreground" />
+                            </TableCell>
                             <TableCell className="text-muted-foreground text-sm pl-8">
                               {format(new Date(tx.date), "dd MMM yyyy", { locale: pt })}
                             </TableCell>
@@ -324,6 +345,14 @@ export default function EntityManagement({ companyId }: EntityManagementProps) {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Transaction Edit Dialog */}
+      <TransactionDialog
+        open={dialogOpen}
+        onOpenChange={handleDialogClose}
+        companyId={companyId}
+        transaction={editingTransaction}
+      />
     </div>
   );
 }
