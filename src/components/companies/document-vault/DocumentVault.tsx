@@ -258,39 +258,60 @@ export function DocumentVault({
 
   const handleDownload = useCallback(async (doc: DocumentRow) => {
     try {
-      // Extract bucket and path from the file URL
-      const url = new URL(doc.file_url);
-      const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/);
-      
-      if (!pathMatch) {
-        // Fallback to opening in new tab if URL doesn't match expected format
-        window.open(doc.file_url, "_blank");
-        return;
+      const fileUrl = String(doc.file_url || "");
+      if (!fileUrl) throw new Error("Missing file URL");
+
+      const url = new URL(fileUrl);
+
+      // Supports:
+      // /storage/v1/object/public/<bucket>/<path>
+      // /storage/v1/object/<bucket>/<path>
+      // /storage/v1/object/sign/<bucket>/<path>
+      const match = url.pathname.match(
+        /\/storage\/v1\/object\/(?:public\/|sign\/)?([^/]+)\/(.+)$/
+      );
+
+      let blob: Blob | null = null;
+
+      if (match) {
+        const [, bucket, encodedPath] = match;
+        const filePath = decodeURIComponent(encodedPath);
+
+        const { data, error } = await supabase.storage.from(bucket).download(filePath);
+        if (!error && data) blob = data;
+
+        if (!blob || blob.size < 2048) {
+          const { data: signed, error: signError } = await supabase.storage
+            .from(bucket)
+            .createSignedUrl(filePath, 60);
+
+          if (!signError && signed?.signedUrl) {
+            const res = await fetch(signed.signedUrl);
+            if (res.ok) {
+              const b = await res.blob();
+              if (b.size >= 2048) blob = b;
+            }
+          }
+        }
       }
-      
-      const [, bucket, filePath] = pathMatch;
-      
-      // Download the file from Supabase storage
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .download(decodeURIComponent(filePath));
-      
-      if (error || !data) {
-        console.error("Download error:", error);
-        toast.error("Failed to download file");
-        return;
+
+      if (!blob || blob.size < 2048) {
+        const res = await fetch(fileUrl);
+        if (!res.ok) throw new Error("Failed to download file");
+        blob = await res.blob();
       }
-      
-      // Create blob URL and trigger download
-      const blobUrl = URL.createObjectURL(data);
+
+      if (!blob || blob.size < 2048) throw new Error("Invalid downloaded file");
+
+      const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = doc.name;
+      link.download = doc.name || "document";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
-      
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+
       toast.success("Download started");
     } catch (err) {
       console.error("Download error:", err);
