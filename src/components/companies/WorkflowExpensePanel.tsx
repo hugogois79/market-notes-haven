@@ -268,12 +268,22 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           .insert({ ...transactionData, created_by: userData.user.id });
         if (error) throw error;
       }
+
+      // Update workflow_files with the new filename if it changed
+      if (attachmentName !== file.file_name) {
+        const { error: fileUpdateError } = await supabase
+          .from("workflow_files")
+          .update({ file_name: attachmentName })
+          .eq("id", file.id);
+        if (fileUpdateError) throw fileUpdateError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["transactions-dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["workflow-linked-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["file-transaction"] });
+      queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
       toast.success(isEditMode ? "Movimento atualizado com sucesso" : "Movimento criado com sucesso");
       if (!isEditMode) reset();
       onSaved?.();
