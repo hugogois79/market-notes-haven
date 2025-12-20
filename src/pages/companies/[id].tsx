@@ -1209,31 +1209,65 @@ export default function CompanyDetailPage() {
 
   const handleDownload = async (doc: any) => {
     try {
-      const url = new URL(doc.file_url);
+      const fileUrl = String(doc.file_url || "");
+      if (!fileUrl) throw new Error("URL do ficheiro em falta");
 
-      // Supports both public and private object URLs:
+      const url = new URL(fileUrl);
+
+      // Supports:
       // /storage/v1/object/public/<bucket>/<path>
       // /storage/v1/object/<bucket>/<path>
-      const match = url.pathname.match(/\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)$/);
-      if (!match) {
-        window.open(doc.file_url, "_blank");
-        return;
+      // /storage/v1/object/sign/<bucket>/<path>
+      const match = url.pathname.match(
+        /\/storage\/v1\/object\/(?:public\/|sign\/)?([^/]+)\/(.+)$/
+      );
+
+      let blob: Blob | null = null;
+      let downloadName: string = doc.name || "document";
+
+      if (match) {
+        const [, bucket, encodedPath] = match;
+        const filePath = decodeURIComponent(encodedPath);
+
+        // 1) Prefer Storage download (keeps auth + avoids CORS issues)
+        const { data, error } = await supabase.storage.from(bucket).download(filePath);
+        if (!error && data) blob = data;
+
+        // 2) If we got a tiny blob (often an error body), fallback to signed URL fetch
+        if (!blob || blob.size < 2048) {
+          const { data: signed, error: signError } = await supabase.storage
+            .from(bucket)
+            .createSignedUrl(filePath, 60);
+
+          if (!signError && signed?.signedUrl) {
+            const res = await fetch(signed.signedUrl);
+            if (res.ok) {
+              const b = await res.blob();
+              if (b.size >= 2048) blob = b;
+            }
+          }
+        }
       }
 
-      const [, bucket, encodedPath] = match;
-      const filePath = decodeURIComponent(encodedPath);
+      // 3) Last resort: fetch the URL directly
+      if (!blob || blob.size < 2048) {
+        const res = await fetch(fileUrl);
+        if (!res.ok) throw new Error("Falha ao descarregar o ficheiro");
+        blob = await res.blob();
+      }
 
-      const { data, error } = await supabase.storage.from(bucket).download(filePath);
-      if (error || !data) throw error ?? new Error("Unable to download file");
+      if (!blob || blob.size < 2048) {
+        throw new Error("Ficheiro descarregado inválido (tamanho muito pequeno)");
+      }
 
-      const blobUrl = URL.createObjectURL(data);
+      const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = blobUrl;
-      a.download = doc.name || "document";
+      a.download = downloadName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
     } catch (error: any) {
       const message = error?.message ? String(error.message) : JSON.stringify(error);
       toast.error("Download failed: " + message);
