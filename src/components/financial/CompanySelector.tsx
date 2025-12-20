@@ -28,13 +28,13 @@ export default function CompanySelector({
 
   return (
     <Select value={selectedCompanyId} onValueChange={onCompanyChange}>
-      <SelectTrigger className="w-[280px]">
+      <SelectTrigger className="w-[320px] h-auto min-h-10 py-2">
         <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4" />
+          <Building2 className="h-4 w-4 shrink-0" />
           <SelectValue>
             {selectedCompany ? (
               <div className="flex flex-col items-start">
-                <span className="font-medium">{selectedCompany.name}</span>
+                <span className="font-medium text-sm">{selectedCompany.name}</span>
                 <span className="text-xs text-muted-foreground">
                   Tax ID: {selectedCompany.tax_id}
                 </span>
@@ -45,11 +45,11 @@ export default function CompanySelector({
           </SelectValue>
         </div>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="min-w-[320px]">
         {companies.map((company) => (
-          <SelectItem key={company.id} value={company.id}>
+          <SelectItem key={company.id} value={company.id} className="py-2.5">
             <div className="flex flex-col items-start">
-              <span className="font-medium">{company.name}</span>
+              <span className="font-medium text-sm">{company.name}</span>
               <span className="text-xs text-muted-foreground">
                 Tax ID: {company.tax_id}
               </span>
