@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { X, Check, ChevronsUpDown, FileText, ExternalLink, Trash2, Upload } from "lucide-react";
+import { X, Check, ChevronsUpDown, FileText, ExternalLink, Trash2, Upload, Wand2 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -589,6 +589,46 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
               <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50 text-sm">
                 <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <span className="truncate flex-1 text-xs">{attachmentName}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 p-0 text-primary hover:text-primary/80"
+                  onClick={() => {
+                    const supplierName = watch("entity_name") || "Fornecedor";
+                    const dateValue = watch("date");
+                    const totalValue = watch("total_amount");
+                    
+                    // Format date to DD-MM-YYYY
+                    let formattedDate = "";
+                    if (dateValue) {
+                      const d = new Date(dateValue);
+                      const day = String(d.getDate()).padStart(2, '0');
+                      const month = String(d.getMonth() + 1).padStart(2, '0');
+                      const year = d.getFullYear();
+                      formattedDate = `${day}-${month}-${year}`;
+                    } else {
+                      const d = new Date();
+                      formattedDate = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+                    }
+                    
+                    // Format amount
+                    const formattedValue = Number(totalValue || 0).toFixed(2);
+                    
+                    // Get extension from current file
+                    const extension = attachmentName.split('.').pop() || 'pdf';
+                    
+                    // Clean supplier name
+                    const cleanSupplier = supplierName.replace(/[<>:"/\\|?*]/g, '').trim();
+                    
+                    const newName = `${cleanSupplier} (${formattedDate}) ${formattedValue}€.${extension}`;
+                    setAttachmentName(newName);
+                    toast.success(`Ficheiro renomeado para: ${newName}`);
+                  }}
+                  title="Renomear ficheiro automaticamente"
+                >
+                  <Wand2 className="h-3 w-3" />
+                </Button>
                 <Button
                   type="button"
                   variant="ghost"
