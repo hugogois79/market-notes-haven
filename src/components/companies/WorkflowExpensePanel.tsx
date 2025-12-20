@@ -303,7 +303,31 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
       </div>
 
       <ScrollArea className="flex-1">
-        <form onSubmit={handleSubmit((data) => saveMutation.mutate(data))} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit((data) => {
+          // Validação de data
+          const date = new Date(data.date);
+          const year = date.getFullYear();
+          const today = new Date();
+          const oneYearFromNow = new Date();
+          oneYearFromNow.setFullYear(today.getFullYear() + 1);
+          const fiveYearsAgo = new Date();
+          fiveYearsAgo.setFullYear(today.getFullYear() - 5);
+
+          if (year < 2000 || year > 2100) {
+            toast.error(`Ano inválido: ${year}. Por favor verifique a data.`);
+            return;
+          }
+          if (date > oneYearFromNow) {
+            toast.error("A data não pode ser mais de 1 ano no futuro");
+            return;
+          }
+          if (date < fiveYearsAgo) {
+            toast.error("A data não pode ser mais de 5 anos no passado");
+            return;
+          }
+
+          saveMutation.mutate(data);
+        })} className="p-4 space-y-4">
           {/* Date & Type */}
           <div className="grid grid-cols-2 gap-3">
             <div>
