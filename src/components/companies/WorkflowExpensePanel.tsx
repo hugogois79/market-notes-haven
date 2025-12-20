@@ -55,7 +55,7 @@ interface WorkflowExpensePanelProps {
     notes: string | null;
   } | null;
   onClose: () => void;
-  onSaved?: () => void;
+  onSaved?: (payload?: { fileName?: string; fileUrl?: string | null }) => void;
 }
 
 export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSaved }: WorkflowExpensePanelProps) {
@@ -286,7 +286,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
       queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
       toast.success(isEditMode ? "Movimento atualizado com sucesso" : "Movimento criado com sucesso");
       if (!isEditMode) reset();
-      onSaved?.();
+      onSaved?.({ fileName: attachmentName, fileUrl: attachmentUrl });
     },
     onError: (error: any) => {
       toast.error("Erro: " + error.message);

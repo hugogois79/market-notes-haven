@@ -2648,9 +2648,13 @@ export default function WorkFlowTab() {
                   }}
                   existingTransaction={existingTransaction}
                   onClose={() => setShowExpensePanel(false)}
-                  onSaved={() => {
+                  onSaved={(payload) => {
                     setShowExpensePanel(false);
+                    if (payload?.fileName) {
+                      setPreviewFile((prev) => (prev ? { ...prev, file_name: payload.fileName } : prev));
+                    }
                     queryClient.invalidateQueries({ queryKey: ["file-transaction", previewFile.file_url] });
+                    queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
                     toast.success(existingTransaction ? "Movimento atualizado!" : "Movimento criado!");
                   }}
                 />
