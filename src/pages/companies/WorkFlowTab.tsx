@@ -187,7 +187,16 @@ interface SavedFilter {
   id: string;
   name: string;
   conditions: FilterCondition[];
+  isPreset?: boolean; // Preset filters cannot be deleted
 }
+
+// Default preset filters that are always available
+const DEFAULT_PRESET_FILTERS: SavedFilter[] = [
+  { id: "preset-pa", name: "PA", conditions: [{ column: "category", values: ["PA"], mode: "include" }], isPreset: true },
+  { id: "preset-payment", name: "Payment", conditions: [{ column: "category", values: ["Payment"], mode: "include" }], isPreset: true },
+  { id: "preset-claim", name: "Claim", conditions: [{ column: "category", values: ["Claim"], mode: "include" }], isPreset: true },
+  { id: "preset-work", name: "Work", conditions: [{ column: "category", values: ["Work"], mode: "include" }], isPreset: true },
+];
 
 // Sanitize filename to remove special characters
 const sanitizeFileName = (fileName: string): string => {
@@ -1664,7 +1673,35 @@ export default function WorkFlowTab() {
           </Button>
         )}
 
-        {/* Saved Filters - Quick Access Buttons */}
+        {/* Preset Filters - Always Available */}
+        {DEFAULT_PRESET_FILTERS.map(filter => {
+          const conditions = filter.conditions || [];
+          const isActive = conditions.length > 0 && conditions.length === activeFilters.length &&
+            conditions.every(fc => 
+              activeFilters.some(af => 
+                af.column === fc.column && 
+                af.values.length === fc.values.length &&
+                af.values.every(v => fc.values.includes(v))
+              )
+            );
+          return (
+            <Button
+              key={filter.id}
+              variant="outline"
+              size="sm"
+              className={cn(
+                "gap-1 h-7 text-xs px-2",
+                isActive && "bg-blue-50 border-blue-200 text-blue-700"
+              )}
+              onClick={() => loadSavedFilter(filter)}
+            >
+              <Bookmark className="h-3 w-3" />
+              {filter.name}
+            </Button>
+          );
+        })}
+
+        {/* User Saved Filters - Quick Access Buttons */}
         {savedFilters.map(filter => {
           // Check if this saved filter matches current active filters
           const conditions = filter.conditions || [];
