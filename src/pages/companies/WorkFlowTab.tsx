@@ -1727,9 +1727,13 @@ export default function WorkFlowTab() {
             );
           })}
 
-        {/* User Saved Filters - Quick Access Buttons (excluding preset names) */}
+        {/* User Saved Filters - Quick Access Buttons (show if preset was deleted or name doesn't match preset) */}
         {savedFilters
-          .filter(filter => !DEFAULT_PRESET_FILTERS.some(pf => pf.name.toLowerCase() === filter.name.toLowerCase()))
+          .filter(filter => {
+            const matchingPreset = DEFAULT_PRESET_FILTERS.find(pf => pf.name.toLowerCase() === filter.name.toLowerCase());
+            // Show if no matching preset OR if the matching preset was deleted
+            return !matchingPreset || deletedPresetIds.includes(matchingPreset.id);
+          })
           .map(filter => {
             // Check if this saved filter matches current active filters
             const conditions = filter.conditions || [];
