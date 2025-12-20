@@ -165,7 +165,7 @@ export default function EntityManagement({ companyId }: EntityManagementProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Entidades
+              Total Holdings
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -223,7 +223,7 @@ export default function EntityManagement({ companyId }: EntityManagementProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Entidades
+            Holdings
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -231,7 +231,7 @@ export default function EntityManagement({ companyId }: EntityManagementProps) {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8"></TableHead>
-                <TableHead>Entidade</TableHead>
+                <TableHead>Holding</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead className="text-right">Transações</TableHead>
                 <TableHead className="text-right text-emerald-600">Receitas</TableHead>
@@ -316,7 +316,7 @@ export default function EntityManagement({ companyId }: EntityManagementProps) {
               {entityGroups.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    Nenhuma entidade encontrada
+                    Nenhum holding encontrado
                   </TableCell>
                 </TableRow>
               )}
