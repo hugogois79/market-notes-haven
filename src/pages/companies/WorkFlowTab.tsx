@@ -1673,7 +1673,7 @@ export default function WorkFlowTab() {
           </Button>
         )}
 
-        {/* Preset Filters - Always Available */}
+        {/* Preset Filters - Always Available (with right-click to delete) */}
         {DEFAULT_PRESET_FILTERS.map(filter => {
           const conditions = filter.conditions || [];
           const isActive = conditions.length > 0 && conditions.length === activeFilters.length &&
@@ -1684,20 +1684,40 @@ export default function WorkFlowTab() {
                 af.values.every(v => fc.values.includes(v))
               )
             );
+          // Check if this preset has a user-saved version
+          const userSavedVersion = savedFilters.find(sf => sf.name.toLowerCase() === filter.name.toLowerCase());
           return (
-            <Button
-              key={filter.id}
-              variant="outline"
-              size="sm"
-              className={cn(
-                "gap-1 h-7 text-xs px-2",
-                isActive && "bg-blue-50 border-blue-200 text-blue-700"
-              )}
-              onClick={() => loadSavedFilter(filter)}
-            >
-              <Bookmark className="h-3 w-3" />
-              {filter.name}
-            </Button>
+            <ContextMenu key={filter.id}>
+              <ContextMenuTrigger>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "gap-1 h-7 text-xs px-2",
+                    isActive && "bg-blue-50 border-blue-200 text-blue-700"
+                  )}
+                  onClick={() => loadSavedFilter(filter)}
+                >
+                  <Bookmark className="h-3 w-3" />
+                  {filter.name}
+                </Button>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                {userSavedVersion ? (
+                  <ContextMenuItem 
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => deleteSavedFilter(userSavedVersion.id)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar filtro guardado
+                  </ContextMenuItem>
+                ) : (
+                  <ContextMenuItem disabled className="text-muted-foreground">
+                    Filtro predefinido (não pode ser eliminado)
+                  </ContextMenuItem>
+                )}
+              </ContextMenuContent>
+            </ContextMenu>
           );
         })}
 
