@@ -248,6 +248,13 @@ export default function WorkFlowTab() {
       return [];
     }
   });
+  
+  // Track deleted preset filter IDs
+  const [deletedPresetIds, setDeletedPresetIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem("workflow-deleted-preset-filters");
+    return saved ? JSON.parse(saved) : [];
+  });
+  
   const [saveFilterDialogOpen, setSaveFilterDialogOpen] = useState(false);
   const [newFilterName, setNewFilterName] = useState("");
   
@@ -1673,51 +1680,52 @@ export default function WorkFlowTab() {
           </Button>
         )}
 
-        {/* Preset Filters - Always Available (with right-click to delete) */}
-        {DEFAULT_PRESET_FILTERS.map(filter => {
-          const conditions = filter.conditions || [];
-          const isActive = conditions.length > 0 && conditions.length === activeFilters.length &&
-            conditions.every(fc => 
-              activeFilters.some(af => 
-                af.column === fc.column && 
-                af.values.length === fc.values.length &&
-                af.values.every(v => fc.values.includes(v))
-              )
+        {/* Preset Filters - Only show if not deleted */}
+        {DEFAULT_PRESET_FILTERS
+          .filter(filter => !deletedPresetIds.includes(filter.id))
+          .map(filter => {
+            const conditions = filter.conditions || [];
+            const isActive = conditions.length > 0 && conditions.length === activeFilters.length &&
+              conditions.every(fc => 
+                activeFilters.some(af => 
+                  af.column === fc.column && 
+                  af.values.length === fc.values.length &&
+                  af.values.every(v => fc.values.includes(v))
+                )
+              );
+            return (
+              <ContextMenu key={filter.id}>
+                <ContextMenuTrigger>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "gap-1 h-7 text-xs px-2",
+                      isActive && "bg-blue-50 border-blue-200 text-blue-700"
+                    )}
+                    onClick={() => loadSavedFilter(filter)}
+                  >
+                    <Bookmark className="h-3 w-3" />
+                    {filter.name}
+                  </Button>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem 
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => {
+                      const newDeletedIds = [...deletedPresetIds, filter.id];
+                      setDeletedPresetIds(newDeletedIds);
+                      localStorage.setItem("workflow-deleted-preset-filters", JSON.stringify(newDeletedIds));
+                      toast.success(`Filtro "${filter.name}" eliminado`);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar filtro
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             );
-          // Check if this preset has a user-saved version
-          const userSavedVersion = savedFilters.find(sf => sf.name.toLowerCase() === filter.name.toLowerCase());
-          return (
-            <ContextMenu key={filter.id}>
-              <ContextMenuTrigger>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn(
-                    "gap-1 h-7 text-xs px-2",
-                    isActive && "bg-blue-50 border-blue-200 text-blue-700"
-                  )}
-                  onClick={() => loadSavedFilter(filter)}
-                >
-                  <Bookmark className="h-3 w-3" />
-                  {filter.name}
-                </Button>
-              </ContextMenuTrigger>
-              <ContextMenuContent>
-                <ContextMenuItem 
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => {
-                    if (userSavedVersion) {
-                      deleteSavedFilter(userSavedVersion.id);
-                    }
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Eliminar filtro
-                </ContextMenuItem>
-              </ContextMenuContent>
-            </ContextMenu>
-          );
-        })}
+          })}
 
         {/* User Saved Filters - Quick Access Buttons (excluding preset names) */}
         {savedFilters
