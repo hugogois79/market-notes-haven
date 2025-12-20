@@ -2877,7 +2877,7 @@ export default function CompanyDetailPage() {
           }
         }}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Mover para Pasta</DialogTitle>
             <DialogDescription>
@@ -2888,7 +2888,7 @@ export default function CompanyDetailPage() {
           <div className="space-y-4 py-4">
             <div className="p-3 bg-muted/20 rounded-lg border">
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">Ficheiro</Label>
-              <p className="mt-1 text-sm font-medium truncate">{docToMove?.name}</p>
+              <p className="mt-1 text-sm font-medium break-all">{docToMove?.name}</p>
             </div>
 
             <div className="space-y-2">
