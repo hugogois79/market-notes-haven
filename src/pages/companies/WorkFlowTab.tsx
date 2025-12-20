@@ -1701,46 +1701,48 @@ export default function WorkFlowTab() {
           );
         })}
 
-        {/* User Saved Filters - Quick Access Buttons */}
-        {savedFilters.map(filter => {
-          // Check if this saved filter matches current active filters
-          const conditions = filter.conditions || [];
-          const isActive = conditions.length > 0 && conditions.length === activeFilters.length &&
-            conditions.every(fc => 
-              activeFilters.some(af => 
-                af.column === fc.column && 
-                af.values.length === fc.values.length &&
-                af.values.every(v => fc.values.includes(v))
-              )
+        {/* User Saved Filters - Quick Access Buttons (excluding preset names) */}
+        {savedFilters
+          .filter(filter => !DEFAULT_PRESET_FILTERS.some(pf => pf.name.toLowerCase() === filter.name.toLowerCase()))
+          .map(filter => {
+            // Check if this saved filter matches current active filters
+            const conditions = filter.conditions || [];
+            const isActive = conditions.length > 0 && conditions.length === activeFilters.length &&
+              conditions.every(fc => 
+                activeFilters.some(af => 
+                  af.column === fc.column && 
+                  af.values.length === fc.values.length &&
+                  af.values.every(v => fc.values.includes(v))
+                )
+              );
+            return (
+              <ContextMenu key={filter.id}>
+                <ContextMenuTrigger>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "gap-1 h-7 text-xs px-2",
+                      isActive && "bg-blue-50 border-blue-200 text-blue-700"
+                    )}
+                    onClick={() => loadSavedFilter(filter)}
+                  >
+                    <Bookmark className="h-3 w-3" />
+                    {filter.name}
+                  </Button>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem 
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => deleteSavedFilter(filter.id)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar filtro
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             );
-          return (
-            <ContextMenu key={filter.id}>
-              <ContextMenuTrigger>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn(
-                    "gap-1 h-7 text-xs px-2",
-                    isActive && "bg-blue-50 border-blue-200 text-blue-700"
-                  )}
-                  onClick={() => loadSavedFilter(filter)}
-                >
-                  <Bookmark className="h-3 w-3" />
-                  {filter.name}
-                </Button>
-              </ContextMenuTrigger>
-              <ContextMenuContent>
-                <ContextMenuItem 
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => deleteSavedFilter(filter.id)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Eliminar filtro
-                </ContextMenuItem>
-              </ContextMenuContent>
-            </ContextMenu>
-          );
-        })}
+          })}
 
         {/* Bulk Actions - shown when files selected */}
         {selectedFiles.size > 0 && (
