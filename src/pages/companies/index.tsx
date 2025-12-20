@@ -8,7 +8,7 @@ import { Plus, Building2, Search, Edit, Trash2, Eye, Settings, ChevronDown, X, L
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import WorkFlowTab from "./WorkFlowTab";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -135,11 +135,30 @@ const MONTHS = [
 
 export default function CompaniesPage() {
   const { user, loading: authLoading } = useAuth();
+  const [searchParams] = useSearchParams();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("workflow");
   
+  // Map URL tab param to internal tab values
+  const getInitialTab = () => {
+    const urlTab = searchParams.get("tab");
+    if (urlTab === "entity") return "list";
+    if (urlTab === "workflow") return "workflow";
+    if (urlTab === "settings") return "settings";
+    return "workflow";
+  };
+  
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+  
+  // Sync tab with URL params when they change
+  useEffect(() => {
+    const urlTab = searchParams.get("tab");
+    if (urlTab === "entity") setActiveTab("list");
+    else if (urlTab === "workflow") setActiveTab("workflow");
+    else if (urlTab === "settings") setActiveTab("settings");
+  }, [searchParams]);
+
   // Custom columns (editable columns with options)
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>(() => {
     const saved = localStorage.getItem(CUSTOM_COLUMNS_KEY);
