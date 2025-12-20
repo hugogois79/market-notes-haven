@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from "pdfjs-dist";
-import { TextLayer } from "pdfjs-dist";
 
 // pdf.js worker (Vite-friendly)
 GlobalWorkerOptions.workerSrc = new URL(
@@ -26,7 +25,6 @@ interface PdfViewerProps {
 
 export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const textLayerRef = useRef<HTMLDivElement | null>(null);
   const pdfRef = useRef<PDFDocumentProxy | null>(null);
   const renderTaskRef = useRef<{ cancel: () => void } | null>(null);
 
@@ -191,7 +189,6 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
     const render = async () => {
       const pdf = pdfRef.current;
       const canvas = canvasRef.current;
-      const textLayerDiv = textLayerRef.current;
       if (!pdf || !canvas) return;
 
       try {
@@ -219,23 +216,6 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       renderTaskRef.current = renderTask as any;
       await renderTask.promise;
-
-      // Render text layer for text selection
-      if (textLayerDiv) {
-        textLayerDiv.innerHTML = "";
-        textLayerDiv.style.width = `${Math.floor(viewport.width)}px`;
-        textLayerDiv.style.height = `${Math.floor(viewport.height)}px`;
-
-        const textContent = await page.getTextContent();
-        
-        const textLayer = new TextLayer({
-          textContentSource: textContent,
-          container: textLayerDiv,
-          viewport: viewport,
-        });
-        
-        await textLayer.render();
-      }
     };
 
     if (!loading && !error) render();
@@ -322,14 +302,6 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
         <div className="min-h-full flex items-start justify-center p-6">
           <div className={cn("relative", loading && "opacity-60")}> 
             <canvas ref={canvasRef} className="shadow-sm rounded-md bg-background" />
-            <div 
-              ref={textLayerRef} 
-              className="absolute top-0 left-0 overflow-hidden"
-              style={{ 
-                lineHeight: 1,
-                transformOrigin: '0 0',
-              }} 
-            />
             {loading && (
               <div className="absolute inset-0 grid place-items-center">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -341,34 +313,6 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
           </div>
         </div>
       </div>
-
-      <style>{`
-        .textLayer {
-          position: absolute;
-          text-align: initial;
-          overflow: hidden;
-          opacity: 1;
-          line-height: 1;
-          text-size-adjust: none;
-          forced-color-adjust: none;
-          transform-origin: 0 0;
-          z-index: 2;
-        }
-        .textLayer span,
-        .textLayer br {
-          position: absolute;
-          white-space: pre;
-          color: transparent;
-          transform-origin: 0% 0%;
-        }
-        .textLayer span::selection {
-          color: transparent;
-          background: hsl(var(--primary) / 0.3);
-        }
-        .textLayer ::selection {
-          background: hsl(var(--primary) / 0.3);
-        }
-      `}</style>
     </div>
   );
 };
