@@ -328,6 +328,35 @@ export default function TransactionDialog({
     toast.success(`Ficheiro renomeado para: ${newName}`);
   };
 
+  // Rename existing attachment with smart name
+  const handleRenameExistingAttachment = async () => {
+    if (!existingAttachment) return;
+    
+    try {
+      // Download the existing file
+      const response = await fetch(existingAttachment);
+      const blob = await response.blob();
+      
+      // Get original name and generate new name
+      const originalName = getFileName(existingAttachment);
+      const newName = generateSmartFileName(originalName);
+      
+      // Create new File with renamed name
+      const renamedFile = new File([blob], newName, { type: blob.type || 'application/pdf' });
+      
+      // Add to new files (will replace existing on save)
+      setNewFiles([renamedFile]);
+      
+      // Remove existing attachment reference
+      setExistingAttachment(null);
+      
+      toast.success(`Ficheiro renomeado para: ${newName}`);
+    } catch (error) {
+      console.error('Error renaming file:', error);
+      toast.error('Erro ao renomear ficheiro');
+    }
+  };
+
   const getFileName = (url: string) => {
     try {
       const parts = url.split('/');
@@ -901,6 +930,16 @@ export default function TransactionDialog({
                   <span className="truncate max-w-[200px] inline-block align-middle">
                     {getFileName(existingAttachment)}
                   </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0 text-primary hover:text-primary/80"
+                    onClick={handleRenameExistingAttachment}
+                    title="Renomear ficheiro automaticamente"
+                  >
+                    <Wand2 className="h-3 w-3" />
+                  </Button>
                   <Button
                     type="button"
                     variant="ghost"
