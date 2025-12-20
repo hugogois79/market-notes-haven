@@ -285,6 +285,11 @@ export default function WorkFlowTab() {
     folder_path: string;
   }>({ company_id: "", folder_id: null, folder_path: "" });
 
+  // Rename file state
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [fileToRename, setFileToRename] = useState<WorkflowFile | null>(null);
+  const [newFileName, setNewFileName] = useState("");
+
   // Query existing transaction for current file using document_file_id
   const { data: existingTransaction, isLoading: isLoadingTransaction } = useQuery({
     queryKey: ["file-transaction", previewFile?.id],
@@ -2293,6 +2298,14 @@ export default function WorkFlowTab() {
                               <CheckCircle2 className="h-4 w-4 mr-2" />
                               Mark as Completed
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setFileToRename(file);
+                              setNewFileName(file.file_name.replace(/\.[^/.]+$/, ''));
+                              setRenameDialogOpen(true);
+                            }}>
+                              <Edit3 className="h-4 w-4 mr-2" />
+                              Renomear
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleOpenMoveDialog(file)}>
                               <FolderInput className="h-4 w-4 mr-2" />
                               Mover para Pasta
@@ -2318,6 +2331,14 @@ export default function WorkFlowTab() {
                     <ContextMenuItem onClick={() => handleMarkAsComplete(file)}>
                       <CheckCircle2 className="h-4 w-4 mr-2" />
                       Mark as Completed
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => {
+                      setFileToRename(file);
+                      setNewFileName(file.file_name.replace(/\.[^/.]+$/, ''));
+                      setRenameDialogOpen(true);
+                    }}>
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      Renomear
                     </ContextMenuItem>
                     <ContextMenuItem onClick={() => handleOpenMoveDialog(file)}>
                       <FolderInput className="h-4 w-4 mr-2" />
@@ -2857,6 +2878,79 @@ export default function WorkFlowTab() {
               className="bg-blue-600 hover:bg-blue-700"
             >
               {moveFileMutation.isPending ? "A mover..." : "Mover Ficheiro"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename File Dialog */}
+      <Dialog open={renameDialogOpen} onOpenChange={(open) => {
+        setRenameDialogOpen(open);
+        if (!open) {
+          setFileToRename(null);
+          setNewFileName("");
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Renomear Ficheiro</DialogTitle>
+            <DialogDescription>
+              Introduza o novo nome para o ficheiro.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome do Ficheiro</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={newFileName}
+                  onChange={(e) => setNewFileName(e.target.value)}
+                  placeholder="Novo nome..."
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newFileName.trim() && fileToRename) {
+                      const ext = fileToRename.file_name.match(/\.[^/.]+$/)?.[0] || '';
+                      updateFieldMutation.mutate(
+                        { id: fileToRename.id, field: 'file_name', value: newFileName.trim() + ext },
+                        { onSuccess: () => {
+                          toast.success("Ficheiro renomeado");
+                          setRenameDialogOpen(false);
+                          setFileToRename(null);
+                          setNewFileName("");
+                        }}
+                      );
+                    }
+                  }}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {fileToRename?.file_name.match(/\.[^/.]+$/)?.[0] || ''}
+                </span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => {
+                if (fileToRename && newFileName.trim()) {
+                  const ext = fileToRename.file_name.match(/\.[^/.]+$/)?.[0] || '';
+                  updateFieldMutation.mutate(
+                    { id: fileToRename.id, field: 'file_name', value: newFileName.trim() + ext },
+                    { onSuccess: () => {
+                      toast.success("Ficheiro renomeado");
+                      setRenameDialogOpen(false);
+                      setFileToRename(null);
+                      setNewFileName("");
+                    }}
+                  );
+                }
+              }}
+              disabled={!newFileName.trim() || updateFieldMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {updateFieldMutation.isPending ? "A renomear..." : "Renomear"}
             </Button>
           </DialogFooter>
         </DialogContent>
