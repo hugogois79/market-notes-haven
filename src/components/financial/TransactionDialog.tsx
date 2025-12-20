@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useEffect, useState, useRef, useMemo } from "react";
-import { Check, ChevronsUpDown, X, Paperclip, Download } from "lucide-react";
+import { Check, ChevronsUpDown, X, Paperclip, Download, Wand2 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -275,6 +275,57 @@ export default function TransactionDialog({
 
   const removeNewFile = (index: number) => {
     setNewFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Generate smart file name based on form data: "Fornecedor (DD-MM-YYYY) Valor€.ext"
+  const generateSmartFileName = (originalFileName: string) => {
+    const supplierName = watch("entity_name") || "Fornecedor";
+    const dateValue = watch("date");
+    const totalValue = watch("total_amount");
+    
+    // Format date to DD-MM-YYYY
+    let formattedDate = "";
+    if (dateValue) {
+      const d = new Date(dateValue);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      formattedDate = `${day}-${month}-${year}`;
+    } else {
+      const d = new Date();
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      formattedDate = `${day}-${month}-${year}`;
+    }
+    
+    // Format value
+    const formattedValue = Number(totalValue || 0).toFixed(2);
+    
+    // Get file extension
+    const extension = originalFileName.split('.').pop() || 'pdf';
+    
+    // Clean supplier name (remove special chars that might cause issues)
+    const cleanSupplier = supplierName.replace(/[<>:"/\\|?*]/g, '').trim();
+    
+    return `${cleanSupplier} (${formattedDate}) ${formattedValue}€.${extension}`;
+  };
+
+  // Rename file with smart name
+  const handleRenameFile = (index: number) => {
+    const file = newFiles[index];
+    const newName = generateSmartFileName(file.name);
+    
+    // Create new File with updated name
+    const renamedFile = new File([file], newName, { type: file.type });
+    
+    setNewFiles(prev => {
+      const updated = [...prev];
+      updated[index] = renamedFile;
+      return updated;
+    });
+    
+    toast.success(`Ficheiro renomeado para: ${newName}`);
   };
 
   const getFileName = (url: string) => {
@@ -896,6 +947,16 @@ export default function TransactionDialog({
                 {newFiles.map((file, index) => (
                   <span key={index} className="inline-flex items-center gap-1">
                     <span className="truncate max-w-[200px]">{file.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0 text-primary hover:text-primary/80"
+                      onClick={() => handleRenameFile(index)}
+                      title="Renomear ficheiro automaticamente"
+                    >
+                      <Wand2 className="h-3 w-3" />
+                    </Button>
                     <Button
                       type="button"
                       variant="ghost"
