@@ -211,6 +211,15 @@ export default function WorkFlowTab() {
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [activeFilters, setActiveFilters] = useState<FilterCondition[]>([]);
+  
+  // Resizable File column width
+  const [fileColWidth, setFileColWidth] = useState<number>(() => {
+    const saved = localStorage.getItem("workflow-file-col-width");
+    return saved ? parseInt(saved, 10) : 400;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartX = useRef<number>(0);
+  const resizeStartWidth = useRef<number>(400);
   // Current filter being edited
   const [currentFilterColumn, setCurrentFilterColumn] = useState<string>("");
   
@@ -1032,6 +1041,38 @@ export default function WorkFlowTab() {
     await uploadFiles(Array.from(files));
   }, []);
 
+  // Resize handlers for File column
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    resizeStartX.current = e.clientX;
+    resizeStartWidth.current = fileColWidth;
+  }, [fileColWidth]);
+
+  useEffect(() => {
+    if (!isResizing) return;
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const delta = e.clientX - resizeStartX.current;
+      const newWidth = Math.max(150, Math.min(800, resizeStartWidth.current + delta));
+      setFileColWidth(newWidth);
+    };
+    
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      localStorage.setItem("workflow-file-col-width", String(fileColWidth));
+    };
+    
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizing, fileColWidth]);
+
   const handleDownload = async (file: WorkflowFile) => {
     try {
       const url = new URL(file.file_url);
@@ -1731,7 +1772,8 @@ export default function WorkFlowTab() {
                 />
               </th>
               <th 
-                className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100"
+                className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
+                style={{ width: fileColWidth, minWidth: 150, maxWidth: 800 }}
                 onClick={() => handleSort('name')}
               >
                 <div className="flex items-center gap-1">
@@ -1740,6 +1782,12 @@ export default function WorkFlowTab() {
                     sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                   )}
                 </div>
+                {/* Resize handle */}
+                <div 
+                  className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                  onMouseDown={handleResizeStart}
+                  onClick={(e) => e.stopPropagation()}
+                />
               </th>
               {isColumnVisible("type") && (
                 <th 
@@ -1918,12 +1966,16 @@ export default function WorkFlowTab() {
                           onCheckedChange={() => toggleSelect(file.id)}
                         />
                       </td>
-                      <td className="px-3 py-1.5">
-                        <div className="flex items-center gap-2">
+                      <td 
+                        className="px-3 py-1.5" 
+                        style={{ width: fileColWidth, minWidth: 150, maxWidth: 800 }}
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden">
                           <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
                           <button 
-                            className="text-xs font-medium text-blue-600 hover:underline cursor-pointer text-left whitespace-nowrap" 
+                            className="text-xs font-medium text-blue-600 hover:underline cursor-pointer text-left truncate" 
                             onClick={() => setPreviewFile(file)}
+                            title={file.file_name}
                           >
                             {getFileNameWithoutExtension(file.file_name)}
                           </button>
