@@ -1703,19 +1703,17 @@ export default function WorkFlowTab() {
                 </Button>
               </ContextMenuTrigger>
               <ContextMenuContent>
-                {userSavedVersion ? (
-                  <ContextMenuItem 
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => deleteSavedFilter(userSavedVersion.id)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Eliminar filtro guardado
-                  </ContextMenuItem>
-                ) : (
-                  <ContextMenuItem disabled className="text-muted-foreground">
-                    Filtro predefinido (não pode ser eliminado)
-                  </ContextMenuItem>
-                )}
+                <ContextMenuItem 
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => {
+                    if (userSavedVersion) {
+                      deleteSavedFilter(userSavedVersion.id);
+                    }
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar filtro
+                </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>
           );
