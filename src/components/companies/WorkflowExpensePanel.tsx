@@ -598,6 +598,9 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                     const supplierName = watch("entity_name") || "Fornecedor";
                     const dateValue = watch("date");
                     const totalValue = watch("total_amount");
+                    const companyId = watch("company_id");
+                    const description = watch("description") || "";
+                    const projectId = watch("project_id");
                     
                     // Format date to DD-MM-YYYY
                     let formattedDate = "";
@@ -615,13 +618,42 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                     // Format amount
                     const formattedValue = Number(totalValue || 0).toFixed(2);
                     
+                    // Get company name (empresa receptora)
+                    const companyName = companies?.find(c => c.id === companyId)?.name || "";
+                    
+                    // Get project name
+                    const projectName = expenseProjects?.find(p => p.id === projectId)?.name || "";
+                    
                     // Get extension from current file
                     const extension = attachmentName.split('.').pop() || 'pdf';
                     
-                    // Clean supplier name
+                    // Clean names (remove invalid characters)
                     const cleanSupplier = supplierName.replace(/[<>:"/\\|?*]/g, '').trim();
+                    const cleanCompany = companyName.replace(/[<>:"/\\|?*]/g, '').trim();
+                    const cleanDescription = description.replace(/[<>:"/\\|?*]/g, '').trim();
+                    const cleanProject = projectName.replace(/[<>:"/\\|?*]/g, '').trim().toUpperCase();
                     
-                    const newName = `${cleanSupplier} (${formattedDate}) ${formattedValue}€.${extension}`;
+                    // Build the new name with all components
+                    let newName = `${cleanSupplier} (${formattedDate}) ${formattedValue}€`;
+                    
+                    // Add company name if available
+                    if (cleanCompany) {
+                      newName += ` (${cleanCompany})`;
+                    }
+                    
+                    // Add description if available
+                    if (cleanDescription) {
+                      newName += ` (${cleanDescription})`;
+                    }
+                    
+                    // Add project name in brackets if available
+                    if (cleanProject) {
+                      newName += ` [${cleanProject}]`;
+                    }
+                    
+                    // Add extension
+                    newName += `.${extension}`;
+                    
                     setAttachmentName(newName);
                     toast.success(`Ficheiro renomeado para: ${newName}`);
                   }}
