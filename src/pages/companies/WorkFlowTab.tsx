@@ -306,6 +306,10 @@ export default function WorkFlowTab() {
   const [fileToRename, setFileToRename] = useState<WorkflowFile | null>(null);
   const [newFileName, setNewFileName] = useState("");
 
+  // Skip payment confirmation state
+  const [showSkipPaymentConfirmation, setShowSkipPaymentConfirmation] = useState(false);
+  const [fileToSkipPayment, setFileToSkipPayment] = useState<WorkflowFile | null>(null);
+
   // Query existing transaction for current file using document_file_id
   const { data: existingTransaction, isLoading: isLoadingTransaction } = useQuery({
     queryKey: ["file-transaction", previewFile?.id],
@@ -926,11 +930,10 @@ export default function WorkFlowTab() {
       .eq("invoice_file_url", file.file_url)
       .maybeSingle();
 
-    // If no transaction or transaction has zero value, require payment registration first
+    // If no transaction or transaction has zero value, show confirmation dialog
     if (!existingTransaction || existingTransaction.total_amount === 0) {
-      setPreviewFile(file);
-      setShowPaymentDialog(true);
-      toast.info("Por favor registe os detalhes do pagamento antes de concluir");
+      setFileToSkipPayment(file);
+      setShowSkipPaymentConfirmation(true);
       return;
     }
 
@@ -1163,6 +1166,72 @@ export default function WorkFlowTab() {
       setMissingStorageCompanyName(null);
       setMarkCompleteWarningOpen(false);
     }
+  };
+
+  // Handle completing file without payment registration
+  const handleCompleteWithoutPayment = async () => {
+    if (!fileToSkipPayment) return;
+    
+    const file = fileToSkipPayment;
+    setShowSkipPaymentConfirmation(false);
+    setFileToSkipPayment(null);
+    
+    // Use file date for storage location lookup
+    const dateToUse = new Date(file.created_at);
+    const fileMonth = dateToUse.getMonth() + 1;
+    const fileYear = dateToUse.getFullYear();
+
+    // Read table relations settings
+    const settingsStr = localStorage.getItem(TABLE_RELATIONS_KEY);
+    const settings: TableRelationsConfig = settingsStr
+      ? JSON.parse(settingsStr)
+      : { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
+
+    const targetCompanyId = settings.defaultCompanyId;
+
+    // Query storage locations
+    let query = supabase
+      .from("workflow_storage_locations")
+      .select("*")
+      .eq("year", fileYear)
+      .eq("month", fileMonth);
+    
+    if (targetCompanyId) {
+      query = query.eq("company_id", targetCompanyId);
+    }
+
+    const { data: matchingLocations, error } = await query;
+
+    if (error) {
+      toast.error("Erro ao procurar localização de armazenamento");
+      return;
+    }
+
+    const matchingLocation = matchingLocations && matchingLocations.length > 0 
+      ? matchingLocations[0] 
+      : null;
+
+    if (!matchingLocation) {
+      let companyName = "Unknown Company";
+      if (targetCompanyId) {
+        const { data: companyData } = await supabase
+          .from("companies")
+          .select("name")
+          .eq("id", targetCompanyId)
+          .maybeSingle();
+        if (companyData?.name) {
+          companyName = companyData.name;
+        }
+      }
+      setMissingStorageCompanyName(companyName);
+      setFileToComplete(file);
+      setMarkCompleteWarningOpen(true);
+      return;
+    }
+
+    // Complete without looking for payment account storage
+    await completeFile(file, matchingLocation, settings);
+    toast.success("Ficheiro movido sem registo financeiro");
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2783,6 +2852,45 @@ export default function WorkFlowTab() {
             }}>
               Close
             </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Skip Payment Confirmation Dialog */}
+      <AlertDialog open={showSkipPaymentConfirmation} onOpenChange={setShowSkipPaymentConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Sem Registo Financeiro
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Este documento não tem registo financeiro associado. Deseja mover para a pasta destino sem criar registo financeiro?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel onClick={() => {
+              setShowSkipPaymentConfirmation(false);
+              setFileToSkipPayment(null);
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowSkipPaymentConfirmation(false);
+                if (fileToSkipPayment) {
+                  setPreviewFile(fileToSkipPayment);
+                  setShowPaymentDialog(true);
+                  setFileToSkipPayment(null);
+                }
+              }}
+            >
+              Registar Pagamento
+            </Button>
+            <AlertDialogAction onClick={handleCompleteWithoutPayment}>
+              Continuar sem registo
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
