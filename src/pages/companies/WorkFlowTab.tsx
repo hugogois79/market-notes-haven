@@ -1617,10 +1617,10 @@ export default function WorkFlowTab() {
         {/* Columns Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-sm">
-              <Columns className="h-3.5 w-3.5" />
+            <Button variant="outline" size="sm" className="gap-1 h-7 text-xs px-2">
+              <Columns className="h-3 w-3" />
               Columns
-              <ChevronDown className="h-3 w-3" />
+              <ChevronDown className="h-2.5 w-2.5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
@@ -1678,12 +1678,12 @@ export default function WorkFlowTab() {
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "gap-1.5 h-8 text-sm",
+                    "gap-1 h-7 text-xs px-2",
                     isActive && "bg-blue-50 border-blue-200 text-blue-700"
                   )}
                   onClick={() => loadSavedFilter(filter)}
                 >
-                  <Bookmark className="h-3.5 w-3.5" />
+                  <Bookmark className="h-3 w-3" />
                   {filter.name}
                 </Button>
               </ContextMenuTrigger>
