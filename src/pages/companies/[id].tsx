@@ -93,6 +93,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DocumentUploadDialog from "@/components/companies/DocumentUploadDialog";
 import { format } from "date-fns";
@@ -291,6 +299,7 @@ export default function CompanyDetailPage() {
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [docToMove, setDocToMove] = useState<any>(null);
   const [moveFolderPath, setMoveFolderPath] = useState<string>("__root__");
+  const [moveFolderPopoverOpen, setMoveFolderPopoverOpen] = useState(false);
   
   // Column management dialogs
   const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false);
@@ -2893,19 +2902,47 @@ export default function CompanyDetailPage() {
 
             <div className="space-y-2">
               <Label>Pasta de Destino</Label>
-              <Select value={moveFolderPath} onValueChange={setMoveFolderPath}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a pasta..." />
-                </SelectTrigger>
-                <SelectContent className="bg-white max-h-60 overflow-y-auto">
-                  <SelectItem value="__root__">📁 Raiz (sem pasta)</SelectItem>
-                  {folderOptions.map((f) => (
-                    <SelectItem key={f.id} value={f.path}>
-                      📂 {f.path}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={moveFolderPopoverOpen} onOpenChange={setMoveFolderPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    {moveFolderPath === "__root__" 
+                      ? "📁 Raiz (sem pasta)" 
+                      : `📂 ${moveFolderPath}`}
+                    <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Pesquisar pasta..." />
+                    <CommandList className="max-h-48 overflow-y-auto">
+                      <CommandEmpty>Nenhuma pasta encontrada.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem 
+                          value="__root__"
+                          onSelect={() => {
+                            setMoveFolderPath("__root__");
+                            setMoveFolderPopoverOpen(false);
+                          }}
+                        >
+                          📁 Raiz (sem pasta)
+                        </CommandItem>
+                        {folderOptions.map((f) => (
+                          <CommandItem 
+                            key={f.id} 
+                            value={f.path}
+                            onSelect={() => {
+                              setMoveFolderPath(f.path);
+                              setMoveFolderPopoverOpen(false);
+                            }}
+                          >
+                            📂 {f.path}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
