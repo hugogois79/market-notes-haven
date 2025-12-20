@@ -559,7 +559,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                 </SelectTrigger>
                 <SelectContent>
                   {filteredBankAccounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
+                    <SelectItem key={account.id} value={account.id} className="text-xs">
                       {account.account_name}
                     </SelectItem>
                   ))}
