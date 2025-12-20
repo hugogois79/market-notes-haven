@@ -34,6 +34,7 @@ import {
   User,
   Folder,
   FolderPlus,
+  FolderInput,
   Settings,
   ChevronRight,
   Columns,
@@ -84,7 +85,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Popover,
   PopoverContent,
@@ -283,6 +286,11 @@ export default function CompanyDetailPage() {
   const [metadataSheetOpen, setMetadataSheetOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [viewingDocument, setViewingDocument] = useState<any>(null);
+
+  // Move document dialog state
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [docToMove, setDocToMove] = useState<any>(null);
+  const [moveFolderPath, setMoveFolderPath] = useState<string>("__root__");
   
   // Column management dialogs
   const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false);
@@ -443,6 +451,15 @@ export default function CompanyDetailPage() {
     enabled: !!id,
   });
 
+  // Build folder paths for move dialog (uses allFolders)
+  const getFolderPath = (folderId: string, foldersList: any[]): string => {
+    const folder = foldersList.find(f => f.id === folderId);
+    if (!folder) return "";
+    if (!folder.parent_folder_id) return folder.name;
+    const parentPath = getFolderPath(folder.parent_folder_id, foldersList);
+    return parentPath ? `${parentPath}/${folder.name}` : folder.name;
+  };
+
   // Fetch ALL folders for settings
   const { data: allFolders } = useQuery({
     queryKey: ["company-all-folders", id],
@@ -458,7 +475,12 @@ export default function CompanyDetailPage() {
     enabled: !!id,
   });
 
-  // Get category options for a specific folder from allFolders data
+  const folderOptions = (allFolders || [])
+    .map(folder => ({
+      id: folder.id as string,
+      path: getFolderPath(folder.id, allFolders || []),
+    }))
+    .sort((a, b) => a.path.localeCompare(b.path));
   const getFolderCategoryOptions = useCallback((folderId: string | null): ColumnOption[] => {
     if (!folderId) return DEFAULT_CATEGORY_OPTIONS;
     const folder = allFolders?.find(f => f.id === folderId);
@@ -657,7 +679,35 @@ export default function CompanyDetailPage() {
     },
   });
 
-  // Column management functions
+  const moveDocumentMutation = useMutation({
+    mutationFn: async ({ docId, folderId }: { docId: string; folderId: string | null }) => {
+      const { error } = await supabase
+        .from("company_documents")
+        .update({ folder_id: folderId })
+        .eq("id", docId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateDocuments();
+      toast.success("Ficheiro movido");
+      setMoveDialogOpen(false);
+      setDocToMove(null);
+      setMoveFolderPath("__root__");
+    },
+    onError: (error) => {
+      toast.error("Erro ao mover: " + error.message);
+    },
+  });
+
+  const handleConfirmMove = () => {
+    if (!docToMove?.id) return;
+    const targetFolderId =
+      moveFolderPath === "__root__"
+        ? null
+        : (folderOptions.find((f) => f.path === moveFolderPath)?.id ?? null);
+
+    moveDocumentMutation.mutate({ docId: docToMove.id, folderId: targetFolderId });
+  };
   const addNewColumn = () => {
     if (!newColumnName.trim()) return;
     const newColumn: ColumnConfig = {
@@ -2425,6 +2475,14 @@ export default function CompanyDetailPage() {
                                   <Edit3 className="h-4 w-4 mr-2" />
                                   Edit Properties
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  setDocToMove(doc);
+                                  setMoveFolderPath("__root__");
+                                  setMoveDialogOpen(true);
+                                }}>
+                                  <FolderInput className="h-4 w-4 mr-2" />
+                                  Mover para Pasta
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleDownload(doc)}>
                                   <Download className="h-4 w-4 mr-2" />
                                   Download
@@ -2807,6 +2865,60 @@ export default function CompanyDetailPage() {
         document={selectedDocument}
         companyId={id!}
       />
+
+      {/* Move Document Dialog */}
+      <Dialog
+        open={moveDialogOpen}
+        onOpenChange={(open) => {
+          setMoveDialogOpen(open);
+          if (!open) {
+            setDocToMove(null);
+            setMoveFolderPath("__root__");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mover para Pasta</DialogTitle>
+            <DialogDescription>
+              Selecione a pasta de destino para este ficheiro.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="p-3 bg-muted/20 rounded-lg border">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Ficheiro</Label>
+              <p className="mt-1 text-sm font-medium truncate">{docToMove?.name}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Pasta de Destino</Label>
+              <Select value={moveFolderPath} onValueChange={setMoveFolderPath}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a pasta..." />
+                </SelectTrigger>
+                <SelectContent className="bg-white max-h-60 overflow-y-auto">
+                  <SelectItem value="__root__">📁 Raiz (sem pasta)</SelectItem>
+                  {folderOptions.map((f) => (
+                    <SelectItem key={f.id} value={f.path}>
+                      📂 {f.path}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMoveDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmMove} disabled={moveDocumentMutation.isPending}>
+              {moveDocumentMutation.isPending ? "A mover..." : "Mover"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Column Dialog */}
       <Dialog open={addColumnDialogOpen} onOpenChange={setAddColumnDialogOpen}>
