@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, CreditCard, Bookmark, Save } from "lucide-react";
+import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, CreditCard, Bookmark, Save, FolderInput } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -274,6 +275,15 @@ export default function WorkFlowTab() {
   const [fileToComplete, setFileToComplete] = useState<WorkflowFile | null>(null);
   const [missingStorageCompanyName, setMissingStorageCompanyName] = useState<string | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
+
+  // Move file to folder state
+  const [moveFileDialogOpen, setMoveFileDialogOpen] = useState(false);
+  const [fileToMove, setFileToMove] = useState<WorkflowFile | null>(null);
+  const [moveForm, setMoveForm] = useState<{
+    company_id: string;
+    folder_id: string | null;
+    folder_path: string;
+  }>({ company_id: "", folder_id: null, folder_path: "" });
 
   // Query existing transaction for current file using document_file_id
   const { data: existingTransaction, isLoading: isLoadingTransaction } = useQuery({
@@ -551,6 +561,38 @@ export default function WorkFlowTab() {
     },
   });
 
+  // Fetch folders for selected company in move file dialog
+  const { data: moveFolders } = useQuery({
+    queryKey: ["company-folders-for-move", moveForm.company_id],
+    queryFn: async () => {
+      if (!moveForm.company_id) return [];
+      const { data, error } = await supabase
+        .from("company_folders")
+        .select("*")
+        .eq("company_id", moveForm.company_id)
+        .order("name");
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!moveForm.company_id,
+  });
+
+  // Build folder paths recursively for move dialog
+  const getMoveFolderPath = (folderId: string, folders: any[]): string => {
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return "";
+    if (!folder.parent_folder_id) return folder.name;
+    const parentPath = getMoveFolderPath(folder.parent_folder_id, folders);
+    return parentPath ? `${parentPath}/${folder.name}` : folder.name;
+  };
+
+  const moveFolderOptions = moveFolders?.map(folder => ({
+    id: folder.id,
+    name: folder.name,
+    path: getMoveFolderPath(folder.id, moveFolders || [])
+  })).sort((a, b) => a.path.localeCompare(b.path)) || [];
+
   // Create lookup map for transactions by file_url
   const transactionsByFileUrl = linkedTransactions?.reduce((acc, tx) => {
     if (tx.invoice_file_url) {
@@ -648,7 +690,102 @@ export default function WorkFlowTab() {
     },
   });
 
-  // Upload files with progress tracking
+  // Move file to company folder mutation
+  const moveFileMutation = useMutation({
+    mutationFn: async ({ file, companyId, folderId }: { file: WorkflowFile; companyId: string; folderId: string | null }) => {
+      // 1. Download the file from attachments bucket
+      const url = new URL(file.file_url);
+      const match = url.pathname.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+      
+      if (!match) {
+        throw new Error("Invalid file URL format");
+      }
+      
+      const [, bucket, encodedPath] = match;
+      const filePath = decodeURIComponent(encodedPath);
+      
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from(bucket)
+        .download(filePath);
+      
+      if (downloadError) throw downloadError;
+      
+      // 2. Upload to company-documents bucket
+      const newPath = `${companyId}/${folderId || 'root'}/${Date.now()}-${sanitizeFileName(file.file_name)}`;
+      const { error: uploadError } = await supabase.storage
+        .from("company-documents")
+        .upload(newPath, fileData);
+      
+      if (uploadError) throw uploadError;
+      
+      // 3. Get the public URL of the new file
+      const { data: { publicUrl } } = supabase.storage
+        .from("company-documents")
+        .getPublicUrl(newPath);
+      
+      // 4. Create document record in company_documents
+      const { error: insertError } = await supabase
+        .from("company_documents")
+        .insert({
+          company_id: companyId,
+          folder_id: folderId,
+          name: file.file_name,
+          file_url: publicUrl,
+          file_size: file.file_size,
+          mime_type: file.mime_type,
+          status: "Final",
+        });
+      
+      if (insertError) throw insertError;
+      
+      // 5. Delete the workflow file record
+      const { error: deleteError } = await supabase
+        .from("workflow_files")
+        .delete()
+        .eq("id", file.id);
+      
+      if (deleteError) throw deleteError;
+      
+      // 6. Optionally delete the old file from storage
+      await supabase.storage.from(bucket).remove([filePath]);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+      setMoveFileDialogOpen(false);
+      setFileToMove(null);
+      setMoveForm({ company_id: "", folder_id: null, folder_path: "" });
+      toast.success("Ficheiro movido com sucesso!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao mover ficheiro: " + error.message);
+    },
+  });
+
+  // Handler to open move dialog
+  const handleOpenMoveDialog = (file: WorkflowFile) => {
+    setFileToMove(file);
+    setMoveForm({ company_id: "", folder_id: null, folder_path: "" });
+    setMoveFileDialogOpen(true);
+  };
+
+  // Handler to execute move
+  const handleMoveFile = () => {
+    if (!fileToMove || !moveForm.company_id) {
+      toast.error("Selecione uma empresa");
+      return;
+    }
+    
+    // If user selected __root__, pass null as folder_id
+    const folderId = moveForm.folder_path === "__root__" ? null : moveForm.folder_id;
+    
+    moveFileMutation.mutate({
+      file: fileToMove,
+      companyId: moveForm.company_id,
+      folderId: folderId,
+    });
+  };
+
+
   const uploadFiles = async (files: FileList | File[]) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
@@ -2156,10 +2293,15 @@ export default function WorkFlowTab() {
                               <CheckCircle2 className="h-4 w-4 mr-2" />
                               Mark as Completed
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleOpenMoveDialog(file)}>
+                              <FolderInput className="h-4 w-4 mr-2" />
+                              Mover para Pasta
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleDownload(file)}>
                               <Download className="h-4 w-4 mr-2" />
                               Download
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="text-destructive"
                               onClick={() => deleteMutation.mutate(file.id)}
@@ -2176,6 +2318,10 @@ export default function WorkFlowTab() {
                     <ContextMenuItem onClick={() => handleMarkAsComplete(file)}>
                       <CheckCircle2 className="h-4 w-4 mr-2" />
                       Mark as Completed
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => handleOpenMoveDialog(file)}>
+                      <FolderInput className="h-4 w-4 mr-2" />
+                      Mover para Pasta
                     </ContextMenuItem>
                     <ContextMenuItem onClick={() => handleDownload(file)}>
                       <Download className="h-4 w-4 mr-2" />
@@ -2612,6 +2758,101 @@ export default function WorkFlowTab() {
             </Button>
             <Button onClick={handleSaveFilter} disabled={!newFilterName.trim()}>
               Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move File to Folder Dialog */}
+      <Dialog open={moveFileDialogOpen} onOpenChange={(open) => {
+        setMoveFileDialogOpen(open);
+        if (!open) {
+          setFileToMove(null);
+          setMoveForm({ company_id: "", folder_id: null, folder_path: "" });
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mover para Pasta</DialogTitle>
+            <DialogDescription>
+              Selecione a empresa e pasta de destino para o ficheiro.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* File being moved */}
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <Label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Ficheiro</Label>
+              <p className="text-sm text-foreground mt-1 font-medium truncate">
+                {fileToMove?.file_name}
+              </p>
+            </div>
+
+            {/* Company selection */}
+            <div className="space-y-2">
+              <Label>Empresa</Label>
+              <Select
+                value={moveForm.company_id}
+                onValueChange={(value) => setMoveForm(prev => ({ ...prev, company_id: value, folder_id: null, folder_path: "" }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a empresa..." />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  {allCompanies?.map(company => (
+                    <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Folder selection */}
+            <div className="space-y-2">
+              <Label>Pasta de Destino</Label>
+              <p className="text-xs text-slate-500">Selecione a pasta onde o ficheiro será guardado.</p>
+              <Select
+                value={moveForm.folder_path}
+                onValueChange={(value) => {
+                  const folder = moveFolderOptions.find(f => f.path === value);
+                  setMoveForm(prev => ({ ...prev, folder_path: value, folder_id: folder?.id || null }));
+                }}
+                disabled={!moveForm.company_id}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={moveForm.company_id ? "Selecione a pasta..." : "Selecione a empresa primeiro"} />
+                </SelectTrigger>
+                <SelectContent className="bg-white max-h-60 overflow-y-auto">
+                  <SelectItem value="__root__">📁 Raiz (sem pasta)</SelectItem>
+                  {moveFolderOptions.length === 0 ? (
+                    <SelectItem value="__none__" disabled>Sem pastas disponíveis</SelectItem>
+                  ) : (
+                    moveFolderOptions.map(folder => (
+                      <SelectItem key={folder.id} value={folder.path}>📂 {folder.path}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Preview */}
+            {moveForm.company_id && (
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <Label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Destino</Label>
+                <p className="text-sm text-slate-700 mt-1 font-mono">
+                  {allCompanies?.find(c => c.id === moveForm.company_id)?.name} → Documents → <span className="text-blue-600">{moveForm.folder_path === "__root__" ? "(Raiz)" : moveForm.folder_path || "..."}</span>
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMoveFileDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleMoveFile}
+              disabled={!moveForm.company_id || moveFileMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {moveFileMutation.isPending ? "A mover..." : "Mover Ficheiro"}
             </Button>
           </DialogFooter>
         </DialogContent>
