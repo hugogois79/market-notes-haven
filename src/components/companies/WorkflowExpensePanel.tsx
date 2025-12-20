@@ -66,7 +66,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   const [attachmentName, setAttachmentName] = useState<string>(file.file_name);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   
-  const { register, handleSubmit, reset, watch, setValue } = useForm({
+  const { register, handleSubmit, reset, watch, setValue, getValues } = useForm({
     defaultValues: {
       date: new Date().toISOString().split("T")[0],
       type: "expense",
@@ -595,65 +595,71 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                   size="icon"
                   className="h-6 w-6 p-0 text-primary hover:text-primary/80"
                   onClick={() => {
-                    const supplierName = watch("entity_name") || "Fornecedor";
-                    const dateValue = watch("date");
-                    const totalValue = watch("total_amount");
-                    const companyId = watch("company_id");
-                    const description = watch("description") || "";
-                    const projectId = watch("project_id");
-                    
+                    const values = getValues();
+
+                    const supplierName = values.entity_name || "Fornecedor";
+                    const dateValue = values.date;
+                    const totalValue = values.total_amount;
+                    const companyId = values.company_id;
+                    const bankAccountId = values.bank_account_id;
+                    const projectId = values.project_id;
+
                     // Format date to DD-MM-YYYY
                     let formattedDate = "";
                     if (dateValue) {
                       const d = new Date(dateValue);
-                      const day = String(d.getDate()).padStart(2, '0');
-                      const month = String(d.getMonth() + 1).padStart(2, '0');
+                      const day = String(d.getDate()).padStart(2, "0");
+                      const month = String(d.getMonth() + 1).padStart(2, "0");
                       const year = d.getFullYear();
                       formattedDate = `${day}-${month}-${year}`;
                     } else {
                       const d = new Date();
-                      formattedDate = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+                      formattedDate = `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
                     }
-                    
+
                     // Format amount
                     const formattedValue = Number(totalValue || 0).toFixed(2);
-                    
+
                     // Get company name (empresa receptora)
-                    const companyName = companies?.find(c => c.id === companyId)?.name || "";
-                    
+                    const companyName = companies?.find((c) => c.id === companyId)?.name || "";
+
+                    // Get bank account name (conta)
+                    const bankAccountName =
+                      allBankAccounts?.find((ba) => ba.id === bankAccountId)?.account_name || "";
+
                     // Get project name
-                    const projectName = expenseProjects?.find(p => p.id === projectId)?.name || "";
-                    
+                    const projectName = expenseProjects?.find((p) => p.id === projectId)?.name || "";
+
                     // Get extension from current file
-                    const extension = attachmentName.split('.').pop() || 'pdf';
-                    
+                    const extension = attachmentName.split(".").pop() || "pdf";
+
                     // Clean names (remove invalid characters)
-                    const cleanSupplier = supplierName.replace(/[<>:"/\\|?*]/g, '').trim();
-                    const cleanCompany = companyName.replace(/[<>:"/\\|?*]/g, '').trim();
-                    const cleanDescription = description.replace(/[<>:"/\\|?*]/g, '').trim();
-                    const cleanProject = projectName.replace(/[<>:"/\\|?*]/g, '').trim().toUpperCase();
-                    
+                    const cleanSupplier = supplierName.replace(/[<>:"/\\|?*]/g, "").trim();
+                    const cleanCompany = companyName.replace(/[<>:"/\\|?*]/g, "").trim();
+                    const cleanBankAccount = bankAccountName.replace(/[<>:"/\\|?*]/g, "").trim();
+                    const cleanProject = projectName.replace(/[<>:"/\\|?*]/g, "").trim().toUpperCase();
+
                     // Build the new name with all components
                     let newName = `${cleanSupplier} (${formattedDate}) ${formattedValue}€`;
-                    
+
                     // Add company name if available
                     if (cleanCompany) {
                       newName += ` (${cleanCompany})`;
                     }
-                    
-                    // Add description if available
-                    if (cleanDescription) {
-                      newName += ` (${cleanDescription})`;
+
+                    // Add bank account name if available
+                    if (cleanBankAccount) {
+                      newName += ` (${cleanBankAccount})`;
                     }
-                    
+
                     // Add project name in brackets if available
                     if (cleanProject) {
                       newName += ` [${cleanProject}]`;
                     }
-                    
+
                     // Add extension
                     newName += `.${extension}`;
-                    
+
                     setAttachmentName(newName);
                     toast.success(`Ficheiro renomeado para: ${newName}`);
                   }}
