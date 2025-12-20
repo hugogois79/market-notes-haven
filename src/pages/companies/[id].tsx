@@ -2877,7 +2877,7 @@ export default function CompanyDetailPage() {
           }
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Mover para Pasta</DialogTitle>
             <DialogDescription>
