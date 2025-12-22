@@ -193,8 +193,8 @@ interface SavedFilter {
 // Default preset filters that are always available
 const DEFAULT_PRESET_FILTERS: SavedFilter[] = [
   { id: "preset-pa", name: "PA", conditions: [{ column: "category", values: ["PA"], mode: "include" }], isPreset: true },
-  { id: "preset-payment", name: "Payment", conditions: [{ column: "category", values: ["Payment"], mode: "include" }], isPreset: true },
-  { id: "preset-claim", name: "Claim", conditions: [{ column: "category", values: ["Claim"], mode: "include" }], isPreset: true },
+  { id: "preset-payment", name: "Payment", conditions: [{ column: "status", values: ["Payment"], mode: "include" }], isPreset: true },
+  { id: "preset-claim", name: "Claim", conditions: [{ column: "status", values: ["Claim"], mode: "include" }], isPreset: true },
   { id: "preset-work", name: "Work", conditions: [{ column: "category", values: ["Work"], mode: "include" }], isPreset: true },
 ];
 
