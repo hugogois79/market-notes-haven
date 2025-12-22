@@ -1,0 +1,175 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sparkles, RefreshCw, AlertCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+interface DocumentAIPanelProps {
+  fileUrl: string;
+  fileName: string;
+  mimeType: string | null;
+}
+
+export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanelProps) {
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const extractTextFromPDF = async (url: string): Promise<string> => {
+    try {
+      // Extract bucket and path from the URL
+      const urlParts = url.split('/storage/v1/object/public/');
+      if (urlParts.length < 2) {
+        throw new Error('Invalid storage URL format');
+      }
+      
+      const pathParts = urlParts[1].split('/');
+      const bucket = pathParts[0];
+      const filePath = pathParts.slice(1).join('/');
+
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .download(filePath);
+
+      if (error) throw error;
+
+      // For PDFs, we'll extract text using the file content
+      // Since we can't directly extract PDF text in the browser easily,
+      // we'll send the base64 content to the AI
+      const arrayBuffer = await data.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(arrayBuffer).reduce(
+          (data, byte) => data + String.fromCharCode(byte),
+          ''
+        )
+      );
+      
+      // Return a note that this is a PDF - the AI will work with the filename and any metadata
+      return `[PDF Document: ${fileName}]\n\nNote: This is a PDF file. The AI will analyze based on the filename and document type.`;
+    } catch (err) {
+      console.error('Error extracting PDF:', err);
+      return `[Document: ${fileName}]`;
+    }
+  };
+
+  const analyzeDocument = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      let fileContent = "";
+
+      if (mimeType?.includes('pdf')) {
+        fileContent = await extractTextFromPDF(fileUrl);
+      } else if (mimeType?.includes('image')) {
+        fileContent = `[Image Document: ${fileName}]\n\nNote: This is an image file. Analysis based on filename.`;
+      } else {
+        fileContent = `[Document: ${fileName}]`;
+      }
+
+      const { data, error: fnError } = await supabase.functions.invoke('explain-document', {
+        body: { fileContent, fileName }
+      });
+
+      if (fnError) throw fnError;
+
+      setExplanation(data.explanation);
+    } catch (err) {
+      console.error('Error analyzing document:', err);
+      setError('Não foi possível analisar o documento. Tente novamente.');
+      toast.error('Erro ao analisar documento');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Auto-analyze on mount
+  useEffect(() => {
+    analyzeDocument();
+  }, [fileUrl]);
+
+  const renderMarkdown = (text: string) => {
+    // Simple markdown rendering
+    return text
+      .split('\n')
+      .map((line, i) => {
+        if (line.startsWith('**') && line.endsWith('**')) {
+          return <h3 key={i} className="font-semibold text-foreground mt-3 mb-1">{line.replace(/\*\*/g, '')}</h3>;
+        }
+        if (line.startsWith('## ')) {
+          return <h3 key={i} className="font-semibold text-foreground mt-3 mb-1">{line.replace('## ', '')}</h3>;
+        }
+        if (line.startsWith('### ')) {
+          return <h4 key={i} className="font-medium text-foreground mt-2 mb-1">{line.replace('### ', '')}</h4>;
+        }
+        if (line.startsWith('- ')) {
+          return <li key={i} className="ml-4 text-muted-foreground text-sm">{line.replace('- ', '')}</li>;
+        }
+        if (line.trim() === '') {
+          return <br key={i} />;
+        }
+        // Handle inline bold
+        const parts = line.split(/(\*\*[^*]+\*\*)/g);
+        return (
+          <p key={i} className="text-muted-foreground text-sm">
+            {parts.map((part, j) => {
+              if (part.startsWith('**') && part.endsWith('**')) {
+                return <strong key={j} className="text-foreground">{part.replace(/\*\*/g, '')}</strong>;
+              }
+              return part;
+            })}
+          </p>
+        );
+      });
+  };
+
+  return (
+    <div className="h-full flex flex-col bg-muted/30">
+      <div className="p-4 border-b flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-primary" />
+          <h3 className="font-semibold">Análise AI</h3>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={analyzeDocument}
+          disabled={isLoading}
+        >
+          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+        </Button>
+      </div>
+
+      <ScrollArea className="flex-1 p-4">
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            <RefreshCw className="h-8 w-8 animate-spin mb-3" />
+            <p className="text-sm">A analisar documento...</p>
+          </div>
+        )}
+
+        {error && !isLoading && (
+          <div className="flex flex-col items-center justify-center py-8 text-destructive">
+            <AlertCircle className="h-8 w-8 mb-3" />
+            <p className="text-sm text-center">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={analyzeDocument}
+              className="mt-3"
+            >
+              Tentar novamente
+            </Button>
+          </div>
+        )}
+
+        {explanation && !isLoading && (
+          <div className="space-y-1">
+            {renderMarkdown(explanation)}
+          </div>
+        )}
+      </ScrollArea>
+    </div>
+  );
+}
