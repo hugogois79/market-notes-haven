@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, CreditCard, Bookmark, Save, FolderInput } from "lucide-react";
+import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, CreditCard, Bookmark, Save, FolderInput, Sparkles } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +45,7 @@ import { Progress } from "@/components/ui/progress";
 import { DocumentPreview } from "@/components/companies/DocumentPreview";
 import { WorkflowExpensePanel } from "@/components/companies/WorkflowExpensePanel";
 import DocumentPaymentDialog from "@/components/companies/DocumentPaymentDialog";
+import { DocumentAIPanel } from "@/components/companies/DocumentAIPanel";
 import { cn } from "@/lib/utils";
 
 interface WorkflowFile {
@@ -284,6 +285,7 @@ export default function WorkFlowTab() {
   // Document preview state
   const [previewFile, setPreviewFile] = useState<WorkflowFile | null>(null);
   const [showExpensePanel, setShowExpensePanel] = useState(false);
+  const [showAIPanel, setShowAIPanel] = useState(true);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
   // Mark as completed state
@@ -2741,11 +2743,19 @@ export default function WorkFlowTab() {
 
       {/* Document Preview Dialog */}
       <Dialog open={!!previewFile} onOpenChange={(open) => { if (!open) { setPreviewFile(null); setShowExpensePanel(false); } }}>
-        <DialogContent className={cn("h-[90vh] flex flex-col p-0", showExpensePanel ? "max-w-[90vw]" : "max-w-5xl")}>
+        <DialogContent className={cn("h-[90vh] flex flex-col p-0", (showExpensePanel || showAIPanel) ? "max-w-[90vw]" : "max-w-5xl")}>
           <DialogHeader className="p-4 pb-0 flex-shrink-0">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-lg">Visualizar Documento</DialogTitle>
               <div className="flex items-center gap-2 mr-8">
+                <Button
+                  variant={showAIPanel ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowAIPanel(!showAIPanel)}
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Análise AI
+                </Button>
                 <Button
                   variant={showExpensePanel ? "default" : "outline"}
                   size="sm"
@@ -2782,7 +2792,7 @@ export default function WorkFlowTab() {
           </DialogHeader>
           <div className="flex-1 overflow-hidden flex">
             {/* Document viewer */}
-            <div className={cn("flex-1 overflow-hidden p-4", showExpensePanel && "border-r")}>
+            <div className={cn("flex-1 overflow-hidden p-4", (showExpensePanel || showAIPanel) && "border-r")}>
               {previewFile && (
                 <DocumentPreview
                   key={previewFile.file_url}
@@ -2795,6 +2805,16 @@ export default function WorkFlowTab() {
                 />
               )}
             </div>
+            {/* AI Panel */}
+            {showAIPanel && previewFile && (
+              <div className="w-[350px] flex-shrink-0 border-r">
+                <DocumentAIPanel
+                  fileUrl={previewFile.file_url}
+                  fileName={previewFile.file_name}
+                  mimeType={previewFile.mime_type}
+                />
+              </div>
+            )}
             {/* Expense panel */}
             {showExpensePanel && previewFile && (
               <div className="w-[400px] flex-shrink-0">
@@ -2822,6 +2842,7 @@ export default function WorkFlowTab() {
           </div>
         </DialogContent>
       </Dialog>
+
 
       {/* Mark as Completed Warning Dialog */}
       <AlertDialog open={markCompleteWarningOpen} onOpenChange={setMarkCompleteWarningOpen}>
