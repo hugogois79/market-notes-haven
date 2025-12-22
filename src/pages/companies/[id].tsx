@@ -106,6 +106,7 @@ import DocumentUploadDialog from "@/components/companies/DocumentUploadDialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DocumentPreview } from "@/components/companies/DocumentPreview";
+import { DocumentAIPanel } from "@/components/companies/DocumentAIPanel";
 
 const DEFAULT_TAG_OPTIONS: ColumnOption[] = [
   { label: "Important", color: "#ef4444" },
@@ -294,6 +295,7 @@ export default function CompanyDetailPage() {
   const [metadataSheetOpen, setMetadataSheetOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [viewingDocument, setViewingDocument] = useState<any>(null);
+  const [showDocAIPanel, setShowDocAIPanel] = useState(true);
 
   // Move document dialog state
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
@@ -3145,25 +3147,46 @@ export default function CompanyDetailPage() {
 
       {/* Document Preview Dialog */}
       <Dialog open={!!viewingDocument} onOpenChange={(open) => !open && setViewingDocument(null)}>
-        <DialogContent className="max-w-4xl h-[90vh]">
-          <DialogHeader>
+        <DialogContent className={cn("h-[90vh] flex flex-col p-0", showDocAIPanel ? "max-w-[90vw]" : "max-w-4xl")}>
+          <DialogHeader className="p-4 pb-0 flex-shrink-0">
             <DialogTitle className="flex items-center justify-between">
               Visualizar Documento
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setViewingDocument(null)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-2 mr-8">
+                <Button
+                  variant={showDocAIPanel ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowDocAIPanel(!showDocAIPanel)}
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Análise AI
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setViewingDocument(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </DialogTitle>
           </DialogHeader>
           {viewingDocument && (
-            <div className="flex-1 overflow-hidden h-full">
-              <DocumentPreview 
-                document={viewingDocument}
-                onDownload={() => handleDownload(viewingDocument)}
-              />
+            <div className="flex-1 overflow-hidden flex">
+              <div className={cn("flex-1 overflow-hidden p-4", showDocAIPanel && "border-r")}>
+                <DocumentPreview 
+                  document={viewingDocument}
+                  onDownload={() => handleDownload(viewingDocument)}
+                />
+              </div>
+              {showDocAIPanel && (
+                <div className="w-[350px] flex-shrink-0">
+                  <DocumentAIPanel
+                    fileUrl={viewingDocument.file_url}
+                    fileName={viewingDocument.name}
+                    mimeType={viewingDocument.mime_type}
+                  />
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
