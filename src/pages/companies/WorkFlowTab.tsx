@@ -307,7 +307,7 @@ export default function WorkFlowTab() {
   // Document preview state
   const [previewFile, setPreviewFile] = useState<WorkflowFile | null>(null);
   const [showExpensePanel, setShowExpensePanel] = useState(false);
-  const [showAIPanel, setShowAIPanel] = useState(true);
+  const [showAIPanel, setShowAIPanel] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
   // Mark as completed state
