@@ -15,10 +15,10 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanel
   const [explanation, setExplanation] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCached, setIsCached] = useState(false);
 
   const extractTextFromPDF = async (url: string): Promise<string> => {
     try {
-      // Extract bucket and path from the URL
       const urlParts = url.split('/storage/v1/object/public/');
       if (urlParts.length < 2) {
         throw new Error('Invalid storage URL format');
@@ -34,18 +34,6 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanel
 
       if (error) throw error;
 
-      // For PDFs, we'll extract text using the file content
-      // Since we can't directly extract PDF text in the browser easily,
-      // we'll send the base64 content to the AI
-      const arrayBuffer = await data.arrayBuffer();
-      const base64 = btoa(
-        new Uint8Array(arrayBuffer).reduce(
-          (data, byte) => data + String.fromCharCode(byte),
-          ''
-        )
-      );
-      
-      // Return a note that this is a PDF - the AI will work with the filename and any metadata
       return `[PDF Document: ${fileName}]\n\nNote: This is a PDF file. The AI will analyze based on the filename and document type.`;
     } catch (err) {
       console.error('Error extracting PDF:', err);
@@ -53,9 +41,57 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanel
     }
   };
 
-  const analyzeDocument = async () => {
+  const loadCachedAnalysis = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("document_ai_analyses")
+        .select("explanation")
+        .eq("file_url", fileUrl)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setExplanation(data.explanation);
+        setIsCached(true);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Error loading cached analysis:', err);
+      return false;
+    }
+  };
+
+  const saveAnalysis = async (explanationText: string) => {
+    try {
+      const { error } = await supabase
+        .from("document_ai_analyses")
+        .upsert({
+          file_url: fileUrl,
+          file_name: fileName,
+          explanation: explanationText,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'file_url'
+        });
+
+      if (error) throw error;
+      setIsCached(true);
+    } catch (err) {
+      console.error('Error saving analysis:', err);
+    }
+  };
+
+  const analyzeDocument = async (forceRegenerate = false) => {
+    if (!forceRegenerate) {
+      const hasCached = await loadCachedAnalysis();
+      if (hasCached) return;
+    }
+
     setIsLoading(true);
     setError(null);
+    setIsCached(false);
 
     try {
       let fileContent = "";
@@ -75,6 +111,8 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanel
       if (fnError) throw fnError;
 
       setExplanation(data.explanation);
+      await saveAnalysis(data.explanation);
+      toast.success('Análise gerada e guardada');
     } catch (err) {
       console.error('Error analyzing document:', err);
       setError('Não foi possível analisar o documento. Tente novamente.');
@@ -84,16 +122,17 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanel
     }
   };
 
-  // Auto-analyze on mount
   useEffect(() => {
-    analyzeDocument();
+    analyzeDocument(false);
   }, [fileUrl]);
 
   const renderMarkdown = (text: string) => {
-    // Simple markdown rendering
     return text
       .split('\n')
       .map((line, i) => {
+        if (line.startsWith('# ')) {
+          return <h2 key={i} className="font-bold text-foreground mt-4 mb-2 text-base">{line.replace('# ', '')}</h2>;
+        }
         if (line.startsWith('**') && line.endsWith('**')) {
           return <h3 key={i} className="font-semibold text-foreground mt-3 mb-1">{line.replace(/\*\*/g, '')}</h3>;
         }
@@ -103,13 +142,23 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanel
         if (line.startsWith('### ')) {
           return <h4 key={i} className="font-medium text-foreground mt-2 mb-1">{line.replace('### ', '')}</h4>;
         }
-        if (line.startsWith('- ')) {
-          return <li key={i} className="ml-4 text-muted-foreground text-sm">{line.replace('- ', '')}</li>;
+        if (line.startsWith('- ') || line.startsWith('* ')) {
+          const content = line.replace(/^[-*] /, '');
+          const parts = content.split(/(\*\*[^*]+\*\*)/g);
+          return (
+            <li key={i} className="ml-4 text-muted-foreground text-sm">
+              {parts.map((part, j) => {
+                if (part.startsWith('**') && part.endsWith('**')) {
+                  return <strong key={j} className="text-foreground">{part.replace(/\*\*/g, '')}</strong>;
+                }
+                return part;
+              })}
+            </li>
+          );
         }
         if (line.trim() === '') {
           return <br key={i} />;
         }
-        // Handle inline bold
         const parts = line.split(/(\*\*[^*]+\*\*)/g);
         return (
           <p key={i} className="text-muted-foreground text-sm">
@@ -134,8 +183,9 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanel
         <Button
           variant="ghost"
           size="sm"
-          onClick={analyzeDocument}
+          onClick={() => analyzeDocument(true)}
           disabled={isLoading}
+          title="Regenerar análise"
         >
           <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
         </Button>
@@ -156,7 +206,7 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanel
             <Button
               variant="outline"
               size="sm"
-              onClick={analyzeDocument}
+              onClick={() => analyzeDocument(true)}
               className="mt-3"
             >
               Tentar novamente

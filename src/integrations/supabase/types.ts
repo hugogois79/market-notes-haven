@@ -631,6 +631,33 @@ export type Database = {
         }
         Relationships: []
       }
+      document_ai_analyses: {
+        Row: {
+          created_at: string
+          explanation: string
+          file_name: string
+          file_url: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          explanation: string
+          file_name: string
+          file_url: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          explanation?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       document_summaries: {
         Row: {
           date_created: string | null
