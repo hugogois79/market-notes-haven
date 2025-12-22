@@ -3715,6 +3715,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_saved_filters: {
+        Row: {
+          conditions: Json
+          created_at: string
+          filter_type: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conditions?: Json
+          created_at?: string
+          filter_type?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          conditions?: Json
+          created_at?: string
+          filter_type?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_tokens: {
         Row: {
           created_at: string | null
