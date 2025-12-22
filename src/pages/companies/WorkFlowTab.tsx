@@ -234,25 +234,43 @@ export default function WorkFlowTab() {
   // Current filter being edited
   const [currentFilterColumn, setCurrentFilterColumn] = useState<string>("");
   
-  // Saved filters state - migrate old format if needed
-  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>(() => {
-    const saved = localStorage.getItem(WORKFLOW_SAVED_FILTERS_KEY);
-    console.log("[WorkFlowTab] Loading saved filters from localStorage:", saved);
-    if (!saved) return [];
-    try {
-      const parsed = JSON.parse(saved);
-      // Migrate old format (single filter) to new format (conditions array)
-      const migrated = parsed.map((f: any) => ({
-        ...f,
-        conditions: f.conditions || (f.column && f.values ? [{ column: f.column, values: f.values, mode: f.mode || 'include' }] : [])
-      }));
-      console.log("[WorkFlowTab] Loaded saved filters:", migrated);
-      return migrated;
-    } catch (e) {
-      console.error("[WorkFlowTab] Error parsing saved filters:", e);
-      return [];
-    }
+  // Saved filters state - now loaded from Supabase
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
+
+  // Query to fetch saved filters from Supabase
+  const { data: supabaseSavedFilters, refetch: refetchSavedFilters } = useQuery({
+    queryKey: ["user-saved-filters", "workflow"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from("user_saved_filters")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("filter_type", "workflow")
+        .order("created_at", { ascending: false });
+      
+      if (error) {
+        console.error("[WorkFlowTab] Error loading saved filters:", error);
+        return [];
+      }
+      
+      // Map to SavedFilter format
+      return data.map((f: any) => ({
+        id: f.id,
+        name: f.name,
+        conditions: f.conditions || []
+      })) as SavedFilter[];
+    },
   });
+
+  // Sync Supabase filters to local state
+  useEffect(() => {
+    if (supabaseSavedFilters) {
+      setSavedFilters(supabaseSavedFilters);
+    }
+  }, [supabaseSavedFilters]);
   
   // Track deleted preset filter IDs
   const [deletedPresetIds, setDeletedPresetIds] = useState<string[]>(() => {
@@ -428,10 +446,52 @@ export default function WorkFlowTab() {
     localStorage.setItem(WORKFLOW_SORT_KEY, JSON.stringify(sortConfig));
   }, [sortConfig]);
 
-  // Persist saved filters
-  useEffect(() => {
-    localStorage.setItem(WORKFLOW_SAVED_FILTERS_KEY, JSON.stringify(savedFilters));
-  }, [savedFilters]);
+  // Mutation to save a new filter to Supabase
+  const saveFilterMutation = useMutation({
+    mutationFn: async (newFilter: { name: string; conditions: FilterCondition[] }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      
+      const { error } = await supabase
+        .from("user_saved_filters")
+        .insert([{
+          user_id: user.id,
+          filter_type: "workflow",
+          name: newFilter.name,
+          conditions: newFilter.conditions as unknown as import("@/integrations/supabase/types").Json
+        }]);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchSavedFilters();
+      setNewFilterName("");
+      setSaveFilterDialogOpen(false);
+      toast.success("Filtro guardado");
+    },
+    onError: (error) => {
+      toast.error("Erro ao guardar filtro: " + error.message);
+    },
+  });
+
+  // Mutation to delete a filter from Supabase
+  const deleteFilterMutation = useMutation({
+    mutationFn: async (filterId: string) => {
+      const { error } = await supabase
+        .from("user_saved_filters")
+        .delete()
+        .eq("id", filterId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchSavedFilters();
+      toast.success("Filtro eliminado");
+    },
+    onError: (error) => {
+      toast.error("Erro ao eliminar filtro: " + error.message);
+    },
+  });
 
   // Save filter functions
   const handleSaveFilter = () => {
@@ -445,16 +505,10 @@ export default function WorkFlowTab() {
       return;
     }
     
-    const newFilter: SavedFilter = {
-      id: `filter-${Date.now()}`,
+    saveFilterMutation.mutate({
       name: newFilterName.trim(),
       conditions: [...activeFilters],
-    };
-    
-    setSavedFilters(prev => [...prev, newFilter]);
-    setNewFilterName("");
-    setSaveFilterDialogOpen(false);
-    toast.success("Filtro guardado");
+    });
   };
 
   const loadSavedFilter = (filter: SavedFilter) => {
@@ -465,8 +519,7 @@ export default function WorkFlowTab() {
   };
 
   const deleteSavedFilter = (filterId: string) => {
-    setSavedFilters(prev => prev.filter(f => f.id !== filterId));
-    toast.success("Filtro eliminado");
+    deleteFilterMutation.mutate(filterId);
   };
 
   // Add or update a filter condition
