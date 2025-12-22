@@ -237,15 +237,19 @@ export default function WorkFlowTab() {
   // Saved filters state - migrate old format if needed
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>(() => {
     const saved = localStorage.getItem(WORKFLOW_SAVED_FILTERS_KEY);
+    console.log("[WorkFlowTab] Loading saved filters from localStorage:", saved);
     if (!saved) return [];
     try {
       const parsed = JSON.parse(saved);
       // Migrate old format (single filter) to new format (conditions array)
-      return parsed.map((f: any) => ({
+      const migrated = parsed.map((f: any) => ({
         ...f,
         conditions: f.conditions || (f.column && f.values ? [{ column: f.column, values: f.values, mode: f.mode || 'include' }] : [])
       }));
-    } catch {
+      console.log("[WorkFlowTab] Loaded saved filters:", migrated);
+      return migrated;
+    } catch (e) {
+      console.error("[WorkFlowTab] Error parsing saved filters:", e);
       return [];
     }
   });
