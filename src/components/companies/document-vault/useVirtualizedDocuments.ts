@@ -153,8 +153,20 @@ export function useVirtualizedDocuments({
     }
   }, [data?.pages]);
 
-  // Flatten all pages into single array
-  const documents = data?.pages.flatMap((page) => page.documents) || [];
+  // Natural sort comparator for proper numeric ordering (1, 2, 10, 11 instead of 1, 10, 11, 2)
+  const naturalSort = (a: string, b: string): number => {
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  };
+
+  // Flatten all pages into single array and apply natural sorting for name field
+  const rawDocuments = data?.pages.flatMap((page) => page.documents) || [];
+  
+  const documents = sortField === "name" 
+    ? [...rawDocuments].sort((a, b) => {
+        const result = naturalSort(a.name, b.name);
+        return sortDirection === "asc" ? result : -result;
+      })
+    : rawDocuments;
 
   // Invalidate and refetch when needed
   const invalidate = useCallback(() => {
