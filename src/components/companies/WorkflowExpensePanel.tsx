@@ -349,6 +349,20 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         }
         
         // 1. Create or update loan record in company_loans
+        // Get company names for auto-generated description
+        const lendingCompanyName = companies?.find(c => c.id === data.lending_company_id)?.name || "Empresa";
+        const borrowingCompanyName = companies?.find(c => c.id === data.borrowing_company_id)?.name || "Empresa";
+        
+        // Format date as DD-MM-YYYY
+        const descDate = new Date(data.date);
+        const formattedDescDate = `${String(descDate.getDate()).padStart(2, '0')}-${String(descDate.getMonth() + 1).padStart(2, '0')}-${descDate.getFullYear()}`;
+        
+        // Format amount with thousands separator
+        const formattedAmount = Number(data.total_amount || 0).toLocaleString('pt-PT', { maximumFractionDigits: 0 });
+        
+        // Auto-generate description
+        const autoDescription = `Transferência de ${lendingCompanyName} para ${borrowingCompanyName} com (${formattedDescDate}) e ${formattedAmount}€`;
+        
         const loanPayload = {
           lending_company_id: data.lending_company_id,
           borrowing_company_id: data.borrowing_company_id,
@@ -358,7 +372,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           start_date: data.date,
           end_date: data.end_date || null,
           status: data.loan_status || "active",
-          description: data.description || null,
+          description: autoDescription,
           attachment_url: loanAttachmentUrl,
           source_file_id: file.id, // Link back to original workflow file
         };
