@@ -35,11 +35,25 @@ interface DocumentDialogProps {
   contacts: Array<{ id: string; name: string }>;
   onSuccess: () => void;
   document?: LegalDocument | null;
+  // Drag and drop support
+  initialFiles?: File[];
+  initialCaseId?: string;
+  initialTitle?: string;
 }
 
 const DOCUMENT_TYPES = ["Notes", "Court Document", "Motion", "Defendant Testimony", "Evidence"];
 
-export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess, document }: DocumentDialogProps) {
+export function DocumentDialog({ 
+  open, 
+  onOpenChange, 
+  cases, 
+  contacts, 
+  onSuccess, 
+  document,
+  initialFiles,
+  initialCaseId,
+  initialTitle 
+}: DocumentDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
@@ -89,17 +103,21 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
           setSelectedContactIds([]);
         }
       } else {
+        // New document mode - use initial values from drag and drop if provided
         setFormData({
-          title: "",
+          title: initialTitle || "",
           description: "",
           document_type: "",
-          case_id: "",
+          case_id: initialCaseId || "",
           created_date: new Date().toISOString().split("T")[0],
         });
         setSelectedContactIds([]);
         setExistingAttachments([]);
+        setFiles(initialFiles || []);
       }
-      setFiles([]);
+      if (document) {
+        setFiles([]);
+      }
       setAttachmentsToRemove([]);
       setContactSearch("");
       setCaseSearch("");
@@ -108,7 +126,7 @@ export function DocumentDialog({ open, onOpenChange, cases, contacts, onSuccess,
     if (open) {
       loadDocumentData();
     }
-  }, [document, open]);
+  }, [document, open, initialFiles, initialCaseId, initialTitle]);
 
   const handleToggleContact = (contactId: string) => {
     setSelectedContactIds(prev => 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Upload, Paperclip, ChevronDown, ChevronRight, Users, Briefcase, Pencil, Banknote } from "lucide-react";
+import { Upload, Paperclip, ChevronDown, ChevronRight, Users, Briefcase, Pencil, Banknote, FileUp } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Fragment } from "react";
 import { DocumentDialog } from "./components/DocumentDialog";
 import { FilterBar } from "./components/FilterBar";
+import { cn } from "@/lib/utils";
 
 interface LegalCase {
   id: string;
@@ -199,11 +200,88 @@ export default function LegalPage() {
 
   const handleAddDocument = () => {
     setSelectedDocument(null);
+    setDroppedFiles([]);
+    setPrefilledCaseId("");
+    setPrefilledTitle("");
     setDocumentDialogOpen(true);
   };
 
+  // Drag and drop state
+  const [isDragging, setIsDragging] = useState(false);
+  const [droppedFiles, setDroppedFiles] = useState<File[]>([]);
+  const [prefilledCaseId, setPrefilledCaseId] = useState<string>("");
+  const [prefilledTitle, setPrefilledTitle] = useState<string>("");
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      // Determine case automatically
+      let autoSelectedCaseId = "";
+      
+      // Priority 1: If there's an active case filter
+      if (filters.caseId) {
+        autoSelectedCaseId = filters.caseId;
+      } 
+      // Priority 2: If there's only one expanded case
+      else {
+        const expandedCaseEntries = Object.entries(openCases)
+          .filter(([_, isOpen]) => isOpen);
+        
+        if (expandedCaseEntries.length === 1) {
+          const expandedCaseTitle = expandedCaseEntries[0][0];
+          const matchedCase = cases.find(c => c.title === expandedCaseTitle);
+          if (matchedCase) {
+            autoSelectedCaseId = matchedCase.id;
+          }
+        }
+      }
+      
+      // Pre-fill title with filename (without extension)
+      const fileName = files[0].name.replace(/\.[^/.]+$/, "");
+      
+      setDroppedFiles(files);
+      setPrefilledCaseId(autoSelectedCaseId);
+      setPrefilledTitle(fileName);
+      setSelectedDocument(null);
+      setDocumentDialogOpen(true);
+    }
+  }, [filters.caseId, openCases, cases]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    // Only exit drag state if we really left the container
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDragging(false);
+  }, []);
+
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div 
+      className={cn(
+        "container mx-auto py-8 px-4 min-h-screen relative transition-colors",
+        isDragging && "ring-2 ring-primary ring-inset bg-primary/5"
+      )}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+    >
+      {/* Drag overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 flex items-center justify-center bg-primary/10 backdrop-blur-sm z-50 pointer-events-none rounded-lg border-2 border-dashed border-primary m-4">
+          <div className="text-center">
+            <FileUp className="h-16 w-16 text-primary mx-auto mb-4" />
+            <p className="text-lg font-semibold text-primary">Largue o documento aqui</p>
+            <p className="text-sm text-muted-foreground">O documento será adicionado à aplicação legal</p>
+          </div>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-4xl font-bold text-foreground">Legal Case Management</h1>
@@ -445,12 +523,20 @@ export default function LegalPage() {
         open={documentDialogOpen}
         onOpenChange={(open) => {
           setDocumentDialogOpen(open);
-          if (!open) setSelectedDocument(null);
+          if (!open) {
+            setSelectedDocument(null);
+            setDroppedFiles([]);
+            setPrefilledCaseId("");
+            setPrefilledTitle("");
+          }
         }}
         cases={cases}
         contacts={contacts}
         onSuccess={fetchData}
         document={selectedDocument}
+        initialFiles={droppedFiles}
+        initialCaseId={prefilledCaseId}
+        initialTitle={prefilledTitle}
       />
     </div>
   );
