@@ -247,7 +247,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         amount_net: isNotification ? 0 : netAmount,
         vat_amount: isNotification ? 0 : vatAmount,
         vat_rate: isNotification ? 0 : (parseFloat(data.vat_rate) || 0),
-        payment_method: isNotification ? "none" : data.payment_method,
+        payment_method: data.payment_method,
         invoice_number: data.invoice_number || null,
         notes: data.notes || null,
         project_id: toUuidOrNull(data.project_id),
