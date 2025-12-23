@@ -42,17 +42,25 @@ interface WorkflowExpensePanelProps {
     id: string;
     date: string;
     type: string;
-    company_id: string;
-    project_id: string | null;
-    category_id: string | null;
-    description: string;
-    entity_name: string;
-    total_amount: number;
-    vat_rate: number | null;
-    payment_method: string;
-    bank_account_id: string | null;
-    invoice_number: string | null;
-    notes: string | null;
+    company_id?: string;
+    project_id?: string | null;
+    category_id?: string | null;
+    description?: string;
+    entity_name?: string;
+    total_amount?: number;
+    vat_rate?: number | null;
+    payment_method?: string;
+    bank_account_id?: string | null;
+    invoice_number?: string | null;
+    notes?: string | null;
+    // Loan-specific fields
+    lending_company_id?: string;
+    borrowing_company_id?: string;
+    interest_rate?: number;
+    monthly_payment?: number | null;
+    end_date?: string | null;
+    loan_status?: string;
+    _isLoan?: boolean;
   } | null;
   onClose: () => void;
   onSaved?: (payload?: { fileName?: string; fileUrl?: string | null }) => void;
@@ -135,27 +143,54 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   // Reset form when existingTransaction changes - wait for all dropdown data to load first
   useEffect(() => {
     if (existingTransaction && companies && expenseCategories && allBankAccounts) {
-      reset({
-        date: existingTransaction.date || new Date().toISOString().split("T")[0],
-        type: existingTransaction.type || "expense",
-        company_id: existingTransaction.company_id || "",
-        project_id: existingTransaction.project_id || "",
-        category_id: existingTransaction.category_id || "",
-        description: existingTransaction.description || "",
-        entity_name: existingTransaction.entity_name || "",
-        total_amount: existingTransaction.total_amount?.toString() || "",
-        vat_rate: existingTransaction.vat_rate?.toString() || "23",
-        payment_method: existingTransaction.payment_method || "bank_transfer",
-        bank_account_id: existingTransaction.bank_account_id || "",
-        invoice_number: existingTransaction.invoice_number || "",
-        notes: existingTransaction.notes || "",
-        lending_company_id: "",
-        borrowing_company_id: "",
-        interest_rate: "0",
-        monthly_payment: "",
-        end_date: "",
-        loan_status: "active",
-      });
+      // Check if this is a loan transaction
+      const isLoanTransaction = existingTransaction.type === "loan" || existingTransaction._isLoan;
+      
+      if (isLoanTransaction) {
+        reset({
+          date: existingTransaction.date || new Date().toISOString().split("T")[0],
+          type: "loan",
+          company_id: "",
+          project_id: "",
+          category_id: "",
+          description: existingTransaction.description || "",
+          entity_name: "",
+          total_amount: existingTransaction.total_amount?.toString() || "",
+          vat_rate: "0",
+          payment_method: "bank_transfer",
+          bank_account_id: "",
+          invoice_number: "",
+          notes: existingTransaction.notes || "",
+          lending_company_id: existingTransaction.lending_company_id || "",
+          borrowing_company_id: existingTransaction.borrowing_company_id || "",
+          interest_rate: existingTransaction.interest_rate?.toString() || "0",
+          monthly_payment: existingTransaction.monthly_payment?.toString() || "",
+          end_date: existingTransaction.end_date || "",
+          loan_status: existingTransaction.loan_status || "active",
+        });
+      } else {
+        reset({
+          date: existingTransaction.date || new Date().toISOString().split("T")[0],
+          type: existingTransaction.type || "expense",
+          company_id: existingTransaction.company_id || "",
+          project_id: existingTransaction.project_id || "",
+          category_id: existingTransaction.category_id || "",
+          description: existingTransaction.description || "",
+          entity_name: existingTransaction.entity_name || "",
+          total_amount: existingTransaction.total_amount?.toString() || "",
+          vat_rate: existingTransaction.vat_rate?.toString() || "23",
+          payment_method: existingTransaction.payment_method || "bank_transfer",
+          bank_account_id: existingTransaction.bank_account_id || "",
+          invoice_number: existingTransaction.invoice_number || "",
+          notes: existingTransaction.notes || "",
+          lending_company_id: "",
+          borrowing_company_id: "",
+          interest_rate: "0",
+          monthly_payment: "",
+          end_date: "",
+          loan_status: "active",
+        });
+      }
     }
   }, [existingTransaction, reset, companies, expenseCategories, allBankAccounts]);
 
@@ -313,25 +348,44 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           }
         }
         
-        // 1. Create loan record in company_loans
-        const { data: loanData, error: loanError } = await supabase
-          .from("company_loans")
-          .insert({
-            lending_company_id: data.lending_company_id,
-            borrowing_company_id: data.borrowing_company_id,
-            amount: parseFloat(data.total_amount) || 0,
-            interest_rate: parseFloat(data.interest_rate) || 0,
-            monthly_payment: data.monthly_payment ? parseFloat(data.monthly_payment) : null,
-            start_date: data.date,
-            end_date: data.end_date || null,
-            status: data.loan_status || "active",
-            description: data.description || null,
-            attachment_url: loanAttachmentUrl,
-          })
-          .select()
-          .single();
+        // 1. Create or update loan record in company_loans
+        const loanPayload = {
+          lending_company_id: data.lending_company_id,
+          borrowing_company_id: data.borrowing_company_id,
+          amount: parseFloat(data.total_amount) || 0,
+          interest_rate: parseFloat(data.interest_rate) || 0,
+          monthly_payment: data.monthly_payment ? parseFloat(data.monthly_payment) : null,
+          start_date: data.date,
+          end_date: data.end_date || null,
+          status: data.loan_status || "active",
+          description: data.description || null,
+          attachment_url: loanAttachmentUrl,
+        };
 
-        if (loanError) throw loanError;
+        let loanData;
+        
+        // Check if we're editing an existing loan
+        if (isEditMode && existingTransaction && existingTransaction._isLoan) {
+          const { data: updatedLoan, error: updateError } = await supabase
+            .from("company_loans")
+            .update(loanPayload)
+            .eq("id", existingTransaction.id)
+            .select()
+            .single();
+          
+          if (updateError) throw updateError;
+          loanData = updatedLoan;
+        } else {
+          // Create new loan
+          const { data: newLoan, error: loanError } = await supabase
+            .from("company_loans")
+            .insert(loanPayload)
+            .select()
+            .single();
+
+          if (loanError) throw loanError;
+          loanData = newLoan;
+        }
 
         // 2. Get storage locations for both companies based on loan date
         const loanDate = new Date(data.date);
@@ -356,35 +410,38 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           .eq("month", loanMonth)
           .maybeSingle();
 
-        // 3. Create document record for LENDING company
-        const { error: docError1 } = await supabase.from("company_documents").insert({
-          company_id: data.lending_company_id,
-          folder_id: lendingStorageLocation?.folder_id || null,
-          name: attachmentName,
-          file_url: loanAttachmentUrl || "",
-          document_type: "Loan",
-          status: "Final",
-          uploaded_by: userData.user.id,
-          notes: `Empréstimo para ${companies?.find((c) => c.id === data.borrowing_company_id)?.name || "empresa"}`,
-          mime_type: file.mime_type || "application/pdf",
-        });
+        // 3. Only create document records for NEW loans (not when editing)
+        if (!(isEditMode && existingTransaction && existingTransaction._isLoan)) {
+          // Create document record for LENDING company
+          const { error: docError1 } = await supabase.from("company_documents").insert({
+            company_id: data.lending_company_id,
+            folder_id: lendingStorageLocation?.folder_id || null,
+            name: attachmentName,
+            file_url: loanAttachmentUrl || "",
+            document_type: "Loan",
+            status: "Final",
+            uploaded_by: userData.user.id,
+            notes: `Empréstimo para ${companies?.find((c) => c.id === data.borrowing_company_id)?.name || "empresa"}`,
+            mime_type: file.mime_type || "application/pdf",
+          });
 
-        if (docError1) throw docError1;
+          if (docError1) throw docError1;
 
-        // 4. Create document record for BORROWING company
-        const { error: docError2 } = await supabase.from("company_documents").insert({
-          company_id: data.borrowing_company_id,
-          folder_id: borrowingStorageLocation?.folder_id || null,
-          name: attachmentName,
-          file_url: loanAttachmentUrl || "",
-          document_type: "Loan",
-          status: "Final",
-          uploaded_by: userData.user.id,
-          notes: `Empréstimo de ${companies?.find((c) => c.id === data.lending_company_id)?.name || "empresa"}`,
-          mime_type: file.mime_type || "application/pdf",
-        });
+          // Create document record for BORROWING company
+          const { error: docError2 } = await supabase.from("company_documents").insert({
+            company_id: data.borrowing_company_id,
+            folder_id: borrowingStorageLocation?.folder_id || null,
+            name: attachmentName,
+            file_url: loanAttachmentUrl || "",
+            document_type: "Loan",
+            status: "Final",
+            uploaded_by: userData.user.id,
+            notes: `Empréstimo de ${companies?.find((c) => c.id === data.lending_company_id)?.name || "empresa"}`,
+            mime_type: file.mime_type || "application/pdf",
+          });
 
-        if (docError2) throw docError2;
+          if (docError2) throw docError2;
+        }
 
         // Update workflow_files with the new filename if it changed
         if (attachmentName !== file.file_name) {
@@ -955,9 +1012,10 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                       const cleanBorrowing = borrowingCompanyName.replace(/[<>:"/\\|?*,]/g, "").trim();
                       const cleanLending = lendingCompanyName.replace(/[<>:"/\\|?*,]/g, "").trim();
 
-                      // Get and format the loan amount
+                      // Get and format the loan amount with thousands separator
                       const loanAmount = values.total_amount;
-                      const formattedAmount = Number(loanAmount || 0).toFixed(0);
+                      const amountNumber = Number(loanAmount || 0);
+                      const formattedAmount = amountNumber.toLocaleString('pt-PT', { maximumFractionDigits: 0 });
 
                       // Build name: [Quem Recebe] (Data) [Montante]€ [Quem Empresta]
                       const newName = `${cleanBorrowing} (${formattedDate}) ${formattedAmount}€ ${cleanLending}.${extension}`;
