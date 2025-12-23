@@ -955,8 +955,12 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                       const cleanBorrowing = borrowingCompanyName.replace(/[<>:"/\\|?*,]/g, "").trim();
                       const cleanLending = lendingCompanyName.replace(/[<>:"/\\|?*,]/g, "").trim();
 
-                      // Build name: [Quem Recebe] (Data) [Quem Empresta]
-                      const newName = `${cleanBorrowing} (${formattedDate}) ${cleanLending}.${extension}`;
+                      // Get and format the loan amount
+                      const loanAmount = values.total_amount;
+                      const formattedAmount = Number(loanAmount || 0).toFixed(0);
+
+                      // Build name: [Quem Recebe] (Data) [Montante]€ [Quem Empresta]
+                      const newName = `${cleanBorrowing} (${formattedDate}) ${formattedAmount}€ ${cleanLending}.${extension}`;
 
                       setAttachmentName(newName);
                       toast.success(`Ficheiro renomeado para: ${newName}`);
