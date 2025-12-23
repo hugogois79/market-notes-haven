@@ -235,22 +235,24 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         return uuidRegex.test(value) ? value : null;
       };
 
+      const isNotification = data.type === "notification";
+      
       const transactionData = {
         company_id: data.company_id,
         type: data.type,
         date: data.date,
         description: data.description,
         entity_name: data.entity_name,
-        total_amount: parseFloat(data.total_amount) || 0,
-        amount_net: netAmount,
-        vat_amount: vatAmount,
-        vat_rate: parseFloat(data.vat_rate) || 0,
-        payment_method: data.payment_method,
+        total_amount: isNotification ? 0 : (parseFloat(data.total_amount) || 0),
+        amount_net: isNotification ? 0 : netAmount,
+        vat_amount: isNotification ? 0 : vatAmount,
+        vat_rate: isNotification ? 0 : (parseFloat(data.vat_rate) || 0),
+        payment_method: isNotification ? "none" : data.payment_method,
         invoice_number: data.invoice_number || null,
         notes: data.notes || null,
         project_id: toUuidOrNull(data.project_id),
         category_id: toUuidOrNull(data.category_id),
-        bank_account_id: toUuidOrNull(data.bank_account_id),
+        bank_account_id: isNotification ? null : toUuidOrNull(data.bank_account_id),
         invoice_file_url: attachmentUrl,
         document_file_id: file.id, // Link to the workflow document
         category: "other" as const,
@@ -343,6 +345,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                 <SelectContent>
                   <SelectItem value="expense">Despesa</SelectItem>
                   <SelectItem value="income">Receita</SelectItem>
+                  <SelectItem value="notification">Notificação</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -505,68 +508,72 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
             </Popover>
           </div>
 
-          {/* Total with VAT */}
-          <div>
-            <Label className="text-xs">Total (c/ IVA) *</Label>
-            <Input
-              type="number"
-              step="0.01"
-              {...register("total_amount", { required: true })}
-              className="h-9 text-sm font-medium"
-              placeholder="0.00"
-            />
-          </div>
+          {/* Total with VAT - Hidden for notifications */}
+          {watch("type") !== "notification" && (
+            <>
+              <div>
+                <Label className="text-xs">Total (c/ IVA) *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  {...register("total_amount", { required: watch("type") !== "notification" })}
+                  className="h-9 text-sm font-medium"
+                  placeholder="0.00"
+                />
+              </div>
 
-          {/* VAT fields */}
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <Label className="text-xs">Taxa IVA (%)</Label>
-              <Input type="number" {...register("vat_rate")} className="h-9 text-sm" />
-            </div>
-            <div>
-              <Label className="text-xs">IVA (€)</Label>
-              <Input value={vatAmount.toFixed(2)} readOnly className="h-9 text-sm bg-muted" />
-            </div>
-            <div>
-              <Label className="text-xs">Valor (s/ IVA)</Label>
-              <Input value={netAmount.toFixed(2)} readOnly className="h-9 text-sm bg-muted" />
-            </div>
-          </div>
+              {/* VAT fields */}
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <Label className="text-xs">Taxa IVA (%)</Label>
+                  <Input type="number" {...register("vat_rate")} className="h-9 text-sm" />
+                </div>
+                <div>
+                  <Label className="text-xs">IVA (€)</Label>
+                  <Input value={vatAmount.toFixed(2)} readOnly className="h-9 text-sm bg-muted" />
+                </div>
+                <div>
+                  <Label className="text-xs">Valor (s/ IVA)</Label>
+                  <Input value={netAmount.toFixed(2)} readOnly className="h-9 text-sm bg-muted" />
+                </div>
+              </div>
 
-          {/* Payment method & Bank account */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">Método Pagamento</Label>
-              <Select onValueChange={(value) => setValue("payment_method", value)} value={watch("payment_method")}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availablePaymentMethods.includes("bank_transfer") && (
-                    <SelectItem value="bank_transfer">Transferência</SelectItem>
-                  )}
-                  {availablePaymentMethods.includes("credit_card") && (
-                    <SelectItem value="credit_card">Cartão Crédito</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs">{paymentMethod === "credit_card" ? "Cartão" : "Conta"}</Label>
-              <Select onValueChange={(value) => setValue("bank_account_id", value)} value={watch("bank_account_id")}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredBankAccounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id} className="text-xs">
-                      {account.account_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+              {/* Payment method & Bank account */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Método Pagamento</Label>
+                  <Select onValueChange={(value) => setValue("payment_method", value)} value={watch("payment_method")}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availablePaymentMethods.includes("bank_transfer") && (
+                        <SelectItem value="bank_transfer">Transferência</SelectItem>
+                      )}
+                      {availablePaymentMethods.includes("credit_card") && (
+                        <SelectItem value="credit_card">Cartão Crédito</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">{paymentMethod === "credit_card" ? "Cartão" : "Conta"}</Label>
+                  <Select onValueChange={(value) => setValue("bank_account_id", value)} value={watch("bank_account_id")}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredBankAccounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id} className="text-xs">
+                          {account.account_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Invoice number */}
           <div>
