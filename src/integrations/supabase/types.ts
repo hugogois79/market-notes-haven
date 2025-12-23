@@ -409,6 +409,7 @@ export type Database = {
           interest_rate: number | null
           lending_company_id: string
           monthly_payment: number | null
+          source_file_id: string | null
           source_transaction_id: string | null
           start_date: string
           status: Database["public"]["Enums"]["loan_status"]
@@ -425,6 +426,7 @@ export type Database = {
           interest_rate?: number | null
           lending_company_id: string
           monthly_payment?: number | null
+          source_file_id?: string | null
           source_transaction_id?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["loan_status"]
@@ -441,6 +443,7 @@ export type Database = {
           interest_rate?: number | null
           lending_company_id?: string
           monthly_payment?: number | null
+          source_file_id?: string | null
           source_transaction_id?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["loan_status"]

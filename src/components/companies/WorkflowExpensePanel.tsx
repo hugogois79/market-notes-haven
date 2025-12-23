@@ -360,6 +360,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           status: data.loan_status || "active",
           description: data.description || null,
           attachment_url: loanAttachmentUrl,
+          source_file_id: file.id, // Link back to original workflow file
         };
 
         let loanData;

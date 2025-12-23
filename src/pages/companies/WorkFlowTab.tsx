@@ -351,45 +351,32 @@ export default function WorkFlowTab() {
       if (transactionError) throw transactionError;
       if (transactionData) return transactionData;
       
-      // If no financial_transaction, check for loan via company_documents
-      if (previewFile.file_url) {
-        // Find company_document with this file_url and document_type = 'Loan'
-        const { data: loanDoc } = await supabase
-          .from("company_documents")
-          .select("file_url, name")
-          .eq("document_type", "Loan")
-          .or(`file_url.eq.${previewFile.file_url},name.eq.${previewFile.file_name}`)
-          .maybeSingle();
-        
-        if (loanDoc) {
-          // Find the loan record by matching attachment_url
-          const { data: loanData, error: loanError } = await supabase
-            .from("company_loans")
-            .select("*")
-            .eq("attachment_url", loanDoc.file_url)
-            .maybeSingle();
-          
-          if (loanError) throw loanError;
-          if (loanData) {
-            // Return loan data in a format compatible with WorkflowExpensePanel
-            return {
-              id: loanData.id,
-              type: "loan",
-              date: loanData.start_date,
-              lending_company_id: loanData.lending_company_id,
-              borrowing_company_id: loanData.borrowing_company_id,
-              total_amount: loanData.amount,
-              interest_rate: loanData.interest_rate,
-              monthly_payment: loanData.monthly_payment,
-              end_date: loanData.end_date,
-              loan_status: loanData.status,
-              description: loanData.description,
-              notes: loanData.description,
-              // Mark as loan type for proper form handling
-              _isLoan: true,
-            };
-          }
-        }
+      // If no financial_transaction, check for loan via source_file_id
+      const { data: loanData, error: loanError } = await supabase
+        .from("company_loans")
+        .select("*")
+        .eq("source_file_id", previewFile.id)
+        .maybeSingle();
+      
+      if (loanError) throw loanError;
+      if (loanData) {
+        // Return loan data in a format compatible with WorkflowExpensePanel
+        return {
+          id: loanData.id,
+          type: "loan",
+          date: loanData.start_date,
+          lending_company_id: loanData.lending_company_id,
+          borrowing_company_id: loanData.borrowing_company_id,
+          total_amount: loanData.amount,
+          interest_rate: loanData.interest_rate,
+          monthly_payment: loanData.monthly_payment,
+          end_date: loanData.end_date,
+          loan_status: loanData.status,
+          description: loanData.description,
+          notes: loanData.description,
+          // Mark as loan type for proper form handling
+          _isLoan: true,
+        };
       }
       
       return null;
