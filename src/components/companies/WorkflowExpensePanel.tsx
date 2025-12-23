@@ -69,6 +69,11 @@ interface WorkflowExpensePanelProps {
 export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSaved }: WorkflowExpensePanelProps) {
   const queryClient = useQueryClient();
   const isEditMode = !!existingTransaction;
+  
+  // Determine if this is an existing registered loan (real UUID vs "pending")
+  const isExistingRegisteredLoan = existingTransaction?._isLoan && existingTransaction.id !== "pending";
+  const isPendingLoan = existingTransaction?._isLoan && existingTransaction.id === "pending";
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachmentUrl, setAttachmentUrl] = useState<string | null>(file.file_url);
   const [attachmentName, setAttachmentName] = useState<string>(file.file_name);
@@ -301,7 +306,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         return uuidRegex.test(value) ? value : null;
       };
 
-      // Handle loan type separately - save as pending, don't create DB records yet
+      // Handle loan type
       if (data.type === "loan") {
         // Get company names for auto-generated description
         const lendingCompanyName = companies?.find(c => c.id === data.lending_company_id)?.name || "Empresa";
@@ -317,7 +322,46 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         // Auto-generate description
         const autoDescription = `Transferência de ${lendingCompanyName} para ${borrowingCompanyName} com (${formattedDescDate}) e ${formattedAmount}€`;
         
-        // Prepare pending loan data - to be created when file is sent to destination folder
+        // If this is an existing registered loan, update it in the database
+        if (isExistingRegisteredLoan && existingTransaction?.id) {
+          const loanUpdateData = {
+            lending_company_id: data.lending_company_id,
+            borrowing_company_id: data.borrowing_company_id,
+            amount: parseFloat(data.total_amount) || 0,
+            interest_rate: parseFloat(data.interest_rate) || 0,
+            monthly_payment: data.monthly_payment ? parseFloat(data.monthly_payment) : null,
+            start_date: data.date,
+            end_date: data.end_date || null,
+            status: data.loan_status || "active",
+            description: autoDescription,
+            updated_at: new Date().toISOString(),
+          };
+
+          const { error: loanUpdateError } = await supabase
+            .from("company_loans")
+            .update(loanUpdateData)
+            .eq("id", existingTransaction.id);
+          
+          if (loanUpdateError) throw loanUpdateError;
+
+          // Update workflow_files with the new filename if it changed
+          if (attachmentName !== file.file_name) {
+            const { error: fileUpdateError } = await supabase
+              .from("workflow_files")
+              .update({ file_name: attachmentName })
+              .eq("id", file.id);
+            if (fileUpdateError) throw fileUpdateError;
+          }
+
+          // Invalidate queries and notify success
+          queryClient.invalidateQueries({ queryKey: ["company-loans"] });
+          queryClient.invalidateQueries({ queryKey: ["file-transaction"] });
+          toast.success("Empréstimo atualizado com sucesso");
+          onSaved?.({ fileName: attachmentName, fileUrl: attachmentUrl });
+          return;
+        }
+        
+        // Otherwise, save as pending loan (not yet registered in DB)
         const pendingLoanData = {
           lending_company_id: data.lending_company_id,
           borrowing_company_id: data.borrowing_company_id,
@@ -411,7 +455,15 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   return (
     <div className="h-full flex flex-col border-l bg-background">
       <div className="flex items-center justify-between p-4 border-b">
-        <h3 className="font-semibold text-base">{isEditMode ? "Editar Movimento" : "Novo Movimento"}</h3>
+        <h3 className="font-semibold text-base">
+          {isExistingRegisteredLoan 
+            ? "Editar Empréstimo" 
+            : isPendingLoan 
+              ? "Editar Empréstimo (pendente)" 
+              : isEditMode 
+                ? "Editar Movimento" 
+                : "Novo Movimento"}
+        </h3>
         <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
           <X className="h-4 w-4" />
         </Button>
