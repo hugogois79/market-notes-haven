@@ -278,17 +278,19 @@ const ReceiptGenerator = () => {
     }
     const companyInfoHtml = companyInfo.join('');
 
-    // Build issuer section for print
+    // Build issuer section for print (Pagador - who is paying)
     const issuerSection = `
       <div class="issuer-section">
-        <p style="font-size: 10px; color: #666; margin: 0 0 5px 0; font-weight: bold;">Emitido por:</p>
+        <p style="font-size: 10px; color: #666; margin: 0 0 5px 0; font-weight: bold;">Pagador:</p>
         ${company?.name ? `<p style="font-size: 11px; font-weight: bold; margin: 2px 0;">${company.name}</p>` : ''}
+        ${company?.address ? `<p style="font-size: 10px; margin: 2px 0;">${company.address}</p>` : ''}
         ${(company?.nipc || company?.company_number) ? `<p style="font-size: 10px; margin: 2px 0;"><strong>NIF:</strong> ${company.nipc || company.company_number}</p>` : ''}
         ${company?.bank_name ? `<p style="font-size: 10px; margin: 2px 0;"><strong>Banco:</strong> ${company.bank_name}</p>` : ''}
         ${company?.bank_account ? `<p style="font-size: 10px; margin: 2px 0;"><strong>IBAN:</strong> ${company.bank_account}</p>` : ''}
       </div>
     `;
 
+    // Beneficiary section (Beneficiário - who receives payment)
     const beneficiarySection = beneficiaryName ? `
       <div class="beneficiary-section">
         <p style="font-size: 10px; color: #666; margin: 0 0 5px 0; font-weight: bold;">Beneficiário:</p>
@@ -371,14 +373,13 @@ const ReceiptGenerator = () => {
             .company-logo img {
               max-width: 200px;
             }
-            /* Parties header - issuer and beneficiary */
+            /* Parties header - pagador and beneficiary */
             .parties-header {
               display: flex;
               justify-content: space-between;
               align-items: flex-start;
               margin: 15px 0;
               padding: 15px 0;
-              border-top: 1px solid #ccc;
               border-bottom: 1px solid #ccc;
             }
             .issuer-section {
@@ -628,9 +629,9 @@ const ReceiptGenerator = () => {
                     </div>
                   )}
 
-                  {/* Parties Header - Issuer (left) and Beneficiary (right) */}
-                  <div className="flex justify-between items-start mb-6 py-4 border-y border-gray-300">
-                    {/* Issuer - Who is paying */}
+                  {/* Parties Header - Pagador (left) and Beneficiário (right) */}
+                  <div className="flex justify-between items-start mb-6 py-4 border-b border-border">
+                    {/* Pagador - Who is paying */}
                     <div className="text-left flex-1">
                       {(() => {
                         const isEpic = content.toLowerCase().includes('epicatmosphere') || 
@@ -641,9 +642,12 @@ const ReceiptGenerator = () => {
                         
                         return (
                           <>
-                            <p className="text-xs text-muted-foreground font-semibold mb-1">Emitido por:</p>
+                            <p className="text-xs text-muted-foreground font-semibold mb-1">Pagador:</p>
                             {company?.name && (
                               <p className="text-xs font-bold">{company.name}</p>
+                            )}
+                            {company?.address && (
+                              <p className="text-xs">{company.address}</p>
                             )}
                             {(company?.nipc || company?.company_number) && (
                               <p className="text-xs"><span className="font-medium">NIF:</span> {company.nipc || company.company_number}</p>
@@ -659,7 +663,7 @@ const ReceiptGenerator = () => {
                       })()}
                     </div>
                     
-                    {/* Beneficiary - Who is receiving */}
+                    {/* Beneficiário - Who is receiving */}
                     {beneficiaryName && (
                       <div className="text-right flex-1">
                         <p className="text-xs text-muted-foreground font-semibold mb-1">Beneficiário:</p>
