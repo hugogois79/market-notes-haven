@@ -3093,9 +3093,13 @@ export default function WorkFlowTab() {
                       }));
                       toast.success("Dados do empréstimo guardados! Será registado quando confirmar o envio.");
                     } else {
-                      queryClient.invalidateQueries({ queryKey: ["file-transaction", previewFile.file_url] });
+                      queryClient.invalidateQueries({ queryKey: ["file-transaction", previewFile.id, previewFile.file_url] });
                       queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
-                      toast.success(existingTransaction ? "Movimento atualizado!" : "Movimento criado!");
+                      // Only show toast for non-loan transactions (loans show their own toast in the panel)
+                      const isLoanTransaction = (existingTransaction as any)?._isLoan || customData[previewFile.id]?._pendingLoan;
+                      if (!isLoanTransaction) {
+                        toast.success(existingTransaction ? "Movimento atualizado!" : "Movimento criado!");
+                      }
                     }
                   }}
                 />
