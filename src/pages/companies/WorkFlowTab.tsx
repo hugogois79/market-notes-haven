@@ -1132,7 +1132,140 @@ export default function WorkFlowTab() {
 
       const companyId = storageLocation.company_id;
 
-      // Transaction should already exist at this point (created via payment dialog)
+      // Check if there's a pending loan for this file
+      const pendingLoanStr = customData[file.id]?._pendingLoan;
+      let loanAttachmentUrl: string | null = null;
+
+      // If there's a pending loan, create it now
+      if (pendingLoanStr) {
+        const loanData = JSON.parse(pendingLoanStr);
+        
+        // First, copy file to loans folder
+        try {
+          const response = await fetch(file.file_url);
+          if (response.ok) {
+            const blob = await response.blob();
+            
+            // Generate clean filename for loans folder
+            const lendingName = (loanData.lending_company_name || 'Empresa').replace(/[^\w]/g, '_');
+            const borrowingName = (loanData.borrowing_company_name || 'Empresa').replace(/[^\w]/g, '_');
+            const loanDate = new Date(loanData.start_date);
+            const formattedDate = `${String(loanDate.getDate()).padStart(2, '0')}-${String(loanDate.getMonth() + 1).padStart(2, '0')}-${loanDate.getFullYear()}`;
+            const amount = Math.round(loanData.amount || 0);
+            const fileExt = file.file_name?.split('.').pop() || 'pdf';
+            const safeId = crypto.randomUUID().substring(0, 8);
+            const newFileName = `${safeId}_${borrowingName}_${formattedDate}_${amount}_${lendingName}.${fileExt}`;
+            
+            // Upload to loans folder
+            const { error: uploadError } = await supabase.storage
+              .from('attachments')
+              .upload(`loans/${newFileName}`, blob, {
+                contentType: file.mime_type || 'application/pdf',
+                upsert: true
+              });
+            
+            if (!uploadError) {
+              const { data: urlData } = supabase.storage
+                .from('attachments')
+                .getPublicUrl(`loans/${newFileName}`);
+              loanAttachmentUrl = urlData.publicUrl;
+            }
+          }
+        } catch (copyError) {
+          console.error('Error copying file to loans folder:', copyError);
+        }
+
+        // Create the loan record
+        const { data: newLoan, error: loanError } = await supabase
+          .from("company_loans")
+          .insert({
+            lending_company_id: loanData.lending_company_id,
+            borrowing_company_id: loanData.borrowing_company_id,
+            amount: loanData.amount,
+            interest_rate: loanData.interest_rate || 0,
+            monthly_payment: loanData.monthly_payment || null,
+            start_date: loanData.start_date,
+            end_date: loanData.end_date || null,
+            status: loanData.status || "active",
+            description: loanData.description,
+            attachment_url: loanAttachmentUrl || file.file_url,
+            source_file_id: file.id,
+          })
+          .select()
+          .single();
+
+        if (loanError) {
+          console.error('Error creating loan:', loanError);
+          throw loanError;
+        }
+
+        // Get storage locations for both companies based on loan date
+        const loanDate = new Date(loanData.start_date);
+        const loanMonth = loanDate.getMonth() + 1;
+        const loanYear = loanDate.getFullYear();
+
+        // Fetch folder_id for lending company
+        const { data: lendingStorageLocation } = await supabase
+          .from("workflow_storage_locations")
+          .select("folder_id")
+          .eq("company_id", loanData.lending_company_id)
+          .eq("year", loanYear)
+          .eq("month", loanMonth)
+          .maybeSingle();
+
+        // Fetch folder_id for borrowing company
+        const { data: borrowingStorageLocation } = await supabase
+          .from("workflow_storage_locations")
+          .select("folder_id")
+          .eq("company_id", loanData.borrowing_company_id)
+          .eq("year", loanYear)
+          .eq("month", loanMonth)
+          .maybeSingle();
+
+        // Create document record for LENDING company
+        await supabase.from("company_documents").insert({
+          company_id: loanData.lending_company_id,
+          folder_id: lendingStorageLocation?.folder_id || null,
+          name: file.file_name,
+          file_url: loanAttachmentUrl || file.file_url,
+          document_type: "Loan",
+          status: "Final",
+          uploaded_by: user.id,
+          notes: `Empréstimo para ${loanData.borrowing_company_name || "empresa"}`,
+          mime_type: file.mime_type || "application/pdf",
+        });
+
+        // Create document record for BORROWING company
+        await supabase.from("company_documents").insert({
+          company_id: loanData.borrowing_company_id,
+          folder_id: borrowingStorageLocation?.folder_id || null,
+          name: file.file_name,
+          file_url: loanAttachmentUrl || file.file_url,
+          document_type: "Loan",
+          status: "Final",
+          uploaded_by: user.id,
+          notes: `Empréstimo de ${loanData.lending_company_name || "empresa"}`,
+          mime_type: file.mime_type || "application/pdf",
+        });
+
+        // Clear pending loan from customData
+        setCustomData(prev => {
+          const updated = { ...prev };
+          if (updated[file.id]) {
+            delete updated[file.id]._pendingLoan;
+            // If no other data, remove the file entry entirely
+            if (Object.keys(updated[file.id]).length === 0) {
+              delete updated[file.id];
+            }
+          }
+          return updated;
+        });
+
+        // Invalidate loan queries
+        queryClient.invalidateQueries({ queryKey: ["company-loans"] });
+        
+        toast.success("Empréstimo registado com sucesso!");
+      }
 
       // Helper function to copy file to a company's folder
       const copyToCompanyFolder = async (targetStorageLocation: any) => {
@@ -2346,6 +2479,16 @@ export default function WorkFlowTab() {
                           >
                             {getFileNameWithoutExtension(file.file_name)}
                           </button>
+                          {/* Pending loan indicator */}
+                          {customData[file.id]?._pendingLoan && (
+                            <Badge 
+                              variant="outline" 
+                              className="text-[9px] px-1 py-0 bg-amber-50 text-amber-700 border-amber-300 flex-shrink-0"
+                              title="Empréstimo pendente - será registado ao confirmar envio"
+                            >
+                              Empréstimo
+                            </Badge>
+                          )}
                         </div>
                       </td>
                       {isColumnVisible("type") && (
@@ -2917,9 +3060,21 @@ export default function WorkFlowTab() {
                     if (payload?.fileName) {
                       setPreviewFile((prev) => (prev ? { ...prev, file_name: payload.fileName } : prev));
                     }
-                    queryClient.invalidateQueries({ queryKey: ["file-transaction", previewFile.file_url] });
-                    queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
-                    toast.success(existingTransaction ? "Movimento atualizado!" : "Movimento criado!");
+                    // If it's a pending loan, save to customData - will be created when confirming file send
+                    if (payload?.pendingLoanData) {
+                      setCustomData(prev => ({
+                        ...prev,
+                        [previewFile.id]: {
+                          ...prev[previewFile.id],
+                          _pendingLoan: JSON.stringify(payload.pendingLoanData),
+                        }
+                      }));
+                      toast.success("Dados do empréstimo guardados! Será registado quando confirmar o envio.");
+                    } else {
+                      queryClient.invalidateQueries({ queryKey: ["file-transaction", previewFile.file_url] });
+                      queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+                      toast.success(existingTransaction ? "Movimento atualizado!" : "Movimento criado!");
+                    }
                   }}
                 />
               </div>
