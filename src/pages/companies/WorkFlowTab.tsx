@@ -2989,10 +2989,10 @@ export default function WorkFlowTab() {
                   size="sm"
                   onClick={() => setShowExpensePanel(!showExpensePanel)}
                 >
-                  {existingTransaction ? (
+                  {existingTransaction || (previewFile && customData[previewFile.id]?._pendingLoan) ? (
                     <>
                       <FileText className="h-4 w-4 mr-2" />
-                      Editar Movimento
+                      {customData[previewFile?.id]?._pendingLoan ? "Editar Empréstimo" : "Editar Movimento"}
                     </>
                   ) : (
                     <>
