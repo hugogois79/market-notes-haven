@@ -278,10 +278,21 @@ const ReceiptGenerator = () => {
     }
     const companyInfoHtml = companyInfo.join('');
 
+    // Build issuer section for print
+    const issuerSection = `
+      <div class="issuer-section">
+        <p style="font-size: 10px; color: #666; margin: 0 0 5px 0; font-weight: bold;">Emitido por:</p>
+        ${company?.name ? `<p style="font-size: 11px; font-weight: bold; margin: 2px 0;">${company.name}</p>` : ''}
+        ${(company?.nipc || company?.company_number) ? `<p style="font-size: 10px; margin: 2px 0;"><strong>NIF:</strong> ${company.nipc || company.company_number}</p>` : ''}
+        ${company?.bank_name ? `<p style="font-size: 10px; margin: 2px 0;"><strong>Banco:</strong> ${company.bank_name}</p>` : ''}
+        ${company?.bank_account ? `<p style="font-size: 10px; margin: 2px 0;"><strong>IBAN:</strong> ${company.bank_account}</p>` : ''}
+      </div>
+    `;
+
     const beneficiarySection = beneficiaryName ? `
-      <div style="margin-bottom: 20px;">
-        <p style="font-size: 10px; color: #666; margin: 0 0 5px 0;">Beneficiário:</p>
-        <p style="font-size: 14px; font-weight: bold; margin: 0;">${beneficiaryName}</p>
+      <div class="beneficiary-section">
+        <p style="font-size: 10px; color: #666; margin: 0 0 5px 0; font-weight: bold;">Beneficiário:</p>
+        <p style="font-size: 12px; font-weight: bold; margin: 0;">${beneficiaryName}</p>
       </div>
     ` : '';
 
@@ -360,6 +371,24 @@ const ReceiptGenerator = () => {
             .company-logo img {
               max-width: 200px;
             }
+            /* Parties header - issuer and beneficiary */
+            .parties-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin: 15px 0;
+              padding: 15px 0;
+              border-top: 1px solid #ccc;
+              border-bottom: 1px solid #ccc;
+            }
+            .issuer-section {
+              text-align: left;
+              flex: 1;
+            }
+            .beneficiary-section {
+              text-align: right;
+              flex: 1;
+            }
             /* Force beneficiary section to align right */
             .formatted-receipt > div:first-of-type {
               text-align: right !important;
@@ -400,11 +429,12 @@ const ReceiptGenerator = () => {
             </div>
           </div>
           
-          <hr style="border: none; border-top: 1px solid #ccc; margin: 0 0 15px 0;" />
-          
           ${receiptNumber ? `<div class="payment-number">Receipt Number: #${receiptNumber}</div>` : ''}
           
-          ${beneficiarySection}
+          <div class="parties-header">
+            ${issuerSection}
+            ${beneficiarySection}
+          </div>
           
           <div class="formatted-receipt">
             ${generatedReceipt}
@@ -554,8 +584,8 @@ const ReceiptGenerator = () => {
               )}
                <Card className="bg-white shadow-lg">
                 <div className="p-8 relative">
-                  {/* Company Header - Who is paying */}
-                  <div className="flex justify-between items-start mb-6 pb-4 border-b-2 border-gray-800">
+                  {/* Company Header with Logo */}
+                  <div className="flex justify-between items-start mb-4 pb-4 border-b-2 border-gray-800">
                     <div className="text-left flex-1">
                       {(() => {
                         const isEpic = content.toLowerCase().includes('epicatmosphere') || 
@@ -598,13 +628,45 @@ const ReceiptGenerator = () => {
                     </div>
                   )}
 
-                  {/* Beneficiary Name */}
-                  {beneficiaryName && (
-                    <div className="mb-6">
-                      <p className="text-sm text-muted-foreground mb-1">Beneficiário:</p>
-                      <p className="text-lg font-semibold">{beneficiaryName}</p>
+                  {/* Parties Header - Issuer (left) and Beneficiary (right) */}
+                  <div className="flex justify-between items-start mb-6 py-4 border-y border-gray-300">
+                    {/* Issuer - Who is paying */}
+                    <div className="text-left flex-1">
+                      {(() => {
+                        const isEpic = content.toLowerCase().includes('epicatmosphere') || 
+                                      generatedReceipt.toLowerCase().includes('epicatmosphere');
+                        const company = isEpic 
+                          ? getCompanyData('epic atmosphere')
+                          : getCompanyData('sustainable yield');
+                        
+                        return (
+                          <>
+                            <p className="text-xs text-muted-foreground font-semibold mb-1">Emitido por:</p>
+                            {company?.name && (
+                              <p className="text-xs font-bold">{company.name}</p>
+                            )}
+                            {(company?.nipc || company?.company_number) && (
+                              <p className="text-xs"><span className="font-medium">NIF:</span> {company.nipc || company.company_number}</p>
+                            )}
+                            {company?.bank_name && (
+                              <p className="text-xs"><span className="font-medium">Banco:</span> {company.bank_name}</p>
+                            )}
+                            {company?.bank_account && (
+                              <p className="text-xs"><span className="font-medium">IBAN:</span> {company.bank_account}</p>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
-                  )}
+                    
+                    {/* Beneficiary - Who is receiving */}
+                    {beneficiaryName && (
+                      <div className="text-right flex-1">
+                        <p className="text-xs text-muted-foreground font-semibold mb-1">Beneficiário:</p>
+                        <p className="text-sm font-bold">{beneficiaryName}</p>
+                      </div>
+                    )}
+                  </div>
                   
                   {/* Receipt Content */}
                   <div 
