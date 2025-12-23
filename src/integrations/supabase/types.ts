@@ -4024,7 +4024,7 @@ export type Database = {
         | "taxes"
         | "utilities"
         | "other"
-      transaction_type: "income" | "expense" | "notification"
+      transaction_type: "income" | "expense" | "notification" | "receipt"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4179,7 +4179,7 @@ export const Constants = {
         "utilities",
         "other",
       ],
-      transaction_type: ["income", "expense", "notification"],
+      transaction_type: ["income", "expense", "notification", "receipt"],
     },
   },
 } as const

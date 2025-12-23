@@ -574,6 +574,8 @@ export default function TransactionDialog({
                 <SelectContent>
                   <SelectItem value="income">Receita</SelectItem>
                   <SelectItem value="expense">Despesa</SelectItem>
+                  <SelectItem value="notification">Notificação</SelectItem>
+                  <SelectItem value="receipt">Recibo</SelectItem>
                 </SelectContent>
               </Select>
             </div>

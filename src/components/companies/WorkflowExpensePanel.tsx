@@ -346,6 +346,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                   <SelectItem value="expense">Despesa</SelectItem>
                   <SelectItem value="income">Receita</SelectItem>
                   <SelectItem value="notification">Notificação</SelectItem>
+                  <SelectItem value="receipt">Recibo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
