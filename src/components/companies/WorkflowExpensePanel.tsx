@@ -880,8 +880,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                       const lendingCompanyName = companies?.find((c) => c.id === lendingId)?.name || "Empresa";
                       const borrowingCompanyName = companies?.find((c) => c.id === borrowingId)?.name || "Empresa";
 
-                      const cleanBorrowing = borrowingCompanyName.replace(/[<>:"/\\|?*]/g, "").trim();
-                      const cleanLending = lendingCompanyName.replace(/[<>:"/\\|?*]/g, "").trim();
+                      const cleanBorrowing = borrowingCompanyName.replace(/[<>:"/\\|?*,]/g, "").trim();
+                      const cleanLending = lendingCompanyName.replace(/[<>:"/\\|?*,]/g, "").trim();
 
                       // Build name: [Quem Recebe] (Data) [Quem Empresta]
                       const newName = `${cleanBorrowing} (${formattedDate}) ${cleanLending}.${extension}`;
@@ -911,11 +911,11 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                     // Get project name
                     const projectName = expenseProjects?.find((p) => p.id === projectId)?.name || "";
 
-                    // Clean names (remove invalid characters)
-                    const cleanSupplier = supplierName.replace(/[<>:"/\\|?*]/g, "").trim();
-                    const cleanCompany = companyName.replace(/[<>:"/\\|?*]/g, "").trim();
-                    const cleanBankAccount = bankAccountName.replace(/[<>:"/\\|?*]/g, "").trim();
-                    const cleanProject = projectName.replace(/[<>:"/\\|?*]/g, "").trim().toUpperCase();
+                    // Clean names (remove invalid characters including commas)
+                    const cleanSupplier = supplierName.replace(/[<>:"/\\|?*,]/g, "").trim();
+                    const cleanCompany = companyName.replace(/[<>:"/\\|?*,]/g, "").trim();
+                    const cleanBankAccount = bankAccountName.replace(/[<>:"/\\|?*,]/g, "").trim();
+                    const cleanProject = projectName.replace(/[<>:"/\\|?*,]/g, "").trim().toUpperCase();
 
                     // Build the new name with all components
                     let newName = `${cleanSupplier} (${formattedDate}) ${formattedValue}€`;
