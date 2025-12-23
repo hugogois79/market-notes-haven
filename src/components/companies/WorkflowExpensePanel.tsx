@@ -698,6 +698,14 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                       newName += ` [${cleanProject}]`;
                     }
 
+                    // Add notes in brackets if available (only for Notificação type)
+                    const transactionType = values.type;
+                    const notesValue = values.notes || "";
+                    const cleanNotes = notesValue.replace(/[<>:"/\\|?*]/g, "").trim().toUpperCase();
+                    if (transactionType === "notification" && cleanNotes) {
+                      newName += ` [${cleanNotes}]`;
+                    }
+
                     // Add extension
                     newName += `.${extension}`;
 
