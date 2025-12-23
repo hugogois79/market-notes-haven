@@ -240,21 +240,34 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     },
   });
 
-  // Filter categories by selected project
+  // Filter categories by selected project and transaction type
   const selectedProjectId = watch("project_id");
+  
   const filteredCategories = useMemo(() => {
     if (!expenseCategories) return [];
-    if (!selectedProjectId) return expenseCategories.filter((c) => c.category_type !== "receita");
+    
+    // For income and receipt types, show revenue categories; for expenses show expense categories
+    const isRevenueType = transactionType === "income" || transactionType === "receipt";
+    
+    if (!selectedProjectId) {
+      return expenseCategories.filter((c) => 
+        isRevenueType ? c.category_type === "receita" : c.category_type !== "receita"
+      );
+    }
     
     const selectedProject = expenseProjects?.find((p) => p.id === selectedProjectId);
-    if (!selectedProject) return expenseCategories.filter((c) => c.category_type !== "receita");
+    if (!selectedProject) {
+      return expenseCategories.filter((c) => 
+        isRevenueType ? c.category_type === "receita" : c.category_type !== "receita"
+      );
+    }
     
     return expenseCategories.filter((c) => {
-      const isExpenseType = c.category_type !== "receita";
+      const matchesType = isRevenueType ? c.category_type === "receita" : c.category_type !== "receita";
       const isAssignedToProject = c.assigned_project_ids?.includes(selectedProjectId);
-      return isExpenseType && isAssignedToProject;
+      return matchesType && isAssignedToProject;
     });
-  }, [expenseCategories, selectedProjectId, expenseProjects]);
+  }, [expenseCategories, selectedProjectId, expenseProjects, transactionType]);
 
   // Filter bank accounts by payment method and company
   const paymentMethod = watch("payment_method");
