@@ -288,9 +288,33 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
 
         if (loanError) throw loanError;
 
-        // 2. Create document record for LENDING company
+        // 2. Get storage locations for both companies based on loan date
+        const loanDate = new Date(data.date);
+        const loanMonth = loanDate.getMonth() + 1;
+        const loanYear = loanDate.getFullYear();
+
+        // Fetch folder_id for lending company
+        const { data: lendingStorageLocation } = await supabase
+          .from("workflow_storage_locations")
+          .select("folder_id")
+          .eq("company_id", data.lending_company_id)
+          .eq("year", loanYear)
+          .eq("month", loanMonth)
+          .maybeSingle();
+
+        // Fetch folder_id for borrowing company
+        const { data: borrowingStorageLocation } = await supabase
+          .from("workflow_storage_locations")
+          .select("folder_id")
+          .eq("company_id", data.borrowing_company_id)
+          .eq("year", loanYear)
+          .eq("month", loanMonth)
+          .maybeSingle();
+
+        // 3. Create document record for LENDING company
         const { error: docError1 } = await supabase.from("company_documents").insert({
           company_id: data.lending_company_id,
+          folder_id: lendingStorageLocation?.folder_id || null,
           name: attachmentName,
           file_url: attachmentUrl || "",
           document_type: "Loan",
@@ -301,9 +325,10 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
 
         if (docError1) throw docError1;
 
-        // 3. Create document record for BORROWING company
+        // 4. Create document record for BORROWING company
         const { error: docError2 } = await supabase.from("company_documents").insert({
           company_id: data.borrowing_company_id,
+          folder_id: borrowingStorageLocation?.folder_id || null,
           name: attachmentName,
           file_url: attachmentUrl || "",
           document_type: "Loan",
