@@ -268,6 +268,51 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
 
       // Handle loan type separately
       if (data.type === "loan") {
+        // 0. Copy file to loans folder to ensure it's never deleted
+        let loanAttachmentUrl = attachmentUrl;
+        
+        if (file.file_url) {
+          try {
+            // Download original file
+            const response = await fetch(file.file_url);
+            if (response.ok) {
+              const blob = await response.blob();
+              
+              // Generate clean filename for loans folder
+              const lendingName = (companies?.find(c => c.id === data.lending_company_id)?.name || 'Empresa').replace(/[^\w]/g, '_');
+              const borrowingName = (companies?.find(c => c.id === data.borrowing_company_id)?.name || 'Empresa').replace(/[^\w]/g, '_');
+              const loanDate = new Date(data.date);
+              const formattedDate = `${String(loanDate.getDate()).padStart(2, '0')}-${String(loanDate.getMonth() + 1).padStart(2, '0')}-${loanDate.getFullYear()}`;
+              const amount = Math.round(parseFloat(data.total_amount) || 0);
+              const fileExt = file.file_name?.split('.').pop() || 'pdf';
+              const safeId = crypto.randomUUID().substring(0, 8);
+              const newFileName = `${safeId}_${borrowingName}_${formattedDate}_${amount}_${lendingName}.${fileExt}`;
+              
+              // Upload to loans folder
+              const { error: uploadError } = await supabase.storage
+                .from('attachments')
+                .upload(`loans/${newFileName}`, blob, {
+                  contentType: file.mime_type || 'application/pdf',
+                  upsert: true
+                });
+              
+              if (!uploadError) {
+                // Get new public URL
+                const { data: urlData } = supabase.storage
+                  .from('attachments')
+                  .getPublicUrl(`loans/${newFileName}`);
+                
+                loanAttachmentUrl = urlData.publicUrl;
+              } else {
+                console.error('Error uploading to loans folder:', uploadError);
+              }
+            }
+          } catch (copyError) {
+            console.error('Error copying file to loans folder:', copyError);
+            // Continue with original URL as fallback
+          }
+        }
+        
         // 1. Create loan record in company_loans
         const { data: loanData, error: loanError } = await supabase
           .from("company_loans")
@@ -281,7 +326,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
             end_date: data.end_date || null,
             status: data.loan_status || "active",
             description: data.description || null,
-            attachment_url: attachmentUrl,
+            attachment_url: loanAttachmentUrl,
           })
           .select()
           .single();
@@ -316,7 +361,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           company_id: data.lending_company_id,
           folder_id: lendingStorageLocation?.folder_id || null,
           name: attachmentName,
-          file_url: attachmentUrl || "",
+          file_url: loanAttachmentUrl || "",
           document_type: "Loan",
           status: "Final",
           uploaded_by: userData.user.id,
@@ -330,7 +375,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           company_id: data.borrowing_company_id,
           folder_id: borrowingStorageLocation?.folder_id || null,
           name: attachmentName,
-          file_url: attachmentUrl || "",
+          file_url: loanAttachmentUrl || "",
           document_type: "Loan",
           status: "Final",
           uploaded_by: userData.user.id,
