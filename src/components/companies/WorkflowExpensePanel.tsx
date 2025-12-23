@@ -366,6 +366,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           status: "Final",
           uploaded_by: userData.user.id,
           notes: `Empréstimo para ${companies?.find((c) => c.id === data.borrowing_company_id)?.name || "empresa"}`,
+          mime_type: file.mime_type || "application/pdf",
         });
 
         if (docError1) throw docError1;
@@ -380,6 +381,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           status: "Final",
           uploaded_by: userData.user.id,
           notes: `Empréstimo de ${companies?.find((c) => c.id === data.lending_company_id)?.name || "empresa"}`,
+          mime_type: file.mime_type || "application/pdf",
         });
 
         if (docError2) throw docError2;

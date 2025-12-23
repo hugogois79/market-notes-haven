@@ -87,7 +87,12 @@ export function DocumentPreview({ document, onDownload }: DocumentPreviewProps) 
     );
   }
 
-  if (document.mime_type === "application/pdf") {
+  // Check if PDF by mime_type OR by file extension (fallback for missing mime_type)
+  const isPdf = document.mime_type === "application/pdf" || 
+                document.name?.toLowerCase().endsWith('.pdf') ||
+                document.file_url?.toLowerCase().endsWith('.pdf');
+
+  if (isPdf) {
     return (
       <PdfViewer 
         url={blobUrl} 
@@ -96,7 +101,12 @@ export function DocumentPreview({ document, onDownload }: DocumentPreviewProps) 
     );
   }
 
-  if (document.mime_type?.startsWith("image/")) {
+  // Check if image by mime_type OR by file extension
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+  const isImage = document.mime_type?.startsWith("image/") ||
+                  imageExtensions.some(ext => document.name?.toLowerCase().endsWith(ext));
+
+  if (isImage) {
     return (
       <div className="flex flex-col h-full">
         <div className="flex items-center justify-end gap-2 p-4 border-b">
