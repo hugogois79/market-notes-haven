@@ -436,7 +436,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
               <SelectTrigger className="h-9 text-sm">
                 <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
+              <SelectContent className="max-h-[400px]">
                 {filteredCategories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>
                     {cat.name}
