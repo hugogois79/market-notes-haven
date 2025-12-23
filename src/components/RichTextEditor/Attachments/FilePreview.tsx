@@ -41,7 +41,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({ url, onRemove }) => {
           ) : (
             <FileText size={20} className="text-blue-500" />
           )}
-          <span className="text-sm font-medium truncate max-w-[180px]">
+          <span className="text-sm font-medium truncate max-w-[280px]">
             {fileName}
           </span>
         </div>
