@@ -335,17 +335,64 @@ export default function WorkFlowTab() {
   const [fileToSkipPayment, setFileToSkipPayment] = useState<WorkflowFile | null>(null);
 
   // Query existing transaction for current file using document_file_id
+  // Also check for loans linked via file_url in company_documents
   const { data: existingTransaction, isLoading: isLoadingTransaction } = useQuery({
-    queryKey: ["file-transaction", previewFile?.id],
+    queryKey: ["file-transaction", previewFile?.id, previewFile?.file_url],
     queryFn: async () => {
       if (!previewFile?.id) return null;
-      const { data, error } = await supabase
+      
+      // First try to find a financial_transaction
+      const { data: transactionData, error: transactionError } = await supabase
         .from("financial_transactions")
         .select("*")
         .eq("document_file_id", previewFile.id)
         .maybeSingle();
-      if (error) throw error;
-      return data;
+      
+      if (transactionError) throw transactionError;
+      if (transactionData) return transactionData;
+      
+      // If no financial_transaction, check for loan via company_documents
+      if (previewFile.file_url) {
+        // Find company_document with this file_url and document_type = 'Loan'
+        const { data: loanDoc } = await supabase
+          .from("company_documents")
+          .select("file_url, name")
+          .eq("document_type", "Loan")
+          .or(`file_url.eq.${previewFile.file_url},name.eq.${previewFile.file_name}`)
+          .maybeSingle();
+        
+        if (loanDoc) {
+          // Find the loan record by matching attachment_url
+          const { data: loanData, error: loanError } = await supabase
+            .from("company_loans")
+            .select("*")
+            .eq("attachment_url", loanDoc.file_url)
+            .maybeSingle();
+          
+          if (loanError) throw loanError;
+          if (loanData) {
+            // Return loan data in a format compatible with WorkflowExpensePanel
+            return {
+              id: loanData.id,
+              type: "loan",
+              date: loanData.start_date,
+              lending_company_id: loanData.lending_company_id,
+              borrowing_company_id: loanData.borrowing_company_id,
+              total_amount: loanData.amount,
+              interest_rate: loanData.interest_rate,
+              monthly_payment: loanData.monthly_payment,
+              end_date: loanData.end_date,
+              loan_status: loanData.status,
+              description: loanData.description,
+              notes: loanData.description,
+              // Mark as loan type for proper form handling
+              _isLoan: true,
+            };
+          }
+        }
+      }
+      
+      return null;
     },
     enabled: !!previewFile?.id,
     staleTime: 0, // Always refetch when file changes
@@ -2825,18 +2872,18 @@ export default function WorkFlowTab() {
                   )}
                 </Button>
                           <Button
-                            variant={existingTransaction?.bank_account_id ? "default" : "outline"}
+                            variant={(existingTransaction as any)?.bank_account_id ? "default" : "outline"}
                             size="sm"
                             onClick={() => setShowPaymentDialog(true)}
-                            disabled={isLoadingTransaction}
-                            className={existingTransaction?.bank_account_id ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+                            disabled={isLoadingTransaction || (existingTransaction as any)?._isLoan}
+                            className={(existingTransaction as any)?.bank_account_id ? "bg-green-600 hover:bg-green-700 text-white" : ""}
                           >
-                            {existingTransaction?.bank_account_id ? (
+                            {(existingTransaction as any)?.bank_account_id ? (
                               <CheckCircle2 className="h-4 w-4 mr-2" />
                             ) : (
                               <CreditCard className="h-4 w-4 mr-2" />
                             )}
-                            {isLoadingTransaction ? "..." : (existingTransaction?.bank_account_id ? "Pagamento Registado" : "Registar Pagamento")}
+                            {isLoadingTransaction ? "..." : ((existingTransaction as any)?.bank_account_id ? "Pagamento Registado" : "Registar Pagamento")}
                           </Button>
               </div>
             </div>
