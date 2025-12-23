@@ -81,6 +81,13 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
       bank_account_id: "",
       invoice_number: "",
       notes: "",
+      // Loan-specific fields
+      lending_company_id: "",
+      borrowing_company_id: "",
+      interest_rate: "0",
+      monthly_payment: "",
+      end_date: "",
+      loan_status: "active",
     },
   });
 
@@ -142,6 +149,12 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         bank_account_id: existingTransaction.bank_account_id || "",
         invoice_number: existingTransaction.invoice_number || "",
         notes: existingTransaction.notes || "",
+        lending_company_id: "",
+        borrowing_company_id: "",
+        interest_rate: "0",
+        monthly_payment: "",
+        end_date: "",
+        loan_status: "active",
       });
     }
   }, [existingTransaction, reset, companies, expenseCategories, allBankAccounts]);
@@ -152,6 +165,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   const [supplierSearch, setSupplierSearch] = useState("");
 
   const selectedCompanyId = watch("company_id");
+  const transactionType = watch("type");
+  const isLoan = transactionType === "loan";
 
   // Note: We no longer clear bank_account_id when company changes
   // because we allow cross-company payments (which auto-create loans)
@@ -224,6 +239,22 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   const vatAmount = totalAmount - totalAmount / (1 + vatRate / 100);
   const netAmount = totalAmount - vatAmount;
 
+  // Get lending and borrowing company IDs for loan filtering
+  const lendingCompanyId = watch("lending_company_id");
+  const borrowingCompanyId = watch("borrowing_company_id");
+
+  // Filter companies for borrowing (exclude lending company)
+  const borrowingCompanyOptions = useMemo(() => {
+    if (!companies) return [];
+    return companies.filter((c) => c.id !== lendingCompanyId);
+  }, [companies, lendingCompanyId]);
+
+  // Filter companies for lending (exclude borrowing company)
+  const lendingCompanyOptions = useMemo(() => {
+    if (!companies) return [];
+    return companies.filter((c) => c.id !== borrowingCompanyId);
+  }, [companies, borrowingCompanyId]);
+
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
       const { data: userData } = await supabase.auth.getUser();
@@ -234,6 +265,66 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         return uuidRegex.test(value) ? value : null;
       };
+
+      // Handle loan type separately
+      if (data.type === "loan") {
+        // 1. Create loan record in company_loans
+        const { data: loanData, error: loanError } = await supabase
+          .from("company_loans")
+          .insert({
+            lending_company_id: data.lending_company_id,
+            borrowing_company_id: data.borrowing_company_id,
+            amount: parseFloat(data.total_amount) || 0,
+            interest_rate: parseFloat(data.interest_rate) || 0,
+            monthly_payment: data.monthly_payment ? parseFloat(data.monthly_payment) : null,
+            start_date: data.date,
+            end_date: data.end_date || null,
+            status: data.loan_status || "active",
+            description: data.description || null,
+            attachment_url: attachmentUrl,
+          })
+          .select()
+          .single();
+
+        if (loanError) throw loanError;
+
+        // 2. Create document record for LENDING company
+        const { error: docError1 } = await supabase.from("company_documents").insert({
+          company_id: data.lending_company_id,
+          name: attachmentName,
+          file_url: attachmentUrl || "",
+          document_type: "Loan",
+          status: "Final",
+          uploaded_by: userData.user.id,
+          notes: `Empréstimo para ${companies?.find((c) => c.id === data.borrowing_company_id)?.name || "empresa"}`,
+        });
+
+        if (docError1) throw docError1;
+
+        // 3. Create document record for BORROWING company
+        const { error: docError2 } = await supabase.from("company_documents").insert({
+          company_id: data.borrowing_company_id,
+          name: attachmentName,
+          file_url: attachmentUrl || "",
+          document_type: "Loan",
+          status: "Final",
+          uploaded_by: userData.user.id,
+          notes: `Empréstimo de ${companies?.find((c) => c.id === data.lending_company_id)?.name || "empresa"}`,
+        });
+
+        if (docError2) throw docError2;
+
+        // Update workflow_files with the new filename if it changed
+        if (attachmentName !== file.file_name) {
+          const { error: fileUpdateError } = await supabase
+            .from("workflow_files")
+            .update({ file_name: attachmentName })
+            .eq("id", file.id);
+          if (fileUpdateError) throw fileUpdateError;
+        }
+
+        return; // Exit without creating financial_transaction
+      }
 
       const isNotification = data.type === "notification";
       
@@ -286,7 +377,9 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
       queryClient.invalidateQueries({ queryKey: ["workflow-linked-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["file-transaction"] });
       queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
-      toast.success(isEditMode ? "Movimento atualizado com sucesso" : "Movimento criado com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["company-loans"] });
+      queryClient.invalidateQueries({ queryKey: ["company-documents"] });
+      toast.success(isLoan ? "Empréstimo criado com sucesso" : (isEditMode ? "Movimento atualizado com sucesso" : "Movimento criado com sucesso"));
       if (!isEditMode) reset();
       onSaved?.({ fileName: attachmentName, fileUrl: attachmentUrl });
     },
@@ -328,6 +421,22 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
             return;
           }
 
+          // Validation for loan type
+          if (data.type === "loan") {
+            if (!data.lending_company_id) {
+              toast.error("Selecione a empresa que empresta");
+              return;
+            }
+            if (!data.borrowing_company_id) {
+              toast.error("Selecione a empresa que recebe");
+              return;
+            }
+            if (!data.total_amount || parseFloat(data.total_amount) <= 0) {
+              toast.error("Introduza o montante do empréstimo");
+              return;
+            }
+          }
+
           saveMutation.mutate(data);
         })} className="p-4 space-y-4">
           {/* Date & Type */}
@@ -347,246 +456,353 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                   <SelectItem value="income">Receita</SelectItem>
                   <SelectItem value="notification">Notificação</SelectItem>
                   <SelectItem value="receipt">Recibo</SelectItem>
+                  <SelectItem value="loan">Empréstimo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          {/* Company & Project */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">Empresa *</Label>
-              <Select onValueChange={(value) => setValue("company_id", value)} value={watch("company_id")}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {companies?.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs">Projeto</Label>
-              <Popover open={projectOpen} onOpenChange={setProjectOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className="w-full justify-between font-normal h-9 text-sm"
-                  >
-                    <span className="truncate">
-                      {watch("project_id")
-                        ? expenseProjects?.find((p) => p.id === watch("project_id"))?.name
-                        : "Sem projeto"}
-                    </span>
-                    <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[200px] p-0">
-                  <Command shouldFilter={false}>
-                    <CommandInput
-                      placeholder="Pesquisar..."
-                      value={projectSearch}
-                      onValueChange={setProjectSearch}
-                    />
-                    <CommandList>
-                      <CommandEmpty>Nenhum projeto.</CommandEmpty>
-                      <CommandGroup>
-                        <CommandItem
-                          onSelect={() => {
-                            setValue("project_id", "");
-                            setValue("category_id", "");
-                            setProjectOpen(false);
-                          }}
-                        >
-                          <Check className={cn("mr-2 h-4 w-4", !watch("project_id") ? "opacity-100" : "opacity-0")} />
-                          Sem projeto
-                        </CommandItem>
-                        {expenseProjects
-                          ?.filter((p) => p.name?.toLowerCase().includes(projectSearch.toLowerCase()))
-                          .map((project) => (
-                            <CommandItem
-                              key={project.id}
-                              onSelect={() => {
-                                setValue("project_id", project.id);
-                                setValue("category_id", "");
-                                setProjectOpen(false);
-                              }}
-                            >
-                              <Check className={cn("mr-2 h-4 w-4", watch("project_id") === project.id ? "opacity-100" : "opacity-0")} />
-                              {project.name}
-                            </CommandItem>
-                          ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          {/* Category */}
-          <div>
-            <Label className="text-xs">Categoria</Label>
-            <Select onValueChange={(value) => setValue("category_id", value)} value={watch("category_id")}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent className="max-h-[400px]">
-                {filteredCategories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Description */}
-          <div>
-            <Label className="text-xs">Descrição *</Label>
-            <Input {...register("description", { required: true })} className="h-9 text-sm" placeholder="Descrição do movimento" />
-          </div>
-
-          {/* Supplier */}
-          <div>
-            <Label className="text-xs">Fornecedor/Cliente *</Label>
-            <Popover open={supplierOpen} onOpenChange={setSupplierOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  className="w-full justify-between font-normal h-9 text-sm"
-                >
-                  <span className="truncate">{watch("entity_name") || "Selecione ou digite..."}</span>
-                  <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[250px] p-0">
-                <Command shouldFilter={false}>
-                  <CommandInput
-                    placeholder="Pesquisar ou criar..."
-                    value={supplierSearch}
-                    onValueChange={setSupplierSearch}
-                  />
-                  <CommandList>
-                    <CommandEmpty>
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={() => {
-                          setValue("entity_name", supplierSearch);
-                          setSupplierOpen(false);
-                        }}
-                      >
-                        Criar "{supplierSearch}"
-                      </Button>
-                    </CommandEmpty>
-                    <CommandGroup>
-                      {suppliers
-                        ?.filter((s) => typeof s === 'string' && s.toLowerCase().includes(supplierSearch.toLowerCase()))
-                        .slice(0, 10)
-                        .map((supplier) => (
-                          <CommandItem
-                            key={supplier}
-                            onSelect={() => {
-                              setValue("entity_name", supplier);
-                              setSupplierOpen(false);
-                            }}
-                          >
-                            <Check className={cn("mr-2 h-4 w-4", watch("entity_name") === supplier ? "opacity-100" : "opacity-0")} />
-                            {supplier}
-                          </CommandItem>
-                        ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Total with VAT - Hidden for notifications */}
-          {watch("type") !== "notification" && (
+          {/* LOAN-SPECIFIC FIELDS */}
+          {isLoan ? (
             <>
+              {/* Lending Company */}
               <div>
-                <Label className="text-xs">Total (c/ IVA) *</Label>
+                <Label className="text-xs text-green-600 font-medium">Quem Empresta *</Label>
+                <Select onValueChange={(value) => setValue("lending_company_id", value)} value={watch("lending_company_id")}>
+                  <SelectTrigger className="h-9 text-sm border-green-300 focus:ring-green-500">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lendingCompanyOptions?.map((company) => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Borrowing Company */}
+              <div>
+                <Label className="text-xs text-orange-600 font-medium">Quem Recebe *</Label>
+                <Select onValueChange={(value) => setValue("borrowing_company_id", value)} value={watch("borrowing_company_id")}>
+                  <SelectTrigger className="h-9 text-sm border-orange-300 focus:ring-orange-500">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {borrowingCompanyOptions?.map((company) => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Loan Amount */}
+              <div>
+                <Label className="text-xs">Montante (€) *</Label>
                 <Input
                   type="number"
                   step="0.01"
-                  {...register("total_amount", { required: watch("type") !== "notification" })}
+                  {...register("total_amount", { required: true })}
                   className="h-9 text-sm font-medium"
                   placeholder="0.00"
                 />
               </div>
 
-              {/* VAT fields */}
-              <div className="grid grid-cols-3 gap-2">
+              {/* Interest Rate & Monthly Payment */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs">Taxa IVA (%)</Label>
-                  <Input type="number" {...register("vat_rate")} className="h-9 text-sm" />
+                  <Label className="text-xs">Taxa de Juro (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    {...register("interest_rate")}
+                    className="h-9 text-sm"
+                    placeholder="0"
+                  />
                 </div>
                 <div>
-                  <Label className="text-xs">IVA (€)</Label>
-                  <Input value={vatAmount.toFixed(2)} readOnly className="h-9 text-sm bg-muted" />
-                </div>
-                <div>
-                  <Label className="text-xs">Valor (s/ IVA)</Label>
-                  <Input value={netAmount.toFixed(2)} readOnly className="h-9 text-sm bg-muted" />
+                  <Label className="text-xs">Prestação Mensal (€)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    {...register("monthly_payment")}
+                    className="h-9 text-sm"
+                    placeholder="0.00"
+                  />
                 </div>
               </div>
 
-              {/* Payment method & Bank account */}
+              {/* End Date & Status */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs">Método Pagamento</Label>
-                  <Select onValueChange={(value) => setValue("payment_method", value)} value={watch("payment_method")}>
+                  <Label className="text-xs">Data de Fim</Label>
+                  <Input type="date" {...register("end_date")} className="h-9 text-sm" />
+                </div>
+                <div>
+                  <Label className="text-xs">Estado</Label>
+                  <Select onValueChange={(value) => setValue("loan_status", value)} value={watch("loan_status")}>
                     <SelectTrigger className="h-9 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {availablePaymentMethods.includes("bank_transfer") && (
-                        <SelectItem value="bank_transfer">Transferência</SelectItem>
-                      )}
-                      {availablePaymentMethods.includes("credit_card") && (
-                        <SelectItem value="credit_card">Cartão Crédito</SelectItem>
-                      )}
+                      <SelectItem value="active">Ativo</SelectItem>
+                      <SelectItem value="paid">Pago</SelectItem>
+                      <SelectItem value="overdue">Em Atraso</SelectItem>
+                      <SelectItem value="cancelled">Cancelado</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <Label className="text-xs">Descrição</Label>
+                <Textarea {...register("description")} className="text-sm min-h-[60px]" placeholder="Descrição do empréstimo..." />
+              </div>
+            </>
+          ) : (
+            <>
+              {/* REGULAR TRANSACTION FIELDS */}
+              {/* Company & Project */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs">{paymentMethod === "credit_card" ? "Cartão" : "Conta"}</Label>
-                  <Select onValueChange={(value) => setValue("bank_account_id", value)} value={watch("bank_account_id")}>
+                  <Label className="text-xs">Empresa *</Label>
+                  <Select onValueChange={(value) => setValue("company_id", value)} value={watch("company_id")}>
                     <SelectTrigger className="h-9 text-sm">
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {filteredBankAccounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id} className="text-xs">
-                          {account.account_name}
+                      {companies?.map((company) => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <Label className="text-xs">Projeto</Label>
+                  <Popover open={projectOpen} onOpenChange={setProjectOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between font-normal h-9 text-sm"
+                      >
+                        <span className="truncate">
+                          {watch("project_id")
+                            ? expenseProjects?.find((p) => p.id === watch("project_id"))?.name
+                            : "Sem projeto"}
+                        </span>
+                        <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[200px] p-0">
+                      <Command shouldFilter={false}>
+                        <CommandInput
+                          placeholder="Pesquisar..."
+                          value={projectSearch}
+                          onValueChange={setProjectSearch}
+                        />
+                        <CommandList>
+                          <CommandEmpty>Nenhum projeto.</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem
+                              onSelect={() => {
+                                setValue("project_id", "");
+                                setValue("category_id", "");
+                                setProjectOpen(false);
+                              }}
+                            >
+                              <Check className={cn("mr-2 h-4 w-4", !watch("project_id") ? "opacity-100" : "opacity-0")} />
+                              Sem projeto
+                            </CommandItem>
+                            {expenseProjects
+                              ?.filter((p) => p.name?.toLowerCase().includes(projectSearch.toLowerCase()))
+                              .map((project) => (
+                                <CommandItem
+                                  key={project.id}
+                                  onSelect={() => {
+                                    setValue("project_id", project.id);
+                                    setValue("category_id", "");
+                                    setProjectOpen(false);
+                                  }}
+                                >
+                                  <Check className={cn("mr-2 h-4 w-4", watch("project_id") === project.id ? "opacity-100" : "opacity-0")} />
+                                  {project.name}
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              {/* Category */}
+              <div>
+                <Label className="text-xs">Categoria</Label>
+                <Select onValueChange={(value) => setValue("category_id", value)} value={watch("category_id")}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[400px]">
+                    {filteredCategories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Description */}
+              <div>
+                <Label className="text-xs">Descrição *</Label>
+                <Input {...register("description", { required: !isLoan })} className="h-9 text-sm" placeholder="Descrição do movimento" />
+              </div>
+
+              {/* Supplier */}
+              <div>
+                <Label className="text-xs">Fornecedor/Cliente *</Label>
+                <Popover open={supplierOpen} onOpenChange={setSupplierOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between font-normal h-9 text-sm"
+                    >
+                      <span className="truncate">{watch("entity_name") || "Selecione ou digite..."}</span>
+                      <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[250px] p-0">
+                    <Command shouldFilter={false}>
+                      <CommandInput
+                        placeholder="Pesquisar ou criar..."
+                        value={supplierSearch}
+                        onValueChange={setSupplierSearch}
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start"
+                            onClick={() => {
+                              setValue("entity_name", supplierSearch);
+                              setSupplierOpen(false);
+                            }}
+                          >
+                            Criar "{supplierSearch}"
+                          </Button>
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {suppliers
+                            ?.filter((s) => typeof s === 'string' && s.toLowerCase().includes(supplierSearch.toLowerCase()))
+                            .slice(0, 10)
+                            .map((supplier) => (
+                              <CommandItem
+                                key={supplier}
+                                onSelect={() => {
+                                  setValue("entity_name", supplier);
+                                  setSupplierOpen(false);
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", watch("entity_name") === supplier ? "opacity-100" : "opacity-0")} />
+                                {supplier}
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Total with VAT - Hidden for notifications */}
+              {watch("type") !== "notification" && (
+                <>
+                  <div>
+                    <Label className="text-xs">Total (c/ IVA) *</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      {...register("total_amount", { required: watch("type") !== "notification" })}
+                      className="h-9 text-sm font-medium"
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  {/* VAT fields */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <Label className="text-xs">Taxa IVA (%)</Label>
+                      <Input type="number" {...register("vat_rate")} className="h-9 text-sm" />
+                    </div>
+                    <div>
+                      <Label className="text-xs">IVA (€)</Label>
+                      <Input value={vatAmount.toFixed(2)} readOnly className="h-9 text-sm bg-muted" />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Valor (s/ IVA)</Label>
+                      <Input value={netAmount.toFixed(2)} readOnly className="h-9 text-sm bg-muted" />
+                    </div>
+                  </div>
+
+                  {/* Payment method & Bank account */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Método Pagamento</Label>
+                      <Select onValueChange={(value) => setValue("payment_method", value)} value={watch("payment_method")}>
+                        <SelectTrigger className="h-9 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availablePaymentMethods.includes("bank_transfer") && (
+                            <SelectItem value="bank_transfer">Transferência</SelectItem>
+                          )}
+                          {availablePaymentMethods.includes("credit_card") && (
+                            <SelectItem value="credit_card">Cartão Crédito</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">{paymentMethod === "credit_card" ? "Cartão" : "Conta"}</Label>
+                      <Select onValueChange={(value) => setValue("bank_account_id", value)} value={watch("bank_account_id")}>
+                        <SelectTrigger className="h-9 text-sm">
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filteredBankAccounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id} className="text-xs">
+                              {account.account_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Invoice number */}
+              <div>
+                <Label className="text-xs">Nº Fatura/Recibo</Label>
+                <Input {...register("invoice_number")} className="h-9 text-sm" placeholder="Ex: FT 2024/001" />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <Label className="text-xs">Notas</Label>
+                <Textarea {...register("notes")} className="text-sm min-h-[60px]" placeholder="Notas adicionais..." />
               </div>
             </>
           )}
-
-          {/* Invoice number */}
-          <div>
-            <Label className="text-xs">Nº Fatura/Recibo</Label>
-            <Input {...register("invoice_number")} className="h-9 text-sm" placeholder="Ex: FT 2024/001" />
-          </div>
-
-          {/* Notes */}
-          <div>
-            <Label className="text-xs">Notas</Label>
-            <Textarea {...register("notes")} className="text-sm min-h-[60px]" placeholder="Notas adicionais..." />
-          </div>
 
           {/* Attached file indicator */}
           <div>
@@ -631,92 +847,94 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
               <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50 text-sm">
                 <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <span className="truncate flex-1 text-xs">{attachmentName}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 p-0 text-primary hover:text-primary/80"
-                  onClick={() => {
-                    const values = getValues();
+                {!isLoan && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 p-0 text-primary hover:text-primary/80"
+                    onClick={() => {
+                      const values = getValues();
 
-                    const supplierName = values.entity_name || "Fornecedor";
-                    const dateValue = values.date;
-                    const totalValue = values.total_amount;
-                    const companyId = values.company_id;
-                    const bankAccountId = values.bank_account_id;
-                    const projectId = values.project_id;
+                      const supplierName = values.entity_name || "Fornecedor";
+                      const dateValue = values.date;
+                      const totalValue = values.total_amount;
+                      const companyId = values.company_id;
+                      const bankAccountId = values.bank_account_id;
+                      const projectId = values.project_id;
 
-                    // Format date to DD-MM-YYYY
-                    let formattedDate = "";
-                    if (dateValue) {
-                      const d = new Date(dateValue);
-                      const day = String(d.getDate()).padStart(2, "0");
-                      const month = String(d.getMonth() + 1).padStart(2, "0");
-                      const year = d.getFullYear();
-                      formattedDate = `${day}-${month}-${year}`;
-                    } else {
-                      const d = new Date();
-                      formattedDate = `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
-                    }
+                      // Format date to DD-MM-YYYY
+                      let formattedDate = "";
+                      if (dateValue) {
+                        const d = new Date(dateValue);
+                        const day = String(d.getDate()).padStart(2, "0");
+                        const month = String(d.getMonth() + 1).padStart(2, "0");
+                        const year = d.getFullYear();
+                        formattedDate = `${day}-${month}-${year}`;
+                      } else {
+                        const d = new Date();
+                        formattedDate = `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+                      }
 
-                    // Format amount
-                    const formattedValue = Number(totalValue || 0).toFixed(2);
+                      // Format amount
+                      const formattedValue = Number(totalValue || 0).toFixed(2);
 
-                    // Get company name (empresa receptora)
-                    const companyName = companies?.find((c) => c.id === companyId)?.name || "";
+                      // Get company name (empresa receptora)
+                      const companyName = companies?.find((c) => c.id === companyId)?.name || "";
 
-                    // Get bank account name (conta)
-                    const bankAccountName =
-                      allBankAccounts?.find((ba) => ba.id === bankAccountId)?.account_name || "";
+                      // Get bank account name (conta)
+                      const bankAccountName =
+                        allBankAccounts?.find((ba) => ba.id === bankAccountId)?.account_name || "";
 
-                    // Get project name
-                    const projectName = expenseProjects?.find((p) => p.id === projectId)?.name || "";
+                      // Get project name
+                      const projectName = expenseProjects?.find((p) => p.id === projectId)?.name || "";
 
-                    // Get extension from current file
-                    const extension = attachmentName.split(".").pop() || "pdf";
+                      // Get extension from current file
+                      const extension = attachmentName.split(".").pop() || "pdf";
 
-                    // Clean names (remove invalid characters)
-                    const cleanSupplier = supplierName.replace(/[<>:"/\\|?*]/g, "").trim();
-                    const cleanCompany = companyName.replace(/[<>:"/\\|?*]/g, "").trim();
-                    const cleanBankAccount = bankAccountName.replace(/[<>:"/\\|?*]/g, "").trim();
-                    const cleanProject = projectName.replace(/[<>:"/\\|?*]/g, "").trim().toUpperCase();
+                      // Clean names (remove invalid characters)
+                      const cleanSupplier = supplierName.replace(/[<>:"/\\|?*]/g, "").trim();
+                      const cleanCompany = companyName.replace(/[<>:"/\\|?*]/g, "").trim();
+                      const cleanBankAccount = bankAccountName.replace(/[<>:"/\\|?*]/g, "").trim();
+                      const cleanProject = projectName.replace(/[<>:"/\\|?*]/g, "").trim().toUpperCase();
 
-                    // Build the new name with all components
-                    let newName = `${cleanSupplier} (${formattedDate}) ${formattedValue}€`;
+                      // Build the new name with all components
+                      let newName = `${cleanSupplier} (${formattedDate}) ${formattedValue}€`;
 
-                    // Add company name if available
-                    if (cleanCompany) {
-                      newName += ` (${cleanCompany})`;
-                    }
+                      // Add company name if available
+                      if (cleanCompany) {
+                        newName += ` (${cleanCompany})`;
+                      }
 
-                    // Add bank account name if available
-                    if (cleanBankAccount) {
-                      newName += ` (${cleanBankAccount})`;
-                    }
+                      // Add bank account name if available
+                      if (cleanBankAccount) {
+                        newName += ` (${cleanBankAccount})`;
+                      }
 
-                    // Add project name in brackets if available
-                    if (cleanProject) {
-                      newName += ` [${cleanProject}]`;
-                    }
+                      // Add project name in brackets if available
+                      if (cleanProject) {
+                        newName += ` [${cleanProject}]`;
+                      }
 
-                    // Add notes in brackets if available (only for Notificação type)
-                    const transactionType = values.type;
-                    const notesValue = values.notes || "";
-                    const cleanNotes = notesValue.replace(/[<>:"/\\|?*]/g, "").trim().toUpperCase();
-                    if (transactionType === "notification" && cleanNotes) {
-                      newName += ` [${cleanNotes}]`;
-                    }
+                      // Add notes in brackets if available (only for Notificação type)
+                      const transactionTypeVal = values.type;
+                      const notesValue = values.notes || "";
+                      const cleanNotes = notesValue.replace(/[<>:"/\\|?*]/g, "").trim().toUpperCase();
+                      if (transactionTypeVal === "notification" && cleanNotes) {
+                        newName += ` [${cleanNotes}]`;
+                      }
 
-                    // Add extension
-                    newName += `.${extension}`;
+                      // Add extension
+                      newName += `.${extension}`;
 
-                    setAttachmentName(newName);
-                    toast.success(`Ficheiro renomeado para: ${newName}`);
-                  }}
-                  title="Renomear ficheiro automaticamente"
-                >
-                  <Wand2 className="h-3 w-3" />
-                </Button>
+                      setAttachmentName(newName);
+                      toast.success(`Ficheiro renomeado para: ${newName}`);
+                    }}
+                    title="Renomear ficheiro automaticamente"
+                  >
+                    <Wand2 className="h-3 w-3" />
+                  </Button>
+                )}
                 <Button
                   type="button"
                   variant="ghost"
