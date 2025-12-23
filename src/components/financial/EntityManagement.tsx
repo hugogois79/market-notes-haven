@@ -17,7 +17,7 @@ interface EntityManagementProps {
 interface Transaction {
   id: string;
   entity_name: string;
-  type: "income" | "expense" | "notification";
+  type: "income" | "expense" | "notification" | "receipt";
   total_amount: number;
   date: string;
   description: string;
