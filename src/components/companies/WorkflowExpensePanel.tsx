@@ -728,22 +728,24 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                 </div>
               </div>
 
-              {/* Category */}
-              <div>
-                <Label className="text-xs">Categoria</Label>
-                <Select onValueChange={(value) => setValue("category_id", value)} value={watch("category_id")}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[400px]">
-                    {filteredCategories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Category - hide for receipts since they are payment proofs, not new transactions */}
+              {transactionType !== "receipt" && (
+                <div>
+                  <Label className="text-xs">Categoria</Label>
+                  <Select onValueChange={(value) => setValue("category_id", value)} value={watch("category_id")}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[400px]">
+                      {filteredCategories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Description */}
               <div>
