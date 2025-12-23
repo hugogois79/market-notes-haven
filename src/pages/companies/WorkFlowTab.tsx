@@ -3053,7 +3053,29 @@ export default function WorkFlowTab() {
                     file_url: previewFile.file_url,
                     mime_type: previewFile.mime_type,
                   }}
-                  existingTransaction={existingTransaction}
+                  existingTransaction={
+                    // If there's pending loan data, convert it to existingTransaction format
+                    customData[previewFile.id]?._pendingLoan
+                      ? (() => {
+                          const pendingLoan = JSON.parse(customData[previewFile.id]._pendingLoan);
+                          return {
+                            id: "pending",
+                            date: pendingLoan.start_date || new Date().toISOString().split("T")[0],
+                            type: "loan",
+                            lending_company_id: pendingLoan.lending_company_id,
+                            borrowing_company_id: pendingLoan.borrowing_company_id,
+                            total_amount: pendingLoan.amount,
+                            interest_rate: pendingLoan.interest_rate,
+                            monthly_payment: pendingLoan.monthly_payment,
+                            end_date: pendingLoan.end_date,
+                            loan_status: pendingLoan.status,
+                            description: pendingLoan.description,
+                            notes: pendingLoan.notes,
+                            _isLoan: true,
+                          };
+                        })()
+                      : existingTransaction
+                  }
                   onClose={() => setShowExpensePanel(false)}
                   onSaved={(payload) => {
                     setShowExpensePanel(false);
