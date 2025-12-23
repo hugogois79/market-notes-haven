@@ -3005,7 +3005,7 @@ export default function WorkFlowTab() {
                             variant={(existingTransaction as any)?.bank_account_id ? "default" : "outline"}
                             size="sm"
                             onClick={() => setShowPaymentDialog(true)}
-                            disabled={isLoadingTransaction || (existingTransaction as any)?._isLoan}
+                            disabled={isLoadingTransaction}
                             className={(existingTransaction as any)?.bank_account_id ? "bg-green-600 hover:bg-green-700 text-white" : ""}
                           >
                             {(existingTransaction as any)?.bank_account_id ? (
