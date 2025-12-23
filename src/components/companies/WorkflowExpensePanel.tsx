@@ -63,7 +63,7 @@ interface WorkflowExpensePanelProps {
     _isLoan?: boolean;
   } | null;
   onClose: () => void;
-  onSaved?: (payload?: { fileName?: string; fileUrl?: string | null }) => void;
+  onSaved?: (payload?: { fileName?: string; fileUrl?: string | null; pendingLoanData?: any }) => void;
 }
 
 export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSaved }: WorkflowExpensePanelProps) {
@@ -301,54 +301,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         return uuidRegex.test(value) ? value : null;
       };
 
-      // Handle loan type separately
+      // Handle loan type separately - save as pending, don't create DB records yet
       if (data.type === "loan") {
-        // 0. Copy file to loans folder to ensure it's never deleted
-        let loanAttachmentUrl = attachmentUrl;
-        
-        if (file.file_url) {
-          try {
-            // Download original file
-            const response = await fetch(file.file_url);
-            if (response.ok) {
-              const blob = await response.blob();
-              
-              // Generate clean filename for loans folder
-              const lendingName = (companies?.find(c => c.id === data.lending_company_id)?.name || 'Empresa').replace(/[^\w]/g, '_');
-              const borrowingName = (companies?.find(c => c.id === data.borrowing_company_id)?.name || 'Empresa').replace(/[^\w]/g, '_');
-              const loanDate = new Date(data.date);
-              const formattedDate = `${String(loanDate.getDate()).padStart(2, '0')}-${String(loanDate.getMonth() + 1).padStart(2, '0')}-${loanDate.getFullYear()}`;
-              const amount = Math.round(parseFloat(data.total_amount) || 0);
-              const fileExt = file.file_name?.split('.').pop() || 'pdf';
-              const safeId = crypto.randomUUID().substring(0, 8);
-              const newFileName = `${safeId}_${borrowingName}_${formattedDate}_${amount}_${lendingName}.${fileExt}`;
-              
-              // Upload to loans folder
-              const { error: uploadError } = await supabase.storage
-                .from('attachments')
-                .upload(`loans/${newFileName}`, blob, {
-                  contentType: file.mime_type || 'application/pdf',
-                  upsert: true
-                });
-              
-              if (!uploadError) {
-                // Get new public URL
-                const { data: urlData } = supabase.storage
-                  .from('attachments')
-                  .getPublicUrl(`loans/${newFileName}`);
-                
-                loanAttachmentUrl = urlData.publicUrl;
-              } else {
-                console.error('Error uploading to loans folder:', uploadError);
-              }
-            }
-          } catch (copyError) {
-            console.error('Error copying file to loans folder:', copyError);
-            // Continue with original URL as fallback
-          }
-        }
-        
-        // 1. Create or update loan record in company_loans
         // Get company names for auto-generated description
         const lendingCompanyName = companies?.find(c => c.id === data.lending_company_id)?.name || "Empresa";
         const borrowingCompanyName = companies?.find(c => c.id === data.borrowing_company_id)?.name || "Empresa";
@@ -363,7 +317,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         // Auto-generate description
         const autoDescription = `Transferência de ${lendingCompanyName} para ${borrowingCompanyName} com (${formattedDescDate}) e ${formattedAmount}€`;
         
-        const loanPayload = {
+        // Prepare pending loan data - to be created when file is sent to destination folder
+        const pendingLoanData = {
           lending_company_id: data.lending_company_id,
           borrowing_company_id: data.borrowing_company_id,
           amount: parseFloat(data.total_amount) || 0,
@@ -373,90 +328,9 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           end_date: data.end_date || null,
           status: data.loan_status || "active",
           description: autoDescription,
-          attachment_url: loanAttachmentUrl,
-          source_file_id: file.id, // Link back to original workflow file
+          lending_company_name: lendingCompanyName,
+          borrowing_company_name: borrowingCompanyName,
         };
-
-        let loanData;
-        
-        // Check if we're editing an existing loan
-        if (isEditMode && existingTransaction && existingTransaction._isLoan) {
-          const { data: updatedLoan, error: updateError } = await supabase
-            .from("company_loans")
-            .update(loanPayload)
-            .eq("id", existingTransaction.id)
-            .select()
-            .single();
-          
-          if (updateError) throw updateError;
-          loanData = updatedLoan;
-        } else {
-          // Create new loan
-          const { data: newLoan, error: loanError } = await supabase
-            .from("company_loans")
-            .insert(loanPayload)
-            .select()
-            .single();
-
-          if (loanError) throw loanError;
-          loanData = newLoan;
-        }
-
-        // 2. Get storage locations for both companies based on loan date
-        const loanDate = new Date(data.date);
-        const loanMonth = loanDate.getMonth() + 1;
-        const loanYear = loanDate.getFullYear();
-
-        // Fetch folder_id for lending company
-        const { data: lendingStorageLocation } = await supabase
-          .from("workflow_storage_locations")
-          .select("folder_id")
-          .eq("company_id", data.lending_company_id)
-          .eq("year", loanYear)
-          .eq("month", loanMonth)
-          .maybeSingle();
-
-        // Fetch folder_id for borrowing company
-        const { data: borrowingStorageLocation } = await supabase
-          .from("workflow_storage_locations")
-          .select("folder_id")
-          .eq("company_id", data.borrowing_company_id)
-          .eq("year", loanYear)
-          .eq("month", loanMonth)
-          .maybeSingle();
-
-        // 3. Only create document records for NEW loans (not when editing)
-        if (!(isEditMode && existingTransaction && existingTransaction._isLoan)) {
-          // Create document record for LENDING company
-          const { error: docError1 } = await supabase.from("company_documents").insert({
-            company_id: data.lending_company_id,
-            folder_id: lendingStorageLocation?.folder_id || null,
-            name: attachmentName,
-            file_url: loanAttachmentUrl || "",
-            document_type: "Loan",
-            status: "Final",
-            uploaded_by: userData.user.id,
-            notes: `Empréstimo para ${companies?.find((c) => c.id === data.borrowing_company_id)?.name || "empresa"}`,
-            mime_type: file.mime_type || "application/pdf",
-          });
-
-          if (docError1) throw docError1;
-
-          // Create document record for BORROWING company
-          const { error: docError2 } = await supabase.from("company_documents").insert({
-            company_id: data.borrowing_company_id,
-            folder_id: borrowingStorageLocation?.folder_id || null,
-            name: attachmentName,
-            file_url: loanAttachmentUrl || "",
-            document_type: "Loan",
-            status: "Final",
-            uploaded_by: userData.user.id,
-            notes: `Empréstimo de ${companies?.find((c) => c.id === data.lending_company_id)?.name || "empresa"}`,
-            mime_type: file.mime_type || "application/pdf",
-          });
-
-          if (docError2) throw docError2;
-        }
 
         // Update workflow_files with the new filename if it changed
         if (attachmentName !== file.file_name) {
@@ -467,7 +341,9 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           if (fileUpdateError) throw fileUpdateError;
         }
 
-        return; // Exit without creating financial_transaction
+        // Pass pending loan data via callback - will be created when confirming file send
+        onSaved?.({ fileName: attachmentName, fileUrl: attachmentUrl, pendingLoanData });
+        return; // Exit without creating DB records
       }
 
       const isNotification = data.type === "notification";
