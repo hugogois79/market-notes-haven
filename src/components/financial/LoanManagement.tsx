@@ -331,7 +331,13 @@ export default function LoanManagement({ companyId }: LoanManagementProps) {
                                     const url = window.URL.createObjectURL(blob);
                                     const a = document.createElement('a');
                                     a.href = url;
-                                    const filename = loan.attachment_url.split('/').pop() || 'anexo';
+                                    // Build clean filename from loan data
+                                    const borrowingName = (loan.borrowing_company?.name || 'Empresa').replace(/\s+/g, '_');
+                                    const loanDate = new Date(loan.start_date);
+                                    const formattedDate = `${String(loanDate.getDate()).padStart(2, '0')}-${String(loanDate.getMonth() + 1).padStart(2, '0')}-${loanDate.getFullYear()}`;
+                                    const amount = Math.round(Number(loan.amount));
+                                    const extension = loan.attachment_url.split('.').pop() || 'pdf';
+                                    const filename = `Emprestimo_${borrowingName}_${formattedDate}_${amount}€.${extension}`;
                                     a.download = filename;
                                     document.body.appendChild(a);
                                     a.click();
