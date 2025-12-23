@@ -847,94 +847,112 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
               <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50 text-sm">
                 <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <span className="truncate flex-1 text-xs">{attachmentName}</span>
-                {!isLoan && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 p-0 text-primary hover:text-primary/80"
-                    onClick={() => {
-                      const values = getValues();
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 p-0 text-primary hover:text-primary/80"
+                  onClick={() => {
+                    const values = getValues();
+                    const dateValue = values.date;
 
-                      const supplierName = values.entity_name || "Fornecedor";
-                      const dateValue = values.date;
-                      const totalValue = values.total_amount;
-                      const companyId = values.company_id;
-                      const bankAccountId = values.bank_account_id;
-                      const projectId = values.project_id;
+                    // Format date to DD-MM-YYYY
+                    let formattedDate = "";
+                    if (dateValue) {
+                      const d = new Date(dateValue);
+                      const day = String(d.getDate()).padStart(2, "0");
+                      const month = String(d.getMonth() + 1).padStart(2, "0");
+                      const year = d.getFullYear();
+                      formattedDate = `${day}-${month}-${year}`;
+                    } else {
+                      const d = new Date();
+                      formattedDate = `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+                    }
 
-                      // Format date to DD-MM-YYYY
-                      let formattedDate = "";
-                      if (dateValue) {
-                        const d = new Date(dateValue);
-                        const day = String(d.getDate()).padStart(2, "0");
-                        const month = String(d.getMonth() + 1).padStart(2, "0");
-                        const year = d.getFullYear();
-                        formattedDate = `${day}-${month}-${year}`;
-                      } else {
-                        const d = new Date();
-                        formattedDate = `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
-                      }
+                    // Get extension from current file
+                    const extension = attachmentName.split(".").pop() || "pdf";
 
-                      // Format amount
-                      const formattedValue = Number(totalValue || 0).toFixed(2);
+                    // Handle loan type differently
+                    if (isLoan) {
+                      const lendingId = values.lending_company_id;
+                      const borrowingId = values.borrowing_company_id;
 
-                      // Get company name (empresa receptora)
-                      const companyName = companies?.find((c) => c.id === companyId)?.name || "";
+                      const lendingCompanyName = companies?.find((c) => c.id === lendingId)?.name || "Empresa";
+                      const borrowingCompanyName = companies?.find((c) => c.id === borrowingId)?.name || "Empresa";
 
-                      // Get bank account name (conta)
-                      const bankAccountName =
-                        allBankAccounts?.find((ba) => ba.id === bankAccountId)?.account_name || "";
+                      const cleanBorrowing = borrowingCompanyName.replace(/[<>:"/\\|?*]/g, "").trim();
+                      const cleanLending = lendingCompanyName.replace(/[<>:"/\\|?*]/g, "").trim();
 
-                      // Get project name
-                      const projectName = expenseProjects?.find((p) => p.id === projectId)?.name || "";
-
-                      // Get extension from current file
-                      const extension = attachmentName.split(".").pop() || "pdf";
-
-                      // Clean names (remove invalid characters)
-                      const cleanSupplier = supplierName.replace(/[<>:"/\\|?*]/g, "").trim();
-                      const cleanCompany = companyName.replace(/[<>:"/\\|?*]/g, "").trim();
-                      const cleanBankAccount = bankAccountName.replace(/[<>:"/\\|?*]/g, "").trim();
-                      const cleanProject = projectName.replace(/[<>:"/\\|?*]/g, "").trim().toUpperCase();
-
-                      // Build the new name with all components
-                      let newName = `${cleanSupplier} (${formattedDate}) ${formattedValue}€`;
-
-                      // Add company name if available
-                      if (cleanCompany) {
-                        newName += ` (${cleanCompany})`;
-                      }
-
-                      // Add bank account name if available
-                      if (cleanBankAccount) {
-                        newName += ` (${cleanBankAccount})`;
-                      }
-
-                      // Add project name in brackets if available
-                      if (cleanProject) {
-                        newName += ` [${cleanProject}]`;
-                      }
-
-                      // Add notes in brackets if available (only for Notificação type)
-                      const transactionTypeVal = values.type;
-                      const notesValue = values.notes || "";
-                      const cleanNotes = notesValue.replace(/[<>:"/\\|?*]/g, "").trim().toUpperCase();
-                      if (transactionTypeVal === "notification" && cleanNotes) {
-                        newName += ` [${cleanNotes}]`;
-                      }
-
-                      // Add extension
-                      newName += `.${extension}`;
+                      // Build name: [Quem Recebe] (Data) [Quem Empresta]
+                      const newName = `${cleanBorrowing} (${formattedDate}) ${cleanLending}.${extension}`;
 
                       setAttachmentName(newName);
                       toast.success(`Ficheiro renomeado para: ${newName}`);
-                    }}
-                    title="Renomear ficheiro automaticamente"
-                  >
-                    <Wand2 className="h-3 w-3" />
-                  </Button>
-                )}
+                      return;
+                    }
+
+                    // Regular transaction naming
+                    const supplierName = values.entity_name || "Fornecedor";
+                    const totalValue = values.total_amount;
+                    const companyId = values.company_id;
+                    const bankAccountId = values.bank_account_id;
+                    const projectId = values.project_id;
+
+                    // Format amount
+                    const formattedValue = Number(totalValue || 0).toFixed(2);
+
+                    // Get company name (empresa receptora)
+                    const companyName = companies?.find((c) => c.id === companyId)?.name || "";
+
+                    // Get bank account name (conta)
+                    const bankAccountName =
+                      allBankAccounts?.find((ba) => ba.id === bankAccountId)?.account_name || "";
+
+                    // Get project name
+                    const projectName = expenseProjects?.find((p) => p.id === projectId)?.name || "";
+
+                    // Clean names (remove invalid characters)
+                    const cleanSupplier = supplierName.replace(/[<>:"/\\|?*]/g, "").trim();
+                    const cleanCompany = companyName.replace(/[<>:"/\\|?*]/g, "").trim();
+                    const cleanBankAccount = bankAccountName.replace(/[<>:"/\\|?*]/g, "").trim();
+                    const cleanProject = projectName.replace(/[<>:"/\\|?*]/g, "").trim().toUpperCase();
+
+                    // Build the new name with all components
+                    let newName = `${cleanSupplier} (${formattedDate}) ${formattedValue}€`;
+
+                    // Add company name if available
+                    if (cleanCompany) {
+                      newName += ` (${cleanCompany})`;
+                    }
+
+                    // Add bank account name if available
+                    if (cleanBankAccount) {
+                      newName += ` (${cleanBankAccount})`;
+                    }
+
+                    // Add project name in brackets if available
+                    if (cleanProject) {
+                      newName += ` [${cleanProject}]`;
+                    }
+
+                    // Add notes in brackets if available (only for Notificação type)
+                    const transactionTypeVal = values.type;
+                    const notesValue = values.notes || "";
+                    const cleanNotes = notesValue.replace(/[<>:"/\\|?*]/g, "").trim().toUpperCase();
+                    if (transactionTypeVal === "notification" && cleanNotes) {
+                      newName += ` [${cleanNotes}]`;
+                    }
+
+                    // Add extension
+                    newName += `.${extension}`;
+
+                    setAttachmentName(newName);
+                    toast.success(`Ficheiro renomeado para: ${newName}`);
+                  }}
+                  title="Renomear ficheiro automaticamente"
+                >
+                  <Wand2 className="h-3 w-3" />
+                </Button>
                 <Button
                   type="button"
                   variant="ghost"
