@@ -599,7 +599,7 @@ const ReceiptGenerator = () => {
                   )}
 
                   {/* Parties Header - Pagador (left) and Beneficiário (right) */}
-                  <div className="flex justify-between items-start mb-6 py-4 border-b border-border">
+                  <div className="flex justify-between items-start mb-6 py-4">
                     {/* Pagador - Who is paying (LEFT) */}
                     <div className="text-left flex-1">
                       {(() => {
@@ -644,6 +644,9 @@ const ReceiptGenerator = () => {
                   {/* Receipt Content */}
                   <style>{`
                     .formatted-receipt > div:first-child {
+                      display: none !important;
+                    }
+                    .formatted-receipt hr {
                       display: none !important;
                     }
                   `}</style>
