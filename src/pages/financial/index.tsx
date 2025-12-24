@@ -118,7 +118,11 @@ export default function FinancialPage() {
 
             <TabsContent value="entities" className="space-y-4">
               {selectedCompanyId && (
-                <EntityManagement companyId={selectedCompanyId} />
+                <EntityManagement 
+                  companyId={selectedCompanyId} 
+                  companies={companies}
+                  onCompanyChange={setSelectedCompanyId}
+                />
               )}
             </TabsContent>
 
