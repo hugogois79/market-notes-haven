@@ -389,6 +389,10 @@ const ReceiptGenerator = () => {
               text-align: right;
               flex: 1;
             }
+            /* Remove any borders from formatted-receipt */
+            .formatted-receipt {
+              border: none !important;
+            }
             /* Force beneficiary section to align right */
             .formatted-receipt > div:first-of-type {
               text-align: right !important;
@@ -643,7 +647,7 @@ const ReceiptGenerator = () => {
                   
                   {/* Receipt Content */}
                   <div 
-                    className="formatted-receipt"
+                    className="formatted-receipt border-none"
                     dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(generatedReceipt) }}
                   />
                 </div>
