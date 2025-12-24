@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronRight, Edit2, TrendingDown, TrendingUp, Users } from "lucide-react";
+import { ChevronDown, ChevronRight, Edit2, Search, TrendingDown, TrendingUp, Users } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import TransactionDialog from "./TransactionDialog";
+import { Input } from "@/components/ui/input";
 
 interface EntityManagementProps {
   companyId: string;
@@ -38,6 +39,7 @@ export default function EntityManagement({ companyId }: EntityManagementProps) {
   const [expandedEntities, setExpandedEntities] = useState<Set<string>>(new Set());
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["entity-transactions", companyId],
@@ -109,6 +111,14 @@ export default function EntityManagement({ companyId }: EntityManagementProps) {
       Math.abs(b.netAmount) - Math.abs(a.netAmount)
     );
   }, [transactions]);
+
+  // Filter entities based on search term
+  const filteredEntityGroups = useMemo(() => {
+    if (!searchTerm.trim()) return entityGroups;
+    return entityGroups.filter((group) =>
+      group.entityName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [entityGroups, searchTerm]);
 
   const toggleEntity = (entityName: string) => {
     setExpandedEntities((prev) => {
@@ -235,11 +245,20 @@ export default function EntityManagement({ companyId }: EntityManagementProps) {
 
       {/* Entities Table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             Holdings
           </CardTitle>
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Pesquisar vendor..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -255,7 +274,7 @@ export default function EntityManagement({ companyId }: EntityManagementProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {entityGroups.map((group) => (
+              {filteredEntityGroups.map((group) => (
                 <Collapsible
                   key={group.entityName}
                   open={expandedEntities.has(group.entityName)}
@@ -334,10 +353,10 @@ export default function EntityManagement({ companyId }: EntityManagementProps) {
                   </>
                 </Collapsible>
               ))}
-              {entityGroups.length === 0 && (
+              {filteredEntityGroups.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    Nenhum holding encontrado
+                    {searchTerm ? "Nenhum vendor encontrado" : "Nenhum holding encontrado"}
                   </TableCell>
                 </TableRow>
               )}
