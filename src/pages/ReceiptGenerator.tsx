@@ -380,7 +380,6 @@ const ReceiptGenerator = () => {
               align-items: flex-start;
               margin: 15px 0;
               padding: 15px 0;
-              border-bottom: 1px solid #ccc;
             }
             .issuer-section {
               text-align: left;
@@ -600,7 +599,7 @@ const ReceiptGenerator = () => {
                   )}
 
                   {/* Parties Header - Pagador (left) and Beneficiário (right) */}
-                  <div className="flex justify-between items-start mb-6 py-4 border-b border-border">
+                  <div className="flex justify-between items-start mb-6 py-4">
                     {/* Pagador - Who is paying (LEFT) */}
                     <div className="text-left flex-1">
                       {(() => {
