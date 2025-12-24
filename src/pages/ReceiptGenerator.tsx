@@ -390,12 +390,18 @@ const ReceiptGenerator = () => {
               text-align: right;
               flex: 1;
             }
-            /* Hide duplicate PAGADOR/BENEFICIÁRIO sections from generated content */
-            .formatted-receipt > div:first-child,
-            .formatted-receipt > div:has(strong:contains("ENTIDADE EMITENTE")),
-            .formatted-receipt > div:has(strong:contains("PAGADOR")),
-            .formatted-receipt div[style*="display: flex"]:first-of-type {
-              display: none !important;
+            /* Force beneficiary section to align right */
+            .formatted-receipt > div:first-of-type {
+              text-align: right !important;
+            }
+            .formatted-receipt div[style*="text-align: right"],
+            .formatted-receipt div:has(p:contains("Beneficiary")) {
+              text-align: right !important;
+            }
+            .formatted-receipt p:contains("Beneficiary"),
+            .formatted-receipt p:contains("Name:"),
+            .formatted-receipt p:contains("Purpose:") {
+              text-align: right !important;
             }
             /* Force authorized signature to align right */
             .formatted-receipt > div:last-of-type {
@@ -599,7 +605,7 @@ const ReceiptGenerator = () => {
                   )}
 
                   {/* Parties Header - Pagador (left) and Beneficiário (right) */}
-                  <div className="flex justify-between items-start mb-6 py-4">
+                  <div className="flex justify-between items-start mb-6 py-4 border-b border-border">
                     {/* Pagador - Who is paying (LEFT) */}
                     <div className="text-left flex-1">
                       {(() => {
@@ -642,14 +648,6 @@ const ReceiptGenerator = () => {
                   </div>
                   
                   {/* Receipt Content */}
-                  <style>{`
-                    .formatted-receipt > div:first-child {
-                      display: none !important;
-                    }
-                    .formatted-receipt hr {
-                      display: none !important;
-                    }
-                  `}</style>
                   <div 
                     className="formatted-receipt"
                     dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(generatedReceipt) }}
