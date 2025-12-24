@@ -5,12 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronRight, Edit2, Search, TrendingDown, TrendingUp, Users, Building2, Info } from "lucide-react";
+import { ChevronDown, ChevronRight, Edit2, Search, TrendingDown, TrendingUp, Users, Building2, Info, Printer } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import TransactionDialog from "./TransactionDialog";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Company {
   id: string;
@@ -214,6 +215,290 @@ export default function EntityManagement({ companyId, companies, onCompanyChange
     );
   }, [entityGroups]);
 
+  // Generate UK-style account statement HTML
+  const generateStatementHtml = (group: EntityGroup, sortedTransactions: Transaction[], company?: Company) => {
+    const today = format(new Date(), "dd MMMM yyyy");
+    
+    // Get date range from transactions
+    const dates = sortedTransactions.map(tx => new Date(tx.date));
+    const firstDate = dates.length > 0 ? format(Math.min(...dates.map(d => d.getTime())), "dd/MM/yyyy") : "—";
+    const lastDate = dates.length > 0 ? format(Math.max(...dates.map(d => d.getTime())), "dd/MM/yyyy") : "—";
+    
+    // Calculate running balance
+    let runningBalance = 0;
+    const transactionsWithBalance = sortedTransactions.map(tx => {
+      if (tx.type === "income") {
+        runningBalance += tx.total_amount;
+      } else {
+        runningBalance -= tx.total_amount;
+      }
+      return { ...tx, balance: runningBalance };
+    });
+
+    const formatValue = (value: number) => {
+      return new Intl.NumberFormat("pt-PT", {
+        style: "currency",
+        currency: "EUR",
+      }).format(value);
+    };
+
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <title>Account Statement - ${group.entityName}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            color: #1e293b;
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 15mm;
+            background: white;
+          }
+          .header {
+            border-bottom: 3px solid #1e40af;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+          }
+          .company-name {
+            font-size: 22pt;
+            font-weight: 700;
+            color: #1e40af;
+            margin-bottom: 4px;
+          }
+          .company-details {
+            font-size: 9pt;
+            color: #64748b;
+          }
+          .statement-title {
+            font-size: 16pt;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: #1e40af;
+            margin-top: 20px;
+            font-weight: 600;
+          }
+          .vendor-info {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 6px;
+            border-left: 4px solid #1e40af;
+          }
+          .vendor-name {
+            font-size: 14pt;
+            font-weight: 600;
+            color: #1e293b;
+          }
+          .period {
+            font-size: 10pt;
+            color: #64748b;
+            margin-top: 4px;
+          }
+          .summary-box {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+          }
+          .summary-title {
+            font-size: 11pt;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+          .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+          }
+          .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+          }
+          .summary-row:last-child {
+            border-bottom: none;
+          }
+          .summary-row.total {
+            border-top: 2px solid #1e40af;
+            margin-top: 10px;
+            padding-top: 12px;
+            font-weight: 700;
+            font-size: 12pt;
+          }
+          .summary-label {
+            color: #64748b;
+          }
+          .summary-value {
+            font-weight: 600;
+            font-family: 'Consolas', monospace;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+          }
+          thead th {
+            background: #1e40af;
+            color: white;
+            padding: 12px 10px;
+            text-align: left;
+            font-size: 9pt;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          thead th.text-right {
+            text-align: right;
+          }
+          tbody td {
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 10pt;
+          }
+          tbody tr:nth-child(even) {
+            background: #f8fafc;
+          }
+          .text-right { text-align: right; }
+          .negative { color: #dc2626; }
+          .positive { color: #16a34a; }
+          .balance-cell {
+            font-family: 'Consolas', monospace;
+            font-weight: 600;
+          }
+          .opening-row, .closing-row {
+            background: #f1f5f9 !important;
+            font-weight: 600;
+          }
+          .closing-row {
+            border-top: 2px solid #1e40af;
+          }
+          .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 8pt;
+          }
+          .footer p {
+            margin: 4px 0;
+          }
+          @media print {
+            body { padding: 10mm; }
+            .summary-box { break-inside: avoid; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="company-name">${company?.name || "Company"}</div>
+          <div class="statement-title">Account Statement</div>
+        </div>
+
+        <div class="vendor-info">
+          <div class="vendor-name">${group.entityName}</div>
+          <div class="period">Statement Period: ${firstDate} to ${lastDate}</div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-title">Account Summary</div>
+          <div class="summary-row">
+            <span class="summary-label">Opening Balance</span>
+            <span class="summary-value">€0.00</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Total Paid Out</span>
+            <span class="summary-value negative">${formatValue(group.totalExpense)}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Total Paid In</span>
+            <span class="summary-value positive">${formatValue(group.totalIncome)}</span>
+          </div>
+          <div class="summary-row total">
+            <span>Closing Balance</span>
+            <span class="summary-value ${group.netAmount >= 0 ? "positive" : "negative"}">${formatValue(group.netAmount)}</span>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 80px;">Date</th>
+              <th>Description</th>
+              <th class="text-right" style="width: 100px;">Paid Out</th>
+              <th class="text-right" style="width: 100px;">Paid In</th>
+              <th class="text-right" style="width: 110px;">Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="opening-row">
+              <td></td>
+              <td>Opening Balance</td>
+              <td></td>
+              <td></td>
+              <td class="text-right balance-cell">€0.00</td>
+            </tr>
+            ${transactionsWithBalance.map(tx => `
+              <tr>
+                <td>${format(new Date(tx.date), "dd/MM/yy")}</td>
+                <td>${tx.description}</td>
+                <td class="text-right negative">${tx.type === "expense" ? formatValue(tx.total_amount) : ""}</td>
+                <td class="text-right positive">${tx.type === "income" ? formatValue(tx.total_amount) : ""}</td>
+                <td class="text-right balance-cell ${tx.balance >= 0 ? "positive" : "negative"}">${formatValue(tx.balance)}</td>
+              </tr>
+            `).join("")}
+            <tr class="closing-row">
+              <td></td>
+              <td>Closing Balance</td>
+              <td></td>
+              <td></td>
+              <td class="text-right balance-cell ${runningBalance >= 0 ? "positive" : "negative"}">${formatValue(runningBalance)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="footer">
+          <p>Page 1 of 1</p>
+          <p>Statement generated on: ${today}</p>
+          <p>This is a computer-generated document and requires no signature.</p>
+        </div>
+      </body>
+      </html>
+    `;
+  };
+
+  // Handle print statement
+  const handlePrintStatement = (group: EntityGroup, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const currentCompany = companies?.find(c => c.id === companyId);
+    
+    // Sort transactions by date (oldest first)
+    const sortedTransactions = [...group.transactions].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    const html = generateStatementHtml(group, sortedTransactions, currentCompany);
+    
+    printWindow.document.write(html);
+    printWindow.document.close();
+    
+    printWindow.onload = () => {
+      setTimeout(() => printWindow.print(), 250);
+    };
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -310,6 +595,7 @@ export default function EntityManagement({ companyId, companies, onCompanyChange
                 <TableHead className="text-right text-emerald-600">Receitas</TableHead>
                 <TableHead className="text-right text-red-600">Despesas</TableHead>
                 <TableHead className="text-right">Saldo</TableHead>
+                <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -350,6 +636,21 @@ export default function EntityManagement({ companyId, companies, onCompanyChange
                         >
                           {formatCurrency(group.netAmount)}
                         </TableCell>
+                        <TableCell>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={(e) => handlePrintStatement(group, e)}
+                              >
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Imprimir extrato</TooltipContent>
+                          </Tooltip>
+                        </TableCell>
                       </TableRow>
                     </CollapsibleTrigger>
                     <CollapsibleContent asChild>
@@ -385,6 +686,7 @@ export default function EntityManagement({ companyId, companies, onCompanyChange
                               )}
                             </TableCell>
                             <TableCell></TableCell>
+                            <TableCell></TableCell>
                           </TableRow>
                         ))}
                       </>
@@ -394,7 +696,7 @@ export default function EntityManagement({ companyId, companies, onCompanyChange
               ))}
               {filteredEntityGroups.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     {searchTerm ? "Nenhum vendor encontrado nesta empresa" : "Nenhum holding encontrado"}
                   </TableCell>
                 </TableRow>
