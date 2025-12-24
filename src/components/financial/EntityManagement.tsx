@@ -4,15 +4,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronRight, Edit2, Search, TrendingDown, TrendingUp, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronRight, Edit2, Search, TrendingDown, TrendingUp, Users, Building2, Info } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import TransactionDialog from "./TransactionDialog";
 import { Input } from "@/components/ui/input";
 
+interface Company {
+  id: string;
+  name: string;
+}
+
 interface EntityManagementProps {
   companyId: string;
+  companies?: Company[];
+  onCompanyChange?: (companyId: string) => void;
 }
 
 interface Transaction {
@@ -35,7 +43,12 @@ interface EntityGroup {
   type: "supplier" | "client" | "mixed";
 }
 
-export default function EntityManagement({ companyId }: EntityManagementProps) {
+interface CrossCompanyResult {
+  entityName: string;
+  companyId: string;
+}
+
+export default function EntityManagement({ companyId, companies, onCompanyChange }: EntityManagementProps) {
   const [expandedEntities, setExpandedEntities] = useState<Set<string>>(new Set());
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -119,6 +132,32 @@ export default function EntityManagement({ companyId }: EntityManagementProps) {
       group.entityName.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [entityGroups, searchTerm]);
+
+  // Cross-company search when no local results
+  const { data: crossCompanyResults } = useQuery({
+    queryKey: ["cross-company-vendors", searchTerm, companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("financial_transactions")
+        .select("entity_name, company_id")
+        .ilike("entity_name", `%${searchTerm}%`)
+        .neq("company_id", companyId);
+
+      if (error) throw error;
+
+      // Group by entity_name and company_id (deduplicate)
+      const grouped = data.reduce<Record<string, CrossCompanyResult>>((acc, item) => {
+        const key = `${item.entity_name}|${item.company_id}`;
+        if (!acc[key]) {
+          acc[key] = { entityName: item.entity_name, companyId: item.company_id };
+        }
+        return acc;
+      }, {});
+
+      return Object.values(grouped);
+    },
+    enabled: !!searchTerm.trim() && filteredEntityGroups.length === 0,
+  });
 
   const toggleEntity = (entityName: string) => {
     setExpandedEntities((prev) => {
@@ -356,12 +395,48 @@ export default function EntityManagement({ companyId }: EntityManagementProps) {
               {filteredEntityGroups.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    {searchTerm ? "Nenhum vendor encontrado" : "Nenhum holding encontrado"}
+                    {searchTerm ? "Nenhum vendor encontrado nesta empresa" : "Nenhum holding encontrado"}
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
+
+          {/* Cross-company results */}
+          {filteredEntityGroups.length === 0 && searchTerm && crossCompanyResults && crossCompanyResults.length > 0 && (
+            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center gap-2 mb-3">
+                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                  Vendor encontrado noutras empresas:
+                </span>
+              </div>
+              <div className="space-y-2">
+                {crossCompanyResults.map((result) => {
+                  const company = companies?.find(c => c.id === result.companyId);
+                  return (
+                    <div key={`${result.entityName}-${result.companyId}`} className="flex items-center justify-between bg-white dark:bg-background/50 p-3 rounded-md border">
+                      <span className="text-sm">
+                        <strong>{result.entityName}</strong>
+                        <span className="text-muted-foreground"> em </span>
+                        {company?.name || "Empresa desconhecida"}
+                      </span>
+                      {onCompanyChange && company && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => onCompanyChange(result.companyId)}
+                        >
+                          <Building2 className="h-4 w-4 mr-1" />
+                          Mudar para {company.name}
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
