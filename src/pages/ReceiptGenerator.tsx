@@ -421,13 +421,8 @@ const ReceiptGenerator = () => {
           </style>
         </head>
         <body>
-          <div class="company-header">
-            <div class="company-info">
-              ${companyInfoHtml}
-            </div>
-            <div class="company-logo">
-              <img src="${logoToUse}" alt="${company?.name || ''}" />
-            </div>
+          <div style="text-align: right; margin-bottom: 20px;">
+            <img src="${logoToUse}" alt="${company?.name || ''}" style="max-width: 200px; height: auto;" />
           </div>
           
           ${receiptNumber ? `<div class="payment-number">Receipt Number: #${receiptNumber}</div>` : ''}
