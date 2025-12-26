@@ -1727,6 +1727,19 @@ export default function WorkFlowTab() {
             setShowExpensePanel(true);
           }
           break;
+        case 'e':
+        case 'E':
+          // Open rename dialog for focused file
+          if (focusedFileId) {
+            e.preventDefault();
+            const file = filteredFiles.find(f => f.id === focusedFileId);
+            if (file) {
+              setFileToRename(file);
+              setNewFileName(file.file_name.replace(/\.[^/.]+$/, ''));
+              setRenameDialogOpen(true);
+            }
+          }
+          break;
       }
     };
     
