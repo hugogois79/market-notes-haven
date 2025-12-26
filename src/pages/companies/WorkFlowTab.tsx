@@ -223,6 +223,10 @@ export default function WorkFlowTab() {
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [activeFilters, setActiveFilters] = useState<FilterCondition[]>([]);
   
+  // Keyboard navigation - focused file row
+  const [focusedFileId, setFocusedFileId] = useState<string | null>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+  
   // Resizable File column width
   const [fileColWidth, setFileColWidth] = useState<number>(() => {
     const saved = localStorage.getItem("workflow-file-col-width");
@@ -1649,6 +1653,62 @@ export default function WorkFlowTab() {
     }));
   };
 
+  // Keyboard navigation for file list
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle if not typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      
+      if (!filteredFiles || filteredFiles.length === 0) return;
+      
+      const currentIndex = focusedFileId 
+        ? filteredFiles.findIndex(f => f.id === focusedFileId)
+        : -1;
+      
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          if (currentIndex < filteredFiles.length - 1) {
+            const nextFile = filteredFiles[currentIndex + 1];
+            setFocusedFileId(nextFile.id);
+            // Scroll row into view
+            const row = document.querySelector(`[data-file-id="${nextFile.id}"]`);
+            row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          } else if (currentIndex === -1 && filteredFiles.length > 0) {
+            const firstFile = filteredFiles[0];
+            setFocusedFileId(firstFile.id);
+          }
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          if (currentIndex > 0) {
+            const prevFile = filteredFiles[currentIndex - 1];
+            setFocusedFileId(prevFile.id);
+            // Scroll row into view
+            const row = document.querySelector(`[data-file-id="${prevFile.id}"]`);
+            row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          }
+          break;
+        case 'Enter':
+          if (focusedFileId) {
+            const file = filteredFiles.find(f => f.id === focusedFileId);
+            if (file) {
+              setPreviewFile(file);
+            }
+          }
+          break;
+        case 'Escape':
+          setFocusedFileId(null);
+          break;
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [filteredFiles, focusedFileId]);
+
   // Bulk actions
   const handleBulkDownload = async () => {
     const filesToDownload = workflowFiles?.filter(f => selectedFiles.has(f.id)) || [];
@@ -2459,8 +2519,16 @@ export default function WorkFlowTab() {
               filteredFiles?.map((file) => (
                 <ContextMenu key={file.id}>
                   <ContextMenuTrigger asChild>
-                    <tr className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-                      <td className="px-3 py-1.5">
+                    <tr 
+                      data-file-id={file.id}
+                      className={cn(
+                        "border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer",
+                        focusedFileId === file.id && "bg-blue-50 ring-1 ring-blue-200"
+                      )}
+                      onClick={() => setFocusedFileId(file.id)}
+                      onDoubleClick={() => setPreviewFile(file)}
+                    >
+                      <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
                         <Checkbox 
                           checked={selectedFiles.has(file.id)}
                           onCheckedChange={() => toggleSelect(file.id)}
@@ -2472,13 +2540,12 @@ export default function WorkFlowTab() {
                       >
                         <div className="flex items-center gap-2 overflow-hidden">
                           <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                          <button 
-                            className="text-xs font-medium text-blue-600 hover:underline cursor-pointer text-left truncate" 
-                            onClick={() => setPreviewFile(file)}
+                          <span 
+                            className="text-xs font-medium text-blue-600 text-left truncate" 
                             title={file.file_name}
                           >
                             {getFileNameWithoutExtension(file.file_name)}
-                          </button>
+                          </span>
                           {/* Pending loan indicator */}
                           {customData[file.id]?._pendingLoan && (
                             <Badge 
