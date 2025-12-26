@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -1559,7 +1559,7 @@ export default function WorkFlowTab() {
     }
   };
 
-  const filteredFiles = workflowFiles?.filter(file => {
+  const filteredFiles = useMemo(() => workflowFiles?.filter(file => {
     // Search filter
     const matchesSearch = file.file_name.toLowerCase().includes(searchQuery.toLowerCase());
     
@@ -1643,7 +1643,7 @@ export default function WorkFlowTab() {
     if (aValue < bValue) return -1 * multiplier;
     if (aValue > bValue) return 1 * multiplier;
     return 0;
-  });
+  }), [workflowFiles, searchQuery, activeFilters, transactionsByFileUrl, columns, customData, sortConfig]);
 
   // Sort handler
   const handleSort = (columnId: string) => {
