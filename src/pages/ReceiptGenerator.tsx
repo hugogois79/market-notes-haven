@@ -278,17 +278,6 @@ const ReceiptGenerator = () => {
     }
     const companyInfoHtml = companyInfo.join('');
 
-    // Build issuer section for print (Pagador - who is paying)
-    const issuerSection = `
-      <div class="issuer-section">
-        <p style="font-size: 10px; color: #666; margin: 0 0 5px 0; font-weight: bold;">Pagador:</p>
-        ${company?.name ? `<p style="font-size: 11px; font-weight: bold; margin: 2px 0;">${company.name}</p>` : ''}
-        ${company?.address ? `<p style="font-size: 10px; margin: 2px 0;">${company.address}</p>` : ''}
-        ${(company?.nipc || company?.company_number) ? `<p style="font-size: 10px; margin: 2px 0;"><strong>NIF:</strong> ${company.nipc || company.company_number}</p>` : ''}
-        ${company?.bank_name ? `<p style="font-size: 10px; margin: 2px 0;"><strong>Banco:</strong> ${company.bank_name}</p>` : ''}
-        ${company?.bank_account ? `<p style="font-size: 10px; margin: 2px 0;"><strong>IBAN:</strong> ${company.bank_account}</p>` : ''}
-      </div>
-    `;
 
     // Beneficiary section (Beneficiário - who receives payment)
     const beneficiarySection = beneficiaryName ? `
@@ -431,7 +420,6 @@ const ReceiptGenerator = () => {
           ${receiptNumber ? `<div class="payment-number">Receipt Number: #${receiptNumber}</div>` : ''}
           
           <div class="parties-header">
-            ${issuerSection}
             ${beneficiarySection}
           </div>
           
