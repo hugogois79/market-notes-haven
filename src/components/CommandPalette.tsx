@@ -45,7 +45,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     { icon: Home, label: 'Dashboard', shortcut: 'G I', path: '/' },
     { icon: FileText, label: 'Notas', shortcut: 'G N', path: '/notes' },
     { icon: Calendar, label: 'Calendário', shortcut: 'G C', path: '/calendar' },
-    { icon: Layout, label: 'Kanban', shortcut: 'G K', path: '/kanban' },
+    { icon: Layout, label: 'Boards', shortcut: 'G K', path: '/kanban', keywords: ['kanban', 'boards'] },
     { icon: FolderOpen, label: 'Projetos', shortcut: 'G P', path: '/projects' },
     { icon: Receipt, label: 'Despesas', shortcut: 'G E', path: '/expenses' },
     { icon: Building2, label: 'Workflow', shortcut: 'G W', path: '/companies', keywords: ['work', 'empresas', 'companies'] },
