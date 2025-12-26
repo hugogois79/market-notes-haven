@@ -225,6 +225,7 @@ export default function WorkFlowTab() {
   
   // Keyboard navigation - focused file row
   const [focusedFileId, setFocusedFileId] = useState<string | null>(null);
+  const [openMenuFileId, setOpenMenuFileId] = useState<string | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   
   // Resizable File column width
@@ -1729,15 +1730,10 @@ export default function WorkFlowTab() {
           break;
         case 'e':
         case 'E':
-          // Open rename dialog for focused file
+          // Open action menu for focused file
           if (focusedFileId) {
             e.preventDefault();
-            const file = filteredFiles.find(f => f.id === focusedFileId);
-            if (file) {
-              setFileToRename(file);
-              setNewFileName(file.file_name.replace(/\.[^/.]+$/, ''));
-              setRenameDialogOpen(true);
-            }
+            setOpenMenuFileId(focusedFileId);
           }
           break;
       }
@@ -2761,7 +2757,10 @@ export default function WorkFlowTab() {
                       {/* Empty cell for add column button */}
                       <td className="px-3 py-1.5"></td>
                       <td className="px-3 py-1.5">
-                        <DropdownMenu>
+                        <DropdownMenu 
+                          open={openMenuFileId === file.id}
+                          onOpenChange={(open) => setOpenMenuFileId(open ? file.id : null)}
+                        >
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-7 w-7">
                               <MoreHorizontal className="h-4 w-4" />
