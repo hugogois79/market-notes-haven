@@ -590,48 +590,15 @@ const ReceiptGenerator = () => {
                     </div>
                   )}
 
-                  {/* Parties Header - Pagador (left) and Beneficiário (right) */}
-                  <div className="flex justify-between items-start mb-6 py-4">
-                    {/* Pagador - Who is paying (LEFT) */}
-                    <div className="text-left flex-1">
-                      {(() => {
-                        const isEpic = content.toLowerCase().includes('epicatmosphere') || 
-                                      generatedReceipt.toLowerCase().includes('epicatmosphere');
-                        const company = isEpic 
-                          ? getCompanyData('epic atmosphere')
-                          : getCompanyData('sustainable yield');
-                        
-                        return (
-                          <>
-                            <p className="text-xs text-muted-foreground font-semibold mb-1">Pagador:</p>
-                            {company?.name && (
-                              <p className="text-xs font-bold">{company.name}</p>
-                            )}
-                            {company?.address && (
-                              <p className="text-xs">{company.address}</p>
-                            )}
-                            {(company?.nipc || company?.company_number) && (
-                              <p className="text-xs"><span className="font-medium">NIF:</span> {company.nipc || company.company_number}</p>
-                            )}
-                            {company?.bank_name && (
-                              <p className="text-xs"><span className="font-medium">Banco:</span> {company.bank_name}</p>
-                            )}
-                            {company?.bank_account && (
-                              <p className="text-xs"><span className="font-medium">IBAN:</span> {company.bank_account}</p>
-                            )}
-                          </>
-                        );
-                      })()}
-                    </div>
-                    
-                    {/* Beneficiário - Who is receiving (RIGHT) */}
-                    {beneficiaryName && (
-                      <div className="text-right flex-1">
+                  {/* Beneficiário Header */}
+                  {beneficiaryName && (
+                    <div className="mb-6 py-4">
+                      <div className="text-right">
                         <p className="text-xs text-muted-foreground font-semibold mb-1">Beneficiário:</p>
                         <p className="text-sm font-bold">{beneficiaryName}</p>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                   
                   {/* Receipt Content */}
                   <div 
