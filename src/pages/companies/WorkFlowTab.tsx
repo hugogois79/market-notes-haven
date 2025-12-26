@@ -1702,12 +1702,20 @@ export default function WorkFlowTab() {
         case 'Escape':
           setFocusedFileId(null);
           break;
+        case 'n':
+        case 'N':
+          // Open new movement panel when viewing a document
+          if (previewFile) {
+            e.preventDefault();
+            setShowExpensePanel(true);
+          }
+          break;
       }
     };
     
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [filteredFiles, focusedFileId]);
+  }, [filteredFiles, focusedFileId, previewFile]);
 
   // Bulk actions
   const handleBulkDownload = async () => {
