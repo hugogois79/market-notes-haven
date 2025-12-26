@@ -1051,7 +1051,7 @@ export default function YearCalendar() {
             ) : (
               <span 
                 className={`break-words text-center leading-tight w-full text-[9px] ${!isPast && morningEvent ? 'font-bold' : ''}`}
-                style={morningEvent && morningStyle.textColor ? { color: morningStyle.textColor } : undefined}
+                style={morningEvent ? { color: isPast ? '#64748b' : (morningStyle.textColor || undefined) } : undefined}
                 title={morningEvent?.title || ''}
               >
                 {morningEvent?.title || ''}
@@ -1097,7 +1097,7 @@ export default function YearCalendar() {
             ) : (
               <span 
                 className={`break-words text-center leading-tight w-full text-[9px] ${!isPast && afternoonEvent ? 'font-bold' : ''}`}
-                style={afternoonEvent && afternoonStyle.textColor ? { color: afternoonStyle.textColor } : undefined}
+                style={afternoonEvent ? { color: isPast ? '#64748b' : (afternoonStyle.textColor || undefined) } : undefined}
                 title={afternoonEvent?.title || ''}
               >
                 {afternoonEvent?.title || ''}
