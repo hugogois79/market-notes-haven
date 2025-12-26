@@ -48,7 +48,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     { icon: Layout, label: 'Kanban', shortcut: 'G K', path: '/kanban' },
     { icon: FolderOpen, label: 'Projetos', shortcut: 'G P', path: '/projects' },
     { icon: Receipt, label: 'Despesas', shortcut: 'G E', path: '/expenses' },
-    { icon: Building2, label: 'Empresas', path: '/companies' },
+    { icon: Building2, label: 'Workflow', shortcut: 'G W', path: '/companies', keywords: ['work', 'empresas', 'companies'] },
     { icon: Wallet, label: 'Crypto', path: '/crypto' },
     { icon: Scale, label: 'Legal', path: '/legal' },
     { icon: Settings, label: 'Definições', shortcut: 'G S', path: '/settings' },

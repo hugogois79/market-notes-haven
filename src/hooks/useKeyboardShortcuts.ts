@@ -92,6 +92,10 @@ export const useKeyboardShortcuts = ({
           e.preventDefault();
           navigate('/expenses');
           break;
+        case 'w': // G + W: Go to Workflow
+          e.preventDefault();
+          navigate('/companies');
+          break;
         case 's': // G + S: Go to Settings
           e.preventDefault();
           navigate('/settings');
@@ -129,6 +133,7 @@ export const KEYBOARD_SHORTCUTS = [
       { keys: ['G', 'K'], description: 'Ir para Kanban' },
       { keys: ['G', 'P'], description: 'Ir para Projetos' },
       { keys: ['G', 'E'], description: 'Ir para Despesas' },
+      { keys: ['G', 'W'], description: 'Ir para Workflow' },
       { keys: ['G', 'S'], description: 'Ir para Definições' },
     ],
   },
