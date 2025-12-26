@@ -1673,12 +1673,14 @@ export default function WorkFlowTab() {
           if (currentIndex < filteredFiles.length - 1) {
             const nextFile = filteredFiles[currentIndex + 1];
             setFocusedFileId(nextFile.id);
-            // Scroll row into view
+            // Scroll row into view - use inline: 'nearest' to prevent horizontal scroll
             const row = document.querySelector(`[data-file-id="${nextFile.id}"]`);
-            row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            row?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
           } else if (currentIndex === -1 && filteredFiles.length > 0) {
             const firstFile = filteredFiles[0];
             setFocusedFileId(firstFile.id);
+            const row = document.querySelector(`[data-file-id="${firstFile.id}"]`);
+            row?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
           }
           break;
         case 'ArrowUp':
@@ -1686,9 +1688,9 @@ export default function WorkFlowTab() {
           if (currentIndex > 0) {
             const prevFile = filteredFiles[currentIndex - 1];
             setFocusedFileId(prevFile.id);
-            // Scroll row into view
+            // Scroll row into view - use inline: 'nearest' to prevent horizontal scroll
             const row = document.querySelector(`[data-file-id="${prevFile.id}"]`);
-            row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            row?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
           }
           break;
         case 'Enter':
