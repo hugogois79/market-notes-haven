@@ -1673,14 +1673,24 @@ export default function WorkFlowTab() {
           if (currentIndex < filteredFiles.length - 1) {
             const nextFile = filteredFiles[currentIndex + 1];
             setFocusedFileId(nextFile.id);
-            // Scroll row into view - use inline: 'nearest' to prevent horizontal scroll
+            // Scroll row into view - preserve horizontal scroll position
+            const container = document.querySelector('[data-workflow-table-container]') as HTMLElement;
+            const prevScrollLeft = container?.scrollLeft ?? 0;
             const row = document.querySelector(`[data-file-id="${nextFile.id}"]`);
-            row?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+            row?.scrollIntoView({ block: 'nearest' });
+            if (container) {
+              requestAnimationFrame(() => { container.scrollLeft = prevScrollLeft; });
+            }
           } else if (currentIndex === -1 && filteredFiles.length > 0) {
             const firstFile = filteredFiles[0];
             setFocusedFileId(firstFile.id);
+            const container = document.querySelector('[data-workflow-table-container]') as HTMLElement;
+            const prevScrollLeft = container?.scrollLeft ?? 0;
             const row = document.querySelector(`[data-file-id="${firstFile.id}"]`);
-            row?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+            row?.scrollIntoView({ block: 'nearest' });
+            if (container) {
+              requestAnimationFrame(() => { container.scrollLeft = prevScrollLeft; });
+            }
           }
           break;
         case 'ArrowUp':
@@ -1688,9 +1698,14 @@ export default function WorkFlowTab() {
           if (currentIndex > 0) {
             const prevFile = filteredFiles[currentIndex - 1];
             setFocusedFileId(prevFile.id);
-            // Scroll row into view - use inline: 'nearest' to prevent horizontal scroll
+            // Scroll row into view - preserve horizontal scroll position
+            const container = document.querySelector('[data-workflow-table-container]') as HTMLElement;
+            const prevScrollLeft = container?.scrollLeft ?? 0;
             const row = document.querySelector(`[data-file-id="${prevFile.id}"]`);
-            row?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+            row?.scrollIntoView({ block: 'nearest' });
+            if (container) {
+              requestAnimationFrame(() => { container.scrollLeft = prevScrollLeft; });
+            }
           }
           break;
         case 'Enter':
@@ -2317,6 +2332,7 @@ export default function WorkFlowTab() {
 
       {/* Files Table with Drag & Drop */}
       <div 
+        data-workflow-table-container
         className={`border rounded-lg bg-white shadow-sm overflow-x-auto transition-colors relative ${
           isDragging ? "border-blue-500 border-2 bg-blue-50" : "border-slate-200"
         }`}
