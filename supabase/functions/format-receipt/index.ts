@@ -88,7 +88,7 @@ CRITICAL - COMPANY HEADER INSTRUCTIONS:
 1. DO NOT include company header at the top - the system automatically adds the payment author's company logo and details
 2. DO NOT include company name, registration number, address, email, or bank details at the beginning
 3. DO NOT add placeholder text like "[Adicionar se disponível]" or "[email@example.com]"
-4. DO include a horizontal line separator at the top if it helps structure
+4. DO NOT include any horizontal line separators at the top - start directly with the payer section
 5. Start with payment number (if available) and then the payer section
 6. The payment author's information (company issuing the receipt) is added automatically by the system
 
@@ -102,7 +102,7 @@ ABSOLUTELY CRITICAL - CONTENT EXTRACTION:
 CRITICAL INSTRUCTIONS - READ CAREFULLY:
 1. DO NOT include company header at the top - this is handled by the system
 2. DO NOT add placeholder fields for missing information
-3. Start with a horizontal separator line
+3. DO NOT include horizontal separator lines - start directly with the payer section
 4. Then proceed with the payer information and payment details sections
 
 FORMAT INSTRUCTIONS:
@@ -139,7 +139,6 @@ ${language === 'English' ? `
 EXAMPLE FOR ENGLISH:
 <div style="font-family: 'Lato', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
   <!-- COMPANY HEADER - DO NOT INCLUDE, HEADER IS HANDLED BY THE SYSTEM -->
-  <hr style="border: none; border-top: 1px solid #ccc; margin: 15px 0;" />
   
   <div style="margin: 15px 0; text-align: right;">
     <p style="font-weight: bold; margin: 10px 0;">Payer:</p>
@@ -160,7 +159,6 @@ EXAMPLE FOR ENGLISH:
 EXAMPLE FOR PORTUGUESE:
 <div style="font-family: 'Lato', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
   <!-- CABEÇALHO DA EMPRESA - NÃO INCLUIR, O CABEÇALHO É TRATADO PELO SISTEMA -->
-  <hr style="border: none; border-top: 1px solid #ccc; margin: 15px 0;" />
   
   <div style="margin: 15px 0; text-align: right;">
     <p style="font-weight: bold; margin: 10px 0;">Pagador:</p>
@@ -273,8 +271,8 @@ CRITICAL RULES - MUST FOLLOW:
 - ABSOLUTELY NO markdown formatting (NO code blocks, NO backticks of any kind)
 - DO NOT include company header - the system handles this
 - DO NOT add placeholder text for missing fields
-- Start with a horizontal line separator
-- Then proceed with the beneficiary and payment sections
+- DO NOT include horizontal separator lines - start directly with the payer section
+- Then proceed with the payer and payment sections
 - CRITICAL: Generate ALL labels and text in ${language} ONLY - no mixing of languages
 - CRITICAL: Extract ALL information from the provided content accurately - INCLUDE EVERYTHING
 - Use professional formatting with proper spacing and alignment
