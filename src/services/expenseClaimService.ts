@@ -75,6 +75,7 @@ export const expenseClaimService = {
     description: string;
     claim_date: string;
     status?: 'rascunho' | 'submetido';
+    requester_id?: string | null;
   }) {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) throw new Error('User not authenticated');
@@ -89,6 +90,7 @@ export const expenseClaimService = {
           claim_date: claim.claim_date,
           status: claim.status || 'rascunho',
           total_amount: 0,
+          requester_id: claim.requester_id || null,
         },
       ])
       .select()
