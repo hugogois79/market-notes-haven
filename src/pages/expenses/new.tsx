@@ -33,7 +33,7 @@ import {
 import { expenseClaimService, Expense } from "@/services/expenseClaimService";
 
 import { supplierService } from "@/services/supplierService";
-import { expenseUserService } from "@/services/expenseUserService";
+import { expenseRequesterService } from "@/services/expenseRequesterService";
 import { formatCurrency, cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
@@ -74,18 +74,18 @@ const NewExpensePage = () => {
     category_id: "",
   });
 
-  // Get expense users for dropdown (instead of requesters)
-  const { data: expenseUsers } = useQuery({
-    queryKey: ["expense-users"],
-    queryFn: () => expenseUserService.getUsers(),
+  // Get expense requesters for dropdown
+  const { data: expenseRequesters } = useQuery({
+    queryKey: ["expense-requesters"],
+    queryFn: () => expenseRequesterService.getRequesters(),
   });
 
-  // Get the selected user's assigned projects
-  const selectedUser = expenseUsers?.find(u => u.id === requesterId);
+  // Get the selected requester's assigned projects
+  const selectedRequester = expenseRequesters?.find(r => r.id === requesterId);
 
-  // Get projects for dropdown - filtered by selected user's assigned projects
+  // Get projects for dropdown - filtered by selected requester's assigned projects
   const { data: projects } = useQuery({
-    queryKey: ["expense-projects", selectedUser?.assigned_project_ids],
+    queryKey: ["expense-projects", selectedRequester?.assigned_project_ids],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expense_projects")
@@ -94,9 +94,9 @@ const NewExpensePage = () => {
         .order("name", { ascending: true });
       if (error) throw error;
       
-      // Filter by selected user's assigned projects
-      if (selectedUser?.assigned_project_ids?.length) {
-        const filtered = data?.filter(p => selectedUser.assigned_project_ids!.includes(p.id)) || [];
+      // Filter by selected requester's assigned projects
+      if (selectedRequester?.assigned_project_ids?.length) {
+        const filtered = data?.filter(p => selectedRequester.assigned_project_ids!.includes(p.id)) || [];
         return filtered.sort((a, b) => a.name.localeCompare(b.name));
       }
       
@@ -432,9 +432,9 @@ const NewExpensePage = () => {
                   <SelectValue placeholder="Selecione o requisitante" />
                 </SelectTrigger>
                 <SelectContent>
-                  {expenseUsers?.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name}
+                  {expenseRequesters?.map((requester) => (
+                    <SelectItem key={requester.id} value={requester.id}>
+                      {requester.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
