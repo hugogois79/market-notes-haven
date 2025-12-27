@@ -101,6 +101,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
       monthly_payment: "",
       end_date: "",
       loan_status: "active",
+      // Document-specific fields
+      target_folder_id: "",
     },
   });
 
@@ -207,6 +209,23 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   const selectedCompanyId = watch("company_id");
   const transactionType = watch("type");
   const isLoan = transactionType === "loan";
+  const isDocument = transactionType === "document";
+
+  // Fetch folders for the selected company (for document type)
+  const { data: companyFolders } = useQuery({
+    queryKey: ["company-folders", selectedCompanyId],
+    queryFn: async () => {
+      if (!selectedCompanyId) return [];
+      const { data, error } = await supabase
+        .from("company_folders")
+        .select("id, name, parent_folder_id")
+        .eq("company_id", selectedCompanyId)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedCompanyId && isDocument,
+  });
 
   // Note: We no longer clear bank_account_id when company changes
   // because we allow cross-company payments (which auto-create loans)
@@ -403,6 +422,40 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         return; // Exit without creating DB records
       }
 
+      // Handle document type - copy file to company_documents
+      if (data.type === "document") {
+        // Create a document entry in the company_documents table
+        const documentData = {
+          company_id: data.company_id,
+          folder_id: data.target_folder_id || null,
+          name: attachmentName || file.file_name,
+          file_url: attachmentUrl || file.file_url,
+          document_type: "arquivo",
+          notes: data.notes || null,
+          uploaded_by: userData.user.id,
+        };
+
+        const { error: docError } = await supabase
+          .from("company_documents")
+          .insert(documentData);
+        
+        if (docError) throw docError;
+
+        // Update workflow_files with the new filename if it changed
+        if (attachmentName !== file.file_name) {
+          const { error: fileUpdateError } = await supabase
+            .from("workflow_files")
+            .update({ file_name: attachmentName })
+            .eq("id", file.id);
+          if (fileUpdateError) throw fileUpdateError;
+        }
+
+        queryClient.invalidateQueries({ queryKey: ["company-documents"] });
+        toast.success("Documento guardado com sucesso");
+        onSaved?.({ fileName: attachmentName, fileUrl: attachmentUrl });
+        return;
+      }
+
       const isNotification = data.type === "notification";
       
       const transactionData = {
@@ -506,6 +559,18 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
             return;
           }
 
+          // Validation for document type
+          if (data.type === "document") {
+            if (!data.company_id) {
+              toast.error("Selecione a empresa");
+              return;
+            }
+            if (!data.target_folder_id) {
+              toast.error("Selecione a pasta de destino");
+              return;
+            }
+          }
+
           // Validation for loan type
           if (data.type === "loan") {
             if (!data.lending_company_id) {
@@ -539,7 +604,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                 <SelectContent>
                   <SelectItem value="expense">Despesa</SelectItem>
                   <SelectItem value="income">Receita</SelectItem>
-                  <SelectItem value="notification">Notificação</SelectItem>
+                  <SelectItem value="document">Documento</SelectItem>
                   <SelectItem value="receipt">Recibo</SelectItem>
                   <SelectItem value="loan">Empréstimo</SelectItem>
                 </SelectContent>
@@ -547,8 +612,61 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
             </div>
           </div>
 
-          {/* LOAN-SPECIFIC FIELDS */}
-          {isLoan ? (
+          {/* DOCUMENT-SPECIFIC FIELDS */}
+          {isDocument ? (
+            <>
+              {/* Company */}
+              <div>
+                <Label className="text-xs">Empresa *</Label>
+                <Select onValueChange={(value) => {
+                  setValue("company_id", value);
+                  setValue("target_folder_id", ""); // Reset folder when company changes
+                }} value={watch("company_id")}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies?.map((company) => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Target Folder */}
+              {selectedCompanyId && (
+                <div>
+                  <Label className="text-xs">Pasta de Destino *</Label>
+                  <Select onValueChange={(value) => setValue("target_folder_id", value)} value={watch("target_folder_id")}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="Selecione uma pasta..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companyFolders?.map((folder) => (
+                        <SelectItem key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Description */}
+              <div>
+                <Label className="text-xs">Descrição</Label>
+                <Input {...register("description")} className="h-9 text-sm" placeholder="Descrição do documento" />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <Label className="text-xs">Notas</Label>
+                <Textarea {...register("notes")} className="text-sm min-h-[60px]" placeholder="Notas adicionais..." />
+              </div>
+            </>
+          ) : isLoan ? (
             <>
               {/* Lending Company */}
               <div>
