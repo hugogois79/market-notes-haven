@@ -228,12 +228,19 @@ export default function WorkFlowTab() {
   const [openMenuFileId, setOpenMenuFileId] = useState<string | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   
-  // Resizable File column width
-  const [fileColWidth, setFileColWidth] = useState<number>(() => {
-    const saved = localStorage.getItem("workflow-file-col-width");
-    return saved ? parseInt(saved, 10) : 400;
+  // Resizable column widths
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem("workflow-column-widths");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return { name: 400 };
+      }
+    }
+    return { name: 400 };
   });
-  const [isResizing, setIsResizing] = useState(false);
+  const [resizingColumn, setResizingColumn] = useState<string | null>(null);
   const resizeStartX = useRef<number>(0);
   const resizeStartWidth = useRef<number>(400);
   // Current filter being edited
@@ -1499,27 +1506,30 @@ export default function WorkFlowTab() {
     await uploadFiles(Array.from(files));
   }, []);
 
-  // Resize handlers for File column
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+  // Resize handlers for columns
+  const handleColumnResizeStart = useCallback((e: React.MouseEvent, columnId: string, defaultWidth: number) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsResizing(true);
+    setResizingColumn(columnId);
     resizeStartX.current = e.clientX;
-    resizeStartWidth.current = fileColWidth;
-  }, [fileColWidth]);
+    resizeStartWidth.current = columnWidths[columnId] ?? defaultWidth;
+  }, [columnWidths]);
 
   useEffect(() => {
-    if (!isResizing) return;
+    if (!resizingColumn) return;
     
     const handleMouseMove = (e: MouseEvent) => {
       const delta = e.clientX - resizeStartX.current;
-      const newWidth = Math.max(150, Math.min(800, resizeStartWidth.current + delta));
-      setFileColWidth(newWidth);
+      const newWidth = Math.max(80, Math.min(800, resizeStartWidth.current + delta));
+      setColumnWidths(prev => ({ ...prev, [resizingColumn]: newWidth }));
     };
     
     const handleMouseUp = () => {
-      setIsResizing(false);
-      localStorage.setItem("workflow-file-col-width", String(fileColWidth));
+      setColumnWidths(prev => {
+        localStorage.setItem("workflow-column-widths", JSON.stringify(prev));
+        return prev;
+      });
+      setResizingColumn(null);
     };
     
     document.addEventListener("mousemove", handleMouseMove);
@@ -1529,7 +1539,10 @@ export default function WorkFlowTab() {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isResizing, fileColWidth]);
+  }, [resizingColumn]);
+  
+  // Helper to get column width
+  const getColumnWidth = (columnId: string, defaultWidth: number) => columnWidths[columnId] ?? defaultWidth;
 
   const handleDownload = async (file: WorkflowFile) => {
     try {
@@ -2374,7 +2387,7 @@ export default function WorkFlowTab() {
               </th>
               <th 
                 className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
-                style={{ width: fileColWidth, minWidth: 150, maxWidth: 800 }}
+                style={{ width: getColumnWidth('name', 400), minWidth: 150, maxWidth: 800 }}
                 onClick={() => handleSort('name')}
               >
                 <div className="flex items-center gap-1">
@@ -2386,13 +2399,14 @@ export default function WorkFlowTab() {
                 {/* Resize handle */}
                 <div 
                   className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
-                  onMouseDown={handleResizeStart}
+                  onMouseDown={(e) => handleColumnResizeStart(e, 'name', 400)}
                   onClick={(e) => e.stopPropagation()}
                 />
               </th>
               {isColumnVisible("type") && (
                 <th 
-                  className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs w-16 cursor-pointer hover:bg-slate-100"
+                  className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
+                  style={{ width: getColumnWidth('type', 64), minWidth: 50 }}
                   onClick={() => handleSort('type')}
                 >
                   <div className="flex items-center justify-center gap-1">
@@ -2401,11 +2415,17 @@ export default function WorkFlowTab() {
                       sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                     )}
                   </div>
+                  <div 
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                    onMouseDown={(e) => handleColumnResizeStart(e, 'type', 64)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
                 </th>
               )}
               {isColumnVisible("date") && (
                 <th 
-                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs w-28 cursor-pointer hover:bg-slate-100"
+                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
+                  style={{ width: getColumnWidth('date', 112), minWidth: 80 }}
                   onClick={() => handleSort('date')}
                 >
                   <div className="flex items-center gap-1">
@@ -2414,10 +2434,18 @@ export default function WorkFlowTab() {
                       sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                     )}
                   </div>
+                  <div 
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                    onMouseDown={(e) => handleColumnResizeStart(e, 'date', 112)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
                 </th>
               )}
               {isColumnVisible("category") && (
-                <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs w-28">
+                <th 
+                  className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs relative select-none"
+                  style={{ width: getColumnWidth('category', 112), minWidth: 80 }}
+                >
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button 
@@ -2440,10 +2468,18 @@ export default function WorkFlowTab() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  <div 
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                    onMouseDown={(e) => handleColumnResizeStart(e, 'category', 112)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
                 </th>
               )}
               {isColumnVisible("status") && (
-                <th className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs w-28">
+                <th 
+                  className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs relative select-none"
+                  style={{ width: getColumnWidth('status', 112), minWidth: 80 }}
+                >
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button 
@@ -2466,11 +2502,17 @@ export default function WorkFlowTab() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  <div 
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                    onMouseDown={(e) => handleColumnResizeStart(e, 'status', 112)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
                 </th>
               )}
               {isColumnVisible("size") && (
                 <th 
-                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs w-20 cursor-pointer hover:bg-slate-100"
+                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
+                  style={{ width: getColumnWidth('size', 80), minWidth: 60 }}
                   onClick={() => handleSort('size')}
                 >
                   <div className="flex items-center gap-1">
@@ -2479,11 +2521,17 @@ export default function WorkFlowTab() {
                       sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                     )}
                   </div>
+                  <div 
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                    onMouseDown={(e) => handleColumnResizeStart(e, 'size', 80)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
                 </th>
               )}
               {isColumnVisible("empresa") && (
                 <th 
-                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs w-32 cursor-pointer hover:bg-slate-100"
+                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
+                  style={{ width: getColumnWidth('empresa', 128), minWidth: 80 }}
                   onClick={() => handleSort('empresa')}
                 >
                   <div className="flex items-center gap-1">
@@ -2492,11 +2540,17 @@ export default function WorkFlowTab() {
                       sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                     )}
                   </div>
+                  <div 
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                    onMouseDown={(e) => handleColumnResizeStart(e, 'empresa', 128)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
                 </th>
               )}
               {isColumnVisible("project") && (
                 <th 
-                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs w-32 cursor-pointer hover:bg-slate-100"
+                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
+                  style={{ width: getColumnWidth('project', 128), minWidth: 80 }}
                   onClick={() => handleSort('project')}
                 >
                   <div className="flex items-center gap-1">
@@ -2505,11 +2559,17 @@ export default function WorkFlowTab() {
                       sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                     )}
                   </div>
+                  <div 
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                    onMouseDown={(e) => handleColumnResizeStart(e, 'project', 128)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
                 </th>
               )}
               {isColumnVisible("value") && (
                 <th 
-                  className="text-right px-3 py-2.5 font-semibold text-slate-700 text-xs w-24 cursor-pointer hover:bg-slate-100"
+                  className="text-right px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
+                  style={{ width: getColumnWidth('value', 96), minWidth: 70 }}
                   onClick={() => handleSort('value')}
                 >
                   <div className="flex items-center justify-end gap-1">
@@ -2518,6 +2578,11 @@ export default function WorkFlowTab() {
                       sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                     )}
                   </div>
+                  <div 
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                    onMouseDown={(e) => handleColumnResizeStart(e, 'value', 96)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
                 </th>
               )}
               {/* Custom columns headers */}
@@ -2577,7 +2642,7 @@ export default function WorkFlowTab() {
                       </td>
                       <td 
                         className="px-3 py-1.5" 
-                        style={{ width: fileColWidth, minWidth: 150, maxWidth: 800 }}
+                        style={{ width: getColumnWidth('name', 400), minWidth: 150, maxWidth: 800 }}
                       >
                         <div className="flex items-center gap-2 overflow-hidden">
                           <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
