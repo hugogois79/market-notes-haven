@@ -282,7 +282,7 @@ const NewExpensePage = () => {
           description,
           claim_date: claimDate,
           status: "rascunho",
-          requester_id: requesterId || null,
+          requester_id: requesterId && requesterId.trim() !== "" ? requesterId : null,
         });
         claimId = claim.id;
         setCurrentClaimId(claim.id);
