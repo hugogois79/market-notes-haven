@@ -1101,6 +1101,26 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                       return;
                     }
 
+                    // Handle document type - Descrição (Data) Empresa
+                    if (values.type === "document") {
+                      const description = values.description || "Documento";
+                      const companyId = values.company_id;
+                      
+                      // Get company name
+                      const companyName = companies?.find((c) => c.id === companyId)?.name || "Empresa";
+                      
+                      // Clean names (remove invalid characters)
+                      const cleanDescription = description.replace(/[<>:"/\\|?*,]/g, "").trim();
+                      const cleanCompany = companyName.replace(/[<>:"/\\|?*,]/g, "").trim();
+                      
+                      // Build name: Descrição (Data) Empresa.ext
+                      const newName = `${cleanDescription} (${formattedDate}) ${cleanCompany}.${extension}`;
+                      
+                      setAttachmentName(newName);
+                      toast.success(`Ficheiro renomeado para: ${newName}`);
+                      return;
+                    }
+
                     // Regular transaction naming
                     const supplierName = values.entity_name || "Fornecedor";
                     const totalValue = values.total_amount;
