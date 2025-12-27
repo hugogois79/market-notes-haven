@@ -40,6 +40,52 @@ serve(async (req) => {
         );
       }
 
+      // Check if user already exists in auth
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = existingUsers?.users?.find(u => u.email === email);
+      
+      if (existingUser) {
+        // Check if expense_user record exists
+        const { data: existingExpenseUser } = await supabaseAdmin
+          .from("expense_users")
+          .select()
+          .eq("user_id", existingUser.id)
+          .single();
+        
+        if (existingExpenseUser) {
+          return new Response(
+            JSON.stringify({ error: "Este utilizador já está registado no sistema" }),
+            { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        // User exists in auth but not in expense_users - create expense_user record
+        const { data: expenseUser, error: expenseError } = await supabaseAdmin
+          .from("expense_users")
+          .insert({
+            user_id: existingUser.id,
+            name: name || email,
+            email,
+            assigned_project_ids: assigned_project_ids || [],
+            is_active: true,
+          })
+          .select()
+          .single();
+
+        if (expenseError) {
+          console.error("Error creating expense user for existing auth user:", expenseError);
+          return new Response(
+            JSON.stringify({ error: expenseError.message }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ user: expenseUser, auth_user_id: existingUser.id, linked_existing: true }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       // Create auth user
       const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
@@ -49,8 +95,11 @@ serve(async (req) => {
 
       if (authError) {
         console.error("Error creating auth user:", authError);
+        const errorMessage = authError.message.includes("already been registered") 
+          ? "Este email já está registado no sistema"
+          : authError.message;
         return new Response(
-          JSON.stringify({ error: authError.message }),
+          JSON.stringify({ error: errorMessage }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
