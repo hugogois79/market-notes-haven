@@ -2013,7 +2013,7 @@ export default function WorkFlowTab() {
   return (
     <div className="space-y-4">
       {/* Top Toolbar */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2">
         <input
           type="file"
           ref={fileInputRef}
@@ -2024,7 +2024,7 @@ export default function WorkFlowTab() {
         <Button 
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="bg-blue-600 hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-700 flex-shrink-0"
         >
           <Upload className="h-4 w-4 mr-2" />
           {isUploading ? "Uploading..." : "Upload"}
@@ -2033,7 +2033,7 @@ export default function WorkFlowTab() {
         {/* Columns Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1 h-7 text-xs px-2">
+            <Button variant="outline" size="sm" className="gap-1 h-7 text-xs px-2 flex-shrink-0">
               <Columns className="h-3 w-3" />
               Columns
               <ChevronDown className="h-2.5 w-2.5" />
@@ -2188,7 +2188,7 @@ export default function WorkFlowTab() {
         <div className="flex-1" />
         
         {/* Horizontal Filter Controls */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {/* Show active filters as badges */}
           {activeFilters.map(filter => {
             const col = getFilterableColumns().find(c => c.id === filter.column);
