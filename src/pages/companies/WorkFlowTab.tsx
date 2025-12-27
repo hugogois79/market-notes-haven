@@ -1662,6 +1662,12 @@ export default function WorkFlowTab() {
         return;
       }
       
+      // If dropdown menu is open, don't handle arrow navigation
+      // (let the menu handle its own keyboard navigation)
+      if (openMenuFileId && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        return;
+      }
+      
       if (!filteredFiles || filteredFiles.length === 0) return;
       
       const currentIndex = focusedFileId 
@@ -1741,7 +1747,7 @@ export default function WorkFlowTab() {
     
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [filteredFiles, focusedFileId, previewFile]);
+  }, [filteredFiles, focusedFileId, previewFile, openMenuFileId]);
 
   // Bulk actions
   const handleBulkDownload = async () => {
