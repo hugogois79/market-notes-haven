@@ -63,6 +63,7 @@ interface DocumentVaultTableProps {
   getStatusOptions: (folderId: string | null) => ColumnOption[];
   setLoadMoreElement: (element: HTMLDivElement | null) => void;
   currentFolderId: string | null;
+  onMoveToFolder?: (docIds: string[], targetFolderId: string | null) => void;
 }
 
 const ROW_HEIGHT = 40;
@@ -134,8 +135,11 @@ export function DocumentVaultTable({
   getStatusOptions,
   setLoadMoreElement,
   currentFolderId,
+  onMoveToFolder,
 }: DocumentVaultTableProps) {
   const parentRef = useRef<HTMLDivElement>(null);
+  const [draggedDocId, setDraggedDocId] = useState<string | null>(null);
+  const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null);
 
   // Combine folders and documents for the table
   const tableData = useMemo(() => {
@@ -186,8 +190,40 @@ export function DocumentVaultTable({
         
         if (item._type === "folder") {
           return (
-            <div className="flex items-center gap-2 min-w-0">
-              <Folder className="h-4 w-4 text-amber-500 flex-shrink-0" />
+            <div 
+              className={cn(
+                "flex items-center gap-2 min-w-0 py-1 px-1 -mx-1 rounded transition-colors",
+                dropTargetFolderId === item.id && "bg-primary/20 ring-2 ring-primary"
+              )}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (draggedDocId) {
+                  setDropTargetFolderId(item.id);
+                }
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                setDropTargetFolderId(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (draggedDocId && onMoveToFolder) {
+                  // Move selected docs if dragged doc is selected, otherwise just the dragged doc
+                  const docsToMove = selectedIds.has(draggedDocId) 
+                    ? Array.from(selectedIds) 
+                    : [draggedDocId];
+                  onMoveToFolder(docsToMove, item.id);
+                }
+                setDraggedDocId(null);
+                setDropTargetFolderId(null);
+              }}
+            >
+              <Folder className={cn(
+                "h-4 w-4 flex-shrink-0 transition-colors",
+                dropTargetFolderId === item.id ? "text-primary" : "text-amber-500"
+              )} />
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -212,7 +248,20 @@ export function DocumentVaultTable({
         const displayName = doc.name.replace(/\.[^/.]+$/, '');
         
         return (
-          <div className="flex items-center gap-2 min-w-0">
+          <div 
+            className="flex items-center gap-2 min-w-0"
+            draggable
+            onDragStart={(e) => {
+              e.stopPropagation();
+              setDraggedDocId(doc.id);
+              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.setData('text/plain', doc.id);
+            }}
+            onDragEnd={() => {
+              setDraggedDocId(null);
+              setDropTargetFolderId(null);
+            }}
+          >
             {getFileIcon(doc.mime_type, doc.name)}
             <TooltipProvider>
               <Tooltip>
