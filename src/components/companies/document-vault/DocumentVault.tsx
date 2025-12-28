@@ -216,6 +216,31 @@ export function DocumentVault({
     },
   });
 
+  const moveToFolderMutation = useMutation({
+    mutationFn: async ({ docIds, targetFolderId }: { docIds: string[]; targetFolderId: string | null }) => {
+      for (const docId of docIds) {
+        const { error } = await supabase
+          .from("company_documents")
+          .update({ folder_id: targetFolderId })
+          .eq("id", docId);
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_, { docIds }) => {
+      invalidateDocuments();
+      queryClient.invalidateQueries({ queryKey: ["company-folders", companyId] });
+      setSelectedIds(new Set());
+      toast.success(`${docIds.length} ficheiro(s) movido(s)`);
+    },
+    onError: (error: Error) => {
+      toast.error("Erro ao mover: " + error.message);
+    },
+  });
+
+  const handleMoveToFolder = useCallback((docIds: string[], targetFolderId: string | null) => {
+    moveToFolderMutation.mutate({ docIds, targetFolderId });
+  }, [moveToFolderMutation]);
+
   // Handlers
   const handleSort = useCallback((field: SortField) => {
     if (field === sortField) {
@@ -531,6 +556,7 @@ export function DocumentVault({
                   getStatusOptions={getStatusOptions}
                   setLoadMoreElement={setLoadMoreElement}
                   currentFolderId={currentFolderId}
+                  onMoveToFolder={handleMoveToFolder}
                 />
               </div>
             </ResizablePanel>
@@ -572,6 +598,7 @@ export function DocumentVault({
               getStatusOptions={getStatusOptions}
               setLoadMoreElement={setLoadMoreElement}
               currentFolderId={currentFolderId}
+              onMoveToFolder={handleMoveToFolder}
             />
           </div>
         )}
