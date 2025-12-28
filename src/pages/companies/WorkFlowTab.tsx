@@ -1802,10 +1802,21 @@ export default function WorkFlowTab() {
           break;
         case 'e':
         case 'E':
-          // Open action menu for focused file
-          if (focusedFileId) {
-            e.preventDefault();
-            setOpenMenuFileId(focusedFileId);
+          // Open action menu for focused file - always prevent default to avoid scrolling
+          e.preventDefault();
+          {
+            // Determine target file: focused > single selected > first visible
+            let targetId = focusedFileId;
+            if (!targetId && selectedFiles.size === 1) {
+              targetId = Array.from(selectedFiles)[0];
+            }
+            if (!targetId && filteredFiles.length > 0) {
+              targetId = filteredFiles[0].id;
+            }
+            if (targetId) {
+              setFocusedFileId(targetId);
+              setOpenMenuFileId(targetId);
+            }
           }
           break;
       }
@@ -1813,7 +1824,7 @@ export default function WorkFlowTab() {
     
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [filteredFiles, focusedFileId, previewFile, openMenuFileId]);
+  }, [filteredFiles, focusedFileId, previewFile, openMenuFileId, selectedFiles]);
 
   // Bulk actions
   const handleBulkDownload = async () => {
@@ -2680,11 +2691,13 @@ export default function WorkFlowTab() {
                   <ContextMenuTrigger asChild>
                     <tr 
                       data-file-id={file.id}
+                      tabIndex={0}
                       className={cn(
                         "border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer",
                         focusedFileId === file.id && "bg-blue-50 ring-1 ring-blue-200"
                       )}
-                      onClick={() => setFocusedFileId(file.id)}
+                      onMouseDown={() => setFocusedFileId(file.id)}
+                      onFocus={() => setFocusedFileId(file.id)}
                       onDoubleClick={() => setPreviewFile(file)}
                     >
                       <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
@@ -2890,7 +2903,7 @@ export default function WorkFlowTab() {
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" className="bg-white z-50 shadow-md border">
                             <DropdownMenuItem onClick={() => handleMarkAsComplete(file)}>
                               <CheckCircle2 className="h-4 w-4 mr-2" />
                               Mark as Completed
