@@ -351,49 +351,102 @@ export default function WorkFlowTab() {
   const { data: existingTransaction, isLoading: isLoadingTransaction } = useQuery({
     queryKey: ["file-transaction", previewFile?.id, previewFile?.file_url],
     queryFn: async () => {
-      if (!previewFile?.id) return null;
+      if (!previewFile?.id && !previewFile?.file_url) return null;
       
-      // First try to find a financial_transaction
-      const { data: transactionData, error: transactionError } = await supabase
-        .from("financial_transactions")
-        .select("*")
-        .eq("document_file_id", previewFile.id)
-        .maybeSingle();
+      // First try to find a financial_transaction by document_file_id
+      if (previewFile?.id) {
+        const { data: transactionData, error: transactionError } = await supabase
+          .from("financial_transactions")
+          .select("*")
+          .eq("document_file_id", previewFile.id)
+          .maybeSingle();
+        
+        if (transactionError) throw transactionError;
+        if (transactionData) return transactionData;
+      }
       
-      if (transactionError) throw transactionError;
-      if (transactionData) return transactionData;
+      // Fallback: try to find by invoice_file_url
+      if (previewFile?.file_url) {
+        const { data: transactionByUrl, error: urlError } = await supabase
+          .from("financial_transactions")
+          .select("*")
+          .eq("invoice_file_url", previewFile.file_url)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (urlError) throw urlError;
+        if (transactionByUrl) {
+          // Auto-relink: if found by URL but missing document_file_id, update it
+          if (previewFile?.id && !transactionByUrl.document_file_id) {
+            await supabase
+              .from("financial_transactions")
+              .update({ document_file_id: previewFile.id })
+              .eq("id", transactionByUrl.id);
+          }
+          return transactionByUrl;
+        }
+      }
       
       // If no financial_transaction, check for loan via source_file_id
-      const { data: loanData, error: loanError } = await supabase
-        .from("company_loans")
-        .select("*")
-        .eq("source_file_id", previewFile.id)
-        .maybeSingle();
+      if (previewFile?.id) {
+        const { data: loanData, error: loanError } = await supabase
+          .from("company_loans")
+          .select("*")
+          .eq("source_file_id", previewFile.id)
+          .maybeSingle();
+        
+        if (loanError) throw loanError;
+        if (loanData) {
+          // Return loan data in a format compatible with WorkflowExpensePanel
+          return {
+            id: loanData.id,
+            type: "loan",
+            date: loanData.start_date,
+            lending_company_id: loanData.lending_company_id,
+            borrowing_company_id: loanData.borrowing_company_id,
+            total_amount: loanData.amount,
+            interest_rate: loanData.interest_rate,
+            monthly_payment: loanData.monthly_payment,
+            end_date: loanData.end_date,
+            loan_status: loanData.status,
+            description: loanData.description,
+            notes: loanData.description,
+            // Mark as loan type for proper form handling
+            _isLoan: true,
+          };
+        }
+      }
       
-      if (loanError) throw loanError;
-      if (loanData) {
-        // Return loan data in a format compatible with WorkflowExpensePanel
-        return {
-          id: loanData.id,
-          type: "loan",
-          date: loanData.start_date,
-          lending_company_id: loanData.lending_company_id,
-          borrowing_company_id: loanData.borrowing_company_id,
-          total_amount: loanData.amount,
-          interest_rate: loanData.interest_rate,
-          monthly_payment: loanData.monthly_payment,
-          end_date: loanData.end_date,
-          loan_status: loanData.status,
-          description: loanData.description,
-          notes: loanData.description,
-          // Mark as loan type for proper form handling
-          _isLoan: true,
-        };
+      // Check for document in company_documents by file_url
+      if (previewFile?.file_url) {
+        const { data: docData, error: docError } = await supabase
+          .from("company_documents")
+          .select("*")
+          .eq("file_url", previewFile.file_url)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (docError) throw docError;
+        if (docData) {
+          // Return document data in a format compatible with WorkflowExpensePanel
+          return {
+            id: docData.id,
+            date: docData.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
+            type: "document",
+            company_id: docData.company_id,
+            target_folder_id: docData.folder_id,
+            notes: docData.notes,
+            description: docData.name,
+            _isDocument: true,
+          };
+        }
       }
       
       return null;
     },
-    enabled: !!previewFile?.id,
+    enabled: !!(previewFile?.id || previewFile?.file_url),
     staleTime: 0, // Always refetch when file changes
   });
 
