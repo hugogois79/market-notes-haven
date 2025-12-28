@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, RefreshCw, AlertCircle } from "lucide-react";
+import { Sparkles, RefreshCw, AlertCircle, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -16,6 +16,45 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanel
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCached, setIsCached] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const copyAnalysisAsRichText = async () => {
+    if (!contentRef.current || !explanation) return;
+
+    try {
+      // Get the HTML content from the rendered element
+      const htmlContent = contentRef.current.innerHTML;
+      
+      // Create a plain text version
+      const plainText = explanation
+        .replace(/\*\*/g, '')
+        .replace(/^#+\s/gm, '')
+        .replace(/^[-*]\s/gm, '• ');
+
+      // Copy as rich text (HTML) with plain text fallback
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([htmlContent], { type: 'text/html' }),
+          'text/plain': new Blob([plainText], { type: 'text/plain' }),
+        }),
+      ]);
+      
+      toast.success('Análise copiada!');
+    } catch (err) {
+      // Fallback for browsers that don't support ClipboardItem
+      try {
+        const plainText = explanation
+          .replace(/\*\*/g, '')
+          .replace(/^#+\s/gm, '')
+          .replace(/^[-*]\s/gm, '• ');
+        await navigator.clipboard.writeText(plainText);
+        toast.success('Análise copiada (texto simples)');
+      } catch (fallbackErr) {
+        console.error('Error copying:', fallbackErr);
+        toast.error('Erro ao copiar análise');
+      }
+    }
+  };
 
   const extractTextFromPDF = async (url: string): Promise<string> => {
     try {
@@ -180,15 +219,26 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanel
           <Sparkles className="h-5 w-5 text-primary" />
           <h3 className="font-semibold">Análise AI</h3>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => analyzeDocument(true)}
-          disabled={isLoading}
-          title="Regenerar análise"
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={copyAnalysisAsRichText}
+            disabled={isLoading || !explanation}
+            title="Copiar análise"
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => analyzeDocument(true)}
+            disabled={isLoading}
+            title="Regenerar análise"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
       </div>
 
       <ScrollArea className="flex-1 p-4">
@@ -215,7 +265,7 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanel
         )}
 
         {explanation && !isLoading && (
-          <div className="space-y-1">
+          <div ref={contentRef} className="space-y-1">
             {renderMarkdown(explanation)}
           </div>
         )}
