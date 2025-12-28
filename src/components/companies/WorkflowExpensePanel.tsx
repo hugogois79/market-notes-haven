@@ -61,6 +61,9 @@ interface WorkflowExpensePanelProps {
     end_date?: string | null;
     loan_status?: string;
     _isLoan?: boolean;
+    // Document-specific fields
+    target_folder_id?: string | null;
+    folder_id?: string | null;
   } | null;
   onClose: () => void;
   onSaved?: (payload?: { fileName?: string; fileUrl?: string | null; pendingLoanData?: any }) => void;
@@ -152,6 +155,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     if (existingTransaction && companies && expenseCategories && allBankAccounts) {
       // Check if this is a loan transaction
       const isLoanTransaction = existingTransaction.type === "loan" || existingTransaction._isLoan;
+      // Check if this is a document transaction
+      const isDocumentTransaction = existingTransaction.type === "document";
       
       if (isLoanTransaction) {
         reset({
@@ -174,6 +179,31 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           monthly_payment: existingTransaction.monthly_payment?.toString() || "",
           end_date: existingTransaction.end_date || "",
           loan_status: existingTransaction.loan_status || "active",
+          target_folder_id: "",
+        });
+      } else if (isDocumentTransaction) {
+        // Handle document type - restore folder selection
+        reset({
+          date: existingTransaction.date || new Date().toISOString().split("T")[0],
+          type: "document",
+          company_id: existingTransaction.company_id || "",
+          project_id: "",
+          category_id: "",
+          description: existingTransaction.description || "",
+          entity_name: "",
+          total_amount: "",
+          vat_rate: "23",
+          payment_method: "bank_transfer",
+          bank_account_id: "",
+          invoice_number: "",
+          notes: existingTransaction.notes || "",
+          lending_company_id: "",
+          borrowing_company_id: "",
+          interest_rate: "0",
+          monthly_payment: "",
+          end_date: "",
+          loan_status: "active",
+          target_folder_id: existingTransaction.target_folder_id || existingTransaction.folder_id || "",
         });
       } else {
         reset({
@@ -196,6 +226,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           monthly_payment: "",
           end_date: "",
           loan_status: "active",
+          target_folder_id: "",
         });
       }
     }
@@ -441,24 +472,45 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         return; // Exit without creating DB records
       }
 
-      // Handle document type - copy file to company_documents
+      // Handle document type - upsert file to company_documents
       if (data.type === "document") {
-        // Create a document entry in the company_documents table
+        const fileUrlToMatch = attachmentUrl || file.file_url;
+        
+        // Check if document already exists for this company + file_url
+        const { data: existingDoc } = await supabase
+          .from("company_documents")
+          .select("id")
+          .eq("company_id", data.company_id)
+          .eq("file_url", fileUrlToMatch)
+          .maybeSingle();
+
         const documentData = {
           company_id: data.company_id,
           folder_id: data.target_folder_id || null,
           name: attachmentName || file.file_name,
-          file_url: attachmentUrl || file.file_url,
+          file_url: fileUrlToMatch,
           document_type: "arquivo",
           notes: data.notes || null,
           uploaded_by: userData.user.id,
+          updated_at: new Date().toISOString(),
         };
 
-        const { error: docError } = await supabase
-          .from("company_documents")
-          .insert(documentData);
-        
-        if (docError) throw docError;
+        if (existingDoc) {
+          // Update existing document
+          const { error: docError } = await supabase
+            .from("company_documents")
+            .update(documentData)
+            .eq("id", existingDoc.id);
+          
+          if (docError) throw docError;
+        } else {
+          // Insert new document
+          const { error: docError } = await supabase
+            .from("company_documents")
+            .insert(documentData);
+          
+          if (docError) throw docError;
+        }
 
         // Update workflow_files with the new filename if it changed
         if (attachmentName !== file.file_name) {
