@@ -327,6 +327,25 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     return companies.filter((c) => c.id !== borrowingCompanyId);
   }, [companies, borrowingCompanyId]);
 
+  // Build folder path for hierarchical display
+  const getFolderPath = (folderId: string, folders: typeof companyFolders): string => {
+    const folder = folders?.find(f => f.id === folderId);
+    if (!folder) return "";
+    if (!folder.parent_folder_id) return folder.name;
+    const parentPath = getFolderPath(folder.parent_folder_id, folders);
+    return parentPath ? `${parentPath} / ${folder.name}` : folder.name;
+  };
+
+  // Create folder options with full hierarchical path
+  const folderOptions = useMemo(() => {
+    if (!companyFolders) return [];
+    return companyFolders.map(folder => ({
+      id: folder.id,
+      name: folder.name,
+      path: getFolderPath(folder.id, companyFolders)
+    })).sort((a, b) => a.path.localeCompare(b.path));
+  }, [companyFolders]);
+
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
       const { data: userData } = await supabase.auth.getUser();
@@ -643,10 +662,10 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                     <SelectTrigger className="h-9 text-sm">
                       <SelectValue placeholder="Selecione uma pasta..." />
                     </SelectTrigger>
-                    <SelectContent>
-                      {companyFolders?.map((folder) => (
+                  <SelectContent>
+                      {folderOptions.map((folder) => (
                         <SelectItem key={folder.id} value={folder.id}>
-                          {folder.name}
+                          📂 {folder.path}
                         </SelectItem>
                       ))}
                     </SelectContent>
