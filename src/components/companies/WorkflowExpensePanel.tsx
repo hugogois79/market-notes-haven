@@ -606,6 +606,22 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
             }
           }
 
+          // Validation for regular transactions (expense, income, receipt, notification)
+          if (data.type !== "document" && data.type !== "loan") {
+            if (!data.company_id) {
+              toast.error("Selecione a empresa");
+              return;
+            }
+            if (!data.description) {
+              toast.error("Preencha a descrição");
+              return;
+            }
+            if (!data.entity_name) {
+              toast.error("Preencha o fornecedor/cliente");
+              return;
+            }
+          }
+
           saveMutation.mutate(data);
         })} className="p-4 space-y-4">
           {/* Date & Type */}
