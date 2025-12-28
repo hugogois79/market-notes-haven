@@ -1818,17 +1818,8 @@ export default function WorkFlowTab() {
             }
             if (targetId) {
               setFocusedFileId(targetId);
-              // Scroll the action button into view before opening the menu
-              const actionBtn = actionBtnRefs.current[targetId];
-              if (actionBtn) {
-                actionBtn.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-                // Small delay to let scroll finish before opening menu
-                setTimeout(() => {
-                  setOpenMenuFileId(targetId);
-                }, 100);
-              } else {
-                setOpenMenuFileId(targetId);
-              }
+              // Open menu directly - Radix portal handles positioning
+              setOpenMenuFileId(targetId);
             }
           }
           break;
