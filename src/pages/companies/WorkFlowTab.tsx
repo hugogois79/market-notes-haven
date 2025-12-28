@@ -228,6 +228,9 @@ export default function WorkFlowTab() {
   const [openMenuFileId, setOpenMenuFileId] = useState<string | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   
+  // Refs for action buttons (to scroll into view when pressing E)
+  const actionBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  
   // Resizable column widths
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
     const saved = localStorage.getItem("workflow-column-widths");
@@ -1815,7 +1818,17 @@ export default function WorkFlowTab() {
             }
             if (targetId) {
               setFocusedFileId(targetId);
-              setOpenMenuFileId(targetId);
+              // Scroll the action button into view before opening the menu
+              const actionBtn = actionBtnRefs.current[targetId];
+              if (actionBtn) {
+                actionBtn.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+                // Small delay to let scroll finish before opening menu
+                setTimeout(() => {
+                  setOpenMenuFileId(targetId);
+                }, 100);
+              } else {
+                setOpenMenuFileId(targetId);
+              }
             }
           }
           break;
@@ -2899,7 +2912,12 @@ export default function WorkFlowTab() {
                           onOpenChange={(open) => setOpenMenuFileId(open ? file.id : null)}
                         >
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                            <Button 
+                              ref={(el) => { actionBtnRefs.current[file.id] = el; }}
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7"
+                            >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
