@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -7,7 +6,7 @@ const corsHeaders = {
 };
 
 interface ManageUserRequest {
-  action: "create" | "reset_password" | "change_password";
+  action: "create" | "reset_password" | "change_password" | "ensure_auth_account" | "check_auth_status";
   email?: string;
   password?: string;
   name?: string;
@@ -16,9 +15,10 @@ interface ManageUserRequest {
   feature_permissions?: Record<string, boolean>;
   user_id?: string;
   new_password?: string;
+  expense_user_id?: string;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -34,8 +34,153 @@ serve(async (req) => {
       },
     });
 
-    const { action, email, password, name, assigned_project_ids, is_requester, feature_permissions, user_id, new_password } = await req.json() as ManageUserRequest;
+    const { action, email, password, name, assigned_project_ids, is_requester, feature_permissions, user_id, new_password, expense_user_id } = await req.json() as ManageUserRequest;
 
+    console.log("manage-user action:", action, "email:", email);
+
+    // Check auth status for existing expense_users
+    if (action === "check_auth_status") {
+      if (!expense_user_id) {
+        return new Response(
+          JSON.stringify({ error: "expense_user_id é obrigatório" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Get the expense_user record
+      const { data: expenseUser, error: fetchError } = await supabaseAdmin
+        .from("expense_users")
+        .select("user_id, email")
+        .eq("id", expense_user_id)
+        .single();
+
+      if (fetchError || !expenseUser) {
+        return new Response(
+          JSON.stringify({ error: "Utilizador não encontrado", has_auth: false }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check if user_id exists and is valid in auth system
+      if (expenseUser.user_id) {
+        const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(
+          expenseUser.user_id
+        );
+
+        if (!authError && authUser?.user) {
+          return new Response(
+            JSON.stringify({ has_auth: true, user_id: expenseUser.user_id }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ has_auth: false, user_id: null }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Ensure auth account for existing expense_user
+    if (action === "ensure_auth_account") {
+      if (!expense_user_id || !email || !password) {
+        return new Response(
+          JSON.stringify({ error: "expense_user_id, email e password são obrigatórios" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Get the expense_user record
+      const { data: expenseUser, error: fetchError } = await supabaseAdmin
+        .from("expense_users")
+        .select("id, user_id, email, name")
+        .eq("id", expense_user_id)
+        .single();
+
+      if (fetchError || !expenseUser) {
+        return new Response(
+          JSON.stringify({ error: "Utilizador não encontrado" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check if already has valid auth account
+      if (expenseUser.user_id) {
+        const { data: existingAuth } = await supabaseAdmin.auth.admin.getUserById(
+          expenseUser.user_id
+        );
+        if (existingAuth?.user) {
+          return new Response(
+            JSON.stringify({ 
+              message: "Utilizador já tem conta de autenticação",
+              user_id: expenseUser.user_id 
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      // Check if email is already registered in auth
+      const { data: existingByEmail } = await supabaseAdmin.auth.admin.listUsers();
+      const existingAuthUser = existingByEmail?.users?.find(
+        (u) => u.email?.toLowerCase() === email.toLowerCase()
+      );
+
+      let authUserId: string;
+
+      if (existingAuthUser) {
+        // User exists in auth but not linked - just link them
+        authUserId = existingAuthUser.id;
+        console.log("Found existing auth user, linking:", authUserId);
+      } else {
+        // Create new auth user
+        const { data: newAuthUser, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
+          email: email,
+          password: password,
+          email_confirm: true,
+          user_metadata: { name: expenseUser.name },
+        });
+
+        if (createAuthError) {
+          console.error("Error creating auth user:", createAuthError);
+          return new Response(
+            JSON.stringify({ error: "Erro ao criar conta de autenticação: " + createAuthError.message }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        authUserId = newAuthUser.user.id;
+        console.log("Created new auth user:", authUserId);
+      }
+
+      // Update expense_user with auth user_id and email
+      const { error: updateError } = await supabaseAdmin
+        .from("expense_users")
+        .update({ 
+          user_id: authUserId,
+          email: email 
+        })
+        .eq("id", expense_user_id);
+
+      if (updateError) {
+        console.error("Error updating expense_user:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Erro ao atualizar utilizador: " + updateError.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: "Conta de autenticação criada com sucesso",
+          user_id: authUserId 
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create user action
     if (action === "create") {
       if (!email || !password) {
         return new Response(
@@ -46,7 +191,7 @@ serve(async (req) => {
 
       // Check if user already exists in auth
       const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-      const existingUser = existingUsers?.users?.find(u => u.email === email);
+      const existingUser = existingUsers?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
       
       if (existingUser) {
         // Check if expense_user record exists
@@ -97,6 +242,7 @@ serve(async (req) => {
         email,
         password,
         email_confirm: true,
+        user_metadata: { name: name },
       });
 
       if (authError) {
@@ -184,7 +330,7 @@ serve(async (req) => {
       if (checkError || !userCheck?.user) {
         console.error("User not found in auth system:", user_id, checkError);
         return new Response(
-          JSON.stringify({ error: "Utilizador não encontrado no sistema de autenticação" }),
+          JSON.stringify({ error: "Utilizador não encontrado no sistema de autenticação. Crie primeiro uma conta de acesso." }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
