@@ -19,8 +19,10 @@ import {
   Users,
   Plus,
   Pencil,
-  Trash2
+  Trash2,
+  LogOut
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { expenseUserService, ExpenseUser } from "@/services/expenseUserService";
 import ExpenseProjectManagement from "@/components/financial/ExpenseProjectManagement";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -57,6 +59,7 @@ import {
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   
   // Theme settings
   const [theme, setTheme] = useState<"light" | "dark" | "system">("light");
@@ -879,6 +882,48 @@ const Settings = () => {
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={handleResetSettings}>
                       Reset
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LogOut className="h-5 w-5" />
+                Sessão
+              </CardTitle>
+              <CardDescription>
+                Terminar sessão e fazer login com outra conta
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="gap-2 text-destructive hover:text-destructive">
+                    <LogOut size={16} />
+                    Terminar Sessão
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Terminar sessão?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Será redirecionado para a página de login onde poderá entrar com outra conta.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={async () => {
+                        await signOut();
+                        toast.success("Sessão terminada com sucesso");
+                        navigate("/auth");
+                      }}
+                    >
+                      Terminar Sessão
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
