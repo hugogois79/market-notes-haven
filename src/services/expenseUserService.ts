@@ -22,12 +22,14 @@ export interface ExpenseUser {
   feature_permissions: FeaturePermissions | null;
   created_at: string;
   updated_at: string;
+  has_auth_account?: boolean; // Virtual field, not in DB
 }
 
 // Helper to map DB row to ExpenseUser type
 const mapRowToExpenseUser = (row: any): ExpenseUser => ({
   ...row,
   feature_permissions: row.feature_permissions as FeaturePermissions | null,
+  has_auth_account: undefined,
 });
 
 export const expenseUserService = {
@@ -128,12 +130,41 @@ export const expenseUserService = {
 
     if (error) throw error;
     if (data.error) {
-      // Provide clearer error message for users not in auth system
-      if (data.error.includes("não encontrado") || data.error.includes("not found")) {
-        throw new Error("Este utilizador não tem conta de autenticação. Elimine e recrie o utilizador com uma password.");
-      }
       throw new Error(data.error);
     }
+  },
+
+  async checkAuthStatus(expenseUserId: string): Promise<{ has_auth: boolean; user_id: string | null }> {
+    const { data, error } = await supabase.functions.invoke("manage-user", {
+      body: {
+        action: "check_auth_status",
+        expense_user_id: expenseUserId,
+      },
+    });
+
+    if (error) throw error;
+    return { 
+      has_auth: data.has_auth || false, 
+      user_id: data.user_id || null 
+    };
+  },
+
+  async ensureAuthAccount(expenseUserId: string, email: string, password: string): Promise<{ success: boolean; user_id: string }> {
+    const { data, error } = await supabase.functions.invoke("manage-user", {
+      body: {
+        action: "ensure_auth_account",
+        expense_user_id: expenseUserId,
+        email: email,
+        password: password,
+      },
+    });
+
+    if (error) throw error;
+    if (data.error) throw new Error(data.error);
+    return { 
+      success: true, 
+      user_id: data.user_id 
+    };
   },
 
   async getCurrentUserExpenseRecord(): Promise<ExpenseUser | null> {

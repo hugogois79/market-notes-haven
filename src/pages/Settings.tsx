@@ -116,6 +116,12 @@ const Settings = () => {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [passwordUserId, setPasswordUserId] = useState<string | null>(null);
+  const [userAuthStatus, setUserAuthStatus] = useState<Record<string, boolean>>({});
+  const [showCreateAuthDialog, setShowCreateAuthDialog] = useState(false);
+  const [createAuthUserId, setCreateAuthUserId] = useState<string | null>(null);
+  const [createAuthEmail, setCreateAuthEmail] = useState("");
+  const [createAuthPassword, setCreateAuthPassword] = useState("");
+  const [isCreatingAuth, setIsCreatingAuth] = useState(false);
   
   // Fetch categories from database
   useEffect(() => {
@@ -159,6 +165,18 @@ const Settings = () => {
         if (projectsResult.data) {
           setExpenseProjects(projectsResult.data);
         }
+        
+        // Check auth status for each user
+        const authStatuses: Record<string, boolean> = {};
+        for (const user of users) {
+          try {
+            const status = await expenseUserService.checkAuthStatus(user.id);
+            authStatuses[user.id] = status.has_auth;
+          } catch {
+            authStatuses[user.id] = false;
+          }
+        }
+        setUserAuthStatus(authStatuses);
       } catch (error) {
         console.error('Error fetching expense users:', error);
       }
@@ -259,9 +277,57 @@ const Settings = () => {
   };
 
   const openPasswordDialog = (user: ExpenseUser) => {
+    // Check if user has auth account first
+    if (!userAuthStatus[user.id]) {
+      toast.error("Este utilizador não tem conta de acesso. Crie primeiro uma conta.");
+      return;
+    }
     setPasswordUserId(user.user_id);
     setNewPassword("");
     setShowPasswordDialog(true);
+  };
+
+  const openCreateAuthDialog = (user: ExpenseUser) => {
+    setCreateAuthUserId(user.id);
+    setCreateAuthEmail(user.email || "");
+    setCreateAuthPassword("");
+    setShowCreateAuthDialog(true);
+  };
+
+  const handleCreateAuthAccount = async () => {
+    if (!createAuthUserId || !createAuthEmail.trim() || !createAuthPassword.trim()) {
+      toast.error("Email e password são obrigatórios");
+      return;
+    }
+    
+    setIsCreatingAuth(true);
+    try {
+      const result = await expenseUserService.ensureAuthAccount(
+        createAuthUserId, 
+        createAuthEmail, 
+        createAuthPassword
+      );
+      
+      if (result.success) {
+        toast.success("Conta de acesso criada com sucesso");
+        setShowCreateAuthDialog(false);
+        
+        // Update auth status
+        setUserAuthStatus(prev => ({
+          ...prev,
+          [createAuthUserId]: true
+        }));
+        
+        // Refresh users list
+        const users = await expenseUserService.getUsers(true);
+        setExpenseUsers(users);
+      }
+    } catch (error: any) {
+      console.error('Error creating auth account:', error);
+      toast.error(error.message || "Erro ao criar conta de acesso");
+    } finally {
+      setIsCreatingAuth(false);
+    }
   };
 
   const handleDeleteUser = async (userId: string) => {
@@ -1027,6 +1093,15 @@ const Settings = () => {
                           {user.is_requester && (
                             <Badge variant="default" className="text-xs">Requisitante</Badge>
                           )}
+                          {userAuthStatus[user.id] === false && (
+                            <Badge variant="destructive" className="text-xs">Sem acesso</Badge>
+                          )}
+                          {userAuthStatus[user.id] === true && (
+                            <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
+                              <Check size={10} className="mr-1" />
+                              Login ativo
+                            </Badge>
+                          )}
                         </div>
                         {user.email && (
                           <span className="text-sm text-muted-foreground">{user.email}</span>
@@ -1055,13 +1130,25 @@ const Settings = () => {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
+                        {userAuthStatus[user.id] === false && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openCreateAuthDialog(user)}
+                            className="gap-1 text-xs"
+                          >
+                            <Plus size={14} />
+                            Criar Acesso
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => openPasswordDialog(user)}
                           title="Alterar Password"
+                          disabled={!userAuthStatus[user.id]}
                         >
-                          <Key size={16} />
+                          <Key size={16} className={!userAuthStatus[user.id] ? "text-muted-foreground" : ""} />
                         </Button>
                         <Button
                           variant="ghost"
@@ -1250,6 +1337,53 @@ const Settings = () => {
             </Button>
             <Button onClick={handleChangePassword}>
               Alterar Password
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Auth Account Dialog */}
+      <Dialog open={showCreateAuthDialog} onOpenChange={setShowCreateAuthDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar Conta de Acesso</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Este utilizador não tem conta de login. Defina o email e password para criar acesso.
+            </p>
+            <div className="space-y-2">
+              <Label>Email *</Label>
+              <Input
+                type="email"
+                value={createAuthEmail}
+                onChange={(e) => setCreateAuthEmail(e.target.value)}
+                placeholder="email@exemplo.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Password *</Label>
+              <Input
+                type="password"
+                value={createAuthPassword}
+                onChange={(e) => setCreateAuthPassword(e.target.value)}
+                placeholder="Defina uma password"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateAuthDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateAuthAccount} disabled={isCreatingAuth}>
+              {isCreatingAuth ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  A criar...
+                </>
+              ) : (
+                "Criar Conta de Acesso"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
