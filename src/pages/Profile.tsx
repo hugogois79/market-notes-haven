@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import MainLayout from "@/layouts/MainLayout";
@@ -10,20 +10,33 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { X, LogOut, Camera, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { getUserProfile, updateUserProfile, getUserLinkedTokens, unlinkTokenFromUser, UserProfile } from "@/services/supabaseService";
+import { getUserProfile, updateUserProfile, getUserLinkedTokens, unlinkTokenFromUser, UserProfile, uploadProfilePhoto } from "@/services/supabaseService";
 import { fetchTokens } from "@/services/tokenService";
 import { Token } from "@/types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [linkedTokens, setLinkedTokens] = useState<Token[]>([]);
   const [availableTokens, setAvailableTokens] = useState<Token[]>([]);
   const [selectedToken, setSelectedToken] = useState<string>("");
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -141,6 +154,57 @@ const Profile = () => {
     return name.substring(0, 2).toUpperCase();
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast.success("Sessão terminada");
+      navigate("/auth");
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast.error("Erro ao terminar sessão");
+    }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Formato inválido. Use JPG, PNG ou WEBP.");
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ficheiro demasiado grande. Máximo 5MB.");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const photoUrl = await uploadProfilePhoto(file);
+      if (photoUrl && profile) {
+        setProfile({ ...profile, avatar_url: photoUrl });
+        // Also update the profile in database
+        await updateUserProfile({ ...profile, avatar_url: photoUrl });
+        toast.success("Foto actualizada com sucesso");
+      } else {
+        toast.error("Erro ao fazer upload da foto");
+      }
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      toast.error("Erro ao fazer upload da foto");
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -161,20 +225,68 @@ const Profile = () => {
             <div className="grid gap-6 md:grid-cols-2">
               {/* Profile Card */}
               <Card className="md:col-span-2">
-                <CardHeader className="flex flex-row items-center gap-4">
-                  <Avatar className="h-16 w-16">
-                    {profile.avatar_url ? (
-                      <AvatarImage src={profile.avatar_url} alt={profile.username || ""} />
-                    ) : (
-                      <AvatarFallback className="text-lg">
-                        {getInitials(profile.full_name || profile.username)}
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-xl">{profile.full_name || profile.username || "User Profile"}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">{user?.email}</p>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    {/* Avatar with upload overlay */}
+                    <div className="relative group">
+                      <Avatar className="h-16 w-16">
+                        {profile.avatar_url ? (
+                          <AvatarImage src={profile.avatar_url} alt={profile.username || ""} />
+                        ) : (
+                          <AvatarFallback className="text-lg">
+                            {getInitials(profile.full_name || profile.username)}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      >
+                        {isUploading ? (
+                          <Loader2 className="h-6 w-6 text-white animate-spin" />
+                        ) : (
+                          <Camera className="h-6 w-6 text-white" />
+                        )}
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={handlePhotoUpload}
+                      />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">{profile.full_name || profile.username || "User Profile"}</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">{user?.email}</p>
+                    </div>
                   </div>
+                  
+                  {/* Logout button */}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Terminar Sessão
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Terminar Sessão</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem a certeza que pretende terminar a sessão?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleLogout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Terminar Sessão
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid gap-4 md:grid-cols-2">
@@ -202,17 +314,6 @@ const Profile = () => {
                         />
                       </div>
                       
-                      <div>
-                        <Label htmlFor="avatar_url">Profile Photo URL</Label>
-                        <Input
-                          id="avatar_url"
-                          name="avatar_url"
-                          value={profile.avatar_url || ""}
-                          onChange={handleChange}
-                          className="mt-1"
-                        />
-                      </div>
-
                       <div>
                         <Label htmlFor="contact_info">Contact Information</Label>
                         <Input

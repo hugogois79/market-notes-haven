@@ -482,6 +482,40 @@ export const updateUserProfile = async (profile: Partial<UserProfile>): Promise<
   }
 };
 
+// Upload profile photo to avatars bucket
+export const uploadProfilePhoto = async (file: File): Promise<string | null> => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+    
+    if (!userId) return null;
+    
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const fileName = `${userId}_${Date.now()}.${fileExt}`;
+    
+    const { data, error } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, file, { 
+        upsert: true,
+        contentType: file.type 
+      });
+    
+    if (error) {
+      console.error('Error uploading photo:', error);
+      return null;
+    }
+    
+    const { data: urlData } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(fileName);
+    
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error('Error uploading photo:', error);
+    return null;
+  }
+};
+
 // Get user linked tokens
 export const getUserLinkedTokens = async (): Promise<any[]> => {
   try {
