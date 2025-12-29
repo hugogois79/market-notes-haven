@@ -20,10 +20,12 @@ import {
   Plus,
   Pencil,
   Trash2,
-  LogOut
+  LogOut,
+  Key,
+  Shield
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { expenseUserService, ExpenseUser } from "@/services/expenseUserService";
+import { expenseUserService, ExpenseUser, FeaturePermissions } from "@/services/expenseUserService";
 import ExpenseProjectManagement from "@/components/financial/ExpenseProjectManagement";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -99,7 +101,21 @@ const Settings = () => {
     email: "",
     password: "",
     assigned_project_ids: [] as string[],
+    is_requester: false,
+    feature_permissions: {
+      expenses: false,
+      receipt_generator: false,
+      calendar: false,
+      finance: false,
+      legal: false,
+      projects: false,
+      notes: false,
+      tao: false,
+    } as FeaturePermissions,
   });
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordUserId, setPasswordUserId] = useState<string | null>(null);
   
   // Fetch categories from database
   useEffect(() => {
@@ -150,6 +166,17 @@ const Settings = () => {
     fetchExpenseUsersAndProjects();
   }, []);
 
+  const defaultPermissions: FeaturePermissions = {
+    expenses: false,
+    receipt_generator: false,
+    calendar: false,
+    finance: false,
+    legal: false,
+    projects: false,
+    notes: false,
+    tao: false,
+  };
+
   const handleOpenUserDialog = (user?: ExpenseUser) => {
     if (user) {
       setEditingUser(user);
@@ -158,6 +185,8 @@ const Settings = () => {
         email: user.email || "",
         password: "",
         assigned_project_ids: user.assigned_project_ids || [],
+        is_requester: user.is_requester || false,
+        feature_permissions: user.feature_permissions || defaultPermissions,
       });
     } else {
       setEditingUser(null);
@@ -166,6 +195,8 @@ const Settings = () => {
         email: "",
         password: "",
         assigned_project_ids: [],
+        is_requester: false,
+        feature_permissions: defaultPermissions,
       });
     }
     setIsUserDialogOpen(true);
@@ -182,6 +213,8 @@ const Settings = () => {
           name: userFormData.name,
           email: userFormData.email || null,
           assigned_project_ids: userFormData.assigned_project_ids,
+          is_requester: userFormData.is_requester,
+          feature_permissions: userFormData.feature_permissions,
         });
         toast.success("Utilizador atualizado");
       } else {
@@ -194,6 +227,8 @@ const Settings = () => {
           email: userFormData.email,
           password: userFormData.password,
           assigned_project_ids: userFormData.assigned_project_ids,
+          is_requester: userFormData.is_requester,
+          feature_permissions: userFormData.feature_permissions,
         });
         toast.success("Utilizador criado");
       }
@@ -204,6 +239,29 @@ const Settings = () => {
       console.error('Error saving user:', error);
       toast.error("Erro ao guardar utilizador");
     }
+  };
+
+  const handleChangePassword = async () => {
+    if (!passwordUserId || !newPassword.trim()) {
+      toast.error("Password é obrigatória");
+      return;
+    }
+    try {
+      await expenseUserService.changePassword(passwordUserId, newPassword);
+      toast.success("Password alterada com sucesso");
+      setShowPasswordDialog(false);
+      setNewPassword("");
+      setPasswordUserId(null);
+    } catch (error) {
+      console.error('Error changing password:', error);
+      toast.error("Erro ao alterar password");
+    }
+  };
+
+  const openPasswordDialog = (user: ExpenseUser) => {
+    setPasswordUserId(user.user_id);
+    setNewPassword("");
+    setShowPasswordDialog(true);
   };
 
   const handleDeleteUser = async (userId: string) => {
@@ -966,24 +1024,45 @@ const Settings = () => {
                           {!user.is_active && (
                             <Badge variant="secondary" className="text-xs">Inativo</Badge>
                           )}
+                          {user.is_requester && (
+                            <Badge variant="default" className="text-xs">Requisitante</Badge>
+                          )}
                         </div>
                         {user.email && (
                           <span className="text-sm text-muted-foreground">{user.email}</span>
                         )}
-                        {user.assigned_project_ids && user.assigned_project_ids.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {user.assigned_project_ids.map((projectId) => {
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {user.assigned_project_ids && user.assigned_project_ids.length > 0 && 
+                            user.assigned_project_ids.map((projectId) => {
                               const project = expenseProjects.find(p => p.id === projectId);
                               return project ? (
                                 <Badge key={projectId} variant="outline" className="text-xs">
                                   {project.name}
                                 </Badge>
                               ) : null;
-                            })}
+                            })
+                          }
+                        </div>
+                        {user.feature_permissions && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {Object.entries(user.feature_permissions).filter(([_, v]) => v).map(([key]) => (
+                              <Badge key={key} variant="secondary" className="text-xs">
+                                <Shield size={10} className="mr-1" />
+                                {key.replace(/_/g, ' ')}
+                              </Badge>
+                            ))}
                           </div>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openPasswordDialog(user)}
+                          title="Alterar Password"
+                        >
+                          <Key size={16} />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1046,20 +1125,21 @@ const Settings = () => {
                 placeholder="email@exemplo.com"
               />
             </div>
-            {!editingUser && (
-              <div className="space-y-2">
-                <Label>Password *</Label>
-                <Input
-                  type="password"
-                  value={userFormData.password}
-                  onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
-                  placeholder="Password inicial"
-                />
+            {editingUser && (
+              <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+                <div>
+                  <Label className="text-sm">Alterar Password</Label>
+                  <p className="text-xs text-muted-foreground">Definir nova password para este utilizador</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => openPasswordDialog(editingUser)}>
+                  <Key size={14} className="mr-2" />
+                  Alterar
+                </Button>
               </div>
             )}
             <div className="space-y-2">
               <Label>Projetos Atribuídos</Label>
-              <div className="max-h-48 overflow-y-auto border rounded-md p-2 space-y-2">
+              <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-2">
                 {expenseProjects.map((project) => (
                   <div key={project.id} className="flex items-center space-x-2">
                     <Checkbox
@@ -1086,6 +1166,55 @@ const Settings = () => {
                 ))}
               </div>
             </div>
+            <Separator />
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <Label className="text-sm font-medium">É Requisitante</Label>
+                <p className="text-xs text-muted-foreground">Pode submeter despesas em nome próprio ou de outros</p>
+              </div>
+              <Switch
+                checked={userFormData.is_requester}
+                onCheckedChange={(checked) => setUserFormData({ ...userFormData, is_requester: checked })}
+              />
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Shield size={16} />
+                Permissões de Acesso
+              </Label>
+              <div className="grid grid-cols-2 gap-2 border rounded-md p-3">
+                {[
+                  { key: 'expenses', label: 'Despesas' },
+                  { key: 'receipt_generator', label: 'Gerador Recibos' },
+                  { key: 'calendar', label: 'Calendário' },
+                  { key: 'finance', label: 'Finanças' },
+                  { key: 'legal', label: 'Legal' },
+                  { key: 'projects', label: 'Projetos' },
+                  { key: 'notes', label: 'Notas/Dashboard' },
+                  { key: 'tao', label: 'TAO Management' },
+                ].map(({ key, label }) => (
+                  <div key={key} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`perm-${key}`}
+                      checked={userFormData.feature_permissions[key as keyof FeaturePermissions]}
+                      onCheckedChange={(checked) => {
+                        setUserFormData({
+                          ...userFormData,
+                          feature_permissions: {
+                            ...userFormData.feature_permissions,
+                            [key]: !!checked,
+                          },
+                        });
+                      }}
+                    />
+                    <label htmlFor={`perm-${key}`} className="text-sm cursor-pointer">
+                      {label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsUserDialogOpen(false)}>
@@ -1093,6 +1222,34 @@ const Settings = () => {
             </Button>
             <Button onClick={handleSaveUser}>
               Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Change Dialog */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alterar Password</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nova Password *</Label>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Introduza a nova password"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleChangePassword}>
+              Alterar Password
             </Button>
           </DialogFooter>
         </DialogContent>

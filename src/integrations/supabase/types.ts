@@ -999,8 +999,10 @@ export type Database = {
           assigned_project_ids: string[] | null
           created_at: string
           email: string | null
+          feature_permissions: Json | null
           id: string
           is_active: boolean
+          is_requester: boolean | null
           name: string
           updated_at: string
           user_id: string
@@ -1009,8 +1011,10 @@ export type Database = {
           assigned_project_ids?: string[] | null
           created_at?: string
           email?: string | null
+          feature_permissions?: Json | null
           id?: string
           is_active?: boolean
+          is_requester?: boolean | null
           name: string
           updated_at?: string
           user_id: string
@@ -1019,8 +1023,10 @@ export type Database = {
           assigned_project_ids?: string[] | null
           created_at?: string
           email?: string | null
+          feature_permissions?: Json | null
           id?: string
           is_active?: boolean
+          is_requester?: boolean | null
           name?: string
           updated_at?: string
           user_id?: string

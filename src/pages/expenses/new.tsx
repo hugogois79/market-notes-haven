@@ -33,7 +33,7 @@ import {
 import { expenseClaimService, Expense } from "@/services/expenseClaimService";
 
 import { supplierService } from "@/services/supplierService";
-import { expenseRequesterService } from "@/services/expenseRequesterService";
+import { expenseUserService } from "@/services/expenseUserService";
 import { formatCurrency, cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
@@ -74,10 +74,10 @@ const NewExpensePage = () => {
     category_id: "",
   });
 
-  // Get expense requesters for dropdown
+  // Get expense requesters (users marked as requesters) for dropdown
   const { data: expenseRequesters } = useQuery({
     queryKey: ["expense-requesters"],
-    queryFn: () => expenseRequesterService.getRequesters(),
+    queryFn: () => expenseUserService.getRequesters(),
   });
 
   // Get the selected requester's assigned projects
