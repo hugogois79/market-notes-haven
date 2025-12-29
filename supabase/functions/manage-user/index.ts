@@ -7,11 +7,15 @@ const corsHeaders = {
 };
 
 interface ManageUserRequest {
-  action: "create" | "reset_password";
-  email: string;
+  action: "create" | "reset_password" | "change_password";
+  email?: string;
   password?: string;
   name?: string;
   assigned_project_ids?: string[];
+  is_requester?: boolean;
+  feature_permissions?: Record<string, boolean>;
+  user_id?: string;
+  new_password?: string;
 }
 
 serve(async (req) => {
@@ -30,7 +34,7 @@ serve(async (req) => {
       },
     });
 
-    const { action, email, password, name, assigned_project_ids } = await req.json() as ManageUserRequest;
+    const { action, email, password, name, assigned_project_ids, is_requester, feature_permissions, user_id, new_password } = await req.json() as ManageUserRequest;
 
     if (action === "create") {
       if (!email || !password) {
@@ -68,6 +72,8 @@ serve(async (req) => {
             email,
             assigned_project_ids: assigned_project_ids || [],
             is_active: true,
+            is_requester: is_requester || false,
+            feature_permissions: feature_permissions || null,
           })
           .select()
           .single();
@@ -113,6 +119,8 @@ serve(async (req) => {
           email,
           assigned_project_ids: assigned_project_ids || [],
           is_active: true,
+          is_requester: is_requester || false,
+          feature_permissions: feature_permissions || null,
         })
         .select()
         .single();
@@ -156,6 +164,32 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, message: "Email de reset enviado com sucesso" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "change_password") {
+      if (!user_id || !new_password) {
+        return new Response(
+          JSON.stringify({ error: "User ID e nova password são obrigatórios" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, {
+        password: new_password,
+      });
+
+      if (error) {
+        console.error("Error changing password:", error);
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: "Password alterada com sucesso" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
