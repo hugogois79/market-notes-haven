@@ -270,21 +270,31 @@ const Settings = () => {
       setShowPasswordDialog(false);
       setNewPassword("");
       setPasswordUserId(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error changing password:', error);
-      toast.error("Erro ao alterar password");
+      const errorMessage = error?.message || "Erro ao alterar password";
+      toast.error(errorMessage);
     }
   };
 
-  const openPasswordDialog = (user: ExpenseUser) => {
-    // Check if user has auth account first
-    if (!userAuthStatus[user.id]) {
-      toast.error("Este utilizador não tem conta de acesso. Crie primeiro uma conta.");
-      return;
+  const openPasswordDialog = async (user: ExpenseUser) => {
+    // Check if user has auth account first - verify fresh status
+    try {
+      const status = await expenseUserService.checkAuthStatus(user.id);
+      if (!status.has_auth) {
+        toast.error("Este utilizador não tem conta de acesso. Crie primeiro uma conta.");
+        // Update local status
+        setUserAuthStatus(prev => ({ ...prev, [user.id]: false }));
+        return;
+      }
+      // Use the verified user_id from status check
+      setPasswordUserId(status.user_id || user.user_id);
+      setNewPassword("");
+      setShowPasswordDialog(true);
+    } catch (error) {
+      console.error('Error checking auth status:', error);
+      toast.error("Erro ao verificar conta de acesso");
     }
-    setPasswordUserId(user.user_id);
-    setNewPassword("");
-    setShowPasswordDialog(true);
   };
 
   const openCreateAuthDialog = (user: ExpenseUser) => {
