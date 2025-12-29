@@ -127,7 +127,13 @@ export const expenseUserService = {
     });
 
     if (error) throw error;
-    if (data.error) throw new Error(data.error);
+    if (data.error) {
+      // Provide clearer error message for users not in auth system
+      if (data.error.includes("não encontrado") || data.error.includes("not found")) {
+        throw new Error("Este utilizador não tem conta de autenticação. Elimine e recrie o utilizador com uma password.");
+      }
+      throw new Error(data.error);
+    }
   },
 
   async getCurrentUserExpenseRecord(): Promise<ExpenseUser | null> {

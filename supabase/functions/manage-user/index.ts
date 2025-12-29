@@ -176,6 +176,19 @@ serve(async (req) => {
         );
       }
 
+      console.log("Attempting to change password for user_id:", user_id);
+
+      // First verify the user exists
+      const { data: userCheck, error: checkError } = await supabaseAdmin.auth.admin.getUserById(user_id);
+      
+      if (checkError || !userCheck?.user) {
+        console.error("User not found in auth system:", user_id, checkError);
+        return new Response(
+          JSON.stringify({ error: "Utilizador não encontrado no sistema de autenticação" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, {
         password: new_password,
       });
