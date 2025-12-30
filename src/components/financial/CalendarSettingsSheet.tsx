@@ -3,8 +3,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings, Plus, Trash2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Settings, Plus, Trash2, Share2 } from "lucide-react";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface CalendarCategory {
   value: string;
@@ -12,6 +14,7 @@ export interface CalendarCategory {
   bgClass: string;
   textClass: string;
   color: string;
+  isShared?: boolean;
 }
 
 const DEFAULT_CATEGORIES: CalendarCategory[] = [
@@ -107,6 +110,12 @@ export default function CalendarSettingsSheet({
     ));
   };
 
+  const handleSharedChange = (value: string, isShared: boolean) => {
+    setLocalCategories(localCategories.map(c => 
+      c.value === value ? { ...c, isShared } : c
+    ));
+  };
+
   const handleSave = () => {
     onCategoriesChange(localCategories);
     setIsOpen(false);
@@ -175,6 +184,29 @@ export default function CalendarSettingsSheet({
                       />
                     ))}
                   </div>
+                  
+                  {/* Share toggle */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1.5">
+                          <Share2 className={`h-3.5 w-3.5 ${category.isShared ? 'text-primary' : 'text-muted-foreground'}`} />
+                          <Switch
+                            checked={category.isShared || false}
+                            onCheckedChange={(checked) => handleSharedChange(category.value, checked)}
+                            className="scale-75"
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">
+                          {category.isShared 
+                            ? "Eventos visíveis para todos os utilizadores" 
+                            : "Clique para partilhar com outros utilizadores"}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   
                   <Button
                     variant="ghost"
