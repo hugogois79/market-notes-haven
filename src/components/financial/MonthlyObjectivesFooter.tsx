@@ -381,6 +381,7 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0, schedul
                                           e.dataTransfer.setData('text/plain', objective.content);
                                           e.dataTransfer.setData('application/x-objective', 'true');
                                           e.dataTransfer.effectAllowed = 'copy';
+                                          e.dataTransfer.dropEffect = 'copy';
                                         }}
                                         className="flex-shrink-0 cursor-grab text-blue-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
                                         title="Arraste para o calendário"

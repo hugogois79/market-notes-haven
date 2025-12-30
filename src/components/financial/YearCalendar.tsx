@@ -532,7 +532,9 @@ export default function YearCalendar() {
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    e.dataTransfer.dropEffect = 'move';
+
+    const isObjectiveDrag = e.dataTransfer.types?.includes("application/x-objective");
+    e.dataTransfer.dropEffect = isObjectiveDrag ? "copy" : "move";
   };
 
   const handleDrop = (e: React.DragEvent, day: number, monthInfo: MonthInfo, period: string) => {
