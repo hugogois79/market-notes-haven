@@ -98,6 +98,8 @@ export default function YearCalendar() {
   const [draggedEvent, setDraggedEvent] = useState<DraggedEvent | null>(null);
   const inputRef = useRef<EventAutocompleteRef>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
+  const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const draggingRef = useRef(false);
   const queryClient = useQueryClient();
 
   // Use categories from Supabase
@@ -475,6 +477,35 @@ export default function YearCalendar() {
     setIsSheetOpen(true);
   };
 
+  // Mouse handlers to separate click from drag
+  const handleCellMouseDown = (day: number, monthInfo: MonthInfo, period: string, hasEvent: boolean) => {
+    if (!isValidDateForMonth(day, monthInfo.month, monthInfo.year)) return;
+    
+    // Clear any existing timer
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    
+    // If no event, open edit immediately
+    if (!hasEvent) {
+      handleCellClick(day, monthInfo, period);
+      return;
+    }
+    
+    // If has event, delay to allow drag to start
+    clickTimerRef.current = setTimeout(() => {
+      if (!draggingRef.current) {
+        handleCellClick(day, monthInfo, period);
+      }
+      clickTimerRef.current = null;
+    }, 150);
+  };
+
+  const handleCellMouseUp = () => {
+    // Timer will handle click if drag didn't start
+  };
+
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, day: number, monthInfo: MonthInfo, period: string) => {
     const event = getEventForDate(day, monthInfo.month, monthInfo.year, period);
@@ -482,6 +513,13 @@ export default function YearCalendar() {
       e.preventDefault();
       return;
     }
+    
+    // Cancel click timer and mark as dragging
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    draggingRef.current = true;
     
     setDraggedEvent({
       event,
@@ -492,13 +530,14 @@ export default function YearCalendar() {
     });
     
     e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.dropEffect = 'move';
     e.dataTransfer.setData('text/plain', event.title);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    e.dataTransfer.dropEffect = 'copy';
+    e.dataTransfer.dropEffect = 'move';
   };
 
   const handleDrop = (e: React.DragEvent, day: number, monthInfo: MonthInfo, period: string) => {
@@ -567,6 +606,7 @@ export default function YearCalendar() {
   };
 
   const handleDragEnd = () => {
+    draggingRef.current = false;
     setDraggedEvent(null);
   };
   const handleInlineSave = () => {
@@ -1078,7 +1118,8 @@ export default function YearCalendar() {
           onDragOver={handleDragOver}
           onDrop={(e) => isValid && handleDrop(e, day, monthInfo, 'morning')}
           onDragEnd={handleDragEnd}
-          onClick={() => isValid && handleCellClick(day, monthInfo, 'morning')}
+          onMouseDown={() => isValid && handleCellMouseDown(day, monthInfo, 'morning', !!morningEvent)}
+          onMouseUp={handleCellMouseUp}
           onContextMenu={(e) => isValid && handleContextMenu(e, 'morning')}
           title="Manhã - Arraste para mover"
         >
@@ -1124,7 +1165,8 @@ export default function YearCalendar() {
           onDragOver={handleDragOver}
           onDrop={(e) => isValid && handleDrop(e, day, monthInfo, 'afternoon')}
           onDragEnd={handleDragEnd}
-          onClick={() => isValid && handleCellClick(day, monthInfo, 'afternoon')}
+          onMouseDown={() => isValid && handleCellMouseDown(day, monthInfo, 'afternoon', !!afternoonEvent)}
+          onMouseUp={handleCellMouseUp}
           onContextMenu={(e) => isValid && handleContextMenu(e, 'afternoon')}
           title="Tarde - Arraste para mover"
         >
