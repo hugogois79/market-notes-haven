@@ -2489,7 +2489,7 @@ export default function WorkFlowTab() {
                 </div>
                 {/* Resize handle */}
                 <div 
-                  className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize bg-slate-200/60 hover:bg-blue-500 transition-colors z-10"
+                  className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                   onMouseDown={(e) => handleColumnResizeStart(e, 'name', 400)}
                   onClick={(e) => e.stopPropagation()}
                 />
