@@ -168,49 +168,44 @@ export default function YearCalendar() {
     queryKey: ["calendar-events", dateRange.start, dateRange.end, categories],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      
-      // Get shared category names from our categories
-      const sharedCategoryNames = categories
-        .filter(c => c.isShared)
-        .map(c => c.label.toLowerCase().replace(/\s+/g, '_'));
+      if (!user) return [];
       
       // First get user's own events
       const { data: ownEvents, error: ownError } = await supabase
         .from("calendar_events")
         .select("*")
-        .eq("user_id", user?.id)
+        .eq("user_id", user.id)
         .gte("date", dateRange.start)
         .lte("date", dateRange.end);
       
       if (ownError) throw ownError;
 
       // Then get shared events from other users
-      // We need to find categories that are marked as shared by other users
+      // Find categories that are shared specifically with the current user
       let sharedEvents: CalendarEvent[] = [];
-      if (user) {
-        // Get all shared categories from all users
-        const { data: allSharedCategories } = await supabase
-          .from("calendar_categories")
-          .select("name, user_id")
-          .eq("is_shared", true)
-          .neq("user_id", user.id);
+      
+      // Get all shared categories where current user is in shared_with_users array
+      const { data: sharedWithMeCategories } = await supabase
+        .from("calendar_categories")
+        .select("name, user_id, shared_with_users")
+        .contains("shared_with_users", [user.id])
+        .neq("user_id", user.id);
+      
+      if (sharedWithMeCategories && sharedWithMeCategories.length > 0) {
+        // Get events from other users that belong to categories shared with me
+        const sharedCatNames = sharedWithMeCategories.map(c => c.name.toLowerCase().replace(/\s+/g, '_'));
+        const otherUserIds = [...new Set(sharedWithMeCategories.map(c => c.user_id))];
         
-        if (allSharedCategories && allSharedCategories.length > 0) {
-          // Get events from other users that belong to shared categories
-          const sharedCatNames = allSharedCategories.map(c => c.name.toLowerCase().replace(/\s+/g, '_'));
-          const otherUserIds = [...new Set(allSharedCategories.map(c => c.user_id))];
-          
-          const { data: otherEvents } = await supabase
-            .from("calendar_events")
-            .select("*")
-            .in("user_id", otherUserIds)
-            .in("category", sharedCatNames)
-            .gte("date", dateRange.start)
-            .lte("date", dateRange.end);
-          
-          if (otherEvents) {
-            sharedEvents = otherEvents as CalendarEvent[];
-          }
+        const { data: otherEvents } = await supabase
+          .from("calendar_events")
+          .select("*")
+          .in("user_id", otherUserIds)
+          .in("category", sharedCatNames)
+          .gte("date", dateRange.start)
+          .lte("date", dateRange.end);
+        
+        if (otherEvents) {
+          sharedEvents = otherEvents as CalendarEvent[];
         }
       }
 

@@ -74,6 +74,7 @@ export type Database = {
           id: string
           is_shared: boolean
           name: string
+          shared_with_users: string[] | null
           updated_at: string
           user_id: string
         }
@@ -83,6 +84,7 @@ export type Database = {
           id?: string
           is_shared?: boolean
           name: string
+          shared_with_users?: string[] | null
           updated_at?: string
           user_id: string
         }
@@ -92,6 +94,7 @@ export type Database = {
           id?: string
           is_shared?: boolean
           name?: string
+          shared_with_users?: string[] | null
           updated_at?: string
           user_id?: string
         }
