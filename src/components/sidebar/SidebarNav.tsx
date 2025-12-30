@@ -21,12 +21,15 @@ import { cn } from "@/lib/utils";
 import { useEffect, useState, useMemo } from "react";
 import { KanbanService } from "@/services/kanbanService";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useFeatureAccess, FeaturePermissions } from "@/hooks/useFeatureAccess";
 
 type NavItem = {
   title: string;
   icon: React.ReactNode;
   path: string;
   workerAllowed?: boolean;
+  featureKey?: keyof FeaturePermissions;
+  alwaysShow?: boolean;
 };
 
 interface SidebarNavProps {
@@ -38,6 +41,7 @@ interface SidebarNavProps {
 export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavProps) => {
   const location = useLocation();
   const { isWorker, loading: roleLoading } = useUserRole();
+  const { hasAccess, isAdmin, loading: permissionsLoading } = useFeatureAccess();
   const [isProjectsExpanded, setIsProjectsExpanded] = useState(false);
   const [isTradingExpanded, setIsTradingExpanded] = useState(false);
   const [expandedSpaces, setExpandedSpaces] = useState<Set<string>>(new Set());
@@ -81,60 +85,70 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       icon: <LayoutDashboard size={20} />,
       path: "/",
       workerAllowed: false,
+      featureKey: "notes",
     },
     {
       title: "All Notes",
       icon: <FileText size={20} />,
       path: "/notes",
       workerAllowed: false,
+      featureKey: "notes",
     },
     {
       title: "Receipt Generator",
       icon: <FileText size={20} />,
       path: "/receipt-generator",
       workerAllowed: false,
+      featureKey: "receipt_generator",
     },
     {
       title: "Finance",
       icon: <Coins size={20} />,
       path: "/financeiro",
       workerAllowed: false,
+      featureKey: "finance",
     },
     {
       title: "Calendar",
       icon: <CalendarDays size={20} />,
       path: "/calendar",
       workerAllowed: false,
+      featureKey: "calendar",
     },
     {
       title: "Expenses",
       icon: <FileCheck size={20} />,
       path: "/expenses",
       workerAllowed: true,
+      featureKey: "expenses",
     },
     {
       title: "Legal",
       icon: <Scale size={20} />,
       path: "/legal",
       workerAllowed: false,
+      featureKey: "legal",
     },
     {
       title: "Projects",
       icon: <FolderKanban size={20} />,
       path: "/projects",
       workerAllowed: false,
+      featureKey: "projects",
     },
     {
       title: "Work",
       icon: <Building2 size={20} />,
       path: "/companies",
       workerAllowed: false,
+      featureKey: "finance",
     },
     {
       title: "Profile",
       icon: <User size={20} />,
       path: "/profile",
       workerAllowed: true,
+      alwaysShow: true,
     },
   ];
 
@@ -144,18 +158,21 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       icon: <Banknote size={20} />,
       path: "/tokens",
       workerAllowed: false,
+      featureKey: "tao",
     },
     {
       title: "Market Data",
       icon: <TrendingUp size={20} />,
       path: "/market-data",
       workerAllowed: false,
+      featureKey: "tao",
     },
     {
       title: "Crypto Assets",
       icon: <Coins size={20} />,
       path: "/crypto/dashboard",
       workerAllowed: false,
+      featureKey: "tao",
     },
     {
       title: "Bittensor TAO",
@@ -170,30 +187,56 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       ),
       path: "/tao",
       workerAllowed: false,
+      featureKey: "tao",
     },
   ];
 
-  // Filter nav items based on role
+  // Filter nav items based on role and feature permissions
   const navItems = useMemo(() => {
-    if (roleLoading) return [];
+    if (roleLoading || permissionsLoading) return [];
+    
+    let items = mainNavItems;
+    
+    // Filter by worker role first
     if (isWorker) {
-      return mainNavItems.filter(item => item.workerAllowed);
+      items = items.filter(item => item.workerAllowed);
     }
-    return mainNavItems;
-  }, [isWorker, roleLoading]);
+    
+    // Then filter by feature permissions (admins bypass this)
+    if (!isAdmin) {
+      items = items.filter(item => {
+        // Always show items marked as alwaysShow
+        if (item.alwaysShow) return true;
+        // If no feature key, hide unless admin
+        if (!item.featureKey) return false;
+        // Check if user has access to this feature
+        return hasAccess(item.featureKey);
+      });
+    }
+    
+    return items;
+  }, [isWorker, isAdmin, roleLoading, permissionsLoading, hasAccess]);
 
   const tradingItems = useMemo(() => {
-    if (roleLoading || isWorker) return [];
-    return tradingNavItems;
-  }, [isWorker, roleLoading]);
+    if (roleLoading || permissionsLoading || isWorker) return [];
+    
+    // Admins see all trading items
+    if (isAdmin) return tradingNavItems;
+    
+    // Filter by TAO permission
+    return tradingNavItems.filter(item => {
+      if (!item.featureKey) return false;
+      return hasAccess(item.featureKey);
+    });
+  }, [isWorker, isAdmin, roleLoading, permissionsLoading, hasAccess]);
 
   // Check if any trading route is active
   const isTradingActive = tradingNavItems.some(
     item => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
   );
 
-  // Don't show boards section for workers
-  const showBoardsSection = !isWorker;
+  // Don't show boards section for workers, and only show if user has projects permission
+  const showBoardsSection = !isWorker && (isAdmin || hasAccess('projects'));
 
   return (
     <nav className="flex-1 overflow-y-auto py-4 px-3">
