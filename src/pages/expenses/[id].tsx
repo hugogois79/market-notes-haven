@@ -48,10 +48,10 @@ const ExpenseDetailPage = () => {
     queryFn: async () => {
       if (!claim?.requester_id) return null;
       const { data, error } = await supabase
-        .from("expense_requesters")
+        .from("expense_users")
         .select("*")
         .eq("id", claim.requester_id)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
