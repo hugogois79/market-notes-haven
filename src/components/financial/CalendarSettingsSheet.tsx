@@ -24,6 +24,8 @@ export interface CalendarCategory {
   color: string;
   isShared?: boolean;
   sharedWithUsers?: string[]; // Array of user IDs to share with
+  ownerId?: string;
+  isSharedWithMe?: boolean;
 }
 
 const DEFAULT_CATEGORIES: CalendarCategory[] = [
@@ -184,104 +186,113 @@ export default function CalendarSettingsSheet({
             </p>
             
             <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
-              {localCategories.map((category) => (
-                <div 
-                  key={category.value}
-                  className="flex items-center gap-3 p-2 rounded-lg border border-border bg-card"
-                >
-                  {/* Preview badge */}
+              {localCategories.map((category) => {
+                const isReadOnly = !!category.isSharedWithMe;
+
+                return (
                   <div 
-                    className="px-2 py-1 rounded text-xs font-medium min-w-[80px] text-center"
-                    style={{ 
-                      backgroundColor: category.color,
-                      color: isDarkColor(category.color) ? '#ffffff' : '#000000'
-                    }}
+                    key={category.value}
+                    className="flex items-center gap-3 p-2 rounded-lg border border-border bg-card"
                   >
-                    {category.label}
-                  </div>
-                  
-                  <Input
-                    value={category.label}
-                    onChange={(e) => handleLabelChange(category.value, e.target.value)}
-                    className="h-8 text-sm w-[120px] min-w-[120px]"
-                  />
-                  
-                  <div className="flex gap-1">
-                    {COLOR_PRESETS.map((preset) => (
-                      <button
-                        key={preset.color}
-                        type="button"
-                        onClick={() => handleColorChange(category.value, preset)}
-                        className={`w-5 h-5 rounded-full border-2 transition-all ${
-                          category.color === preset.color 
-                            ? 'border-foreground scale-110' 
-                            : 'border-transparent hover:scale-105'
-                        }`}
-                        style={{ backgroundColor: preset.color }}
-                      />
-                    ))}
-                  </div>
-                  
-                  {/* Share with users selector */}
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={`h-7 gap-1 text-xs min-w-[100px] ${
-                          (category.sharedWithUsers?.length || 0) > 0 
-                            ? 'border-primary text-primary' 
-                            : ''
-                        }`}
-                      >
-                        <Users className="h-3 w-3" />
-                        {(category.sharedWithUsers?.length || 0) > 0 
-                          ? `${category.sharedWithUsers?.length} selecionado(s)`
-                          : "Partilhar"
-                        }
-                        <ChevronDown className="h-3 w-3" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[220px] p-2" align="end">
-                      <div className="text-xs font-medium mb-2 text-muted-foreground">
-                        Partilhar com:
-                      </div>
-                      <div className="space-y-1 max-h-[200px] overflow-y-auto">
-                        {users?.map(user => {
-                          const isSelected = category.sharedWithUsers?.includes(user.user_id) || false;
-                          return (
-                            <div
-                              key={user.id}
-                              className="flex items-center gap-2 p-1.5 rounded hover:bg-muted cursor-pointer"
-                              onClick={() => handleSharedUsersChange(category.value, user.user_id, !isSelected)}
-                            >
-                              <Checkbox 
-                                checked={isSelected}
-                                className="h-3.5 w-3.5"
-                              />
-                              <span className="text-xs truncate">{user.name}</span>
+                    {/* Preview badge */}
+                    <div 
+                      className="px-2 py-1 rounded text-xs font-medium min-w-[80px] text-center"
+                      style={{ 
+                        backgroundColor: category.color,
+                        color: isDarkColor(category.color) ? '#ffffff' : '#000000'
+                      }}
+                      title={isReadOnly ? "Categoria partilhada consigo (só leitura)" : undefined}
+                    >
+                      {category.label}
+                    </div>
+                    
+                    <Input
+                      value={category.label}
+                      onChange={(e) => handleLabelChange(category.value, e.target.value)}
+                      className="h-8 text-sm w-[120px] min-w-[120px]"
+                      disabled={isReadOnly}
+                    />
+                    
+                    <div className="flex gap-1">
+                      {COLOR_PRESETS.map((preset) => (
+                        <button
+                          key={preset.color}
+                          type="button"
+                          onClick={() => handleColorChange(category.value, preset)}
+                          disabled={isReadOnly}
+                          className={`w-5 h-5 rounded-full border-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                            category.color === preset.color 
+                              ? 'border-foreground scale-110' 
+                              : 'border-transparent hover:scale-105'
+                          }`}
+                          style={{ backgroundColor: preset.color }}
+                        />
+                      ))}
+                    </div>
+                    
+                    {/* Share with users selector */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isReadOnly}
+                          className={`h-7 gap-1 text-xs min-w-[100px] ${
+                            (category.sharedWithUsers?.length || 0) > 0 
+                              ? 'border-primary text-primary' 
+                              : ''
+                          }`}
+                        >
+                          <Users className="h-3 w-3" />
+                          {(category.sharedWithUsers?.length || 0) > 0 
+                            ? `${category.sharedWithUsers?.length} selecionado(s)`
+                            : "Partilhar"
+                          }
+                          <ChevronDown className="h-3 w-3" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[220px] p-2" align="end">
+                        <div className="text-xs font-medium mb-2 text-muted-foreground">
+                          Partilhar com:
+                        </div>
+                        <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                          {users?.map(user => {
+                            const isSelected = category.sharedWithUsers?.includes(user.user_id) || false;
+                            return (
+                              <div
+                                key={user.id}
+                                className="flex items-center gap-2 p-1.5 rounded hover:bg-muted cursor-pointer"
+                                onClick={() => handleSharedUsersChange(category.value, user.user_id, !isSelected)}
+                              >
+                                <Checkbox 
+                                  checked={isSelected}
+                                  className="h-3.5 w-3.5"
+                                />
+                                <span className="text-xs truncate">{user.name}</span>
+                              </div>
+                            );
+                          })}
+                          {(!users || users.length === 0) && (
+                            <div className="text-xs text-muted-foreground p-2 text-center">
+                              Nenhum utilizador disponível
                             </div>
-                          );
-                        })}
-                        {(!users || users.length === 0) && (
-                          <div className="text-xs text-muted-foreground p-2 text-center">
-                            Nenhum utilizador disponível
-                          </div>
-                        )}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                  
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-destructive hover:text-destructive"
-                    onClick={() => handleDeleteCategory(category.value)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ))}
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                    
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={isReadOnly}
+                      className="h-7 w-7 text-destructive hover:text-destructive disabled:opacity-40 disabled:cursor-not-allowed"
+                      onClick={() => handleDeleteCategory(category.value)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
             
             {/* Add new category */}

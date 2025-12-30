@@ -11,6 +11,8 @@ export interface CalendarCategory {
   color: string;
   isShared?: boolean;
   sharedWithUsers?: string[]; // Array of user IDs to share with
+  ownerId?: string; // category owner (creator)
+  isSharedWithMe?: boolean; // true when this category was shared by another user
 }
 
 interface DbCalendarCategory {
@@ -41,7 +43,7 @@ const isDarkColor = (color: string): boolean => {
 const getTextClass = (color: string) => isDarkColor(color) ? "text-white" : "text-black";
 const getBgClass = (color: string) => ""; // We'll use inline style for bg
 
-const dbToCategory = (db: DbCalendarCategory): CalendarCategory => ({
+const dbToCategory = (db: DbCalendarCategory, currentUserId?: string): CalendarCategory => ({
   value: db.name.toLowerCase().replace(/\s+/g, '_'),
   label: db.name,
   color: db.color,
@@ -49,6 +51,8 @@ const dbToCategory = (db: DbCalendarCategory): CalendarCategory => ({
   textClass: getTextClass(db.color),
   isShared: db.is_shared,
   sharedWithUsers: db.shared_with_users || [],
+  ownerId: db.user_id,
+  isSharedWithMe: currentUserId ? db.user_id !== currentUserId : false,
 });
 
 export function useCalendarCategories() {
@@ -63,10 +67,11 @@ export function useCalendarCategories() {
         return { categories: DEFAULT_CATEGORIES, needsInit: false };
       }
 
+      // Fetch my categories + categories shared with me
       const { data, error } = await supabase
         .from("calendar_categories")
         .select("*")
-        .eq("user_id", user.id);
+        .or(`user_id.eq.${user.id},shared_with_users.cs.{${user.id}}`);
 
       if (error) {
         console.error("useCalendarCategories: Error fetching categories", error);
@@ -80,7 +85,7 @@ export function useCalendarCategories() {
         return { categories: DEFAULT_CATEGORIES, needsInit: true };
       }
 
-      return { categories: data.map(dbToCategory), needsInit: false };
+      return { categories: data.map((row) => dbToCategory(row, user.id)), needsInit: false };
     },
   });
 
@@ -124,7 +129,11 @@ export function useCalendarCategories() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      console.log("useCalendarCategories: Saving categories", newCategories.length);
+      // Only save categories owned by the current user.
+      // Categories shared *with* the user are read-only and must not be re-inserted.
+      const ownCategories = newCategories.filter((c) => !c.isSharedWithMe);
+
+      console.log("useCalendarCategories: Saving categories", ownCategories.length);
 
       // Delete all existing categories for user
       const { error: deleteError } = await supabase
@@ -141,7 +150,7 @@ export function useCalendarCategories() {
       const { error: insertError } = await supabase
         .from("calendar_categories")
         .insert(
-          newCategories.map(cat => ({
+          ownCategories.map(cat => ({
             user_id: user.id,
             name: cat.label,
             color: cat.color,
