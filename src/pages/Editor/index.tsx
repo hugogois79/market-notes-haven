@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Note } from "@/types";
 import NoteActions from "./NoteActions";
@@ -12,10 +12,12 @@ const Editor = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [hasCreatedNote, setHasCreatedNote] = useState(false);
+  const [pendingNoteId, setPendingNoteId] = useState<string | null>(null);
+  const tempNoteRef = useRef<Note | null>(null);
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { notes, handleSaveNote, handleDeleteNote, refetch } = useNotes();
+  const { notes, handleSaveNote, handleDeleteNote, refetch, isLoading } = useNotes();
   const isNewNote = id === 'new' || location.pathname === '/editor/new';
   
   const {
@@ -54,10 +56,12 @@ const Editor = () => {
       handleSaveNote(newNote).then(savedNote => {
         if (savedNote) {
           console.log("New note created with ID:", savedNote.id);
+          // Set pending note ID BEFORE navigating to prevent "Note Not Found"
+          setPendingNoteId(savedNote.id);
           // Navigate directly to the editor path with the new ID
           navigate(`/editor/${savedNote.id}`, { replace: true });
-          // Explicitly refetch notes to update the list
-          if (refetch) refetch();
+          // Clear pending after a short delay
+          setTimeout(() => setPendingNoteId(null), 500);
         } else {
           console.error("Failed to create new note");
           toast.error("Failed to create new note");
@@ -78,18 +82,34 @@ const Editor = () => {
     }
   }, [isNewNote]);
 
-  // Check if note exists
+  // Check if note exists - with grace period for newly created notes
   useEffect(() => {
+    // Don't check while loading or if this is the pending note we just created
+    if (isLoading || pendingNoteId === id) {
+      setNotFound(false);
+      return;
+    }
+    
     if (!isNewNote && notes.length > 0 && id) {
       const noteExists = notes.some(note => note.id === id);
-      setNotFound(!noteExists);
       
+      // Only set notFound if the note truly doesn't exist after cache is populated
       if (!noteExists) {
-        console.error("Note not found with ID:", id);
-        toast.error("Note not found");
+        // Add a small delay before showing "not found" to allow cache update
+        const timer = setTimeout(() => {
+          const stillMissing = !notes.some(note => note.id === id);
+          if (stillMissing) {
+            setNotFound(true);
+            console.error("Note not found with ID:", id);
+            toast.error("Note not found");
+          }
+        }, 300);
+        return () => clearTimeout(timer);
+      } else {
+        setNotFound(false);
       }
     }
-  }, [notes, id, isNewNote]);
+  }, [notes, id, isNewNote, isLoading, pendingNoteId]);
 
   // Enhanced save handler that ensures refetch after save and properly handles title changes
   const handleEnhancedSave = async (updatedFields: Partial<Note>) => {
@@ -177,16 +197,22 @@ const Editor = () => {
       {/* Editor */}
       {(currentNote || isNewNote) && (
         <NoteEditor 
-          currentNote={currentNote || {
-            id: `temp-${Date.now()}`,
-            title: "Untitled Note",
-            content: "",
-            tags: [],
-            category: "General",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            attachments: []
-          }}
+          currentNote={currentNote || (() => {
+            // Use stable temp note reference to avoid creating new IDs on every render
+            if (!tempNoteRef.current) {
+              tempNoteRef.current = {
+                id: `temp-${Date.now()}`,
+                title: "Untitled Note",
+                content: "",
+                tags: [],
+                category: "General",
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                attachments: []
+              };
+            }
+            return tempNoteRef.current;
+          })()}
           onSave={handleEnhancedSave}
           linkedTokens={linkedTokens}
           allTags={allTags}

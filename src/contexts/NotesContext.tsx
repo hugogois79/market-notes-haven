@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchNotes, createNote, updateNote, deleteNote } from "@/services/supabaseService";
 import { Note, Tag } from "@/types";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ interface NotesProviderProps {
 }
 
 export const NotesProvider = ({ children }: NotesProviderProps) => {
+  const queryClient = useQueryClient();
   const { data: notesData, isLoading, refetch } = useQuery({
     queryKey: ['notes'],
     queryFn: fetchNotes,
@@ -83,6 +84,11 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
         
         if (result.note) {
           console.log("New note created:", result.note.id);
+          // Immediately update cache with new note to prevent "Note Not Found"
+          queryClient.setQueryData(['notes'], (oldNotes: Note[] | undefined) => {
+            if (!oldNotes) return [result.note];
+            return [...oldNotes, result.note];
+          });
           await refetch();
           return result.note;
         }
