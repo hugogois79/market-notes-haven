@@ -842,7 +842,7 @@ export type Database = {
             foreignKeyName: "expense_claims_requester_id_fkey"
             columns: ["requester_id"]
             isOneToOne: false
-            referencedRelation: "expense_requesters"
+            referencedRelation: "expense_users"
             referencedColumns: ["id"]
           },
         ]
