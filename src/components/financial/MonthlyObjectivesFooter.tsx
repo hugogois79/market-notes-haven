@@ -380,6 +380,7 @@ export default function MonthlyObjectivesFooter({ year, monthOffset = 0, schedul
                                           e.stopPropagation();
                                           e.dataTransfer.setData('text/plain', objective.content);
                                           e.dataTransfer.setData('application/x-objective', 'true');
+                                          e.dataTransfer.setData('application/x-objective-id', objective.id);
                                           e.dataTransfer.effectAllowed = 'copy';
                                           e.dataTransfer.dropEffect = 'copy';
                                         }}

@@ -553,6 +553,8 @@ export default function YearCalendar() {
     const droppedText = e.dataTransfer.getData('text/plain');
     
     if (isObjectiveDrop && droppedText) {
+      const objectiveId = e.dataTransfer.getData('application/x-objective-id');
+      
       // Create new event from objective text with "Forecast" category
       saveMutation.mutate({
         id: existingTargetEvent?.id,
@@ -562,6 +564,18 @@ export default function YearCalendar() {
         notes: null,
         period,
       });
+      
+      // Mark objective as completed (underlined)
+      if (objectiveId) {
+        supabase
+          .from('monthly_objectives')
+          .update({ is_completed: true })
+          .eq('id', objectiveId)
+          .then(() => {
+            queryClient.invalidateQueries({ queryKey: ['monthly-objectives'] });
+          });
+      }
+      
       toast.success(`Adicionado: ${droppedText}`);
       return;
     }
