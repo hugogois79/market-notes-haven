@@ -1562,19 +1562,6 @@ export default function WorkFlowTab() {
     await uploadFiles(Array.from(files));
   }, []);
 
-  // Column resize limits per column
-  const COLUMN_LIMITS: Record<string, { min: number; max: number; default: number }> = {
-    name: { min: 80, max: 800, default: 400 },
-    type: { min: 50, max: 150, default: 64 },
-    date: { min: 70, max: 200, default: 112 },
-    category: { min: 70, max: 200, default: 112 },
-    status: { min: 70, max: 200, default: 112 },
-    size: { min: 60, max: 150, default: 80 },
-    empresa: { min: 80, max: 300, default: 128 },
-    project: { min: 80, max: 300, default: 128 },
-    value: { min: 70, max: 200, default: 96 },
-  };
-
   // Resize handlers for columns
   const handleColumnResizeStart = useCallback((e: React.MouseEvent, columnId: string, defaultWidth: number) => {
     e.preventDefault();
@@ -1582,18 +1569,14 @@ export default function WorkFlowTab() {
     setResizingColumn(columnId);
     resizeStartX.current = e.clientX;
     resizeStartWidth.current = columnWidths[columnId] ?? defaultWidth;
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
   }, [columnWidths]);
 
   useEffect(() => {
     if (!resizingColumn) return;
     
-    const limits = COLUMN_LIMITS[resizingColumn] || { min: 80, max: 800 };
-    
     const handleMouseMove = (e: MouseEvent) => {
       const delta = e.clientX - resizeStartX.current;
-      const newWidth = Math.max(limits.min, Math.min(limits.max, resizeStartWidth.current + delta));
+      const newWidth = Math.max(80, Math.min(800, resizeStartWidth.current + delta));
       setColumnWidths(prev => ({ ...prev, [resizingColumn]: newWidth }));
     };
     
@@ -1603,8 +1586,6 @@ export default function WorkFlowTab() {
         return prev;
       });
       setResizingColumn(null);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
     };
     
     document.addEventListener("mousemove", handleMouseMove);
@@ -1613,8 +1594,6 @@ export default function WorkFlowTab() {
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
     };
   }, [resizingColumn]);
   
@@ -2476,7 +2455,7 @@ export default function WorkFlowTab() {
               </th>
               <th 
                 className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
-                style={{ width: getColumnWidth('name', 400), minWidth: 80, maxWidth: 800 }}
+                style={{ width: getColumnWidth('name', 400), minWidth: 150, maxWidth: 800 }}
                 onClick={() => handleSort('name')}
               >
                 <div className="flex items-center gap-1">
@@ -2485,9 +2464,9 @@ export default function WorkFlowTab() {
                     sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                   )}
                 </div>
-                {/* Resize handle - wider and more visible */}
+                {/* Resize handle */}
                 <div 
-                  className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize bg-slate-200/40 hover:bg-blue-500 transition-colors z-10"
+                  className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                   onMouseDown={(e) => handleColumnResizeStart(e, 'name', 400)}
                   onClick={(e) => e.stopPropagation()}
                 />
@@ -2505,7 +2484,7 @@ export default function WorkFlowTab() {
                     )}
                   </div>
                   <div 
-                    className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize bg-slate-200/40 hover:bg-blue-500 transition-colors z-10"
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                     onMouseDown={(e) => handleColumnResizeStart(e, 'type', 64)}
                     onClick={(e) => e.stopPropagation()}
                   />
@@ -2524,7 +2503,7 @@ export default function WorkFlowTab() {
                     )}
                   </div>
                   <div 
-                    className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize bg-slate-200/40 hover:bg-blue-500 transition-colors z-10"
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                     onMouseDown={(e) => handleColumnResizeStart(e, 'date', 112)}
                     onClick={(e) => e.stopPropagation()}
                   />
@@ -2558,7 +2537,7 @@ export default function WorkFlowTab() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                   <div 
-                    className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize bg-slate-200/40 hover:bg-blue-500 transition-colors z-10"
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                     onMouseDown={(e) => handleColumnResizeStart(e, 'category', 112)}
                     onClick={(e) => e.stopPropagation()}
                   />
@@ -2592,7 +2571,7 @@ export default function WorkFlowTab() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                   <div 
-                    className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize bg-slate-200/40 hover:bg-blue-500 transition-colors z-10"
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                     onMouseDown={(e) => handleColumnResizeStart(e, 'status', 112)}
                     onClick={(e) => e.stopPropagation()}
                   />
@@ -2611,7 +2590,7 @@ export default function WorkFlowTab() {
                     )}
                   </div>
                   <div 
-                    className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize bg-slate-200/40 hover:bg-blue-500 transition-colors z-10"
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                     onMouseDown={(e) => handleColumnResizeStart(e, 'size', 80)}
                     onClick={(e) => e.stopPropagation()}
                   />
@@ -2630,7 +2609,7 @@ export default function WorkFlowTab() {
                     )}
                   </div>
                   <div 
-                    className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize bg-slate-200/40 hover:bg-blue-500 transition-colors z-10"
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                     onMouseDown={(e) => handleColumnResizeStart(e, 'empresa', 128)}
                     onClick={(e) => e.stopPropagation()}
                   />
@@ -2649,7 +2628,7 @@ export default function WorkFlowTab() {
                     )}
                   </div>
                   <div 
-                    className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize bg-slate-200/40 hover:bg-blue-500 transition-colors z-10"
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                     onMouseDown={(e) => handleColumnResizeStart(e, 'project', 128)}
                     onClick={(e) => e.stopPropagation()}
                   />
@@ -2668,7 +2647,7 @@ export default function WorkFlowTab() {
                     )}
                   </div>
                   <div 
-                    className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize bg-slate-200/40 hover:bg-blue-500 transition-colors z-10"
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                     onMouseDown={(e) => handleColumnResizeStart(e, 'value', 96)}
                     onClick={(e) => e.stopPropagation()}
                   />
@@ -2733,7 +2712,7 @@ export default function WorkFlowTab() {
                       </td>
                       <td 
                         className="px-3 py-1.5" 
-                        style={{ width: getColumnWidth('name', 400), minWidth: 80, maxWidth: 800 }}
+                        style={{ width: getColumnWidth('name', 400), minWidth: 150, maxWidth: 800 }}
                       >
                         <div className="flex items-center gap-2 overflow-hidden">
                           <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
