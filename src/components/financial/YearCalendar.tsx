@@ -163,16 +163,62 @@ export default function YearCalendar() {
   } = useCalendarDayStatus(dateRange);
 
   const { data: events } = useQuery({
-    queryKey: ["calendar-events", dateRange.start, dateRange.end],
+    queryKey: ["calendar-events", dateRange.start, dateRange.end, categories],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Get shared category names from our categories
+      const sharedCategoryNames = categories
+        .filter(c => c.isShared)
+        .map(c => c.label.toLowerCase().replace(/\s+/g, '_'));
+      
+      // First get user's own events
+      const { data: ownEvents, error: ownError } = await supabase
         .from("calendar_events")
         .select("*")
+        .eq("user_id", user?.id)
         .gte("date", dateRange.start)
         .lte("date", dateRange.end);
       
-      if (error) throw error;
-      return data as CalendarEvent[];
+      if (ownError) throw ownError;
+
+      // Then get shared events from other users
+      // We need to find categories that are marked as shared by other users
+      let sharedEvents: CalendarEvent[] = [];
+      if (user) {
+        // Get all shared categories from all users
+        const { data: allSharedCategories } = await supabase
+          .from("calendar_categories")
+          .select("name, user_id")
+          .eq("is_shared", true)
+          .neq("user_id", user.id);
+        
+        if (allSharedCategories && allSharedCategories.length > 0) {
+          // Get events from other users that belong to shared categories
+          const sharedCatNames = allSharedCategories.map(c => c.name.toLowerCase().replace(/\s+/g, '_'));
+          const otherUserIds = [...new Set(allSharedCategories.map(c => c.user_id))];
+          
+          const { data: otherEvents } = await supabase
+            .from("calendar_events")
+            .select("*")
+            .in("user_id", otherUserIds)
+            .in("category", sharedCatNames)
+            .gte("date", dateRange.start)
+            .lte("date", dateRange.end);
+          
+          if (otherEvents) {
+            sharedEvents = otherEvents as CalendarEvent[];
+          }
+        }
+      }
+
+      // Merge and deduplicate events
+      const allEvents = [...(ownEvents || []), ...sharedEvents];
+      const uniqueEvents = allEvents.filter((event, index, self) => 
+        index === self.findIndex(e => e.id === event.id)
+      );
+      
+      return uniqueEvents as CalendarEvent[];
     },
   });
 

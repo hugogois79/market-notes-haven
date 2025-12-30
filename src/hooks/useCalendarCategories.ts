@@ -9,6 +9,7 @@ export interface CalendarCategory {
   bgClass: string;
   textClass: string;
   color: string;
+  isShared?: boolean;
 }
 
 interface DbCalendarCategory {
@@ -16,6 +17,7 @@ interface DbCalendarCategory {
   user_id: string;
   name: string;
   color: string;
+  is_shared: boolean;
 }
 
 const DEFAULT_CATEGORIES: CalendarCategory[] = [
@@ -43,6 +45,7 @@ const dbToCategory = (db: DbCalendarCategory): CalendarCategory => ({
   color: db.color,
   bgClass: getBgClass(db.color),
   textClass: getTextClass(db.color),
+  isShared: db.is_shared,
 });
 
 export function useCalendarCategories() {
@@ -139,6 +142,7 @@ export function useCalendarCategories() {
             user_id: user.id,
             name: cat.label,
             color: cat.color,
+            is_shared: cat.isShared || false,
           }))
         );
 
