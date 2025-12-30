@@ -226,7 +226,7 @@ export default function WorkFlowTab() {
   // Keyboard navigation - focused file row
   const [focusedFileId, setFocusedFileId] = useState<string | null>(null);
   const [openMenuFileId, setOpenMenuFileId] = useState<string | null>(null);
-  const tableRef = useRef<HTMLTableElement>(null);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
   
   // Refs for action buttons (to scroll into view when pressing E)
   const actionBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -2452,12 +2452,18 @@ export default function WorkFlowTab() {
       {/* Files Table with Drag & Drop */}
       <div 
         data-workflow-table-container
-        className={`border rounded-lg bg-white shadow-sm overflow-auto max-h-[calc(100vh-280px)] transition-colors relative ${
+        ref={tableContainerRef}
+        tabIndex={0}
+        className={`border rounded-lg bg-white shadow-sm overflow-auto max-h-[calc(100vh-280px)] transition-colors relative focus:outline-none focus:ring-2 focus:ring-blue-400/50 ${
           isDragging ? "border-blue-500 border-2 bg-blue-50" : "border-slate-200"
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+        onClick={() => {
+          // Focus the table container when clicking anywhere on it
+          tableContainerRef.current?.focus();
+        }}
       >
         {isDragging && (
           <div className="absolute inset-0 flex items-center justify-center bg-blue-50/80 z-10 pointer-events-none">
