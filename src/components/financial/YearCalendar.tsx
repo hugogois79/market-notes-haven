@@ -1288,44 +1288,74 @@ export default function YearCalendar() {
       </CardHeader>
       <CardContent className="p-2 overflow-x-auto">
         <div ref={calendarRef} className={showFullYear ? "min-w-[900px]" : "min-w-[1100px]"}>
-          {/* Grid Header */}
-          <div 
-            className="border-b border-border sticky top-0 bg-slate-300 z-10"
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: sixMonthGridTemplate 
-            }}
-          >
-            <div className="p-1 text-[10px] font-bold text-foreground text-center border-r border-border">
-              Dia
-            </div>
-            {showFullYear ? (
-              visibleMonths.map((monthInfo) => (
+          {/* Grid Header - Full Year View */}
+          {showFullYear && (
+            <div 
+              className="border-b border-border sticky top-0 bg-slate-300 z-10"
+              style={{ 
+                display: 'grid', 
+                gridTemplateColumns: sixMonthGridTemplate 
+              }}
+            >
+              <div className="p-1 text-[10px] font-bold text-foreground text-center border-r border-border">
+                Dia
+              </div>
+              {visibleMonths.map((monthInfo) => (
                 <div
                   key={`${monthInfo.month}-${monthInfo.year}`}
                   className="p-1 text-[10px] font-bold text-foreground text-center border-r border-border last:border-r-0"
                 >
                   {monthInfo.label}
                 </div>
-              ))
-            ) : (
-              visibleMonths.map((monthInfo) => (
-                <React.Fragment key={`header-${monthInfo.month}-${monthInfo.year}`}>
-                  {/* B column header */}
-                  <div className="p-0.5 text-[8px] font-bold text-foreground text-center border-r border-border/30 flex items-center justify-center">B</div>
-                  {/* Morning column with month name */}
-                  <div className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30 flex items-center justify-center">
+              ))}
+            </div>
+          )}
+
+          {/* Grid Header - 6 Month View with Two Rows */}
+          {!showFullYear && (
+            <>
+              {/* Row 1: Month names spanning across all 4 columns */}
+              <div 
+                className="border-b border-border sticky top-0 bg-slate-300 z-10"
+                style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: `40px ${visibleMonths.map(() => '1fr').join(' ')}` 
+                }}
+              >
+                <div className="p-1 text-[10px] font-bold text-foreground text-center border-r border-border">
+                  Dia
+                </div>
+                {visibleMonths.map((monthInfo, idx) => (
+                  <div
+                    key={`month-${monthInfo.month}-${monthInfo.year}`}
+                    className="p-1 text-[10px] font-bold text-foreground text-center"
+                    style={{ borderRight: idx < visibleMonths.length - 1 ? '3px double #1e293b' : 'none' }}
+                  >
                     {monthInfo.label}
                   </div>
-                  {/* Afternoon column - empty or secondary label */}
-                  <div className="p-0.5 text-[9px] font-bold text-foreground text-center border-r border-border/30 flex items-center justify-center">
-                  </div>
-                  {/* D column header - with double border as month separator */}
-                  <div className="p-0.5 text-[8px] font-bold text-foreground text-center flex items-center justify-center" style={{ borderRight: '3px double #1e293b' }}>D</div>
-                </React.Fragment>
-              ))
-            )}
-          </div>
+                ))}
+              </div>
+              
+              {/* Row 2: B/Manhã/Tarde/D sub-headers */}
+              <div 
+                className="border-b border-border sticky top-[24px] bg-slate-200 z-10"
+                style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: sixMonthGridTemplate 
+                }}
+              >
+                <div className="border-r border-border" />
+                {visibleMonths.map((monthInfo, idx) => (
+                  <React.Fragment key={`subheader-${monthInfo.month}-${monthInfo.year}`}>
+                    <div className="p-0.5 text-[8px] font-medium text-muted-foreground text-center border-r border-border/30">B</div>
+                    <div className="p-0.5 text-[8px] font-medium text-muted-foreground text-center border-r border-border/30">Manhã</div>
+                    <div className="p-0.5 text-[8px] font-medium text-muted-foreground text-center border-r border-border/30">Tarde</div>
+                    <div className="p-0.5 text-[8px] font-medium text-muted-foreground text-center" style={{ borderRight: idx < visibleMonths.length - 1 ? '3px double #1e293b' : 'none' }}>D</div>
+                  </React.Fragment>
+                ))}
+              </div>
+            </>
+          )}
 
           {/* Grid Body */}
           {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
