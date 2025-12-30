@@ -1,12 +1,20 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Settings, Plus, Trash2, Share2 } from "lucide-react";
+import { Settings, Plus, Trash2, Share2, Users, ChevronDown, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export interface CalendarCategory {
   value: string;
@@ -15,6 +23,7 @@ export interface CalendarCategory {
   textClass: string;
   color: string;
   isShared?: boolean;
+  sharedWithUsers?: string[]; // Array of user IDs to share with
 }
 
 const DEFAULT_CATEGORIES: CalendarCategory[] = [
@@ -64,6 +73,21 @@ export default function CalendarSettingsSheet({
   const [localCategories, setLocalCategories] = useState<CalendarCategory[]>(categories);
   const [newCategoryLabel, setNewCategoryLabel] = useState("");
 
+  // Fetch users for sharing dropdown
+  const { data: users } = useQuery({
+    queryKey: ["expense-users-for-sharing"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expense_users")
+        .select("id, name, email, user_id")
+        .eq("is_active", true)
+        .order("name");
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   useEffect(() => {
     setLocalCategories(categories);
   }, [categories]);
@@ -112,8 +136,21 @@ export default function CalendarSettingsSheet({
 
   const handleSharedChange = (value: string, isShared: boolean) => {
     setLocalCategories(localCategories.map(c => 
-      c.value === value ? { ...c, isShared } : c
+      c.value === value ? { ...c, isShared, sharedWithUsers: isShared ? c.sharedWithUsers : [] } : c
     ));
+  };
+
+  const handleSharedUsersChange = (categoryValue: string, userId: string, checked: boolean) => {
+    setLocalCategories(localCategories.map(c => {
+      if (c.value !== categoryValue) return c;
+      
+      const currentUsers = c.sharedWithUsers || [];
+      const newUsers = checked 
+        ? [...currentUsers, userId]
+        : currentUsers.filter(id => id !== userId);
+      
+      return { ...c, sharedWithUsers: newUsers, isShared: newUsers.length > 0 };
+    }));
   };
 
   const handleSave = () => {
@@ -185,28 +222,55 @@ export default function CalendarSettingsSheet({
                     ))}
                   </div>
                   
-                  {/* Share toggle */}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-1.5">
-                          <Share2 className={`h-3.5 w-3.5 ${category.isShared ? 'text-primary' : 'text-muted-foreground'}`} />
-                          <Switch
-                            checked={category.isShared || false}
-                            onCheckedChange={(checked) => handleSharedChange(category.value, checked)}
-                            className="scale-75"
-                          />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-xs">
-                          {category.isShared 
-                            ? "Eventos visíveis para todos os utilizadores" 
-                            : "Clique para partilhar com outros utilizadores"}
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  {/* Share with users selector */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={`h-7 gap-1 text-xs min-w-[100px] ${
+                          (category.sharedWithUsers?.length || 0) > 0 
+                            ? 'border-primary text-primary' 
+                            : ''
+                        }`}
+                      >
+                        <Users className="h-3 w-3" />
+                        {(category.sharedWithUsers?.length || 0) > 0 
+                          ? `${category.sharedWithUsers?.length} selecionado(s)`
+                          : "Partilhar"
+                        }
+                        <ChevronDown className="h-3 w-3" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[220px] p-2" align="end">
+                      <div className="text-xs font-medium mb-2 text-muted-foreground">
+                        Partilhar com:
+                      </div>
+                      <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                        {users?.map(user => {
+                          const isSelected = category.sharedWithUsers?.includes(user.user_id) || false;
+                          return (
+                            <div
+                              key={user.id}
+                              className="flex items-center gap-2 p-1.5 rounded hover:bg-muted cursor-pointer"
+                              onClick={() => handleSharedUsersChange(category.value, user.user_id, !isSelected)}
+                            >
+                              <Checkbox 
+                                checked={isSelected}
+                                className="h-3.5 w-3.5"
+                              />
+                              <span className="text-xs truncate">{user.name}</span>
+                            </div>
+                          );
+                        })}
+                        {(!users || users.length === 0) && (
+                          <div className="text-xs text-muted-foreground p-2 text-center">
+                            Nenhum utilizador disponível
+                          </div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   
                   <Button
                     variant="ghost"
