@@ -1562,6 +1562,19 @@ export default function WorkFlowTab() {
     await uploadFiles(Array.from(files));
   }, []);
 
+  // Column resize limits
+  const COLUMN_LIMITS: Record<string, { min: number; max: number }> = {
+    name: { min: 80, max: 800 },
+    type: { min: 50, max: 120 },
+    date: { min: 80, max: 200 },
+    category: { min: 80, max: 200 },
+    status: { min: 80, max: 200 },
+    size: { min: 60, max: 120 },
+    empresa: { min: 80, max: 300 },
+    project: { min: 80, max: 300 },
+    value: { min: 70, max: 150 },
+  };
+
   // Resize handlers for columns
   const handleColumnResizeStart = useCallback((e: React.MouseEvent, columnId: string, defaultWidth: number) => {
     e.preventDefault();
@@ -1569,14 +1582,19 @@ export default function WorkFlowTab() {
     setResizingColumn(columnId);
     resizeStartX.current = e.clientX;
     resizeStartWidth.current = columnWidths[columnId] ?? defaultWidth;
+    // Global cursor lock during resize
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
   }, [columnWidths]);
 
   useEffect(() => {
     if (!resizingColumn) return;
     
+    const limits = COLUMN_LIMITS[resizingColumn] || { min: 80, max: 800 };
+    
     const handleMouseMove = (e: MouseEvent) => {
       const delta = e.clientX - resizeStartX.current;
-      const newWidth = Math.max(80, Math.min(800, resizeStartWidth.current + delta));
+      const newWidth = Math.max(limits.min, Math.min(limits.max, resizeStartWidth.current + delta));
       setColumnWidths(prev => ({ ...prev, [resizingColumn]: newWidth }));
     };
     
@@ -1586,6 +1604,9 @@ export default function WorkFlowTab() {
         return prev;
       });
       setResizingColumn(null);
+      // Clear global cursor lock
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
     };
     
     document.addEventListener("mousemove", handleMouseMove);
@@ -1594,6 +1615,8 @@ export default function WorkFlowTab() {
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
     };
   }, [resizingColumn]);
   
@@ -2444,7 +2467,7 @@ export default function WorkFlowTab() {
             </div>
           </div>
         )}
-        <table className="w-full min-w-[1400px]">
+        <table className="w-full min-w-[1400px] table-fixed">
           <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
             <tr>
               <th className="w-10 px-3 py-2.5">
@@ -2455,7 +2478,7 @@ export default function WorkFlowTab() {
               </th>
               <th 
                 className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
-                style={{ width: getColumnWidth('name', 400), minWidth: 150, maxWidth: 800 }}
+                style={{ width: getColumnWidth('name', 400), minWidth: 80, maxWidth: 800 }}
                 onClick={() => handleSort('name')}
               >
                 <div className="flex items-center gap-1">
@@ -2466,7 +2489,7 @@ export default function WorkFlowTab() {
                 </div>
                 {/* Resize handle */}
                 <div 
-                  className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                  className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize bg-slate-200/60 hover:bg-blue-500 transition-colors z-10"
                   onMouseDown={(e) => handleColumnResizeStart(e, 'name', 400)}
                   onClick={(e) => e.stopPropagation()}
                 />
@@ -2712,12 +2735,12 @@ export default function WorkFlowTab() {
                       </td>
                       <td 
                         className="px-3 py-1.5" 
-                        style={{ width: getColumnWidth('name', 400), minWidth: 150, maxWidth: 800 }}
+                        style={{ width: getColumnWidth('name', 400), minWidth: 80, maxWidth: 800 }}
                       >
-                        <div className="flex items-center gap-2 overflow-hidden">
+                        <div className="flex items-center gap-2 overflow-hidden min-w-0">
                           <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
                           <span 
-                            className="text-xs font-medium text-blue-600 text-left truncate" 
+                            className="text-xs font-medium text-blue-600 text-left truncate min-w-0 block" 
                             title={file.file_name}
                           >
                             {getFileNameWithoutExtension(file.file_name)}
