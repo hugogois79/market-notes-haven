@@ -763,10 +763,10 @@ export default function YearCalendar() {
 
   const columnCount = showFullYear ? visibleMonths.length : visibleMonths.length * 4;
   
-  // Grid template for 6-month view: narrow columns for B/D, wider for events
+  // Grid template for 6-month view: narrow columns for B/D, wider for events with minimum width
   const sixMonthGridTemplate = showFullYear 
     ? `40px repeat(${visibleMonths.length}, 1fr)`
-    : `40px ${visibleMonths.map(() => '20px 1fr 1fr 20px').join(' ')}`;
+    : `40px ${visibleMonths.map(() => '20px minmax(60px, 1fr) minmax(60px, 1fr) 20px').join(' ')}`;
 
   // Check if cell is being edited
   const isEditing = (day: number, month: number, year: number, period: string) => {
@@ -1287,7 +1287,7 @@ export default function YearCalendar() {
         </p>
       </CardHeader>
       <CardContent className="p-2 overflow-x-auto">
-        <div ref={calendarRef} className={showFullYear ? "min-w-[900px]" : "min-w-[700px]"}>
+        <div ref={calendarRef} className={showFullYear ? "min-w-[900px]" : "min-w-[1100px]"}>
           {/* Grid Header */}
           <div 
             className="border-b border-border sticky top-0 bg-slate-300 z-10"
