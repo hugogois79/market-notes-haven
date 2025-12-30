@@ -22,7 +22,8 @@ import {
   Trash2,
   LogOut,
   Key,
-  Shield
+  Shield,
+  Crown
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { expenseUserService, ExpenseUser, FeaturePermissions } from "@/services/expenseUserService";
@@ -33,6 +34,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -62,6 +64,7 @@ import {
 const Settings = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   
   // Theme settings
   const [theme, setTheme] = useState<"light" | "dark" | "system">("light");
@@ -122,6 +125,7 @@ const Settings = () => {
   const [createAuthEmail, setCreateAuthEmail] = useState("");
   const [createAuthPassword, setCreateAuthPassword] = useState("");
   const [isCreatingAuth, setIsCreatingAuth] = useState(false);
+  const [userRoles, setUserRoles] = useState<Record<string, boolean>>({});
   
   // Fetch categories from database
   useEffect(() => {
@@ -155,6 +159,9 @@ const Settings = () => {
 
   // Fetch expense users and projects
   useEffect(() => {
+    // Only fetch if admin
+    if (roleLoading || !isAdmin) return;
+    
     const fetchExpenseUsersAndProjects = async () => {
       try {
         const [users, projectsResult] = await Promise.all([
@@ -166,23 +173,33 @@ const Settings = () => {
           setExpenseProjects(projectsResult.data);
         }
         
-        // Check auth status for each user
+        // Check auth status and admin roles for each user
         const authStatuses: Record<string, boolean> = {};
+        const adminRoles: Record<string, boolean> = {};
         for (const user of users) {
           try {
             const status = await expenseUserService.checkAuthStatus(user.id);
             authStatuses[user.id] = status.has_auth;
+            
+            // Check if user has admin role
+            if (status.user_id) {
+              const { data: roleData } = await supabase.rpc("get_user_role", {
+                _user_id: status.user_id,
+              });
+              adminRoles[user.id] = roleData === "admin";
+            }
           } catch {
             authStatuses[user.id] = false;
           }
         }
         setUserAuthStatus(authStatuses);
+        setUserRoles(adminRoles);
       } catch (error) {
         console.error('Error fetching expense users:', error);
       }
     };
     fetchExpenseUsersAndProjects();
-  }, []);
+  }, [isAdmin, roleLoading]);
 
   const defaultPermissions: FeaturePermissions = {
     expenses: false,
@@ -337,6 +354,42 @@ const Settings = () => {
       toast.error(error.message || "Erro ao criar conta de acesso");
     } finally {
       setIsCreatingAuth(false);
+    }
+  };
+
+  const handleToggleAdminRole = async (user: ExpenseUser, makeAdmin: boolean) => {
+    try {
+      // Get the user's auth user_id
+      const status = await expenseUserService.checkAuthStatus(user.id);
+      if (!status.has_auth || !status.user_id) {
+        toast.error("Este utilizador não tem conta de acesso");
+        return;
+      }
+
+      if (makeAdmin) {
+        // Add admin role
+        const { error } = await supabase
+          .from('user_roles')
+          .upsert({ user_id: status.user_id, role: 'admin' }, { onConflict: 'user_id,role' });
+        
+        if (error) throw error;
+        toast.success("Utilizador promovido a administrador");
+      } else {
+        // Remove admin role
+        const { error } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', status.user_id)
+          .eq('role', 'admin');
+        
+        if (error) throw error;
+        toast.success("Privilégios de administrador removidos");
+      }
+
+      setUserRoles(prev => ({ ...prev, [user.id]: makeAdmin }));
+    } catch (error) {
+      console.error('Error toggling admin role:', error);
+      toast.error("Erro ao alterar privilégios");
     }
   };
 
@@ -548,14 +601,14 @@ const Settings = () => {
       </div>
       
       <Tabs defaultValue="appearance" className="space-y-4">
-        <TabsList className="grid grid-cols-7 lg:w-[840px]">
+        <TabsList className={`grid ${isAdmin ? 'grid-cols-7 lg:w-[840px]' : 'grid-cols-5 lg:w-[600px]'}`}>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="editor">Editor</TabsTrigger>
           <TabsTrigger value="layout">Layout</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="privacy">Privacy</TabsTrigger>
-          <TabsTrigger value="users">Utilizadores</TabsTrigger>
-          <TabsTrigger value="projects">Projetos</TabsTrigger>
+          {isAdmin && <TabsTrigger value="users">Utilizadores</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="projects">Projetos</TabsTrigger>}
         </TabsList>
         
         <TabsContent value="appearance" className="space-y-4">
@@ -1066,6 +1119,7 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
+        {isAdmin && (
         <TabsContent value="users" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -1110,6 +1164,12 @@ const Settings = () => {
                             <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
                               <Check size={10} className="mr-1" />
                               Login ativo
+                            </Badge>
+                          )}
+                          {userRoles[user.id] && (
+                            <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                              <Crown size={10} className="mr-1" />
+                              Admin
                             </Badge>
                           )}
                         </div>
@@ -1163,6 +1223,15 @@ const Settings = () => {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => handleToggleAdminRole(user, !userRoles[user.id])}
+                          title={userRoles[user.id] ? "Remover Admin" : "Tornar Admin"}
+                          disabled={!userAuthStatus[user.id]}
+                        >
+                          <Crown size={16} className={userRoles[user.id] ? "text-amber-500" : "text-muted-foreground"} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleToggleUserActive(user)}
                           title={user.is_active ? "Desativar" : "Ativar"}
                         >
@@ -1190,10 +1259,13 @@ const Settings = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
+        {isAdmin && (
         <TabsContent value="projects" className="space-y-4">
           <ExpenseProjectManagement />
         </TabsContent>
+        )}
       </Tabs>
 
       {/* User Dialog */}
