@@ -966,11 +966,11 @@ export default function YearCalendar() {
     };
 
     // Determine B column background color based on custody status
+    // Keep colors visible even for past dates to show historical custody
     const getBColumnStyle = () => {
       if (!isValid) return undefined;
-      if (isPast) return { backgroundColor: PAST_DATE_BG };
       
-      // If custody is set, use that
+      // If custody is set, use that (even for past dates)
       if (custody === 'comigo') {
         return { backgroundColor: '#16a34a', color: '#ffffff' }; // Bright green with white text
       }
@@ -990,16 +990,16 @@ export default function YearCalendar() {
     };
 
     // Determine D column background color based on Diana status
+    // Keep colors visible even for past dates to show historical presence
     const getDColumnStyle = () => {
       if (!isValid) return undefined;
-      if (isPast) return { backgroundColor: PAST_DATE_BG };
       
-      // If Diana is with me, show green with white text
+      // If Diana is with me, show green with white text (even for past dates)
       if (diana === 'comigo') {
         return { backgroundColor: '#16a34a', color: '#ffffff' }; // Bright green with white text
       }
       
-      // Default: light blue for future dates
+      // Default: light blue for all dates
       return { backgroundColor: '#dbeafe' };
     };
 
