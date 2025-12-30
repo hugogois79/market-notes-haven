@@ -39,7 +39,7 @@ const ExpensesPage = () => {
         .from('expense_claims')
         .select(`
           *,
-          expense_requesters (
+          expense_users (
             id,
             name
           )
@@ -213,7 +213,7 @@ const ExpensesPage = () => {
             // Mobile Card View
             <div className="space-y-3">
               {claims.map((claim) => (
-                <ExpenseCard key={claim.id} claim={claim} requesterName={claim.expense_requesters?.name} />
+                <ExpenseCard key={claim.id} claim={claim} requesterName={claim.expense_users?.name} />
               ))}
             </div>
           ) : (
@@ -278,7 +278,7 @@ const ExpensesPage = () => {
                               {formatDate(claim.claim_date)}
                             </TableCell>
                             <TableCell className="py-1.5 px-3 text-xs max-w-[120px] truncate">
-                              {claim.expense_requesters?.name || "-"}
+                              {claim.expense_users?.name || "-"}
                             </TableCell>
                             <TableCell className="py-1.5 px-3">
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0">
