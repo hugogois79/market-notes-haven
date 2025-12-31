@@ -16,6 +16,7 @@ import {
   CalendarDays,
   Building2,
   FolderKanban,
+  Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useMemo } from "react";
@@ -135,6 +136,13 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       path: "/projects",
       workerAllowed: false,
       featureKey: "projects",
+    },
+    {
+      title: "Imobiliário",
+      icon: <Home size={20} />,
+      path: "/real-estate",
+      workerAllowed: false,
+      featureKey: "finance",
     },
     {
       title: "Work",
