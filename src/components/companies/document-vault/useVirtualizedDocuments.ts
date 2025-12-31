@@ -88,13 +88,11 @@ export function useVirtualizedDocuments({
         .select("*", { count: "exact" })
         .eq("company_id", companyId);
 
-      // Property filter
+      // Property filter - show property-specific OR general company docs
       if (propertyId) {
-        query = query.eq("property_id", propertyId);
-      }
-
-      // Folder filter (only apply when not filtering by property)
-      if (!propertyId) {
+        query = query.or(`property_id.eq.${propertyId},property_id.is.null`);
+      } else {
+        // Folder filter (only apply when not filtering by property)
         if (folderId) {
           query = query.eq("folder_id", folderId);
         } else {
