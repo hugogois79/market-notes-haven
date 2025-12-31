@@ -48,10 +48,42 @@ export function PropertyDialog({ open, onOpenChange, property }: PropertyDialogP
     notes: property?.notes || "",
   });
 
+  // Format number with thousand separators (Portuguese format: 1 234 567,89)
+  const formatNumberInput = (value: string): string => {
+    // Remove all non-numeric chars except comma and dot
+    const cleaned = value.replace(/[^\d,.-]/g, "");
+    // Replace comma with dot for parsing
+    const normalized = cleaned.replace(",", ".");
+    const num = parseFloat(normalized);
+    if (isNaN(num)) return cleaned;
+    // Format with spaces as thousand separators
+    return num.toLocaleString("pt-PT", { maximumFractionDigits: 2 });
+  };
+
+  // Parse formatted number back to raw value
+  const parseFormattedNumber = (value: string): string => {
+    // Remove spaces and convert comma to dot
+    return value.replace(/\s/g, "").replace(",", ".");
+  };
+
+  const handlePriceChange = (field: "purchase_price" | "current_value", value: string) => {
+    // Allow typing: keep raw input but format on blur
+    setFormData({ ...formData, [field]: value });
+  };
+
+  const handlePriceBlur = (field: "purchase_price" | "current_value") => {
+    const formatted = formatNumberInput(formData[field]);
+    setFormData({ ...formData, [field]: formatted });
+  };
+
   // Reset form when property changes or dialog opens
   useEffect(() => {
     if (open) {
       if (property) {
+        const formatValue = (val: number | null | undefined) => {
+          if (val == null) return "";
+          return val.toLocaleString("pt-PT", { maximumFractionDigits: 2 });
+        };
         setFormData({
           name: property.name || "",
           company_id: property.company_id || "",
@@ -61,8 +93,8 @@ export function PropertyDialog({ open, onOpenChange, property }: PropertyDialogP
           city: property.city || "",
           postal_code: property.postal_code || "",
           purchase_date: property.purchase_date || "",
-          purchase_price: property.purchase_price?.toString() || "",
-          current_value: property.current_value?.toString() || "",
+          purchase_price: formatValue(property.purchase_price),
+          current_value: formatValue(property.current_value),
           notes: property.notes || "",
         });
       } else {
@@ -91,8 +123,8 @@ export function PropertyDialog({ open, onOpenChange, property }: PropertyDialogP
         ...data,
         user_id: user?.id,
         company_id: data.company_id || null,
-        purchase_price: parseFloat(data.purchase_price.replace(",", ".")) || 0,
-        current_value: parseFloat(data.current_value.replace(",", ".")) || 0,
+        purchase_price: parseFloat(parseFormattedNumber(data.purchase_price)) || 0,
+        current_value: parseFloat(parseFormattedNumber(data.current_value)) || 0,
         purchase_date: data.purchase_date || null,
       };
 
@@ -274,7 +306,8 @@ export function PropertyDialog({ open, onOpenChange, property }: PropertyDialogP
                 <Input
                   id="purchase_price"
                   value={formData.purchase_price}
-                  onChange={(e) => setFormData({ ...formData, purchase_price: e.target.value })}
+                  onChange={(e) => handlePriceChange("purchase_price", e.target.value)}
+                  onBlur={() => handlePriceBlur("purchase_price")}
                   placeholder="0,00"
                 />
               </div>
@@ -285,7 +318,8 @@ export function PropertyDialog({ open, onOpenChange, property }: PropertyDialogP
               <Input
                 id="current_value"
                 value={formData.current_value}
-                onChange={(e) => setFormData({ ...formData, current_value: e.target.value })}
+                onChange={(e) => handlePriceChange("current_value", e.target.value)}
+                onBlur={() => handlePriceBlur("current_value")}
                 placeholder="0,00"
               />
             </div>
