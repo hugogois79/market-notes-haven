@@ -254,7 +254,8 @@ const NewExpensePage = () => {
         return;
       }
 
-      if (parseFloat(expenseForm.amount) <= 0) {
+      const parsedAmount = parseFloat(expenseForm.amount.replace(',', '.'));
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
         toast({
           title: "Valor inválido",
           description: "O valor da despesa deve ser maior que zero.",
@@ -319,7 +320,7 @@ const NewExpensePage = () => {
             expense_date: expenseForm.expense_date,
             description: expenseForm.description,
             supplier: expenseForm.supplier.trim(),
-            amount: parseFloat(expenseForm.amount),
+            amount: parseFloat(expenseForm.amount.replace(',', '.')),
             project_id: expenseForm.project_id || null,
             category_id: expenseForm.category_id || null,
             receipt_image_url: receiptUrl || editingExpense.receipt_image_url,
@@ -331,7 +332,7 @@ const NewExpensePage = () => {
           expense_date: expenseForm.expense_date,
           description: expenseForm.description,
           supplier: expenseForm.supplier.trim(),
-          amount: parseFloat(expenseForm.amount),
+          amount: parseFloat(expenseForm.amount.replace(',', '.')),
           project_id: expenseForm.project_id || null,
           category_id: expenseForm.category_id || null,
           receipt_image_url: receiptUrl,
@@ -887,7 +888,7 @@ const NewExpensePage = () => {
                 !expenseForm.description ||
                 !expenseForm.supplier ||
                 !expenseForm.amount ||
-                parseFloat(expenseForm.amount) <= 0 ||
+                parseFloat(expenseForm.amount.replace(',', '.')) <= 0 ||
                 (!editingExpense && !expenseForm.receipt_file)
               }
             >
