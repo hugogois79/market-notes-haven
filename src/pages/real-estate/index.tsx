@@ -74,8 +74,22 @@ export default function RealEstatePage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["residential", "commercial"]));
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const handleEditProperty = (property: Property) => {
+    setEditingProperty(property);
+    setIsDialogOpen(true);
+    setIsDrawerOpen(false);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      setEditingProperty(null);
+    }
+  };
 
   // Fetch properties
   const { data: properties = [], isLoading } = useQuery({
@@ -405,7 +419,8 @@ export default function RealEstatePage() {
       {/* Property Dialog */}
       <PropertyDialog
         open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        onOpenChange={handleDialogClose}
+        property={editingProperty}
       />
 
       {/* Property Drawer */}
@@ -413,6 +428,7 @@ export default function RealEstatePage() {
         property={selectedProperty}
         open={isDrawerOpen}
         onOpenChange={setIsDrawerOpen}
+        onEdit={handleEditProperty}
       />
     </div>
   );

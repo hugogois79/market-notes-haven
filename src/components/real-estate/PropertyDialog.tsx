@@ -48,24 +48,28 @@ export function PropertyDialog({ open, onOpenChange, property }: PropertyDialogP
     notes: property?.notes || "",
   });
 
-  // Reset form when property changes
+  // Reset form when property changes or dialog opens
   useEffect(() => {
-    if (property) {
-      setFormData({
-        name: property.name || "",
-        company_id: property.company_id || "",
-        property_type: property.property_type || "residential",
-        status: property.status || "active",
-        address: property.address || "",
-        city: property.city || "",
-        postal_code: property.postal_code || "",
-        purchase_date: property.purchase_date || "",
-        purchase_price: property.purchase_price?.toString() || "",
-        current_value: property.current_value?.toString() || "",
-        notes: property.notes || "",
-      });
+    if (open) {
+      if (property) {
+        setFormData({
+          name: property.name || "",
+          company_id: property.company_id || "",
+          property_type: property.property_type || "residential",
+          status: property.status || "active",
+          address: property.address || "",
+          city: property.city || "",
+          postal_code: property.postal_code || "",
+          purchase_date: property.purchase_date || "",
+          purchase_price: property.purchase_price?.toString() || "",
+          current_value: property.current_value?.toString() || "",
+          notes: property.notes || "",
+        });
+      } else {
+        resetForm();
+      }
     }
-  }, [property]);
+  }, [property, open]);
 
   // Fetch companies
   const { data: companies = [] } = useQuery({

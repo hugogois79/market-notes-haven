@@ -31,9 +31,10 @@ interface PropertyDrawerProps {
   property: any | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEdit?: (property: any) => void;
 }
 
-export function PropertyDrawer({ property, open, onOpenChange }: PropertyDrawerProps) {
+export function PropertyDrawer({ property, open, onOpenChange, onEdit }: PropertyDrawerProps) {
   // Fetch company info
   const { data: company } = useQuery({
     queryKey: ["company", property?.company_id],
@@ -139,7 +140,11 @@ export function PropertyDrawer({ property, open, onOpenChange }: PropertyDrawerP
                 </div>
               </div>
             </div>
-            <Button variant="outline" size="icon">
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => onEdit?.(property)}
+            >
               <Edit className="h-4 w-4" />
             </Button>
           </div>
