@@ -2785,6 +2785,333 @@ export type Database = {
         }
         Relationships: []
       }
+      real_estate_documents: {
+        Row: {
+          ai_summary: string | null
+          created_at: string
+          document_type: string
+          file_url: string
+          id: string
+          name: string
+          property_id: string | null
+          tenant_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_summary?: string | null
+          created_at?: string
+          document_type: string
+          file_url: string
+          id?: string
+          name: string
+          property_id?: string | null
+          tenant_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_summary?: string | null
+          created_at?: string
+          document_type?: string
+          file_url?: string
+          id?: string
+          name?: string
+          property_id?: string | null
+          tenant_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "real_estate_documents_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "real_estate_properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "real_estate_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "real_estate_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      real_estate_leases: {
+        Row: {
+          created_at: string
+          deposit_amount: number | null
+          end_date: string | null
+          id: string
+          monthly_rent: number
+          property_id: string
+          start_date: string
+          status: string
+          tenant_id: string
+          unit_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deposit_amount?: number | null
+          end_date?: string | null
+          id?: string
+          monthly_rent: number
+          property_id: string
+          start_date: string
+          status?: string
+          tenant_id: string
+          unit_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deposit_amount?: number | null
+          end_date?: string | null
+          id?: string
+          monthly_rent?: number
+          property_id?: string
+          start_date?: string
+          status?: string
+          tenant_id?: string
+          unit_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "real_estate_leases_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "real_estate_properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "real_estate_leases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "real_estate_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "real_estate_leases_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "real_estate_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      real_estate_ledger: {
+        Row: {
+          amount: number
+          attachment_url: string | null
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          payment_method: string | null
+          property_id: string | null
+          status: string | null
+          tenant_id: string | null
+          transaction_date: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          attachment_url?: string | null
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          payment_method?: string | null
+          property_id?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          transaction_date: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          attachment_url?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          payment_method?: string | null
+          property_id?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          transaction_date?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "real_estate_ledger_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "real_estate_properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "real_estate_ledger_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "real_estate_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      real_estate_properties: {
+        Row: {
+          address: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          current_value: number | null
+          id: string
+          image_url: string | null
+          name: string
+          notes: string | null
+          postal_code: string | null
+          property_type: string
+          purchase_date: string | null
+          purchase_price: number | null
+          status: string
+          total_maintenance_cost: number | null
+          total_rents_collected: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          current_value?: number | null
+          id?: string
+          image_url?: string | null
+          name: string
+          notes?: string | null
+          postal_code?: string | null
+          property_type?: string
+          purchase_date?: string | null
+          purchase_price?: number | null
+          status?: string
+          total_maintenance_cost?: number | null
+          total_rents_collected?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          current_value?: number | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          notes?: string | null
+          postal_code?: string | null
+          property_type?: string
+          purchase_date?: string | null
+          purchase_price?: number | null
+          status?: string
+          total_maintenance_cost?: number | null
+          total_rents_collected?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      real_estate_tenants: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          tax_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          tax_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          tax_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      real_estate_units: {
+        Row: {
+          area_sqm: number | null
+          created_at: string
+          id: string
+          is_occupied: boolean | null
+          property_id: string
+          rent_amount: number | null
+          unit_name: string
+          unit_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          area_sqm?: number | null
+          created_at?: string
+          id?: string
+          is_occupied?: boolean | null
+          property_id: string
+          rent_amount?: number | null
+          unit_name: string
+          unit_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          area_sqm?: number | null
+          created_at?: string
+          id?: string
+          is_occupied?: boolean | null
+          property_id?: string
+          rent_amount?: number | null
+          unit_name?: string
+          unit_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "real_estate_units_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "real_estate_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       receipt_companies: {
         Row: {
           address: string | null
