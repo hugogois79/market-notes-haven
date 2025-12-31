@@ -7,6 +7,7 @@ export type SortDirection = "asc" | "desc";
 
 interface UseVirtualizedDocumentsParams {
   companyId: string | undefined;
+  propertyId?: string;
   folderId: string | null;
   searchQuery: string;
   typeFilter: string;
@@ -37,6 +38,7 @@ export interface DocumentRow {
 
 export function useVirtualizedDocuments({
   companyId,
+  propertyId,
   folderId,
   searchQuery,
   typeFilter,
@@ -54,6 +56,7 @@ export function useVirtualizedDocuments({
   const queryKey = [
     "company-documents-virtualized",
     companyId,
+    propertyId,
     folderId,
     searchQuery,
     typeFilter,
@@ -85,11 +88,18 @@ export function useVirtualizedDocuments({
         .select("*", { count: "exact" })
         .eq("company_id", companyId);
 
-      // Folder filter
-      if (folderId) {
-        query = query.eq("folder_id", folderId);
-      } else {
-        query = query.is("folder_id", null);
+      // Property filter
+      if (propertyId) {
+        query = query.eq("property_id", propertyId);
+      }
+
+      // Folder filter (only apply when not filtering by property)
+      if (!propertyId) {
+        if (folderId) {
+          query = query.eq("folder_id", folderId);
+        } else {
+          query = query.is("folder_id", null);
+        }
       }
 
       // Search filter (using ilike for case-insensitive search)

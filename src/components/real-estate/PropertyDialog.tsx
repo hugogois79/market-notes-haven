@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -36,6 +36,7 @@ export function PropertyDialog({ open, onOpenChange, property }: PropertyDialogP
 
   const [formData, setFormData] = useState({
     name: property?.name || "",
+    company_id: property?.company_id || "",
     property_type: property?.property_type || "residential",
     status: property?.status || "active",
     address: property?.address || "",
@@ -47,11 +48,45 @@ export function PropertyDialog({ open, onOpenChange, property }: PropertyDialogP
     notes: property?.notes || "",
   });
 
+  // Reset form when property changes
+  useEffect(() => {
+    if (property) {
+      setFormData({
+        name: property.name || "",
+        company_id: property.company_id || "",
+        property_type: property.property_type || "residential",
+        status: property.status || "active",
+        address: property.address || "",
+        city: property.city || "",
+        postal_code: property.postal_code || "",
+        purchase_date: property.purchase_date || "",
+        purchase_price: property.purchase_price?.toString() || "",
+        current_value: property.current_value?.toString() || "",
+        notes: property.notes || "",
+      });
+    }
+  }, [property]);
+
+  // Fetch companies
+  const { data: companies = [] } = useQuery({
+    queryKey: ["companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const payload = {
         ...data,
         user_id: user?.id,
+        company_id: data.company_id || null,
         purchase_price: parseFloat(data.purchase_price.replace(",", ".")) || 0,
         current_value: parseFloat(data.current_value.replace(",", ".")) || 0,
         purchase_date: data.purchase_date || null,
@@ -85,6 +120,7 @@ export function PropertyDialog({ open, onOpenChange, property }: PropertyDialogP
   const resetForm = () => {
     setFormData({
       name: "",
+      company_id: "",
       property_type: "residential",
       status: "active",
       address: "",
@@ -101,6 +137,10 @@ export function PropertyDialog({ open, onOpenChange, property }: PropertyDialogP
     e.preventDefault();
     if (!formData.name.trim()) {
       toast.error("Nome é obrigatório");
+      return;
+    }
+    if (!formData.company_id) {
+      toast.error("Empresa é obrigatória");
       return;
     }
     mutation.mutate(formData);
@@ -125,6 +165,25 @@ export function PropertyDialog({ open, onOpenChange, property }: PropertyDialogP
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ex: Foz Living"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="company_id">Empresa *</Label>
+              <Select
+                value={formData.company_id}
+                onValueChange={(value) => setFormData({ ...formData, company_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
