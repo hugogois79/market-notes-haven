@@ -49,12 +49,14 @@ import {
 
 interface DocumentVaultProps {
   companyId: string;
-  onUploadClick: () => void;
-  onCreateFolder: () => void;
+  propertyId?: string;
+  onUploadClick?: () => void;
+  onCreateFolder?: () => void;
 }
 
 export function DocumentVault({
   companyId,
+  propertyId,
   onUploadClick,
   onCreateFolder,
 }: DocumentVaultProps) {
@@ -142,6 +144,7 @@ export function DocumentVault({
     setLoadMoreElement,
   } = useVirtualizedDocuments({
     companyId,
+    propertyId,
     folderId: currentFolderId,
     searchQuery,
     typeFilter,
@@ -471,19 +474,23 @@ export function DocumentVault({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <div className="w-px h-6 bg-border" />
+          {(onCreateFolder || onUploadClick) && <div className="w-px h-6 bg-border" />}
 
           {/* New Folder */}
-          <Button variant="outline" size="sm" className="h-8" onClick={onCreateFolder}>
-            <FolderPlus className="h-3.5 w-3.5 mr-1.5" />
-            Folder
-          </Button>
+          {onCreateFolder && (
+            <Button variant="outline" size="sm" className="h-8" onClick={onCreateFolder}>
+              <FolderPlus className="h-3.5 w-3.5 mr-1.5" />
+              Folder
+            </Button>
+          )}
 
           {/* Upload */}
-          <Button size="sm" className="h-8" onClick={onUploadClick}>
-            <Upload className="h-3.5 w-3.5 mr-1.5" />
-            Upload
-          </Button>
+          {onUploadClick && (
+            <Button size="sm" className="h-8" onClick={onUploadClick}>
+              <Upload className="h-3.5 w-3.5 mr-1.5" />
+              Upload
+            </Button>
+          )}
         </div>
       </div>
 

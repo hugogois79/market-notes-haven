@@ -21,9 +21,11 @@ import {
   TrendingUp,
   Wrench,
   Edit,
+  FolderOpen,
 } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
+import { DocumentVault } from "@/components/companies/document-vault/DocumentVault";
 
 interface PropertyDrawerProps {
   property: any | null;
@@ -32,6 +34,22 @@ interface PropertyDrawerProps {
 }
 
 export function PropertyDrawer({ property, open, onOpenChange }: PropertyDrawerProps) {
+  // Fetch company info
+  const { data: company } = useQuery({
+    queryKey: ["company", property?.company_id],
+    queryFn: async () => {
+      if (!property?.company_id) return null;
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, name")
+        .eq("id", property.company_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!property?.company_id,
+  });
+
   // Fetch units for this property
   const { data: units = [] } = useQuery({
     queryKey: ["real-estate-units", property?.id],
@@ -65,6 +83,21 @@ export function PropertyDrawer({ property, open, onOpenChange }: PropertyDrawerP
     enabled: !!property?.id,
   });
 
+  // Fetch documents count for this property
+  const { data: documentsCount = 0 } = useQuery({
+    queryKey: ["property-documents-count", property?.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("company_documents")
+        .select("*", { count: "exact", head: true })
+        .eq("property_id", property?.id);
+
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!property?.id,
+  });
+
   if (!property) return null;
 
   const formatCurrency = (value: number) => {
@@ -89,7 +122,7 @@ export function PropertyDrawer({ property, open, onOpenChange }: PropertyDrawerP
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader className="space-y-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -110,6 +143,13 @@ export function PropertyDrawer({ property, open, onOpenChange }: PropertyDrawerP
               <Edit className="h-4 w-4" />
             </Button>
           </div>
+
+          {company && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Building2 className="h-4 w-4" />
+              <span>Empresa: <span className="font-medium text-foreground">{company.name}</span></span>
+            </div>
+          )}
 
           {property.address && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -174,6 +214,14 @@ export function PropertyDrawer({ property, open, onOpenChange }: PropertyDrawerP
             <TabsTrigger value="overview" className="flex-1">Resumo</TabsTrigger>
             <TabsTrigger value="units" className="flex-1">Frações</TabsTrigger>
             <TabsTrigger value="ledger" className="flex-1">Movimentos</TabsTrigger>
+            <TabsTrigger value="documents" className="flex-1 gap-1">
+              Documentos
+              {documentsCount > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 text-xs justify-center">
+                  {documentsCount}
+                </Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -262,6 +310,22 @@ export function PropertyDrawer({ property, open, onOpenChange }: PropertyDrawerP
               <div className="text-center py-8 text-muted-foreground">
                 <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>Nenhum movimento registado</p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="documents" className="space-y-4">
+            {property.company_id ? (
+              <div className="-mx-6">
+                <DocumentVault 
+                  companyId={property.company_id} 
+                  propertyId={property.id}
+                />
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <FolderOpen className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>Associe uma empresa para gerir documentos</p>
               </div>
             )}
           </TabsContent>

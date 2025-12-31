@@ -291,6 +291,7 @@ export type Database = {
           mime_type: string | null
           name: string
           notes: string | null
+          property_id: string | null
           status: string | null
           tags: string[] | null
           updated_at: string
@@ -309,6 +310,7 @@ export type Database = {
           mime_type?: string | null
           name: string
           notes?: string | null
+          property_id?: string | null
           status?: string | null
           tags?: string[] | null
           updated_at?: string
@@ -327,6 +329,7 @@ export type Database = {
           mime_type?: string | null
           name?: string
           notes?: string | null
+          property_id?: string | null
           status?: string | null
           tags?: string[] | null
           updated_at?: string
@@ -347,6 +350,13 @@ export type Database = {
             referencedRelation: "company_folders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "company_documents_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "real_estate_properties"
+            referencedColumns: ["id"]
+          },
         ]
       }
       company_folders: {
@@ -358,6 +368,7 @@ export type Database = {
           id: string
           name: string
           parent_folder_id: string | null
+          property_id: string | null
           status: string | null
           status_options: Json | null
           updated_at: string
@@ -370,6 +381,7 @@ export type Database = {
           id?: string
           name: string
           parent_folder_id?: string | null
+          property_id?: string | null
           status?: string | null
           status_options?: Json | null
           updated_at?: string
@@ -382,6 +394,7 @@ export type Database = {
           id?: string
           name?: string
           parent_folder_id?: string | null
+          property_id?: string | null
           status?: string | null
           status_options?: Json | null
           updated_at?: string
@@ -399,6 +412,13 @@ export type Database = {
             columns: ["parent_folder_id"]
             isOneToOne: false
             referencedRelation: "company_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_folders_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "real_estate_properties"
             referencedColumns: ["id"]
           },
         ]
@@ -2973,6 +2993,7 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
+          company_id: string | null
           country: string | null
           created_at: string
           current_value: number | null
@@ -2993,6 +3014,7 @@ export type Database = {
         Insert: {
           address?: string | null
           city?: string | null
+          company_id?: string | null
           country?: string | null
           created_at?: string
           current_value?: number | null
@@ -3013,6 +3035,7 @@ export type Database = {
         Update: {
           address?: string | null
           city?: string | null
+          company_id?: string | null
           country?: string | null
           created_at?: string
           current_value?: number | null
@@ -3030,7 +3053,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "real_estate_properties_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       real_estate_tenants: {
         Row: {
