@@ -21,6 +21,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Plus, 
   Search, 
@@ -174,10 +180,29 @@ export default function RealEstatePage() {
             Gestão de propriedades residenciais e comerciais
           </p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
-          <Plus size={16} />
-          Nova Propriedade
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="gap-2">
+              <Plus size={16} />
+              {activeTab === "tenants" ? "Novo Inquilino" : activeTab === "projects" ? "Novo Projeto" : "Nova Propriedade"}
+              <ChevronDown size={14} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-popover">
+            <DropdownMenuItem onClick={() => setIsDialogOpen(true)} className="gap-2 cursor-pointer">
+              <Building2 size={16} />
+              Nova Propriedade
+            </DropdownMenuItem>
+            <DropdownMenuItem className="gap-2 cursor-pointer" disabled>
+              <Users size={16} />
+              Novo Inquilino
+            </DropdownMenuItem>
+            <DropdownMenuItem className="gap-2 cursor-pointer" disabled>
+              <Briefcase size={16} />
+              Novo Projeto
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Tabs */}
