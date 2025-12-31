@@ -3823,6 +3823,38 @@ export type Database = {
         }
         Relationships: []
       }
+      workflow_file_index: {
+        Row: {
+          file_id: string
+          id: string
+          indexed_at: string
+          search_text: string
+          tokens: unknown
+        }
+        Insert: {
+          file_id: string
+          id?: string
+          indexed_at?: string
+          search_text: string
+          tokens?: unknown
+        }
+        Update: {
+          file_id?: string
+          id?: string
+          indexed_at?: string
+          search_text?: string
+          tokens?: unknown
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_file_index_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: true
+            referencedRelation: "workflow_files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_files: {
         Row: {
           category: string | null
@@ -3958,6 +3990,14 @@ export type Database = {
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      get_workflow_index_stats: {
+        Args: never
+        Returns: {
+          last_indexed_at: string
+          pending_files: number
+          total_indexed: number
+        }[]
       }
       has_role: {
         Args: {

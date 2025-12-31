@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.folder-insights]
 verify_jwt = false
+
+[functions.index-workflow-files]
+verify_jwt = false
