@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -27,10 +28,11 @@ import {
   Home, 
   ChevronDown, 
   ChevronRight,
-  Filter
+  Filter,
+  Users,
+  Briefcase
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { PropertyDialog } from "@/components/real-estate/PropertyDialog";
 import { PropertyDrawer } from "@/components/real-estate/PropertyDrawer";
 
@@ -61,7 +63,7 @@ type GroupedProperties = {
 
 export default function RealEstatePage() {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState("properties");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["residential", "commercial"]));
@@ -178,159 +180,202 @@ export default function RealEstatePage() {
         </Button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Pesquisar propriedades..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
-            <Filter size={16} className="mr-2" />
-            <SelectValue placeholder="Filtrar status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="active">Ativos</SelectItem>
-            <SelectItem value="maintenance">Manutenção</SelectItem>
-            <SelectItem value="vacant">Vagos</SelectItem>
-            <SelectItem value="sold">Vendidos</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="properties" className="flex items-center gap-2">
+            <Building2 size={16} />
+            Propriedades
+          </TabsTrigger>
+          <TabsTrigger value="tenants" className="flex items-center gap-2">
+            <Users size={16} />
+            Inquilinos
+          </TabsTrigger>
+          <TabsTrigger value="projects" className="flex items-center gap-2">
+            <Briefcase size={16} />
+            Projetos
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Grouped Table */}
-      <div className="border rounded-lg overflow-hidden bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="w-[40px]"></TableHead>
-              <TableHead>Propriedade</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Preço de Compra</TableHead>
-              <TableHead className="text-right">Manutenção</TableHead>
-              <TableHead className="text-right">Rendas</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {Object.entries(groupedProperties).map(([type, group]) => {
-              if (group.properties.length === 0) return null;
-              const isExpanded = expandedGroups.has(type);
-              const TypeIcon = type === "residential" ? Home : Building2;
+        {/* Properties Tab */}
+        <TabsContent value="properties">
+          {/* Filters */}
+          <div className="flex flex-col gap-4 md:flex-row md:items-center mb-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Pesquisar propriedades..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <Filter size={16} className="mr-2" />
+                <SelectValue placeholder="Filtrar status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="active">Ativos</SelectItem>
+                <SelectItem value="maintenance">Manutenção</SelectItem>
+                <SelectItem value="vacant">Vagos</SelectItem>
+                <SelectItem value="sold">Vendidos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-              return (
-                <>
-                  {/* Group Header Row */}
-                  <TableRow
-                    key={`group-${type}`}
-                    className="bg-muted/30 hover:bg-muted/40 cursor-pointer"
-                    onClick={() => toggleGroup(type)}
-                  >
-                    <TableCell className="py-3">
-                      {isExpanded ? (
-                        <ChevronDown size={16} className="text-muted-foreground" />
-                      ) : (
-                        <ChevronRight size={16} className="text-muted-foreground" />
-                      )}
-                    </TableCell>
-                    <TableCell className="py-3 font-medium">
-                      <div className="flex items-center gap-2">
-                        <TypeIcon size={16} className="text-muted-foreground" />
-                        <span className="uppercase text-xs text-muted-foreground">
-                          Tipo de Propriedade
-                        </span>
-                        {getTypeBadge(type)}
-                        <span className="text-xs text-muted-foreground ml-2">
-                          ({group.properties.length})
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell></TableCell>
-                    <TableCell></TableCell>
-                    <TableCell className="text-right font-medium text-muted-foreground">
-                      Σ {formatCurrency(group.totals.purchase_price)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-muted-foreground">
-                      Σ {formatCurrency(group.totals.maintenance)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-muted-foreground">
-                      Σ {formatCurrency(group.totals.rents)}
-                    </TableCell>
-                  </TableRow>
+          {/* Grouped Table */}
+          <div className="border rounded-lg overflow-hidden bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="w-[40px]"></TableHead>
+                  <TableHead>Propriedade</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Preço de Compra</TableHead>
+                  <TableHead className="text-right">Manutenção</TableHead>
+                  <TableHead className="text-right">Rendas</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Object.entries(groupedProperties).map(([type, group]) => {
+                  if (group.properties.length === 0) return null;
+                  const isExpanded = expandedGroups.has(type);
+                  const TypeIcon = type === "residential" ? Home : Building2;
 
-                  {/* Property Rows */}
-                  {isExpanded &&
-                    group.properties.map((property, index) => (
+                  return (
+                    <>
+                      {/* Group Header Row */}
                       <TableRow
-                        key={property.id}
-                        className="hover:bg-muted/50 cursor-pointer"
-                        onClick={() => handleRowClick(property)}
+                        key={`group-${type}`}
+                        className="bg-muted/30 hover:bg-muted/40 cursor-pointer"
+                        onClick={() => toggleGroup(type)}
                       >
-                        <TableCell className="py-2">
-                          <div
-                            className={cn(
-                              "w-1 h-6 rounded-full ml-2",
-                              type === "residential" ? "bg-blue-400" : "bg-purple-400"
-                            )}
-                          />
+                        <TableCell className="py-3">
+                          {isExpanded ? (
+                            <ChevronDown size={16} className="text-muted-foreground" />
+                          ) : (
+                            <ChevronRight size={16} className="text-muted-foreground" />
+                          )}
                         </TableCell>
-                        <TableCell className="py-2">
+                        <TableCell className="py-3 font-medium">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground w-6">
-                              {index + 1}
+                            <TypeIcon size={16} className="text-muted-foreground" />
+                            <span className="uppercase text-xs text-muted-foreground">
+                              Tipo de Propriedade
                             </span>
-                            <span className="font-medium">{property.name}</span>
+                            {getTypeBadge(type)}
+                            <span className="text-xs text-muted-foreground ml-2">
+                              ({group.properties.length})
+                            </span>
                           </div>
                         </TableCell>
-                        <TableCell className="py-2">{getTypeBadge(property.property_type)}</TableCell>
-                        <TableCell className="py-2">{getStatusBadge(property.status)}</TableCell>
-                        <TableCell className="py-2 text-right">
-                          {formatCurrency(property.purchase_price || 0)}
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell className="text-right font-medium text-muted-foreground">
+                          Σ {formatCurrency(group.totals.purchase_price)}
                         </TableCell>
-                        <TableCell className="py-2 text-right">
-                          {formatCurrency(property.total_maintenance_cost || 0)}
+                        <TableCell className="text-right font-medium text-muted-foreground">
+                          Σ {formatCurrency(group.totals.maintenance)}
                         </TableCell>
-                        <TableCell className="py-2 text-right">
-                          {formatCurrency(property.total_rents_collected || 0)}
+                        <TableCell className="text-right font-medium text-muted-foreground">
+                          Σ {formatCurrency(group.totals.rents)}
                         </TableCell>
                       </TableRow>
-                    ))}
-                </>
-              );
-            })}
 
-            {filteredProperties.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
-                  {isLoading ? (
-                    <span className="text-muted-foreground">A carregar...</span>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2">
-                      <Building2 size={32} className="text-muted-foreground/50" />
-                      <span className="text-muted-foreground">
-                        Nenhuma propriedade encontrada
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsDialogOpen(true)}
-                      >
-                        Adicionar primeira propriedade
-                      </Button>
-                    </div>
-                  )}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                      {/* Property Rows */}
+                      {isExpanded &&
+                        group.properties.map((property, index) => (
+                          <TableRow
+                            key={property.id}
+                            className="hover:bg-muted/50 cursor-pointer"
+                            onClick={() => handleRowClick(property)}
+                          >
+                            <TableCell className="py-2">
+                              <div
+                                className={cn(
+                                  "w-1 h-6 rounded-full ml-2",
+                                  type === "residential" ? "bg-blue-400" : "bg-purple-400"
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell className="py-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground w-6">
+                                  {index + 1}
+                                </span>
+                                <span className="font-medium">{property.name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-2">{getTypeBadge(property.property_type)}</TableCell>
+                            <TableCell className="py-2">{getStatusBadge(property.status)}</TableCell>
+                            <TableCell className="py-2 text-right">
+                              {formatCurrency(property.purchase_price || 0)}
+                            </TableCell>
+                            <TableCell className="py-2 text-right">
+                              {formatCurrency(property.total_maintenance_cost || 0)}
+                            </TableCell>
+                            <TableCell className="py-2 text-right">
+                              {formatCurrency(property.total_rents_collected || 0)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </>
+                  );
+                })}
+
+                {filteredProperties.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      {isLoading ? (
+                        <span className="text-muted-foreground">A carregar...</span>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2">
+                          <Building2 size={32} className="text-muted-foreground/50" />
+                          <span className="text-muted-foreground">
+                            Nenhuma propriedade encontrada
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsDialogOpen(true)}
+                          >
+                            Adicionar primeira propriedade
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+
+        {/* Tenants Tab */}
+        <TabsContent value="tenants">
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Users size={48} className="text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">Gestão de Inquilinos</h3>
+            <p className="text-sm text-muted-foreground max-w-md">
+              Aqui poderá gerir todos os inquilinos, contratos de arrendamento e histórico de pagamentos.
+            </p>
+          </div>
+        </TabsContent>
+
+        {/* Projects Tab */}
+        <TabsContent value="projects">
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Briefcase size={48} className="text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">Projetos de Manutenção</h3>
+            <p className="text-sm text-muted-foreground max-w-md">
+              Aqui poderá gerir projetos de renovação, manutenção e melhorias das propriedades.
+            </p>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Property Dialog */}
       <PropertyDialog
