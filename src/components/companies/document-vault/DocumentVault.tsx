@@ -29,6 +29,7 @@ import {
   FolderPlus,
   ChevronDown,
   ArrowLeft,
+  FolderInput,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -240,9 +241,46 @@ export function DocumentVault({
     },
   });
 
+  const moveFolderMutation = useMutation({
+    mutationFn: async ({ folderId, targetFolderId }: { folderId: string; targetFolderId: string | null }) => {
+      // Prevent moving folder into itself or its descendants
+      const getDescendantIds = (parentId: string): string[] => {
+        const children = allFolders.filter(f => f.parent_folder_id === parentId);
+        return children.flatMap(c => [c.id, ...getDescendantIds(c.id)]);
+      };
+      
+      if (targetFolderId === folderId) {
+        throw new Error("Cannot move folder into itself");
+      }
+      
+      const descendantIds = getDescendantIds(folderId);
+      if (targetFolderId && descendantIds.includes(targetFolderId)) {
+        throw new Error("Cannot move folder into its descendant");
+      }
+      
+      const { error } = await supabase
+        .from("company_folders")
+        .update({ parent_folder_id: targetFolderId })
+        .eq("id", folderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-folders", companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company-all-folders", companyId] });
+      toast.success("Pasta movida com sucesso");
+    },
+    onError: (error: Error) => {
+      toast.error("Erro ao mover pasta: " + error.message);
+    },
+  });
+
   const handleMoveToFolder = useCallback((docIds: string[], targetFolderId: string | null) => {
     moveToFolderMutation.mutate({ docIds, targetFolderId });
   }, [moveToFolderMutation]);
+
+  const handleMoveFolder = useCallback((folderId: string, targetFolderId: string | null) => {
+    moveFolderMutation.mutate({ folderId, targetFolderId });
+  }, [moveFolderMutation]);
 
   // Handlers
   const handleSort = useCallback((field: SortField) => {
@@ -564,6 +602,8 @@ export function DocumentVault({
                   setLoadMoreElement={setLoadMoreElement}
                   currentFolderId={currentFolderId}
                   onMoveToFolder={handleMoveToFolder}
+                  onMoveFolder={handleMoveFolder}
+                  allFolders={allFolders}
                 />
               </div>
             </ResizablePanel>
@@ -606,6 +646,8 @@ export function DocumentVault({
               setLoadMoreElement={setLoadMoreElement}
               currentFolderId={currentFolderId}
               onMoveToFolder={handleMoveToFolder}
+              onMoveFolder={handleMoveFolder}
+              allFolders={allFolders}
             />
           </div>
         )}
