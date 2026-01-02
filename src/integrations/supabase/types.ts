@@ -4154,6 +4154,112 @@ export type Database = {
           },
         ]
       }
+      work_documents: {
+        Row: {
+          created_at: string
+          document_type: string | null
+          file_size: number | null
+          file_url: string
+          financial_value: number | null
+          folder_id: string | null
+          id: string
+          mime_type: string | null
+          name: string
+          notes: string | null
+          status: string | null
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_type?: string | null
+          file_size?: number | null
+          file_url: string
+          financial_value?: number | null
+          folder_id?: string | null
+          id?: string
+          mime_type?: string | null
+          name: string
+          notes?: string | null
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          document_type?: string | null
+          file_size?: number | null
+          file_url?: string
+          financial_value?: number | null
+          folder_id?: string | null
+          id?: string
+          mime_type?: string | null
+          name?: string
+          notes?: string | null
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_documents_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "work_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_folders: {
+        Row: {
+          category: string | null
+          category_options: Json | null
+          created_at: string
+          id: string
+          name: string
+          parent_folder_id: string | null
+          status: string | null
+          status_options: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          category_options?: Json | null
+          created_at?: string
+          id?: string
+          name: string
+          parent_folder_id?: string | null
+          status?: string | null
+          status_options?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          category_options?: Json | null
+          created_at?: string
+          id?: string
+          name?: string
+          parent_folder_id?: string | null
+          status?: string | null
+          status_options?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_folders_parent_folder_id_fkey"
+            columns: ["parent_folder_id"]
+            isOneToOne: false
+            referencedRelation: "work_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_column_config: {
         Row: {
           column_id: string
