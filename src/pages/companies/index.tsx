@@ -4,9 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Building2, Search, Edit, Trash2, Eye, Settings, ChevronDown, X, ListTodo, Link2 } from "lucide-react";
+import { Plus, Building2, Search, Edit, Trash2, Eye, Settings, ChevronDown, X, ListTodo, Link2, Bookmark } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import WorkFlowTab from "./WorkFlowTab";
+import WorkFilesTab from "./WorkFilesTab";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -145,6 +146,7 @@ export default function CompaniesPage() {
     const urlTab = searchParams.get("tab");
     if (urlTab === "entity") return "list";
     if (urlTab === "workflow") return "workflow";
+    if (urlTab === "work") return "work";
     if (urlTab === "settings") return "settings";
     return "workflow";
   };
@@ -156,6 +158,7 @@ export default function CompaniesPage() {
     const urlTab = searchParams.get("tab");
     if (urlTab === "entity") setActiveTab("list");
     else if (urlTab === "workflow") setActiveTab("workflow");
+    else if (urlTab === "work") setActiveTab("work");
     else if (urlTab === "settings") setActiveTab("settings");
   }, [searchParams]);
 
@@ -664,6 +667,13 @@ export default function CompaniesPage() {
             Entity
           </TabsTrigger>
           <TabsTrigger 
+            value="work" 
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:shadow-none px-4 pb-2"
+          >
+            <Bookmark className="h-4 w-4 mr-2" />
+            Work
+          </TabsTrigger>
+          <TabsTrigger 
             value="settings" 
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:shadow-none px-4 pb-2"
           >
@@ -1070,6 +1080,10 @@ export default function CompaniesPage() {
 
         <TabsContent value="workflow" className="mt-6">
           <WorkFlowTab />
+        </TabsContent>
+
+        <TabsContent value="work" className="mt-6">
+          <WorkFilesTab />
         </TabsContent>
       </Tabs>
 
