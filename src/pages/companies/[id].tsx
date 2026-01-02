@@ -597,6 +597,7 @@ export default function CompanyDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-folders", id] });
+      queryClient.invalidateQueries({ queryKey: ["company-all-folders", id] });
       setFolderDialogOpen(false);
       setNewFolderName("");
       toast.success("Folder created");
@@ -613,6 +614,7 @@ export default function CompanyDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-folders", id] });
+      queryClient.invalidateQueries({ queryKey: ["company-all-folders", id] });
       toast.success("Folder deleted");
     },
     onError: (error) => {
