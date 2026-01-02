@@ -36,7 +36,14 @@ import {
   Edit3,
   Eye,
   Loader2,
+  FolderInput,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DocumentRow, FolderRow, SortField, SortDirection, ColumnOption, DEFAULT_CATEGORY_OPTIONS, DEFAULT_STATUS_OPTIONS } from "./types";
@@ -64,6 +71,8 @@ interface DocumentVaultTableProps {
   setLoadMoreElement: (element: HTMLDivElement | null) => void;
   currentFolderId: string | null;
   onMoveToFolder?: (docIds: string[], targetFolderId: string | null) => void;
+  onMoveFolder?: (folderId: string, targetFolderId: string | null) => void;
+  allFolders?: FolderRow[];
 }
 
 const ROW_HEIGHT = 40;
@@ -136,10 +145,37 @@ export function DocumentVaultTable({
   setLoadMoreElement,
   currentFolderId,
   onMoveToFolder,
+  onMoveFolder,
+  allFolders = [],
 }: DocumentVaultTableProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [draggedDocId, setDraggedDocId] = useState<string | null>(null);
   const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null);
+  const [moveFolderOpen, setMoveFolderOpen] = useState(false);
+  const [folderToMove, setFolderToMove] = useState<FolderRow | null>(null);
+
+  // Get available destinations for folder move (exclude self and descendants)
+  const getAvailableDestinations = useCallback((folderId: string) => {
+    const getDescendantIds = (parentId: string): string[] => {
+      const children = allFolders.filter(f => f.parent_folder_id === parentId);
+      return children.flatMap(c => [c.id, ...getDescendantIds(c.id)]);
+    };
+    const descendantIds = [folderId, ...getDescendantIds(folderId)];
+    return allFolders.filter(f => !descendantIds.includes(f.id));
+  }, [allFolders]);
+
+  const handleOpenMoveFolder = useCallback((folder: FolderRow) => {
+    setFolderToMove(folder);
+    setMoveFolderOpen(true);
+  }, []);
+
+  const handleConfirmMoveFolder = useCallback((targetFolderId: string | null) => {
+    if (folderToMove && onMoveFolder) {
+      onMoveFolder(folderToMove.id, targetFolderId);
+    }
+    setMoveFolderOpen(false);
+    setFolderToMove(null);
+  }, [folderToMove, onMoveFolder]);
 
   // Combine folders and documents for the table
   const tableData = useMemo(() => {
@@ -419,6 +455,12 @@ export function DocumentVaultTable({
                   <Eye className="h-4 w-4 mr-2" />
                   Open
                 </DropdownMenuItem>
+                {onMoveFolder && (
+                  <DropdownMenuItem onClick={() => handleOpenMoveFolder(item as FolderRow)}>
+                    <FolderInput className="h-4 w-4 mr-2" />
+                    Move to...
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           );
@@ -595,6 +637,36 @@ export function DocumentVaultTable({
           </div>
         )}
       </div>
+
+      {/* Move Folder Dialog */}
+      <Dialog open={moveFolderOpen} onOpenChange={setMoveFolderOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Move Folder "{folderToMove?.name}"</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => handleConfirmMoveFolder(null)}
+            >
+              <Folder className="h-4 w-4 mr-2" />
+              Documents (Root)
+            </Button>
+            {folderToMove && getAvailableDestinations(folderToMove.id).map(folder => (
+              <Button
+                key={folder.id}
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => handleConfirmMoveFolder(folder.id)}
+              >
+                <Folder className="h-4 w-4 mr-2" />
+                {folder.name}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
