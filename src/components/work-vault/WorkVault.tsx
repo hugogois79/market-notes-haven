@@ -45,6 +45,7 @@ import {
   MoreHorizontal,
   Eye,
   Columns,
+  FolderInput,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -144,6 +145,8 @@ export function WorkVault() {
   // Dialogs
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [moveFolderOpen, setMoveFolderOpen] = useState(false);
+  const [folderToMove, setFolderToMove] = useState<WorkFolderRow | null>(null);
 
   // Fetch folders
   const { data: folders = [] } = useQuery({
@@ -277,6 +280,40 @@ export function WorkVault() {
       queryClient.invalidateQueries({ queryKey: ["work-folders"] });
       queryClient.invalidateQueries({ queryKey: ["work-all-folders"] });
       toast.success("Folder deleted");
+    },
+    onError: (error: Error) => {
+      toast.error("Error: " + error.message);
+    },
+  });
+
+  // Move folder mutation
+  const moveFolderMutation = useMutation({
+    mutationFn: async ({ folderId, targetFolderId }: { folderId: string; targetFolderId: string | null }) => {
+      // Check if trying to move folder into itself or its descendants
+      if (targetFolderId) {
+        let checkId: string | null = targetFolderId;
+        while (checkId) {
+          if (checkId === folderId) {
+            throw new Error("Cannot move a folder into itself or its subfolders");
+          }
+          const parentFolder = allFolders.find(f => f.id === checkId);
+          checkId = parentFolder?.parent_folder_id || null;
+        }
+      }
+
+      const { error } = await supabase
+        .from("work_folders")
+        .update({ parent_folder_id: targetFolderId })
+        .eq("id", folderId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["work-folders"] });
+      queryClient.invalidateQueries({ queryKey: ["work-all-folders"] });
+      setMoveFolderOpen(false);
+      setFolderToMove(null);
+      toast.success("Folder moved");
     },
     onError: (error: Error) => {
       toast.error("Error: " + error.message);
@@ -435,6 +472,30 @@ export function WorkVault() {
       col.id === columnId ? { ...col, visible: !col.visible } : col
     ));
   }, []);
+
+  const handleMoveFolder = useCallback((folder: WorkFolderRow) => {
+    setFolderToMove(folder);
+    setMoveFolderOpen(true);
+  }, []);
+
+  // Get available destination folders (excluding the folder being moved and its descendants)
+  const getAvailableDestinations = useCallback((folderToMoveId: string) => {
+    const descendants = new Set<string>();
+    
+    const findDescendants = (parentId: string) => {
+      allFolders.forEach(f => {
+        if (f.parent_folder_id === parentId) {
+          descendants.add(f.id);
+          findDescendants(f.id);
+        }
+      });
+    };
+    
+    descendants.add(folderToMoveId);
+    findDescendants(folderToMoveId);
+    
+    return allFolders.filter(f => !descendants.has(f.id));
+  }, [allFolders]);
 
   const visibleColumns = columns.filter(c => c.visible);
 
@@ -638,6 +699,11 @@ export function WorkVault() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => handleMoveFolder(folder)}>
+                          <FolderInput className="h-4 w-4 mr-2" />
+                          Move to...
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem 
                           className="text-destructive"
                           onClick={() => {
@@ -824,6 +890,54 @@ export function WorkVault() {
               disabled={!newFolderName.trim()}
             >
               Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move Folder Dialog */}
+      <Dialog open={moveFolderOpen} onOpenChange={setMoveFolderOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Move "{folderToMove?.name}" to...</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 max-h-64 overflow-auto space-y-1">
+            {/* Root option */}
+            <div
+              className={cn(
+                "flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-slate-100",
+                folderToMove?.parent_folder_id === null && "bg-slate-100"
+              )}
+              onClick={() => {
+                if (folderToMove) {
+                  moveFolderMutation.mutate({ folderId: folderToMove.id, targetFolderId: null });
+                }
+              }}
+            >
+              <Folder className="h-4 w-4 text-amber-500" />
+              <span className="text-sm font-medium">Work (Root)</span>
+            </div>
+            
+            {/* Other folders */}
+            {folderToMove && getAvailableDestinations(folderToMove.id).map(folder => (
+              <div
+                key={folder.id}
+                className={cn(
+                  "flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-slate-100",
+                  folderToMove?.parent_folder_id === folder.id && "bg-slate-100"
+                )}
+                onClick={() => {
+                  moveFolderMutation.mutate({ folderId: folderToMove.id, targetFolderId: folder.id });
+                }}
+              >
+                <Folder className="h-4 w-4 text-amber-500" />
+                <span className="text-sm">{folder.name}</span>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMoveFolderOpen(false)}>
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
