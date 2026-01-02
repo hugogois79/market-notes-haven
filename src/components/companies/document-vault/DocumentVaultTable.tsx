@@ -150,6 +150,7 @@ export function DocumentVaultTable({
 }: DocumentVaultTableProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [draggedDocId, setDraggedDocId] = useState<string | null>(null);
+  const [draggedFolderId, setDraggedFolderId] = useState<string | null>(null);
   const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null);
   const [moveFolderOpen, setMoveFolderOpen] = useState(false);
   const [folderToMove, setFolderToMove] = useState<FolderRow | null>(null);
@@ -225,17 +226,37 @@ export function DocumentVaultTable({
         const item = row.original;
         
         if (item._type === "folder") {
+          const folder = item as FolderRow;
+          const descendantIds = getAvailableDestinations(folder.id).map(f => f.id);
+          const canDropHere = (draggedDocId || draggedFolderId) && draggedFolderId !== folder.id;
+          const isValidFolderDrop = draggedFolderId ? descendantIds.includes(folder.id) || folder.parent_folder_id !== draggedFolderId : true;
+          
           return (
             <div 
               className={cn(
-                "flex items-center gap-2 min-w-0 py-1 px-1 -mx-1 rounded transition-colors",
-                dropTargetFolderId === item.id && "bg-primary/20 ring-2 ring-primary"
+                "flex items-center gap-2 min-w-0 py-1 px-1 -mx-1 rounded transition-colors cursor-grab",
+                dropTargetFolderId === item.id && "bg-primary/20 ring-2 ring-primary",
+                draggedFolderId === folder.id && "opacity-50"
               )}
+              draggable
+              onDragStart={(e) => {
+                e.stopPropagation();
+                setDraggedFolderId(folder.id);
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', folder.id);
+              }}
+              onDragEnd={() => {
+                setDraggedFolderId(null);
+                setDropTargetFolderId(null);
+              }}
               onDragOver={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (draggedDocId) {
-                  setDropTargetFolderId(item.id);
+                if (canDropHere && isValidFolderDrop) {
+                  e.dataTransfer.dropEffect = 'move';
+                  setDropTargetFolderId(folder.id);
+                } else {
+                  e.dataTransfer.dropEffect = 'none';
                 }
               }}
               onDragLeave={(e) => {
@@ -246,19 +267,21 @@ export function DocumentVaultTable({
                 e.preventDefault();
                 e.stopPropagation();
                 if (draggedDocId && onMoveToFolder) {
-                  // Move selected docs if dragged doc is selected, otherwise just the dragged doc
                   const docsToMove = selectedIds.has(draggedDocId) 
                     ? Array.from(selectedIds) 
                     : [draggedDocId];
-                  onMoveToFolder(docsToMove, item.id);
+                  onMoveToFolder(docsToMove, folder.id);
+                } else if (draggedFolderId && onMoveFolder && isValidFolderDrop) {
+                  onMoveFolder(draggedFolderId, folder.id);
                 }
                 setDraggedDocId(null);
+                setDraggedFolderId(null);
                 setDropTargetFolderId(null);
               }}
             >
               <Folder className={cn(
                 "h-4 w-4 flex-shrink-0 transition-colors",
-                dropTargetFolderId === item.id ? "text-primary" : "text-amber-500"
+                dropTargetFolderId === folder.id ? "text-primary" : "text-amber-500"
               )} />
               <TooltipProvider>
                 <Tooltip>
@@ -266,14 +289,14 @@ export function DocumentVaultTable({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onFolderClick(item.id);
+                        onFolderClick(folder.id);
                       }}
                       className="font-medium text-primary hover:underline truncate"
                     >
-                      {item.name}
+                      {folder.name}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>{item.name}</TooltipContent>
+                  <TooltipContent>{folder.name}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
@@ -497,7 +520,7 @@ export function DocumentVaultTable({
         );
       },
     },
-  ], [selectedIds, documents.length, sortField, sortDirection, currentFolderId, onSort, onSelectAll, onSelectRow, onRowClick, onFolderClick, onDelete, onDownload, onEdit, onUpdateField, getCategoryOptions, getStatusOptions]);
+  ], [selectedIds, documents.length, sortField, sortDirection, currentFolderId, draggedDocId, draggedFolderId, dropTargetFolderId, onSort, onSelectAll, onSelectRow, onRowClick, onFolderClick, onDelete, onDownload, onEdit, onUpdateField, getCategoryOptions, getStatusOptions, onMoveToFolder, onMoveFolder, getAvailableDestinations]);
 
   const table = useReactTable({
     data: tableData,
