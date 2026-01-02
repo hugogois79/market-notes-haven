@@ -628,7 +628,6 @@ const NewExpensePage = () => {
                 onChange={(e) =>
                   setExpenseForm({ ...expenseForm, expense_date: e.target.value })
                 }
-                max={format(new Date(), "yyyy-MM-dd")}
               />
             </div>
             <div>
