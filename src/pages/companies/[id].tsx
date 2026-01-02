@@ -254,6 +254,7 @@ export default function CompanyDetailPage() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+  const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<SortField>("updated_at");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [showFilters, setShowFilters] = useState(false);
@@ -726,33 +727,36 @@ export default function CompanyDetailPage() {
     moveDocumentMutation.mutate({ docId: docToMove.id, folderId: targetFolderId });
   };
 
-  // Move folder mutation
+  // Move folder mutation (supports multiple folders)
   const moveFolderMutation = useMutation({
-    mutationFn: async ({ folderId, targetParentId }: { folderId: string; targetParentId: string | null }) => {
-      // Prevent moving folder into itself or its descendants
-      if (targetParentId) {
-        let checkId: string | null = targetParentId;
-        while (checkId) {
-          if (checkId === folderId) {
-            throw new Error("Não é possível mover uma pasta para dentro de si mesma ou das suas subpastas");
+    mutationFn: async ({ folderIds, targetParentId }: { folderIds: string[]; targetParentId: string | null }) => {
+      for (const folderId of folderIds) {
+        // Prevent moving folder into itself or its descendants
+        if (targetParentId) {
+          let checkId: string | null = targetParentId;
+          while (checkId) {
+            if (checkId === folderId) {
+              throw new Error("Não é possível mover uma pasta para dentro de si mesma ou das suas subpastas");
+            }
+            const parentFolder = allFolders?.find(f => f.id === checkId);
+            checkId = parentFolder?.parent_folder_id || null;
           }
-          const parentFolder = allFolders?.find(f => f.id === checkId);
-          checkId = parentFolder?.parent_folder_id || null;
         }
-      }
 
-      const { error } = await supabase
-        .from("company_folders")
-        .update({ parent_folder_id: targetParentId })
-        .eq("id", folderId);
-      if (error) throw error;
+        const { error } = await supabase
+          .from("company_folders")
+          .update({ parent_folder_id: targetParentId })
+          .eq("id", folderId);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-folders"] });
       queryClient.invalidateQueries({ queryKey: ["company-all-folders"] });
-      toast.success("Pasta movida");
+      toast.success(selectedFolders.size > 1 ? "Pastas movidas" : "Pasta movida");
       setMoveFolderDialogOpen(false);
       setFolderToMove(null);
+      setSelectedFolders(new Set());
       setTargetFolderPath("__root__");
     },
     onError: (error: any) => {
@@ -761,17 +765,22 @@ export default function CompanyDetailPage() {
   });
 
   const handleConfirmMoveFolder = () => {
-    if (!folderToMove?.id) return;
+    const folderIds = folderToMove?.id 
+      ? [folderToMove.id] 
+      : Array.from(selectedFolders);
+    
+    if (folderIds.length === 0) return;
+    
     const targetParentId =
       targetFolderPath === "__root__"
         ? null
         : (folderOptions.find((f) => f.path === targetFolderPath)?.id ?? null);
 
-    moveFolderMutation.mutate({ folderId: folderToMove.id, targetParentId });
+    moveFolderMutation.mutate({ folderIds, targetParentId });
   };
 
-  // Get available destination folders (excluding the folder being moved and its descendants)
-  const getAvailableFolderDestinations = useCallback((folderToMoveId: string) => {
+  // Get available destination folders (excluding all selected folders and their descendants)
+  const getAvailableFolderDestinations = useCallback((folderIdsToMove: string[]) => {
     if (!allFolders) return [];
     
     const descendants = new Set<string>();
@@ -784,19 +793,56 @@ export default function CompanyDetailPage() {
       });
     };
     
-    descendants.add(folderToMoveId);
-    findDescendants(folderToMoveId);
+    folderIdsToMove.forEach(folderId => {
+      descendants.add(folderId);
+      findDescendants(folderId);
+    });
     
     return allFolders.filter(f => !descendants.has(f.id));
   }, [allFolders]);
 
-  const folderMoveOptions = folderToMove 
-    ? getAvailableFolderDestinations(folderToMove.id).map(folder => ({
-        id: folder.id,
-        name: folder.name,
-        path: getFolderPath(folder.id, allFolders || [])
-      })).sort((a, b) => a.path.localeCompare(b.path))
-    : [];
+  const folderMoveOptions = (() => {
+    const folderIds = folderToMove?.id 
+      ? [folderToMove.id] 
+      : Array.from(selectedFolders);
+    
+    if (folderIds.length === 0) return [];
+    
+    return getAvailableFolderDestinations(folderIds).map(folder => ({
+      id: folder.id,
+      name: folder.name,
+      path: getFolderPath(folder.id, allFolders || [])
+    })).sort((a, b) => a.path.localeCompare(b.path));
+  })();
+
+  // Toggle folder selection
+  const toggleFolderSelection = useCallback((folderId: string) => {
+    setSelectedFolders(prev => {
+      const next = new Set(prev);
+      if (next.has(folderId)) {
+        next.delete(folderId);
+      } else {
+        next.add(folderId);
+      }
+      return next;
+    });
+  }, []);
+
+  // Select/deselect all folders
+  const toggleSelectAllFolders = useCallback(() => {
+    if (selectedFolders.size === folders?.length) {
+      setSelectedFolders(new Set());
+    } else {
+      setSelectedFolders(new Set(folders?.map(f => f.id) || []));
+    }
+  }, [folders, selectedFolders.size]);
+
+  // Open bulk move folders dialog
+  const openBulkMoveFolders = useCallback(() => {
+    setFolderToMove(null);
+    setTargetFolderPath("__root__");
+    setMoveFolderDialogOpen(true);
+  }, []);
   const addNewColumn = () => {
     if (!newColumnName.trim()) return;
     const newColumn: ColumnConfig = {
@@ -2064,6 +2110,38 @@ export default function CompanyDetailPage() {
             </div>
           </div>
 
+          {/* Bulk Actions Bar for Folders */}
+          {selectedFolders.size > 0 && (
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Checkbox 
+                  checked={selectedFolders.size === folders?.length && folders.length > 0}
+                  onCheckedChange={toggleSelectAllFolders}
+                />
+                <span className="text-sm font-medium">
+                  {selectedFolders.size} pasta{selectedFolders.size > 1 ? 's' : ''} selecionada{selectedFolders.size > 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={openBulkMoveFolders}
+                >
+                  <FolderInput className="h-4 w-4 mr-2" />
+                  Mover para...
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setSelectedFolders(new Set())}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* SharePoint-style Dense Data Grid */}
           <div 
             className={cn(
@@ -2161,11 +2239,17 @@ export default function CompanyDetailPage() {
                   {sortedFolders?.map((folder) => (
                     <tr 
                       key={folder.id} 
-                      className="border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer group"
+                      className={cn(
+                        "border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer group",
+                        selectedFolders.has(folder.id) && "bg-primary/10"
+                      )}
                       onDoubleClick={() => setCurrentFolderId(folder.id)}
                     >
-                      <td className="px-3 py-1.5">
-                        <Checkbox disabled />
+                      <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox 
+                          checked={selectedFolders.has(folder.id)}
+                          onCheckedChange={() => toggleFolderSelection(folder.id)}
+                        />
                       </td>
                       <td className="px-3 py-1.5">
                         <div className="flex items-center gap-2">
@@ -3058,19 +3142,39 @@ export default function CompanyDetailPage() {
       >
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Mover Pasta</DialogTitle>
+            <DialogTitle>
+              {folderToMove 
+                ? `Mover Pasta "${folderToMove.name}"` 
+                : `Mover ${selectedFolders.size} Pasta${selectedFolders.size > 1 ? 's' : ''}`}
+            </DialogTitle>
             <DialogDescription>
-              Selecione a pasta de destino para mover "{folderToMove?.name}".
+              Selecione a pasta de destino.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="p-3 bg-muted/20 rounded-lg border">
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Pasta</Label>
-              <p className="mt-1 text-sm font-medium break-all flex items-center gap-2">
-                <Folder className="h-4 w-4 text-amber-500" />
-                {folderToMove?.name}
-              </p>
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                {folderToMove ? 'Pasta' : `${selectedFolders.size} Pasta${selectedFolders.size > 1 ? 's' : ''} Selecionada${selectedFolders.size > 1 ? 's' : ''}`}
+              </Label>
+              {folderToMove ? (
+                <p className="mt-1 text-sm font-medium break-all flex items-center gap-2">
+                  <Folder className="h-4 w-4 text-amber-500" />
+                  {folderToMove.name}
+                </p>
+              ) : (
+                <div className="mt-1 space-y-1 max-h-32 overflow-y-auto">
+                  {Array.from(selectedFolders).map(folderId => {
+                    const folder = allFolders?.find(f => f.id === folderId);
+                    return folder ? (
+                      <p key={folderId} className="text-sm font-medium flex items-center gap-2">
+                        <Folder className="h-4 w-4 text-amber-500" />
+                        {folder.name}
+                      </p>
+                    ) : null;
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
