@@ -727,6 +727,36 @@ export default function CompanyDetailPage() {
     moveDocumentMutation.mutate({ docId: docToMove.id, folderId: targetFolderId });
   };
 
+  // Helper function to build folder path from hierarchy
+  const buildFolderPath = useCallback((folderId: string, folders: { id: string; name: string; parent_folder_id: string | null }[]): string => {
+    const pathParts: string[] = [];
+    let currentId: string | null = folderId;
+    
+    while (currentId) {
+      const folder = folders.find(f => f.id === currentId);
+      if (!folder) break;
+      pathParts.unshift(folder.name);
+      currentId = folder.parent_folder_id;
+    }
+    
+    return pathParts.join("/");
+  }, []);
+
+  // Helper to get all descendant folder IDs
+  const getDescendantFolderIds = useCallback((parentId: string, folders: { id: string; parent_folder_id: string | null }[]): string[] => {
+    const descendants: string[] = [];
+    const findDescendants = (pId: string) => {
+      folders.forEach(f => {
+        if (f.parent_folder_id === pId) {
+          descendants.push(f.id);
+          findDescendants(f.id);
+        }
+      });
+    };
+    findDescendants(parentId);
+    return descendants;
+  }, []);
+
   // Move folder mutation (supports multiple folders)
   const moveFolderMutation = useMutation({
     mutationFn: async ({ folderIds, targetParentId }: { folderIds: string[]; targetParentId: string | null }) => {
@@ -749,10 +779,47 @@ export default function CompanyDetailPage() {
           .eq("id", folderId);
         if (error) throw error;
       }
+
+      // After moving folders, update workflow_storage_locations folder_path
+      // First, refetch all folders to get updated hierarchy
+      const { data: updatedFolders } = await supabase
+        .from("company_folders")
+        .select("id, name, parent_folder_id, company_id")
+        .eq("company_id", id);
+
+      if (!updatedFolders) return;
+
+      // Collect all affected folder IDs (moved folders + their descendants)
+      const affectedFolderIds = new Set<string>();
+      for (const folderId of folderIds) {
+        affectedFolderIds.add(folderId);
+        const descendants = getDescendantFolderIds(folderId, updatedFolders);
+        descendants.forEach(d => affectedFolderIds.add(d));
+      }
+
+      // Find all workflow_storage_locations that reference affected folders
+      const { data: affectedLocations } = await supabase
+        .from("workflow_storage_locations")
+        .select("id, folder_id")
+        .in("folder_id", Array.from(affectedFolderIds));
+
+      if (affectedLocations && affectedLocations.length > 0) {
+        // Update folder_path for each affected location
+        for (const location of affectedLocations) {
+          if (location.folder_id) {
+            const newPath = buildFolderPath(location.folder_id, updatedFolders);
+            await supabase
+              .from("workflow_storage_locations")
+              .update({ folder_path: newPath })
+              .eq("id", location.id);
+          }
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-folders"] });
       queryClient.invalidateQueries({ queryKey: ["company-all-folders"] });
+      queryClient.invalidateQueries({ queryKey: ["workflow-storage-locations"] });
       toast.success(selectedFolders.size > 1 ? "Pastas movidas" : "Pasta movida");
       setMoveFolderDialogOpen(false);
       setFolderToMove(null);
