@@ -303,6 +303,12 @@ export default function CompanyDetailPage() {
   const [moveFolderPath, setMoveFolderPath] = useState<string>("__root__");
   const [moveFolderPopoverOpen, setMoveFolderPopoverOpen] = useState(false);
   
+  // Move folder dialog state
+  const [moveFolderDialogOpen, setMoveFolderDialogOpen] = useState(false);
+  const [folderToMove, setFolderToMove] = useState<any>(null);
+  const [targetFolderPath, setTargetFolderPath] = useState<string>("__root__");
+  const [targetFolderPopoverOpen, setTargetFolderPopoverOpen] = useState(false);
+  
   // Column management dialogs
   const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
@@ -719,6 +725,78 @@ export default function CompanyDetailPage() {
 
     moveDocumentMutation.mutate({ docId: docToMove.id, folderId: targetFolderId });
   };
+
+  // Move folder mutation
+  const moveFolderMutation = useMutation({
+    mutationFn: async ({ folderId, targetParentId }: { folderId: string; targetParentId: string | null }) => {
+      // Prevent moving folder into itself or its descendants
+      if (targetParentId) {
+        let checkId: string | null = targetParentId;
+        while (checkId) {
+          if (checkId === folderId) {
+            throw new Error("Não é possível mover uma pasta para dentro de si mesma ou das suas subpastas");
+          }
+          const parentFolder = allFolders?.find(f => f.id === checkId);
+          checkId = parentFolder?.parent_folder_id || null;
+        }
+      }
+
+      const { error } = await supabase
+        .from("company_folders")
+        .update({ parent_folder_id: targetParentId })
+        .eq("id", folderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-folders"] });
+      queryClient.invalidateQueries({ queryKey: ["company-all-folders"] });
+      toast.success("Pasta movida");
+      setMoveFolderDialogOpen(false);
+      setFolderToMove(null);
+      setTargetFolderPath("__root__");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao mover: " + error.message);
+    },
+  });
+
+  const handleConfirmMoveFolder = () => {
+    if (!folderToMove?.id) return;
+    const targetParentId =
+      targetFolderPath === "__root__"
+        ? null
+        : (folderOptions.find((f) => f.path === targetFolderPath)?.id ?? null);
+
+    moveFolderMutation.mutate({ folderId: folderToMove.id, targetParentId });
+  };
+
+  // Get available destination folders (excluding the folder being moved and its descendants)
+  const getAvailableFolderDestinations = useCallback((folderToMoveId: string) => {
+    if (!allFolders) return [];
+    
+    const descendants = new Set<string>();
+    const findDescendants = (parentId: string) => {
+      allFolders.forEach(f => {
+        if (f.parent_folder_id === parentId) {
+          descendants.add(f.id);
+          findDescendants(f.id);
+        }
+      });
+    };
+    
+    descendants.add(folderToMoveId);
+    findDescendants(folderToMoveId);
+    
+    return allFolders.filter(f => !descendants.has(f.id));
+  }, [allFolders]);
+
+  const folderMoveOptions = folderToMove 
+    ? getAvailableFolderDestinations(folderToMove.id).map(folder => ({
+        id: folder.id,
+        name: folder.name,
+        path: getFolderPath(folder.id, allFolders || [])
+      })).sort((a, b) => a.path.localeCompare(b.path))
+    : [];
   const addNewColumn = () => {
     if (!newColumnName.trim()) return;
     const newColumn: ColumnConfig = {
@@ -2166,6 +2244,14 @@ export default function CompanyDetailPage() {
                               <Edit3 className="h-4 w-4 mr-2" />
                               Edit Categories
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setFolderToMove(folder);
+                              setTargetFolderPath("__root__");
+                              setMoveFolderDialogOpen(true);
+                            }}>
+                              <FolderInput className="h-4 w-4 mr-2" />
+                              Move to...
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="text-destructive"
@@ -2954,6 +3040,91 @@ export default function CompanyDetailPage() {
             </Button>
             <Button onClick={handleConfirmMove} disabled={moveDocumentMutation.isPending}>
               {moveDocumentMutation.isPending ? "A mover..." : "Mover"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move Folder Dialog */}
+      <Dialog
+        open={moveFolderDialogOpen}
+        onOpenChange={(open) => {
+          setMoveFolderDialogOpen(open);
+          if (!open) {
+            setFolderToMove(null);
+            setTargetFolderPath("__root__");
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Mover Pasta</DialogTitle>
+            <DialogDescription>
+              Selecione a pasta de destino para mover "{folderToMove?.name}".
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="p-3 bg-muted/20 rounded-lg border">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Pasta</Label>
+              <p className="mt-1 text-sm font-medium break-all flex items-center gap-2">
+                <Folder className="h-4 w-4 text-amber-500" />
+                {folderToMove?.name}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Pasta de Destino</Label>
+              <Popover open={targetFolderPopoverOpen} onOpenChange={setTargetFolderPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    {targetFolderPath === "__root__" 
+                      ? "📁 Raiz (sem pasta)" 
+                      : `📂 ${targetFolderPath}`}
+                    <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Pesquisar pasta..." />
+                    <CommandList className="max-h-48 overflow-y-auto">
+                      <CommandEmpty>Nenhuma pasta encontrada.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem 
+                          value="__root__"
+                          onSelect={() => {
+                            setTargetFolderPath("__root__");
+                            setTargetFolderPopoverOpen(false);
+                          }}
+                        >
+                          📁 Raiz (sem pasta)
+                        </CommandItem>
+                        {folderMoveOptions.map((f) => (
+                          <CommandItem 
+                            key={f.id} 
+                            value={f.path}
+                            onSelect={() => {
+                              setTargetFolderPath(f.path);
+                              setTargetFolderPopoverOpen(false);
+                            }}
+                          >
+                            📂 {f.path}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMoveFolderDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmMoveFolder} disabled={moveFolderMutation.isPending}>
+              {moveFolderMutation.isPending ? "A mover..." : "Mover"}
             </Button>
           </DialogFooter>
         </DialogContent>
