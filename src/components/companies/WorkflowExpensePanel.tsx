@@ -37,6 +37,10 @@ interface WorkflowExpensePanelProps {
     file_name: string;
     file_url: string;
     mime_type: string | null;
+    // OCR data from n8n workflow
+    company_id?: string | null;
+    category?: string | null;
+    notes?: string | null;
   };
   existingTransaction?: {
     id: string;
@@ -231,6 +235,40 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
       }
     }
   }, [existingTransaction, reset, companies, expenseCategories, allBankAccounts]);
+
+  // Pre-fill form with OCR data from n8n when there's no existing transaction
+  useEffect(() => {
+    if (!existingTransaction && companies && file) {
+      const hasOcrData = file.company_id || file.notes;
+      if (hasOcrData) {
+        // Determine type based on category (Invoice -> expense)
+        const inferredType = file.category === "Invoice" ? "expense" : "expense";
+        
+        reset({
+          date: new Date().toISOString().split("T")[0],
+          type: inferredType,
+          company_id: file.company_id || "",
+          project_id: "",
+          category_id: "",
+          description: "",
+          entity_name: "",
+          total_amount: "",
+          vat_rate: "23",
+          payment_method: "bank_transfer",
+          bank_account_id: "",
+          invoice_number: "",
+          notes: file.notes || "",
+          lending_company_id: "",
+          borrowing_company_id: "",
+          interest_rate: "0",
+          monthly_payment: "",
+          end_date: "",
+          loan_status: "active",
+          target_folder_id: "",
+        });
+      }
+    }
+  }, [existingTransaction, file, reset, companies]);
 
   const [projectOpen, setProjectOpen] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);

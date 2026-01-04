@@ -3346,6 +3346,10 @@ export default function WorkFlowTab() {
                     file_name: previewFile.file_name,
                     file_url: previewFile.file_url,
                     mime_type: previewFile.mime_type,
+                    // OCR data from n8n
+                    company_id: previewFile.company_id,
+                    category: previewFile.category,
+                    notes: previewFile.notes,
                   }}
                   existingTransaction={
                     // If there's pending loan data, convert it to existingTransaction format
