@@ -60,6 +60,8 @@ interface WorkflowFile {
   created_at: string;
   completed_at: string | null;
   category?: string | null;
+  company_id?: string | null;
+  companies?: { id: string; name: string } | null;
 }
 
 interface UploadProgress {
@@ -653,7 +655,7 @@ export default function WorkFlowTab() {
     setCurrentFilterColumn("");
   };
 
-  // Fetch workflow files
+  // Fetch workflow files with company info
   const { data: workflowFiles, isLoading } = useQuery({
     queryKey: ["workflow-files"],
     queryFn: async () => {
@@ -662,7 +664,13 @@ export default function WorkFlowTab() {
       
       const { data, error } = await supabase
         .from("workflow_files")
-        .select("*")
+        .select(`
+          *,
+          companies:company_id (
+            id,
+            name
+          )
+        `)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       
@@ -1661,9 +1669,9 @@ export default function WorkFlowTab() {
     for (const filter of activeFilters) {
       let fileValue: string | undefined;
       
-      // Special handling for empresa filter (comes from linked transactions)
+      // Special handling for empresa filter (prefer direct company_id, fallback to transaction)
       if (filter.column === 'empresa') {
-        fileValue = transactionsByFileUrl?.[file.file_url]?.companyName || '';
+        fileValue = file.companies?.name || transactionsByFileUrl?.[file.file_url]?.companyName || '';
       } else {
         const col = columns.find(c => c.id === filter.column);
         if (col) {
@@ -1720,8 +1728,8 @@ export default function WorkFlowTab() {
         bValue = transactionsByFileUrl?.[b.file_url]?.projectName || '';
         break;
       case 'empresa':
-        aValue = transactionsByFileUrl?.[a.file_url]?.companyName || '';
-        bValue = transactionsByFileUrl?.[b.file_url]?.companyName || '';
+        aValue = a.companies?.name || transactionsByFileUrl?.[a.file_url]?.companyName || '';
+        bValue = b.companies?.name || transactionsByFileUrl?.[b.file_url]?.companyName || '';
         break;
       case 'value':
         aValue = transactionsByFileUrl?.[a.file_url]?.value || 0;
@@ -1872,13 +1880,19 @@ export default function WorkFlowTab() {
     toast.success(`Deleted ${selectedFiles.size} files`);
   };
 
-  // Get unique company names from transactions for empresa filter
+  // Get unique company names from workflow files and transactions for empresa filter
   const uniqueCompanyOptions = (): ColumnOption[] => {
-    if (!transactionsByFileUrl) return [];
     const companyNames = new Set<string>();
-    Object.values(transactionsByFileUrl).forEach(tx => {
-      if (tx.companyName) companyNames.add(tx.companyName);
+    // Add company names from direct company_id relationship
+    workflowFiles?.forEach(file => {
+      if (file.companies?.name) companyNames.add(file.companies.name);
     });
+    // Also add from transactions for backwards compatibility
+    if (transactionsByFileUrl) {
+      Object.values(transactionsByFileUrl).forEach(tx => {
+        if (tx.companyName) companyNames.add(tx.companyName);
+      });
+    }
     return Array.from(companyNames).map(name => ({ label: name, color: "#3b82f6" }));
   };
 
@@ -2802,7 +2816,7 @@ export default function WorkFlowTab() {
                       {isColumnVisible("empresa") && (
                         <td className="px-3 py-1.5">
                           <span className="text-xs text-slate-600 whitespace-nowrap">
-                            {transactionsByFileUrl?.[file.file_url]?.companyName || <span className="text-slate-400">—</span>}
+                            {file.companies?.name || transactionsByFileUrl?.[file.file_url]?.companyName || <span className="text-slate-400">—</span>}
                           </span>
                         </td>
                       )}

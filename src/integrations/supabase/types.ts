@@ -4322,6 +4322,7 @@ export type Database = {
       workflow_files: {
         Row: {
           category: string | null
+          company_id: string | null
           completed_at: string | null
           created_at: string
           file_name: string
@@ -4337,6 +4338,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          company_id?: string | null
           completed_at?: string | null
           created_at?: string
           file_name: string
@@ -4352,6 +4354,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          company_id?: string | null
           completed_at?: string | null
           created_at?: string
           file_name?: string
@@ -4365,7 +4368,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workflow_files_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workflow_storage_locations: {
         Row: {
