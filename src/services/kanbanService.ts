@@ -308,6 +308,97 @@ export class KanbanService {
   }
 
   static async moveCard(cardId: string, targetListId: string, newPosition: number) {
+    // Get the card being moved to find its current list
+    const { data: movedCard, error: cardError } = await supabase
+      .from('kanban_cards')
+      .select('list_id, position')
+      .eq('id', cardId)
+      .single();
+    
+    if (cardError) throw cardError;
+    
+    const sourceListId = movedCard.list_id;
+    const oldPosition = movedCard.position;
+    
+    // Get all cards in the target list (excluding the moved card)
+    const { data: targetCards, error: targetError } = await supabase
+      .from('kanban_cards')
+      .select('id, position')
+      .eq('list_id', targetListId)
+      .neq('id', cardId)
+      .order('position', { ascending: true });
+    
+    if (targetError) throw targetError;
+    
+    // If moving within the same list
+    if (sourceListId === targetListId) {
+      // Reorder cards in the same list
+      const updates: { id: string; position: number }[] = [];
+      let position = 0;
+      
+      for (const card of targetCards || []) {
+        if (position === newPosition) {
+          position++; // Leave space for the moved card
+        }
+        if (card.position !== position) {
+          updates.push({ id: card.id, position });
+        }
+        position++;
+      }
+      
+      // Update all affected cards
+      for (const update of updates) {
+        await supabase
+          .from('kanban_cards')
+          .update({ position: update.position })
+          .eq('id', update.id);
+      }
+    } else {
+      // Moving to a different list - shift cards in target list
+      const updates: { id: string; position: number }[] = [];
+      let position = 0;
+      
+      for (const card of targetCards || []) {
+        if (position === newPosition) {
+          position++; // Leave space for the moved card
+        }
+        if (card.position !== position) {
+          updates.push({ id: card.id, position });
+        }
+        position++;
+      }
+      
+      // Update all affected cards in target list
+      for (const update of updates) {
+        await supabase
+          .from('kanban_cards')
+          .update({ position: update.position })
+          .eq('id', update.id);
+      }
+      
+      // Also reorder cards in the source list to close the gap
+      const { data: sourceCards, error: sourceError } = await supabase
+        .from('kanban_cards')
+        .select('id, position')
+        .eq('list_id', sourceListId)
+        .neq('id', cardId)
+        .order('position', { ascending: true });
+      
+      if (!sourceError && sourceCards) {
+        let srcPosition = 0;
+        for (const card of sourceCards) {
+          if (card.position !== srcPosition) {
+            await supabase
+              .from('kanban_cards')
+              .update({ position: srcPosition })
+              .eq('id', card.id);
+          }
+          srcPosition++;
+        }
+      }
+    }
+    
+    // Finally, update the moved card
     const { data, error } = await supabase
       .from('kanban_cards')
       .update({ 
