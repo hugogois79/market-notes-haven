@@ -63,6 +63,7 @@ export default function DocumentPaymentDialog({
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [existingFileUrl, setExistingFileUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [conversionProgress, setConversionProgress] = useState<string | null>(null);
   
   const isEditing = !!existingTransaction;
   
@@ -129,7 +130,10 @@ export default function DocumentPaymentDialog({
         if (isPdfUrl(documentFileUrl) && isPdfFile(attachmentFile)) {
           try {
             toast.info("A combinar documentos PDF...");
-            fileToUpload = await mergePdfs(documentFileUrl, attachmentFile);
+            fileToUpload = await mergePdfs(documentFileUrl, attachmentFile, (message) => {
+              setConversionProgress(message);
+            });
+            setConversionProgress(null);
             fileExtension = 'pdf';
             mergeSucceeded = true;
           } catch (mergeError) {
@@ -359,13 +363,15 @@ export default function DocumentPaymentDialog({
               Cancelar
             </Button>
             <Button type="submit" disabled={saveMutation.isPending || isUploading}>
-              {isUploading 
-                ? "A carregar..." 
-                : saveMutation.isPending 
-                  ? "A guardar..." 
-                  : isEditing 
-                    ? "Guardar Alterações" 
-                    : "Registar Pagamento"}
+              {conversionProgress
+                ? conversionProgress
+                : isUploading 
+                  ? "A carregar..." 
+                  : saveMutation.isPending 
+                    ? "A guardar..." 
+                    : isEditing 
+                      ? "Guardar Alterações" 
+                      : "Registar Pagamento"}
             </Button>
           </div>
         </form>
