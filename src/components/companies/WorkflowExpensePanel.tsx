@@ -514,11 +514,10 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
       if (data.type === "document") {
         const fileUrlToMatch = attachmentUrl || file.file_url;
         
-        // Check if document already exists for this company + file_url
+        // Check if document already exists by file_url (regardless of company - allows company changes)
         const { data: existingDoc } = await supabase
           .from("company_documents")
           .select("id")
-          .eq("company_id", data.company_id)
           .eq("file_url", fileUrlToMatch)
           .maybeSingle();
 
@@ -534,7 +533,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         };
 
         if (existingDoc) {
-          // Update existing document
+          // Update existing document (including company change)
           const { error: docError } = await supabase
             .from("company_documents")
             .update(documentData)
