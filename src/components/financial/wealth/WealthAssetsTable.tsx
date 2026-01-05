@@ -24,6 +24,7 @@ type WealthAsset = {
   status: string | null;
   current_value: number | null;
   purchase_price: number | null;
+  purchase_date: string | null;
   profit_loss_value: number | null;
   yield_expected: number | null;
   allocation_weight: number | null;

@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useMemo } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { format, differenceInDays } from "date-fns";
+import { cn } from "@/lib/utils";
 
 type WealthAsset = {
   id: string;
@@ -36,6 +38,7 @@ type WealthAsset = {
   status: string | null;
   current_value: number | null;
   purchase_price: number | null;
+  purchase_date: string | null;
   profit_loss_value: number | null;
   yield_expected: number | null;
   allocation_weight: number | null;
@@ -53,8 +56,7 @@ type FormValues = {
   status: string;
   current_value: string;
   purchase_price: string;
-  profit_loss_value: string;
-  yield_expected: string;
+  purchase_date: string;
   allocation_weight: string;
   target_value_6m: string;
   target_weight: string;
@@ -84,6 +86,15 @@ const CATEGORIES = [
 const STATUSES = ["Active", "Sold", "In Recovery", "Liquidated"];
 const CURRENCIES = ["EUR", "USD", "CHF", "GBP"];
 
+const formatCurrency = (value: number | null, currency = "EUR") => {
+  if (value === null) return "—";
+  return new Intl.NumberFormat("pt-PT", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+  }).format(value);
+};
+
 export default function WealthAssetDialog({
   open,
   onOpenChange,
@@ -100,8 +111,7 @@ export default function WealthAssetDialog({
       status: "Active",
       current_value: "",
       purchase_price: "",
-      profit_loss_value: "",
-      yield_expected: "",
+      purchase_date: "",
       allocation_weight: "",
       target_value_6m: "",
       target_weight: "",
@@ -110,6 +120,35 @@ export default function WealthAssetDialog({
       notes: "",
     },
   });
+
+  // Watch values for auto-calculation
+  const currentValue = useWatch({ control: form.control, name: "current_value" });
+  const purchasePrice = useWatch({ control: form.control, name: "purchase_price" });
+  const purchaseDate = useWatch({ control: form.control, name: "purchase_date" });
+  const currency = useWatch({ control: form.control, name: "currency" });
+
+  // Calculate P/L and Yield automatically
+  const calculations = useMemo(() => {
+    const cv = parseFloat(currentValue) || 0;
+    const pp = parseFloat(purchasePrice) || 0;
+    
+    // P/L = Current Value - Purchase Price
+    const pnl = cv && pp ? cv - pp : null;
+    
+    // Annualized Yield = ((Current Value / Purchase Price) ^ (365 / days)) - 1) * 100
+    let yieldPercent: number | null = null;
+    
+    if (cv && pp && pp > 0 && purchaseDate) {
+      const days = differenceInDays(new Date(), new Date(purchaseDate));
+      if (days > 0) {
+        const totalReturn = cv / pp;
+        const annualizedReturn = Math.pow(totalReturn, 365 / days) - 1;
+        yieldPercent = annualizedReturn * 100;
+      }
+    }
+    
+    return { pnl, yieldPercent };
+  }, [currentValue, purchasePrice, purchaseDate]);
 
   useEffect(() => {
     if (asset) {
@@ -120,8 +159,7 @@ export default function WealthAssetDialog({
         status: asset.status || "Active",
         current_value: asset.current_value?.toString() || "",
         purchase_price: asset.purchase_price?.toString() || "",
-        profit_loss_value: asset.profit_loss_value?.toString() || "",
-        yield_expected: asset.yield_expected?.toString() || "",
+        purchase_date: asset.purchase_date || "",
         allocation_weight: asset.allocation_weight?.toString() || "",
         target_value_6m: asset.target_value_6m?.toString() || "",
         target_weight: asset.target_weight?.toString() || "",
@@ -137,8 +175,7 @@ export default function WealthAssetDialog({
         status: "Active",
         current_value: "",
         purchase_price: "",
-        profit_loss_value: "",
-        yield_expected: "",
+        purchase_date: "",
         allocation_weight: "",
         target_value_6m: "",
         target_weight: "",
@@ -151,15 +188,33 @@ export default function WealthAssetDialog({
 
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
+      const cv = parseFloat(values.current_value) || null;
+      const pp = parseFloat(values.purchase_price) || null;
+      
+      // Calculate P/L
+      const pnl = cv && pp ? cv - pp : null;
+      
+      // Calculate annualized yield
+      let yieldPercent: number | null = null;
+      if (cv && pp && pp > 0 && values.purchase_date) {
+        const days = differenceInDays(new Date(), new Date(values.purchase_date));
+        if (days > 0) {
+          const totalReturn = cv / pp;
+          const annualizedReturn = Math.pow(totalReturn, 365 / days) - 1;
+          yieldPercent = annualizedReturn * 100;
+        }
+      }
+
       const payload = {
         name: values.name,
         category: values.category,
         subcategory: values.subcategory || null,
         status: values.status,
-        current_value: values.current_value ? parseFloat(values.current_value) : null,
-        purchase_price: values.purchase_price ? parseFloat(values.purchase_price) : null,
-        profit_loss_value: values.profit_loss_value ? parseFloat(values.profit_loss_value) : null,
-        yield_expected: values.yield_expected ? parseFloat(values.yield_expected) : null,
+        current_value: cv,
+        purchase_price: pp,
+        purchase_date: values.purchase_date || null,
+        profit_loss_value: pnl,
+        yield_expected: yieldPercent,
         allocation_weight: values.allocation_weight ? parseFloat(values.allocation_weight) : null,
         target_value_6m: values.target_value_6m ? parseFloat(values.target_value_6m) : null,
         target_weight: values.target_weight ? parseFloat(values.target_weight) : null,
@@ -309,12 +364,12 @@ export default function WealthAssetDialog({
 
               <FormField
                 control={form.control}
-                name="current_value"
+                name="purchase_date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Valor Atual</FormLabel>
+                    <FormLabel>Data de Compra</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                      <Input type="date" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -337,10 +392,10 @@ export default function WealthAssetDialog({
 
               <FormField
                 control={form.control}
-                name="profit_loss_value"
+                name="current_value"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>P/L (Ganho/Perda)</FormLabel>
+                    <FormLabel>Valor Atual</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" placeholder="0.00" {...field} />
                     </FormControl>
@@ -349,19 +404,29 @@ export default function WealthAssetDialog({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="yield_expected"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Yld Exp. (%)</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder="3.75" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Calculated fields - read only */}
+              <FormItem>
+                <FormLabel>P/L (Calculado)</FormLabel>
+                <div className={cn(
+                  "h-10 px-3 py-2 rounded-md border bg-muted text-sm flex items-center",
+                  calculations.pnl !== null && calculations.pnl >= 0 ? "text-green-600" : "text-red-600"
+                )}>
+                  {calculations.pnl !== null ? formatCurrency(calculations.pnl, currency || "EUR") : "—"}
+                </div>
+              </FormItem>
+
+              <FormItem>
+                <FormLabel>Yield Anual (Calculado)</FormLabel>
+                <div className={cn(
+                  "h-10 px-3 py-2 rounded-md border bg-muted text-sm flex items-center",
+                  calculations.yieldPercent !== null && calculations.yieldPercent >= 0 ? "text-green-600" : "text-red-600"
+                )}>
+                  {calculations.yieldPercent !== null ? `${calculations.yieldPercent.toFixed(2)}%` : "—"}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Rendimento anualizado desde a data de compra
+                </p>
+              </FormItem>
 
               <FormField
                 control={form.control}
