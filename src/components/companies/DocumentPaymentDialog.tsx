@@ -123,17 +123,20 @@ export default function DocumentPaymentDialog({
         
         let fileToUpload: Blob | File = attachmentFile;
         let fileExtension = attachmentFile.name.split('.').pop() || 'pdf';
+        let mergeSucceeded = false;
         
-        // If both the original document and attachment are PDFs, merge them
+        // If both the original document and attachment are PDFs, try to merge them
         if (isPdfUrl(documentFileUrl) && isPdfFile(attachmentFile)) {
           try {
             toast.info("A combinar documentos PDF...");
             fileToUpload = await mergePdfs(documentFileUrl, attachmentFile);
             fileExtension = 'pdf';
+            mergeSucceeded = true;
           } catch (mergeError) {
             console.error("PDF merge failed, uploading payment file only:", mergeError);
-            // If merge fails, just upload the payment file
+            // If merge fails, just upload the payment file - DO NOT update workflow_files
             toast.warning("Não foi possível combinar os PDFs, a carregar apenas o comprovativo");
+            mergeSucceeded = false;
           }
         }
         
@@ -152,8 +155,8 @@ export default function DocumentPaymentDialog({
         invoiceFileUrl = urlData.publicUrl;
         setIsUploading(false);
         
-        // If we merged PDFs, update the workflow file's file_url to point to the merged file
-        if (isPdfUrl(documentFileUrl) && isPdfFile(attachmentFile)) {
+        // ONLY update workflow file if merge actually succeeded
+        if (mergeSucceeded) {
           const { error: updateDocError } = await supabase
             .from('workflow_files')
             .update({ file_url: invoiceFileUrl })
