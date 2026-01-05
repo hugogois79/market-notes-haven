@@ -13,7 +13,8 @@ import CategoryManagement from "@/components/financial/CategoryManagement";
 import BudgetingManagement from "@/components/financial/BudgetingManagement";
 import DocumentDropZone from "@/components/financial/DocumentDropZone";
 import EntityManagement from "@/components/financial/EntityManagement";
-import { Building2, TrendingUp, CreditCard, PiggyBank, Settings, Tag, Calculator, Upload, Users } from "lucide-react";
+import FinancePlan from "@/components/financial/FinancePlan";
+import { Building2, TrendingUp, CreditCard, PiggyBank, Settings, Tag, Calculator, Upload, Users, Target } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function FinancialPage() {
@@ -69,7 +70,7 @@ export default function FinancialPage() {
           </div>
         ) : (
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className={isMobile ? "flex w-full overflow-x-auto overflow-y-hidden whitespace-nowrap pb-px" : "grid w-full grid-cols-7"}>
+            <TabsList className={isMobile ? "flex w-full overflow-x-auto overflow-y-hidden whitespace-nowrap pb-px" : "grid w-full grid-cols-8"}>
               <TabsTrigger value="dashboard" className="flex-shrink-0">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Dashboard
@@ -89,6 +90,10 @@ export default function FinancialPage() {
               <TabsTrigger value="budgeting" className="flex-shrink-0">
                 <Calculator className="h-4 w-4 mr-2" />
                 Budgeting
+              </TabsTrigger>
+              <TabsTrigger value="financeplan" className="flex-shrink-0">
+                <Target className="h-4 w-4 mr-2" />
+                Finance Plan
               </TabsTrigger>
               <TabsTrigger value="loans" className="flex-shrink-0">
                 <PiggyBank className="h-4 w-4 mr-2" />
@@ -129,6 +134,12 @@ export default function FinancialPage() {
             <TabsContent value="budgeting" className="space-y-4">
               {selectedCompanyId && (
                 <BudgetingManagement companyId={selectedCompanyId} />
+              )}
+            </TabsContent>
+
+            <TabsContent value="financeplan" className="space-y-4">
+              {selectedCompanyId && (
+                <FinancePlan companyId={selectedCompanyId} />
               )}
             </TabsContent>
 
