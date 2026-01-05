@@ -3376,6 +3376,15 @@ export default function WorkFlowTab() {
                     company_id: previewFile.company_id,
                     category: previewFile.category,
                     notes: previewFile.notes,
+                    invoice_date: previewFile.invoice_date,
+                    invoice_number: previewFile.invoice_number,
+                    vendor_name: previewFile.vendor_name,
+                    vendor_vat: previewFile.vendor_vat,
+                    total_amount: previewFile.total_amount,
+                    tax_amount: previewFile.tax_amount,
+                    subtotal: previewFile.subtotal,
+                    currency: previewFile.currency,
+                    payment_method: previewFile.payment_method,
                   }}
                   existingTransaction={
                     // If there's pending loan data, convert it to existingTransaction format
