@@ -21,7 +21,7 @@ import {
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { Paperclip, X, ExternalLink } from "lucide-react";
-import { mergePdfs, isPdfFile, isPdfUrl } from "@/utils/pdfMerger";
+import { mergePdfs, isPdfFile, isPdfUrl, EncryptedPdfError } from "@/utils/pdfMerger";
 
 // Helper to remove file extension
 const removeExtension = (filename: string) => {
@@ -135,7 +135,11 @@ export default function DocumentPaymentDialog({
           } catch (mergeError) {
             console.error("PDF merge failed, uploading payment file only:", mergeError);
             // If merge fails, just upload the payment file - DO NOT update workflow_files
-            toast.warning("Não foi possível combinar os PDFs, a carregar apenas o comprovativo");
+            if (mergeError instanceof EncryptedPdfError) {
+              toast.warning("O PDF do documento base está protegido. Não foi possível combinar; foi carregado apenas o comprovativo.");
+            } else {
+              toast.warning("Não foi possível combinar os PDFs, a carregar apenas o comprovativo");
+            }
             mergeSucceeded = false;
           }
         }
