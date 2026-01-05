@@ -1819,6 +1819,10 @@ export default function WorkFlowTab() {
           if (focusedFileId) {
             const file = filteredFiles.find(f => f.id === focusedFileId);
             if (file) {
+              if (showExpensePanel) {
+                toast.warning("Feche o painel 'Novo Movimento' antes de abrir outro ficheiro");
+                break;
+              }
               setPreviewFile(file);
             }
           }
@@ -2745,7 +2749,13 @@ export default function WorkFlowTab() {
                       )}
                       onMouseDown={() => setFocusedFileId(file.id)}
                       onFocus={() => setFocusedFileId(file.id)}
-                      onDoubleClick={() => setPreviewFile(file)}
+                      onDoubleClick={() => {
+                        if (showExpensePanel) {
+                          toast.warning("Feche o painel 'Novo Movimento' antes de abrir outro ficheiro");
+                          return;
+                        }
+                        setPreviewFile(file);
+                      }}
                     >
                       <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
                         <Checkbox 
@@ -3010,7 +3020,13 @@ export default function WorkFlowTab() {
                       <Download className="h-4 w-4 mr-2" />
                       Download
                     </ContextMenuItem>
-                    <ContextMenuItem onClick={() => setPreviewFile(file)}>
+                    <ContextMenuItem onClick={() => {
+                      if (showExpensePanel) {
+                        toast.warning("Feche o painel 'Novo Movimento' antes de abrir outro ficheiro");
+                        return;
+                      }
+                      setPreviewFile(file);
+                    }}>
                       <FileText className="h-4 w-4 mr-2" />
                       Preview
                     </ContextMenuItem>
