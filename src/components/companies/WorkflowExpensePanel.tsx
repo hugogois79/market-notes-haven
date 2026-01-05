@@ -41,6 +41,15 @@ interface WorkflowExpensePanelProps {
     company_id?: string | null;
     category?: string | null;
     notes?: string | null;
+    invoice_date?: string | null;
+    invoice_number?: string | null;
+    vendor_name?: string | null;
+    vendor_vat?: string | null;
+    total_amount?: number | null;
+    tax_amount?: number | null;
+    subtotal?: number | null;
+    currency?: string | null;
+    payment_method?: string | null;
   };
   existingTransaction?: {
     id: string;
@@ -239,24 +248,43 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   // Pre-fill form with OCR data from n8n when there's no existing transaction
   useEffect(() => {
     if (!existingTransaction && companies && file) {
-      const hasOcrData = file.company_id || file.notes;
+      const hasOcrData = file.company_id || file.notes || file.invoice_date || file.total_amount || file.vendor_name;
       if (hasOcrData) {
         // Determine type based on category (Invoice -> expense)
         const inferredType = file.category === "Invoice" ? "expense" : "expense";
         
+        // Calculate VAT rate from OCR data if available
+        let vatRate = "23";
+        if (file.tax_amount && file.subtotal && file.subtotal > 0) {
+          vatRate = Math.round((file.tax_amount / file.subtotal) * 100).toString();
+        }
+        
+        // Map OCR payment_method to form values
+        let paymentMethod = "bank_transfer";
+        if (file.payment_method) {
+          const pm = file.payment_method.toLowerCase();
+          if (pm.includes("cash") || pm.includes("dinheiro") || pm.includes("numerário")) {
+            paymentMethod = "cash";
+          } else if (pm.includes("card") || pm.includes("cartão") || pm.includes("cartao")) {
+            paymentMethod = "card";
+          } else if (pm.includes("cheque") || pm.includes("check")) {
+            paymentMethod = "check";
+          }
+        }
+        
         reset({
-          date: new Date().toISOString().split("T")[0],
+          date: file.invoice_date || new Date().toISOString().split("T")[0],
           type: inferredType,
           company_id: file.company_id || "",
           project_id: "",
           category_id: "",
           description: "",
-          entity_name: "",
-          total_amount: "",
-          vat_rate: "23",
-          payment_method: "bank_transfer",
+          entity_name: file.vendor_name || "",
+          total_amount: file.total_amount?.toString() || "",
+          vat_rate: vatRate,
+          payment_method: paymentMethod,
           bank_account_id: "",
-          invoice_number: "",
+          invoice_number: file.invoice_number || "",
           notes: file.notes || "",
           lending_company_id: "",
           borrowing_company_id: "",

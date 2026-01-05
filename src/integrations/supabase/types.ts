@@ -4154,6 +4154,208 @@ export type Database = {
           },
         ]
       }
+      wealth_asset_valuations: {
+        Row: {
+          asset_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          valuation_date: string
+          value: number
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          valuation_date?: string
+          value: number
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          valuation_date?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wealth_asset_valuations_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "wealth_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wealth_assets: {
+        Row: {
+          category: string
+          created_at: string
+          currency: string | null
+          current_value: number | null
+          id: string
+          image_url: string | null
+          metadata: Json | null
+          name: string
+          notes: string | null
+          purchase_date: string | null
+          purchase_price: number | null
+          status: string | null
+          subcategory: string | null
+          updated_at: string
+          user_id: string | null
+          yield_percent: number | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          currency?: string | null
+          current_value?: number | null
+          id?: string
+          image_url?: string | null
+          metadata?: Json | null
+          name: string
+          notes?: string | null
+          purchase_date?: string | null
+          purchase_price?: number | null
+          status?: string | null
+          subcategory?: string | null
+          updated_at?: string
+          user_id?: string | null
+          yield_percent?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          currency?: string | null
+          current_value?: number | null
+          id?: string
+          image_url?: string | null
+          metadata?: Json | null
+          name?: string
+          notes?: string | null
+          purchase_date?: string | null
+          purchase_price?: number | null
+          status?: string | null
+          subcategory?: string | null
+          updated_at?: string
+          user_id?: string | null
+          yield_percent?: number | null
+        }
+        Relationships: []
+      }
+      wealth_market_data: {
+        Row: {
+          currency: string | null
+          fetched_at: string
+          id: string
+          price: number
+          source: string | null
+          symbol: string
+        }
+        Insert: {
+          currency?: string | null
+          fetched_at?: string
+          id?: string
+          price: number
+          source?: string | null
+          symbol: string
+        }
+        Update: {
+          currency?: string | null
+          fetched_at?: string
+          id?: string
+          price?: number
+          source?: string | null
+          symbol?: string
+        }
+        Relationships: []
+      }
+      wealth_portfolio_snapshots: {
+        Row: {
+          breakdown: Json | null
+          created_at: string
+          id: string
+          net_worth: number | null
+          snapshot_date: string
+          total_assets: number | null
+          total_liabilities: number | null
+          user_id: string | null
+        }
+        Insert: {
+          breakdown?: Json | null
+          created_at?: string
+          id?: string
+          net_worth?: number | null
+          snapshot_date?: string
+          total_assets?: number | null
+          total_liabilities?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          breakdown?: Json | null
+          created_at?: string
+          id?: string
+          net_worth?: number | null
+          snapshot_date?: string
+          total_assets?: number | null
+          total_liabilities?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      wealth_transactions: {
+        Row: {
+          amount: number
+          asset_id: string | null
+          category: string | null
+          created_at: string
+          date: string
+          description: string
+          id: string
+          notes: string | null
+          transaction_type: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          asset_id?: string | null
+          category?: string | null
+          created_at?: string
+          date?: string
+          description: string
+          id?: string
+          notes?: string | null
+          transaction_type: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          asset_id?: string | null
+          category?: string | null
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          notes?: string | null
+          transaction_type?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wealth_transactions_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "wealth_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_documents: {
         Row: {
           created_at: string
@@ -4325,48 +4527,78 @@ export type Database = {
           company_id: string | null
           completed_at: string | null
           created_at: string
+          currency: string | null
           file_name: string
           file_size: number | null
           file_url: string
           id: string
+          invoice_date: string | null
+          invoice_number: string | null
+          line_items_summary: string | null
           mime_type: string | null
           notes: string | null
+          payment_method: string | null
           priority: string | null
           status: string | null
+          subtotal: number | null
+          tax_amount: number | null
+          total_amount: number | null
           updated_at: string
           user_id: string
+          vendor_name: string | null
+          vendor_vat: string | null
         }
         Insert: {
           category?: string | null
           company_id?: string | null
           completed_at?: string | null
           created_at?: string
+          currency?: string | null
           file_name: string
           file_size?: number | null
           file_url: string
           id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          line_items_summary?: string | null
           mime_type?: string | null
           notes?: string | null
+          payment_method?: string | null
           priority?: string | null
           status?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          total_amount?: number | null
           updated_at?: string
           user_id: string
+          vendor_name?: string | null
+          vendor_vat?: string | null
         }
         Update: {
           category?: string | null
           company_id?: string | null
           completed_at?: string | null
           created_at?: string
+          currency?: string | null
           file_name?: string
           file_size?: number | null
           file_url?: string
           id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          line_items_summary?: string | null
           mime_type?: string | null
           notes?: string | null
+          payment_method?: string | null
           priority?: string | null
           status?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          total_amount?: number | null
           updated_at?: string
           user_id?: string
+          vendor_name?: string | null
+          vendor_vat?: string | null
         }
         Relationships: [
           {
