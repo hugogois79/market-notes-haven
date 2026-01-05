@@ -4191,6 +4191,7 @@ export type Database = {
       }
       wealth_assets: {
         Row: {
+          allocation_weight: number | null
           category: string
           created_at: string
           currency: string | null
@@ -4200,15 +4201,23 @@ export type Database = {
           metadata: Json | null
           name: string
           notes: string | null
+          previous_valuation: number | null
+          profit_loss_value: number | null
           purchase_date: string | null
           purchase_price: number | null
+          recovery_value: number | null
           status: string | null
           subcategory: string | null
+          target_value_6m: number | null
+          target_weight: number | null
           updated_at: string
           user_id: string | null
+          vintage_year: number | null
+          yield_expected: number | null
           yield_percent: number | null
         }
         Insert: {
+          allocation_weight?: number | null
           category: string
           created_at?: string
           currency?: string | null
@@ -4218,15 +4227,23 @@ export type Database = {
           metadata?: Json | null
           name: string
           notes?: string | null
+          previous_valuation?: number | null
+          profit_loss_value?: number | null
           purchase_date?: string | null
           purchase_price?: number | null
+          recovery_value?: number | null
           status?: string | null
           subcategory?: string | null
+          target_value_6m?: number | null
+          target_weight?: number | null
           updated_at?: string
           user_id?: string | null
+          vintage_year?: number | null
+          yield_expected?: number | null
           yield_percent?: number | null
         }
         Update: {
+          allocation_weight?: number | null
           category?: string
           created_at?: string
           currency?: string | null
@@ -4236,12 +4253,19 @@ export type Database = {
           metadata?: Json | null
           name?: string
           notes?: string | null
+          previous_valuation?: number | null
+          profit_loss_value?: number | null
           purchase_date?: string | null
           purchase_price?: number | null
+          recovery_value?: number | null
           status?: string | null
           subcategory?: string | null
+          target_value_6m?: number | null
+          target_weight?: number | null
           updated_at?: string
           user_id?: string | null
+          vintage_year?: number | null
+          yield_expected?: number | null
           yield_percent?: number | null
         }
         Relationships: []
@@ -4311,11 +4335,14 @@ export type Database = {
           amount: number
           asset_id: string | null
           category: string | null
+          category_weight: number | null
+          counterparty: string | null
           created_at: string
           date: string
           description: string
           id: string
           notes: string | null
+          running_balance: number | null
           transaction_type: string
           updated_at: string
           user_id: string | null
@@ -4324,11 +4351,14 @@ export type Database = {
           amount: number
           asset_id?: string | null
           category?: string | null
+          category_weight?: number | null
+          counterparty?: string | null
           created_at?: string
           date?: string
           description: string
           id?: string
           notes?: string | null
+          running_balance?: number | null
           transaction_type: string
           updated_at?: string
           user_id?: string | null
@@ -4337,11 +4367,14 @@ export type Database = {
           amount?: number
           asset_id?: string | null
           category?: string | null
+          category_weight?: number | null
+          counterparty?: string | null
           created_at?: string
           date?: string
           description?: string
           id?: string
           notes?: string | null
+          running_balance?: number | null
           transaction_type?: string
           updated_at?: string
           user_id?: string | null
