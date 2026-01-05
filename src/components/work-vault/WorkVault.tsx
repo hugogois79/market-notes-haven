@@ -46,6 +46,7 @@ import {
   Eye,
   Columns,
   FolderInput,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -65,6 +66,7 @@ interface ColumnConfig {
   id: string;
   label: string;
   visible: boolean;
+  isCustom?: boolean;
 }
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
@@ -76,6 +78,8 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "status", label: "Status", visible: true },
   { id: "tags", label: "Tags", visible: true },
 ];
+
+const COLUMNS_STORAGE_KEY = "workfinance-columns";
 
 // Format file size
 const formatFileSize = (bytes: number | null): string => {
@@ -140,13 +144,31 @@ export function WorkVault() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ fileName: string; progress: number }[]>([]);
-  const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
+  // Load columns from localStorage or use defaults
+  const [columns, setColumns] = useState<ColumnConfig[]>(() => {
+    const saved = localStorage.getItem(COLUMNS_STORAGE_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return DEFAULT_COLUMNS;
+      }
+    }
+    return DEFAULT_COLUMNS;
+  });
   
   // Dialogs
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [moveFolderOpen, setMoveFolderOpen] = useState(false);
   const [folderToMove, setFolderToMove] = useState<WorkFolderRow | null>(null);
+  
+  // Column management dialogs
+  const [renameColumnOpen, setRenameColumnOpen] = useState(false);
+  const [columnToRename, setColumnToRename] = useState<ColumnConfig | null>(null);
+  const [newColumnLabel, setNewColumnLabel] = useState("");
+  const [addColumnOpen, setAddColumnOpen] = useState(false);
+  const [newColumnName, setNewColumnName] = useState("");
 
   // Fetch folders
   const { data: folders = [] } = useQuery({
@@ -468,9 +490,60 @@ export function WorkVault() {
   }, [deleteDocsMutation]);
 
   const toggleColumn = useCallback((columnId: string) => {
-    setColumns(prev => prev.map(col => 
-      col.id === columnId ? { ...col, visible: !col.visible } : col
-    ));
+    setColumns(prev => {
+      const updated = prev.map(col => 
+        col.id === columnId ? { ...col, visible: !col.visible } : col
+      );
+      localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const handleRenameColumn = useCallback((column: ColumnConfig) => {
+    setColumnToRename(column);
+    setNewColumnLabel(column.label);
+    setRenameColumnOpen(true);
+  }, []);
+
+  const confirmRenameColumn = useCallback(() => {
+    if (!columnToRename || !newColumnLabel.trim()) return;
+    
+    setColumns(prev => {
+      const updated = prev.map(col => 
+        col.id === columnToRename.id ? { ...col, label: newColumnLabel.trim() } : col
+      );
+      localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    
+    setRenameColumnOpen(false);
+    setColumnToRename(null);
+    setNewColumnLabel("");
+    toast.success("Column renamed");
+  }, [columnToRename, newColumnLabel]);
+
+  const handleAddColumn = useCallback(() => {
+    if (!newColumnName.trim()) return;
+    
+    const newId = `custom_${Date.now()}`;
+    setColumns(prev => {
+      const updated = [...prev, { id: newId, label: newColumnName.trim(), visible: true, isCustom: true }];
+      localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    
+    setAddColumnOpen(false);
+    setNewColumnName("");
+    toast.success("Column added");
+  }, [newColumnName]);
+
+  const handleDeleteColumn = useCallback((columnId: string) => {
+    setColumns(prev => {
+      const updated = prev.filter(col => col.id !== columnId);
+      localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    toast.success("Column deleted");
   }, []);
 
   const handleMoveFolder = useCallback((folder: WorkFolderRow) => {
@@ -563,16 +636,47 @@ export function WorkVault() {
                 <ChevronDown className="h-4 w-4 ml-2" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
+            <DropdownMenuContent className="w-56">
               {columns.map(col => (
-                <DropdownMenuCheckboxItem
-                  key={col.id}
-                  checked={col.visible}
-                  onCheckedChange={() => toggleColumn(col.id)}
-                >
-                  {col.label}
-                </DropdownMenuCheckboxItem>
+                <div key={col.id} className="flex items-center justify-between px-2 py-1.5 hover:bg-slate-100 rounded-sm">
+                  <DropdownMenuCheckboxItem
+                    checked={col.visible}
+                    onCheckedChange={() => toggleColumn(col.id)}
+                    className="flex-1"
+                  >
+                    {col.label}
+                  </DropdownMenuCheckboxItem>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 ml-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRenameColumn(col);
+                    }}
+                  >
+                    <Pencil className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                  {col.isCustom && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 ml-1 text-destructive hover:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteColumn(col.id);
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setAddColumnOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Custom Column
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -608,7 +712,7 @@ export function WorkVault() {
                 onClick={() => setCurrentFolderId(null)}
                 className="cursor-pointer text-sm"
               >
-                Work
+                WorkFinance
               </BreadcrumbLink>
             </BreadcrumbItem>
             {folderPath.map((folder, idx) => (
@@ -915,7 +1019,7 @@ export function WorkVault() {
               }}
             >
               <Folder className="h-4 w-4 text-amber-500" />
-              <span className="text-sm font-medium">Work (Root)</span>
+              <span className="text-sm font-medium">WorkFinance (Root)</span>
             </div>
             
             {/* Other folders */}
@@ -938,6 +1042,70 @@ export function WorkVault() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setMoveFolderOpen(false)}>
               Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Column Dialog */}
+      <Dialog open={renameColumnOpen} onOpenChange={setRenameColumnOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Rename Column</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Column name"
+              value={newColumnLabel}
+              onChange={(e) => setNewColumnLabel(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newColumnLabel.trim()) {
+                  confirmRenameColumn();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameColumnOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmRenameColumn}
+              disabled={!newColumnLabel.trim()}
+            >
+              Rename
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Column Dialog */}
+      <Dialog open={addColumnOpen} onOpenChange={setAddColumnOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add Custom Column</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Column name"
+              value={newColumnName}
+              onChange={(e) => setNewColumnName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newColumnName.trim()) {
+                  handleAddColumn();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddColumnOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddColumn}
+              disabled={!newColumnName.trim()}
+            >
+              Add Column
             </Button>
           </DialogFooter>
         </DialogContent>
