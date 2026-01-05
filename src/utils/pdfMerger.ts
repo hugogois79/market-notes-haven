@@ -49,24 +49,16 @@ async function fetchPdfAsArrayBuffer(url: string): Promise<ArrayBuffer> {
  */
 async function loadPdfWithEncryptionHandling(pdfBytes: ArrayBuffer, source: string): Promise<ReturnType<typeof PDFDocument.load>> {
   try {
-    // First try normal load
     return await PDFDocument.load(pdfBytes);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     
-    // Check if it's an encryption error
+    // If encrypted, fail immediately - ignoreEncryption loads structure but not content
     if (errorMessage.toLowerCase().includes('encrypt')) {
-      console.log(`PDF from ${source} is encrypted, trying with ignoreEncryption...`);
-      try {
-        // Try again with ignoreEncryption option
-        return await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
-      } catch (retryError) {
-        console.error(`Failed to load encrypted PDF from ${source} even with ignoreEncryption:`, retryError);
-        throw new EncryptedPdfError(`O PDF "${source}" está protegido e não pode ser processado`);
-      }
+      console.error(`PDF from ${source} is encrypted and cannot be merged`);
+      throw new EncryptedPdfError(`O PDF "${source}" está protegido e não pode ser combinado`);
     }
     
-    // Re-throw non-encryption errors
     throw error;
   }
 }
