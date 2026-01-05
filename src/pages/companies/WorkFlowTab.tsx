@@ -290,6 +290,7 @@ export default function WorkFlowTab() {
         conditions: f.conditions || []
       })) as SavedFilter[];
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
   // Sync Supabase filters to local state
@@ -488,6 +489,7 @@ export default function WorkFlowTab() {
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
   // Apply column config from Supabase when loaded
@@ -687,6 +689,7 @@ export default function WorkFlowTab() {
       if (error) throw error;
       return data as WorkflowFile[];
     },
+    staleTime: 30 * 1000, // 30 seconds cache (changes more frequently)
   });
 
   // Fetch transactions linked to workflow files (by invoice_file_url)
@@ -715,6 +718,7 @@ export default function WorkFlowTab() {
       if (error) throw error;
       return data;
     },
+    staleTime: 30 * 1000, // 30 seconds cache
   });
 
   // Fetch all projects for dropdown
@@ -730,9 +734,10 @@ export default function WorkFlowTab() {
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
-  // Fetch storage locations for mark as complete
+  // Fetch storage locations for mark as complete - lazy load when dialog opens
   const { data: storageLocations } = useQuery({
     queryKey: ["workflow-storage-locations"],
     queryFn: async () => {
@@ -749,9 +754,11 @@ export default function WorkFlowTab() {
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    enabled: markCompleteWarningOpen || !!fileToComplete, // Only load when needed
   });
 
-  // Fetch companies for mark as complete
+  // Fetch companies for mark as complete and move dialog
   const { data: allCompanies } = useQuery({
     queryKey: ["all-companies"],
     queryFn: async () => {
@@ -763,9 +770,10 @@ export default function WorkFlowTab() {
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
-  // Fetch folders for selected company in move file dialog
+  // Fetch folders for selected company in move file dialog - lazy load
   const { data: moveFolders } = useQuery({
     queryKey: ["company-folders-for-move", moveForm.company_id],
     queryFn: async () => {
@@ -779,7 +787,8 @@ export default function WorkFlowTab() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!moveForm.company_id,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    enabled: moveFileDialogOpen && !!moveForm.company_id, // Only load when dialog is open
   });
 
   // Build folder paths recursively for move dialog

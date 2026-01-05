@@ -133,6 +133,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
   // Fetch categories
@@ -147,6 +148,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
   // Fetch bank accounts (moved here so useEffect can depend on it)
@@ -161,6 +163,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
   // Reset form when existingTransaction changes - wait for all dropdown data to load first
@@ -321,6 +324,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
     enabled: !!selectedCompanyId && isDocument,
   });
 
@@ -339,6 +343,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
 
@@ -354,6 +359,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
       const uniqueSuppliers = [...new Set(data.map((d) => d.entity_name).filter((s): s is string => typeof s === 'string' && s.length > 0))];
       return uniqueSuppliers.sort();
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
   // Filter categories by selected project and transaction type
