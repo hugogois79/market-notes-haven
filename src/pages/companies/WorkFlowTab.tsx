@@ -3026,8 +3026,8 @@ export default function WorkFlowTab() {
               ))
             )}
           </tbody>
-          <tfoot>
-            <tr className="border-t border-slate-200 bg-slate-50">
+          <tfoot className="sticky bottom-0 z-10">
+            <tr className="border-t border-slate-200 bg-slate-50 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
               <td colSpan={2} className="px-3 py-2 text-xs text-muted-foreground">
                 {filteredFiles?.length || 0} file{(filteredFiles?.length || 0) !== 1 ? 's' : ''}
               </td>
