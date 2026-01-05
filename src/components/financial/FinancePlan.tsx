@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Target, TrendingUp, Calendar, PieChart } from "lucide-react";
+import WealthAssetsTable from "./wealth/WealthAssetsTable";
 
 interface FinancePlanProps {
   companyId: string;
@@ -71,21 +72,13 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Financial Planning</CardTitle>
+          <CardTitle>Portfolio de Ativos</CardTitle>
           <CardDescription>
-            Define your financial goals, create projections, and track progress towards your targets.
+            Gestão de ativos, avaliações, P/L e alocação do portfolio.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center py-12 text-muted-foreground">
-            <div className="text-center">
-              <Target className="mx-auto h-12 w-12 mb-4" />
-              <h3 className="text-lg font-medium">Start Planning</h3>
-              <p className="text-sm max-w-md mt-2">
-                Create financial goals, set budgets, forecast revenue and expenses, and track your progress over time.
-              </p>
-            </div>
-          </div>
+          <WealthAssetsTable />
         </CardContent>
       </Card>
     </div>
