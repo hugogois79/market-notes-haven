@@ -62,6 +62,16 @@ interface WorkflowFile {
   category?: string | null;
   company_id?: string | null;
   companies?: { id: string; name: string } | null;
+  // OCR data from n8n
+  invoice_date?: string | null;
+  invoice_number?: string | null;
+  vendor_name?: string | null;
+  vendor_vat?: string | null;
+  total_amount?: number | null;
+  tax_amount?: number | null;
+  subtotal?: number | null;
+  currency?: string | null;
+  payment_method?: string | null;
 }
 
 interface UploadProgress {
