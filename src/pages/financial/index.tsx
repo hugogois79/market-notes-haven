@@ -13,8 +13,7 @@ import CategoryManagement from "@/components/financial/CategoryManagement";
 import BudgetingManagement from "@/components/financial/BudgetingManagement";
 import DocumentDropZone from "@/components/financial/DocumentDropZone";
 import EntityManagement from "@/components/financial/EntityManagement";
-import WealthOS from "@/pages/financial/WealthOS";
-import { Building2, TrendingUp, CreditCard, PiggyBank, Settings, Tag, Calculator, Upload, Users, Briefcase } from "lucide-react";
+import { Building2, TrendingUp, CreditCard, PiggyBank, Settings, Tag, Calculator, Upload, Users } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function FinancialPage() {
@@ -70,14 +69,10 @@ export default function FinancialPage() {
           </div>
         ) : (
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className={isMobile ? "flex w-full overflow-x-auto overflow-y-hidden whitespace-nowrap pb-px" : "grid w-full grid-cols-8"}>
+            <TabsList className={isMobile ? "flex w-full overflow-x-auto overflow-y-hidden whitespace-nowrap pb-px" : "grid w-full grid-cols-7"}>
               <TabsTrigger value="dashboard" className="flex-shrink-0">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Dashboard
-              </TabsTrigger>
-              <TabsTrigger value="wealth" className="flex-shrink-0">
-                <Briefcase className="h-4 w-4 mr-2" />
-                Financial Plan
               </TabsTrigger>
               <TabsTrigger value="dropzone" className="flex-shrink-0">
                 <Upload className="h-4 w-4 mr-2" />
@@ -109,10 +104,6 @@ export default function FinancialPage() {
               {selectedCompanyId && (
                 <FinancialDashboard companyId={selectedCompanyId} />
               )}
-            </TabsContent>
-
-            <TabsContent value="wealth" className="space-y-4 -mx-6 -mt-6">
-              <WealthOS />
             </TabsContent>
 
             <TabsContent value="dropzone" className="space-y-4">
