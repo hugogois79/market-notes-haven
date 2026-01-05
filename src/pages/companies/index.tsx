@@ -671,7 +671,7 @@ export default function CompaniesPage() {
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:shadow-none px-4 pb-2"
           >
             <Bookmark className="h-4 w-4 mr-2" />
-            Work
+            WorkFinance
           </TabsTrigger>
           <TabsTrigger 
             value="settings" 
