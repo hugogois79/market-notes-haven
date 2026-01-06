@@ -156,6 +156,10 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
             <Receipt className="h-4 w-4" />
             Cashflow
           </TabsTrigger>
+          <TabsTrigger value="markets" className="flex items-center gap-2">
+            <LineChart className="h-4 w-4" />
+            Markets
+          </TabsTrigger>
           <TabsTrigger value="portfolio" className="flex items-center gap-2">
             <Briefcase className="h-4 w-4" />
             Portfolio
@@ -163,10 +167,6 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
           <TabsTrigger value="milestones" className="flex items-center gap-2">
             <Flag className="h-4 w-4" />
             Milestones
-          </TabsTrigger>
-          <TabsTrigger value="markets" className="flex items-center gap-2">
-            <LineChart className="h-4 w-4" />
-            Markets
           </TabsTrigger>
           <TabsTrigger value="snapshots" className="flex items-center gap-2">
             <History className="h-4 w-4" />
@@ -348,20 +348,6 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
           </Card>
         </TabsContent>
 
-        <TabsContent value="milestones">
-          <Card>
-            <CardHeader>
-              <CardTitle>Milestones</CardTitle>
-              <CardDescription>
-                Defina e acompanhe os seus objetivos financeiros.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <WealthMilestonesTable />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="markets">
           <Card>
             <CardHeader>
@@ -372,6 +358,20 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
             </CardHeader>
             <CardContent>
               <MarketHoldingsTable />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="milestones">
+          <Card>
+            <CardHeader>
+              <CardTitle>Milestones</CardTitle>
+              <CardDescription>
+                Defina e acompanhe os seus objetivos financeiros.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WealthMilestonesTable />
             </CardContent>
           </Card>
         </TabsContent>
