@@ -4297,6 +4297,48 @@ export type Database = {
         }
         Relationships: []
       }
+      wealth_milestones: {
+        Row: {
+          achieved_date: string | null
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          status: string | null
+          target_date: string | null
+          target_value: number
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          achieved_date?: string | null
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          status?: string | null
+          target_date?: string | null
+          target_value: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          achieved_date?: string | null
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string | null
+          target_date?: string | null
+          target_value?: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       wealth_portfolio_snapshots: {
         Row: {
           breakdown: Json | null

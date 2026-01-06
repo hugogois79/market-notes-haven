@@ -116,7 +116,12 @@ export default function WealthAssetsTable() {
     setEditingAsset(null);
   };
 
-  // Group assets by category
+  // Calculate totals first
+  const totalValue = assets
+    .filter((a) => a.status !== "In Recovery")
+    .reduce((sum, a) => sum + (a.current_value || 0), 0);
+
+  // Group assets by category with category totals
   const groupedAssets = assets.reduce((acc, asset) => {
     const cat = asset.category || "Other";
     if (!acc[cat]) acc[cat] = [];
@@ -124,10 +129,13 @@ export default function WealthAssetsTable() {
     return acc;
   }, {} as Record<string, WealthAsset[]>);
 
-  // Calculate totals
-  const totalValue = assets
-    .filter((a) => a.status !== "In Recovery")
-    .reduce((sum, a) => sum + (a.current_value || 0), 0);
+  // Calculate category totals for weight calculations
+  const categoryTotals = Object.entries(groupedAssets).reduce((acc, [cat, catAssets]) => {
+    acc[cat] = catAssets
+      .filter((a) => a.status !== "In Recovery")
+      .reduce((sum, a) => sum + (a.current_value || 0), 0);
+    return acc;
+  }, {} as Record<string, number>);
 
   const totalPL = assets
     .filter((a) => a.status !== "In Recovery")
@@ -166,14 +174,14 @@ export default function WealthAssetsTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[250px]">Posição</TableHead>
+              <TableHead className="w-[220px]">Posição</TableHead>
               <TableHead>Categoria</TableHead>
               <TableHead className="text-right">Valor Atual</TableHead>
               <TableHead className="text-right">P/L</TableHead>
               <TableHead className="text-right">Yld Exp.</TableHead>
-              <TableHead className="text-right">Peso</TableHead>
+              <TableHead className="text-right">Peso Cat.</TableHead>
+              <TableHead className="text-right">Peso Total</TableHead>
               <TableHead className="text-right">Target 6M</TableHead>
-              <TableHead className="text-right">Peso Target</TableHead>
               <TableHead className="w-[80px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -197,7 +205,11 @@ export default function WealthAssetsTable() {
                       <TableCell className="text-right font-semibold">
                         {formatCurrency(categoryTotal)}
                       </TableCell>
-                      <TableCell colSpan={6}></TableCell>
+                      <TableCell colSpan={3}></TableCell>
+                      <TableCell className="text-right font-semibold text-muted-foreground">
+                        {totalValue > 0 ? formatPercent((categoryTotal / totalValue) * 100) : "—"}
+                      </TableCell>
+                      <TableCell colSpan={2}></TableCell>
                     </TableRow>
                     {categoryAssets
                       .filter((a) => a.status !== "In Recovery")
@@ -244,14 +256,18 @@ export default function WealthAssetsTable() {
                           <TableCell className="text-right">
                             {formatPercent(asset.yield_expected)}
                           </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {categoryTotal > 0 && asset.current_value
+                              ? formatPercent((asset.current_value / categoryTotal) * 100)
+                              : "—"}
+                          </TableCell>
                           <TableCell className="text-right">
-                            {formatPercent(asset.allocation_weight)}
+                            {totalValue > 0 && asset.current_value
+                              ? formatPercent((asset.current_value / totalValue) * 100)
+                              : "—"}
                           </TableCell>
                           <TableCell className="text-right">
                             {formatCurrency(asset.target_value_6m)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatPercent(asset.target_weight)}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
