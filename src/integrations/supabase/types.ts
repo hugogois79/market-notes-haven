@@ -3442,6 +3442,7 @@ export type Database = {
           created_at: string
           credit_rating: string | null
           currency: string | null
+          current_price: number | null
           debt_to_equity: number | null
           delivery_month: string | null
           distribution_policy: string | null
@@ -3470,6 +3471,7 @@ export type Database = {
           payout_ratio: number | null
           pb_ratio: number | null
           pe_ratio: number | null
+          price_updated_at: string | null
           quote_credit_rating: string | null
           quote_currency: string | null
           quote_current_account: number | null
@@ -3516,6 +3518,7 @@ export type Database = {
           created_at?: string
           credit_rating?: string | null
           currency?: string | null
+          current_price?: number | null
           debt_to_equity?: number | null
           delivery_month?: string | null
           distribution_policy?: string | null
@@ -3544,6 +3547,7 @@ export type Database = {
           payout_ratio?: number | null
           pb_ratio?: number | null
           pe_ratio?: number | null
+          price_updated_at?: string | null
           quote_credit_rating?: string | null
           quote_currency?: string | null
           quote_current_account?: number | null
@@ -3590,6 +3594,7 @@ export type Database = {
           created_at?: string
           credit_rating?: string | null
           currency?: string | null
+          current_price?: number | null
           debt_to_equity?: number | null
           delivery_month?: string | null
           distribution_policy?: string | null
@@ -3618,6 +3623,7 @@ export type Database = {
           payout_ratio?: number | null
           pb_ratio?: number | null
           pe_ratio?: number | null
+          price_updated_at?: string | null
           quote_credit_rating?: string | null
           quote_currency?: string | null
           quote_current_account?: number | null

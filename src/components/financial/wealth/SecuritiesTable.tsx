@@ -148,6 +148,9 @@ type Security = {
   analyst_target_low: number | null;
   analyst_count: number | null;
   recent_analyses: RecentAnalysis[] | null;
+  // Price fields
+  current_price: number | null;
+  price_updated_at: string | null;
   created_at: string;
 };
 
@@ -245,6 +248,8 @@ type SecurityFormData = {
   analyst_target_low: string;
   analyst_count: string;
   recent_analyses: RecentAnalysis[] | null;
+  // Price field
+  current_price: string;
 };
 
 const SECURITY_TYPES: { value: SecurityType; label: string }[] = [
@@ -338,6 +343,8 @@ const emptyFormData: SecurityFormData = {
   analyst_target_low: "",
   analyst_count: "",
   recent_analyses: null,
+  // Price field
+  current_price: "",
 };
 
 const parseNumber = (val: string): number | null => {
@@ -459,6 +466,9 @@ export default function SecuritiesTable() {
             grade: a.grade || a.newGrade,
             previous_grade: a.previous_grade || a.previousGrade,
           })) || prev.recent_analyses,
+          
+          // Price field
+          current_price: result.data.price?.toString().replace(".", ",") || prev.current_price,
         }));
         toast.success("Dados carregados do FMP");
       } else {
@@ -579,6 +589,9 @@ export default function SecuritiesTable() {
         analyst_target_low: parseNumber(data.analyst_target_low),
         analyst_count: parseNumber(data.analyst_count),
         recent_analyses: data.recent_analyses,
+        // Price fields
+        current_price: parseNumber(data.current_price),
+        price_updated_at: data.current_price ? new Date().toISOString() : null,
         user_id: user.id,
       });
       if (error) throw error;
@@ -669,6 +682,9 @@ export default function SecuritiesTable() {
           analyst_target_low: parseNumber(data.analyst_target_low),
           analyst_count: parseNumber(data.analyst_count),
           recent_analyses: data.recent_analyses,
+          // Price fields
+          current_price: parseNumber(data.current_price),
+          price_updated_at: data.current_price ? new Date().toISOString() : null,
         })
         .eq("id", id);
       if (error) throw error;
@@ -778,6 +794,8 @@ export default function SecuritiesTable() {
       analyst_target_low: formatNumberField(security.analyst_target_low),
       analyst_count: formatNumberField(security.analyst_count),
       recent_analyses: security.recent_analyses,
+      // Price field
+      current_price: formatNumberField(security.current_price),
     });
     setIsDialogOpen(true);
   };
@@ -951,7 +969,9 @@ export default function SecuritiesTable() {
                         {getTypeMetric(sec)}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs">
-                        {sec.price ? (
+                        {sec.current_price ? (
+                          formatCurrency(sec.current_price, sec.currency || "EUR")
+                        ) : sec.price ? (
                           formatCurrency(sec.price.current_price, sec.currency || "EUR")
                         ) : (
                           <span className="text-muted-foreground">—</span>
