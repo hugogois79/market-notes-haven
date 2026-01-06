@@ -156,6 +156,10 @@ type Security = {
   // Price fields
   current_price: number | null;
   price_updated_at: string | null;
+  // Price change fields
+  change_1d: number | null;
+  change_1w: number | null;
+  change_ytd: number | null;
   created_at: string;
 };
 
@@ -260,6 +264,10 @@ type SecurityFormData = {
   recent_analyses: RecentAnalysis[] | null;
   // Price field
   current_price: string;
+  // Price change fields
+  change_1d: string;
+  change_1w: string;
+  change_ytd: string;
 };
 
 const SECURITY_TYPES: { value: SecurityType; label: string }[] = [
@@ -360,6 +368,10 @@ const emptyFormData: SecurityFormData = {
   recent_analyses: null,
   // Price field
   current_price: "",
+  // Price change fields
+  change_1d: "",
+  change_1w: "",
+  change_ytd: "",
 };
 
 const parseNumber = (val: string | null | undefined | string[]): number | null => {
@@ -492,6 +504,10 @@ export default function SecuritiesTable() {
           
           // Price field
           current_price: result.data.price?.toString().replace(".", ",") || prev.current_price,
+          // Price change fields
+          change_1d: result.data.change_1d?.toString().replace(".", ",") || prev.change_1d,
+          change_1w: result.data.change_1w?.toString().replace(".", ",") || prev.change_1w,
+          change_ytd: result.data.change_ytd?.toString().replace(".", ",") || prev.change_ytd,
         }));
         toast.success("Dados carregados do FMP");
       } else {
@@ -620,6 +636,10 @@ export default function SecuritiesTable() {
         // Price fields
         current_price: parseNumber(data.current_price),
         price_updated_at: data.current_price ? new Date().toISOString() : null,
+        // Price change fields
+        change_1d: parseNumber(data.change_1d),
+        change_1w: parseNumber(data.change_1w),
+        change_ytd: parseNumber(data.change_ytd),
         user_id: user.id,
       });
       if (error) throw error;
@@ -718,6 +738,10 @@ export default function SecuritiesTable() {
           // Price fields
           current_price: parseNumber(data.current_price),
           price_updated_at: data.current_price ? new Date().toISOString() : null,
+          // Price change fields
+          change_1d: parseNumber(data.change_1d),
+          change_1w: parseNumber(data.change_1w),
+          change_ytd: parseNumber(data.change_ytd),
         })
         .eq("id", id);
       if (error) throw error;
@@ -834,6 +858,10 @@ export default function SecuritiesTable() {
       recent_analyses: security.recent_analyses,
       // Price field
       current_price: formatNumberField(security.current_price),
+      // Price change fields
+      change_1d: formatNumberField(security.change_1d),
+      change_1w: formatNumberField(security.change_1w),
+      change_ytd: formatNumberField(security.change_ytd),
     });
     setIsDialogOpen(true);
   };
@@ -876,27 +904,16 @@ export default function SecuritiesTable() {
   const isLoading = loadingSecurities || loadingPrices;
   const isPending = createMutation.isPending || updateMutation.isPending;
 
-  // Get relevant metric based on security type
-  const getTypeMetric = (sec: Security & { price: StockPrice | null }) => {
-    switch (sec.security_type) {
-      case "bond":
-        return sec.coupon_rate ? `${sec.coupon_rate.toFixed(2)}%` : "—";
-      case "etf":
-        return sec.expense_ratio ? `${sec.expense_ratio.toFixed(2)}%` : "—";
-      case "crypto":
-        return sec.circulating_supply ? `${(sec.circulating_supply / 1e6).toFixed(1)}M` : "—";
-      default:
-        return sec.pe_ratio ? sec.pe_ratio.toFixed(1) : "—";
-    }
+  // Helper to format percentage change
+  const formatChange = (value: number | null) => {
+    if (value === null) return "—";
+    const sign = value > 0 ? "+" : "";
+    return `${sign}${value.toFixed(2)}%`;
   };
 
-  const getTypeMetricLabel = (type: SecurityType | null) => {
-    switch (type) {
-      case "bond": return "Cupão";
-      case "etf": return "TER";
-      case "crypto": return "Supply";
-      default: return "P/E";
-    }
+  const getChangeColor = (value: number | null) => {
+    if (value === null || value === 0) return "text-muted-foreground";
+    return value > 0 ? "text-green-500" : "text-red-500";
   };
 
   return (
@@ -961,29 +978,28 @@ export default function SecuritiesTable() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Ticker</TableHead>
                 <TableHead>Moeda</TableHead>
-                <TableHead className="text-right">Métrica</TableHead>
                 <TableHead className="text-right">Preço</TableHead>
-                <TableHead className="text-right">Var.</TableHead>
+                <TableHead className="text-right text-xs">1D</TableHead>
+                <TableHead className="text-right text-xs">1W</TableHead>
+                <TableHead className="text-right text-xs">YTD</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     A carregar...
                   </TableCell>
                 </TableRow>
               ) : securitiesWithPrices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     Nenhum título registado
                   </TableCell>
                 </TableRow>
               ) : (
-                securitiesWithPrices.map((sec) => {
-                  const changeNum = sec.price ? parseFloat(sec.price.change_percent?.replace("%", "") || "0") : 0;
-                  return (
+                securitiesWithPrices.map((sec) => (
                     <TableRow key={sec.id}>
                       <TableCell>
                         <Badge variant="outline" className={`text-xs ${getTypeBadgeColor(sec.security_type)}`}>
@@ -1003,9 +1019,6 @@ export default function SecuritiesTable() {
                       <TableCell>
                         <Badge variant="secondary" className="text-xs">{sec.currency || "EUR"}</Badge>
                       </TableCell>
-                      <TableCell className="text-right font-mono text-xs" title={getTypeMetricLabel(sec.security_type)}>
-                        {getTypeMetric(sec)}
-                      </TableCell>
                       <TableCell className="text-right font-mono text-xs">
                         {sec.current_price ? (
                           formatCurrency(sec.current_price, sec.currency || "EUR")
@@ -1015,23 +1028,14 @@ export default function SecuritiesTable() {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right text-xs">
-                        {sec.price ? (
-                          <div className="flex items-center justify-end gap-1">
-                            {changeNum > 0 ? (
-                              <TrendingUp className="h-3 w-3 text-green-500" />
-                            ) : changeNum < 0 ? (
-                              <TrendingDown className="h-3 w-3 text-red-500" />
-                            ) : (
-                              <Minus className="h-3 w-3 text-muted-foreground" />
-                            )}
-                            <span className={changeNum > 0 ? "text-green-500" : changeNum < 0 ? "text-red-500" : "text-muted-foreground"}>
-                              {sec.price.change_percent || "0%"}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
+                      <TableCell className={`text-right font-mono text-xs ${getChangeColor(sec.change_1d)}`}>
+                        {formatChange(sec.change_1d)}
+                      </TableCell>
+                      <TableCell className={`text-right font-mono text-xs ${getChangeColor(sec.change_1w)}`}>
+                        {formatChange(sec.change_1w)}
+                      </TableCell>
+                      <TableCell className={`text-right font-mono text-xs ${getChangeColor(sec.change_ytd)}`}>
+                        {formatChange(sec.change_ytd)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -1054,8 +1058,7 @@ export default function SecuritiesTable() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  );
-                })
+                  ))
               )}
             </TableBody>
           </Table>
@@ -1204,6 +1207,40 @@ export default function SecuritiesTable() {
                         value={formData.current_price}
                         onChange={(e) => setFormData({ ...formData, current_price: e.target.value })}
                         placeholder="Ex: 185,50"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Variações de Preço */}
+                  <h4 className="text-sm font-medium text-muted-foreground border-b pb-2 mt-4">
+                    Variações de Preço
+                  </h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="change_1d">1 Dia (%)</Label>
+                      <Input
+                        id="change_1d"
+                        value={formData.change_1d}
+                        onChange={(e) => setFormData({ ...formData, change_1d: e.target.value })}
+                        placeholder="Ex: 2,34"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="change_1w">1 Semana (%)</Label>
+                      <Input
+                        id="change_1w"
+                        value={formData.change_1w}
+                        onChange={(e) => setFormData({ ...formData, change_1w: e.target.value })}
+                        placeholder="Ex: -1,12"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="change_ytd">YTD (%)</Label>
+                      <Input
+                        id="change_ytd"
+                        value={formData.change_ytd}
+                        onChange={(e) => setFormData({ ...formData, change_ytd: e.target.value })}
+                        placeholder="Ex: 45,67"
                       />
                     </div>
                   </div>
