@@ -37,6 +37,7 @@ type MarketHolding = {
   asset_id: string;
   name: string;
   ticker: string | null;
+  currency: string | null;
   weight_target: number | null;
   weight_current: number | null;
   current_value: number | null;
@@ -75,6 +76,7 @@ export default function MarketHoldingsTable() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedHolding, setSelectedHolding] = useState<MarketHolding | null>(null);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [selectedAssetName, setSelectedAssetName] = useState<string>("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
 
@@ -129,15 +131,17 @@ export default function MarketHoldingsTable() {
     },
   });
 
-  const handleEdit = (holding: MarketHolding) => {
+  const handleEdit = (holding: MarketHolding, accountName: string) => {
     setSelectedHolding(holding);
     setSelectedAssetId(holding.asset_id);
+    setSelectedAssetName(accountName);
     setDialogOpen(true);
   };
 
-  const handleAddHolding = (assetId: string) => {
+  const handleAddHolding = (assetId: string, accountName: string) => {
     setSelectedHolding(null);
     setSelectedAssetId(assetId);
+    setSelectedAssetName(accountName);
     setDialogOpen(true);
   };
 
@@ -224,7 +228,7 @@ export default function MarketHoldingsTable() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleAddHolding(asset.id);
+                              handleAddHolding(asset.id, asset.name);
                             }}
                           >
                             <Plus className="h-4 w-4" />
@@ -241,7 +245,14 @@ export default function MarketHoldingsTable() {
                           return (
                             <TableRow key={holding.id} className="bg-background">
                               <TableCell className="pl-12">
-                                <span className="text-muted-foreground">{holding.name}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-muted-foreground">{holding.name}</span>
+                                  {holding.currency && holding.currency !== "EUR" && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {holding.currency}
+                                    </Badge>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell>
                                 {holding.ticker && (
@@ -276,7 +287,7 @@ export default function MarketHoldingsTable() {
                               </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-1">
-                                  <Button variant="ghost" size="icon" onClick={() => handleEdit(holding)}>
+                                  <Button variant="ghost" size="icon" onClick={() => handleEdit(holding, asset.name)}>
                                     <Pencil className="h-4 w-4" />
                                   </Button>
                                   <Button
@@ -365,6 +376,7 @@ export default function MarketHoldingsTable() {
         onOpenChange={setDialogOpen}
         holding={selectedHolding}
         assetId={selectedAssetId}
+        accountName={selectedAssetName}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
