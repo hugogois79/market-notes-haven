@@ -2493,6 +2493,42 @@ export type Database = {
         }
         Relationships: []
       }
+      portfolio_snapshots: {
+        Row: {
+          allocation_by_category: Json | null
+          asset_count: number
+          average_yield: number | null
+          created_at: string | null
+          id: string
+          snapshot_date: string
+          total_pl: number
+          total_value: number
+          user_id: string
+        }
+        Insert: {
+          allocation_by_category?: Json | null
+          asset_count: number
+          average_yield?: number | null
+          created_at?: string | null
+          id?: string
+          snapshot_date: string
+          total_pl: number
+          total_value: number
+          user_id: string
+        }
+        Update: {
+          allocation_by_category?: Json | null
+          asset_count?: number
+          average_yield?: number | null
+          created_at?: string | null
+          id?: string
+          snapshot_date?: string
+          total_pl?: number
+          total_value?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       portfolios_tokens: {
         Row: {
           created_at: string | null

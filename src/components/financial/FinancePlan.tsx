@@ -1,12 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt, Flag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt, Flag, Percent, Save } from "lucide-react";
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { toast } from "sonner";
 import WealthAssetsTable from "./wealth/WealthAssetsTable";
 import WealthTransactionsTable from "./wealth/WealthTransactionsTable";
 import WealthMilestonesTable from "./wealth/WealthMilestonesTable";
+import PortfolioHistoryChart from "./wealth/PortfolioHistoryChart";
 
 interface FinancePlanProps {
   companyId: string;
@@ -33,7 +36,24 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
+// Calculate CAGR (Compound Annual Growth Rate)
+const calculateCAGR = (currentValue: number, purchasePrice: number, purchaseDate: string): number | null => {
+  if (!purchasePrice || purchasePrice <= 0 || !purchaseDate) return null;
+  
+  const today = new Date();
+  const purchase = new Date(purchaseDate);
+  const yearsHeld = (today.getTime() - purchase.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+  
+  if (yearsHeld <= 0) return null;
+  
+  // CAGR = (EndValue / StartValue)^(1/years) - 1
+  const cagr = Math.pow(currentValue / purchasePrice, 1 / yearsHeld) - 1;
+  return cagr * 100; // Return as percentage
+};
+
 export default function FinancePlan({ companyId }: FinancePlanProps) {
+  const queryClient = useQueryClient();
+
   const { data: assets = [] } = useQuery({
     queryKey: ["wealth-assets"],
     queryFn: async () => {
@@ -44,6 +64,41 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
 
       if (error) throw error;
       return data || [];
+    },
+  });
+
+  // Snapshot mutation
+  const snapshotMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const allocationByCategory = Object.entries(
+        assets.reduce((acc, asset) => {
+          const cat = asset.category || "Other";
+          acc[cat] = (acc[cat] || 0) + (asset.current_value || 0);
+          return acc;
+        }, {} as Record<string, number>)
+      ).reduce((obj, [k, v]) => ({ ...obj, [k]: v }), {});
+
+      const { error } = await supabase.from("portfolio_snapshots").upsert({
+        user_id: user.id,
+        snapshot_date: new Date().toISOString().split("T")[0],
+        total_value: totalValue,
+        total_pl: totalPL,
+        average_yield: weightedAverageCAGR,
+        asset_count: assets.length,
+        allocation_by_category: allocationByCategory,
+      }, { onConflict: "user_id,snapshot_date" });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portfolio-snapshots"] });
+      toast.success("Snapshot guardado com sucesso");
+    },
+    onError: () => {
+      toast.error("Erro ao guardar snapshot");
     },
   });
 
@@ -68,6 +123,18 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
 
   // Calculate total P/L
   const totalPL = assets.reduce((sum, a) => sum + (a.profit_loss_value || 0), 0);
+
+  // Calculate weighted average CAGR
+  const assetsWithCAGR = assets
+    .map((a) => ({
+      ...a,
+      cagr: calculateCAGR(a.current_value || 0, a.purchase_price || 0, a.purchase_date || ""),
+    }))
+    .filter((a) => a.cagr !== null && a.current_value && a.current_value > 0);
+
+  const weightedAverageCAGR = assetsWithCAGR.length > 0
+    ? assetsWithCAGR.reduce((sum, a) => sum + (a.cagr! * (a.current_value! / totalValue)), 0)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -138,6 +205,21 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
                 <div className="text-2xl font-bold">{assets.length}</div>
                 <p className="text-xs text-muted-foreground">
                   No portfolio
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Rend. Médio</CardTitle>
+                <Percent className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${weightedAverageCAGR !== null ? (weightedAverageCAGR >= 0 ? "text-green-500" : "text-red-500") : ""}`}>
+                  {weightedAverageCAGR !== null ? `${weightedAverageCAGR.toFixed(1)}%` : "—"}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  CAGR ponderado anual
                 </p>
               </CardContent>
             </Card>
@@ -226,6 +308,20 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
               </CardContent>
             </Card>
           )}
+
+          {/* Portfolio History Chart */}
+          <div className="flex items-center justify-between">
+            <PortfolioHistoryChart />
+            <Button 
+              onClick={() => snapshotMutation.mutate()} 
+              disabled={snapshotMutation.isPending}
+              size="sm"
+              className="ml-4 shrink-0"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {snapshotMutation.isPending ? "A guardar..." : "Guardar Snapshot"}
+            </Button>
+          </div>
         </TabsContent>
 
         <TabsContent value="portfolio">
