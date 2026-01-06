@@ -17,6 +17,8 @@ import Index from "@/pages/Index";
 import TokensDashboard from "@/pages/tokens";
 import TokenDetail from "@/pages/tokens/[id]";
 import CryptoDashboard from "@/pages/crypto/Dashboard";
+import MarketsPage from "@/pages/markets";
+import SecuritiesPage from "@/pages/securities";
 import ReceiptGenerator from "@/pages/ReceiptGenerator";
 import KanbanPage from "@/pages/kanban";
 
@@ -135,6 +137,22 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <CryptoDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="markets"
+            element={
+              <ProtectedRoute>
+                <MarketsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="securities"
+            element={
+              <ProtectedRoute>
+                <SecuritiesPage />
               </ProtectedRoute>
             }
           />
