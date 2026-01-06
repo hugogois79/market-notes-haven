@@ -22,6 +22,7 @@ type MarketHolding = {
   asset_id: string;
   name: string;
   ticker: string | null;
+  currency: string | null;
   weight_target: number | null;
   weight_current: number | null;
   current_value: number | null;
@@ -37,11 +38,13 @@ interface MarketHoldingDialogProps {
   onOpenChange: (open: boolean) => void;
   holding: MarketHolding | null;
   assetId: string | null;
+  accountName: string;
 }
 
 type FormData = {
   name: string;
   ticker: string;
+  currency: string;
   current_value: string;
   cost_basis: string;
   quantity: string;
@@ -61,6 +64,7 @@ export default function MarketHoldingDialog({
   onOpenChange,
   holding,
   assetId,
+  accountName,
 }: MarketHoldingDialogProps) {
   const queryClient = useQueryClient();
   const isEditing = !!holding;
@@ -76,6 +80,7 @@ export default function MarketHoldingDialog({
     defaultValues: {
       name: "",
       ticker: "",
+      currency: "EUR",
       current_value: "",
       cost_basis: "",
       quantity: "",
@@ -90,6 +95,7 @@ export default function MarketHoldingDialog({
       reset({
         name: holding.name,
         ticker: holding.ticker || "",
+        currency: holding.currency || "EUR",
         current_value: holding.current_value?.toLocaleString("pt-PT") || "",
         cost_basis: holding.cost_basis?.toLocaleString("pt-PT") || "",
         quantity: holding.quantity?.toString() || "",
@@ -101,6 +107,7 @@ export default function MarketHoldingDialog({
       reset({
         name: "",
         ticker: "",
+        currency: "EUR",
         current_value: "",
         cost_basis: "",
         quantity: "",
@@ -116,6 +123,7 @@ export default function MarketHoldingDialog({
       const payload = {
         name: data.name,
         ticker: data.ticker || null,
+        currency: data.currency || "EUR",
         current_value: parsePortugueseNumber(data.current_value),
         cost_basis: parsePortugueseNumber(data.cost_basis),
         quantity: parseFloat(data.quantity) || null,
@@ -171,15 +179,17 @@ export default function MarketHoldingDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Editar Holding" : "Novo Holding"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Editar Holding" : "Novo Holding"} - {accountName}
+          </DialogTitle>
           <DialogDescription>
-            Adicione um ativo de mercado a esta conta.
+            {isEditing ? "Atualize os dados do ativo de mercado." : `Adicione um ativo de mercado à conta ${accountName}.`}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nome *</Label>
                 <Input
@@ -198,6 +208,21 @@ export default function MarketHoldingDialog({
                   placeholder="Ex: VGSH"
                   {...register("ticker")}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="currency">Moeda</Label>
+                <select
+                  id="currency"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  {...register("currency")}
+                >
+                  <option value="EUR">EUR</option>
+                  <option value="USD">USD</option>
+                  <option value="GBP">GBP</option>
+                  <option value="CHF">CHF</option>
+                  <option value="USDT">USDT</option>
+                  <option value="BTC">BTC</option>
+                </select>
               </div>
             </div>
 

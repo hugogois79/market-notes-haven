@@ -2221,6 +2221,7 @@ export type Database = {
           asset_id: string
           cost_basis: number | null
           created_at: string
+          currency: string | null
           current_value: number | null
           id: string
           name: string
@@ -2236,6 +2237,7 @@ export type Database = {
           asset_id: string
           cost_basis?: number | null
           created_at?: string
+          currency?: string | null
           current_value?: number | null
           id?: string
           name: string
@@ -2251,6 +2253,7 @@ export type Database = {
           asset_id?: string
           cost_basis?: number | null
           created_at?: string
+          currency?: string | null
           current_value?: number | null
           id?: string
           name?: string
