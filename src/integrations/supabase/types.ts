@@ -3423,6 +3423,11 @@ export type Database = {
       securities: {
         Row: {
           analyst_count: number | null
+          analyst_last_month_avg: number | null
+          analyst_last_month_count: number | null
+          analyst_last_quarter_avg: number | null
+          analyst_last_quarter_count: number | null
+          analyst_publishers: string[] | null
           analyst_target_high: number | null
           analyst_target_low: number | null
           analyst_target_price: number | null
@@ -3499,6 +3504,11 @@ export type Database = {
         }
         Insert: {
           analyst_count?: number | null
+          analyst_last_month_avg?: number | null
+          analyst_last_month_count?: number | null
+          analyst_last_quarter_avg?: number | null
+          analyst_last_quarter_count?: number | null
+          analyst_publishers?: string[] | null
           analyst_target_high?: number | null
           analyst_target_low?: number | null
           analyst_target_price?: number | null
@@ -3575,6 +3585,11 @@ export type Database = {
         }
         Update: {
           analyst_count?: number | null
+          analyst_last_month_avg?: number | null
+          analyst_last_month_count?: number | null
+          analyst_last_quarter_avg?: number | null
+          analyst_last_quarter_count?: number | null
+          analyst_publishers?: string[] | null
           analyst_target_high?: number | null
           analyst_target_low?: number | null
           analyst_target_price?: number | null
