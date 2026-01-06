@@ -1148,15 +1148,26 @@ export default function SecuritiesTable() {
                     </div>
                   </div>
                   
-                  {/* Indústria */}
-                  <div className="space-y-2">
-                    <Label htmlFor="industry">Indústria</Label>
-                    <Input
-                      id="industry"
-                      value={formData.industry}
-                      onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                      placeholder="Ex: Consumer Electronics"
-                    />
+                  {/* Indústria + Preço */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="industry">Indústria</Label>
+                      <Input
+                        id="industry"
+                        value={formData.industry}
+                        onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                        placeholder="Ex: Consumer Electronics"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="current_price">Preço</Label>
+                      <Input
+                        id="current_price"
+                        value={formData.current_price}
+                        onChange={(e) => setFormData({ ...formData, current_price: e.target.value })}
+                        placeholder="Ex: 185,50"
+                      />
+                    </div>
                   </div>
                 </TabsContent>
 
