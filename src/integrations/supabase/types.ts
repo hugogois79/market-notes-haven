@@ -4381,6 +4381,8 @@ export type Database = {
           id: string
           milestone_type: string | null
           name: string
+          proceeds_destination_asset_id: string | null
+          proceeds_destination_type: string | null
           status: string | null
           target_date: string | null
           target_value: number
@@ -4396,6 +4398,8 @@ export type Database = {
           id?: string
           milestone_type?: string | null
           name: string
+          proceeds_destination_asset_id?: string | null
+          proceeds_destination_type?: string | null
           status?: string | null
           target_date?: string | null
           target_value: number
@@ -4411,6 +4415,8 @@ export type Database = {
           id?: string
           milestone_type?: string | null
           name?: string
+          proceeds_destination_asset_id?: string | null
+          proceeds_destination_type?: string | null
           status?: string | null
           target_date?: string | null
           target_value?: number
@@ -4421,6 +4427,13 @@ export type Database = {
           {
             foreignKeyName: "wealth_milestones_asset_id_fkey"
             columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "wealth_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wealth_milestones_proceeds_destination_asset_id_fkey"
+            columns: ["proceeds_destination_asset_id"]
             isOneToOne: false
             referencedRelation: "wealth_assets"
             referencedColumns: ["id"]
