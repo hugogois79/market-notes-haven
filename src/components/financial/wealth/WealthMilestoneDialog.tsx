@@ -262,14 +262,14 @@ export default function WealthMilestoneDialog({
               <div className="space-y-2">
                 <Label>Ativo {milestoneType === "sell" ? "(a vender)" : "(a comprar)"}</Label>
                 <Select
-                  value={watch("asset_id")}
-                  onValueChange={(value) => setValue("asset_id", value)}
+                  value={watch("asset_id") || "none"}
+                  onValueChange={(value) => setValue("asset_id", value === "none" ? "" : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecionar ativo..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Novo ativo (sem link)</SelectItem>
+                    <SelectItem value="none">Novo ativo (sem link)</SelectItem>
                     {assets.map((asset) => (
                       <SelectItem key={asset.id} value={asset.id}>
                         {asset.name} ({asset.category}) {asset.current_value ? `- ${formatCurrency(asset.current_value)}` : ""}
