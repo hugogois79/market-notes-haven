@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { format, differenceInDays } from "date-fns";
+import { differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 
 type WealthAsset = {
@@ -86,6 +86,26 @@ const CATEGORIES = [
 const STATUSES = ["Active", "Sold", "In Recovery", "Liquidated"];
 const CURRENCIES = ["EUR", "USD", "CHF", "GBP"];
 
+// Format number for display with Portuguese convention (space as thousand separator, comma as decimal)
+const formatNumberForDisplay = (value: string | number | null): string => {
+  if (value === null || value === "") return "";
+  const num = typeof value === "string" ? parseFloat(value.replace(/\s/g, "").replace(",", ".")) : value;
+  if (isNaN(num)) return "";
+  return new Intl.NumberFormat("pt-PT", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num);
+};
+
+// Parse Portuguese formatted number to standard number
+const parsePortugueseNumber = (value: string): number | null => {
+  if (!value || value.trim() === "") return null;
+  // Remove spaces and replace comma with dot
+  const normalized = value.replace(/\s/g, "").replace(",", ".");
+  const num = parseFloat(normalized);
+  return isNaN(num) ? null : num;
+};
+
 const formatCurrency = (value: number | null, currency = "EUR") => {
   if (value === null) return "—";
   return new Intl.NumberFormat("pt-PT", {
@@ -94,6 +114,66 @@ const formatCurrency = (value: number | null, currency = "EUR") => {
     minimumFractionDigits: 2,
   }).format(value);
 };
+
+// Custom number input component with Portuguese formatting
+function PortugueseNumberInput({
+  value,
+  onChange,
+  placeholder,
+  ...props
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  const [displayValue, setDisplayValue] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setDisplayValue(formatNumberForDisplay(value));
+    }
+  }, [value, isFocused]);
+
+  const handleFocus = () => {
+    setIsFocused(true);
+    // Show raw value on focus
+    const num = parsePortugueseNumber(displayValue);
+    setDisplayValue(num !== null ? num.toString().replace(".", ",") : "");
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    const num = parsePortugueseNumber(displayValue);
+    if (num !== null) {
+      onChange(num.toString());
+      setDisplayValue(formatNumberForDisplay(num));
+    } else {
+      onChange("");
+      setDisplayValue("");
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    // Allow numbers, comma, dot, and spaces
+    if (/^[\d\s,.-]*$/.test(val)) {
+      setDisplayValue(val);
+    }
+  };
+
+  return (
+    <Input
+      {...props}
+      value={displayValue}
+      onChange={handleChange}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      placeholder={placeholder}
+      inputMode="decimal"
+    />
+  );
+}
 
 export default function WealthAssetDialog({
   open,
@@ -188,6 +268,9 @@ export default function WealthAssetDialog({
 
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
       const cv = parseFloat(values.current_value) || null;
       const pp = parseFloat(values.purchase_price) || null;
       
@@ -221,6 +304,7 @@ export default function WealthAssetDialog({
         vintage_year: values.vintage_year ? parseInt(values.vintage_year) : null,
         currency: values.currency,
         notes: values.notes || null,
+        user_id: user.id,
       };
 
       if (isEditing && asset) {
@@ -239,7 +323,8 @@ export default function WealthAssetDialog({
       toast.success(isEditing ? "Ativo atualizado" : "Ativo criado");
       onOpenChange(false);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Save error:", error);
       toast.error("Erro ao guardar ativo");
     },
   });
@@ -383,7 +468,11 @@ export default function WealthAssetDialog({
                   <FormItem>
                     <FormLabel>Preço de Compra</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                      <PortugueseNumberInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="0,00"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -397,7 +486,11 @@ export default function WealthAssetDialog({
                   <FormItem>
                     <FormLabel>Valor Atual</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                      <PortugueseNumberInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="0,00"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -449,7 +542,11 @@ export default function WealthAssetDialog({
                   <FormItem>
                     <FormLabel>Target 6M</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                      <PortugueseNumberInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="0,00"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
