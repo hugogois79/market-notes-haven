@@ -2224,9 +2224,11 @@ export type Database = {
           currency: string | null
           current_value: number | null
           id: string
+          isin: string | null
           name: string
           notes: string | null
           quantity: number | null
+          security_id: string | null
           ticker: string | null
           updated_at: string
           user_id: string
@@ -2240,9 +2242,11 @@ export type Database = {
           currency?: string | null
           current_value?: number | null
           id?: string
+          isin?: string | null
           name: string
           notes?: string | null
           quantity?: number | null
+          security_id?: string | null
           ticker?: string | null
           updated_at?: string
           user_id: string
@@ -2256,9 +2260,11 @@ export type Database = {
           currency?: string | null
           current_value?: number | null
           id?: string
+          isin?: string | null
           name?: string
           notes?: string | null
           quantity?: number | null
+          security_id?: string | null
           ticker?: string | null
           updated_at?: string
           user_id?: string
@@ -2271,6 +2277,13 @@ export type Database = {
             columns: ["asset_id"]
             isOneToOne: false
             referencedRelation: "wealth_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "market_holdings_security_id_fkey"
+            columns: ["security_id"]
+            isOneToOne: false
+            referencedRelation: "securities"
             referencedColumns: ["id"]
           },
         ]
@@ -3406,6 +3419,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      securities: {
+        Row: {
+          created_at: string
+          currency: string | null
+          id: string
+          isin: string | null
+          name: string
+          ticker: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string | null
+          id?: string
+          isin?: string | null
+          name: string
+          ticker?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string | null
+          id?: string
+          isin?: string | null
+          name?: string
+          ticker?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       settings: {
         Row: {

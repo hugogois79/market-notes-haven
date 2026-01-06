@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -22,6 +22,7 @@ type MarketHolding = {
   asset_id: string;
   name: string;
   ticker: string | null;
+  isin: string | null;
   currency: string | null;
   weight_target: number | null;
   weight_current: number | null;
@@ -31,6 +32,14 @@ type MarketHolding = {
   notes: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type Security = {
+  id: string;
+  name: string;
+  ticker: string | null;
+  isin: string | null;
+  currency: string | null;
 };
 
 interface MarketHoldingDialogProps {
@@ -44,17 +53,15 @@ interface MarketHoldingDialogProps {
 type FormData = {
   name: string;
   ticker: string;
+  isin: string;
   currency: string;
   current_value: string;
   cost_basis: string;
   quantity: string;
-  weight_target: string;
-  weight_current: string;
   notes: string;
 };
 
 const parsePortugueseNumber = (value: string): number => {
-  // Remove spaces (thousand separators) and convert comma to dot
   const normalized = value.replace(/\s/g, "").replace(",", ".");
   return parseFloat(normalized) || 0;
 };
@@ -68,6 +75,7 @@ export default function MarketHoldingDialog({
 }: MarketHoldingDialogProps) {
   const queryClient = useQueryClient();
   const isEditing = !!holding;
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const {
     register,
@@ -80,39 +88,69 @@ export default function MarketHoldingDialog({
     defaultValues: {
       name: "",
       ticker: "",
+      isin: "",
       currency: "EUR",
       current_value: "",
       cost_basis: "",
       quantity: "",
-      weight_target: "",
-      weight_current: "",
       notes: "",
     },
   });
+
+  const nameValue = watch("name");
+
+  // Fetch existing securities
+  const { data: securities = [] } = useQuery({
+    queryKey: ["securities"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("securities")
+        .select("id, name, ticker, isin, currency")
+        .order("name");
+      if (error) throw error;
+      return data as Security[];
+    },
+  });
+
+  // Filter suggestions based on input
+  const suggestions = useMemo(() => {
+    if (!nameValue || nameValue.length < 2) return [];
+    const lowerName = nameValue.toLowerCase();
+    return securities.filter((s) =>
+      s.name.toLowerCase().includes(lowerName)
+    ).slice(0, 5);
+  }, [nameValue, securities]);
+
+  // Auto-fill when security is selected
+  const selectSecurity = (security: Security) => {
+    setValue("name", security.name);
+    setValue("ticker", security.ticker || "");
+    setValue("isin", security.isin || "");
+    setValue("currency", security.currency || "EUR");
+    setShowSuggestions(false);
+  };
 
   useEffect(() => {
     if (holding) {
       reset({
         name: holding.name,
         ticker: holding.ticker || "",
+        isin: holding.isin || "",
         currency: holding.currency || "EUR",
         current_value: holding.current_value?.toLocaleString("pt-PT") || "",
         cost_basis: holding.cost_basis?.toLocaleString("pt-PT") || "",
-        quantity: holding.quantity?.toString() || "",
-        weight_target: holding.weight_target?.toString() || "",
-        weight_current: holding.weight_current?.toString() || "",
+        quantity: holding.quantity?.toLocaleString("pt-PT") || "",
         notes: holding.notes || "",
       });
     } else {
       reset({
         name: "",
         ticker: "",
+        isin: "",
         currency: "EUR",
         current_value: "",
         cost_basis: "",
         quantity: "",
-        weight_target: "",
-        weight_current: "",
         notes: "",
       });
     }
@@ -120,16 +158,46 @@ export default function MarketHoldingDialog({
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
+      const { data: user } = await supabase.auth.getUser();
+      const userId = user.user?.id;
+
+      // Check if security exists, if not create it
+      const existingSecurity = securities.find(
+        (s) => s.name.toLowerCase() === data.name.toLowerCase()
+      );
+
+      let securityId = existingSecurity?.id;
+
+      if (!existingSecurity && data.name) {
+        const { data: newSecurity, error: secError } = await supabase
+          .from("securities")
+          .insert({
+            user_id: userId,
+            name: data.name,
+            ticker: data.ticker || null,
+            isin: data.isin || null,
+            currency: data.currency || "EUR",
+          })
+          .select("id")
+          .single();
+
+        if (secError) {
+          console.error("Error creating security:", secError);
+        } else {
+          securityId = newSecurity.id;
+        }
+      }
+
       const payload = {
         name: data.name,
         ticker: data.ticker || null,
+        isin: data.isin || null,
         currency: data.currency || "EUR",
         current_value: parsePortugueseNumber(data.current_value),
         cost_basis: parsePortugueseNumber(data.cost_basis),
-        quantity: parseFloat(data.quantity) || null,
-        weight_target: parseFloat(data.weight_target) || null,
-        weight_current: parseFloat(data.weight_current) || null,
+        quantity: parsePortugueseNumber(data.quantity) || null,
         notes: data.notes || null,
+        security_id: securityId || null,
       };
 
       if (isEditing) {
@@ -139,10 +207,9 @@ export default function MarketHoldingDialog({
           .eq("id", holding.id);
         if (error) throw error;
       } else {
-        const { data: user } = await supabase.auth.getUser();
         const { error } = await supabase.from("market_holdings").insert({
           ...payload,
-          user_id: user.user?.id,
+          user_id: userId,
           asset_id: assetId,
         });
         if (error) throw error;
@@ -150,6 +217,7 @@ export default function MarketHoldingDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cash-assets-with-holdings"] });
+      queryClient.invalidateQueries({ queryKey: ["securities"] });
       toast.success(isEditing ? "Holding atualizado" : "Holding criado");
       onOpenChange(false);
     },
@@ -162,7 +230,6 @@ export default function MarketHoldingDialog({
     mutation.mutate(data);
   };
 
-  // Format number input with thousand separators
   const handleNumberChange = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/[^\d,.-]/g, "");
     const normalized = raw.replace(",", ".");
@@ -189,14 +256,32 @@ export default function MarketHoldingDialog({
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2 relative">
                 <Label htmlFor="name">Nome *</Label>
                 <Input
                   id="name"
                   placeholder="Ex: US Treasury"
                   {...register("name", { required: "Nome é obrigatório" })}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  autoComplete="off"
                 />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-lg max-h-40 overflow-y-auto">
+                    {suggestions.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex justify-between items-center"
+                        onMouseDown={() => selectSecurity(s)}
+                      >
+                        <span>{s.name}</span>
+                        <span className="text-muted-foreground text-xs">{s.ticker}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {errors.name && (
                   <p className="text-xs text-destructive">{errors.name.message}</p>
                 )}
@@ -207,6 +292,17 @@ export default function MarketHoldingDialog({
                   id="ticker"
                   placeholder="Ex: VGSH"
                   {...register("ticker")}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="isin">ISIN</Label>
+                <Input
+                  id="isin"
+                  placeholder="Ex: US1234567890"
+                  {...register("isin")}
                 />
               </div>
               <div className="space-y-2">
@@ -226,7 +322,7 @@ export default function MarketHoldingDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="current_value">Valor Atual ({watch("currency") || "EUR"})</Label>
                 <Input
@@ -245,16 +341,15 @@ export default function MarketHoldingDialog({
                   onChange={handleNumberChange("cost_basis")}
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="quantity">Quantidade</Label>
-              <Input
-                id="quantity"
-                placeholder="1 000 000"
-                value={watch("quantity")}
-                onChange={handleNumberChange("quantity")}
-              />
+              <div className="space-y-2">
+                <Label htmlFor="quantity">Quantidade</Label>
+                <Input
+                  id="quantity"
+                  placeholder="1 000 000"
+                  value={watch("quantity")}
+                  onChange={handleNumberChange("quantity")}
+                />
+              </div>
             </div>
 
             <div className="space-y-2">

@@ -37,6 +37,7 @@ type MarketHolding = {
   asset_id: string;
   name: string;
   ticker: string | null;
+  isin: string | null;
   currency: string | null;
   weight_target: number | null;
   weight_current: number | null;
