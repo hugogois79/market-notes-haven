@@ -367,12 +367,23 @@ export default function WealthMilestoneDialog({
                 </Label>
                 <Input
                   id="target_value"
-                  placeholder="1.000.000"
-                  {...register("target_value", { required: "Valor é obrigatório" })}
+                  placeholder="1 000 000"
+                  value={watch("target_value")}
+                  onChange={(e) => {
+                    // Remove non-numeric characters except comma and dot
+                    const raw = e.target.value.replace(/[^\d,.-]/g, "");
+                    // Convert comma to dot for internal handling
+                    const normalized = raw.replace(",", ".");
+                    // Parse and format with thousand separators
+                    const num = parseFloat(normalized);
+                    if (!isNaN(num)) {
+                      const formatted = num.toLocaleString("pt-PT", { maximumFractionDigits: 2 });
+                      setValue("target_value", formatted);
+                    } else if (raw === "" || raw === "-") {
+                      setValue("target_value", raw);
+                    }
+                  }}
                 />
-                {errors.target_value && (
-                  <p className="text-xs text-destructive">{errors.target_value.message}</p>
-                )}
               </div>
 
               <div className="space-y-2">
