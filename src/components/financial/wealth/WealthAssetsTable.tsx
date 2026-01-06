@@ -68,6 +68,21 @@ const formatPercent = (value: number | null | undefined) => {
   return `${value.toFixed(2)}%`;
 };
 
+// Calculate CAGR (Compound Annual Growth Rate)
+const calculateCAGR = (currentValue: number, purchasePrice: number, purchaseDate: string): number | null => {
+  if (!purchasePrice || purchasePrice <= 0 || !purchaseDate) return null;
+  
+  const today = new Date();
+  const purchase = new Date(purchaseDate);
+  const yearsHeld = (today.getTime() - purchase.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+  
+  if (yearsHeld <= 0.01) return null; // Less than ~4 days
+  
+  // CAGR = (EndValue / StartValue)^(1/years) - 1
+  const cagr = Math.pow(currentValue / purchasePrice, 1 / yearsHeld) - 1;
+  return cagr * 100; // Return as percentage
+};
+
 export default function WealthAssetsTable() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -178,10 +193,10 @@ export default function WealthAssetsTable() {
               <TableHead>Categoria</TableHead>
               <TableHead className="text-right">Valor Atual</TableHead>
               <TableHead className="text-right">P/L</TableHead>
+              <TableHead className="text-right">CAGR</TableHead>
               <TableHead className="text-right">Yld Exp.</TableHead>
               <TableHead className="text-right">Peso Cat.</TableHead>
               <TableHead className="text-right">Peso Total</TableHead>
-              <TableHead className="text-right">Target 6M</TableHead>
               <TableHead className="w-[80px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -205,11 +220,11 @@ export default function WealthAssetsTable() {
                       <TableCell className="text-right font-semibold">
                         {formatCurrency(categoryTotal)}
                       </TableCell>
-                      <TableCell colSpan={3}></TableCell>
+                      <TableCell colSpan={4}></TableCell>
                       <TableCell className="text-right font-semibold text-muted-foreground">
                         {totalValue > 0 ? formatPercent((categoryTotal / totalValue) * 100) : "—"}
                       </TableCell>
-                      <TableCell colSpan={2}></TableCell>
+                      <TableCell></TableCell>
                     </TableRow>
                     {categoryAssets
                       .filter((a) => a.status !== "In Recovery")
@@ -254,6 +269,21 @@ export default function WealthAssetsTable() {
                             )}
                           </TableCell>
                           <TableCell className="text-right">
+                            {(() => {
+                              const cagr = calculateCAGR(
+                                asset.current_value || 0,
+                                asset.purchase_price || 0,
+                                asset.purchase_date || ""
+                              );
+                              if (cagr === null) return "—";
+                              return (
+                                <span className={cn(cagr >= 0 ? "text-green-500" : "text-red-500")}>
+                                  {formatPercent(cagr)}
+                                </span>
+                              );
+                            })()}
+                          </TableCell>
+                          <TableCell className="text-right">
                             {formatPercent(asset.yield_expected)}
                           </TableCell>
                           <TableCell className="text-right text-muted-foreground">
@@ -265,9 +295,6 @@ export default function WealthAssetsTable() {
                             {totalValue > 0 && asset.current_value
                               ? formatPercent((asset.current_value / totalValue) * 100)
                               : "—"}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatCurrency(asset.target_value_6m)}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
