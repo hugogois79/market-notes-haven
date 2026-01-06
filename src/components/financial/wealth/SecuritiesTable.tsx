@@ -51,6 +51,24 @@ type RecentAnalysis = {
   company: string;
   target: number;
   date: string;
+  grade?: string;
+  previous_grade?: string;
+};
+
+// Helper to classify analyst grades
+const getGradeStyle = (grade: string) => {
+  const bullish = ["buy", "strong buy", "overweight", "outperform", "positive"];
+  const bearish = ["sell", "strong sell", "underweight", "underperform", "negative"];
+  
+  const normalized = grade.toLowerCase();
+  
+  if (bullish.some(g => normalized.includes(g))) {
+    return { color: "bg-green-100 text-green-800 border-green-200", icon: TrendingUp };
+  }
+  if (bearish.some(g => normalized.includes(g))) {
+    return { color: "bg-red-100 text-red-800 border-red-200", icon: TrendingDown };
+  }
+  return { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Minus };
 };
 
 type Security = {
@@ -433,7 +451,14 @@ export default function SecuritiesTable() {
           analyst_target_high: result.data.analyst_target_high?.toString().replace(".", ",") || prev.analyst_target_high,
           analyst_target_low: result.data.analyst_target_low?.toString().replace(".", ",") || prev.analyst_target_low,
           analyst_count: result.data.analyst_count?.toString() || prev.analyst_count,
-          recent_analyses: result.data.recent_analyses || prev.recent_analyses,
+          recent_analyses: result.data.recent_analyses?.map((a: any) => ({
+            analyst: a.analyst || a.analystName,
+            company: a.company || a.analystCompany,
+            target: a.target || a.priceTarget,
+            date: a.date || a.publishedDate,
+            grade: a.grade || a.newGrade,
+            previous_grade: a.previous_grade || a.previousGrade,
+          })) || prev.recent_analyses,
         }));
         toast.success("Dados carregados do FMP");
       } else {
@@ -1578,21 +1603,34 @@ export default function SecuritiesTable() {
                                   <TableHead className="text-xs">Empresa</TableHead>
                                   <TableHead className="text-xs text-right">Target</TableHead>
                                   <TableHead className="text-xs text-right">Data</TableHead>
+                                  <TableHead className="text-xs">Recomendação</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {formData.recent_analyses.map((analysis, idx) => (
-                                  <TableRow key={idx}>
-                                    <TableCell className="text-xs font-medium">{analysis.analyst}</TableCell>
-                                    <TableCell className="text-xs text-muted-foreground">{analysis.company}</TableCell>
-                                    <TableCell className="text-xs text-right font-mono">
-                                      {formatCurrency(analysis.target, formData.currency)}
-                                    </TableCell>
-                                    <TableCell className="text-xs text-right text-muted-foreground">
-                                      {analysis.date}
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
+                                {formData.recent_analyses.map((analysis, idx) => {
+                                  const gradeStyle = analysis.grade ? getGradeStyle(analysis.grade) : null;
+                                  const GradeIcon = gradeStyle?.icon;
+                                  return (
+                                    <TableRow key={idx}>
+                                      <TableCell className="text-xs font-medium">{analysis.analyst}</TableCell>
+                                      <TableCell className="text-xs text-muted-foreground">{analysis.company}</TableCell>
+                                      <TableCell className="text-xs text-right font-mono">
+                                        {formatCurrency(analysis.target, formData.currency)}
+                                      </TableCell>
+                                      <TableCell className="text-xs text-right text-muted-foreground">
+                                        {analysis.date}
+                                      </TableCell>
+                                      <TableCell className="text-xs">
+                                        {analysis.grade && gradeStyle && GradeIcon && (
+                                          <Badge variant="outline" className={`${gradeStyle.color} text-xs`}>
+                                            <GradeIcon className="h-3 w-3 mr-1" />
+                                            {analysis.grade}
+                                          </Badge>
+                                        )}
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
                               </TableBody>
                             </Table>
                           </div>
