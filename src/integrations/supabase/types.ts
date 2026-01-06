@@ -3489,6 +3489,51 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_prices: {
+        Row: {
+          change: number | null
+          change_percent: string | null
+          current_price: number | null
+          fetched_at: string | null
+          high_price: number | null
+          id: number
+          latest_trading_day: string | null
+          low_price: number | null
+          open_price: number | null
+          previous_close: number | null
+          symbol: string
+          volume: number | null
+        }
+        Insert: {
+          change?: number | null
+          change_percent?: string | null
+          current_price?: number | null
+          fetched_at?: string | null
+          high_price?: number | null
+          id?: number
+          latest_trading_day?: string | null
+          low_price?: number | null
+          open_price?: number | null
+          previous_close?: number | null
+          symbol: string
+          volume?: number | null
+        }
+        Update: {
+          change?: number | null
+          change_percent?: string | null
+          current_price?: number | null
+          fetched_at?: string | null
+          high_price?: number | null
+          id?: number
+          latest_trading_day?: string | null
+          low_price?: number | null
+          open_price?: number | null
+          previous_close?: number | null
+          symbol?: string
+          volume?: number | null
+        }
+        Relationships: []
+      }
       subnet_projects: {
         Row: {
           created_at: string
