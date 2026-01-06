@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -10,6 +10,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,7 +82,7 @@ export default function MarketHoldingDialog({
 }: MarketHoldingDialogProps) {
   const queryClient = useQueryClient();
   const isEditing = !!holding;
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [customSecurityName, setCustomSecurityName] = useState("");
 
   const {
     register,
@@ -83,6 +90,7 @@ export default function MarketHoldingDialog({
     reset,
     setValue,
     watch,
+    control,
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
@@ -112,26 +120,36 @@ export default function MarketHoldingDialog({
     },
   });
 
-  // Filter suggestions based on input
-  const suggestions = useMemo(() => {
-    if (!nameValue || nameValue.length < 2) return [];
-    const lowerName = nameValue.toLowerCase();
-    return securities.filter((s) =>
-      s.name.toLowerCase().includes(lowerName)
-    ).slice(0, 5);
-  }, [nameValue, securities]);
-
-  // Auto-fill when security is selected
-  const selectSecurity = (security: Security) => {
-    setValue("name", security.name);
-    setValue("ticker", security.ticker || "");
-    setValue("isin", security.isin || "");
-    setValue("currency", security.currency || "EUR");
-    setShowSuggestions(false);
+  // Handle security selection from dropdown
+  const handleSecurityChange = (value: string) => {
+    if (value === "__new__") {
+      // User wants to add new security - show input
+      setCustomSecurityName("");
+      setValue("name", "");
+      setValue("ticker", "");
+      setValue("isin", "");
+      setValue("currency", "EUR");
+    } else {
+      const security = securities.find((s) => s.id === value);
+      if (security) {
+        setValue("name", security.name);
+        setValue("ticker", security.ticker || "");
+        setValue("isin", security.isin || "");
+        setValue("currency", security.currency || "EUR");
+        setCustomSecurityName("");
+      }
+    }
   };
 
   useEffect(() => {
     if (holding) {
+      // Check if name matches an existing security
+      const existingSec = securities.find(
+        (s) => s.name.toLowerCase() === holding.name.toLowerCase()
+      );
+      if (!existingSec) {
+        setCustomSecurityName(holding.name);
+      }
       reset({
         name: holding.name,
         ticker: holding.ticker || "",
@@ -143,6 +161,7 @@ export default function MarketHoldingDialog({
         notes: holding.notes || "",
       });
     } else {
+      setCustomSecurityName("");
       reset({
         name: "",
         ticker: "",
@@ -154,7 +173,7 @@ export default function MarketHoldingDialog({
         notes: "",
       });
     }
-  }, [holding, reset]);
+  }, [holding, reset, securities]);
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -257,31 +276,42 @@ export default function MarketHoldingDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2 relative">
+              <div className="space-y-2">
                 <Label htmlFor="name">Nome *</Label>
-                <Input
-                  id="name"
-                  placeholder="Ex: US Treasury"
-                  {...register("name", { required: "Nome é obrigatório" })}
-                  onFocus={() => setShowSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                  autoComplete="off"
-                />
-                {showSuggestions && suggestions.length > 0 && (
-                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-lg max-h-40 overflow-y-auto">
-                    {suggestions.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex justify-between items-center"
-                        onMouseDown={() => selectSecurity(s)}
-                      >
-                        <span>{s.name}</span>
-                        <span className="text-muted-foreground text-xs">{s.ticker}</span>
-                      </button>
+                <Select
+                  value={
+                    customSecurityName 
+                      ? "__new__" 
+                      : securities.find((s) => s.name === nameValue)?.id || ""
+                  }
+                  onValueChange={handleSecurityChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um ativo" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="__new__">+ Adicionar novo</SelectItem>
+                    {securities.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name} {s.ticker && `(${s.ticker})`}
+                      </SelectItem>
                     ))}
-                  </div>
+                  </SelectContent>
+                </Select>
+                {(customSecurityName !== "" || (nameValue === "" && !securities.find((s) => s.name === nameValue))) && watch("name") === "" && (
+                  <Input
+                    id="name-custom"
+                    placeholder="Nome do novo ativo"
+                    className="mt-2"
+                    value={customSecurityName}
+                    onChange={(e) => {
+                      setCustomSecurityName(e.target.value);
+                      setValue("name", e.target.value);
+                    }}
+                  />
                 )}
+                {/* Hidden input for form validation */}
+                <input type="hidden" {...register("name", { required: "Nome é obrigatório" })} />
                 {errors.name && (
                   <p className="text-xs text-destructive">{errors.name.message}</p>
                 )}
