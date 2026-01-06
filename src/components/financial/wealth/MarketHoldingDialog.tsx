@@ -150,14 +150,20 @@ export default function MarketHoldingDialog({
       if (!existingSec) {
         setCustomSecurityName(holding.name);
       }
+      
+      // Calcular preço unitário a partir do valor total e quantidade
+      const quantity = holding.quantity || 1;
+      const unitPrice = holding.current_value ? holding.current_value / quantity : 0;
+      const unitCostBasis = holding.cost_basis ? holding.cost_basis / quantity : 0;
+      
       reset({
         name: holding.name,
         ticker: holding.ticker || "",
         isin: holding.isin || "",
         currency: holding.currency || "EUR",
-        current_value: holding.current_value?.toLocaleString("pt-PT") || "",
-        cost_basis: holding.cost_basis?.toLocaleString("pt-PT") || "",
-        quantity: holding.quantity?.toLocaleString("pt-PT") || "",
+        current_value: unitPrice.toLocaleString("pt-PT") || "",
+        cost_basis: unitCostBasis.toLocaleString("pt-PT") || "",
+        quantity: quantity.toLocaleString("pt-PT") || "",
         notes: holding.notes || "",
       });
     } else {
@@ -207,14 +213,22 @@ export default function MarketHoldingDialog({
         }
       }
 
+      const unitPrice = parsePortugueseNumber(data.current_value);
+      const quantity = parsePortugueseNumber(data.quantity) || 1;
+      const costBasisUnit = parsePortugueseNumber(data.cost_basis);
+      
+      // Valor total = preço unitário × quantidade
+      const totalValue = unitPrice * quantity;
+      const totalCostBasis = costBasisUnit * quantity;
+
       const payload = {
         name: data.name,
         ticker: data.ticker || null,
         isin: data.isin || null,
         currency: data.currency || "EUR",
-        current_value: parsePortugueseNumber(data.current_value),
-        cost_basis: parsePortugueseNumber(data.cost_basis),
-        quantity: parsePortugueseNumber(data.quantity) || null,
+        current_value: totalValue,
+        cost_basis: totalCostBasis,
+        quantity: quantity,
         notes: data.notes || null,
         security_id: securityId || null,
       };
@@ -354,7 +368,7 @@ export default function MarketHoldingDialog({
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="current_value">Valor Atual ({watch("currency") || "EUR"})</Label>
+                <Label htmlFor="current_value">Preço Unit. ({watch("currency") || "EUR"})</Label>
                 <Input
                   id="current_value"
                   placeholder="10 000"
@@ -363,7 +377,7 @@ export default function MarketHoldingDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cost_basis">Custo Base ({watch("currency") || "EUR"})</Label>
+                <Label htmlFor="cost_basis">Custo Unit. ({watch("currency") || "EUR"})</Label>
                 <Input
                   id="cost_basis"
                   placeholder="9 500"
