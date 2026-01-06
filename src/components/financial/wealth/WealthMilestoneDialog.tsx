@@ -63,6 +63,8 @@ type FormData = {
   achieved_date: string;
   asset_id: string;
   milestone_type: string;
+  proceeds_destination_type: string;
+  proceeds_destination_asset_id: string;
 };
 
 const CATEGORIES = [
@@ -109,12 +111,15 @@ export default function WealthMilestoneDialog({
       achieved_date: "",
       asset_id: "",
       milestone_type: "portfolio",
+      proceeds_destination_type: "cash",
+      proceeds_destination_asset_id: "",
     },
   });
 
   const status = watch("status");
   const milestoneType = watch("milestone_type");
   const selectedAssetId = watch("asset_id");
+  const proceedsDestinationType = watch("proceeds_destination_type");
 
   // Fetch assets for the dropdown
   const { data: assets = [] } = useQuery({
@@ -157,6 +162,8 @@ export default function WealthMilestoneDialog({
         achieved_date: milestone.achieved_date || "",
         asset_id: milestone.asset_id || "",
         milestone_type: milestone.milestone_type || "portfolio",
+        proceeds_destination_type: (milestone as any).proceeds_destination_type || "cash",
+        proceeds_destination_asset_id: (milestone as any).proceeds_destination_asset_id || "",
       });
     } else {
       reset({
@@ -169,6 +176,8 @@ export default function WealthMilestoneDialog({
         achieved_date: "",
         asset_id: "",
         milestone_type: "portfolio",
+        proceeds_destination_type: "cash",
+        proceeds_destination_asset_id: "",
       });
     }
   }, [milestone, reset]);
@@ -185,6 +194,10 @@ export default function WealthMilestoneDialog({
         achieved_date: data.status === "achieved" ? (data.achieved_date || format(new Date(), "yyyy-MM-dd")) : null,
         asset_id: data.asset_id || null,
         milestone_type: data.milestone_type,
+        proceeds_destination_type: data.milestone_type === "sell" ? data.proceeds_destination_type : null,
+        proceeds_destination_asset_id: data.milestone_type === "sell" && data.proceeds_destination_type === "asset" 
+          ? (data.proceeds_destination_asset_id || null) 
+          : null,
       };
 
       if (isEditing) {
@@ -278,6 +291,51 @@ export default function WealthMilestoneDialog({
                   </SelectContent>
                 </Select>
               </div>
+            )}
+
+            {/* Proceeds Destination (for sell milestones only) */}
+            {milestoneType === "sell" && (
+              <>
+                <div className="space-y-2">
+                  <Label>Destino dos Fundos</Label>
+                  <Select
+                    value={proceedsDestinationType}
+                    onValueChange={(value) => setValue("proceeds_destination_type", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash / Liquidez</SelectItem>
+                      <SelectItem value="asset">Reinvestir em Ativo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {proceedsDestinationType === "asset" && (
+                  <div className="space-y-2">
+                    <Label>Ativo de Destino</Label>
+                    <Select
+                      value={watch("proceeds_destination_asset_id") || "none"}
+                      onValueChange={(value) => setValue("proceeds_destination_asset_id", value === "none" ? "" : value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecionar ativo..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Selecionar...</SelectItem>
+                        {assets
+                          .filter((a) => a.id !== selectedAssetId) // Exclude the asset being sold
+                          .map((asset) => (
+                            <SelectItem key={asset.id} value={asset.id}>
+                              {asset.name} ({asset.category})
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </>
             )}
 
             <div className="space-y-2">
