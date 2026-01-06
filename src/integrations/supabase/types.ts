@@ -3423,6 +3423,8 @@ export type Database = {
       securities: {
         Row: {
           aum: number | null
+          avg_daily_volume: number | null
+          bid_ask_spread: number | null
           blockchain: string | null
           circulating_supply: number | null
           commodity_type: string | null
@@ -3433,8 +3435,11 @@ export type Database = {
           currency: string | null
           debt_to_equity: number | null
           delivery_month: string | null
+          distribution_policy: string | null
           dividend_yield: number | null
+          domicile: string | null
           eps: number | null
+          exchange: string | null
           expense_ratio: number | null
           fcf: number | null
           fcf_yield: number | null
@@ -3446,22 +3451,32 @@ export type Database = {
           maturity_date: string | null
           max_supply: number | null
           name: string
+          nav: number | null
+          nav_premium_discount: number | null
           operating_margin: number | null
           payout_ratio: number | null
           pb_ratio: number | null
           pe_ratio: number | null
+          return_1y: number | null
+          return_3y: number | null
+          return_5y: number | null
           revenue_growth: number | null
           roe: number | null
           sector: string | null
           security_type: string | null
           ticker: string | null
+          top_10_holdings_weight: number | null
+          tracking_error: number | null
           tracking_index: string | null
           updated_at: string
           user_id: string
+          volatility: number | null
           yield_to_maturity: number | null
         }
         Insert: {
           aum?: number | null
+          avg_daily_volume?: number | null
+          bid_ask_spread?: number | null
           blockchain?: string | null
           circulating_supply?: number | null
           commodity_type?: string | null
@@ -3472,8 +3487,11 @@ export type Database = {
           currency?: string | null
           debt_to_equity?: number | null
           delivery_month?: string | null
+          distribution_policy?: string | null
           dividend_yield?: number | null
+          domicile?: string | null
           eps?: number | null
+          exchange?: string | null
           expense_ratio?: number | null
           fcf?: number | null
           fcf_yield?: number | null
@@ -3485,22 +3503,32 @@ export type Database = {
           maturity_date?: string | null
           max_supply?: number | null
           name: string
+          nav?: number | null
+          nav_premium_discount?: number | null
           operating_margin?: number | null
           payout_ratio?: number | null
           pb_ratio?: number | null
           pe_ratio?: number | null
+          return_1y?: number | null
+          return_3y?: number | null
+          return_5y?: number | null
           revenue_growth?: number | null
           roe?: number | null
           sector?: string | null
           security_type?: string | null
           ticker?: string | null
+          top_10_holdings_weight?: number | null
+          tracking_error?: number | null
           tracking_index?: string | null
           updated_at?: string
           user_id: string
+          volatility?: number | null
           yield_to_maturity?: number | null
         }
         Update: {
           aum?: number | null
+          avg_daily_volume?: number | null
+          bid_ask_spread?: number | null
           blockchain?: string | null
           circulating_supply?: number | null
           commodity_type?: string | null
@@ -3511,8 +3539,11 @@ export type Database = {
           currency?: string | null
           debt_to_equity?: number | null
           delivery_month?: string | null
+          distribution_policy?: string | null
           dividend_yield?: number | null
+          domicile?: string | null
           eps?: number | null
+          exchange?: string | null
           expense_ratio?: number | null
           fcf?: number | null
           fcf_yield?: number | null
@@ -3524,18 +3555,26 @@ export type Database = {
           maturity_date?: string | null
           max_supply?: number | null
           name?: string
+          nav?: number | null
+          nav_premium_discount?: number | null
           operating_margin?: number | null
           payout_ratio?: number | null
           pb_ratio?: number | null
           pe_ratio?: number | null
+          return_1y?: number | null
+          return_3y?: number | null
+          return_5y?: number | null
           revenue_growth?: number | null
           roe?: number | null
           sector?: string | null
           security_type?: string | null
           ticker?: string | null
+          top_10_holdings_weight?: number | null
+          tracking_error?: number | null
           tracking_index?: string | null
           updated_at?: string
           user_id?: string
+          volatility?: number | null
           yield_to_maturity?: number | null
         }
         Relationships: []
