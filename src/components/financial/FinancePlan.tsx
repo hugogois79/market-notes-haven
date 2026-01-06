@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Target, TrendingUp, Calendar, PieChart } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase } from "lucide-react";
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import WealthAssetsTable from "./wealth/WealthAssetsTable";
 
@@ -63,6 +64,9 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
 
   const topCategory = allocationData[0];
 
+  // Calculate total P/L
+  const totalPL = assets.reduce((sum, a) => sum + (a.profit_loss_value || 0), 0);
+
   return (
     <div className="space-y-6">
       <div>
@@ -72,142 +76,162 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Annual Goals</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">
-              No goals defined yet
-            </p>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="dashboard" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="dashboard" className="flex items-center gap-2">
+            <LayoutDashboard className="h-4 w-4" />
+            Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="portfolio" className="flex items-center gap-2">
+            <Briefcase className="h-4 w-4" />
+            Portfolio
+          </TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Projections</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>
-            <p className="text-xs text-muted-foreground">
-              Valor total do portfolio
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Milestones</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{assets.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Ativos no portfolio
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Allocation</CardTitle>
-            <PieChart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {topCategory ? (
-              <>
-                <div className="text-2xl font-bold">{topCategory.percentage}%</div>
+        <TabsContent value="dashboard" className="space-y-6">
+          {/* KPI Cards */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
+                <Target className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>
                 <p className="text-xs text-muted-foreground">
-                  {topCategory.name}
+                  Portfolio ativo
                 </p>
-              </>
-            ) : (
-              <>
-                <div className="text-2xl font-bold">—</div>
-                <p className="text-xs text-muted-foreground">
-                  Sem ativos
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              </CardContent>
+            </Card>
 
-      {/* Allocation Chart */}
-      {allocationData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Alocação do Portfolio</CardTitle>
-            <CardDescription>
-              Distribuição do valor por categoria de ativos
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsPie>
-                  <Pie
-                    data={allocationData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    dataKey="value"
-                    nameKey="name"
-                    label={({ name, percentage }) => `${name}: ${percentage}%`}
-                    labelLine={false}
-                  >
-                    {allocationData.map((entry) => (
-                      <Cell
-                        key={entry.name}
-                        fill={CATEGORY_COLORS[entry.name] || CATEGORY_COLORS["Other"]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--popover))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Legend />
-                </RechartsPie>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2">
-              {allocationData.map((item) => (
-                <div key={item.name} className="flex items-center gap-2 text-sm">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: CATEGORY_COLORS[item.name] || CATEGORY_COLORS["Other"] }}
-                  />
-                  <span className="text-muted-foreground">{item.name}:</span>
-                  <span className="font-medium">{item.percentage}%</span>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">P/L Total</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${totalPL >= 0 ? "text-green-500" : "text-red-500"}`}>
+                  {formatCurrency(totalPL)}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                <p className="text-xs text-muted-foreground">
+                  Ganhos/Perdas acumulados
+                </p>
+              </CardContent>
+            </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Portfolio de Ativos</CardTitle>
-          <CardDescription>
-            Gestão de ativos, avaliações, P/L e alocação do portfolio.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <WealthAssetsTable />
-        </CardContent>
-      </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Ativos</CardTitle>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{assets.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  No portfolio
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Top Alocação</CardTitle>
+                <PieChart className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {topCategory ? (
+                  <>
+                    <div className="text-2xl font-bold">{topCategory.percentage}%</div>
+                    <p className="text-xs text-muted-foreground">
+                      {topCategory.name}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">—</div>
+                    <p className="text-xs text-muted-foreground">
+                      Sem ativos
+                    </p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Allocation Chart */}
+          {allocationData.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Alocação do Portfolio</CardTitle>
+                <CardDescription>
+                  Distribuição do valor por categoria de ativos
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPie>
+                      <Pie
+                        data={allocationData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={2}
+                        dataKey="value"
+                        nameKey="name"
+                        label={({ name, percentage }) => `${name}: ${percentage}%`}
+                        labelLine={false}
+                      >
+                        {allocationData.map((entry) => (
+                          <Cell
+                            key={entry.name}
+                            fill={CATEGORY_COLORS[entry.name] || CATEGORY_COLORS["Other"]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number) => formatCurrency(value)}
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--popover))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                      />
+                      <Legend />
+                    </RechartsPie>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {allocationData.map((item) => (
+                    <div key={item.name} className="flex items-center gap-2 text-sm">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: CATEGORY_COLORS[item.name] || CATEGORY_COLORS["Other"] }}
+                      />
+                      <span className="text-muted-foreground">{item.name}:</span>
+                      <span className="font-medium">{item.percentage}%</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="portfolio">
+          <Card>
+            <CardHeader>
+              <CardTitle>Portfolio de Ativos</CardTitle>
+              <CardDescription>
+                Gestão de ativos, avaliações, P/L e alocação do portfolio.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WealthAssetsTable />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
