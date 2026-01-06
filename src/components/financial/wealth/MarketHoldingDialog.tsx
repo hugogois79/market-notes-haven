@@ -247,31 +247,14 @@ export default function MarketHoldingDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantidade</Label>
-                <Input
-                  id="quantity"
-                  placeholder="100"
-                  {...register("quantity")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="weight_current">Weight Atual %</Label>
-                <Input
-                  id="weight_current"
-                  placeholder="25.5"
-                  {...register("weight_current")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="weight_target">Weight Target %</Label>
-                <Input
-                  id="weight_target"
-                  placeholder="30.0"
-                  {...register("weight_target")}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="quantity">Quantidade</Label>
+              <Input
+                id="quantity"
+                placeholder="1 000 000"
+                value={watch("quantity")}
+                onChange={handleNumberChange("quantity")}
+              />
             </div>
 
             <div className="space-y-2">
