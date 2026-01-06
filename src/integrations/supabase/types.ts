@@ -4190,6 +4190,44 @@ export type Database = {
           },
         ]
       }
+      wealth_asset_notes: {
+        Row: {
+          asset_id: string
+          content: string
+          created_at: string | null
+          id: string
+          title: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          asset_id: string
+          content: string
+          created_at?: string | null
+          id?: string
+          title?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          asset_id?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wealth_asset_notes_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "wealth_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wealth_asset_valuations: {
         Row: {
           asset_id: string
