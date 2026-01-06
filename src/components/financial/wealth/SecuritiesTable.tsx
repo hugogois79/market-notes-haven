@@ -362,9 +362,12 @@ const emptyFormData: SecurityFormData = {
   current_price: "",
 };
 
-const parseNumber = (val: string): number | null => {
-  if (!val.trim()) return null;
-  const parsed = parseFloat(val.replace(",", "."));
+const parseNumber = (val: string | null | undefined | string[]): number | null => {
+  if (val === null || val === undefined || Array.isArray(val)) return null;
+  if (typeof val !== 'string') return null;
+  const trimmed = val.trim();
+  if (!trimmed) return null;
+  const parsed = parseFloat(trimmed.replace(",", "."));
   return isNaN(parsed) ? null : parsed;
 };
 
