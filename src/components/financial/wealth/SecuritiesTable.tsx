@@ -329,7 +329,7 @@ export default function SecuritiesTable() {
   const [isFetchingData, setIsFetchingData] = useState(false);
 
   // n8n webhook URL for fetching security data
-  const N8N_SECURITY_WEBHOOK = "https://diogofernandes.app.n8n.cloud/webhook/security-data";
+  const N8N_SECURITY_WEBHOOK = "https://n8n.gvvcapital.com/webhook/fetch-security";
 
   const handleFetchSecurityData = async () => {
     if (!formData.ticker.trim()) {
@@ -951,19 +951,15 @@ export default function SecuritiesTable() {
                         <Button
                           type="button"
                           variant="outline"
+                          size="icon"
                           onClick={handleFetchSecurityData}
                           disabled={isFetchingData || !formData.ticker.trim()}
+                          title="Obter dados do ticker"
                         >
                           {isFetchingData ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              A obter...
-                            </>
+                            <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
-                            <>
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                              Obter Dados
-                            </>
+                            <RefreshCw className="h-4 w-4" />
                           )}
                         </Button>
                       </div>
