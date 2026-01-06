@@ -4330,6 +4330,30 @@ export type Database = {
         }
         Relationships: []
       }
+      wealth_subcategories: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          name: string
+          user_id: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          name: string
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       wealth_transactions: {
         Row: {
           amount: number
