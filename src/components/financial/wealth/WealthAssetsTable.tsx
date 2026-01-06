@@ -11,10 +11,11 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Building2, Car, Anchor, Palette, Watch, Coins, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Building2, Car, Anchor, Palette, Watch, Coins, TrendingUp, TrendingDown, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import WealthAssetDialog from "./WealthAssetDialog";
+import WealthAssetNotesDialog from "./WealthAssetNotesDialog";
 
 type WealthAsset = {
   id: string;
@@ -87,6 +88,8 @@ export default function WealthAssetsTable() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<WealthAsset | null>(null);
+  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
+  const [notesAsset, setNotesAsset] = useState<WealthAsset | null>(null);
 
   const { data: assets = [], isLoading } = useQuery({
     queryKey: ["wealth-assets"],
@@ -299,6 +302,18 @@ export default function WealthAssetsTable() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-7 w-7"
+                                onClick={() => {
+                                  setNotesAsset(asset);
+                                  setNotesDialogOpen(true);
+                                }}
+                                title="Notas de Research"
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
                                 onClick={() => handleEdit(asset)}
                               >
                                 <Pencil className="h-3.5 w-3.5" />
@@ -375,6 +390,15 @@ export default function WealthAssetsTable() {
         onOpenChange={handleDialogClose}
         asset={editingAsset}
       />
+
+      {notesAsset && (
+        <WealthAssetNotesDialog
+          open={notesDialogOpen}
+          onOpenChange={setNotesDialogOpen}
+          assetId={notesAsset.id}
+          assetName={notesAsset.name}
+        />
+      )}
     </div>
   );
 }
