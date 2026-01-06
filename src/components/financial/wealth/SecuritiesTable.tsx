@@ -951,15 +951,19 @@ export default function SecuritiesTable() {
                         <Button
                           type="button"
                           variant="outline"
-                          size="icon"
                           onClick={handleFetchSecurityData}
                           disabled={isFetchingData || !formData.ticker.trim()}
-                          title="Obter dados do ticker via n8n"
                         >
                           {isFetchingData ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              A obter...
+                            </>
                           ) : (
-                            <RefreshCw className="h-4 w-4" />
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Obter Dados
+                            </>
                           )}
                         </Button>
                       </div>
