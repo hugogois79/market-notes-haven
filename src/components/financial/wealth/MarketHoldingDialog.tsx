@@ -228,7 +228,7 @@ export default function MarketHoldingDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="current_value">Valor Atual (€)</Label>
+                <Label htmlFor="current_value">Valor Atual ({watch("currency") || "EUR"})</Label>
                 <Input
                   id="current_value"
                   placeholder="10 000"
@@ -237,7 +237,7 @@ export default function MarketHoldingDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cost_basis">Custo Base (€)</Label>
+                <Label htmlFor="cost_basis">Custo Base ({watch("currency") || "EUR"})</Label>
                 <Input
                   id="cost_basis"
                   placeholder="9 500"
