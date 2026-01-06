@@ -2216,6 +2216,62 @@ export type Database = {
           },
         ]
       }
+      market_holdings: {
+        Row: {
+          asset_id: string
+          cost_basis: number | null
+          created_at: string
+          current_value: number | null
+          id: string
+          name: string
+          notes: string | null
+          quantity: number | null
+          ticker: string | null
+          updated_at: string
+          user_id: string
+          weight_current: number | null
+          weight_target: number | null
+        }
+        Insert: {
+          asset_id: string
+          cost_basis?: number | null
+          created_at?: string
+          current_value?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          quantity?: number | null
+          ticker?: string | null
+          updated_at?: string
+          user_id: string
+          weight_current?: number | null
+          weight_target?: number | null
+        }
+        Update: {
+          asset_id?: string
+          cost_basis?: number | null
+          created_at?: string
+          current_value?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          quantity?: number | null
+          ticker?: string | null
+          updated_at?: string
+          user_id?: string
+          weight_current?: number | null
+          weight_target?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_holdings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "wealth_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monthly_objectives: {
         Row: {
           category: string | null
