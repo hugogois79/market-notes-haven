@@ -3440,6 +3440,9 @@ export type Database = {
           base_interest_rate: number | null
           bid_ask_spread: number | null
           blockchain: string | null
+          change_1d: number | null
+          change_1w: number | null
+          change_ytd: number | null
           circulating_supply: number | null
           commodity_type: string | null
           contract_size: number | null
@@ -3521,6 +3524,9 @@ export type Database = {
           base_interest_rate?: number | null
           bid_ask_spread?: number | null
           blockchain?: string | null
+          change_1d?: number | null
+          change_1w?: number | null
+          change_ytd?: number | null
           circulating_supply?: number | null
           commodity_type?: string | null
           contract_size?: number | null
@@ -3602,6 +3608,9 @@ export type Database = {
           base_interest_rate?: number | null
           bid_ask_spread?: number | null
           blockchain?: string | null
+          change_1d?: number | null
+          change_1w?: number | null
+          change_ytd?: number | null
           circulating_supply?: number | null
           commodity_type?: string | null
           contract_size?: number | null
