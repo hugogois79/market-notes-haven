@@ -2,9 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase } from "lucide-react";
+import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt } from "lucide-react";
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import WealthAssetsTable from "./wealth/WealthAssetsTable";
+import WealthTransactionsTable from "./wealth/WealthTransactionsTable";
 
 interface FinancePlanProps {
   companyId: string;
@@ -85,6 +86,10 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
           <TabsTrigger value="portfolio" className="flex items-center gap-2">
             <Briefcase className="h-4 w-4" />
             Portfolio
+          </TabsTrigger>
+          <TabsTrigger value="cashflow" className="flex items-center gap-2">
+            <Receipt className="h-4 w-4" />
+            Cashflow
           </TabsTrigger>
         </TabsList>
 
@@ -228,6 +233,20 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
             </CardHeader>
             <CardContent>
               <WealthAssetsTable />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="cashflow">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plano Financeiro</CardTitle>
+              <CardDescription>
+                Registo de transações, créditos, débitos e saldo corrente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WealthTransactionsTable />
             </CardContent>
           </Card>
         </TabsContent>
