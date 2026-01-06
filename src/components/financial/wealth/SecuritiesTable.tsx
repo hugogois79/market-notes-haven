@@ -116,7 +116,7 @@ type StockPrice = {
   pe_ratio: number | null;
   year_high: number | null;
   year_low: number | null;
-  latest_trading_day: string;
+  date: string;
   fetched_at: string;
 };
 

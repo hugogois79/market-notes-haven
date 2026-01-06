@@ -3620,10 +3620,10 @@ export type Database = {
           change: number | null
           change_percent: string | null
           current_price: number | null
+          date: string
           fetched_at: string | null
           high_price: number | null
           id: number
-          latest_trading_day: string | null
           low_price: number | null
           market_cap: number | null
           open_price: number | null
@@ -3638,10 +3638,10 @@ export type Database = {
           change?: number | null
           change_percent?: string | null
           current_price?: number | null
+          date: string
           fetched_at?: string | null
           high_price?: number | null
           id?: number
-          latest_trading_day?: string | null
           low_price?: number | null
           market_cap?: number | null
           open_price?: number | null
@@ -3656,10 +3656,10 @@ export type Database = {
           change?: number | null
           change_percent?: string | null
           current_price?: number | null
+          date?: string
           fetched_at?: string | null
           high_price?: number | null
           id?: number
-          latest_trading_day?: string | null
           low_price?: number | null
           market_cap?: number | null
           open_price?: number | null
