@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -34,8 +34,17 @@ type WealthMilestone = {
   category: string | null;
   status: string | null;
   achieved_date: string | null;
+  asset_id: string | null;
+  milestone_type: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type WealthAsset = {
+  id: string;
+  name: string;
+  category: string;
+  current_value: number | null;
 };
 
 interface WealthMilestoneDialogProps {
@@ -52,6 +61,8 @@ type FormData = {
   category: string;
   status: string;
   achieved_date: string;
+  asset_id: string;
+  milestone_type: string;
 };
 
 const CATEGORIES = [
@@ -64,6 +75,12 @@ const CATEGORIES = [
   "Private Equity",
   "Cash",
   "Global",
+];
+
+const MILESTONE_TYPES = [
+  { value: "portfolio", label: "Meta Portfolio" },
+  { value: "buy", label: "Comprar Ativo" },
+  { value: "sell", label: "Vender Ativo" },
 ];
 
 export default function WealthMilestoneDialog({
@@ -90,10 +107,43 @@ export default function WealthMilestoneDialog({
       category: "",
       status: "active",
       achieved_date: "",
+      asset_id: "",
+      milestone_type: "portfolio",
     },
   });
 
   const status = watch("status");
+  const milestoneType = watch("milestone_type");
+  const selectedAssetId = watch("asset_id");
+
+  // Fetch assets for the dropdown
+  const { data: assets = [] } = useQuery({
+    queryKey: ["wealth-assets-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("wealth_assets")
+        .select("id, name, category, current_value")
+        .order("name");
+
+      if (error) throw error;
+      return data as WealthAsset[];
+    },
+  });
+
+  // Auto-fill name when asset is selected
+  useEffect(() => {
+    if (selectedAssetId && !isEditing) {
+      const asset = assets.find((a) => a.id === selectedAssetId);
+      if (asset) {
+        const currentName = watch("name");
+        if (!currentName) {
+          const typeLabel = milestoneType === "sell" ? "Vender" : "Comprar";
+          setValue("name", `${typeLabel} ${asset.name}`);
+        }
+        setValue("category", asset.category);
+      }
+    }
+  }, [selectedAssetId, assets, isEditing, milestoneType, setValue, watch]);
 
   useEffect(() => {
     if (milestone) {
@@ -105,6 +155,8 @@ export default function WealthMilestoneDialog({
         category: milestone.category || "",
         status: milestone.status || "active",
         achieved_date: milestone.achieved_date || "",
+        asset_id: milestone.asset_id || "",
+        milestone_type: milestone.milestone_type || "portfolio",
       });
     } else {
       reset({
@@ -115,6 +167,8 @@ export default function WealthMilestoneDialog({
         category: "",
         status: "active",
         achieved_date: "",
+        asset_id: "",
+        milestone_type: "portfolio",
       });
     }
   }, [milestone, reset]);
@@ -129,6 +183,8 @@ export default function WealthMilestoneDialog({
         category: data.category || null,
         status: data.status,
         achieved_date: data.status === "achieved" ? (data.achieved_date || format(new Date(), "yyyy-MM-dd")) : null,
+        asset_id: data.asset_id || null,
+        milestone_type: data.milestone_type,
       };
 
       if (isEditing) {
@@ -160,6 +216,15 @@ export default function WealthMilestoneDialog({
     mutation.mutate(data);
   };
 
+  const formatCurrency = (value: number | null) => {
+    if (value === null) return "";
+    return new Intl.NumberFormat("pt-PT", {
+      style: "currency",
+      currency: "EUR",
+      minimumFractionDigits: 0,
+    }).format(value);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -172,11 +237,54 @@ export default function WealthMilestoneDialog({
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-4">
+            {/* Milestone Type */}
+            <div className="space-y-2">
+              <Label>Tipo de Milestone</Label>
+              <Select
+                value={watch("milestone_type")}
+                onValueChange={(value) => setValue("milestone_type", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MILESTONE_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Asset Selection (for buy/sell milestones) */}
+            {(milestoneType === "buy" || milestoneType === "sell") && (
+              <div className="space-y-2">
+                <Label>Ativo {milestoneType === "sell" ? "(a vender)" : "(a comprar)"}</Label>
+                <Select
+                  value={watch("asset_id")}
+                  onValueChange={(value) => setValue("asset_id", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar ativo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Novo ativo (sem link)</SelectItem>
+                    {assets.map((asset) => (
+                      <SelectItem key={asset.id} value={asset.id}>
+                        {asset.name} ({asset.category}) {asset.current_value ? `- ${formatCurrency(asset.current_value)}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="name">Nome *</Label>
               <Input
                 id="name"
-                placeholder="Ex: Primeiro Milhão"
+                placeholder="Ex: Primeiro Milhão, Vender Barco"
                 {...register("name", { required: "Nome é obrigatório" })}
               />
               {errors.name && (
@@ -196,7 +304,9 @@ export default function WealthMilestoneDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="target_value">Valor Alvo (€) *</Label>
+                <Label htmlFor="target_value">
+                  {milestoneType === "sell" ? "Valor de Venda (€)" : milestoneType === "buy" ? "Valor de Compra (€)" : "Valor Alvo (€)"} *
+                </Label>
                 <Input
                   id="target_value"
                   placeholder="1.000.000"

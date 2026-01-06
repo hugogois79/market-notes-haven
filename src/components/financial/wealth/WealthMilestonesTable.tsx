@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Pencil, Trash2, Target, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, Target, CheckCircle2, XCircle, ShoppingCart, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -29,8 +29,17 @@ type WealthMilestone = {
   category: string | null;
   status: string | null;
   achieved_date: string | null;
+  asset_id: string | null;
+  milestone_type: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type WealthAsset = {
+  id: string;
+  name: string;
+  category: string;
+  current_value: number | null;
 };
 
 const formatCurrency = (value: number) => {
@@ -46,6 +55,12 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   active: { label: "Ativo", color: "bg-blue-500/10 text-blue-500 border-blue-500/20", icon: Target },
   achieved: { label: "Atingido", color: "bg-green-500/10 text-green-500 border-green-500/20", icon: CheckCircle2 },
   cancelled: { label: "Cancelado", color: "bg-muted text-muted-foreground border-muted", icon: XCircle },
+};
+
+const typeConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  portfolio: { label: "Portfolio", icon: Target, color: "text-blue-500" },
+  buy: { label: "Comprar", icon: ShoppingCart, color: "text-green-500" },
+  sell: { label: "Vender", icon: Tag, color: "text-orange-500" },
 };
 
 export default function WealthMilestonesTable() {
@@ -67,17 +82,17 @@ export default function WealthMilestonesTable() {
     },
   });
 
-  // Get current portfolio value for progress calculation
+  // Get assets for displaying linked asset names
   const { data: assets = [] } = useQuery({
     queryKey: ["wealth-assets"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("wealth_assets")
-        .select("current_value, status")
+        .select("id, name, category, current_value, status")
         .neq("status", "In Recovery");
 
       if (error) throw error;
-      return data || [];
+      return data as WealthAsset[];
     },
   });
 
@@ -112,6 +127,38 @@ export default function WealthMilestonesTable() {
     setEditingMilestone(null);
   };
 
+  const getAssetName = (assetId: string | null) => {
+    if (!assetId) return null;
+    const asset = assets.find((a) => a.id === assetId);
+    return asset?.name || null;
+  };
+
+  const getAssetValue = (assetId: string | null) => {
+    if (!assetId) return null;
+    const asset = assets.find((a) => a.id === assetId);
+    return asset?.current_value || null;
+  };
+
+  const calculateProgress = (milestone: WealthMilestone) => {
+    if (milestone.milestone_type === "portfolio") {
+      return Math.min((currentPortfolioValue / milestone.target_value) * 100, 100);
+    }
+    
+    if (milestone.asset_id) {
+      const assetValue = getAssetValue(milestone.asset_id);
+      if (assetValue !== null) {
+        // For sell: progress is how close the asset value is to target
+        // For buy: progress could be savings towards purchase (use portfolio as proxy)
+        if (milestone.milestone_type === "sell") {
+          return Math.min((assetValue / milestone.target_value) * 100, 100);
+        }
+      }
+    }
+    
+    // Default to portfolio-based progress
+    return Math.min((currentPortfolioValue / milestone.target_value) * 100, 100);
+  };
+
   const activeMilestones = milestones.filter((m) => m.status === "active");
   const completedMilestones = milestones.filter((m) => m.status !== "active");
 
@@ -143,10 +190,11 @@ export default function WealthMilestonesTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[250px]">Milestone</TableHead>
-              <TableHead>Categoria</TableHead>
+              <TableHead className="w-[60px]">Tipo</TableHead>
+              <TableHead className="w-[220px]">Milestone</TableHead>
+              <TableHead>Ativo</TableHead>
               <TableHead className="text-right">Valor Alvo</TableHead>
-              <TableHead className="w-[200px]">Progresso</TableHead>
+              <TableHead className="w-[180px]">Progresso</TableHead>
               <TableHead>Data Alvo</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="w-[80px]"></TableHead>
@@ -155,21 +203,25 @@ export default function WealthMilestonesTable() {
           <TableBody>
             {activeMilestones.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   Sem milestones ativos. Crie o primeiro milestone para acompanhar os seus objetivos.
                 </TableCell>
               </TableRow>
             ) : (
               activeMilestones.map((milestone) => {
-                const progress = Math.min(
-                  (currentPortfolioValue / milestone.target_value) * 100,
-                  100
-                );
-                const config = statusConfig[milestone.status || "active"];
-                const Icon = config.icon;
+                const progress = calculateProgress(milestone);
+                const statusCfg = statusConfig[milestone.status || "active"];
+                const StatusIcon = statusCfg.icon;
+                const typeCfg = typeConfig[milestone.milestone_type || "portfolio"];
+                const TypeIcon = typeCfg.icon;
+                const assetName = getAssetName(milestone.asset_id);
+                const remaining = milestone.target_value - (milestone.milestone_type === "portfolio" ? currentPortfolioValue : (getAssetValue(milestone.asset_id) || 0));
 
                 return (
                   <TableRow key={milestone.id}>
+                    <TableCell>
+                      <TypeIcon className={cn("h-4 w-4", typeCfg.color)} />
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium">{milestone.name}</span>
@@ -181,10 +233,12 @@ export default function WealthMilestonesTable() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {milestone.category ? (
+                      {assetName ? (
                         <Badge variant="outline" className="text-xs">
-                          {milestone.category}
+                          {assetName}
                         </Badge>
+                      ) : milestone.category ? (
+                        <span className="text-sm text-muted-foreground">{milestone.category}</span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -197,7 +251,7 @@ export default function WealthMilestonesTable() {
                         <Progress value={progress} className="h-2" />
                         <div className="flex justify-between text-xs text-muted-foreground">
                           <span>{progress.toFixed(1)}%</span>
-                          <span>{formatCurrency(milestone.target_value - currentPortfolioValue)} restante</span>
+                          <span>{remaining > 0 ? `${formatCurrency(remaining)} restante` : "Meta atingida!"}</span>
                         </div>
                       </div>
                     </TableCell>
@@ -207,9 +261,9 @@ export default function WealthMilestonesTable() {
                         : "—"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={cn("text-xs gap-1", config.color)}>
-                        <Icon className="h-3 w-3" />
-                        {config.label}
+                      <Badge variant="outline" className={cn("text-xs gap-1", statusCfg.color)}>
+                        <StatusIcon className="h-3 w-3" />
+                        {statusCfg.label}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -253,11 +307,16 @@ export default function WealthMilestonesTable() {
               {completedMilestones.map((milestone) => {
                 const config = statusConfig[milestone.status || "active"];
                 const Icon = config.icon;
+                const typeCfg = typeConfig[milestone.milestone_type || "portfolio"];
+                const TypeIcon = typeCfg.icon;
 
                 return (
                   <TableRow key={milestone.id} className="opacity-60">
+                    <TableCell className="w-[60px]">
+                      <TypeIcon className={cn("h-4 w-4", typeCfg.color)} />
+                    </TableCell>
                     <TableCell className="font-medium">{milestone.name}</TableCell>
-                    <TableCell>{milestone.category || "—"}</TableCell>
+                    <TableCell>{getAssetName(milestone.asset_id) || milestone.category || "—"}</TableCell>
                     <TableCell className="text-right">
                       {formatCurrency(milestone.target_value)}
                     </TableCell>

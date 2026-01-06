@@ -4300,10 +4300,12 @@ export type Database = {
       wealth_milestones: {
         Row: {
           achieved_date: string | null
+          asset_id: string | null
           category: string | null
           created_at: string | null
           description: string | null
           id: string
+          milestone_type: string | null
           name: string
           status: string | null
           target_date: string | null
@@ -4313,10 +4315,12 @@ export type Database = {
         }
         Insert: {
           achieved_date?: string | null
+          asset_id?: string | null
           category?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
+          milestone_type?: string | null
           name: string
           status?: string | null
           target_date?: string | null
@@ -4326,10 +4330,12 @@ export type Database = {
         }
         Update: {
           achieved_date?: string | null
+          asset_id?: string | null
           category?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
+          milestone_type?: string | null
           name?: string
           status?: string | null
           target_date?: string | null
@@ -4337,7 +4343,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "wealth_milestones_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "wealth_assets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wealth_portfolio_snapshots: {
         Row: {
