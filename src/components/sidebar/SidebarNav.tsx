@@ -169,9 +169,16 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       featureKey: "tao",
     },
     {
-      title: "Market Data",
+      title: "Markets",
+      icon: <LineChart size={20} />,
+      path: "/markets",
+      workerAllowed: false,
+      featureKey: "tao",
+    },
+    {
+      title: "Securities",
       icon: <TrendingUp size={20} />,
-      path: "/market-data",
+      path: "/securities",
       workerAllowed: false,
       featureKey: "tao",
     },
