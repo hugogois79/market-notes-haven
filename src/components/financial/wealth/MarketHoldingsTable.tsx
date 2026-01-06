@@ -148,21 +148,26 @@ export default function MarketHoldingsTable() {
 
   const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
 
-  // Calculate totals
-  const totalValue = cashAssets.reduce((sum, a) => sum + (a.current_value || 0), 0);
+  // Calculate totals based on holdings sum
+  const getAccountHoldingsValue = (asset: CashAsset) => {
+    return asset.holdings.reduce((sum, h) => sum + (h.current_value || 0), 0);
+  };
+
+  const totalValue = cashAssets.reduce((sum, a) => sum + getAccountHoldingsValue(a), 0);
 
   // Set default active account when data loads
   const effectiveActiveAccount = activeAccountId || (cashAssets.length > 0 ? cashAssets[0].id : null);
 
   const renderHoldingsTable = (asset: CashAsset) => {
-    const accountWeight = totalValue > 0 ? ((asset.current_value || 0) / totalValue) * 100 : 0;
+    const holdingsValue = getAccountHoldingsValue(asset);
+    const accountWeight = totalValue > 0 ? (holdingsValue / totalValue) * 100 : 0;
 
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-muted-foreground">
-              Valor: <span className="font-semibold text-foreground">{formatCurrency(asset.current_value)}</span>
+              Valor: <span className="font-semibold text-foreground">{formatCurrency(holdingsValue)}</span>
               <span className="mx-2">|</span>
               Peso: <span className="font-medium">{formatPercent(accountWeight)}</span>
               <span className="mx-2">|</span>
@@ -289,7 +294,7 @@ export default function MarketHoldingsTable() {
         <Tabs value={effectiveActiveAccount || undefined} onValueChange={setActiveAccountId} className="space-y-4">
           <TabsList className="flex-wrap h-auto gap-1">
             {cashAssets.map((asset) => {
-              const accountWeight = totalValue > 0 ? ((asset.current_value || 0) / totalValue) * 100 : 0;
+              const holdingsValue = getAccountHoldingsValue(asset);
               return (
                 <TabsTrigger key={asset.id} value={asset.id} className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4" />
