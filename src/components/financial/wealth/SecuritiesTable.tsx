@@ -950,7 +950,7 @@ export default function SecuritiesTable() {
                           size="icon"
                           onClick={handleFetchSecurityData}
                           disabled={isLoadingSecurityData || !formData.ticker.trim()}
-                          title="Obter dados do ticker"
+                          title="Obter dados do Ticket"
                         >
                           {isLoadingSecurityData ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
