@@ -182,8 +182,8 @@ export default function WealthAssetsTable() {
         </Button>
       </div>
 
-      <div className="rounded-md border text-xs">
-        <Table>
+      <div className="rounded-md border">
+        <Table className="text-xs">
           <TableHeader>
             <TableRow>
               <TableHead className="w-[220px]">Posição</TableHead>
