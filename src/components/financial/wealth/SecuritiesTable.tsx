@@ -78,6 +78,19 @@ type Security = {
   expense_ratio: number | null;
   aum: number | null;
   tracking_index: string | null;
+  nav: number | null;
+  nav_premium_discount: number | null;
+  avg_daily_volume: number | null;
+  bid_ask_spread: number | null;
+  domicile: string | null;
+  distribution_policy: string | null;
+  top_10_holdings_weight: number | null;
+  return_1y: number | null;
+  return_3y: number | null;
+  return_5y: number | null;
+  volatility: number | null;
+  tracking_error: number | null;
+  exchange: string | null;
   // Crypto fields
   circulating_supply: number | null;
   max_supply: number | null;
@@ -138,6 +151,19 @@ type SecurityFormData = {
   expense_ratio: string;
   aum: string;
   tracking_index: string;
+  nav: string;
+  nav_premium_discount: string;
+  avg_daily_volume: string;
+  bid_ask_spread: string;
+  domicile: string;
+  distribution_policy: string;
+  top_10_holdings_weight: string;
+  return_1y: string;
+  return_3y: string;
+  return_5y: string;
+  volatility: string;
+  tracking_error: string;
+  exchange: string;
   // Crypto fields
   circulating_supply: string;
   max_supply: string;
@@ -196,6 +222,19 @@ const emptyFormData: SecurityFormData = {
   expense_ratio: "",
   aum: "",
   tracking_index: "",
+  nav: "",
+  nav_premium_discount: "",
+  avg_daily_volume: "",
+  bid_ask_spread: "",
+  domicile: "",
+  distribution_policy: "",
+  top_10_holdings_weight: "",
+  return_1y: "",
+  return_3y: "",
+  return_5y: "",
+  volatility: "",
+  tracking_error: "",
+  exchange: "",
   circulating_supply: "",
   max_supply: "",
   blockchain: "",
@@ -295,6 +334,19 @@ export default function SecuritiesTable() {
         expense_ratio: parseNumber(data.expense_ratio),
         aum: parseNumber(data.aum),
         tracking_index: data.tracking_index.trim() || null,
+        nav: parseNumber(data.nav),
+        nav_premium_discount: parseNumber(data.nav_premium_discount),
+        avg_daily_volume: parseNumber(data.avg_daily_volume),
+        bid_ask_spread: parseNumber(data.bid_ask_spread),
+        domicile: data.domicile.trim() || null,
+        distribution_policy: data.distribution_policy || null,
+        top_10_holdings_weight: parseNumber(data.top_10_holdings_weight),
+        return_1y: parseNumber(data.return_1y),
+        return_3y: parseNumber(data.return_3y),
+        return_5y: parseNumber(data.return_5y),
+        volatility: parseNumber(data.volatility),
+        tracking_error: parseNumber(data.tracking_error),
+        exchange: data.exchange.trim() || null,
         circulating_supply: parseNumber(data.circulating_supply),
         max_supply: parseNumber(data.max_supply),
         blockchain: data.blockchain.trim() || null,
@@ -348,6 +400,19 @@ export default function SecuritiesTable() {
           expense_ratio: parseNumber(data.expense_ratio),
           aum: parseNumber(data.aum),
           tracking_index: data.tracking_index.trim() || null,
+          nav: parseNumber(data.nav),
+          nav_premium_discount: parseNumber(data.nav_premium_discount),
+          avg_daily_volume: parseNumber(data.avg_daily_volume),
+          bid_ask_spread: parseNumber(data.bid_ask_spread),
+          domicile: data.domicile.trim() || null,
+          distribution_policy: data.distribution_policy || null,
+          top_10_holdings_weight: parseNumber(data.top_10_holdings_weight),
+          return_1y: parseNumber(data.return_1y),
+          return_3y: parseNumber(data.return_3y),
+          return_5y: parseNumber(data.return_5y),
+          volatility: parseNumber(data.volatility),
+          tracking_error: parseNumber(data.tracking_error),
+          exchange: data.exchange.trim() || null,
           circulating_supply: parseNumber(data.circulating_supply),
           max_supply: parseNumber(data.max_supply),
           blockchain: data.blockchain.trim() || null,
@@ -420,6 +485,19 @@ export default function SecuritiesTable() {
       expense_ratio: formatNumberField(security.expense_ratio),
       aum: formatNumberField(security.aum),
       tracking_index: security.tracking_index || "",
+      nav: formatNumberField(security.nav),
+      nav_premium_discount: formatNumberField(security.nav_premium_discount),
+      avg_daily_volume: formatNumberField(security.avg_daily_volume),
+      bid_ask_spread: formatNumberField(security.bid_ask_spread),
+      domicile: security.domicile || "",
+      distribution_policy: security.distribution_policy || "",
+      top_10_holdings_weight: formatNumberField(security.top_10_holdings_weight),
+      return_1y: formatNumberField(security.return_1y),
+      return_3y: formatNumberField(security.return_3y),
+      return_5y: formatNumberField(security.return_5y),
+      volatility: formatNumberField(security.volatility),
+      tracking_error: formatNumberField(security.tracking_error),
+      exchange: security.exchange || "",
       circulating_supply: formatNumberField(security.circulating_supply),
       max_supply: formatNumberField(security.max_supply),
       blockchain: security.blockchain || "",
@@ -943,6 +1021,8 @@ export default function SecuritiesTable() {
 
                   {formData.security_type === "etf" && (
                     <>
+                      {/* Estrutura e Custos */}
+                      <h4 className="text-sm font-medium text-muted-foreground border-b pb-2">Estrutura e Custos</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>TER / Expense Ratio (%)</Label>
@@ -953,7 +1033,7 @@ export default function SecuritiesTable() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>AUM (Assets Under Management)</Label>
+                          <Label>AUM</Label>
                           <Input
                             value={formData.aum}
                             onChange={(e) => setFormData({ ...formData, aum: e.target.value })}
@@ -961,12 +1041,152 @@ export default function SecuritiesTable() {
                           />
                         </div>
                       </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Domicílio</Label>
+                          <Select
+                            value={formData.domicile}
+                            onValueChange={(value) => setFormData({ ...formData, domicile: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecionar..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="IE">Irlanda (IE)</SelectItem>
+                              <SelectItem value="LU">Luxemburgo (LU)</SelectItem>
+                              <SelectItem value="US">Estados Unidos (US)</SelectItem>
+                              <SelectItem value="DE">Alemanha (DE)</SelectItem>
+                              <SelectItem value="CH">Suíça (CH)</SelectItem>
+                              <SelectItem value="UK">Reino Unido (UK)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Política de Distribuição</Label>
+                          <Select
+                            value={formData.distribution_policy}
+                            onValueChange={(value) => setFormData({ ...formData, distribution_policy: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecionar..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="accumulating">Acumulativo (Acc)</SelectItem>
+                              <SelectItem value="distributing">Distributivo (Dist)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Índice de Referência</Label>
+                          <Input
+                            value={formData.tracking_index}
+                            onChange={(e) => setFormData({ ...formData, tracking_index: e.target.value })}
+                            placeholder="Ex: S&P 500, MSCI World"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Bolsa de Listagem</Label>
+                          <Input
+                            value={formData.exchange}
+                            onChange={(e) => setFormData({ ...formData, exchange: e.target.value })}
+                            placeholder="Ex: XETRA, LSE, NYSE"
+                          />
+                        </div>
+                      </div>
+
+                      {/* NAV e Liquidez */}
+                      <h4 className="text-sm font-medium text-muted-foreground border-b pb-2 pt-4">Valor e Liquidez</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>NAV por Cota</Label>
+                          <Input
+                            value={formData.nav}
+                            onChange={(e) => setFormData({ ...formData, nav: e.target.value })}
+                            placeholder="Ex: 523,45"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Premium/Desconto vs NAV (%)</Label>
+                          <Input
+                            value={formData.nav_premium_discount}
+                            onChange={(e) => setFormData({ ...formData, nav_premium_discount: e.target.value })}
+                            placeholder="Ex: -0,02"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Volume Médio Diário</Label>
+                          <Input
+                            value={formData.avg_daily_volume}
+                            onChange={(e) => setFormData({ ...formData, avg_daily_volume: e.target.value })}
+                            placeholder="Ex: 5000000"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Bid-Ask Spread (%)</Label>
+                          <Input
+                            value={formData.bid_ask_spread}
+                            onChange={(e) => setFormData({ ...formData, bid_ask_spread: e.target.value })}
+                            placeholder="Ex: 0,01"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Performance e Risco */}
+                      <h4 className="text-sm font-medium text-muted-foreground border-b pb-2 pt-4">Performance e Risco</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Peso Top-10 Holdings (%)</Label>
+                          <Input
+                            value={formData.top_10_holdings_weight}
+                            onChange={(e) => setFormData({ ...formData, top_10_holdings_weight: e.target.value })}
+                            placeholder="Ex: 28,5"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Tracking Error (%)</Label>
+                          <Input
+                            value={formData.tracking_error}
+                            onChange={(e) => setFormData({ ...formData, tracking_error: e.target.value })}
+                            placeholder="Ex: 0,05"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label>Retorno 1 Ano (%)</Label>
+                          <Input
+                            value={formData.return_1y}
+                            onChange={(e) => setFormData({ ...formData, return_1y: e.target.value })}
+                            placeholder="Ex: 24,5"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Retorno 3 Anos (%)</Label>
+                          <Input
+                            value={formData.return_3y}
+                            onChange={(e) => setFormData({ ...formData, return_3y: e.target.value })}
+                            placeholder="Ex: 12,8"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Retorno 5 Anos (%)</Label>
+                          <Input
+                            value={formData.return_5y}
+                            onChange={(e) => setFormData({ ...formData, return_5y: e.target.value })}
+                            placeholder="Ex: 15,2"
+                          />
+                        </div>
+                      </div>
                       <div className="space-y-2">
-                        <Label>Índice de Referência</Label>
+                        <Label>Volatilidade Anualizada (%)</Label>
                         <Input
-                          value={formData.tracking_index}
-                          onChange={(e) => setFormData({ ...formData, tracking_index: e.target.value })}
-                          placeholder="Ex: S&P 500, MSCI World"
+                          value={formData.volatility}
+                          onChange={(e) => setFormData({ ...formData, volatility: e.target.value })}
+                          placeholder="Ex: 18,5"
                         />
                       </div>
                     </>
