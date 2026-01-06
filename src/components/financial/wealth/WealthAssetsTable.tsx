@@ -63,8 +63,8 @@ const formatCurrency = (value: number | null, currency = "EUR") => {
   }).format(value);
 };
 
-const formatPercent = (value: number | null) => {
-  if (value === null) return "—";
+const formatPercent = (value: number | null | undefined) => {
+  if (value === null || value === undefined || isNaN(value)) return "—";
   return `${value.toFixed(2)}%`;
 };
 
