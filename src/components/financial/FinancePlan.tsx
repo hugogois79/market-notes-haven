@@ -2,10 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt } from "lucide-react";
+import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt, Flag } from "lucide-react";
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import WealthAssetsTable from "./wealth/WealthAssetsTable";
 import WealthTransactionsTable from "./wealth/WealthTransactionsTable";
+import WealthMilestonesTable from "./wealth/WealthMilestonesTable";
 
 interface FinancePlanProps {
   companyId: string;
@@ -90,6 +91,10 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
           <TabsTrigger value="cashflow" className="flex items-center gap-2">
             <Receipt className="h-4 w-4" />
             Cashflow
+          </TabsTrigger>
+          <TabsTrigger value="milestones" className="flex items-center gap-2">
+            <Flag className="h-4 w-4" />
+            Milestones
           </TabsTrigger>
         </TabsList>
 
@@ -247,6 +252,20 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
             </CardHeader>
             <CardContent>
               <WealthTransactionsTable />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="milestones">
+          <Card>
+            <CardHeader>
+              <CardTitle>Milestones</CardTitle>
+              <CardDescription>
+                Defina e acompanhe os seus objetivos financeiros.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WealthMilestonesTable />
             </CardContent>
           </Card>
         </TabsContent>
