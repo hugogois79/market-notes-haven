@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt, Flag, Percent, Save, History, LineChart } from "lucide-react";
+import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt, Flag, Percent, Save, History, LineChart, List } from "lucide-react";
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { toast } from "sonner";
 import WealthAssetsTable from "./wealth/WealthAssetsTable";
@@ -11,6 +11,7 @@ import WealthTransactionsTable from "./wealth/WealthTransactionsTable";
 import WealthMilestonesTable from "./wealth/WealthMilestonesTable";
 import PortfolioHistoryChart from "./wealth/PortfolioHistoryChart";
 import MarketHoldingsTable from "./wealth/MarketHoldingsTable";
+import SecuritiesTable from "./wealth/SecuritiesTable";
 
 interface FinancePlanProps {
   companyId: string;
@@ -160,6 +161,10 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
           <TabsTrigger value="markets" className="flex items-center gap-2">
             <LineChart className="h-4 w-4" />
             Markets
+          </TabsTrigger>
+          <TabsTrigger value="securities" className="flex items-center gap-2">
+            <List className="h-4 w-4" />
+            Securities
           </TabsTrigger>
           <TabsTrigger value="portfolio" className="flex items-center gap-2">
             <Briefcase className="h-4 w-4" />
@@ -359,6 +364,20 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
             </CardHeader>
             <CardContent>
               <MarketHoldingsTable />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="securities">
+          <Card>
+            <CardHeader>
+              <CardTitle>Securities</CardTitle>
+              <CardDescription>
+                Lista de títulos e taxas de câmbio com preços atualizados.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SecuritiesTable />
             </CardContent>
           </Card>
         </TabsContent>
