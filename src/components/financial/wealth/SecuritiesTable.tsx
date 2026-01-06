@@ -99,6 +99,24 @@ type Security = {
   commodity_type: string | null;
   contract_size: number | null;
   delivery_month: string | null;
+  // FX/Currency fields
+  base_currency: string | null;
+  quote_currency: string | null;
+  spot_rate: number | null;
+  base_interest_rate: number | null;
+  quote_interest_rate: number | null;
+  forward_rate_3m: number | null;
+  forward_rate_12m: number | null;
+  fx_volatility_30d: number | null;
+  fx_atr: number | null;
+  support_level: number | null;
+  resistance_level: number | null;
+  base_inflation_rate: number | null;
+  quote_inflation_rate: number | null;
+  base_current_account: number | null;
+  quote_current_account: number | null;
+  base_credit_rating: string | null;
+  quote_credit_rating: string | null;
   created_at: string;
 };
 
@@ -172,6 +190,24 @@ type SecurityFormData = {
   commodity_type: string;
   contract_size: string;
   delivery_month: string;
+  // FX/Currency fields
+  base_currency: string;
+  quote_currency: string;
+  spot_rate: string;
+  base_interest_rate: string;
+  quote_interest_rate: string;
+  forward_rate_3m: string;
+  forward_rate_12m: string;
+  fx_volatility_30d: string;
+  fx_atr: string;
+  support_level: string;
+  resistance_level: string;
+  base_inflation_rate: string;
+  quote_inflation_rate: string;
+  base_current_account: string;
+  quote_current_account: string;
+  base_credit_rating: string;
+  quote_credit_rating: string;
 };
 
 const SECURITY_TYPES: { value: SecurityType; label: string }[] = [
@@ -241,6 +277,24 @@ const emptyFormData: SecurityFormData = {
   commodity_type: "",
   contract_size: "",
   delivery_month: "",
+  // FX/Currency fields
+  base_currency: "",
+  quote_currency: "",
+  spot_rate: "",
+  base_interest_rate: "",
+  quote_interest_rate: "",
+  forward_rate_3m: "",
+  forward_rate_12m: "",
+  fx_volatility_30d: "",
+  fx_atr: "",
+  support_level: "",
+  resistance_level: "",
+  base_inflation_rate: "",
+  quote_inflation_rate: "",
+  base_current_account: "",
+  quote_current_account: "",
+  base_credit_rating: "",
+  quote_credit_rating: "",
 };
 
 const parseNumber = (val: string): number | null => {
@@ -353,6 +407,24 @@ export default function SecuritiesTable() {
         commodity_type: data.commodity_type.trim() || null,
         contract_size: parseNumber(data.contract_size),
         delivery_month: data.delivery_month.trim() || null,
+        // FX/Currency fields
+        base_currency: data.base_currency.trim() || null,
+        quote_currency: data.quote_currency.trim() || null,
+        spot_rate: parseNumber(data.spot_rate),
+        base_interest_rate: parseNumber(data.base_interest_rate),
+        quote_interest_rate: parseNumber(data.quote_interest_rate),
+        forward_rate_3m: parseNumber(data.forward_rate_3m),
+        forward_rate_12m: parseNumber(data.forward_rate_12m),
+        fx_volatility_30d: parseNumber(data.fx_volatility_30d),
+        fx_atr: parseNumber(data.fx_atr),
+        support_level: parseNumber(data.support_level),
+        resistance_level: parseNumber(data.resistance_level),
+        base_inflation_rate: parseNumber(data.base_inflation_rate),
+        quote_inflation_rate: parseNumber(data.quote_inflation_rate),
+        base_current_account: parseNumber(data.base_current_account),
+        quote_current_account: parseNumber(data.quote_current_account),
+        base_credit_rating: data.base_credit_rating.trim() || null,
+        quote_credit_rating: data.quote_credit_rating.trim() || null,
         user_id: user.id,
       });
       if (error) throw error;
@@ -419,6 +491,24 @@ export default function SecuritiesTable() {
           commodity_type: data.commodity_type.trim() || null,
           contract_size: parseNumber(data.contract_size),
           delivery_month: data.delivery_month.trim() || null,
+          // FX/Currency fields
+          base_currency: data.base_currency.trim() || null,
+          quote_currency: data.quote_currency.trim() || null,
+          spot_rate: parseNumber(data.spot_rate),
+          base_interest_rate: parseNumber(data.base_interest_rate),
+          quote_interest_rate: parseNumber(data.quote_interest_rate),
+          forward_rate_3m: parseNumber(data.forward_rate_3m),
+          forward_rate_12m: parseNumber(data.forward_rate_12m),
+          fx_volatility_30d: parseNumber(data.fx_volatility_30d),
+          fx_atr: parseNumber(data.fx_atr),
+          support_level: parseNumber(data.support_level),
+          resistance_level: parseNumber(data.resistance_level),
+          base_inflation_rate: parseNumber(data.base_inflation_rate),
+          quote_inflation_rate: parseNumber(data.quote_inflation_rate),
+          base_current_account: parseNumber(data.base_current_account),
+          quote_current_account: parseNumber(data.quote_current_account),
+          base_credit_rating: data.base_credit_rating.trim() || null,
+          quote_credit_rating: data.quote_credit_rating.trim() || null,
         })
         .eq("id", id);
       if (error) throw error;
@@ -504,6 +594,24 @@ export default function SecuritiesTable() {
       commodity_type: security.commodity_type || "",
       contract_size: formatNumberField(security.contract_size),
       delivery_month: security.delivery_month || "",
+      // FX/Currency fields
+      base_currency: security.base_currency || "",
+      quote_currency: security.quote_currency || "",
+      spot_rate: formatNumberField(security.spot_rate),
+      base_interest_rate: formatNumberField(security.base_interest_rate),
+      quote_interest_rate: formatNumberField(security.quote_interest_rate),
+      forward_rate_3m: formatNumberField(security.forward_rate_3m),
+      forward_rate_12m: formatNumberField(security.forward_rate_12m),
+      fx_volatility_30d: formatNumberField(security.fx_volatility_30d),
+      fx_atr: formatNumberField(security.fx_atr),
+      support_level: formatNumberField(security.support_level),
+      resistance_level: formatNumberField(security.resistance_level),
+      base_inflation_rate: formatNumberField(security.base_inflation_rate),
+      quote_inflation_rate: formatNumberField(security.quote_inflation_rate),
+      base_current_account: formatNumberField(security.base_current_account),
+      quote_current_account: formatNumberField(security.quote_current_account),
+      base_credit_rating: security.base_credit_rating || "",
+      quote_credit_rating: security.quote_credit_rating || "",
     });
     setIsDialogOpen(true);
   };
@@ -1259,7 +1367,171 @@ export default function SecuritiesTable() {
                   )}
 
                   {formData.security_type === "currency" && (
-                    <p className="text-sm text-muted-foreground">Moedas usam apenas campos básicos.</p>
+                    <>
+                      {/* Par e Estrutura */}
+                      <h4 className="text-sm font-medium text-muted-foreground border-b pb-2">Par e Estrutura</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Moeda Base</Label>
+                          <Input
+                            value={formData.base_currency}
+                            onChange={(e) => setFormData({ ...formData, base_currency: e.target.value })}
+                            placeholder="Ex: EUR"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Moeda Cotação</Label>
+                          <Input
+                            value={formData.quote_currency}
+                            onChange={(e) => setFormData({ ...formData, quote_currency: e.target.value })}
+                            placeholder="Ex: USD"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Spot Rate</Label>
+                        <Input
+                          value={formData.spot_rate}
+                          onChange={(e) => setFormData({ ...formData, spot_rate: e.target.value })}
+                          placeholder="Ex: 1,0850"
+                        />
+                      </div>
+
+                      {/* Taxas de Juro */}
+                      <h4 className="text-sm font-medium text-muted-foreground border-b pb-2 pt-4">Taxas de Juro</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Taxa Juro Base (%)</Label>
+                          <Input
+                            value={formData.base_interest_rate}
+                            onChange={(e) => setFormData({ ...formData, base_interest_rate: e.target.value })}
+                            placeholder="Ex: 4,25"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Taxa Juro Cotação (%)</Label>
+                          <Input
+                            value={formData.quote_interest_rate}
+                            onChange={(e) => setFormData({ ...formData, quote_interest_rate: e.target.value })}
+                            placeholder="Ex: 5,25"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Forward Rate 3M</Label>
+                          <Input
+                            value={formData.forward_rate_3m}
+                            onChange={(e) => setFormData({ ...formData, forward_rate_3m: e.target.value })}
+                            placeholder="Ex: 1,0875"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Forward Rate 12M</Label>
+                          <Input
+                            value={formData.forward_rate_12m}
+                            onChange={(e) => setFormData({ ...formData, forward_rate_12m: e.target.value })}
+                            placeholder="Ex: 1,0920"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Volatilidade e Técnicos */}
+                      <h4 className="text-sm font-medium text-muted-foreground border-b pb-2 pt-4">Volatilidade e Técnicos</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Volatilidade 30D (%)</Label>
+                          <Input
+                            value={formData.fx_volatility_30d}
+                            onChange={(e) => setFormData({ ...formData, fx_volatility_30d: e.target.value })}
+                            placeholder="Ex: 8,5"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>ATR</Label>
+                          <Input
+                            value={formData.fx_atr}
+                            onChange={(e) => setFormData({ ...formData, fx_atr: e.target.value })}
+                            placeholder="Ex: 0,0085"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Suporte</Label>
+                          <Input
+                            value={formData.support_level}
+                            onChange={(e) => setFormData({ ...formData, support_level: e.target.value })}
+                            placeholder="Ex: 1,0750"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Resistência</Label>
+                          <Input
+                            value={formData.resistance_level}
+                            onChange={(e) => setFormData({ ...formData, resistance_level: e.target.value })}
+                            placeholder="Ex: 1,1050"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Macro */}
+                      <h4 className="text-sm font-medium text-muted-foreground border-b pb-2 pt-4">Macro e Risco</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Inflação Base (%)</Label>
+                          <Input
+                            value={formData.base_inflation_rate}
+                            onChange={(e) => setFormData({ ...formData, base_inflation_rate: e.target.value })}
+                            placeholder="Ex: 2,4"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Inflação Cotação (%)</Label>
+                          <Input
+                            value={formData.quote_inflation_rate}
+                            onChange={(e) => setFormData({ ...formData, quote_inflation_rate: e.target.value })}
+                            placeholder="Ex: 3,2"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Conta Corrente Base (% PIB)</Label>
+                          <Input
+                            value={formData.base_current_account}
+                            onChange={(e) => setFormData({ ...formData, base_current_account: e.target.value })}
+                            placeholder="Ex: 2,5"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Conta Corrente Cotação (% PIB)</Label>
+                          <Input
+                            value={formData.quote_current_account}
+                            onChange={(e) => setFormData({ ...formData, quote_current_account: e.target.value })}
+                            placeholder="Ex: -3,2"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Rating Crédito Base</Label>
+                          <Input
+                            value={formData.base_credit_rating}
+                            onChange={(e) => setFormData({ ...formData, base_credit_rating: e.target.value })}
+                            placeholder="Ex: AAA"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Rating Crédito Cotação</Label>
+                          <Input
+                            value={formData.quote_credit_rating}
+                            onChange={(e) => setFormData({ ...formData, quote_credit_rating: e.target.value })}
+                            placeholder="Ex: AA+"
+                          />
+                        </div>
+                      </div>
+                    </>
                   )}
                 </TabsContent>
               </ScrollArea>
