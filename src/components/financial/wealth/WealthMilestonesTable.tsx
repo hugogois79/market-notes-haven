@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -147,20 +147,27 @@ export default function WealthMilestonesTable() {
     if (milestone.asset_id) {
       const assetValue = getAssetValue(milestone.asset_id);
       if (assetValue !== null) {
-        // For sell: progress is how close the asset value is to target
-        // For buy: progress could be savings towards purchase (use portfolio as proxy)
         if (milestone.milestone_type === "sell") {
           return Math.min((assetValue / milestone.target_value) * 100, 100);
         }
       }
     }
     
-    // Default to portfolio-based progress
     return Math.min((currentPortfolioValue / milestone.target_value) * 100, 100);
   };
 
   const activeMilestones = milestones.filter((m) => m.status === "active");
   const completedMilestones = milestones.filter((m) => m.status !== "active");
+
+  // Group active milestones by type
+  const groupedActiveMilestones = activeMilestones.reduce((acc, milestone) => {
+    const type = milestone.milestone_type || "portfolio";
+    if (!acc[type]) acc[type] = [];
+    acc[type].push(milestone);
+    return acc;
+  }, {} as Record<string, WealthMilestone[]>);
+
+  const typeOrder = ["sell", "buy", "portfolio"];
 
   if (isLoading) {
     return (
@@ -185,12 +192,11 @@ export default function WealthMilestonesTable() {
         </Button>
       </div>
 
-      {/* Active Milestones */}
+      {/* Active Milestones grouped by type */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[60px]">Tipo</TableHead>
               <TableHead className="w-[220px]">Milestone</TableHead>
               <TableHead>Ativo</TableHead>
               <TableHead className="text-right">Valor Alvo</TableHead>
@@ -203,90 +209,108 @@ export default function WealthMilestonesTable() {
           <TableBody>
             {activeMilestones.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   Sem milestones ativos. Crie o primeiro milestone para acompanhar os seus objetivos.
                 </TableCell>
               </TableRow>
             ) : (
-              activeMilestones.map((milestone) => {
-                const progress = calculateProgress(milestone);
-                const statusCfg = statusConfig[milestone.status || "active"];
-                const StatusIcon = statusCfg.icon;
-                const typeCfg = typeConfig[milestone.milestone_type || "portfolio"];
+              typeOrder.map((type) => {
+                const milestonesOfType = groupedActiveMilestones[type];
+                if (!milestonesOfType || milestonesOfType.length === 0) return null;
+
+                const typeCfg = typeConfig[type];
                 const TypeIcon = typeCfg.icon;
-                const assetName = getAssetName(milestone.asset_id);
-                const remaining = milestone.target_value - (milestone.milestone_type === "portfolio" ? currentPortfolioValue : (getAssetValue(milestone.asset_id) || 0));
 
                 return (
-                  <TableRow key={milestone.id}>
-                    <TableCell>
-                      <TypeIcon className={cn("h-4 w-4", typeCfg.color)} />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{milestone.name}</span>
-                        {milestone.description && (
-                          <span className="text-xs text-muted-foreground line-clamp-1">
-                            {milestone.description}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {assetName ? (
-                        <Badge variant="outline" className="text-xs">
-                          {assetName}
-                        </Badge>
-                      ) : milestone.category ? (
-                        <span className="text-sm text-muted-foreground">{milestone.category}</span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(milestone.target_value)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <Progress value={progress} className="h-2" />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>{progress.toFixed(1)}%</span>
-                          <span>{remaining > 0 ? `${formatCurrency(remaining)} restante` : "Meta atingida!"}</span>
+                  <React.Fragment key={`group-${type}`}>
+                    {/* Type Header Row */}
+                    <TableRow className="bg-muted/50">
+                      <TableCell colSpan={7} className="font-semibold">
+                        <div className="flex items-center gap-2">
+                          <TypeIcon className={cn("h-4 w-4", typeCfg.color)} />
+                          {typeCfg.label} ({milestonesOfType.length})
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {milestone.target_date
-                        ? format(new Date(milestone.target_date), "dd MMM yyyy", { locale: pt })
-                        : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={cn("text-xs gap-1", statusCfg.color)}>
-                        <StatusIcon className="h-3 w-3" />
-                        {statusCfg.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => handleEdit(milestone)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive"
-                          onClick={() => deleteMutation.mutate(milestone.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                      </TableCell>
+                    </TableRow>
+
+                    {/* Milestones of this type */}
+                    {milestonesOfType.map((milestone) => {
+                      const progress = calculateProgress(milestone);
+                      const statusCfg = statusConfig[milestone.status || "active"];
+                      const StatusIcon = statusCfg.icon;
+                      const assetName = getAssetName(milestone.asset_id);
+                      const remaining = milestone.target_value - (milestone.milestone_type === "portfolio" ? currentPortfolioValue : (getAssetValue(milestone.asset_id) || 0));
+
+                      return (
+                        <TableRow key={milestone.id}>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{milestone.name}</span>
+                              {milestone.description && (
+                                <span className="text-xs text-muted-foreground line-clamp-1">
+                                  {milestone.description}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {assetName ? (
+                              <Badge variant="outline" className="text-xs">
+                                {assetName}
+                              </Badge>
+                            ) : milestone.category ? (
+                              <span className="text-sm text-muted-foreground">{milestone.category}</span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(milestone.target_value)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <Progress value={progress} className="h-2" />
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>{progress.toFixed(1)}%</span>
+                                <span>{remaining > 0 ? `${formatCurrency(remaining)} restante` : "Meta atingida!"}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {milestone.target_date
+                              ? format(new Date(milestone.target_date), "dd MMM yyyy", { locale: pt })
+                              : "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={cn("text-xs gap-1", statusCfg.color)}>
+                              <StatusIcon className="h-3 w-3" />
+                              {statusCfg.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => handleEdit(milestone)}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive"
+                                onClick={() => deleteMutation.mutate(milestone.id)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </React.Fragment>
                 );
               })
             )}
