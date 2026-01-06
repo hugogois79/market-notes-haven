@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { TrendingUp, TrendingDown, Minus, RefreshCw, Plus, Pencil, Trash2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, RefreshCw, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { toast } from "sonner";
@@ -326,6 +326,65 @@ export default function SecuritiesTable() {
   const [editingSecurity, setEditingSecurity] = useState<Security | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [formData, setFormData] = useState<SecurityFormData>(emptyFormData);
+  const [isFetchingData, setIsFetchingData] = useState(false);
+
+  // n8n webhook URL for fetching security data
+  const N8N_SECURITY_WEBHOOK = "https://diogofernandes.app.n8n.cloud/webhook/security-data";
+
+  const handleFetchSecurityData = async () => {
+    if (!formData.ticker.trim()) {
+      toast.error("Insira um ticker primeiro");
+      return;
+    }
+
+    setIsFetchingData(true);
+    try {
+      const response = await fetch(N8N_SECURITY_WEBHOOK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticker: formData.ticker.trim().toUpperCase(),
+          type: formData.security_type,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Update form with fetched data
+        if (data) {
+          setFormData((prev) => ({
+            ...prev,
+            name: data.name || prev.name,
+            isin: data.isin || prev.isin,
+            currency: data.currency || prev.currency,
+            sector: data.sector || prev.sector,
+            industry: data.industry || prev.industry,
+            market_cap: data.market_cap ? String(data.market_cap) : prev.market_cap,
+            pe_ratio: data.pe_ratio ? String(data.pe_ratio) : prev.pe_ratio,
+            eps: data.eps ? String(data.eps) : prev.eps,
+            dividend_yield: data.dividend_yield ? String(data.dividend_yield) : prev.dividend_yield,
+            // ETF fields
+            expense_ratio: data.expense_ratio ? String(data.expense_ratio) : prev.expense_ratio,
+            aum: data.aum ? String(data.aum) : prev.aum,
+            tracking_index: data.tracking_index || prev.tracking_index,
+            nav: data.nav ? String(data.nav) : prev.nav,
+            // Bond fields
+            coupon_rate: data.coupon_rate ? String(data.coupon_rate) : prev.coupon_rate,
+            yield_to_maturity: data.yield_to_maturity ? String(data.yield_to_maturity) : prev.yield_to_maturity,
+            credit_rating: data.credit_rating || prev.credit_rating,
+          }));
+          toast.success("Dados obtidos com sucesso");
+        }
+      } else {
+        toast.error("Erro ao obter dados do ticker");
+      }
+    } catch (error) {
+      console.error("Error fetching security data:", error);
+      toast.info("Pedido enviado ao n8n");
+    } finally {
+      setIsFetchingData(false);
+    }
+  };
 
   // Fetch securities
   const { data: securities = [], isLoading: loadingSecurities } = useQuery({
@@ -858,6 +917,7 @@ export default function SecuritiesTable() {
               
               <ScrollArea className="h-[400px] pr-4 mt-4">
                 <TabsContent value="basic" className="space-y-4 mt-0">
+                  {/* Tipo + Ticker (com botão refresh) */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="security_type">Tipo *</Label>
@@ -878,6 +938,47 @@ export default function SecuritiesTable() {
                       </Select>
                     </div>
                     <div className="space-y-2">
+                      <Label htmlFor="ticker">Ticker</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="ticker"
+                          value={formData.ticker}
+                          onChange={(e) => setFormData({ ...formData, ticker: e.target.value.toUpperCase() })}
+                          placeholder="Ex: AAPL"
+                          maxLength={20}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={handleFetchSecurityData}
+                          disabled={isFetchingData || !formData.ticker.trim()}
+                          title="Obter dados do ticker via n8n"
+                        >
+                          {isFetchingData ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Nome + Moeda */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Nome *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Ex: Apple Inc."
+                        maxLength={100}
+                      />
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="currency">Moeda</Label>
                       <Select
                         value={formData.currency}
@@ -896,28 +997,8 @@ export default function SecuritiesTable() {
                       </Select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Nome *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="Ex: Apple Inc."
-                        maxLength={100}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="ticker">Ticker</Label>
-                      <Input
-                        id="ticker"
-                        value={formData.ticker}
-                        onChange={(e) => setFormData({ ...formData, ticker: e.target.value.toUpperCase() })}
-                        placeholder="Ex: AAPL"
-                        maxLength={20}
-                      />
-                    </div>
-                  </div>
+                  
+                  {/* ISIN + Setor */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="isin">ISIN</Label>
@@ -939,6 +1020,8 @@ export default function SecuritiesTable() {
                       />
                     </div>
                   </div>
+                  
+                  {/* Indústria */}
                   <div className="space-y-2">
                     <Label htmlFor="industry">Indústria</Label>
                     <Input
