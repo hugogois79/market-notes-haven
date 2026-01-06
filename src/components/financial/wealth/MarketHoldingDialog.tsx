@@ -264,15 +264,9 @@ export default function MarketHoldingDialog({
   };
 
   const handleNumberChange = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/[^\d,.-]/g, "");
-    const normalized = raw.replace(",", ".");
-    const num = parseFloat(normalized);
-    if (!isNaN(num)) {
-      const formatted = num.toLocaleString("pt-PT", { maximumFractionDigits: 2 });
-      setValue(field, formatted);
-    } else if (raw === "" || raw === "-") {
-      setValue(field, raw);
-    }
+    // Permitir números, vírgula, ponto, menos e espaços
+    const raw = e.target.value.replace(/[^\d,.\-\s]/g, "");
+    setValue(field, raw);
   };
 
   return (
