@@ -170,22 +170,19 @@ export default function WealthAssetsTable() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Portfolio de Ativos</h3>
-          <p className="text-sm text-muted-foreground">
-            Valor Total: {formatCurrency(totalValue)} | P/L:{" "}
-            <span className={cn(totalPL >= 0 ? "text-green-500" : "text-red-500")}>
-              {formatCurrency(totalPL)}
-            </span>
-          </p>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          Valor Total: {formatCurrency(totalValue)} | P/L:{" "}
+          <span className={cn(totalPL >= 0 ? "text-green-500" : "text-red-500")}>
+            {formatCurrency(totalPL)}
+          </span>
+        </p>
         <Button onClick={handleAdd} size="sm">
           <Plus className="h-4 w-4 mr-2" />
           Novo Ativo
         </Button>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border text-xs">
         <Table>
           <TableHeader>
             <TableRow>
