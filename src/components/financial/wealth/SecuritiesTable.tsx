@@ -352,11 +352,15 @@ export default function SecuritiesTable() {
       if (result.success && result.data) {
         setFormData(prev => ({
           ...prev,
+          // Campos base
           name: result.data.name || prev.name,
           currency: result.data.currency || prev.currency,
           sector: result.data.sector || prev.sector,
           industry: result.data.industry || prev.industry,
           isin: result.data.isin || prev.isin,
+          exchange: result.data.exchange || prev.exchange,
+          
+          // Campos Equity
           market_cap: result.data.market_cap || prev.market_cap,
           eps: result.data.eps || prev.eps,
           pe_ratio: result.data.pe_ratio || prev.pe_ratio,
@@ -370,6 +374,23 @@ export default function SecuritiesTable() {
           interest_coverage: result.data.interest_coverage || prev.interest_coverage,
           dividend_yield: result.data.dividend_yield || prev.dividend_yield,
           payout_ratio: result.data.payout_ratio || prev.payout_ratio,
+          
+          // Campos ETF
+          expense_ratio: result.data.expense_ratio || prev.expense_ratio,
+          aum: result.data.aum || prev.aum,
+          nav: result.data.nav || prev.nav,
+          tracking_index: result.data.tracking_index || prev.tracking_index,
+          avg_daily_volume: result.data.avg_daily_volume || prev.avg_daily_volume,
+          domicile: result.data.domicile || prev.domicile,
+          distribution_policy: result.data.distribution_policy || prev.distribution_policy,
+          return_1y: result.data.return_1y || prev.return_1y,
+          return_3y: result.data.return_3y || prev.return_3y,
+          return_5y: result.data.return_5y || prev.return_5y,
+          nav_premium_discount: result.data.nav_premium_discount || prev.nav_premium_discount,
+          volatility: result.data.volatility || prev.volatility,
+          tracking_error: result.data.tracking_error || prev.tracking_error,
+          top_10_holdings_weight: result.data.top_10_holdings_weight || prev.top_10_holdings_weight,
+          bid_ask_spread: result.data.bid_ask_spread || prev.bid_ask_spread,
         }));
         toast.success("Dados carregados do FMP");
       } else {
