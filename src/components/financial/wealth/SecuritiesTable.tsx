@@ -339,14 +339,12 @@ export default function SecuritiesTable() {
 
     setIsFetchingData(true);
     try {
-      const response = await fetch(N8N_SECURITY_WEBHOOK, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ticker: formData.ticker.trim().toUpperCase(),
-          type: formData.security_type,
-        }),
-      });
+      const ticker = encodeURIComponent(formData.ticker.trim().toUpperCase());
+      const type = encodeURIComponent(formData.security_type);
+      const response = await fetch(
+        `${N8N_SECURITY_WEBHOOK}?ticker=${ticker}&type=${type}`,
+        { method: "GET" }
+      );
 
       if (response.ok) {
         const data = await response.json();
