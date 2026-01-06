@@ -3424,6 +3424,11 @@ export type Database = {
         Row: {
           aum: number | null
           avg_daily_volume: number | null
+          base_credit_rating: string | null
+          base_currency: string | null
+          base_current_account: number | null
+          base_inflation_rate: number | null
+          base_interest_rate: number | null
           bid_ask_spread: number | null
           blockchain: string | null
           circulating_supply: number | null
@@ -3443,6 +3448,10 @@ export type Database = {
           expense_ratio: number | null
           fcf: number | null
           fcf_yield: number | null
+          forward_rate_12m: number | null
+          forward_rate_3m: number | null
+          fx_atr: number | null
+          fx_volatility_30d: number | null
           id: string
           industry: string | null
           interest_coverage: number | null
@@ -3457,6 +3466,12 @@ export type Database = {
           payout_ratio: number | null
           pb_ratio: number | null
           pe_ratio: number | null
+          quote_credit_rating: string | null
+          quote_currency: string | null
+          quote_current_account: number | null
+          quote_inflation_rate: number | null
+          quote_interest_rate: number | null
+          resistance_level: number | null
           return_1y: number | null
           return_3y: number | null
           return_5y: number | null
@@ -3464,6 +3479,8 @@ export type Database = {
           roe: number | null
           sector: string | null
           security_type: string | null
+          spot_rate: number | null
+          support_level: number | null
           ticker: string | null
           top_10_holdings_weight: number | null
           tracking_error: number | null
@@ -3476,6 +3493,11 @@ export type Database = {
         Insert: {
           aum?: number | null
           avg_daily_volume?: number | null
+          base_credit_rating?: string | null
+          base_currency?: string | null
+          base_current_account?: number | null
+          base_inflation_rate?: number | null
+          base_interest_rate?: number | null
           bid_ask_spread?: number | null
           blockchain?: string | null
           circulating_supply?: number | null
@@ -3495,6 +3517,10 @@ export type Database = {
           expense_ratio?: number | null
           fcf?: number | null
           fcf_yield?: number | null
+          forward_rate_12m?: number | null
+          forward_rate_3m?: number | null
+          fx_atr?: number | null
+          fx_volatility_30d?: number | null
           id?: string
           industry?: string | null
           interest_coverage?: number | null
@@ -3509,6 +3535,12 @@ export type Database = {
           payout_ratio?: number | null
           pb_ratio?: number | null
           pe_ratio?: number | null
+          quote_credit_rating?: string | null
+          quote_currency?: string | null
+          quote_current_account?: number | null
+          quote_inflation_rate?: number | null
+          quote_interest_rate?: number | null
+          resistance_level?: number | null
           return_1y?: number | null
           return_3y?: number | null
           return_5y?: number | null
@@ -3516,6 +3548,8 @@ export type Database = {
           roe?: number | null
           sector?: string | null
           security_type?: string | null
+          spot_rate?: number | null
+          support_level?: number | null
           ticker?: string | null
           top_10_holdings_weight?: number | null
           tracking_error?: number | null
@@ -3528,6 +3562,11 @@ export type Database = {
         Update: {
           aum?: number | null
           avg_daily_volume?: number | null
+          base_credit_rating?: string | null
+          base_currency?: string | null
+          base_current_account?: number | null
+          base_inflation_rate?: number | null
+          base_interest_rate?: number | null
           bid_ask_spread?: number | null
           blockchain?: string | null
           circulating_supply?: number | null
@@ -3547,6 +3586,10 @@ export type Database = {
           expense_ratio?: number | null
           fcf?: number | null
           fcf_yield?: number | null
+          forward_rate_12m?: number | null
+          forward_rate_3m?: number | null
+          fx_atr?: number | null
+          fx_volatility_30d?: number | null
           id?: string
           industry?: string | null
           interest_coverage?: number | null
@@ -3561,6 +3604,12 @@ export type Database = {
           payout_ratio?: number | null
           pb_ratio?: number | null
           pe_ratio?: number | null
+          quote_credit_rating?: string | null
+          quote_currency?: string | null
+          quote_current_account?: number | null
+          quote_inflation_rate?: number | null
+          quote_interest_rate?: number | null
+          resistance_level?: number | null
           return_1y?: number | null
           return_3y?: number | null
           return_5y?: number | null
@@ -3568,6 +3617,8 @@ export type Database = {
           roe?: number | null
           sector?: string | null
           security_type?: string | null
+          spot_rate?: number | null
+          support_level?: number | null
           ticker?: string | null
           top_10_holdings_weight?: number | null
           tracking_error?: number | null
