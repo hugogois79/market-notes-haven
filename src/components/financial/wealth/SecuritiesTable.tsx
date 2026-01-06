@@ -326,61 +326,59 @@ export default function SecuritiesTable() {
   const [editingSecurity, setEditingSecurity] = useState<Security | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [formData, setFormData] = useState<SecurityFormData>(emptyFormData);
-  const [isFetchingData, setIsFetchingData] = useState(false);
+  const [isLoadingSecurityData, setIsLoadingSecurityData] = useState(false);
 
   // n8n webhook URL for fetching security data
   const N8N_SECURITY_WEBHOOK = "https://n8n.gvvcapital.com/webhook/fetch-security";
 
   const handleFetchSecurityData = async () => {
     if (!formData.ticker.trim()) {
-      toast.error("Insira um ticker primeiro");
+      toast.error("Insere um ticker primeiro");
       return;
     }
 
-    setIsFetchingData(true);
+    setIsLoadingSecurityData(true);
     try {
       const ticker = encodeURIComponent(formData.ticker.trim().toUpperCase());
       const type = encodeURIComponent(formData.security_type);
+
       const response = await fetch(
         `${N8N_SECURITY_WEBHOOK}?ticker=${ticker}&type=${type}`,
         { method: "GET" }
       );
 
-      if (response.ok) {
-        const data = await response.json();
-        // Update form with fetched data
-        if (data) {
-          setFormData((prev) => ({
-            ...prev,
-            name: data.name || prev.name,
-            isin: data.isin || prev.isin,
-            currency: data.currency || prev.currency,
-            sector: data.sector || prev.sector,
-            industry: data.industry || prev.industry,
-            market_cap: data.market_cap ? String(data.market_cap) : prev.market_cap,
-            pe_ratio: data.pe_ratio ? String(data.pe_ratio) : prev.pe_ratio,
-            eps: data.eps ? String(data.eps) : prev.eps,
-            dividend_yield: data.dividend_yield ? String(data.dividend_yield) : prev.dividend_yield,
-            // ETF fields
-            expense_ratio: data.expense_ratio ? String(data.expense_ratio) : prev.expense_ratio,
-            aum: data.aum ? String(data.aum) : prev.aum,
-            tracking_index: data.tracking_index || prev.tracking_index,
-            nav: data.nav ? String(data.nav) : prev.nav,
-            // Bond fields
-            coupon_rate: data.coupon_rate ? String(data.coupon_rate) : prev.coupon_rate,
-            yield_to_maturity: data.yield_to_maturity ? String(data.yield_to_maturity) : prev.yield_to_maturity,
-            credit_rating: data.credit_rating || prev.credit_rating,
-          }));
-          toast.success("Dados obtidos com sucesso");
-        }
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        setFormData(prev => ({
+          ...prev,
+          name: result.data.name || prev.name,
+          currency: result.data.currency || prev.currency,
+          sector: result.data.sector || prev.sector,
+          industry: result.data.industry || prev.industry,
+          isin: result.data.isin || prev.isin,
+          market_cap: result.data.market_cap || prev.market_cap,
+          eps: result.data.eps || prev.eps,
+          pe_ratio: result.data.pe_ratio || prev.pe_ratio,
+          pb_ratio: result.data.pb_ratio || prev.pb_ratio,
+          fcf: result.data.fcf || prev.fcf,
+          fcf_yield: result.data.fcf_yield || prev.fcf_yield,
+          roe: result.data.roe || prev.roe,
+          operating_margin: result.data.operating_margin || prev.operating_margin,
+          revenue_growth: result.data.revenue_growth || prev.revenue_growth,
+          debt_to_equity: result.data.debt_to_equity || prev.debt_to_equity,
+          interest_coverage: result.data.interest_coverage || prev.interest_coverage,
+          dividend_yield: result.data.dividend_yield || prev.dividend_yield,
+          payout_ratio: result.data.payout_ratio || prev.payout_ratio,
+        }));
+        toast.success("Dados carregados do FMP");
       } else {
-        toast.error("Erro ao obter dados do ticker");
+        toast.error(result.error || "Ticker não encontrado");
       }
     } catch (error) {
-      console.error("Error fetching security data:", error);
-      toast.info("Pedido enviado ao n8n");
+      toast.error("Falha ao contactar n8n");
     } finally {
-      setIsFetchingData(false);
+      setIsLoadingSecurityData(false);
     }
   };
 
@@ -951,10 +949,10 @@ export default function SecuritiesTable() {
                           variant="outline"
                           size="icon"
                           onClick={handleFetchSecurityData}
-                          disabled={isFetchingData || !formData.ticker.trim()}
+                          disabled={isLoadingSecurityData || !formData.ticker.trim()}
                           title="Obter dados do ticker"
                         >
-                          {isFetchingData ? (
+                          {isLoadingSecurityData ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <RefreshCw className="h-4 w-4" />
