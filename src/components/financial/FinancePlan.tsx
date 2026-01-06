@@ -151,13 +151,13 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
             <LayoutDashboard className="h-4 w-4" />
             Dashboard
           </TabsTrigger>
-          <TabsTrigger value="portfolio" className="flex items-center gap-2">
-            <Briefcase className="h-4 w-4" />
-            Portfolio
-          </TabsTrigger>
           <TabsTrigger value="cashflow" className="flex items-center gap-2">
             <Receipt className="h-4 w-4" />
             Cashflow
+          </TabsTrigger>
+          <TabsTrigger value="portfolio" className="flex items-center gap-2">
+            <Briefcase className="h-4 w-4" />
+            Portfolio
           </TabsTrigger>
           <TabsTrigger value="milestones" className="flex items-center gap-2">
             <Flag className="h-4 w-4" />
