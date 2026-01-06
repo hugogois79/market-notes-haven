@@ -29,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
+import SubcategoryCombobox from "./SubcategoryCombobox";
 
 type WealthAsset = {
   id: string;
@@ -206,6 +207,7 @@ export default function WealthAssetDialog({
   const purchasePrice = useWatch({ control: form.control, name: "purchase_price" });
   const purchaseDate = useWatch({ control: form.control, name: "purchase_date" });
   const currency = useWatch({ control: form.control, name: "currency" });
+  const selectedCategory = useWatch({ control: form.control, name: "category" });
 
   // Calculate P/L and Yield automatically
   const calculations = useMemo(() => {
@@ -390,7 +392,11 @@ export default function WealthAssetDialog({
                   <FormItem>
                     <FormLabel>Subcategoria</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: New Fund, Garagem Paranhos" {...field} />
+                      <SubcategoryCombobox
+                        value={field.value}
+                        onChange={field.onChange}
+                        category={selectedCategory}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
