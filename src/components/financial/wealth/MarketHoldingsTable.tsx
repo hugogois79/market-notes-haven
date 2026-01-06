@@ -145,179 +145,122 @@ export default function MarketHoldingsTable() {
     setDialogOpen(true);
   };
 
-  const toggleExpand = (assetId: string) => {
-    setExpandedAccounts((prev) => {
-      const next = new Set(prev);
-      if (next.has(assetId)) {
-        next.delete(assetId);
-      } else {
-        next.add(assetId);
-      }
-      return next;
-    });
-  };
-
-  // Group assets by subcategory
-  const subcategories = Array.from(
-    new Set(cashAssets.map((a) => a.subcategory || "Geral"))
-  ).sort();
-
-  const assetsBySubcategory = subcategories.reduce((acc, sub) => {
-    acc[sub] = cashAssets.filter((a) => (a.subcategory || "Geral") === sub);
-    return acc;
-  }, {} as Record<string, CashAsset[]>);
+  const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
 
   // Calculate totals
   const totalValue = cashAssets.reduce((sum, a) => sum + (a.current_value || 0), 0);
 
-  const renderAccountTable = (assets: CashAsset[]) => {
-    const groupTotal = assets.reduce((sum, a) => sum + (a.current_value || 0), 0);
+  // Set default active account when data loads
+  const effectiveActiveAccount = activeAccountId || (cashAssets.length > 0 ? cashAssets[0].id : null);
+
+  const renderHoldingsTable = (asset: CashAsset) => {
+    const accountWeight = totalValue > 0 ? ((asset.current_value || 0) / totalValue) * 100 : 0;
 
     return (
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[280px]">Conta / Holding</TableHead>
-              <TableHead>Ticker</TableHead>
-              <TableHead className="text-right">Valor</TableHead>
-              <TableHead className="text-right">Custo Base</TableHead>
-              <TableHead className="text-right">P/L</TableHead>
-              <TableHead className="text-right">Weight %</TableHead>
-              <TableHead className="text-right">Target %</TableHead>
-              <TableHead className="w-[100px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {assets.map((asset) => {
-              const isExpanded = expandedAccounts.has(asset.id);
-              const accountWeight = totalValue > 0 ? ((asset.current_value || 0) / totalValue) * 100 : 0;
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              Valor: <span className="font-semibold text-foreground">{formatCurrency(asset.current_value)}</span>
+              <span className="mx-2">|</span>
+              Peso: <span className="font-medium">{formatPercent(accountWeight)}</span>
+              <span className="mx-2">|</span>
+              {asset.holdings.length} holdings
+            </p>
+          </div>
+          <Button size="sm" onClick={() => handleAddHolding(asset.id, asset.name)}>
+            <Plus className="h-4 w-4 mr-1" />
+            Adicionar Holding
+          </Button>
+        </div>
 
-              return (
-                <Collapsible key={asset.id} open={isExpanded} onOpenChange={() => toggleExpand(asset.id)} asChild>
-                  <>
-                    <CollapsibleTrigger asChild>
-                      <TableRow className="bg-muted/30 cursor-pointer hover:bg-muted/50">
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {isExpanded ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                            <span>{asset.name}</span>
-                            <Badge variant="secondary" className="ml-2">
-                              {asset.holdings.length} holdings
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell></TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {formatCurrency(asset.current_value)}
-                        </TableCell>
-                        <TableCell className="text-right">—</TableCell>
-                        <TableCell className="text-right">—</TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatPercent(accountWeight)}
-                        </TableCell>
-                        <TableCell className="text-right">—</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddHolding(asset.id, asset.name);
-                            }}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent asChild>
-                      <>
-                        {asset.holdings.map((holding) => {
-                          const pl = (holding.current_value || 0) - (holding.cost_basis || 0);
-                          const plPercent = holding.cost_basis && holding.cost_basis !== 0 ? (pl / Math.abs(holding.cost_basis)) * 100 : 0;
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[240px]">Holding</TableHead>
+                <TableHead>Ticker</TableHead>
+                <TableHead>Moeda</TableHead>
+                <TableHead className="text-right">Valor</TableHead>
+                <TableHead className="text-right">Custo Base</TableHead>
+                <TableHead className="text-right">P/L</TableHead>
+                <TableHead className="text-right">Weight %</TableHead>
+                <TableHead className="text-right">Target %</TableHead>
+                <TableHead className="w-[100px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {asset.holdings.map((holding) => {
+                const pl = (holding.current_value || 0) - (holding.cost_basis || 0);
+                const plPercent = holding.cost_basis && holding.cost_basis !== 0 ? (pl / Math.abs(holding.cost_basis)) * 100 : 0;
 
-                          return (
-                            <TableRow key={holding.id} className="bg-background">
-                              <TableCell className="pl-12">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-muted-foreground">{holding.name}</span>
-                                  {holding.currency && holding.currency !== "EUR" && (
-                                    <Badge variant="outline" className="text-xs">
-                                      {holding.currency}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                {holding.ticker && (
-                                  <Badge variant="outline" className="font-mono text-xs">
-                                    {holding.ticker}
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {formatCurrency(holding.current_value)}
-                              </TableCell>
-                              <TableCell className="text-right text-muted-foreground">
-                                {holding.cost_basis ? formatCurrency(holding.cost_basis) : "—"}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {holding.cost_basis ? (
-                                  <>
-                                    <span className={pl >= 0 ? "text-green-600" : "text-red-600"}>
-                                      {formatCurrency(pl)}
-                                    </span>
-                                    <span className={`ml-1 text-xs ${pl >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                      ({plPercent.toFixed(1)}%)
-                                    </span>
-                                  </>
-                                ) : "—"}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {holding.weight_current ? formatPercent(holding.weight_current) : "—"}
-                              </TableCell>
-                              <TableCell className="text-right text-muted-foreground">
-                                {holding.weight_target ? formatPercent(holding.weight_target) : "—"}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1">
-                                  <Button variant="ghost" size="icon" onClick={() => handleEdit(holding, asset.name)}>
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-destructive"
-                                    onClick={() => setDeleteId(holding.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                        {asset.holdings.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={8} className="pl-12 text-muted-foreground text-sm">
-                              Sem holdings. Clique em + para adicionar.
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </>
-                    </CollapsibleContent>
-                  </>
-                </Collapsible>
-              );
-            })}
-          </TableBody>
-        </Table>
+                return (
+                  <TableRow key={holding.id}>
+                    <TableCell className="font-medium">{holding.name}</TableCell>
+                    <TableCell>
+                      {holding.ticker && (
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {holding.ticker}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="text-xs">
+                        {holding.currency || "EUR"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(holding.current_value)}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {holding.cost_basis ? formatCurrency(holding.cost_basis) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {holding.cost_basis ? (
+                        <>
+                          <span className={pl >= 0 ? "text-green-600" : "text-red-600"}>
+                            {formatCurrency(pl)}
+                          </span>
+                          <span className={`ml-1 text-xs ${pl >= 0 ? "text-green-600" : "text-red-600"}`}>
+                            ({plPercent.toFixed(1)}%)
+                          </span>
+                        </>
+                      ) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {holding.weight_current ? formatPercent(holding.weight_current) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {holding.weight_target ? formatPercent(holding.weight_target) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(holding, asset.name)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          onClick={() => setDeleteId(holding.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {asset.holdings.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                    Sem holdings nesta conta. Clique em "Adicionar Holding" para começar.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     );
   };
@@ -326,46 +269,41 @@ export default function MarketHoldingsTable() {
     return <div className="text-center py-8 text-muted-foreground">A carregar...</div>;
   }
 
+  const activeAsset = cashAssets.find(a => a.id === effectiveActiveAccount);
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Contas de Mercado</h3>
-          <p className="text-sm text-muted-foreground">
-            Total: {formatCurrency(totalValue)} | {cashAssets.length} contas
-          </p>
-        </div>
+      <div>
+        <h3 className="text-lg font-semibold">Contas de Mercado</h3>
+        <p className="text-sm text-muted-foreground">
+          Total: {formatCurrency(totalValue)} | {cashAssets.length} contas
+        </p>
       </div>
 
-      {subcategories.length === 0 ? (
+      {cashAssets.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           Nenhuma conta Cash encontrada. Adicione ativos com categoria "Cash" no Portfolio.
         </div>
-      ) : subcategories.length === 1 ? (
-        // If only one subcategory, don't show tabs
-        renderAccountTable(cashAssets)
       ) : (
-        // Show tabs for multiple subcategories
-        <Tabs defaultValue={subcategories[0]} className="space-y-4">
-          <TabsList>
-            {subcategories.map((sub) => {
-              const subAssets = assetsBySubcategory[sub];
-              const subTotal = subAssets.reduce((s, a) => s + (a.current_value || 0), 0);
+        <Tabs value={effectiveActiveAccount || undefined} onValueChange={setActiveAccountId} className="space-y-4">
+          <TabsList className="flex-wrap h-auto gap-1">
+            {cashAssets.map((asset) => {
+              const accountWeight = totalValue > 0 ? ((asset.current_value || 0) / totalValue) * 100 : 0;
               return (
-                <TabsTrigger key={sub} value={sub} className="flex items-center gap-2">
-                  <Wallet className="h-4 w-4" />
-                  {sub}
-                  <Badge variant="secondary" className="ml-1">
-                    {formatCurrency(subTotal)}
+                <TabsTrigger key={asset.id} value={asset.id} className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  {asset.name}
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {asset.holdings.length}
                   </Badge>
                 </TabsTrigger>
               );
             })}
           </TabsList>
 
-          {subcategories.map((sub) => (
-            <TabsContent key={sub} value={sub}>
-              {renderAccountTable(assetsBySubcategory[sub])}
+          {cashAssets.map((asset) => (
+            <TabsContent key={asset.id} value={asset.id}>
+              {renderHoldingsTable(asset)}
             </TabsContent>
           ))}
         </Tabs>
