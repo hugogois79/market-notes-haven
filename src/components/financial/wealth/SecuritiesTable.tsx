@@ -147,6 +147,11 @@ type Security = {
   analyst_target_high: number | null;
   analyst_target_low: number | null;
   analyst_count: number | null;
+  analyst_last_month_count: number | null;
+  analyst_last_month_avg: number | null;
+  analyst_last_quarter_count: number | null;
+  analyst_last_quarter_avg: number | null;
+  analyst_publishers: string[] | null;
   recent_analyses: RecentAnalysis[] | null;
   // Price fields
   current_price: number | null;
@@ -247,6 +252,11 @@ type SecurityFormData = {
   analyst_target_high: string;
   analyst_target_low: string;
   analyst_count: string;
+  analyst_last_month_count: string;
+  analyst_last_month_avg: string;
+  analyst_last_quarter_count: string;
+  analyst_last_quarter_avg: string;
+  analyst_publishers: string[];
   recent_analyses: RecentAnalysis[] | null;
   // Price field
   current_price: string;
@@ -342,6 +352,11 @@ const emptyFormData: SecurityFormData = {
   analyst_target_high: "",
   analyst_target_low: "",
   analyst_count: "",
+  analyst_last_month_count: "",
+  analyst_last_month_avg: "",
+  analyst_last_quarter_count: "",
+  analyst_last_quarter_avg: "",
+  analyst_publishers: [],
   recent_analyses: null,
   // Price field
   current_price: "",
@@ -458,6 +473,11 @@ export default function SecuritiesTable() {
           analyst_target_high: result.data.analyst_target_high?.toString().replace(".", ",") || prev.analyst_target_high,
           analyst_target_low: result.data.analyst_target_low?.toString().replace(".", ",") || prev.analyst_target_low,
           analyst_count: result.data.analyst_count?.toString() || prev.analyst_count,
+          analyst_last_month_count: result.data.analyst_last_month_count?.toString() || prev.analyst_last_month_count,
+          analyst_last_month_avg: result.data.analyst_last_month_avg?.toString().replace(".", ",") || prev.analyst_last_month_avg,
+          analyst_last_quarter_count: result.data.analyst_last_quarter_count?.toString() || prev.analyst_last_quarter_count,
+          analyst_last_quarter_avg: result.data.analyst_last_quarter_avg?.toString().replace(".", ",") || prev.analyst_last_quarter_avg,
+          analyst_publishers: result.data.analyst_publishers || prev.analyst_publishers || [],
           recent_analyses: result.data.recent_analyses?.map((a: any) => ({
             analyst: a.analyst || a.analystName,
             company: a.company || a.analystCompany,
@@ -588,6 +608,11 @@ export default function SecuritiesTable() {
         analyst_target_high: parseNumber(data.analyst_target_high),
         analyst_target_low: parseNumber(data.analyst_target_low),
         analyst_count: parseNumber(data.analyst_count),
+        analyst_last_month_count: parseInt(data.analyst_last_month_count) || null,
+        analyst_last_month_avg: parseNumber(data.analyst_last_month_avg),
+        analyst_last_quarter_count: parseInt(data.analyst_last_quarter_count) || null,
+        analyst_last_quarter_avg: parseNumber(data.analyst_last_quarter_avg),
+        analyst_publishers: data.analyst_publishers.length > 0 ? data.analyst_publishers : null,
         recent_analyses: data.recent_analyses,
         // Price fields
         current_price: parseNumber(data.current_price),
@@ -681,6 +706,11 @@ export default function SecuritiesTable() {
           analyst_target_high: parseNumber(data.analyst_target_high),
           analyst_target_low: parseNumber(data.analyst_target_low),
           analyst_count: parseNumber(data.analyst_count),
+          analyst_last_month_count: parseInt(data.analyst_last_month_count) || null,
+          analyst_last_month_avg: parseNumber(data.analyst_last_month_avg),
+          analyst_last_quarter_count: parseInt(data.analyst_last_quarter_count) || null,
+          analyst_last_quarter_avg: parseNumber(data.analyst_last_quarter_avg),
+          analyst_publishers: data.analyst_publishers.length > 0 ? data.analyst_publishers : null,
           recent_analyses: data.recent_analyses,
           // Price fields
           current_price: parseNumber(data.current_price),
@@ -793,6 +823,11 @@ export default function SecuritiesTable() {
       analyst_target_high: formatNumberField(security.analyst_target_high),
       analyst_target_low: formatNumberField(security.analyst_target_low),
       analyst_count: formatNumberField(security.analyst_count),
+      analyst_last_month_count: formatNumberField(security.analyst_last_month_count),
+      analyst_last_month_avg: formatNumberField(security.analyst_last_month_avg),
+      analyst_last_quarter_count: formatNumberField(security.analyst_last_quarter_count),
+      analyst_last_quarter_avg: formatNumberField(security.analyst_last_quarter_avg),
+      analyst_publishers: (security.analyst_publishers as string[]) || [],
       recent_analyses: security.recent_analyses,
       // Price field
       current_price: formatNumberField(security.current_price),
@@ -1622,48 +1657,58 @@ export default function SecuritiesTable() {
                         </div>
                       </div>
                       
-                      {/* Recent Analyses - Read-only display */}
-                      {formData.recent_analyses && formData.recent_analyses.length > 0 && (
+                      {/* Analyst History - Mini table */}
+                      {(formData.analyst_last_month_count || formData.analyst_last_quarter_count) && (
                         <>
-                          <h4 className="text-sm font-medium text-muted-foreground border-b pb-2 pt-4">Análises Recentes</h4>
+                          <h4 className="text-sm font-medium text-muted-foreground border-b pb-2 pt-4">Histórico de Análises</h4>
                           <div className="rounded-md border">
                             <Table>
                               <TableHeader>
                                 <TableRow>
-                                  <TableHead className="text-xs">Analista</TableHead>
-                                  <TableHead className="text-xs">Empresa</TableHead>
-                                  <TableHead className="text-xs text-right">Target</TableHead>
-                                  <TableHead className="text-xs text-right">Data</TableHead>
-                                  <TableHead className="text-xs">Recomendação</TableHead>
+                                  <TableHead className="text-xs">Período</TableHead>
+                                  <TableHead className="text-xs text-center">Análises</TableHead>
+                                  <TableHead className="text-xs text-right">Média</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {formData.recent_analyses.map((analysis, idx) => {
-                                  const gradeStyle = analysis.grade ? getGradeStyle(analysis.grade) : null;
-                                  const GradeIcon = gradeStyle?.icon;
-                                  return (
-                                    <TableRow key={idx}>
-                                      <TableCell className="text-xs font-medium">{analysis.analyst}</TableCell>
-                                      <TableCell className="text-xs text-muted-foreground">{analysis.company}</TableCell>
-                                      <TableCell className="text-xs text-right font-mono">
-                                        {formatCurrency(analysis.target, formData.currency)}
-                                      </TableCell>
-                                      <TableCell className="text-xs text-right text-muted-foreground">
-                                        {analysis.date}
-                                      </TableCell>
-                                      <TableCell className="text-xs">
-                                        {analysis.grade && gradeStyle && GradeIcon && (
-                                          <Badge variant="outline" className={`${gradeStyle.color} text-xs`}>
-                                            <GradeIcon className="h-3 w-3 mr-1" />
-                                            {analysis.grade}
-                                          </Badge>
-                                        )}
-                                      </TableCell>
-                                    </TableRow>
-                                  );
-                                })}
+                                <TableRow>
+                                  <TableCell className="text-xs">Último mês</TableCell>
+                                  <TableCell className="text-xs text-center font-mono">
+                                    {formData.analyst_last_month_count || "—"}
+                                  </TableCell>
+                                  <TableCell className="text-xs text-right font-mono">
+                                    {formData.analyst_last_month_avg 
+                                      ? formatCurrency(parseNumber(formData.analyst_last_month_avg) || 0, formData.currency)
+                                      : "—"}
+                                  </TableCell>
+                                </TableRow>
+                                <TableRow>
+                                  <TableCell className="text-xs">Último trimestre</TableCell>
+                                  <TableCell className="text-xs text-center font-mono">
+                                    {formData.analyst_last_quarter_count || "—"}
+                                  </TableCell>
+                                  <TableCell className="text-xs text-right font-mono">
+                                    {formData.analyst_last_quarter_avg 
+                                      ? formatCurrency(parseNumber(formData.analyst_last_quarter_avg) || 0, formData.currency)
+                                      : "—"}
+                                  </TableCell>
+                                </TableRow>
                               </TableBody>
                             </Table>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Publisher Badges */}
+                      {formData.analyst_publishers && formData.analyst_publishers.length > 0 && (
+                        <>
+                          <h4 className="text-sm font-medium text-muted-foreground border-b pb-2 pt-4">Fontes</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {formData.analyst_publishers.map((publisher, idx) => (
+                              <Badge key={idx} variant="secondary" className="text-xs">
+                                {publisher}
+                              </Badge>
+                            ))}
                           </div>
                         </>
                       )}
