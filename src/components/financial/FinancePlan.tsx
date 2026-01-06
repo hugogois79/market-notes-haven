@@ -98,8 +98,9 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
       queryClient.invalidateQueries({ queryKey: ["portfolio-snapshots"] });
       toast.success("Snapshot guardado com sucesso");
     },
-    onError: () => {
-      toast.error("Erro ao guardar snapshot");
+    onError: (error: Error) => {
+      console.error("Snapshot error:", error);
+      toast.error(`Erro ao guardar snapshot: ${error.message}`);
     },
   });
 
