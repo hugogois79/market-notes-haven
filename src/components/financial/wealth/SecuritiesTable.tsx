@@ -430,11 +430,15 @@ export default function SecuritiesTable() {
       const result = await response.json();
 
       if (result.success && result.data) {
+        // Log para debug
+        console.log(`[${formData.security_type}] Dados recebidos do n8n:`, result.data);
+        
         // Helper para converter decimal para percentagem (ex: 0.0039 -> 0.39)
         const toPercent = (val: any): string => {
           if (val === null || val === undefined || val === "") return "";
           const num = parseFloat(val);
-          return isNaN(num) ? "" : (num * 100).toFixed(4).replace(".", ",");
+          if (isNaN(num)) return "";
+          return (num * 100).toFixed(4).replace(".", ",");
         };
 
         setFormData(prev => ({
@@ -448,40 +452,40 @@ export default function SecuritiesTable() {
           exchange: result.data.exchange || prev.exchange,
           
           // Campos Equity - valores absolutos
-          market_cap: result.data.market_cap || prev.market_cap,
+          market_cap: result.data.market_cap || result.data.marketCap || prev.market_cap,
           eps: result.data.eps || prev.eps,
-          pe_ratio: result.data.pe_ratio || prev.pe_ratio,
-          pb_ratio: result.data.pb_ratio || prev.pb_ratio,
+          pe_ratio: result.data.pe_ratio || result.data.peRatio || prev.pe_ratio,
+          pb_ratio: result.data.pb_ratio || result.data.pbRatio || prev.pb_ratio,
           fcf: result.data.fcf || prev.fcf,
-          debt_to_equity: result.data.debt_to_equity || prev.debt_to_equity,
-          interest_coverage: result.data.interest_coverage || prev.interest_coverage,
+          debt_to_equity: result.data.debt_to_equity || result.data.debtToEquity || prev.debt_to_equity,
+          interest_coverage: result.data.interest_coverage || result.data.interestCoverage || prev.interest_coverage,
           
           // Campos Equity - percentagens (convertidas de decimal)
-          fcf_yield: toPercent(result.data.fcf_yield) || prev.fcf_yield,
-          roe: toPercent(result.data.roe) || prev.roe,
-          operating_margin: toPercent(result.data.operating_margin) || prev.operating_margin,
-          revenue_growth: toPercent(result.data.revenue_growth) || prev.revenue_growth,
-          dividend_yield: toPercent(result.data.dividend_yield) || prev.dividend_yield,
-          payout_ratio: toPercent(result.data.payout_ratio) || prev.payout_ratio,
+          fcf_yield: toPercent(result.data.fcf_yield || result.data.fcfYield) || prev.fcf_yield,
+          roe: toPercent(result.data.roe || result.data.returnOnEquity) || prev.roe,
+          operating_margin: toPercent(result.data.operating_margin || result.data.operatingMargin) || prev.operating_margin,
+          revenue_growth: toPercent(result.data.revenue_growth || result.data.revenueGrowth) || prev.revenue_growth,
+          dividend_yield: toPercent(result.data.dividend_yield || result.data.dividendYield) || prev.dividend_yield,
+          payout_ratio: toPercent(result.data.payout_ratio || result.data.payoutRatio) || prev.payout_ratio,
           
-          // Campos ETF - valores absolutos
-          aum: result.data.aum || prev.aum,
-          nav: result.data.nav || prev.nav,
-          tracking_index: result.data.tracking_index || prev.tracking_index,
-          avg_daily_volume: result.data.avg_daily_volume || prev.avg_daily_volume,
-          domicile: result.data.domicile || prev.domicile,
-          distribution_policy: result.data.distribution_policy || prev.distribution_policy,
+          // Campos ETF - valores absolutos (aceitar múltiplos nomes possíveis)
+          aum: (result.data.aum || result.data.totalAssets || result.data.AUM)?.toString() || prev.aum,
+          nav: (result.data.nav || result.data.navPrice || result.data.NAV)?.toString().replace(".", ",") || prev.nav,
+          tracking_index: result.data.tracking_index || result.data.trackingIndex || result.data.index || prev.tracking_index,
+          avg_daily_volume: (result.data.avg_daily_volume || result.data.avgVolume || result.data.volume)?.toString() || prev.avg_daily_volume,
+          domicile: result.data.domicile || result.data.country || prev.domicile,
+          distribution_policy: result.data.distribution_policy || result.data.distributionPolicy || prev.distribution_policy,
           bid_ask_spread: result.data.bid_ask_spread || prev.bid_ask_spread,
           
-          // Campos ETF - percentagens (convertidas de decimal)
-          expense_ratio: toPercent(result.data.expense_ratio) || prev.expense_ratio,
-          return_1y: toPercent(result.data.return_1y) || prev.return_1y,
-          return_3y: toPercent(result.data.return_3y) || prev.return_3y,
-          return_5y: toPercent(result.data.return_5y) || prev.return_5y,
-          nav_premium_discount: toPercent(result.data.nav_premium_discount) || prev.nav_premium_discount,
-          volatility: toPercent(result.data.volatility) || prev.volatility,
-          tracking_error: toPercent(result.data.tracking_error) || prev.tracking_error,
-          top_10_holdings_weight: toPercent(result.data.top_10_holdings_weight) || prev.top_10_holdings_weight,
+          // Campos ETF - percentagens (convertidas de decimal, aceitar múltiplos nomes)
+          expense_ratio: toPercent(result.data.expense_ratio || result.data.expenseRatio || result.data.ter) || prev.expense_ratio,
+          return_1y: toPercent(result.data.return_1y || result.data.return1y || result.data.oneYearReturn) || prev.return_1y,
+          return_3y: toPercent(result.data.return_3y || result.data.return3y || result.data.threeYearReturn) || prev.return_3y,
+          return_5y: toPercent(result.data.return_5y || result.data.return5y || result.data.fiveYearReturn) || prev.return_5y,
+          nav_premium_discount: toPercent(result.data.nav_premium_discount || result.data.navPremiumDiscount) || prev.nav_premium_discount,
+          volatility: toPercent(result.data.volatility || result.data.standardDeviation) || prev.volatility,
+          tracking_error: toPercent(result.data.tracking_error || result.data.trackingError) || prev.tracking_error,
+          top_10_holdings_weight: toPercent(result.data.top_10_holdings_weight || result.data.top10HoldingsWeight) || prev.top_10_holdings_weight,
           
           // Analyst coverage fields (only for equities)
           analyst_target_price: result.data.analyst_target_price?.toString().replace(".", ",") || prev.analyst_target_price,
