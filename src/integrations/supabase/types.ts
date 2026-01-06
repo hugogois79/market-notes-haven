@@ -3422,6 +3422,10 @@ export type Database = {
       }
       securities: {
         Row: {
+          analyst_count: number | null
+          analyst_target_high: number | null
+          analyst_target_low: number | null
+          analyst_target_price: number | null
           aum: number | null
           avg_daily_volume: number | null
           base_credit_rating: string | null
@@ -3471,6 +3475,7 @@ export type Database = {
           quote_current_account: number | null
           quote_inflation_rate: number | null
           quote_interest_rate: number | null
+          recent_analyses: Json | null
           resistance_level: number | null
           return_1y: number | null
           return_3y: number | null
@@ -3491,6 +3496,10 @@ export type Database = {
           yield_to_maturity: number | null
         }
         Insert: {
+          analyst_count?: number | null
+          analyst_target_high?: number | null
+          analyst_target_low?: number | null
+          analyst_target_price?: number | null
           aum?: number | null
           avg_daily_volume?: number | null
           base_credit_rating?: string | null
@@ -3540,6 +3549,7 @@ export type Database = {
           quote_current_account?: number | null
           quote_inflation_rate?: number | null
           quote_interest_rate?: number | null
+          recent_analyses?: Json | null
           resistance_level?: number | null
           return_1y?: number | null
           return_3y?: number | null
@@ -3560,6 +3570,10 @@ export type Database = {
           yield_to_maturity?: number | null
         }
         Update: {
+          analyst_count?: number | null
+          analyst_target_high?: number | null
+          analyst_target_low?: number | null
+          analyst_target_price?: number | null
           aum?: number | null
           avg_daily_volume?: number | null
           base_credit_rating?: string | null
@@ -3609,6 +3623,7 @@ export type Database = {
           quote_current_account?: number | null
           quote_inflation_rate?: number | null
           quote_interest_rate?: number | null
+          recent_analyses?: Json | null
           resistance_level?: number | null
           return_1y?: number | null
           return_3y?: number | null

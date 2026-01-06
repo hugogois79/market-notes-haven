@@ -46,6 +46,13 @@ import { toast } from "sonner";
 
 type SecurityType = "equity" | "etf" | "bond" | "commodity" | "currency" | "crypto";
 
+type RecentAnalysis = {
+  analyst: string;
+  company: string;
+  target: number;
+  date: string;
+};
+
 type Security = {
   id: string;
   name: string;
@@ -117,6 +124,12 @@ type Security = {
   quote_current_account: number | null;
   base_credit_rating: string | null;
   quote_credit_rating: string | null;
+  // Analyst coverage fields
+  analyst_target_price: number | null;
+  analyst_target_high: number | null;
+  analyst_target_low: number | null;
+  analyst_count: number | null;
+  recent_analyses: RecentAnalysis[] | null;
   created_at: string;
 };
 
@@ -208,6 +221,12 @@ type SecurityFormData = {
   quote_current_account: string;
   base_credit_rating: string;
   quote_credit_rating: string;
+  // Analyst coverage fields
+  analyst_target_price: string;
+  analyst_target_high: string;
+  analyst_target_low: string;
+  analyst_count: string;
+  recent_analyses: RecentAnalysis[] | null;
 };
 
 const SECURITY_TYPES: { value: SecurityType; label: string }[] = [
@@ -295,6 +314,12 @@ const emptyFormData: SecurityFormData = {
   quote_current_account: "",
   base_credit_rating: "",
   quote_credit_rating: "",
+  // Analyst coverage fields
+  analyst_target_price: "",
+  analyst_target_high: "",
+  analyst_target_low: "",
+  analyst_count: "",
+  recent_analyses: null,
 };
 
 const parseNumber = (val: string): number | null => {
@@ -402,6 +427,13 @@ export default function SecuritiesTable() {
           volatility: toPercent(result.data.volatility) || prev.volatility,
           tracking_error: toPercent(result.data.tracking_error) || prev.tracking_error,
           top_10_holdings_weight: toPercent(result.data.top_10_holdings_weight) || prev.top_10_holdings_weight,
+          
+          // Analyst coverage fields (only for equities)
+          analyst_target_price: result.data.analyst_target_price?.toString().replace(".", ",") || prev.analyst_target_price,
+          analyst_target_high: result.data.analyst_target_high?.toString().replace(".", ",") || prev.analyst_target_high,
+          analyst_target_low: result.data.analyst_target_low?.toString().replace(".", ",") || prev.analyst_target_low,
+          analyst_count: result.data.analyst_count?.toString() || prev.analyst_count,
+          recent_analyses: result.data.recent_analyses || prev.recent_analyses,
         }));
         toast.success("Dados carregados do FMP");
       } else {
@@ -423,7 +455,11 @@ export default function SecuritiesTable() {
         .select("*")
         .order("name");
       if (error) throw error;
-      return data as Security[];
+      // Map recent_analyses from JSON to proper type
+      return (data || []).map(d => ({
+        ...d,
+        recent_analyses: d.recent_analyses as RecentAnalysis[] | null
+      })) as Security[];
     },
   });
 
@@ -512,6 +548,12 @@ export default function SecuritiesTable() {
         quote_current_account: parseNumber(data.quote_current_account),
         base_credit_rating: data.base_credit_rating.trim() || null,
         quote_credit_rating: data.quote_credit_rating.trim() || null,
+        // Analyst coverage fields
+        analyst_target_price: parseNumber(data.analyst_target_price),
+        analyst_target_high: parseNumber(data.analyst_target_high),
+        analyst_target_low: parseNumber(data.analyst_target_low),
+        analyst_count: parseNumber(data.analyst_count),
+        recent_analyses: data.recent_analyses,
         user_id: user.id,
       });
       if (error) throw error;
@@ -596,6 +638,12 @@ export default function SecuritiesTable() {
           quote_current_account: parseNumber(data.quote_current_account),
           base_credit_rating: data.base_credit_rating.trim() || null,
           quote_credit_rating: data.quote_credit_rating.trim() || null,
+          // Analyst coverage fields
+          analyst_target_price: parseNumber(data.analyst_target_price),
+          analyst_target_high: parseNumber(data.analyst_target_high),
+          analyst_target_low: parseNumber(data.analyst_target_low),
+          analyst_count: parseNumber(data.analyst_count),
+          recent_analyses: data.recent_analyses,
         })
         .eq("id", id);
       if (error) throw error;
@@ -699,6 +747,12 @@ export default function SecuritiesTable() {
       quote_current_account: formatNumberField(security.quote_current_account),
       base_credit_rating: security.base_credit_rating || "",
       quote_credit_rating: security.quote_credit_rating || "",
+      // Analyst coverage fields
+      analyst_target_price: formatNumberField(security.analyst_target_price),
+      analyst_target_high: formatNumberField(security.analyst_target_high),
+      analyst_target_low: formatNumberField(security.analyst_target_low),
+      analyst_count: formatNumberField(security.analyst_count),
+      recent_analyses: security.recent_analyses,
     });
     setIsDialogOpen(true);
   };
@@ -1474,7 +1528,77 @@ export default function SecuritiesTable() {
                   )}
 
                   {formData.security_type === "equity" && (
-                    <p className="text-sm text-muted-foreground">Equity usa os campos de métricas padrão.</p>
+                    <>
+                      {/* Analyst Coverage */}
+                      <h4 className="text-sm font-medium text-muted-foreground border-b pb-2">Cobertura de Analistas</h4>
+                      <div className="grid grid-cols-4 gap-4">
+                        <div className="space-y-2">
+                          <Label>Preço Alvo</Label>
+                          <Input
+                            value={formData.analyst_target_price}
+                            onChange={(e) => setFormData({ ...formData, analyst_target_price: e.target.value })}
+                            placeholder="Ex: 250,50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Target High</Label>
+                          <Input
+                            value={formData.analyst_target_high}
+                            onChange={(e) => setFormData({ ...formData, analyst_target_high: e.target.value })}
+                            placeholder="Ex: 300,00"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Target Low</Label>
+                          <Input
+                            value={formData.analyst_target_low}
+                            onChange={(e) => setFormData({ ...formData, analyst_target_low: e.target.value })}
+                            placeholder="Ex: 200,00"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Nº Analistas</Label>
+                          <Input
+                            value={formData.analyst_count}
+                            onChange={(e) => setFormData({ ...formData, analyst_count: e.target.value })}
+                            placeholder="Ex: 35"
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Recent Analyses - Read-only display */}
+                      {formData.recent_analyses && formData.recent_analyses.length > 0 && (
+                        <>
+                          <h4 className="text-sm font-medium text-muted-foreground border-b pb-2 pt-4">Análises Recentes</h4>
+                          <div className="rounded-md border">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="text-xs">Analista</TableHead>
+                                  <TableHead className="text-xs">Empresa</TableHead>
+                                  <TableHead className="text-xs text-right">Target</TableHead>
+                                  <TableHead className="text-xs text-right">Data</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {formData.recent_analyses.map((analysis, idx) => (
+                                  <TableRow key={idx}>
+                                    <TableCell className="text-xs font-medium">{analysis.analyst}</TableCell>
+                                    <TableCell className="text-xs text-muted-foreground">{analysis.company}</TableCell>
+                                    <TableCell className="text-xs text-right font-mono">
+                                      {formatCurrency(analysis.target, formData.currency)}
+                                    </TableCell>
+                                    <TableCell className="text-xs text-right text-muted-foreground">
+                                      {analysis.date}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </>
+                      )}
+                    </>
                   )}
 
                   {formData.security_type === "currency" && (
