@@ -3424,9 +3424,24 @@ export type Database = {
         Row: {
           created_at: string
           currency: string | null
+          debt_to_equity: number | null
+          dividend_yield: number | null
+          eps: number | null
+          fcf: number | null
+          fcf_yield: number | null
           id: string
+          industry: string | null
+          interest_coverage: number | null
           isin: string | null
+          market_cap: number | null
           name: string
+          operating_margin: number | null
+          payout_ratio: number | null
+          pb_ratio: number | null
+          pe_ratio: number | null
+          revenue_growth: number | null
+          roe: number | null
+          sector: string | null
           ticker: string | null
           updated_at: string
           user_id: string
@@ -3434,9 +3449,24 @@ export type Database = {
         Insert: {
           created_at?: string
           currency?: string | null
+          debt_to_equity?: number | null
+          dividend_yield?: number | null
+          eps?: number | null
+          fcf?: number | null
+          fcf_yield?: number | null
           id?: string
+          industry?: string | null
+          interest_coverage?: number | null
           isin?: string | null
+          market_cap?: number | null
           name: string
+          operating_margin?: number | null
+          payout_ratio?: number | null
+          pb_ratio?: number | null
+          pe_ratio?: number | null
+          revenue_growth?: number | null
+          roe?: number | null
+          sector?: string | null
           ticker?: string | null
           updated_at?: string
           user_id: string
@@ -3444,9 +3474,24 @@ export type Database = {
         Update: {
           created_at?: string
           currency?: string | null
+          debt_to_equity?: number | null
+          dividend_yield?: number | null
+          eps?: number | null
+          fcf?: number | null
+          fcf_yield?: number | null
           id?: string
+          industry?: string | null
+          interest_coverage?: number | null
           isin?: string | null
+          market_cap?: number | null
           name?: string
+          operating_margin?: number | null
+          payout_ratio?: number | null
+          pb_ratio?: number | null
+          pe_ratio?: number | null
+          revenue_growth?: number | null
+          roe?: number | null
+          sector?: string | null
           ticker?: string | null
           updated_at?: string
           user_id?: string
