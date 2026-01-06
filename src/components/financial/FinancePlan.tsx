@@ -3,13 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt, Flag, Percent, Save, History } from "lucide-react";
+import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt, Flag, Percent, Save, History, LineChart } from "lucide-react";
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { toast } from "sonner";
 import WealthAssetsTable from "./wealth/WealthAssetsTable";
 import WealthTransactionsTable from "./wealth/WealthTransactionsTable";
 import WealthMilestonesTable from "./wealth/WealthMilestonesTable";
 import PortfolioHistoryChart from "./wealth/PortfolioHistoryChart";
+import MarketHoldingsTable from "./wealth/MarketHoldingsTable";
 
 interface FinancePlanProps {
   companyId: string;
@@ -162,6 +163,10 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
           <TabsTrigger value="milestones" className="flex items-center gap-2">
             <Flag className="h-4 w-4" />
             Milestones
+          </TabsTrigger>
+          <TabsTrigger value="markets" className="flex items-center gap-2">
+            <LineChart className="h-4 w-4" />
+            Markets
           </TabsTrigger>
           <TabsTrigger value="snapshots" className="flex items-center gap-2">
             <History className="h-4 w-4" />
@@ -353,6 +358,20 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
             </CardHeader>
             <CardContent>
               <WealthMilestonesTable />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="markets">
+          <Card>
+            <CardHeader>
+              <CardTitle>Markets</CardTitle>
+              <CardDescription>
+                Gestão de holdings de mercado nas suas contas Cash.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MarketHoldingsTable />
             </CardContent>
           </Card>
         </TabsContent>
