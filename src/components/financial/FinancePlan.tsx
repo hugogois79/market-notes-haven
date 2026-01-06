@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt, Flag, Percent, Save } from "lucide-react";
+import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt, Flag, Percent, Save, History } from "lucide-react";
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { toast } from "sonner";
 import WealthAssetsTable from "./wealth/WealthAssetsTable";
@@ -163,6 +163,10 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
             <Flag className="h-4 w-4" />
             Milestones
           </TabsTrigger>
+          <TabsTrigger value="snapshots" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Snapshots
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="space-y-6">
@@ -309,19 +313,6 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
             </Card>
           )}
 
-          {/* Portfolio History Chart */}
-          <div className="flex items-center justify-between">
-            <PortfolioHistoryChart />
-            <Button 
-              onClick={() => snapshotMutation.mutate()} 
-              disabled={snapshotMutation.isPending}
-              size="sm"
-              className="ml-4 shrink-0"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {snapshotMutation.isPending ? "A guardar..." : "Guardar Snapshot"}
-            </Button>
-          </div>
         </TabsContent>
 
         <TabsContent value="portfolio">
@@ -364,6 +355,26 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
               <WealthMilestonesTable />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="snapshots" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">Histórico do Portfolio</h3>
+              <p className="text-sm text-muted-foreground">
+                Evolução semanal do valor e rendimento do portfolio
+              </p>
+            </div>
+            <Button 
+              onClick={() => snapshotMutation.mutate()} 
+              disabled={snapshotMutation.isPending}
+              size="sm"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {snapshotMutation.isPending ? "A guardar..." : "Guardar Snapshot"}
+            </Button>
+          </div>
+          <PortfolioHistoryChart />
         </TabsContent>
       </Tabs>
     </div>
