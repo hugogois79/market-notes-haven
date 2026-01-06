@@ -44,14 +44,18 @@ import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { toast } from "sonner";
 
+type SecurityType = "equity" | "etf" | "bond" | "commodity" | "currency" | "crypto";
+
 type Security = {
   id: string;
   name: string;
   ticker: string | null;
   isin: string | null;
   currency: string | null;
+  security_type: SecurityType | null;
   sector: string | null;
   industry: string | null;
+  // Equity/ETF fields
   market_cap: number | null;
   eps: number | null;
   pe_ratio: number | null;
@@ -65,6 +69,23 @@ type Security = {
   interest_coverage: number | null;
   dividend_yield: number | null;
   payout_ratio: number | null;
+  // Bond fields
+  coupon_rate: number | null;
+  maturity_date: string | null;
+  credit_rating: string | null;
+  yield_to_maturity: number | null;
+  // ETF fields
+  expense_ratio: number | null;
+  aum: number | null;
+  tracking_index: string | null;
+  // Crypto fields
+  circulating_supply: number | null;
+  max_supply: number | null;
+  blockchain: string | null;
+  // Commodity fields
+  commodity_type: string | null;
+  contract_size: number | null;
+  delivery_month: string | null;
   created_at: string;
 };
 
@@ -74,6 +95,14 @@ type StockPrice = {
   previous_close: number | null;
   change: number | null;
   change_percent: string | null;
+  open_price: number | null;
+  high_price: number | null;
+  low_price: number | null;
+  volume: number | null;
+  market_cap: number | null;
+  pe_ratio: number | null;
+  year_high: number | null;
+  year_low: number | null;
   latest_trading_day: string;
   fetched_at: string;
 };
@@ -83,8 +112,10 @@ type SecurityFormData = {
   ticker: string;
   isin: string;
   currency: string;
+  security_type: SecurityType;
   sector: string;
   industry: string;
+  // Equity fields
   market_cap: string;
   eps: string;
   pe_ratio: string;
@@ -98,7 +129,33 @@ type SecurityFormData = {
   interest_coverage: string;
   dividend_yield: string;
   payout_ratio: string;
+  // Bond fields
+  coupon_rate: string;
+  maturity_date: string;
+  credit_rating: string;
+  yield_to_maturity: string;
+  // ETF fields
+  expense_ratio: string;
+  aum: string;
+  tracking_index: string;
+  // Crypto fields
+  circulating_supply: string;
+  max_supply: string;
+  blockchain: string;
+  // Commodity fields
+  commodity_type: string;
+  contract_size: string;
+  delivery_month: string;
 };
+
+const SECURITY_TYPES: { value: SecurityType; label: string }[] = [
+  { value: "equity", label: "Equity" },
+  { value: "etf", label: "ETF" },
+  { value: "bond", label: "Bond" },
+  { value: "commodity", label: "Commodity" },
+  { value: "currency", label: "Currency" },
+  { value: "crypto", label: "Crypto" },
+];
 
 const CURRENCIES = ["EUR", "USD", "GBP", "CHF", "BTC", "USDT"];
 
@@ -116,6 +173,7 @@ const emptyFormData: SecurityFormData = {
   ticker: "",
   isin: "",
   currency: "EUR",
+  security_type: "equity",
   sector: "",
   industry: "",
   market_cap: "",
@@ -131,6 +189,19 @@ const emptyFormData: SecurityFormData = {
   interest_coverage: "",
   dividend_yield: "",
   payout_ratio: "",
+  coupon_rate: "",
+  maturity_date: "",
+  credit_rating: "",
+  yield_to_maturity: "",
+  expense_ratio: "",
+  aum: "",
+  tracking_index: "",
+  circulating_supply: "",
+  max_supply: "",
+  blockchain: "",
+  commodity_type: "",
+  contract_size: "",
+  delivery_month: "",
 };
 
 const parseNumber = (val: string): number | null => {
@@ -142,6 +213,18 @@ const parseNumber = (val: string): number | null => {
 const formatNumberField = (val: number | null): string => {
   if (val === null || val === undefined) return "";
   return val.toString().replace(".", ",");
+};
+
+const getTypeBadgeColor = (type: SecurityType | null) => {
+  switch (type) {
+    case "equity": return "bg-blue-500/10 text-blue-600 border-blue-500/20";
+    case "etf": return "bg-purple-500/10 text-purple-600 border-purple-500/20";
+    case "bond": return "bg-amber-500/10 text-amber-600 border-amber-500/20";
+    case "commodity": return "bg-orange-500/10 text-orange-600 border-orange-500/20";
+    case "currency": return "bg-green-500/10 text-green-600 border-green-500/20";
+    case "crypto": return "bg-cyan-500/10 text-cyan-600 border-cyan-500/20";
+    default: return "";
+  }
 };
 
 export default function SecuritiesTable() {
@@ -189,6 +272,7 @@ export default function SecuritiesTable() {
         ticker: data.ticker.trim() || null,
         isin: data.isin.trim() || null,
         currency: data.currency,
+        security_type: data.security_type,
         sector: data.sector.trim() || null,
         industry: data.industry.trim() || null,
         market_cap: parseNumber(data.market_cap),
@@ -204,6 +288,19 @@ export default function SecuritiesTable() {
         interest_coverage: parseNumber(data.interest_coverage),
         dividend_yield: parseNumber(data.dividend_yield),
         payout_ratio: parseNumber(data.payout_ratio),
+        coupon_rate: parseNumber(data.coupon_rate),
+        maturity_date: data.maturity_date || null,
+        credit_rating: data.credit_rating.trim() || null,
+        yield_to_maturity: parseNumber(data.yield_to_maturity),
+        expense_ratio: parseNumber(data.expense_ratio),
+        aum: parseNumber(data.aum),
+        tracking_index: data.tracking_index.trim() || null,
+        circulating_supply: parseNumber(data.circulating_supply),
+        max_supply: parseNumber(data.max_supply),
+        blockchain: data.blockchain.trim() || null,
+        commodity_type: data.commodity_type.trim() || null,
+        contract_size: parseNumber(data.contract_size),
+        delivery_month: data.delivery_month.trim() || null,
         user_id: user.id,
       });
       if (error) throw error;
@@ -228,6 +325,7 @@ export default function SecuritiesTable() {
           ticker: data.ticker.trim() || null,
           isin: data.isin.trim() || null,
           currency: data.currency,
+          security_type: data.security_type,
           sector: data.sector.trim() || null,
           industry: data.industry.trim() || null,
           market_cap: parseNumber(data.market_cap),
@@ -243,6 +341,19 @@ export default function SecuritiesTable() {
           interest_coverage: parseNumber(data.interest_coverage),
           dividend_yield: parseNumber(data.dividend_yield),
           payout_ratio: parseNumber(data.payout_ratio),
+          coupon_rate: parseNumber(data.coupon_rate),
+          maturity_date: data.maturity_date || null,
+          credit_rating: data.credit_rating.trim() || null,
+          yield_to_maturity: parseNumber(data.yield_to_maturity),
+          expense_ratio: parseNumber(data.expense_ratio),
+          aum: parseNumber(data.aum),
+          tracking_index: data.tracking_index.trim() || null,
+          circulating_supply: parseNumber(data.circulating_supply),
+          max_supply: parseNumber(data.max_supply),
+          blockchain: data.blockchain.trim() || null,
+          commodity_type: data.commodity_type.trim() || null,
+          contract_size: parseNumber(data.contract_size),
+          delivery_month: data.delivery_month.trim() || null,
         })
         .eq("id", id);
       if (error) throw error;
@@ -286,6 +397,7 @@ export default function SecuritiesTable() {
       ticker: security.ticker || "",
       isin: security.isin || "",
       currency: security.currency || "EUR",
+      security_type: security.security_type || "equity",
       sector: security.sector || "",
       industry: security.industry || "",
       market_cap: formatNumberField(security.market_cap),
@@ -301,6 +413,19 @@ export default function SecuritiesTable() {
       interest_coverage: formatNumberField(security.interest_coverage),
       dividend_yield: formatNumberField(security.dividend_yield),
       payout_ratio: formatNumberField(security.payout_ratio),
+      coupon_rate: formatNumberField(security.coupon_rate),
+      maturity_date: security.maturity_date || "",
+      credit_rating: security.credit_rating || "",
+      yield_to_maturity: formatNumberField(security.yield_to_maturity),
+      expense_ratio: formatNumberField(security.expense_ratio),
+      aum: formatNumberField(security.aum),
+      tracking_index: security.tracking_index || "",
+      circulating_supply: formatNumberField(security.circulating_supply),
+      max_supply: formatNumberField(security.max_supply),
+      blockchain: security.blockchain || "",
+      commodity_type: security.commodity_type || "",
+      contract_size: formatNumberField(security.contract_size),
+      delivery_month: security.delivery_month || "",
     });
     setIsDialogOpen(true);
   };
@@ -342,6 +467,29 @@ export default function SecuritiesTable() {
 
   const isLoading = loadingSecurities || loadingPrices;
   const isPending = createMutation.isPending || updateMutation.isPending;
+
+  // Get relevant metric based on security type
+  const getTypeMetric = (sec: Security & { price: StockPrice | null }) => {
+    switch (sec.security_type) {
+      case "bond":
+        return sec.coupon_rate ? `${sec.coupon_rate.toFixed(2)}%` : "—";
+      case "etf":
+        return sec.expense_ratio ? `${sec.expense_ratio.toFixed(2)}%` : "—";
+      case "crypto":
+        return sec.circulating_supply ? `${(sec.circulating_supply / 1e6).toFixed(1)}M` : "—";
+      default:
+        return sec.pe_ratio ? sec.pe_ratio.toFixed(1) : "—";
+    }
+  };
+
+  const getTypeMetricLabel = (type: SecurityType | null) => {
+    switch (type) {
+      case "bond": return "Cupão";
+      case "etf": return "TER";
+      case "crypto": return "Supply";
+      default: return "P/E";
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -401,13 +549,11 @@ export default function SecuritiesTable() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>Ticker</TableHead>
-                <TableHead>Setor</TableHead>
                 <TableHead>Moeda</TableHead>
-                <TableHead className="text-right">P/E</TableHead>
-                <TableHead className="text-right">ROE</TableHead>
-                <TableHead className="text-right">D/Y</TableHead>
+                <TableHead className="text-right">Métrica</TableHead>
                 <TableHead className="text-right">Preço</TableHead>
                 <TableHead className="text-right">Var.</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
@@ -416,13 +562,13 @@ export default function SecuritiesTable() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     A carregar...
                   </TableCell>
                 </TableRow>
               ) : securitiesWithPrices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Nenhum título registado
                   </TableCell>
                 </TableRow>
@@ -431,7 +577,12 @@ export default function SecuritiesTable() {
                   const changeNum = sec.price ? parseFloat(sec.price.change_percent?.replace("%", "") || "0") : 0;
                   return (
                     <TableRow key={sec.id}>
-                      <TableCell className="font-medium max-w-[200px] truncate" title={sec.name}>
+                      <TableCell>
+                        <Badge variant="outline" className={`text-xs ${getTypeBadgeColor(sec.security_type)}`}>
+                          {SECURITY_TYPES.find(t => t.value === sec.security_type)?.label || "Equity"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-medium max-w-[180px] truncate" title={sec.name}>
                         {sec.name}
                       </TableCell>
                       <TableCell>
@@ -441,20 +592,11 @@ export default function SecuritiesTable() {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-[120px] truncate" title={sec.sector || ""}>
-                        {sec.sector || "—"}
-                      </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="text-xs">{sec.currency || "EUR"}</Badge>
                       </TableCell>
-                      <TableCell className="text-right font-mono text-xs">
-                        {sec.pe_ratio ? sec.pe_ratio.toFixed(1) : "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs">
-                        {sec.roe ? `${sec.roe.toFixed(1)}%` : "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs">
-                        {sec.dividend_yield ? `${sec.dividend_yield.toFixed(2)}%` : "—"}
+                      <TableCell className="text-right font-mono text-xs" title={getTypeMetricLabel(sec.security_type)}>
+                        {getTypeMetric(sec)}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs">
                         {sec.price ? (
@@ -520,15 +662,54 @@ export default function SecuritiesTable() {
           </DialogHeader>
           <form onSubmit={handleSubmit}>
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="basic">Básico</TabsTrigger>
-                <TabsTrigger value="valuation">Valuation</TabsTrigger>
-                <TabsTrigger value="quality">Qualidade</TabsTrigger>
-                <TabsTrigger value="risk">Risco</TabsTrigger>
+                <TabsTrigger value="metrics">Métricas</TabsTrigger>
+                <TabsTrigger value="type-specific">
+                  {SECURITY_TYPES.find(t => t.value === formData.security_type)?.label || "Específico"}
+                </TabsTrigger>
               </TabsList>
               
               <ScrollArea className="h-[400px] pr-4 mt-4">
                 <TabsContent value="basic" className="space-y-4 mt-0">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="security_type">Tipo *</Label>
+                      <Select
+                        value={formData.security_type}
+                        onValueChange={(value: SecurityType) => setFormData({ ...formData, security_type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SECURITY_TYPES.map((t) => (
+                            <SelectItem key={t.value} value={t.value}>
+                              {t.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="currency">Moeda</Label>
+                      <Select
+                        value={formData.currency}
+                        onValueChange={(value) => setFormData({ ...formData, currency: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CURRENCIES.map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Nome *</Label>
@@ -563,26 +744,6 @@ export default function SecuritiesTable() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="currency">Moeda</Label>
-                      <Select
-                        value={formData.currency}
-                        onValueChange={(value) => setFormData({ ...formData, currency: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CURRENCIES.map((c) => (
-                            <SelectItem key={c} value={c}>
-                              {c}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
                       <Label htmlFor="sector">Setor</Label>
                       <Input
                         id="sector"
@@ -591,163 +752,295 @@ export default function SecuritiesTable() {
                         placeholder="Ex: Technology"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="industry">Indústria</Label>
-                      <Input
-                        id="industry"
-                        value={formData.industry}
-                        onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                        placeholder="Ex: Consumer Electronics"
-                      />
-                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="market_cap">Market Cap</Label>
+                    <Label htmlFor="industry">Indústria</Label>
                     <Input
-                      id="market_cap"
-                      value={formData.market_cap}
-                      onChange={(e) => setFormData({ ...formData, market_cap: e.target.value })}
-                      placeholder="Ex: 3000000000000"
+                      id="industry"
+                      value={formData.industry}
+                      onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                      placeholder="Ex: Consumer Electronics"
                     />
-                    <p className="text-xs text-muted-foreground">Capitalização de mercado em moeda base</p>
                   </div>
                 </TabsContent>
 
-                <TabsContent value="valuation" className="space-y-4 mt-0">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="eps">EPS (Earnings per Share)</Label>
-                      <Input
-                        id="eps"
-                        value={formData.eps}
-                        onChange={(e) => setFormData({ ...formData, eps: e.target.value })}
-                        placeholder="Ex: 6,42"
-                      />
-                      <p className="text-xs text-muted-foreground">Lucro por ação (TTM)</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pe_ratio">P/E Ratio</Label>
-                      <Input
-                        id="pe_ratio"
-                        value={formData.pe_ratio}
-                        onChange={(e) => setFormData({ ...formData, pe_ratio: e.target.value })}
-                        placeholder="Ex: 28,5"
-                      />
-                      <p className="text-xs text-muted-foreground">Preço/Lucro</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="pb_ratio">P/B Ratio</Label>
-                      <Input
-                        id="pb_ratio"
-                        value={formData.pb_ratio}
-                        onChange={(e) => setFormData({ ...formData, pb_ratio: e.target.value })}
-                        placeholder="Ex: 48,2"
-                      />
-                      <p className="text-xs text-muted-foreground">Preço/Valor contabilístico</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="fcf">FCF (Free Cash Flow)</Label>
-                      <Input
-                        id="fcf"
-                        value={formData.fcf}
-                        onChange={(e) => setFormData({ ...formData, fcf: e.target.value })}
-                        placeholder="Ex: 99584000000"
-                      />
-                      <p className="text-xs text-muted-foreground">Cash flow livre</p>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fcf_yield">FCF Yield (%)</Label>
-                    <Input
-                      id="fcf_yield"
-                      value={formData.fcf_yield}
-                      onChange={(e) => setFormData({ ...formData, fcf_yield: e.target.value })}
-                      placeholder="Ex: 3,32"
-                    />
-                    <p className="text-xs text-muted-foreground">FCF / Market Cap</p>
-                  </div>
+                <TabsContent value="metrics" className="space-y-4 mt-0">
+                  {(formData.security_type === "equity" || formData.security_type === "etf") && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Market Cap</Label>
+                          <Input
+                            value={formData.market_cap}
+                            onChange={(e) => setFormData({ ...formData, market_cap: e.target.value })}
+                            placeholder="Ex: 3000000000000"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>EPS</Label>
+                          <Input
+                            value={formData.eps}
+                            onChange={(e) => setFormData({ ...formData, eps: e.target.value })}
+                            placeholder="Ex: 6,42"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label>P/E Ratio</Label>
+                          <Input
+                            value={formData.pe_ratio}
+                            onChange={(e) => setFormData({ ...formData, pe_ratio: e.target.value })}
+                            placeholder="Ex: 28,5"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>P/B Ratio</Label>
+                          <Input
+                            value={formData.pb_ratio}
+                            onChange={(e) => setFormData({ ...formData, pb_ratio: e.target.value })}
+                            placeholder="Ex: 48,2"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>ROE (%)</Label>
+                          <Input
+                            value={formData.roe}
+                            onChange={(e) => setFormData({ ...formData, roe: e.target.value })}
+                            placeholder="Ex: 147,25"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>FCF</Label>
+                          <Input
+                            value={formData.fcf}
+                            onChange={(e) => setFormData({ ...formData, fcf: e.target.value })}
+                            placeholder="Ex: 99584000000"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>FCF Yield (%)</Label>
+                          <Input
+                            value={formData.fcf_yield}
+                            onChange={(e) => setFormData({ ...formData, fcf_yield: e.target.value })}
+                            placeholder="Ex: 3,32"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Margem Operacional (%)</Label>
+                          <Input
+                            value={formData.operating_margin}
+                            onChange={(e) => setFormData({ ...formData, operating_margin: e.target.value })}
+                            placeholder="Ex: 29,8"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Crescimento Receita (%)</Label>
+                          <Input
+                            value={formData.revenue_growth}
+                            onChange={(e) => setFormData({ ...formData, revenue_growth: e.target.value })}
+                            placeholder="Ex: 8,5"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>D/E Ratio</Label>
+                          <Input
+                            value={formData.debt_to_equity}
+                            onChange={(e) => setFormData({ ...formData, debt_to_equity: e.target.value })}
+                            placeholder="Ex: 1,87"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Interest Coverage</Label>
+                          <Input
+                            value={formData.interest_coverage}
+                            onChange={(e) => setFormData({ ...formData, interest_coverage: e.target.value })}
+                            placeholder="Ex: 29,5"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Dividend Yield (%)</Label>
+                          <Input
+                            value={formData.dividend_yield}
+                            onChange={(e) => setFormData({ ...formData, dividend_yield: e.target.value })}
+                            placeholder="Ex: 0,55"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Payout Ratio (%)</Label>
+                          <Input
+                            value={formData.payout_ratio}
+                            onChange={(e) => setFormData({ ...formData, payout_ratio: e.target.value })}
+                            placeholder="Ex: 15,6"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  {formData.security_type === "bond" && (
+                    <p className="text-sm text-muted-foreground">Campos de bond disponíveis na tab específica.</p>
+                  )}
+                  {formData.security_type === "crypto" && (
+                    <p className="text-sm text-muted-foreground">Campos de crypto disponíveis na tab específica.</p>
+                  )}
+                  {formData.security_type === "commodity" && (
+                    <p className="text-sm text-muted-foreground">Campos de commodity disponíveis na tab específica.</p>
+                  )}
+                  {formData.security_type === "currency" && (
+                    <p className="text-sm text-muted-foreground">Moedas não têm métricas adicionais.</p>
+                  )}
                 </TabsContent>
 
-                <TabsContent value="quality" className="space-y-4 mt-0">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="roe">ROE (%)</Label>
-                      <Input
-                        id="roe"
-                        value={formData.roe}
-                        onChange={(e) => setFormData({ ...formData, roe: e.target.value })}
-                        placeholder="Ex: 147,25"
-                      />
-                      <p className="text-xs text-muted-foreground">Return on Equity</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="operating_margin">Margem Operacional (%)</Label>
-                      <Input
-                        id="operating_margin"
-                        value={formData.operating_margin}
-                        onChange={(e) => setFormData({ ...formData, operating_margin: e.target.value })}
-                        placeholder="Ex: 29,8"
-                      />
-                      <p className="text-xs text-muted-foreground">Lucro operacional / Vendas</p>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="revenue_growth">Crescimento de Receita (%)</Label>
-                    <Input
-                      id="revenue_growth"
-                      value={formData.revenue_growth}
-                      onChange={(e) => setFormData({ ...formData, revenue_growth: e.target.value })}
-                      placeholder="Ex: 8,5"
-                    />
-                    <p className="text-xs text-muted-foreground">Taxa de crescimento 3-5 anos</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="dividend_yield">Dividend Yield (%)</Label>
-                      <Input
-                        id="dividend_yield"
-                        value={formData.dividend_yield}
-                        onChange={(e) => setFormData({ ...formData, dividend_yield: e.target.value })}
-                        placeholder="Ex: 0,55"
-                      />
-                      <p className="text-xs text-muted-foreground">Rendimento em dividendos</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="payout_ratio">Payout Ratio (%)</Label>
-                      <Input
-                        id="payout_ratio"
-                        value={formData.payout_ratio}
-                        onChange={(e) => setFormData({ ...formData, payout_ratio: e.target.value })}
-                        placeholder="Ex: 15,6"
-                      />
-                      <p className="text-xs text-muted-foreground">Dividendos / Lucro</p>
-                    </div>
-                  </div>
-                </TabsContent>
+                <TabsContent value="type-specific" className="space-y-4 mt-0">
+                  {formData.security_type === "bond" && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Taxa de Cupão (%)</Label>
+                          <Input
+                            value={formData.coupon_rate}
+                            onChange={(e) => setFormData({ ...formData, coupon_rate: e.target.value })}
+                            placeholder="Ex: 4,5"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Maturidade</Label>
+                          <Input
+                            type="date"
+                            value={formData.maturity_date}
+                            onChange={(e) => setFormData({ ...formData, maturity_date: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Rating de Crédito</Label>
+                          <Input
+                            value={formData.credit_rating}
+                            onChange={(e) => setFormData({ ...formData, credit_rating: e.target.value })}
+                            placeholder="Ex: AAA, AA+, BBB-"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>YTM (%)</Label>
+                          <Input
+                            value={formData.yield_to_maturity}
+                            onChange={(e) => setFormData({ ...formData, yield_to_maturity: e.target.value })}
+                            placeholder="Ex: 5,2"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
 
-                <TabsContent value="risk" className="space-y-4 mt-0">
-                  <div className="space-y-2">
-                    <Label htmlFor="debt_to_equity">Debt-to-Equity (D/E)</Label>
-                    <Input
-                      id="debt_to_equity"
-                      value={formData.debt_to_equity}
-                      onChange={(e) => setFormData({ ...formData, debt_to_equity: e.target.value })}
-                      placeholder="Ex: 1,87"
-                    />
-                    <p className="text-xs text-muted-foreground">Nível de alavancagem (Dívida / Capital Próprio)</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="interest_coverage">Interest Coverage</Label>
-                    <Input
-                      id="interest_coverage"
-                      value={formData.interest_coverage}
-                      onChange={(e) => setFormData({ ...formData, interest_coverage: e.target.value })}
-                      placeholder="Ex: 29,5"
-                    />
-                    <p className="text-xs text-muted-foreground">EBIT / Juros - capacidade de pagar juros</p>
-                  </div>
+                  {formData.security_type === "etf" && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>TER / Expense Ratio (%)</Label>
+                          <Input
+                            value={formData.expense_ratio}
+                            onChange={(e) => setFormData({ ...formData, expense_ratio: e.target.value })}
+                            placeholder="Ex: 0,07"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>AUM (Assets Under Management)</Label>
+                          <Input
+                            value={formData.aum}
+                            onChange={(e) => setFormData({ ...formData, aum: e.target.value })}
+                            placeholder="Ex: 500000000000"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Índice de Referência</Label>
+                        <Input
+                          value={formData.tracking_index}
+                          onChange={(e) => setFormData({ ...formData, tracking_index: e.target.value })}
+                          placeholder="Ex: S&P 500, MSCI World"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {formData.security_type === "crypto" && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Circulating Supply</Label>
+                          <Input
+                            value={formData.circulating_supply}
+                            onChange={(e) => setFormData({ ...formData, circulating_supply: e.target.value })}
+                            placeholder="Ex: 19500000"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Max Supply</Label>
+                          <Input
+                            value={formData.max_supply}
+                            onChange={(e) => setFormData({ ...formData, max_supply: e.target.value })}
+                            placeholder="Ex: 21000000"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Blockchain</Label>
+                        <Input
+                          value={formData.blockchain}
+                          onChange={(e) => setFormData({ ...formData, blockchain: e.target.value })}
+                          placeholder="Ex: Bitcoin, Ethereum, Solana"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {formData.security_type === "commodity" && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Tipo de Commodity</Label>
+                          <Input
+                            value={formData.commodity_type}
+                            onChange={(e) => setFormData({ ...formData, commodity_type: e.target.value })}
+                            placeholder="Ex: Gold, Oil, Natural Gas"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Tamanho do Contrato</Label>
+                          <Input
+                            value={formData.contract_size}
+                            onChange={(e) => setFormData({ ...formData, contract_size: e.target.value })}
+                            placeholder="Ex: 100"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Mês de Entrega</Label>
+                        <Input
+                          value={formData.delivery_month}
+                          onChange={(e) => setFormData({ ...formData, delivery_month: e.target.value })}
+                          placeholder="Ex: Dec 2025"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {formData.security_type === "equity" && (
+                    <p className="text-sm text-muted-foreground">Equity usa os campos de métricas padrão.</p>
+                  )}
+
+                  {formData.security_type === "currency" && (
+                    <p className="text-sm text-muted-foreground">Moedas usam apenas campos básicos.</p>
+                  )}
                 </TabsContent>
               </ScrollArea>
             </Tabs>

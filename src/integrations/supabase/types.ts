@@ -3422,11 +3422,20 @@ export type Database = {
       }
       securities: {
         Row: {
+          aum: number | null
+          blockchain: string | null
+          circulating_supply: number | null
+          commodity_type: string | null
+          contract_size: number | null
+          coupon_rate: number | null
           created_at: string
+          credit_rating: string | null
           currency: string | null
           debt_to_equity: number | null
+          delivery_month: string | null
           dividend_yield: number | null
           eps: number | null
+          expense_ratio: number | null
           fcf: number | null
           fcf_yield: number | null
           id: string
@@ -3434,6 +3443,8 @@ export type Database = {
           interest_coverage: number | null
           isin: string | null
           market_cap: number | null
+          maturity_date: string | null
+          max_supply: number | null
           name: string
           operating_margin: number | null
           payout_ratio: number | null
@@ -3442,16 +3453,28 @@ export type Database = {
           revenue_growth: number | null
           roe: number | null
           sector: string | null
+          security_type: string | null
           ticker: string | null
+          tracking_index: string | null
           updated_at: string
           user_id: string
+          yield_to_maturity: number | null
         }
         Insert: {
+          aum?: number | null
+          blockchain?: string | null
+          circulating_supply?: number | null
+          commodity_type?: string | null
+          contract_size?: number | null
+          coupon_rate?: number | null
           created_at?: string
+          credit_rating?: string | null
           currency?: string | null
           debt_to_equity?: number | null
+          delivery_month?: string | null
           dividend_yield?: number | null
           eps?: number | null
+          expense_ratio?: number | null
           fcf?: number | null
           fcf_yield?: number | null
           id?: string
@@ -3459,6 +3482,8 @@ export type Database = {
           interest_coverage?: number | null
           isin?: string | null
           market_cap?: number | null
+          maturity_date?: string | null
+          max_supply?: number | null
           name: string
           operating_margin?: number | null
           payout_ratio?: number | null
@@ -3467,16 +3492,28 @@ export type Database = {
           revenue_growth?: number | null
           roe?: number | null
           sector?: string | null
+          security_type?: string | null
           ticker?: string | null
+          tracking_index?: string | null
           updated_at?: string
           user_id: string
+          yield_to_maturity?: number | null
         }
         Update: {
+          aum?: number | null
+          blockchain?: string | null
+          circulating_supply?: number | null
+          commodity_type?: string | null
+          contract_size?: number | null
+          coupon_rate?: number | null
           created_at?: string
+          credit_rating?: string | null
           currency?: string | null
           debt_to_equity?: number | null
+          delivery_month?: string | null
           dividend_yield?: number | null
           eps?: number | null
+          expense_ratio?: number | null
           fcf?: number | null
           fcf_yield?: number | null
           id?: string
@@ -3484,6 +3521,8 @@ export type Database = {
           interest_coverage?: number | null
           isin?: string | null
           market_cap?: number | null
+          maturity_date?: string | null
+          max_supply?: number | null
           name?: string
           operating_margin?: number | null
           payout_ratio?: number | null
@@ -3492,9 +3531,12 @@ export type Database = {
           revenue_growth?: number | null
           roe?: number | null
           sector?: string | null
+          security_type?: string | null
           ticker?: string | null
+          tracking_index?: string | null
           updated_at?: string
           user_id?: string
+          yield_to_maturity?: number | null
         }
         Relationships: []
       }
@@ -3544,10 +3586,14 @@ export type Database = {
           id: number
           latest_trading_day: string | null
           low_price: number | null
+          market_cap: number | null
           open_price: number | null
+          pe_ratio: number | null
           previous_close: number | null
           symbol: string
           volume: number | null
+          year_high: number | null
+          year_low: number | null
         }
         Insert: {
           change?: number | null
@@ -3558,10 +3604,14 @@ export type Database = {
           id?: number
           latest_trading_day?: string | null
           low_price?: number | null
+          market_cap?: number | null
           open_price?: number | null
+          pe_ratio?: number | null
           previous_close?: number | null
           symbol: string
           volume?: number | null
+          year_high?: number | null
+          year_low?: number | null
         }
         Update: {
           change?: number | null
@@ -3572,10 +3622,14 @@ export type Database = {
           id?: number
           latest_trading_day?: string | null
           low_price?: number | null
+          market_cap?: number | null
           open_price?: number | null
+          pe_ratio?: number | null
           previous_close?: number | null
           symbol?: string
           volume?: number | null
+          year_high?: number | null
+          year_low?: number | null
         }
         Relationships: []
       }
