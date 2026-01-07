@@ -190,7 +190,6 @@ export default function WealthAssetsTable() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-[220px]">Posição</TableHead>
-              <TableHead>Categoria</TableHead>
               <TableHead className="text-right">Valor Atual</TableHead>
               <TableHead className="text-right">P/L</TableHead>
               <TableHead className="text-right">CAGR</TableHead>
@@ -236,7 +235,7 @@ export default function WealthAssetsTable() {
                 return (
                   <>
                     <TableRow key={`header-${category}`} className="bg-muted/50">
-                      <TableCell colSpan={2} className="font-semibold">
+                      <TableCell className="font-semibold">
                         <div className="flex items-center gap-2">
                           <Icon className="h-4 w-4" />
                           {category}
@@ -264,11 +263,6 @@ export default function WealthAssetsTable() {
                                 </span>
                               )}
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={cn("text-xs", colorClass)}>
-                              {asset.category}
-                            </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             {formatCurrency(asset.current_value, asset.currency || "EUR")}
@@ -358,7 +352,7 @@ export default function WealthAssetsTable() {
                     {/* Separator row after Cash showing non-cash portfolio total */}
                     {showSeparator && (
                       <TableRow key="separator-non-cash" className="bg-primary/5 border-t-2 border-primary/20">
-                        <TableCell colSpan={2} className="font-semibold text-primary">
+                        <TableCell className="font-semibold text-primary">
                           Portfolio Ativos (excl. Cash)
                         </TableCell>
                         <TableCell className="text-right font-semibold text-primary">
@@ -397,11 +391,6 @@ export default function WealthAssetsTable() {
               {recoveryAssets.map((asset) => (
                 <TableRow key={asset.id}>
                   <TableCell className="font-medium">{asset.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
-                      {asset.category}
-                    </Badge>
-                  </TableCell>
                   <TableCell className="text-right">
                     {formatCurrency(asset.current_value)}
                   </TableCell>
