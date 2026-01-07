@@ -600,36 +600,55 @@ export default function WealthTransactionsTable() {
         </Table>
       </div>
 
-      {/* Observações - Soma das células selecionadas */}
-      {Object.keys(coloredCells).length > 0 && (
-        <div className="p-3 bg-muted/30 rounded-md">
-          <div className="text-xs font-medium text-muted-foreground mb-2">Observações</div>
-          <div className="flex items-center gap-4 flex-wrap">
-            {Object.entries(coloredCells).map(([cellId, color]) => {
-              const tx = transactions.find((t) => t.id === cellId);
-              if (!tx) return null;
-              const opt = COLOR_OPTIONS.find((c) => c.value === color);
-              return (
-                <div key={cellId} className={`flex items-center gap-2 px-2 py-1 rounded ${opt?.bg}`}>
-                  <span className={`text-xs ${opt?.text}`}>{tx.counterparty || tx.description || "Transação"}:</span>
-                  <span className={`text-sm font-semibold ${opt?.text}`}>{formatCurrency(Math.abs(tx.amount))}</span>
+      {/* Observações - Totais por cor (crédito soma, débito subtrai) */}
+      {Object.keys(coloredCells).length > 0 && (() => {
+        // Calcular totais por cor
+        const colorTotals: Record<ColorOption, number> = {
+          none: 0, green: 0, blue: 0, amber: 0, red: 0, purple: 0
+        };
+        
+        Object.entries(coloredCells).forEach(([cellId, color]) => {
+          const tx = transactions.find((t) => t.id === cellId);
+          if (tx && color !== "none") {
+            // Crédito soma, Débito subtrai
+            if (tx.transaction_type === "credit") {
+              colorTotals[color] += Math.abs(tx.amount);
+            } else {
+              colorTotals[color] -= Math.abs(tx.amount);
+            }
+          }
+        });
+        
+        // Filtrar cores com valores
+        const activeColors = COLOR_OPTIONS.filter(
+          (opt) => opt.value !== "none" && colorTotals[opt.value] !== 0
+        );
+        
+        // Total geral
+        const grandTotal = Object.values(colorTotals).reduce((sum, val) => sum + val, 0);
+        
+        return (
+          <div className="p-3 bg-muted/30 rounded-md">
+            <div className="text-xs font-medium text-muted-foreground mb-2">Observações</div>
+            <div className="flex items-center gap-4 flex-wrap">
+              {activeColors.map((opt) => (
+                <div key={opt.value} className={`flex items-center gap-2 px-2 py-1 rounded ${opt.bg}`}>
+                  <span className={`text-xs ${opt.text}`}>{opt.label}:</span>
+                  <span className={`text-sm font-semibold ${opt.text}`}>
+                    {formatCurrency(colorTotals[opt.value])}
+                  </span>
                 </div>
-              );
-            })}
-            <div className="flex items-center gap-2 px-2 py-1 rounded bg-primary/10 ml-auto">
-              <span className="text-xs font-medium">Total Selecionado:</span>
-              <span className="text-sm font-bold">
-                {formatCurrency(
-                  Object.keys(coloredCells).reduce((sum, cellId) => {
-                    const tx = transactions.find((t) => t.id === cellId);
-                    return sum + (tx ? Math.abs(tx.amount) : 0);
-                  }, 0)
-                )}
-              </span>
+              ))}
+              <div className="flex items-center gap-2 px-2 py-1 rounded bg-primary/10 ml-auto">
+                <span className="text-xs font-medium">Total:</span>
+                <span className="text-sm font-bold">
+                  {formatCurrency(grandTotal)}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <WealthTransactionDialog
         open={dialogOpen}
