@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -8,7 +9,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
+import { format, addMonths, addYears, addDays, differenceInDays } from "date-fns";
+import { pt } from "date-fns/locale";
 
 const CATEGORY_ORDER = [
   "Real Estate",
@@ -30,7 +34,15 @@ const formatCurrency = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value);
 
+const formatDateShort = (date: Date) =>
+  format(date, "dd MMM yy", { locale: pt });
+
 export default function PortfolioForecastTable() {
+  const today = new Date();
+  const [customDate, setCustomDate] = useState<string>(
+    format(addDays(today, 8), "yyyy-MM-dd")
+  );
+
   const { data: assets = [], isLoading } = useQuery({
     queryKey: ["wealth-assets-forecast"],
     queryFn: async () => {
@@ -58,6 +70,15 @@ export default function PortfolioForecastTable() {
     );
   }
 
+  // Dates for forecasts
+  const date6M = addMonths(today, 6);
+  const date1Y = addYears(today, 1);
+  const customDateObj = new Date(customDate);
+  
+  // Calculate growth factor for custom date based on 5% annual rate
+  const daysToCustom = differenceInDays(customDateObj, today);
+  const customGrowthFactor = Math.pow(1.05, daysToCustom / 365);
+
   // Group assets by category
   const groupedAssets = assets.reduce((acc, asset) => {
     const cat = asset.category || "Other";
@@ -84,10 +105,34 @@ export default function PortfolioForecastTable() {
         <TableHeader>
           <TableRow>
             <TableHead className="w-[250px]">Ativo</TableHead>
-            <TableHead className="text-right">Valor Atual</TableHead>
-            <TableHead className="text-right">Forecast 1Y</TableHead>
-            <TableHead className="text-right">Forecast 3Y</TableHead>
-            <TableHead className="text-right">Forecast 5Y</TableHead>
+            <TableHead className="text-right">
+              <div>Valor Atual</div>
+              <div className="text-[10px] text-muted-foreground font-normal">
+                {formatDateShort(today)}
+              </div>
+            </TableHead>
+            <TableHead className="text-right">
+              <div className="flex items-center justify-end gap-1">
+                <Input
+                  type="date"
+                  value={customDate}
+                  onChange={(e) => setCustomDate(e.target.value)}
+                  className="h-6 w-28 text-xs px-1"
+                />
+              </div>
+            </TableHead>
+            <TableHead className="text-right">
+              <div>6M</div>
+              <div className="text-[10px] text-muted-foreground font-normal">
+                {formatDateShort(date6M)}
+              </div>
+            </TableHead>
+            <TableHead className="text-right">
+              <div>1Y</div>
+              <div className="text-[10px] text-muted-foreground font-normal">
+                {formatDateShort(date1Y)}
+              </div>
+            </TableHead>
             <TableHead className="text-right">% Portfolio</TableHead>
           </TableRow>
         </TableHeader>
@@ -110,10 +155,10 @@ export default function PortfolioForecastTable() {
                 {categoryAssets.map((asset) => {
                   const value = asset.current_value || 0;
                   const weight = totalValue > 0 ? (value / totalValue) * 100 : 0;
-                  // Simple projections (can be enhanced with user inputs)
+                  // Projections based on 5% annual growth
+                  const forecastCustom = value * customGrowthFactor;
+                  const forecast6M = value * Math.pow(1.05, 0.5);
                   const forecast1Y = value * 1.05;
-                  const forecast3Y = value * Math.pow(1.05, 3);
-                  const forecast5Y = value * Math.pow(1.05, 5);
 
                   return (
                     <TableRow key={asset.id} className="text-xs">
@@ -126,9 +171,9 @@ export default function PortfolioForecastTable() {
                         )}
                       </TableCell>
                       <TableCell className="text-right py-1.5">{formatCurrency(value)}</TableCell>
+                      <TableCell className="text-right py-1.5 text-muted-foreground">{formatCurrency(forecastCustom)}</TableCell>
+                      <TableCell className="text-right py-1.5 text-muted-foreground">{formatCurrency(forecast6M)}</TableCell>
                       <TableCell className="text-right py-1.5 text-muted-foreground">{formatCurrency(forecast1Y)}</TableCell>
-                      <TableCell className="text-right py-1.5 text-muted-foreground">{formatCurrency(forecast3Y)}</TableCell>
-                      <TableCell className="text-right py-1.5 text-muted-foreground">{formatCurrency(forecast5Y)}</TableCell>
                       <TableCell className="text-right py-1.5">{weight.toFixed(1)}%</TableCell>
                     </TableRow>
                   );
@@ -141,9 +186,9 @@ export default function PortfolioForecastTable() {
           <TableRow className="bg-primary/5 border-t-2 font-semibold">
             <TableCell className="py-2">Total Portfolio</TableCell>
             <TableCell className="text-right py-2">{formatCurrency(totalValue)}</TableCell>
+            <TableCell className="text-right py-2">{formatCurrency(totalValue * customGrowthFactor)}</TableCell>
+            <TableCell className="text-right py-2">{formatCurrency(totalValue * Math.pow(1.05, 0.5))}</TableCell>
             <TableCell className="text-right py-2">{formatCurrency(totalValue * 1.05)}</TableCell>
-            <TableCell className="text-right py-2">{formatCurrency(totalValue * Math.pow(1.05, 3))}</TableCell>
-            <TableCell className="text-right py-2">{formatCurrency(totalValue * Math.pow(1.05, 5))}</TableCell>
             <TableCell className="text-right py-2">100%</TableCell>
           </TableRow>
         </TableBody>
