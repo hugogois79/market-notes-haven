@@ -1878,86 +1878,28 @@ export default function SecuritiesTable() {
                         />
                       </div>
 
-                      {/* Taxas de Juro */}
-                      <h4 className="text-sm font-medium text-muted-foreground border-b pb-2 pt-4">Taxas de Juro</h4>
+                      {/* Núcleo de Taxa de Juro */}
+                      <h4 className="text-sm font-medium text-muted-foreground border-b pb-2 pt-4">Núcleo de Taxa de Juro</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label>Taxa Juro Base (%)</Label>
+                          <Label>Taxa Oficial Base (%)</Label>
                           <Input
                             value={formData.base_interest_rate}
                             onChange={(e) => setFormData({ ...formData, base_interest_rate: e.target.value })}
                             placeholder="Ex: 4,25"
                           />
+                          <p className="text-xs text-muted-foreground">Policy rate do banco central</p>
                         </div>
                         <div className="space-y-2">
-                          <Label>Taxa Juro Cotação (%)</Label>
+                          <Label>Taxa Oficial Cotação (%)</Label>
                           <Input
                             value={formData.quote_interest_rate}
                             onChange={(e) => setFormData({ ...formData, quote_interest_rate: e.target.value })}
                             placeholder="Ex: 5,25"
                           />
+                          <p className="text-xs text-muted-foreground">Policy rate do banco central</p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Forward Rate 3M</Label>
-                          <Input
-                            value={formData.forward_rate_3m}
-                            onChange={(e) => setFormData({ ...formData, forward_rate_3m: e.target.value })}
-                            placeholder="Ex: 1,0875"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Forward Rate 12M</Label>
-                          <Input
-                            value={formData.forward_rate_12m}
-                            onChange={(e) => setFormData({ ...formData, forward_rate_12m: e.target.value })}
-                            placeholder="Ex: 1,0920"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Volatilidade e Técnicos */}
-                      <h4 className="text-sm font-medium text-muted-foreground border-b pb-2 pt-4">Volatilidade e Técnicos</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Volatilidade 30D (%)</Label>
-                          <Input
-                            value={formData.fx_volatility_30d}
-                            onChange={(e) => setFormData({ ...formData, fx_volatility_30d: e.target.value })}
-                            placeholder="Ex: 8,5"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>ATR</Label>
-                          <Input
-                            value={formData.fx_atr}
-                            onChange={(e) => setFormData({ ...formData, fx_atr: e.target.value })}
-                            placeholder="Ex: 0,0085"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Suporte</Label>
-                          <Input
-                            value={formData.support_level}
-                            onChange={(e) => setFormData({ ...formData, support_level: e.target.value })}
-                            placeholder="Ex: 1,0750"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Resistência</Label>
-                          <Input
-                            value={formData.resistance_level}
-                            onChange={(e) => setFormData({ ...formData, resistance_level: e.target.value })}
-                            placeholder="Ex: 1,1050"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Macro */}
-                      <h4 className="text-sm font-medium text-muted-foreground border-b pb-2 pt-4">Macro e Risco</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Inflação Base (%)</Label>
@@ -1966,6 +1908,7 @@ export default function SecuritiesTable() {
                             onChange={(e) => setFormData({ ...formData, base_inflation_rate: e.target.value })}
                             placeholder="Ex: 2,4"
                           />
+                          <p className="text-xs text-muted-foreground">Inflação atual/esperada</p>
                         </div>
                         <div className="space-y-2">
                           <Label>Inflação Cotação (%)</Label>
@@ -1974,26 +1917,59 @@ export default function SecuritiesTable() {
                             onChange={(e) => setFormData({ ...formData, quote_inflation_rate: e.target.value })}
                             placeholder="Ex: 3,2"
                           />
+                          <p className="text-xs text-muted-foreground">Inflação atual/esperada</p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Conta Corrente Base (% PIB)</Label>
-                          <Input
-                            value={formData.base_current_account}
-                            onChange={(e) => setFormData({ ...formData, base_current_account: e.target.value })}
-                            placeholder="Ex: 2,5"
-                          />
+
+                      {/* Métricas Derivadas (read-only) */}
+                      <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
+                        <h5 className="text-sm font-medium">Métricas Derivadas</h5>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Diferencial Taxa Nominal</span>
+                            <p className="font-mono font-medium">
+                              {formData.base_interest_rate && formData.quote_interest_rate
+                                ? `${(parseFloat(formData.base_interest_rate.replace(",", ".")) - parseFloat(formData.quote_interest_rate.replace(",", "."))).toFixed(2).replace(".", ",")}%`
+                                : "—"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Base - Cotação</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Taxa Real Base</span>
+                            <p className="font-mono font-medium">
+                              {formData.base_interest_rate && formData.base_inflation_rate
+                                ? `${(parseFloat(formData.base_interest_rate.replace(",", ".")) - parseFloat(formData.base_inflation_rate.replace(",", "."))).toFixed(2).replace(".", ",")}%`
+                                : "—"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Nominal - Inflação</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Taxa Real Cotação</span>
+                            <p className="font-mono font-medium">
+                              {formData.quote_interest_rate && formData.quote_inflation_rate
+                                ? `${(parseFloat(formData.quote_interest_rate.replace(",", ".")) - parseFloat(formData.quote_inflation_rate.replace(",", "."))).toFixed(2).replace(".", ",")}%`
+                                : "—"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Nominal - Inflação</p>
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label>Conta Corrente Cotação (% PIB)</Label>
-                          <Input
-                            value={formData.quote_current_account}
-                            onChange={(e) => setFormData({ ...formData, quote_current_account: e.target.value })}
-                            placeholder="Ex: -3,2"
-                          />
+                        <div className="pt-2 border-t">
+                          <span className="text-muted-foreground text-sm">Diferencial Taxa Real</span>
+                          <p className="font-mono font-medium text-lg">
+                            {formData.base_interest_rate && formData.quote_interest_rate && formData.base_inflation_rate && formData.quote_inflation_rate
+                              ? (() => {
+                                  const realBase = parseFloat(formData.base_interest_rate.replace(",", ".")) - parseFloat(formData.base_inflation_rate.replace(",", "."));
+                                  const realQuote = parseFloat(formData.quote_interest_rate.replace(",", ".")) - parseFloat(formData.quote_inflation_rate.replace(",", "."));
+                                  return `${(realBase - realQuote).toFixed(2).replace(".", ",")}%`;
+                                })()
+                              : "—"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Métrica central para tendência de médio/longo prazo</p>
                         </div>
                       </div>
+
+                      {/* Credibilidade e Risco */}
+                      <h4 className="text-sm font-medium text-muted-foreground border-b pb-2 pt-4">Credibilidade e Risco</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Rating Crédito Base</Label>
