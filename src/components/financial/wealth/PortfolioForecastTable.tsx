@@ -77,7 +77,7 @@ export default function PortfolioForecastTable() {
 
       const { data, error } = await supabase
         .from("wealth_transactions")
-        .select("id, date, amount, transaction_type, asset_id")
+        .select("id, date, amount, transaction_type, asset_id, affects_asset_value")
         .eq("user_id", user.id)
         .not("asset_id", "is", null)
         .gte("date", todayStr)
@@ -108,8 +108,9 @@ export default function PortfolioForecastTable() {
     // Future transactions delta
     // O amount já tem sinal: positivo (crédito/venda) ou negativo (débito/compra)
     // Inverter para o impacto no ativo: venda reduz, compra aumenta
+    // Only include transactions that affect asset value
     const transactionDelta = futureTransactions
-      .filter((tx) => tx.asset_id === assetId && new Date(tx.date) <= targetDate)
+      .filter((tx) => tx.asset_id === assetId && new Date(tx.date) <= targetDate && tx.affects_asset_value !== false)
       .reduce((delta, tx) => delta - tx.amount, 0);
 
     return manualDelta + transactionDelta;
@@ -121,8 +122,9 @@ export default function PortfolioForecastTable() {
       .filter((adj) => new Date(adj.date) <= targetDate)
       .reduce((sum, adj) => sum + (adj.type === "credit" ? adj.amount : -adj.amount), 0);
 
+    // Only include transactions that affect asset value
     const transactionDelta = futureTransactions
-      .filter((tx) => new Date(tx.date) <= targetDate)
+      .filter((tx) => new Date(tx.date) <= targetDate && tx.affects_asset_value !== false)
       .reduce((sum, tx) => sum - tx.amount, 0);
 
     return manualDelta + transactionDelta;
@@ -179,21 +181,28 @@ export default function PortfolioForecastTable() {
           {futureTransactions.map((tx) => {
             const asset = assets.find((a) => a.id === tx.asset_id);
             const isAssetSale = tx.transaction_type === "credit";
+            const affectsValue = tx.affects_asset_value !== false;
             return (
               <div
                 key={tx.id}
                 className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md ${
-                  isAssetSale
+                  !affectsValue
+                    ? "bg-muted text-muted-foreground border border-muted-foreground/20"
+                    : isAssetSale
                     ? "bg-amber-50 text-amber-700 border border-amber-200"
                     : "bg-blue-50 text-blue-700 border border-blue-200"
                 }`}
               >
-                {isAssetSale ? (
-                  <TrendingDown className="h-3 w-3" />
+                {affectsValue ? (
+                  isAssetSale ? (
+                    <TrendingDown className="h-3 w-3" />
+                  ) : (
+                    <TrendingUp className="h-3 w-3" />
+                  )
                 ) : (
-                  <TrendingUp className="h-3 w-3" />
+                  <span className="text-[10px]">💰</span>
                 )}
-                <span className="font-medium">
+                <span className={`font-medium ${!affectsValue ? "line-through opacity-60" : ""}`}>
                   {isAssetSale ? "-" : "+"}
                   {formatCurrency(Math.abs(tx.amount))}
                 </span>
@@ -201,6 +210,9 @@ export default function PortfolioForecastTable() {
                 <span className="text-muted-foreground">
                   ({format(new Date(tx.date), "dd/MM/yy")})
                 </span>
+                {!affectsValue && (
+                  <span className="text-[9px] opacity-60">(custo)</span>
+                )}
               </div>
             );
           })}

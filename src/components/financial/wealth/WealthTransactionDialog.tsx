@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 type WealthTransaction = {
@@ -53,6 +54,7 @@ type FormValues = {
   currency: string;
   project_id: string;
   asset_id: string;
+  affects_asset_value: boolean;
 };
 
 interface WealthTransactionDialogProps {
@@ -166,6 +168,7 @@ export default function WealthTransactionDialog({
       currency: "EUR",
       project_id: "",
       asset_id: "",
+      affects_asset_value: true,
     },
   });
 
@@ -195,6 +198,7 @@ export default function WealthTransactionDialog({
         currency: transaction.currency || "EUR",
         project_id: transaction.project_id || "",
         asset_id: transaction.asset_id || "",
+        affects_asset_value: (transaction as any).affects_asset_value !== false,
       });
     } else {
       form.reset({
@@ -208,6 +212,7 @@ export default function WealthTransactionDialog({
         currency: "EUR",
         project_id: "",
         asset_id: "",
+        affects_asset_value: true,
       });
     }
   }, [transaction, form]);
@@ -245,6 +250,7 @@ export default function WealthTransactionDialog({
         currency: "EUR", // Always store in EUR after conversion
         project_id: values.project_id || null,
         asset_id: values.asset_id || null,
+        affects_asset_value: values.asset_id ? values.affects_asset_value : true,
         user_id: user.id,
       };
 
@@ -456,6 +462,33 @@ export default function WealthTransactionDialog({
                   </FormItem>
                 )}
               />
+
+              {/* Affects Asset Value Checkbox - only shown when asset is selected */}
+              {form.watch("asset_id") && (
+                <FormField
+                  control={form.control}
+                  name="affects_asset_value"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2 flex items-start gap-2 space-y-0 rounded-md border p-2 bg-muted/30">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="mt-0.5"
+                        />
+                      </FormControl>
+                      <div className="space-y-0.5 leading-none">
+                        <FormLabel className="text-xs font-medium cursor-pointer">
+                          Afeta valor do ativo no Forecast
+                        </FormLabel>
+                        <p className="text-[10px] text-muted-foreground">
+                          Desmarcar para comissões, manutenção, seguros e outros custos
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}

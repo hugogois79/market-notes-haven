@@ -31,6 +31,7 @@ type WealthTransaction = {
   notes: string | null;
   created_at: string;
   asset_id: string | null;
+  affects_asset_value: boolean | null;
   wealth_assets: { name: string } | null;
 };
 
@@ -122,21 +123,26 @@ function EditableCell({
 function AssetBadge({
   assetName,
   isCredit,
+  affectsValue,
 }: {
   assetName: string | null;
   isCredit: boolean;
+  affectsValue: boolean;
 }) {
   return (
     <Badge
       variant="outline"
       className={cn(
         "text-[10px] px-1.5 py-0",
-        isCredit
+        !affectsValue
+          ? "bg-muted text-muted-foreground border-muted-foreground/30"
+          : isCredit
           ? "bg-green-50 text-green-700 border-green-200"
           : "bg-red-50 text-red-700 border-red-200"
       )}
     >
       {assetName || (isCredit ? "Entrada" : "Saída")}
+      {!affectsValue && assetName && " 💰"}
     </Badge>
   );
 }
@@ -157,7 +163,7 @@ export default function WealthTransactionsTable() {
         .order("date", { ascending: false });
 
       if (error) throw error;
-      return data as WealthTransaction[];
+      return (data || []) as WealthTransaction[];
     },
   });
 
@@ -384,11 +390,12 @@ export default function WealthTransactionsTable() {
                   <TableRow key={transaction.id} className="group hover:bg-muted/30 text-xs">
                     {/* Crédito Column */}
                     <TableCell className="text-left py-1.5">
-                      {isCredit ? (
+                    {isCredit ? (
                         <div className="flex items-center gap-2">
                           <AssetBadge
                             assetName={transaction.wealth_assets?.name || null}
                             isCredit={true}
+                            affectsValue={transaction.affects_asset_value !== false}
                           />
                           <EditableCell
                             value={displayName}
@@ -473,6 +480,7 @@ export default function WealthTransactionsTable() {
                           <AssetBadge
                             assetName={transaction.wealth_assets?.name || null}
                             isCredit={false}
+                            affectsValue={transaction.affects_asset_value !== false}
                           />
                         </div>
                       ) : null}
