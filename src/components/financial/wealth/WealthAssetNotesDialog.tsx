@@ -146,7 +146,7 @@ export default function WealthAssetNotesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -154,9 +154,9 @@ export default function WealthAssetNotesDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex flex-col flex-1 min-h-0 space-y-4">
           {/* Search Bar */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Procurar notas para anexar..."
@@ -168,7 +168,7 @@ export default function WealthAssetNotesDialog({
 
           {/* Search Results */}
           {searchQuery.length >= 2 && (
-            <div className="border rounded-lg p-2 bg-muted/30 max-h-[200px] overflow-y-auto">
+            <div className="border rounded-lg p-2 bg-muted/30 max-h-[180px] overflow-y-auto shrink-0">
               <p className="text-xs text-muted-foreground mb-2 px-2">
                 {loadingSearch ? "A procurar..." : `${filteredSearchResults.length} resultados`}
               </p>
@@ -209,9 +209,9 @@ export default function WealthAssetNotesDialog({
           )}
 
           {/* Linked Notes List */}
-          <div>
-            <h4 className="text-sm font-medium mb-2">Notas Anexadas ({linkedNotes.length})</h4>
-            <ScrollArea className="h-[350px]">
+          <div className="flex-1 min-h-0 flex flex-col">
+            <h4 className="text-sm font-medium mb-2 shrink-0">Notas Anexadas ({linkedNotes.length})</h4>
+            <ScrollArea className="flex-1">
               {loadingLinked ? (
                 <div className="text-center py-8 text-muted-foreground">
                   A carregar notas...
@@ -221,7 +221,7 @@ export default function WealthAssetNotesDialog({
                   Sem notas anexadas. Use a pesquisa acima para anexar notas existentes.
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2 pr-2">
                   {linkedNotes.map((link) => (
                     <div
                       key={link.id}
