@@ -3,13 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt, Flag, Percent, Save, History } from "lucide-react";
+import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt, Flag, Percent, Save, History, TrendingUpDown } from "lucide-react";
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { toast } from "sonner";
 import WealthAssetsTable from "./wealth/WealthAssetsTable";
 import WealthTransactionsTable from "./wealth/WealthTransactionsTable";
 import WealthMilestonesTable from "./wealth/WealthMilestonesTable";
 import PortfolioHistoryChart from "./wealth/PortfolioHistoryChart";
+import PortfolioForecastTable from "./wealth/PortfolioForecastTable";
 
 interface FinancePlanProps {
   companyId: string;
@@ -163,6 +164,10 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
           <TabsTrigger value="milestones" className="flex items-center gap-2">
             <Flag className="h-4 w-4" />
             Milestones
+          </TabsTrigger>
+          <TabsTrigger value="forecast" className="flex items-center gap-2">
+            <TrendingUpDown className="h-4 w-4" />
+            Forecast
           </TabsTrigger>
           <TabsTrigger value="snapshots" className="flex items-center gap-2">
             <History className="h-4 w-4" />
@@ -354,6 +359,20 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
             </CardHeader>
             <CardContent>
               <WealthMilestonesTable />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="forecast">
+          <Card>
+            <CardHeader>
+              <CardTitle>Portfolio Forecast</CardTitle>
+              <CardDescription>
+                Projeção do valor do portfolio a 1, 3 e 5 anos (5% CAGR)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PortfolioForecastTable />
             </CardContent>
           </Card>
         </TabsContent>
