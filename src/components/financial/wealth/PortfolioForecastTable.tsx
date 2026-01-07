@@ -237,7 +237,7 @@ export default function PortfolioForecastTable() {
   return (
     <div className="space-y-4">
       {/* Manual Adjustments Section */}
-      <div className="flex items-center justify-between">
+      {adjustments.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
           {adjustments.map((adj) => (
             <div
@@ -259,11 +259,7 @@ export default function PortfolioForecastTable() {
             </div>
           ))}
         </div>
-        <Button size="sm" variant="outline" onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" />
-          Ajuste
-        </Button>
-      </div>
+      )}
 
       <Table>
         <TableHeader>
