@@ -24,6 +24,8 @@ export interface ForecastAdjustment {
   type: "credit" | "debit";
   amount: number;
   date: string;
+  relatedAssetId?: string;
+  relatedAssetName?: string;
 }
 
 interface Asset {
@@ -49,6 +51,7 @@ export default function ForecastAdjustmentDialog({
   const [type, setType] = useState<"credit" | "debit">("credit");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [relatedAssetId, setRelatedAssetId] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +61,8 @@ export default function ForecastAdjustmentDialog({
     const parsedAmount = parseFloat(amount.replace(/\s/g, "").replace(",", "."));
     if (isNaN(parsedAmount)) return;
 
+    const relatedAsset = assets.find((a) => a.id === relatedAssetId);
+
     onSave({
       id: crypto.randomUUID(),
       assetId,
@@ -65,6 +70,8 @@ export default function ForecastAdjustmentDialog({
       type,
       amount: parsedAmount,
       date,
+      relatedAssetId: relatedAsset?.id,
+      relatedAssetName: relatedAsset?.name,
     });
 
     // Reset form
@@ -72,6 +79,7 @@ export default function ForecastAdjustmentDialog({
     setType("credit");
     setAmount("");
     setDate(format(new Date(), "yyyy-MM-dd"));
+    setRelatedAssetId("");
     onOpenChange(false);
   };
 
@@ -82,6 +90,29 @@ export default function ForecastAdjustmentDialog({
           <DialogTitle>Novo Ajuste de Planeamento</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Data do Ajuste</Label>
+              <Input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo</Label>
+              <Select value={type} onValueChange={(v) => setType(v as "credit" | "debit")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="credit">Crédito (Entrada)</SelectItem>
+                  <SelectItem value="debit">Débito (Saída)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label>Ativo</Label>
             <Select value={assetId} onValueChange={setAssetId}>
@@ -99,14 +130,20 @@ export default function ForecastAdjustmentDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Tipo</Label>
-            <Select value={type} onValueChange={(v) => setType(v as "credit" | "debit")}>
+            <Label>Contraparte (Ativo Relacionado)</Label>
+            <Select value={relatedAssetId} onValueChange={setRelatedAssetId}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Opcional..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="credit">Crédito (Entrada)</SelectItem>
-                <SelectItem value="debit">Débito (Saída)</SelectItem>
+                <SelectItem value="">Nenhum</SelectItem>
+                {assets
+                  .filter((a) => a.id !== assetId)
+                  .map((asset) => (
+                    <SelectItem key={asset.id} value={asset.id}>
+                      {asset.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
@@ -117,15 +154,6 @@ export default function ForecastAdjustmentDialog({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Data do Ajuste</Label>
-            <Input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
             />
           </div>
 
