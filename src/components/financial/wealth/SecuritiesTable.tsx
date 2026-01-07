@@ -1258,40 +1258,44 @@ export default function SecuritiesTable() {
                     </div>
                   </div>
                   
-                  {/* ISIN + Setor */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="isin">ISIN</Label>
-                      <Input
-                        id="isin"
-                        value={formData.isin}
-                        onChange={(e) => setFormData({ ...formData, isin: e.target.value.toUpperCase() })}
-                        placeholder="Ex: US0378331005"
-                        maxLength={20}
-                      />
+                  {/* ISIN + Setor - hidden for Currency */}
+                  {formData.security_type !== "currency" && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="isin">ISIN</Label>
+                        <Input
+                          id="isin"
+                          value={formData.isin}
+                          onChange={(e) => setFormData({ ...formData, isin: e.target.value.toUpperCase() })}
+                          placeholder="Ex: US0378331005"
+                          maxLength={20}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="sector">Setor</Label>
+                        <Input
+                          id="sector"
+                          value={formData.sector}
+                          onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
+                          placeholder="Ex: Technology"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="sector">Setor</Label>
-                      <Input
-                        id="sector"
-                        value={formData.sector}
-                        onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
-                        placeholder="Ex: Technology"
-                      />
-                    </div>
-                  </div>
+                  )}
                   
-                  {/* Indústria + Preço */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="industry">Indústria</Label>
-                      <Input
-                        id="industry"
-                        value={formData.industry}
-                        onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                        placeholder="Ex: Consumer Electronics"
-                      />
-                    </div>
+                  {/* Indústria + Preço - Indústria hidden for Currency */}
+                  <div className={formData.security_type !== "currency" ? "grid grid-cols-2 gap-4" : ""}>
+                    {formData.security_type !== "currency" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="industry">Indústria</Label>
+                        <Input
+                          id="industry"
+                          value={formData.industry}
+                          onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                          placeholder="Ex: Consumer Electronics"
+                        />
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="current_price">Preço</Label>
                       <Input
