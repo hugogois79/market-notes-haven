@@ -269,100 +269,40 @@ export default function PortfolioForecastTable() {
         <TableHeader>
           <TableRow>
             <TableHead className="w-[250px]">Ativo</TableHead>
-            <ContextMenu>
-              <ContextMenuTrigger asChild>
-                <TableHead className={`text-right cursor-context-menu ${getColumnStyle("current").bg}`}>
-                  <div>Valor Atual</div>
-                  <div className="text-[10px] text-muted-foreground font-normal">
-                    {formatDateShort(today)}
-                  </div>
-                </TableHead>
-              </ContextMenuTrigger>
-              <ContextMenuContent className="bg-background border shadow-lg z-50">
-                {COLOR_OPTIONS.map((opt) => (
-                  <ContextMenuItem key={opt.value} onClick={() => handleSetColumnColor("current", opt.value)}>
-                    <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
-                    {opt.label}
-                  </ContextMenuItem>
-                ))}
-              </ContextMenuContent>
-            </ContextMenu>
-            <ContextMenu>
-              <ContextMenuTrigger asChild>
-                <TableHead className={`text-right cursor-context-menu ${getColumnStyle("custom").bg}`}>
-                  <div className="flex items-center justify-end gap-1">
-                    <Input
-                      type="date"
-                      value={customDate}
-                      onChange={(e) => setCustomDate(e.target.value)}
-                      className="h-6 w-28 text-xs px-1"
-                    />
-                  </div>
-                </TableHead>
-              </ContextMenuTrigger>
-              <ContextMenuContent className="bg-background border shadow-lg z-50">
-                {COLOR_OPTIONS.map((opt) => (
-                  <ContextMenuItem key={opt.value} onClick={() => handleSetColumnColor("custom", opt.value)}>
-                    <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
-                    {opt.label}
-                  </ContextMenuItem>
-                ))}
-              </ContextMenuContent>
-            </ContextMenu>
-            <ContextMenu>
-              <ContextMenuTrigger asChild>
-                <TableHead className={`text-right cursor-context-menu ${getColumnStyle("3m").bg}`}>
-                  <div>3M</div>
-                  <div className="text-[10px] text-muted-foreground font-normal">
-                    {formatDateShort(date3M)}
-                  </div>
-                </TableHead>
-              </ContextMenuTrigger>
-              <ContextMenuContent className="bg-background border shadow-lg z-50">
-                {COLOR_OPTIONS.map((opt) => (
-                  <ContextMenuItem key={opt.value} onClick={() => handleSetColumnColor("3m", opt.value)}>
-                    <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
-                    {opt.label}
-                  </ContextMenuItem>
-                ))}
-              </ContextMenuContent>
-            </ContextMenu>
-            <ContextMenu>
-              <ContextMenuTrigger asChild>
-                <TableHead className={`text-right cursor-context-menu ${getColumnStyle("6m").bg}`}>
-                  <div>6M</div>
-                  <div className="text-[10px] text-muted-foreground font-normal">
-                    {formatDateShort(date6M)}
-                  </div>
-                </TableHead>
-              </ContextMenuTrigger>
-              <ContextMenuContent className="bg-background border shadow-lg z-50">
-                {COLOR_OPTIONS.map((opt) => (
-                  <ContextMenuItem key={opt.value} onClick={() => handleSetColumnColor("6m", opt.value)}>
-                    <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
-                    {opt.label}
-                  </ContextMenuItem>
-                ))}
-              </ContextMenuContent>
-            </ContextMenu>
-            <ContextMenu>
-              <ContextMenuTrigger asChild>
-                <TableHead className={`text-right cursor-context-menu ${getColumnStyle("1y").bg}`}>
-                  <div>1Y</div>
-                  <div className="text-[10px] text-muted-foreground font-normal">
-                    {formatDateShort(date1Y)}
-                  </div>
-                </TableHead>
-              </ContextMenuTrigger>
-              <ContextMenuContent className="bg-background border shadow-lg z-50">
-                {COLOR_OPTIONS.map((opt) => (
-                  <ContextMenuItem key={opt.value} onClick={() => handleSetColumnColor("1y", opt.value)}>
-                    <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
-                    {opt.label}
-                  </ContextMenuItem>
-                ))}
-              </ContextMenuContent>
-            </ContextMenu>
+            <TableHead className="text-right">
+              <div>Valor Atual</div>
+              <div className="text-[10px] text-muted-foreground font-normal">
+                {formatDateShort(today)}
+              </div>
+            </TableHead>
+            <TableHead className="text-right">
+              <div className="flex items-center justify-end gap-1">
+                <Input
+                  type="date"
+                  value={customDate}
+                  onChange={(e) => setCustomDate(e.target.value)}
+                  className="h-6 w-28 text-xs px-1"
+                />
+              </div>
+            </TableHead>
+            <TableHead className="text-right">
+              <div>3M</div>
+              <div className="text-[10px] text-muted-foreground font-normal">
+                {formatDateShort(date3M)}
+              </div>
+            </TableHead>
+            <TableHead className="text-right">
+              <div>6M</div>
+              <div className="text-[10px] text-muted-foreground font-normal">
+                {formatDateShort(date6M)}
+              </div>
+            </TableHead>
+            <TableHead className="text-right">
+              <div>1Y</div>
+              <div className="text-[10px] text-muted-foreground font-normal">
+                {formatDateShort(date1Y)}
+              </div>
+            </TableHead>
             <TableHead className="text-right">% Portfolio</TableHead>
           </TableRow>
         </TableHeader>
@@ -460,19 +400,81 @@ export default function PortfolioForecastTable() {
           {/* Total row */}
           <TableRow className="bg-primary/5 border-t-2 font-semibold">
             <TableCell className="py-2">Total Portfolio</TableCell>
-            <TableCell className={`text-right py-2 ${getColumnStyle("current").bg}`}>{formatCurrency(totalValue)}</TableCell>
-            <TableCell className={`text-right py-2 ${getColumnStyle("custom").bg} ${totalDeltaCustom !== 0 ? "text-blue-600" : ""}`}>
-              {formatCurrency((totalValue + totalDeltaCustom) * customGrowthFactor)}
-            </TableCell>
-            <TableCell className={`text-right py-2 ${getColumnStyle("3m").bg} ${totalDelta3M !== 0 ? "text-blue-600" : ""}`}>
-              {formatCurrency((totalValue + totalDelta3M) * Math.pow(1.05, 0.25))}
-            </TableCell>
-            <TableCell className={`text-right py-2 ${getColumnStyle("6m").bg} ${totalDelta6M !== 0 ? "text-blue-600" : ""}`}>
-              {formatCurrency((totalValue + totalDelta6M) * Math.pow(1.05, 0.5))}
-            </TableCell>
-            <TableCell className={`text-right py-2 ${getColumnStyle("1y").bg} ${totalDelta1Y !== 0 ? "text-blue-600" : ""}`}>
-              {formatCurrency((totalValue + totalDelta1Y) * 1.05)}
-            </TableCell>
+            <ContextMenu>
+              <ContextMenuTrigger asChild>
+                <TableCell className={`text-right py-2 cursor-context-menu ${getColumnStyle("current").bg}`}>
+                  {formatCurrency(totalValue)}
+                </TableCell>
+              </ContextMenuTrigger>
+              <ContextMenuContent className="bg-background border shadow-lg z-50">
+                {COLOR_OPTIONS.map((opt) => (
+                  <ContextMenuItem key={opt.value} onClick={() => handleSetColumnColor("current", opt.value)}>
+                    <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
+                    {opt.label}
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuContent>
+            </ContextMenu>
+            <ContextMenu>
+              <ContextMenuTrigger asChild>
+                <TableCell className={`text-right py-2 cursor-context-menu ${getColumnStyle("custom").bg} ${totalDeltaCustom !== 0 ? "text-blue-600" : ""}`}>
+                  {formatCurrency((totalValue + totalDeltaCustom) * customGrowthFactor)}
+                </TableCell>
+              </ContextMenuTrigger>
+              <ContextMenuContent className="bg-background border shadow-lg z-50">
+                {COLOR_OPTIONS.map((opt) => (
+                  <ContextMenuItem key={opt.value} onClick={() => handleSetColumnColor("custom", opt.value)}>
+                    <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
+                    {opt.label}
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuContent>
+            </ContextMenu>
+            <ContextMenu>
+              <ContextMenuTrigger asChild>
+                <TableCell className={`text-right py-2 cursor-context-menu ${getColumnStyle("3m").bg} ${totalDelta3M !== 0 ? "text-blue-600" : ""}`}>
+                  {formatCurrency((totalValue + totalDelta3M) * Math.pow(1.05, 0.25))}
+                </TableCell>
+              </ContextMenuTrigger>
+              <ContextMenuContent className="bg-background border shadow-lg z-50">
+                {COLOR_OPTIONS.map((opt) => (
+                  <ContextMenuItem key={opt.value} onClick={() => handleSetColumnColor("3m", opt.value)}>
+                    <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
+                    {opt.label}
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuContent>
+            </ContextMenu>
+            <ContextMenu>
+              <ContextMenuTrigger asChild>
+                <TableCell className={`text-right py-2 cursor-context-menu ${getColumnStyle("6m").bg} ${totalDelta6M !== 0 ? "text-blue-600" : ""}`}>
+                  {formatCurrency((totalValue + totalDelta6M) * Math.pow(1.05, 0.5))}
+                </TableCell>
+              </ContextMenuTrigger>
+              <ContextMenuContent className="bg-background border shadow-lg z-50">
+                {COLOR_OPTIONS.map((opt) => (
+                  <ContextMenuItem key={opt.value} onClick={() => handleSetColumnColor("6m", opt.value)}>
+                    <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
+                    {opt.label}
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuContent>
+            </ContextMenu>
+            <ContextMenu>
+              <ContextMenuTrigger asChild>
+                <TableCell className={`text-right py-2 cursor-context-menu ${getColumnStyle("1y").bg} ${totalDelta1Y !== 0 ? "text-blue-600" : ""}`}>
+                  {formatCurrency((totalValue + totalDelta1Y) * 1.05)}
+                </TableCell>
+              </ContextMenuTrigger>
+              <ContextMenuContent className="bg-background border shadow-lg z-50">
+                {COLOR_OPTIONS.map((opt) => (
+                  <ContextMenuItem key={opt.value} onClick={() => handleSetColumnColor("1y", opt.value)}>
+                    <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
+                    {opt.label}
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuContent>
+            </ContextMenu>
             <TableCell className="text-right py-2">100%</TableCell>
           </TableRow>
         </TableBody>
