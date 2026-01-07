@@ -548,10 +548,10 @@ export default function SecuritiesTable() {
           
           // Price field
           current_price: result.data.price?.toString().replace(".", ",") || prev.current_price,
-          // Price change fields
-          change_1d: result.data.change_1d?.toString().replace(".", ",") || prev.change_1d,
-          change_1w: result.data.change_1w?.toString().replace(".", ",") || prev.change_1w,
-          change_ytd: result.data.change_ytd?.toString().replace(".", ",") || prev.change_ytd,
+          // Price change fields - multiplicar por 100 (n8n envia decimais, ex: 0.0002 = 0.02%)
+          change_1d: toPercent(result.data.change_1d) || prev.change_1d,
+          change_1w: toPercent(result.data.change_1w) || prev.change_1w,
+          change_ytd: toPercent(result.data.change_ytd) || prev.change_ytd,
         }));
         toast.success("Dados carregados do FMP");
       } else {
