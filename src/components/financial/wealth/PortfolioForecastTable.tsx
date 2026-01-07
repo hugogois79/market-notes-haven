@@ -250,6 +250,16 @@ export default function PortfolioForecastTable() {
   const totalDelta6M = getTotalDelta(date6M);
   const totalDelta1Y = getTotalDelta(date1Y);
 
+  // Calculate projected totals for each column (for weight calculations)
+  const projectedTotalCurrent = totalValue + getCashflowPosition(today);
+  const projectedTotalCustom = (totalValue + totalDeltaCustom) * customGrowthFactor + getCashflowPosition(customDateObj);
+  const projectedTotal3M = (totalValue + totalDelta3M) * Math.pow(1.05, 0.25) + getCashflowPosition(date3M);
+  const projectedTotal6M = (totalValue + totalDelta6M) * Math.pow(1.05, 0.5) + getCashflowPosition(date6M);
+  const projectedTotal1Y = (totalValue + totalDelta1Y) * 1.05 + getCashflowPosition(date1Y);
+
+  // Helper function to calculate weight for a projected value
+  const calcWeight = (value: number, total: number) => total > 0 ? (value / total) * 100 : 0;
+
   return (
     <div className="space-y-4">
       {/* Manual Adjustments Section */}
@@ -315,7 +325,6 @@ export default function PortfolioForecastTable() {
                 {formatDateShort(date1Y)}
               </div>
             </TableHead>
-            <TableHead className="text-right py-1">% Portfolio</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -334,7 +343,7 @@ export default function PortfolioForecastTable() {
                   className="bg-muted/50 h-8 cursor-pointer hover:bg-muted/70"
                   onClick={() => toggleCategory(category)}
                 >
-                  <TableCell colSpan={7} className="font-semibold py-1">
+                  <TableCell colSpan={6} className="font-semibold py-1">
                     <div className="flex items-center gap-2">
                       {isCollapsed ? (
                         <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
@@ -351,7 +360,6 @@ export default function PortfolioForecastTable() {
                 {/* Assets - only show if not collapsed */}
                 {!isCollapsed && categoryAssets.map((asset) => {
                   const value = asset.current_value || 0;
-                  const weight = totalValue > 0 ? (value / totalValue) * 100 : 0;
                   
                   // Get combined deltas (adjustments + future transactions) for each forecast date
                   const deltaCustom = getAssetDelta(asset.id, customDateObj);
@@ -365,10 +373,15 @@ export default function PortfolioForecastTable() {
                   const forecast6M = (value + delta6M) * Math.pow(1.05, 0.5);
                   const forecast1Y = (value + delta1Y) * 1.05;
 
-                  const hasAdjustment = deltaCustom !== 0 || delta3M !== 0 || delta6M !== 0 || delta1Y !== 0;
+                  // Calculate weights for each projection column
+                  const weightCurrent = calcWeight(value, projectedTotalCurrent);
+                  const weightCustom = calcWeight(forecastCustom, projectedTotalCustom);
+                  const weight3M = calcWeight(forecast3M, projectedTotal3M);
+                  const weight6M = calcWeight(forecast6M, projectedTotal6M);
+                  const weight1Y = calcWeight(forecast1Y, projectedTotal1Y);
 
                   return (
-                    <TableRow key={asset.id} className="h-8">
+                    <TableRow key={asset.id} className="h-10">
                       <TableCell className="py-1">
                         <div className="flex flex-col leading-tight">
                           <span className="font-medium">{asset.name}</span>
@@ -379,20 +392,36 @@ export default function PortfolioForecastTable() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className={`text-right py-1 ${getColumnStyle("current").bg}`}>{formatCurrency(value)}</TableCell>
+                      <TableCell className={`text-right py-1 ${getColumnStyle("current").bg}`}>
+                        <div className="flex flex-col items-end leading-tight">
+                          <span>{formatCurrency(value)}</span>
+                          <span className="text-[10px] text-muted-foreground">{weightCurrent.toFixed(1)}%</span>
+                        </div>
+                      </TableCell>
                       <TableCell className={`text-right py-1 ${getColumnStyle("custom").bg} ${deltaCustom !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
-                        {formatCurrency(forecastCustom)}
+                        <div className="flex flex-col items-end leading-tight">
+                          <span>{formatCurrency(forecastCustom)}</span>
+                          <span className="text-[10px] text-muted-foreground">{weightCustom.toFixed(1)}%</span>
+                        </div>
                       </TableCell>
                       <TableCell className={`text-right py-1 ${getColumnStyle("3m").bg} ${delta3M !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
-                        {formatCurrency(forecast3M)}
+                        <div className="flex flex-col items-end leading-tight">
+                          <span>{formatCurrency(forecast3M)}</span>
+                          <span className="text-[10px] text-muted-foreground">{weight3M.toFixed(1)}%</span>
+                        </div>
                       </TableCell>
                       <TableCell className={`text-right py-1 ${getColumnStyle("6m").bg} ${delta6M !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
-                        {formatCurrency(forecast6M)}
+                        <div className="flex flex-col items-end leading-tight">
+                          <span>{formatCurrency(forecast6M)}</span>
+                          <span className="text-[10px] text-muted-foreground">{weight6M.toFixed(1)}%</span>
+                        </div>
                       </TableCell>
                       <TableCell className={`text-right py-1 ${getColumnStyle("1y").bg} ${delta1Y !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
-                        {formatCurrency(forecast1Y)}
+                        <div className="flex flex-col items-end leading-tight">
+                          <span>{formatCurrency(forecast1Y)}</span>
+                          <span className="text-[10px] text-muted-foreground">{weight1Y.toFixed(1)}%</span>
+                        </div>
                       </TableCell>
-                      <TableCell className="text-right py-1">{weight.toFixed(1)}%</TableCell>
                     </TableRow>
                   );
                 })}
@@ -401,7 +430,7 @@ export default function PortfolioForecastTable() {
           })}
 
           {/* Cashflow row */}
-          <TableRow className="bg-emerald-50/50 border-t h-8">
+          <TableRow className="bg-emerald-50/50 border-t h-10">
             <TableCell className="py-1 font-medium">
               <div className="flex items-center gap-2">
                 <span className="text-base">💰</span>
@@ -409,30 +438,47 @@ export default function PortfolioForecastTable() {
               </div>
             </TableCell>
             <TableCell className={`text-right py-1 font-medium ${getColumnStyle("current").bg} ${getCashflowPosition(today) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-              {formatCurrency(getCashflowPosition(today))}
+              <div className="flex flex-col items-end leading-tight">
+                <span>{formatCurrency(getCashflowPosition(today))}</span>
+                <span className="text-[10px] text-muted-foreground">{calcWeight(getCashflowPosition(today), projectedTotalCurrent).toFixed(1)}%</span>
+              </div>
             </TableCell>
             <TableCell className={`text-right py-1 font-medium ${getColumnStyle("custom").bg} ${getCashflowPosition(customDateObj) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-              {formatCurrency(getCashflowPosition(customDateObj))}
+              <div className="flex flex-col items-end leading-tight">
+                <span>{formatCurrency(getCashflowPosition(customDateObj))}</span>
+                <span className="text-[10px] text-muted-foreground">{calcWeight(getCashflowPosition(customDateObj), projectedTotalCustom).toFixed(1)}%</span>
+              </div>
             </TableCell>
             <TableCell className={`text-right py-1 font-medium ${getColumnStyle("3m").bg} ${getCashflowPosition(date3M) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-              {formatCurrency(getCashflowPosition(date3M))}
+              <div className="flex flex-col items-end leading-tight">
+                <span>{formatCurrency(getCashflowPosition(date3M))}</span>
+                <span className="text-[10px] text-muted-foreground">{calcWeight(getCashflowPosition(date3M), projectedTotal3M).toFixed(1)}%</span>
+              </div>
             </TableCell>
             <TableCell className={`text-right py-1 font-medium ${getColumnStyle("6m").bg} ${getCashflowPosition(date6M) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-              {formatCurrency(getCashflowPosition(date6M))}
+              <div className="flex flex-col items-end leading-tight">
+                <span>{formatCurrency(getCashflowPosition(date6M))}</span>
+                <span className="text-[10px] text-muted-foreground">{calcWeight(getCashflowPosition(date6M), projectedTotal6M).toFixed(1)}%</span>
+              </div>
             </TableCell>
             <TableCell className={`text-right py-1 font-medium ${getColumnStyle("1y").bg} ${getCashflowPosition(date1Y) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-              {formatCurrency(getCashflowPosition(date1Y))}
+              <div className="flex flex-col items-end leading-tight">
+                <span>{formatCurrency(getCashflowPosition(date1Y))}</span>
+                <span className="text-[10px] text-muted-foreground">{calcWeight(getCashflowPosition(date1Y), projectedTotal1Y).toFixed(1)}%</span>
+              </div>
             </TableCell>
-            <TableCell className="text-right py-1 text-muted-foreground">—</TableCell>
           </TableRow>
 
           {/* Total row */}
-          <TableRow className="bg-primary/5 border-t-2 font-semibold h-8">
+          <TableRow className="bg-primary/5 border-t-2 font-semibold h-10">
             <TableCell className="py-1">Total Líquido</TableCell>
             <ContextMenu>
               <ContextMenuTrigger asChild>
                 <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("current").bg}`}>
-                  {formatCurrency(totalValue + getCashflowPosition(today))}
+                  <div className="flex flex-col items-end leading-tight">
+                    <span>{formatCurrency(projectedTotalCurrent)}</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">100%</span>
+                  </div>
                 </TableCell>
               </ContextMenuTrigger>
               <ContextMenuContent className="bg-background border shadow-lg z-50">
@@ -447,7 +493,10 @@ export default function PortfolioForecastTable() {
             <ContextMenu>
               <ContextMenuTrigger asChild>
                 <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("custom").bg} ${totalDeltaCustom !== 0 ? "text-blue-600" : ""}`}>
-                  {formatCurrency((totalValue + totalDeltaCustom) * customGrowthFactor + getCashflowPosition(customDateObj))}
+                  <div className="flex flex-col items-end leading-tight">
+                    <span>{formatCurrency(projectedTotalCustom)}</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">100%</span>
+                  </div>
                 </TableCell>
               </ContextMenuTrigger>
               <ContextMenuContent className="bg-background border shadow-lg z-50">
@@ -462,7 +511,10 @@ export default function PortfolioForecastTable() {
             <ContextMenu>
               <ContextMenuTrigger asChild>
                 <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("3m").bg} ${totalDelta3M !== 0 ? "text-blue-600" : ""}`}>
-                  {formatCurrency((totalValue + totalDelta3M) * Math.pow(1.05, 0.25) + getCashflowPosition(date3M))}
+                  <div className="flex flex-col items-end leading-tight">
+                    <span>{formatCurrency(projectedTotal3M)}</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">100%</span>
+                  </div>
                 </TableCell>
               </ContextMenuTrigger>
               <ContextMenuContent className="bg-background border shadow-lg z-50">
@@ -477,7 +529,10 @@ export default function PortfolioForecastTable() {
             <ContextMenu>
               <ContextMenuTrigger asChild>
                 <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("6m").bg} ${totalDelta6M !== 0 ? "text-blue-600" : ""}`}>
-                  {formatCurrency((totalValue + totalDelta6M) * Math.pow(1.05, 0.5) + getCashflowPosition(date6M))}
+                  <div className="flex flex-col items-end leading-tight">
+                    <span>{formatCurrency(projectedTotal6M)}</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">100%</span>
+                  </div>
                 </TableCell>
               </ContextMenuTrigger>
               <ContextMenuContent className="bg-background border shadow-lg z-50">
@@ -492,7 +547,10 @@ export default function PortfolioForecastTable() {
             <ContextMenu>
               <ContextMenuTrigger asChild>
                 <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("1y").bg} ${totalDelta1Y !== 0 ? "text-blue-600" : ""}`}>
-                  {formatCurrency((totalValue + totalDelta1Y) * 1.05 + getCashflowPosition(date1Y))}
+                  <div className="flex flex-col items-end leading-tight">
+                    <span>{formatCurrency(projectedTotal1Y)}</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">100%</span>
+                  </div>
                 </TableCell>
               </ContextMenuTrigger>
               <ContextMenuContent className="bg-background border shadow-lg z-50">
@@ -504,7 +562,6 @@ export default function PortfolioForecastTable() {
                 ))}
               </ContextMenuContent>
             </ContextMenu>
-            <TableCell className="text-right py-1">100%</TableCell>
           </TableRow>
         </TableBody>
       </Table>
@@ -515,11 +572,11 @@ export default function PortfolioForecastTable() {
         if (selectedColumns.length === 0) return null;
         
         const totals: Record<ColumnKey, number> = {
-          current: totalValue + getCashflowPosition(today),
-          custom: (totalValue + totalDeltaCustom) * customGrowthFactor + getCashflowPosition(customDateObj),
-          "3m": (totalValue + totalDelta3M) * Math.pow(1.05, 0.25) + getCashflowPosition(date3M),
-          "6m": (totalValue + totalDelta6M) * Math.pow(1.05, 0.5) + getCashflowPosition(date6M),
-          "1y": (totalValue + totalDelta1Y) * 1.05 + getCashflowPosition(date1Y),
+          current: projectedTotalCurrent,
+          custom: projectedTotalCustom,
+          "3m": projectedTotal3M,
+          "6m": projectedTotal6M,
+          "1y": projectedTotal1Y,
         };
         
         const columnLabels: Record<ColumnKey, string> = {
