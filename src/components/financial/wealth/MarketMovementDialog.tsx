@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -34,6 +34,13 @@ type MarketMovement = {
 };
 
 type MarketHolding = {
+  id: string;
+  name: string;
+  ticker: string | null;
+  currency: string | null;
+};
+
+type Security = {
   id: string;
   name: string;
   ticker: string | null;
@@ -77,7 +84,9 @@ export default function MarketMovementDialog({
   const queryClient = useQueryClient();
   const isEditing = !!movement;
 
+  const [selectionMode, setSelectionMode] = useState<"holding" | "security">("holding");
   const [holdingId, setHoldingId] = useState("");
+  const [securityId, setSecurityId] = useState("");
   const [movementType, setMovementType] = useState("buy");
   const [movementDate, setMovementDate] = useState(new Date().toISOString().split("T")[0]);
   const [quantity, setQuantity] = useState("");
@@ -86,9 +95,25 @@ export default function MarketMovementDialog({
   const [currency, setCurrency] = useState("EUR");
   const [notes, setNotes] = useState("");
 
+  // Fetch securities for new titles
+  const { data: securities = [] } = useQuery({
+    queryKey: ["securities-for-movements"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("securities")
+        .select("id, name, ticker, currency")
+        .order("name");
+      if (error) throw error;
+      return data as Security[];
+    },
+    enabled: open,
+  });
+
   useEffect(() => {
     if (movement) {
+      setSelectionMode("holding");
       setHoldingId(movement.holding_id);
+      setSecurityId("");
       setMovementType(movement.movement_type);
       setMovementDate(movement.movement_date);
       setQuantity(movement.quantity?.toString().replace(".", ",") || "");
@@ -97,7 +122,9 @@ export default function MarketMovementDialog({
       setCurrency(movement.currency);
       setNotes(movement.notes || "");
     } else {
+      setSelectionMode(preSelectedHoldingId ? "holding" : "holding");
       setHoldingId(preSelectedHoldingId || "");
+      setSecurityId("");
       setMovementType("buy");
       setMovementDate(new Date().toISOString().split("T")[0]);
       setQuantity("");
@@ -108,15 +135,20 @@ export default function MarketMovementDialog({
     }
   }, [movement, preSelectedHoldingId, open]);
 
-  // Update currency when holding changes
+  // Update currency when holding or security changes
   useEffect(() => {
-    if (holdingId) {
+    if (selectionMode === "holding" && holdingId) {
       const selectedHolding = holdings.find((h) => h.id === holdingId);
       if (selectedHolding?.currency) {
         setCurrency(selectedHolding.currency);
       }
+    } else if (selectionMode === "security" && securityId) {
+      const selectedSecurity = securities.find((s) => s.id === securityId);
+      if (selectedSecurity?.currency) {
+        setCurrency(selectedSecurity.currency);
+      }
     }
-  }, [holdingId, holdings]);
+  }, [holdingId, securityId, selectionMode, holdings, securities]);
 
   // Auto-calculate total when qty and price change
   useEffect(() => {
@@ -132,9 +164,61 @@ export default function MarketMovementDialog({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("User not authenticated");
 
+      let finalHoldingId = holdingId;
+
+      // If using security mode, we need to create a holding first or find existing
+      if (selectionMode === "security" && securityId) {
+        const selectedSecurity = securities.find((s) => s.id === securityId);
+        if (!selectedSecurity) throw new Error("Security not found");
+
+        // Check if holding already exists for this security
+        const { data: existingHolding } = await supabase
+          .from("market_holdings")
+          .select("id")
+          .eq("security_id", securityId)
+          .eq("user_id", userData.user.id)
+          .maybeSingle();
+
+        if (existingHolding) {
+          finalHoldingId = existingHolding.id;
+        } else {
+          // Get a wealth asset to associate (first one for now)
+          const { data: assets } = await supabase
+            .from("wealth_assets")
+            .select("id")
+            .eq("user_id", userData.user.id)
+            .eq("category", "cash")
+            .limit(1);
+          
+          if (!assets || assets.length === 0) {
+            throw new Error("No cash account found to associate holding");
+          }
+
+          // Create new holding
+          const { data: newHolding, error: holdingError } = await supabase
+            .from("market_holdings")
+            .insert({
+              user_id: userData.user.id,
+              asset_id: assets[0].id,
+              security_id: securityId,
+              name: selectedSecurity.name,
+              ticker: selectedSecurity.ticker,
+              currency: selectedSecurity.currency || "EUR",
+              quantity: 0,
+              cost_basis: 0,
+              current_value: 0,
+            })
+            .select("id")
+            .single();
+
+          if (holdingError) throw holdingError;
+          finalHoldingId = newHolding.id;
+        }
+      }
+
       const payload = {
         user_id: userData.user.id,
-        holding_id: holdingId,
+        holding_id: finalHoldingId,
         movement_type: movementType,
         movement_date: movementDate,
         quantity: quantity ? parsePortugueseNumber(quantity) : null,
@@ -157,6 +241,7 @@ export default function MarketMovementDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["market-movements"] });
+      queryClient.invalidateQueries({ queryKey: ["market-holdings"] });
       toast.success(isEditing ? "Movimento atualizado" : "Movimento adicionado");
       onOpenChange(false);
     },
@@ -168,8 +253,12 @@ export default function MarketMovementDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!holdingId) {
+    if (selectionMode === "holding" && !holdingId) {
       toast.error("Selecione um holding");
+      return;
+    }
+    if (selectionMode === "security" && !securityId) {
+      toast.error("Selecione um título");
       return;
     }
     if (!totalValue || parsePortugueseNumber(totalValue) <= 0) {
@@ -189,21 +278,64 @@ export default function MarketMovementDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Selection Mode Toggle */}
           <div className="space-y-2">
-            <Label>Holding</Label>
-            <Select value={holdingId} onValueChange={setHoldingId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecionar holding..." />
-              </SelectTrigger>
-              <SelectContent>
-                {holdings.map((h) => (
-                  <SelectItem key={h.id} value={h.id}>
-                    {h.name} {h.ticker && `(${h.ticker})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Associar a</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={selectionMode === "holding" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectionMode("holding")}
+                className="flex-1"
+              >
+                Holding Existente
+              </Button>
+              <Button
+                type="button"
+                variant={selectionMode === "security" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectionMode("security")}
+                className="flex-1"
+              >
+                Novo Título
+              </Button>
+            </div>
           </div>
+
+          {selectionMode === "holding" ? (
+            <div className="space-y-2">
+              <Label>Holding</Label>
+              <Select value={holdingId} onValueChange={setHoldingId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar holding..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {holdings.map((h) => (
+                    <SelectItem key={h.id} value={h.id}>
+                      {h.name} {h.ticker && `(${h.ticker})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>Título (Security)</Label>
+              <Select value={securityId} onValueChange={setSecurityId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar título..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {securities.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name} {s.ticker && `(${s.ticker})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
