@@ -505,7 +505,7 @@ export default function SecuritiesTable() {
           roe: asPercent(result.data.roe || result.data.returnOnEquity) || prev.roe,
           operating_margin: asPercent(result.data.operating_margin || result.data.operatingMargin) || prev.operating_margin,
           revenue_growth: asPercent(result.data.revenue_growth || result.data.revenueGrowth) || prev.revenue_growth,
-          dividend_yield: toPercent(result.data.dividend_yield || result.data.dividendYield) || prev.dividend_yield,
+          dividend_yield: asPercent(result.data.dividend_yield || result.data.dividendYield) || prev.dividend_yield,
           payout_ratio: asPercent(result.data.payout_ratio || result.data.payoutRatio) || prev.payout_ratio,
           
           // Campos ETF - valores absolutos (aceitar múltiplos nomes possíveis)
