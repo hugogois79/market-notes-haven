@@ -128,6 +128,32 @@ export default function WealthTransactionDialog({
     },
   });
 
+  // Fetch FX rates from securities table (e.g., EURUSD, EURGBP)
+  const { data: fxRates = [] } = useQuery({
+    queryKey: ["securities-fx-rates"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("securities")
+        .select("ticker, current_price")
+        .eq("security_type", "currency")
+        .not("current_price", "is", null);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Get exchange rate for a currency pair (e.g., EURUSD returns rate to convert USD to EUR)
+  const getExchangeRate = (currency: string): number | null => {
+    if (currency === "EUR") return 1;
+    const pair = `EUR${currency}`;
+    const rate = fxRates.find(fx => fx.ticker === pair);
+    if (rate?.current_price) {
+      // EURUSD = 1.05 means 1 EUR = 1.05 USD, so to convert USD to EUR: divide by rate
+      return rate.current_price;
+    }
+    return null;
+  };
+
   const form = useForm<FormValues>({
     defaultValues: {
       date: new Date().toISOString().split("T")[0],
@@ -144,7 +170,13 @@ export default function WealthTransactionDialog({
   });
 
   const selectedCurrency = form.watch("currency");
+  const watchedAmount = form.watch("amount");
   const currencySymbol = CURRENCIES.find(c => c.value === selectedCurrency)?.symbol || "€";
+  
+  // Calculate EUR equivalent when different currency is selected
+  const fxRate = getExchangeRate(selectedCurrency);
+  const amountValue = parseCurrencyInput(watchedAmount || "0");
+  const eurEquivalent = selectedCurrency !== "EUR" && fxRate ? amountValue / fxRate : null;
 
   useEffect(() => {
     if (transaction) {
@@ -186,7 +218,21 @@ export default function WealthTransactionDialog({
       if (!user) throw new Error("Not authenticated");
 
       const amount = parseCurrencyInput(values.amount);
-      const finalAmount = values.transaction_type === "debit" ? -Math.abs(amount) : Math.abs(amount);
+      
+      // Convert to EUR if different currency is selected
+      let amountInEur = amount;
+      if (values.currency !== "EUR") {
+        const fxRate = getExchangeRate(values.currency);
+        if (fxRate) {
+          // EURUSD = 1.05 means 1 EUR = 1.05 USD, so USD to EUR = amount / rate
+          amountInEur = amount / fxRate;
+        } else {
+          toast.error(`Taxa de câmbio para ${values.currency} não encontrada na tabela de securities`);
+          throw new Error(`FX rate not found for ${values.currency}`);
+        }
+      }
+      
+      const finalAmount = values.transaction_type === "debit" ? -Math.abs(amountInEur) : Math.abs(amountInEur);
 
       const payload = {
         date: values.date,
@@ -196,7 +242,7 @@ export default function WealthTransactionDialog({
         transaction_type: values.transaction_type,
         category: values.category || null,
         notes: values.notes || null,
-        currency: values.currency,
+        currency: "EUR", // Always store in EUR after conversion
         project_id: values.project_id || null,
         asset_id: values.asset_id || null,
         user_id: user.id,
@@ -366,6 +412,25 @@ export default function WealthTransactionDialog({
                   </FormItem>
                 )}
               />
+
+              {/* FX Conversion Info */}
+              {selectedCurrency !== "EUR" && amountValue > 0 && (
+                <div className="col-span-2 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1.5">
+                  {fxRate ? (
+                    <>
+                      Taxa EUR{selectedCurrency}: <span className="font-medium">{fxRate.toFixed(4)}</span>
+                      {" → "}
+                      <span className="font-semibold text-foreground">
+                        {eurEquivalent?.toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-destructive">
+                      ⚠ Taxa EUR{selectedCurrency} não encontrada em Securities
+                    </span>
+                  )}
+                </div>
+              )}
 
               <FormField
                 control={form.control}
