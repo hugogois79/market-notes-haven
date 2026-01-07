@@ -1167,9 +1167,11 @@ export default function SecuritiesTable() {
           </DialogHeader>
           <form onSubmit={handleSubmit}>
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className={`grid w-full ${formData.security_type === "currency" ? "grid-cols-2" : "grid-cols-3"}`}>
                 <TabsTrigger value="basic">Básico</TabsTrigger>
-                <TabsTrigger value="metrics">Métricas</TabsTrigger>
+                {formData.security_type !== "currency" && (
+                  <TabsTrigger value="metrics">Métricas</TabsTrigger>
+                )}
                 <TabsTrigger value="type-specific">
                   {SECURITY_TYPES.find(t => t.value === formData.security_type)?.label || "Específico"}
                 </TabsTrigger>
