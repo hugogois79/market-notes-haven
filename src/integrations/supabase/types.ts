@@ -2288,6 +2288,59 @@ export type Database = {
           },
         ]
       }
+      market_movements: {
+        Row: {
+          created_at: string
+          currency: string
+          holding_id: string
+          id: string
+          movement_date: string
+          movement_type: string
+          notes: string | null
+          price_per_unit: number | null
+          quantity: number | null
+          total_value: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          holding_id: string
+          id?: string
+          movement_date?: string
+          movement_type: string
+          notes?: string | null
+          price_per_unit?: number | null
+          quantity?: number | null
+          total_value: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          holding_id?: string
+          id?: string
+          movement_date?: string
+          movement_type?: string
+          notes?: string | null
+          price_per_unit?: number | null
+          quantity?: number | null
+          total_value?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_movements_holding_id_fkey"
+            columns: ["holding_id"]
+            isOneToOne: false
+            referencedRelation: "market_holdings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monthly_objectives: {
         Row: {
           category: string | null
