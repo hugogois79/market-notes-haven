@@ -8,10 +8,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -108,7 +109,7 @@ export default function WealthTransactionsTable() {
   
   const totalDebits = transactions
     .filter((t) => t.amount < 0)
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    .reduce((sum, t) => sum + t.amount, 0);
   
   const currentBalance = transactionsWithBalance[0]?.running_balance || 0;
 
@@ -122,111 +123,167 @@ export default function WealthTransactionsTable() {
 
   return (
     <div className="space-y-4">
+      {/* Header with Summary */}
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Cashflow Ledger</h3>
-          <div className="flex gap-4 text-sm text-muted-foreground">
-            <span>
-              Créditos: <span className="text-green-500 font-medium">{formatCurrency(totalCredits)}</span>
-            </span>
-            <span>
-              Débitos: <span className="text-red-500 font-medium">{formatCurrency(totalDebits)}</span>
-            </span>
-            <span>
-              Saldo: <span className={cn("font-medium", currentBalance >= 0 ? "text-green-500" : "text-red-500")}>
-                {formatCurrency(currentBalance)}
-              </span>
+        <div className="flex items-center gap-6">
+          <div className="text-sm">
+            <span className="text-muted-foreground">Créditos:</span>{" "}
+            <span className="font-semibold text-green-600">{formatCurrency(totalCredits)}</span>
+          </div>
+          <div className="text-sm">
+            <span className="text-muted-foreground">Débitos:</span>{" "}
+            <span className="font-semibold text-red-500">{formatCurrency(totalDebits)}</span>
+          </div>
+          <div className="text-sm">
+            <span className="text-muted-foreground">Saldo:</span>{" "}
+            <span className={cn("font-semibold", currentBalance >= 0 ? "text-green-600" : "text-red-500")}>
+              {formatCurrency(currentBalance)}
             </span>
           </div>
         </div>
-        <Button onClick={handleAdd} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
+        <Button size="sm" onClick={handleAdd}>
+          <Plus className="h-4 w-4 mr-1" />
           Nova Transação
         </Button>
       </div>
 
+      {/* Ledger Table */}
       <div className="rounded-md border">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-muted/50">
             <TableRow>
-              <TableHead className="w-[100px]">Data</TableHead>
-              <TableHead>Contraparte</TableHead>
-              <TableHead>Descrição</TableHead>
-              <TableHead>Categoria</TableHead>
-              <TableHead className="text-right">Valor</TableHead>
-              <TableHead className="text-right">Saldo</TableHead>
-              <TableHead className="w-[80px]"></TableHead>
+              <TableHead className="w-[38%] text-left font-semibold">Crédito</TableHead>
+              <TableHead className="w-[12%] text-center font-semibold">Data</TableHead>
+              <TableHead className="w-[38%] text-right font-semibold">Débito</TableHead>
+              <TableHead className="w-[12%] text-right font-semibold">Saldo</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {transactionsWithBalance.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  Nenhuma transação registada
+                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                  Sem transações registadas.
                 </TableCell>
               </TableRow>
             ) : (
-              transactionsWithBalance.map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell className="text-sm">
-                    {format(new Date(transaction.date), "dd/MM/yyyy", { locale: pt })}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {transaction.counterparty || "—"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {transaction.amount >= 0 ? (
-                        <ArrowUpCircle className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <ArrowDownCircle className="h-4 w-4 text-red-500" />
-                      )}
-                      {transaction.description}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {transaction.category && (
-                      <Badge variant="outline" className="text-xs">
-                        {transaction.category}
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className={cn(
-                    "text-right font-medium",
-                    transaction.amount >= 0 ? "text-green-500" : "text-red-500"
-                  )}>
-                    {formatCurrency(transaction.amount)}
-                  </TableCell>
-                  <TableCell className={cn(
-                    "text-right font-medium",
-                    transaction.running_balance >= 0 ? "text-green-500" : "text-red-500"
-                  )}>
-                    {formatCurrency(transaction.running_balance)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleEdit(transaction)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive"
-                        onClick={() => deleteMutation.mutate(transaction.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+              transactionsWithBalance.map((transaction) => {
+                const isCredit = transaction.amount > 0;
+                const displayName = transaction.counterparty || transaction.description || "Sem descrição";
+
+                return (
+                  <TableRow key={transaction.id} className="group hover:bg-muted/30">
+                    {/* Crédito Column */}
+                    <TableCell className="text-left py-2">
+                      {isCredit ? (
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant="outline" 
+                            className="bg-green-50 text-green-700 border-green-200 text-xs shrink-0"
+                          >
+                            {transaction.category || "Entrada"}
+                          </Badge>
+                          <span className="font-medium text-sm truncate flex-1">
+                            {displayName}
+                          </span>
+                          <span className="text-green-600 font-semibold text-sm whitespace-nowrap">
+                            {formatCurrency(transaction.amount)}
+                          </span>
+                          {/* Action buttons on hover */}
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 ml-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleEdit(transaction)}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive hover:text-destructive"
+                              onClick={() => deleteMutation.mutate(transaction.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null}
+                    </TableCell>
+
+                    {/* Data Column */}
+                    <TableCell className="text-center text-sm text-muted-foreground py-2">
+                      {format(new Date(transaction.date), "dd/MM/yyyy", { locale: pt })}
+                    </TableCell>
+
+                    {/* Débito Column */}
+                    <TableCell className="text-right py-2">
+                      {!isCredit ? (
+                        <div className="flex items-center gap-2 justify-end">
+                          {/* Action buttons on hover */}
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 mr-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleEdit(transaction)}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive hover:text-destructive"
+                              onClick={() => deleteMutation.mutate(transaction.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <span className="text-red-500 font-semibold text-sm whitespace-nowrap">
+                            {formatCurrency(transaction.amount)}
+                          </span>
+                          <span className="font-medium text-sm truncate flex-1 text-right">
+                            {displayName}
+                          </span>
+                          <Badge 
+                            variant="outline" 
+                            className="bg-red-50 text-red-700 border-red-200 text-xs shrink-0"
+                          >
+                            {transaction.category || "Saída"}
+                          </Badge>
+                        </div>
+                      ) : null}
+                    </TableCell>
+
+                    {/* Saldo Column */}
+                    <TableCell className="text-right py-2">
+                      <span className={cn("font-semibold text-sm", transaction.running_balance >= 0 ? "text-green-600" : "text-red-500")}>
+                        {formatCurrency(transaction.running_balance)}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
+          <TableFooter className="bg-muted/30">
+            <TableRow>
+              <TableCell className="text-left font-semibold text-green-600">
+                Total: {formatCurrency(totalCredits)}
+              </TableCell>
+              <TableCell className="text-center text-sm text-muted-foreground">
+                {transactions.length} mov.
+              </TableCell>
+              <TableCell className="text-right font-semibold text-red-500">
+                Total: {formatCurrency(totalDebits)}
+              </TableCell>
+              <TableCell className="text-right">
+                <span className={cn("font-bold", currentBalance >= 0 ? "text-green-600" : "text-red-500")}>
+                  {formatCurrency(currentBalance)}
+                </span>
+              </TableCell>
+            </TableRow>
+          </TableFooter>
         </Table>
       </div>
 
