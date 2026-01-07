@@ -54,6 +54,7 @@ interface MarketMovementDialogProps {
   movement?: MarketMovement | null;
   holdings: MarketHolding[];
   preSelectedHoldingId?: string | null;
+  assetId?: string | null;
 }
 
 const MOVEMENT_TYPES = [
@@ -81,6 +82,7 @@ export default function MarketMovementDialog({
   movement,
   holdings,
   preSelectedHoldingId,
+  assetId,
 }: MarketMovementDialogProps) {
   const queryClient = useQueryClient();
   const isEditing = !!movement;
@@ -187,16 +189,20 @@ export default function MarketMovementDialog({
         if (existingHolding) {
           finalHoldingId = existingHolding.id;
         } else {
-          // Get a wealth asset to associate (first one for now)
-          const { data: assets } = await supabase
-            .from("wealth_assets")
-            .select("id")
-            .eq("user_id", userData.user.id)
-            .eq("category", "cash")
-            .limit(1);
+          // Use provided assetId or fallback to first wealth asset
+          let targetAssetId = assetId;
           
-          if (!assets || assets.length === 0) {
-            throw new Error("No cash account found to associate holding");
+          if (!targetAssetId) {
+            const { data: assets } = await supabase
+              .from("wealth_assets")
+              .select("id")
+              .eq("user_id", userData.user.id)
+              .limit(1);
+            
+            if (!assets || assets.length === 0) {
+              throw new Error("No account found to associate holding");
+            }
+            targetAssetId = assets[0].id;
           }
 
           // Create new holding
@@ -204,7 +210,7 @@ export default function MarketMovementDialog({
             .from("market_holdings")
             .insert({
               user_id: userData.user.id,
-              asset_id: assets[0].id,
+              asset_id: targetAssetId,
               security_id: securityId,
               name: selectedSecurity.name,
               ticker: selectedSecurity.ticker,

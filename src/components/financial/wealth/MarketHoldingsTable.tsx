@@ -450,6 +450,7 @@ export default function MarketHoldingsTable() {
           currency: h.currency 
         })))}
         preSelectedHoldingId={preSelectedHoldingId}
+        assetId={selectedAssetId}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
