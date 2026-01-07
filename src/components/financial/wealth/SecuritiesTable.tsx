@@ -531,6 +531,7 @@ export default function SecuritiesTable() {
       const { data, error } = await supabase
         .from("securities")
         .select("*")
+        .order("security_type")
         .order("name");
       if (error) throw error;
       // Map recent_analyses from JSON to proper type
