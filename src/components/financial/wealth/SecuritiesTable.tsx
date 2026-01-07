@@ -696,7 +696,11 @@ export default function SecuritiesTable() {
       handleCloseDialog();
     },
     onError: (error: Error) => {
-      toast.error(`Erro ao criar título: ${error.message}`);
+      if (error.message.includes("duplicate key") || error.message.includes("unique constraint")) {
+        toast.error("Este título já existe na tua lista. Verifica se já o adicionaste anteriormente.");
+      } else {
+        toast.error(`Erro ao criar título: ${error.message}`);
+      }
     },
   });
 
