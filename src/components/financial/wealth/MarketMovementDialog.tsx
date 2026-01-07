@@ -45,6 +45,7 @@ type Security = {
   name: string;
   ticker: string | null;
   currency: string | null;
+  current_price: number | null;
 };
 
 interface MarketMovementDialogProps {
@@ -101,7 +102,7 @@ export default function MarketMovementDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("securities")
-        .select("id, name, ticker, currency")
+        .select("id, name, ticker, currency, current_price")
         .order("name");
       if (error) throw error;
       return data as Security[];
@@ -135,7 +136,7 @@ export default function MarketMovementDialog({
     }
   }, [movement, preSelectedHoldingId, open]);
 
-  // Update currency when holding or security changes
+  // Update currency and price when holding or security changes
   useEffect(() => {
     if (selectionMode === "holding" && holdingId) {
       const selectedHolding = holdings.find((h) => h.id === holdingId);
@@ -146,6 +147,10 @@ export default function MarketMovementDialog({
       const selectedSecurity = securities.find((s) => s.id === securityId);
       if (selectedSecurity?.currency) {
         setCurrency(selectedSecurity.currency);
+      }
+      // Pre-fill price from security's current_price
+      if (selectedSecurity?.current_price) {
+        setPricePerUnit(selectedSecurity.current_price.toString().replace(".", ","));
       }
     }
   }, [holdingId, securityId, selectionMode, holdings, securities]);
@@ -397,18 +402,9 @@ export default function MarketMovementDialog({
 
             <div className="space-y-2">
               <Label>Moeda</Label>
-              <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CURRENCIES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="h-10 px-3 py-2 border rounded-md bg-muted text-muted-foreground flex items-center">
+                {currency}
+              </div>
             </div>
           </div>
 
