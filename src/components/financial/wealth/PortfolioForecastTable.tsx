@@ -164,6 +164,7 @@ export default function PortfolioForecastTable() {
   }
 
   // Dates for forecasts
+  const date3M = addMonths(today, 3);
   const date6M = addMonths(today, 6);
   const date1Y = addYears(today, 1);
   const customDateObj = new Date(customDate);
@@ -194,6 +195,7 @@ export default function PortfolioForecastTable() {
 
   // Calculate total deltas for each forecast column (including future transactions)
   const totalDeltaCustom = getTotalDelta(customDateObj);
+  const totalDelta3M = getTotalDelta(date3M);
   const totalDelta6M = getTotalDelta(date6M);
   const totalDelta1Y = getTotalDelta(date1Y);
 
@@ -249,6 +251,12 @@ export default function PortfolioForecastTable() {
               </div>
             </TableHead>
             <TableHead className="text-right">
+              <div>3M</div>
+              <div className="text-[10px] text-muted-foreground font-normal">
+                {formatDateShort(date3M)}
+              </div>
+            </TableHead>
+            <TableHead className="text-right">
               <div>6M</div>
               <div className="text-[10px] text-muted-foreground font-normal">
                 {formatDateShort(date6M)}
@@ -273,7 +281,7 @@ export default function PortfolioForecastTable() {
               <>
                 {/* Category header */}
                 <TableRow key={`cat-${category}`} className="bg-muted/50">
-                  <TableCell colSpan={6} className="font-semibold text-xs uppercase tracking-wide">
+                  <TableCell colSpan={7} className="font-semibold text-xs uppercase tracking-wide">
                     {category} ({catWeight.toFixed(1)}%)
                   </TableCell>
                 </TableRow>
@@ -285,15 +293,17 @@ export default function PortfolioForecastTable() {
                   
                   // Get combined deltas (adjustments + future transactions) for each forecast date
                   const deltaCustom = getAssetDelta(asset.id, customDateObj);
+                  const delta3M = getAssetDelta(asset.id, date3M);
                   const delta6M = getAssetDelta(asset.id, date6M);
                   const delta1Y = getAssetDelta(asset.id, date1Y);
                   
                   // Projections based on 5% annual growth + adjustments
                   const forecastCustom = (value + deltaCustom) * customGrowthFactor;
+                  const forecast3M = (value + delta3M) * Math.pow(1.05, 0.25);
                   const forecast6M = (value + delta6M) * Math.pow(1.05, 0.5);
                   const forecast1Y = (value + delta1Y) * 1.05;
 
-                  const hasAdjustment = deltaCustom !== 0 || delta6M !== 0 || delta1Y !== 0;
+                  const hasAdjustment = deltaCustom !== 0 || delta3M !== 0 || delta6M !== 0 || delta1Y !== 0;
 
                   return (
                     <TableRow key={asset.id} className="text-xs">
@@ -308,6 +318,9 @@ export default function PortfolioForecastTable() {
                       <TableCell className="text-right py-1.5">{formatCurrency(value)}</TableCell>
                       <TableCell className={`text-right py-1.5 ${deltaCustom !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
                         {formatCurrency(forecastCustom)}
+                      </TableCell>
+                      <TableCell className={`text-right py-1.5 ${delta3M !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
+                        {formatCurrency(forecast3M)}
                       </TableCell>
                       <TableCell className={`text-right py-1.5 ${delta6M !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
                         {formatCurrency(forecast6M)}
@@ -337,6 +350,9 @@ export default function PortfolioForecastTable() {
             <TableCell className={`text-right py-2 font-medium ${getCashflowPosition(customDateObj) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {formatCurrency(getCashflowPosition(customDateObj))}
             </TableCell>
+            <TableCell className={`text-right py-2 font-medium ${getCashflowPosition(date3M) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+              {formatCurrency(getCashflowPosition(date3M))}
+            </TableCell>
             <TableCell className={`text-right py-2 font-medium ${getCashflowPosition(date6M) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {formatCurrency(getCashflowPosition(date6M))}
             </TableCell>
@@ -352,6 +368,9 @@ export default function PortfolioForecastTable() {
             <TableCell className="text-right py-2">{formatCurrency(totalValue)}</TableCell>
             <TableCell className={`text-right py-2 ${totalDeltaCustom !== 0 ? "text-blue-600" : ""}`}>
               {formatCurrency((totalValue + totalDeltaCustom) * customGrowthFactor)}
+            </TableCell>
+            <TableCell className={`text-right py-2 ${totalDelta3M !== 0 ? "text-blue-600" : ""}`}>
+              {formatCurrency((totalValue + totalDelta3M) * Math.pow(1.05, 0.25))}
             </TableCell>
             <TableCell className={`text-right py-2 ${totalDelta6M !== 0 ? "text-blue-600" : ""}`}>
               {formatCurrency((totalValue + totalDelta6M) * Math.pow(1.05, 0.5))}
