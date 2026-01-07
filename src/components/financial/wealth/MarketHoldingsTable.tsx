@@ -12,7 +12,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, TrendingUp, Wallet } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, TrendingUp, Wallet, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -30,6 +30,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import MarketHoldingDialog from "./MarketHoldingDialog";
+import MarketMovementDialog from "./MarketMovementDialog";
 
 type MarketHolding = {
   id: string;
@@ -85,11 +86,13 @@ const formatPercent = (value: number | null) => {
 export default function MarketHoldingsTable() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [movementDialogOpen, setMovementDialogOpen] = useState(false);
   const [selectedHolding, setSelectedHolding] = useState<MarketHolding | null>(null);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [selectedAssetName, setSelectedAssetName] = useState<string>("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
+  const [preSelectedHoldingId, setPreSelectedHoldingId] = useState<string | null>(null);
 
   // Fetch securities for current prices (includes FX rates with security_type = 'currency')
   const { data: securities = [] } = useQuery({
@@ -235,10 +238,19 @@ export default function MarketHoldingsTable() {
               {asset.holdings.length} holdings
             </p>
           </div>
-          <Button size="sm" onClick={() => handleAddHolding(asset.id, asset.name)}>
-            <Plus className="h-4 w-4 mr-1" />
-            Adicionar Holding
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => {
+              setPreSelectedHoldingId(null);
+              setMovementDialogOpen(true);
+            }}>
+              <ArrowRightLeft className="h-4 w-4 mr-1" />
+              Adicionar Movimento
+            </Button>
+            <Button size="sm" onClick={() => handleAddHolding(asset.id, asset.name)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Adicionar Holding
+            </Button>
+          </div>
         </div>
 
         <div className="rounded-md border">
@@ -426,6 +438,18 @@ export default function MarketHoldingsTable() {
         holding={selectedHolding}
         assetId={selectedAssetId}
         accountName={selectedAssetName}
+      />
+
+      <MarketMovementDialog
+        open={movementDialogOpen}
+        onOpenChange={setMovementDialogOpen}
+        holdings={cashAssets.flatMap(a => a.holdings.map(h => ({ 
+          id: h.id, 
+          name: h.name, 
+          ticker: h.ticker, 
+          currency: h.currency 
+        })))}
+        preSelectedHoldingId={preSelectedHoldingId}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
