@@ -56,6 +56,7 @@ type Security = {
   ticker: string | null;
   current_price: number | null;
   currency: string | null;
+  security_type: string | null;
 };
 
 type CashAsset = {
@@ -90,27 +91,25 @@ export default function MarketHoldingsTable() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
 
-  // Fetch FX rates from stock_prices (symbols like EURUSD, EURGBP, etc.)
-  const { data: fxRates = {} } = useQuery({
-    queryKey: ["fx-rates"],
+  // Fetch securities for current prices (includes FX rates with security_type = 'currency')
+  const { data: securities = [] } = useQuery({
+    queryKey: ["securities-prices"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("stock_prices")
-        .select("symbol, current_price")
-        .like("symbol", "EUR%");
-
-      if (error) {
-        console.error("FX rates fetch error:", error);
-        return {};
-      }
-
-      // Create map: { "EURUSD": 1.085, "EURGBP": 0.835 }
-      return (data || []).reduce((acc, row) => {
-        acc[row.symbol] = row.current_price;
-        return acc;
-      }, {} as Record<string, number>);
+        .from("securities")
+        .select("id, name, ticker, current_price, currency, security_type");
+      if (error) throw error;
+      return data as Security[];
     },
   });
+
+  // Create FX rates map from securities with type 'currency' (e.g., EURUSD)
+  const fxRates = securities
+    .filter(s => s.security_type === 'currency' && s.ticker && s.current_price)
+    .reduce((acc, s) => {
+      acc[s.ticker!] = s.current_price!;
+      return acc;
+    }, {} as Record<string, number>);
 
   // Convert value to EUR using FX rate
   const convertToEUR = (value: number, currency: string): number => {
@@ -120,18 +119,6 @@ export default function MarketHoldingsTable() {
     // rate = how many USD per 1 EUR, so EUR = USD / rate
     return rate && rate > 0 ? value / rate : value;
   };
-
-  // Fetch securities for current prices
-  const { data: securities = [] } = useQuery({
-    queryKey: ["securities-prices"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("securities")
-        .select("id, name, ticker, current_price, currency");
-      if (error) throw error;
-      return data as Security[];
-    },
-  });
 
   // Create map of security_id -> security data
   const securitiesMap = securities.reduce((acc, sec) => {
