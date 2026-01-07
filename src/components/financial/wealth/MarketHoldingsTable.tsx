@@ -47,6 +47,15 @@ type MarketHolding = {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  security_id: string | null;
+};
+
+type Security = {
+  id: string;
+  name: string;
+  ticker: string | null;
+  current_price: number | null;
+  currency: string | null;
 };
 
 type CashAsset = {
@@ -111,6 +120,24 @@ export default function MarketHoldingsTable() {
     // rate = how many USD per 1 EUR, so EUR = USD / rate
     return rate && rate > 0 ? value / rate : value;
   };
+
+  // Fetch securities for current prices
+  const { data: securities = [] } = useQuery({
+    queryKey: ["securities-prices"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("securities")
+        .select("id, name, ticker, current_price, currency");
+      if (error) throw error;
+      return data as Security[];
+    },
+  });
+
+  // Create map of security_id -> security data
+  const securitiesMap = securities.reduce((acc, sec) => {
+    acc[sec.id] = sec;
+    return acc;
+  }, {} as Record<string, Security>);
 
   // Fetch Cash category assets with holdings
   const { data: cashAssets = [], isLoading } = useQuery({
@@ -218,33 +245,49 @@ export default function MarketHoldingsTable() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[240px]">Holding</TableHead>
+                <TableHead className="w-[200px]">Holding</TableHead>
                 <TableHead>Ticker</TableHead>
                 <TableHead>Moeda</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
+                <TableHead className="text-right">Qtd</TableHead>
+                <TableHead className="text-right">Preço Compra</TableHead>
+                <TableHead className="text-right">Preço Atual</TableHead>
                 <TableHead className="text-right">Valor EUR</TableHead>
-                <TableHead className="text-right">P/L EUR</TableHead>
-                <TableHead className="text-right">Weight %</TableHead>
-                <TableHead className="w-[100px]"></TableHead>
+                <TableHead className="text-right">P/L</TableHead>
+                <TableHead className="text-right">%</TableHead>
+                <TableHead className="text-right">Weight</TableHead>
+                <TableHead className="w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {asset.holdings.map((holding) => {
                 const currency = holding.currency || "EUR";
-                const valueEUR = convertToEUR(holding.current_value || 0, currency);
+                const quantity = holding.quantity || 1;
+                
+                // Get security current price
+                const security = holding.security_id ? securitiesMap[holding.security_id] : null;
+                const securityCurrentPrice = security?.current_price || null;
+                
+                // Calculate unit prices
+                const costBasisUnit = holding.cost_basis ? holding.cost_basis / quantity : null;
+                const currentPriceUnit = securityCurrentPrice || (holding.current_value ? holding.current_value / quantity : null);
+                
+                // Calculate current value from security price if available
+                const currentValueFromSecurity = securityCurrentPrice ? securityCurrentPrice * quantity : holding.current_value;
+                
+                const valueEUR = convertToEUR(currentValueFromSecurity || 0, currency);
                 const costBasisEUR = convertToEUR(holding.cost_basis || 0, currency);
                 const plEUR = valueEUR - costBasisEUR;
                 const plPercent = costBasisEUR !== 0 ? (plEUR / Math.abs(costBasisEUR)) * 100 : 0;
                 const holdingWeight = totalValue > 0 ? (valueEUR / totalValue) * 100 : 0;
 
-                // Format original currency value
-                const formatOriginalCurrency = (value: number | null, curr: string) => {
+                // Format currency for display
+                const formatUnitPrice = (value: number | null, curr: string) => {
                   if (value === null || value === undefined) return "—";
                   return new Intl.NumberFormat("pt-PT", {
                     style: "currency",
                     currency: curr === "USDT" || curr === "BTC" ? "USD" : curr,
                     minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
+                    maximumFractionDigits: 4,
                   }).format(value);
                 };
 
@@ -263,13 +306,17 @@ export default function MarketHoldingsTable() {
                         {currency}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
-                      {currency !== "EUR" ? (
-                        <span className="text-muted-foreground">
-                          {formatOriginalCurrency(holding.current_value, currency)}
-                        </span>
+                    <TableCell className="text-right text-sm text-muted-foreground">
+                      {quantity.toLocaleString("pt-PT")}
+                    </TableCell>
+                    <TableCell className="text-right text-sm">
+                      {formatUnitPrice(costBasisUnit, currency)}
+                    </TableCell>
+                    <TableCell className="text-right text-sm font-medium">
+                      {securityCurrentPrice ? (
+                        formatUnitPrice(currentPriceUnit, currency)
                       ) : (
-                        formatCurrency(holding.current_value)
+                        <span className="text-muted-foreground">{formatUnitPrice(currentPriceUnit, currency)}</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right font-medium">
@@ -277,17 +324,19 @@ export default function MarketHoldingsTable() {
                     </TableCell>
                     <TableCell className="text-right">
                       {holding.cost_basis ? (
-                        <>
-                          <span className={plEUR >= 0 ? "text-green-600" : "text-red-600"}>
-                            {formatCurrency(plEUR)}
-                          </span>
-                          <span className={`ml-1 text-xs ${plEUR >= 0 ? "text-green-600" : "text-red-600"}`}>
-                            ({plPercent.toFixed(1)}%)
-                          </span>
-                        </>
+                        <span className={plEUR >= 0 ? "text-green-600" : "text-red-600"}>
+                          {formatCurrency(plEUR)}
+                        </span>
                       ) : "—"}
                     </TableCell>
                     <TableCell className="text-right">
+                      {holding.cost_basis ? (
+                        <span className={`text-sm font-medium ${plPercent >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          {plPercent >= 0 ? "+" : ""}{plPercent.toFixed(2)}%
+                        </span>
+                      ) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right text-sm text-muted-foreground">
                       {formatPercent(holdingWeight)}
                     </TableCell>
                     <TableCell>
@@ -310,7 +359,7 @@ export default function MarketHoldingsTable() {
               })}
               {asset.holdings.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
                     Sem holdings nesta conta. Clique em "Adicionar Holding" para começar.
                   </TableCell>
                 </TableRow>
