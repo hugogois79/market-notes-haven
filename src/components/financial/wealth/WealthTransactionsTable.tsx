@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -38,6 +38,9 @@ type WealthTransaction = {
   notes: string | null;
   created_at: string;
 };
+
+type SortField = "date" | "amount" | "counterparty" | "category";
+type SortDirection = "asc" | "desc";
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("pt-PT", {
@@ -58,7 +61,6 @@ const CATEGORIES = [
   "Transferência",
   "Outros",
 ];
-
 // Inline editable cell component
 function EditableCell({
   value,
@@ -182,6 +184,8 @@ export default function WealthTransactionsTable() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<WealthTransaction | null>(null);
+  const [sortField, setSortField] = useState<SortField>("date");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ["wealth-transactions"],
@@ -234,6 +238,26 @@ export default function WealthTransactionsTable() {
     },
   });
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />;
+    }
+    return sortDirection === "asc" ? (
+      <ArrowUp className="h-3 w-3 ml-1" />
+    ) : (
+      <ArrowDown className="h-3 w-3 ml-1" />
+    );
+  };
+
   const handleInlineEdit = (id: string, field: string, value: string) => {
     if (field === "amount") {
       // Parse Portuguese number format
@@ -273,10 +297,36 @@ export default function WealthTransactionsTable() {
       return { ...t, running_balance: runningBalance };
     });
 
-    // Return in reverse order (newest first) for display
-    return withBalance.reverse();
+    return withBalance;
   }, [transactions]);
 
+  // Apply user sorting
+  const sortedTransactions = useMemo(() => {
+    return [...transactionsWithBalance].sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortField) {
+        case "date":
+          comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+          break;
+        case "amount":
+          comparison = a.amount - b.amount;
+          break;
+        case "counterparty":
+          const nameA = (a.counterparty || a.description || "").toLowerCase();
+          const nameB = (b.counterparty || b.description || "").toLowerCase();
+          comparison = nameA.localeCompare(nameB);
+          break;
+        case "category":
+          const catA = (a.category || "").toLowerCase();
+          const catB = (b.category || "").toLowerCase();
+          comparison = catA.localeCompare(catB);
+          break;
+      }
+      
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+  }, [transactionsWithBalance, sortField, sortDirection]);
   // Calculate totals
   const totalCredits = transactions
     .filter((t) => t.amount > 0)
@@ -286,7 +336,7 @@ export default function WealthTransactionsTable() {
     .filter((t) => t.amount < 0)
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const currentBalance = transactionsWithBalance[0]?.running_balance || 0;
+  const currentBalance = transactionsWithBalance[transactionsWithBalance.length - 1]?.running_balance || 0;
 
   if (isLoading) {
     return (
@@ -327,21 +377,45 @@ export default function WealthTransactionsTable() {
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
-              <TableHead className="w-[38%] text-left font-semibold">Crédito</TableHead>
-              <TableHead className="w-[12%] text-center font-semibold">Data</TableHead>
-              <TableHead className="w-[38%] text-right font-semibold">Débito</TableHead>
+              <TableHead className="w-[38%] text-left">
+                <button
+                  onClick={() => handleSort("counterparty")}
+                  className="flex items-center font-semibold hover:text-foreground transition-colors"
+                >
+                  Crédito
+                  {getSortIcon("counterparty")}
+                </button>
+              </TableHead>
+              <TableHead className="w-[12%] text-center">
+                <button
+                  onClick={() => handleSort("date")}
+                  className="flex items-center justify-center font-semibold hover:text-foreground transition-colors w-full"
+                >
+                  Data
+                  {getSortIcon("date")}
+                </button>
+              </TableHead>
+              <TableHead className="w-[38%] text-right">
+                <button
+                  onClick={() => handleSort("amount")}
+                  className="flex items-center justify-end font-semibold hover:text-foreground transition-colors w-full"
+                >
+                  Débito
+                  {getSortIcon("amount")}
+                </button>
+              </TableHead>
               <TableHead className="w-[12%] text-right font-semibold">Saldo</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactionsWithBalance.length === 0 ? (
+            {sortedTransactions.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                   Sem transações registadas.
                 </TableCell>
               </TableRow>
             ) : (
-              transactionsWithBalance.map((transaction) => {
+              sortedTransactions.map((transaction) => {
                 const isCredit = transaction.amount > 0;
                 const displayName = transaction.counterparty || transaction.description || "";
 
