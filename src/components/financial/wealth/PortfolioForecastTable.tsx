@@ -105,16 +105,12 @@ export default function PortfolioForecastTable() {
         return adj.type === "credit" ? delta + adj.amount : delta - adj.amount;
       }, 0);
 
-    // Future transactions delta (INVERTED LOGIC)
-    // Crédito no cashflow = entrada para ti = VENDA do ativo = reduz valor
-    // Débito no cashflow = saída para ti = COMPRA do ativo = aumenta valor
+    // Future transactions delta
+    // O amount já tem sinal: positivo (crédito/venda) ou negativo (débito/compra)
+    // Inverter para o impacto no ativo: venda reduz, compra aumenta
     const transactionDelta = futureTransactions
       .filter((tx) => tx.asset_id === assetId && new Date(tx.date) <= targetDate)
-      .reduce((delta, tx) => {
-        return tx.transaction_type === "credit"
-          ? delta - tx.amount  // Venda: reduz o ativo
-          : delta + tx.amount; // Compra: aumenta o ativo
-      }, 0);
+      .reduce((delta, tx) => delta - tx.amount, 0);
 
     return manualDelta + transactionDelta;
   };
@@ -127,11 +123,7 @@ export default function PortfolioForecastTable() {
 
     const transactionDelta = futureTransactions
       .filter((tx) => new Date(tx.date) <= targetDate)
-      .reduce((sum, tx) => {
-        return tx.transaction_type === "credit"
-          ? sum - tx.amount
-          : sum + tx.amount;
-      }, 0);
+      .reduce((sum, tx) => sum - tx.amount, 0);
 
     return manualDelta + transactionDelta;
   };
@@ -203,7 +195,7 @@ export default function PortfolioForecastTable() {
                 )}
                 <span className="font-medium">
                   {isAssetSale ? "-" : "+"}
-                  {formatCurrency(tx.amount)}
+                  {formatCurrency(Math.abs(tx.amount))}
                 </span>
                 <span>em {asset?.name || "Ativo"}</span>
                 <span className="text-muted-foreground">
