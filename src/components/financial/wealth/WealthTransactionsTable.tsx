@@ -10,15 +10,32 @@ import {
   TableRow,
   TableFooter,
 } from "@/components/ui/table";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Circle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import WealthTransactionDialog from "./WealthTransactionDialog";
+
+type ColorOption = "none" | "green" | "blue" | "amber" | "red" | "purple";
+
+const COLOR_OPTIONS: { value: ColorOption; label: string; bg: string; text: string }[] = [
+  { value: "none", label: "Sem cor", bg: "", text: "" },
+  { value: "green", label: "Verde", bg: "bg-emerald-100", text: "text-emerald-700" },
+  { value: "blue", label: "Azul", bg: "bg-blue-100", text: "text-blue-700" },
+  { value: "amber", label: "Amarelo", bg: "bg-amber-100", text: "text-amber-700" },
+  { value: "red", label: "Vermelho", bg: "bg-red-100", text: "text-red-700" },
+  { value: "purple", label: "Roxo", bg: "bg-purple-100", text: "text-purple-700" },
+];
 
 type WealthTransaction = {
   id: string;
@@ -153,6 +170,24 @@ export default function WealthTransactionsTable() {
   const [editingTransaction, setEditingTransaction] = useState<WealthTransaction | null>(null);
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [coloredCells, setColoredCells] = useState<Record<string, ColorOption>>({});
+
+  const handleSetCellColor = (cellId: string, color: ColorOption) => {
+    setColoredCells((prev) => {
+      if (color === "none") {
+        const { [cellId]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [cellId]: color };
+    });
+  };
+
+  const getCellStyle = (cellId: string) => {
+    const color = coloredCells[cellId];
+    if (!color) return { bg: "", text: "" };
+    const option = COLOR_OPTIONS.find((c) => c.value === color);
+    return option ? { bg: option.bg, text: option.text } : { bg: "", text: "" };
+  };
 
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ["wealth-transactions"],
@@ -409,13 +444,33 @@ export default function WealthTransactionsTable() {
                             onSave={(val) => handleInlineEdit(transaction.id, "counterparty", val)}
                             className="font-medium text-xs truncate flex-1"
                           />
-                          <EditableCell
-                            value={transaction.amount.toLocaleString("pt-PT", { minimumFractionDigits: 2 })}
-                            onSave={(val) => handleInlineEdit(transaction.id, "amount", val)}
-                            type="text"
-                            className="text-green-600 font-semibold text-xs whitespace-nowrap"
-                          />
-                          <span className="text-muted-foreground text-xs">€</span>
+                          <ContextMenu>
+                            <ContextMenuTrigger asChild>
+                              <span className={cn(
+                                "cursor-context-menu px-1 py-0.5 rounded",
+                                getCellStyle(transaction.id).bg || ""
+                              )}>
+                                <EditableCell
+                                  value={transaction.amount.toLocaleString("pt-PT", { minimumFractionDigits: 2 })}
+                                  onSave={(val) => handleInlineEdit(transaction.id, "amount", val)}
+                                  type="text"
+                                  className={cn(
+                                    "font-semibold text-xs whitespace-nowrap",
+                                    getCellStyle(transaction.id).text || "text-green-600"
+                                  )}
+                                />
+                                <span className="text-muted-foreground text-xs ml-1">€</span>
+                              </span>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent className="bg-background border shadow-lg z-50">
+                              {COLOR_OPTIONS.map((opt) => (
+                                <ContextMenuItem key={opt.value} onClick={() => handleSetCellColor(transaction.id, opt.value)}>
+                                  <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
+                                  {opt.label}
+                                </ContextMenuItem>
+                              ))}
+                            </ContextMenuContent>
+                          </ContextMenu>
                           {/* Action buttons on hover */}
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 ml-1">
                             <Button
@@ -467,18 +522,38 @@ export default function WealthTransactionsTable() {
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
-                          <EditableCell
-                            value={Math.abs(transaction.amount).toLocaleString("pt-PT", { minimumFractionDigits: 2 })}
-                            onSave={(val) => {
-                              const numVal = parseFloat(val.replace(/\s/g, "").replace(",", "."));
-                              if (!isNaN(numVal)) {
-                                handleInlineEdit(transaction.id, "amount", (-Math.abs(numVal)).toString());
-                              }
-                            }}
-                            type="text"
-                            className="text-red-500 font-semibold text-xs whitespace-nowrap"
-                          />
-                          <span className="text-muted-foreground text-xs">€</span>
+                          <ContextMenu>
+                            <ContextMenuTrigger asChild>
+                              <span className={cn(
+                                "cursor-context-menu px-1 py-0.5 rounded",
+                                getCellStyle(transaction.id).bg || ""
+                              )}>
+                                <EditableCell
+                                  value={Math.abs(transaction.amount).toLocaleString("pt-PT", { minimumFractionDigits: 2 })}
+                                  onSave={(val) => {
+                                    const numVal = parseFloat(val.replace(/\s/g, "").replace(",", "."));
+                                    if (!isNaN(numVal)) {
+                                      handleInlineEdit(transaction.id, "amount", (-Math.abs(numVal)).toString());
+                                    }
+                                  }}
+                                  type="text"
+                                  className={cn(
+                                    "font-semibold text-xs whitespace-nowrap",
+                                    getCellStyle(transaction.id).text || "text-red-500"
+                                  )}
+                                />
+                                <span className="text-muted-foreground text-xs ml-1">€</span>
+                              </span>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent className="bg-background border shadow-lg z-50">
+                              {COLOR_OPTIONS.map((opt) => (
+                                <ContextMenuItem key={opt.value} onClick={() => handleSetCellColor(transaction.id, opt.value)}>
+                                  <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
+                                  {opt.label}
+                                </ContextMenuItem>
+                              ))}
+                            </ContextMenuContent>
+                          </ContextMenu>
                           <EditableCell
                             value={displayName}
                             onSave={(val) => handleInlineEdit(transaction.id, "counterparty", val)}
@@ -524,6 +599,37 @@ export default function WealthTransactionsTable() {
           </TableFooter>
         </Table>
       </div>
+
+      {/* Observações - Soma das células selecionadas */}
+      {Object.keys(coloredCells).length > 0 && (
+        <div className="p-3 bg-muted/30 rounded-md">
+          <div className="text-xs font-medium text-muted-foreground mb-2">Observações</div>
+          <div className="flex items-center gap-4 flex-wrap">
+            {Object.entries(coloredCells).map(([cellId, color]) => {
+              const tx = transactions.find((t) => t.id === cellId);
+              if (!tx) return null;
+              const opt = COLOR_OPTIONS.find((c) => c.value === color);
+              return (
+                <div key={cellId} className={`flex items-center gap-2 px-2 py-1 rounded ${opt?.bg}`}>
+                  <span className={`text-xs ${opt?.text}`}>{tx.counterparty || tx.description || "Transação"}:</span>
+                  <span className={`text-sm font-semibold ${opt?.text}`}>{formatCurrency(Math.abs(tx.amount))}</span>
+                </div>
+              );
+            })}
+            <div className="flex items-center gap-2 px-2 py-1 rounded bg-primary/10 ml-auto">
+              <span className="text-xs font-medium">Total Selecionado:</span>
+              <span className="text-sm font-bold">
+                {formatCurrency(
+                  Object.keys(coloredCells).reduce((sum, cellId) => {
+                    const tx = transactions.find((t) => t.id === cellId);
+                    return sum + (tx ? Math.abs(tx.amount) : 0);
+                  }, 0)
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <WealthTransactionDialog
         open={dialogOpen}
