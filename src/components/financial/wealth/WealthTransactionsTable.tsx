@@ -170,7 +170,23 @@ export default function WealthTransactionsTable() {
   const [editingTransaction, setEditingTransaction] = useState<WealthTransaction | null>(null);
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [coloredCells, setColoredCells] = useState<Record<string, ColorOption>>({});
+  const [coloredCells, setColoredCells] = useState<Record<string, ColorOption>>(() => {
+    const saved = localStorage.getItem("wealth-transactions-colors");
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  // Persist colors to localStorage
+  useEffect(() => {
+    if (Object.keys(coloredCells).length > 0) {
+      localStorage.setItem("wealth-transactions-colors", JSON.stringify(coloredCells));
+    } else {
+      localStorage.removeItem("wealth-transactions-colors");
+    }
+  }, [coloredCells]);
+
+  const handleClearColors = () => {
+    setColoredCells({});
+  };
 
   const handleSetCellColor = (cellId: string, color: ColorOption) => {
     setColoredCells((prev) => {
@@ -639,11 +655,21 @@ export default function WealthTransactionsTable() {
                   </span>
                 </div>
               ))}
-              <div className="flex items-center gap-2 px-2 py-1 rounded bg-primary/10 ml-auto">
-                <span className="text-xs font-medium">Total:</span>
-                <span className="text-sm font-bold">
-                  {formatCurrency(grandTotal)}
-                </span>
+              <div className="flex items-center gap-2 ml-auto">
+                <div className="flex items-center gap-2 px-2 py-1 rounded bg-primary/10">
+                  <span className="text-xs font-medium">Total:</span>
+                  <span className="text-sm font-bold">
+                    {formatCurrency(grandTotal)}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearColors}
+                  className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
+                >
+                  Limpar
+                </Button>
               </div>
             </div>
           </div>
