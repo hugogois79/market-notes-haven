@@ -39,6 +39,7 @@ type WealthTransaction = {
   notes: string | null;
   currency?: string | null;
   project_id?: string | null;
+  asset_id?: string | null;
 };
 
 type FormValues = {
@@ -51,6 +52,7 @@ type FormValues = {
   notes: string;
   currency: string;
   project_id: string;
+  asset_id: string;
 };
 
 interface WealthTransactionDialogProps {
@@ -136,6 +138,21 @@ export default function WealthTransactionDialog({
     },
   });
 
+  const { data: assets = [] } = useQuery({
+    queryKey: ["wealth-assets-for-transactions"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("wealth_assets")
+        .select("id, name, category")
+        .eq("user_id", user.id)
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const form = useForm<FormValues>({
     defaultValues: {
       date: new Date().toISOString().split("T")[0],
@@ -147,6 +164,7 @@ export default function WealthTransactionDialog({
       notes: "",
       currency: "EUR",
       project_id: "",
+      asset_id: "",
     },
   });
 
@@ -169,6 +187,7 @@ export default function WealthTransactionDialog({
         notes: transaction.notes || "",
         currency: transaction.currency || "EUR",
         project_id: transaction.project_id || "",
+        asset_id: transaction.asset_id || "",
       });
     } else {
       form.reset({
@@ -181,6 +200,7 @@ export default function WealthTransactionDialog({
         notes: "",
         currency: "EUR",
         project_id: "",
+        asset_id: "",
       });
     }
   }, [transaction, form]);
@@ -203,6 +223,7 @@ export default function WealthTransactionDialog({
         notes: values.notes || null,
         currency: values.currency,
         project_id: values.project_id || null,
+        asset_id: values.asset_id || null,
         user_id: user.id,
       };
 
@@ -362,6 +383,31 @@ export default function WealthTransactionDialog({
                         {CURRENCIES.map((curr) => (
                           <SelectItem key={curr.value} value={curr.value}>
                             {curr.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="asset_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Ativo</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Selecionar..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {assets.map((asset) => (
+                          <SelectItem key={asset.id} value={asset.id}>
+                            {asset.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
