@@ -4947,6 +4947,7 @@ export type Database = {
           description: string
           id: string
           notes: string | null
+          project_id: string | null
           running_balance: number | null
           transaction_type: string
           updated_at: string
@@ -4964,6 +4965,7 @@ export type Database = {
           description: string
           id?: string
           notes?: string | null
+          project_id?: string | null
           running_balance?: number | null
           transaction_type: string
           updated_at?: string
@@ -4981,6 +4983,7 @@ export type Database = {
           description?: string
           id?: string
           notes?: string | null
+          project_id?: string | null
           running_balance?: number | null
           transaction_type?: string
           updated_at?: string
@@ -4992,6 +4995,13 @@ export type Database = {
             columns: ["asset_id"]
             isOneToOne: false
             referencedRelation: "wealth_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wealth_transactions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "expense_projects"
             referencedColumns: ["id"]
           },
         ]

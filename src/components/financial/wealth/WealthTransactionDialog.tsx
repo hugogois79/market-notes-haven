@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -38,6 +38,7 @@ type WealthTransaction = {
   category: string | null;
   notes: string | null;
   currency?: string | null;
+  project_id?: string | null;
 };
 
 type FormValues = {
@@ -49,6 +50,7 @@ type FormValues = {
   category: string;
   notes: string;
   currency: string;
+  project_id: string;
 };
 
 interface WealthTransactionDialogProps {
@@ -121,6 +123,19 @@ export default function WealthTransactionDialog({
   const queryClient = useQueryClient();
   const isEditing = !!transaction;
 
+  const { data: projects = [] } = useQuery({
+    queryKey: ["expense-projects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expense_projects")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const form = useForm<FormValues>({
     defaultValues: {
       date: new Date().toISOString().split("T")[0],
@@ -131,6 +146,7 @@ export default function WealthTransactionDialog({
       category: "",
       notes: "",
       currency: "EUR",
+      project_id: "",
     },
   });
 
@@ -152,6 +168,7 @@ export default function WealthTransactionDialog({
         category: transaction.category || "",
         notes: transaction.notes || "",
         currency: transaction.currency || "EUR",
+        project_id: transaction.project_id || "",
       });
     } else {
       form.reset({
@@ -163,6 +180,7 @@ export default function WealthTransactionDialog({
         category: "",
         notes: "",
         currency: "EUR",
+        project_id: "",
       });
     }
   }, [transaction, form]);
@@ -184,6 +202,7 @@ export default function WealthTransactionDialog({
         category: values.category || null,
         notes: values.notes || null,
         currency: values.currency,
+        project_id: values.project_id || null,
         user_id: user.id,
       };
 
@@ -368,6 +387,31 @@ export default function WealthTransactionDialog({
                         {CATEGORIES.map((cat) => (
                           <SelectItem key={cat} value={cat}>
                             {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="project_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Projeto</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Selecionar..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {projects.map((proj) => (
+                          <SelectItem key={proj.id} value={proj.id}>
+                            {proj.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
