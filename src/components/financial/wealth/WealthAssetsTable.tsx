@@ -31,10 +31,12 @@ type WealthAsset = {
   allocation_weight: number | null;
   target_value_6m: number | null;
   target_weight: number | null;
-  vintage_year: number | null;
   currency: string | null;
   notes: string | null;
   created_at: string;
+  appreciation_type: string | null;
+  annual_rate_percent: number | null;
+  consider_appreciation: boolean | null;
 };
 
 const categoryIcons: Record<string, React.ElementType> = {

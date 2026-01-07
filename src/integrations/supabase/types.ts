@@ -4769,7 +4769,10 @@ export type Database = {
       wealth_assets: {
         Row: {
           allocation_weight: number | null
+          annual_rate_percent: number | null
+          appreciation_type: string | null
           category: string
+          consider_appreciation: boolean | null
           created_at: string
           currency: string | null
           current_value: number | null
@@ -4795,7 +4798,10 @@ export type Database = {
         }
         Insert: {
           allocation_weight?: number | null
+          annual_rate_percent?: number | null
+          appreciation_type?: string | null
           category: string
+          consider_appreciation?: boolean | null
           created_at?: string
           currency?: string | null
           current_value?: number | null
@@ -4821,7 +4827,10 @@ export type Database = {
         }
         Update: {
           allocation_weight?: number | null
+          annual_rate_percent?: number | null
+          appreciation_type?: string | null
           category?: string
+          consider_appreciation?: boolean | null
           created_at?: string
           currency?: string | null
           current_value?: number | null
