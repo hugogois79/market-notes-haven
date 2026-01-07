@@ -281,12 +281,13 @@ const SECURITY_TYPES: { value: SecurityType; label: string }[] = [
 
 const CURRENCIES = ["EUR", "USD", "GBP", "CHF", "BTC", "USDT"];
 
-const formatCurrency = (value: number, currency: string = "EUR") => {
+const formatCurrency = (value: number, currency: string = "EUR", securityType?: string | null) => {
+  const decimals = securityType === "currency" ? 3 : (currency === "BTC" ? 8 : 2);
   return new Intl.NumberFormat("pt-PT", {
     style: "currency",
     currency: currency === "BTC" || currency === "USDT" ? "USD" : currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: currency === "BTC" ? 8 : 2,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   }).format(value);
 };
 
@@ -1131,9 +1132,9 @@ export default function SecuritiesTable() {
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs">
                             {sec.current_price ? (
-                              formatCurrency(sec.current_price, sec.currency || "EUR")
+                              formatCurrency(sec.current_price, sec.currency || "EUR", sec.security_type)
                             ) : sec.price ? (
-                              formatCurrency(sec.price.current_price, sec.currency || "EUR")
+                              formatCurrency(sec.price.current_price, sec.currency || "EUR", sec.security_type)
                             ) : (
                               <span className="text-muted-foreground">—</span>
                             )}
