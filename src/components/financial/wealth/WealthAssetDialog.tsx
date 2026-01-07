@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -45,9 +46,11 @@ type WealthAsset = {
   allocation_weight: number | null;
   target_value_6m: number | null;
   target_weight: number | null;
-  vintage_year: number | null;
   currency: string | null;
   notes: string | null;
+  appreciation_type: string | null;
+  annual_rate_percent: number | null;
+  consider_appreciation: boolean | null;
 };
 
 type FormValues = {
@@ -61,9 +64,11 @@ type FormValues = {
   allocation_weight: string;
   target_value_6m: string;
   target_weight: string;
-  vintage_year: string;
   currency: string;
   notes: string;
+  appreciation_type: string;
+  annual_rate_percent: string;
+  consider_appreciation: boolean;
 };
 
 interface WealthAssetDialogProps {
@@ -197,9 +202,11 @@ export default function WealthAssetDialog({
       allocation_weight: "",
       target_value_6m: "",
       target_weight: "",
-      vintage_year: "",
       currency: "EUR",
       notes: "",
+      appreciation_type: "appreciates",
+      annual_rate_percent: "",
+      consider_appreciation: true,
     },
   });
 
@@ -246,9 +253,11 @@ export default function WealthAssetDialog({
         allocation_weight: asset.allocation_weight?.toString() || "",
         target_value_6m: asset.target_value_6m?.toString() || "",
         target_weight: asset.target_weight?.toString() || "",
-        vintage_year: asset.vintage_year?.toString() || "",
         currency: asset.currency || "EUR",
         notes: asset.notes || "",
+        appreciation_type: asset.appreciation_type || "appreciates",
+        annual_rate_percent: asset.annual_rate_percent?.toString() || "",
+        consider_appreciation: asset.consider_appreciation ?? true,
       });
     } else {
       form.reset({
@@ -262,9 +271,11 @@ export default function WealthAssetDialog({
         allocation_weight: "",
         target_value_6m: "",
         target_weight: "",
-        vintage_year: "",
         currency: "EUR",
         notes: "",
+        appreciation_type: "appreciates",
+        annual_rate_percent: "",
+        consider_appreciation: true,
       });
     }
   }, [asset, form]);
@@ -304,9 +315,11 @@ export default function WealthAssetDialog({
         allocation_weight: values.allocation_weight ? parseFloat(values.allocation_weight) : null,
         target_value_6m: values.target_value_6m ? parseFloat(values.target_value_6m) : null,
         target_weight: values.target_weight ? parseFloat(values.target_weight) : null,
-        vintage_year: values.vintage_year ? parseInt(values.vintage_year) : null,
         currency: values.currency,
         notes: values.notes || null,
+        appreciation_type: values.appreciation_type || "appreciates",
+        annual_rate_percent: values.annual_rate_percent ? parseFloat(values.annual_rate_percent) : null,
+        consider_appreciation: values.consider_appreciation,
         user_id: user.id,
       };
 
@@ -576,14 +589,56 @@ export default function WealthAssetDialog({
 
               <FormField
                 control={form.control}
-                name="vintage_year"
+                name="appreciation_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ano Vintage</FormLabel>
+                    <FormLabel>Tipo de Valorização</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="appreciates">Aprecia</SelectItem>
+                        <SelectItem value="depreciates">Deprecia</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="annual_rate_percent"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Taxa Anual (%)</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="2016" {...field} />
+                      <Input type="number" step="0.1" placeholder="5.0" {...field} />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="consider_appreciation"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-sm font-normal">
+                        Considerar valorização no Forecast
+                      </FormLabel>
+                    </div>
                   </FormItem>
                 )}
               />
