@@ -114,7 +114,7 @@ function EditableCell({
           onChange={(e) => setEditValue(e.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={handleSave}
-          className="h-7 text-sm px-2 py-1"
+          className="h-6 text-xs px-2 py-0.5"
         />
       </div>
     );
@@ -160,7 +160,7 @@ function CategoryDropdown({
         <Badge
           variant="outline"
           className={cn(
-            "text-xs cursor-pointer",
+            "text-[10px] cursor-pointer px-1.5 py-0",
             isCredit
               ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
               : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
@@ -171,7 +171,7 @@ function CategoryDropdown({
       </SelectTrigger>
       <SelectContent className="bg-background border shadow-lg z-50">
         {CATEGORIES.map((cat) => (
-          <SelectItem key={cat} value={cat} className="text-sm">
+          <SelectItem key={cat} value={cat} className="text-xs">
             {cat}
           </SelectItem>
         ))}
@@ -347,27 +347,27 @@ export default function WealthTransactionsTable() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 text-xs">
       {/* Header with Summary */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <div className="text-sm">
+        <div className="flex items-center gap-4">
+          <div>
             <span className="text-muted-foreground">Créditos:</span>{" "}
             <span className="font-semibold text-green-600">{formatCurrency(totalCredits)}</span>
           </div>
-          <div className="text-sm">
+          <div>
             <span className="text-muted-foreground">Débitos:</span>{" "}
             <span className="font-semibold text-red-500">{formatCurrency(totalDebits)}</span>
           </div>
-          <div className="text-sm">
+          <div>
             <span className="text-muted-foreground">Saldo:</span>{" "}
             <span className={cn("font-semibold", currentBalance >= 0 ? "text-green-600" : "text-red-500")}>
               {formatCurrency(currentBalance)}
             </span>
           </div>
         </div>
-        <Button size="sm" onClick={handleAdd}>
-          <Plus className="h-4 w-4 mr-1" />
+        <Button size="sm" className="h-7 text-xs" onClick={handleAdd}>
+          <Plus className="h-3 w-3 mr-1" />
           Nova Transação
         </Button>
       </div>
@@ -376,35 +376,35 @@ export default function WealthTransactionsTable() {
       <div className="rounded-md border">
         <Table>
           <TableHeader className="bg-muted/50">
-            <TableRow>
-              <TableHead className="w-[38%] text-left">
+            <TableRow className="text-xs">
+              <TableHead className="w-[38%] text-left py-2">
                 <button
                   onClick={() => handleSort("counterparty")}
-                  className="flex items-center font-semibold hover:text-foreground transition-colors"
+                  className="flex items-center text-xs font-semibold hover:text-foreground transition-colors"
                 >
                   Crédito
                   {getSortIcon("counterparty")}
                 </button>
               </TableHead>
-              <TableHead className="w-[12%] text-center">
+              <TableHead className="w-[12%] text-center py-2">
                 <button
                   onClick={() => handleSort("date")}
-                  className="flex items-center justify-center font-semibold hover:text-foreground transition-colors w-full"
+                  className="flex items-center justify-center text-xs font-semibold hover:text-foreground transition-colors w-full"
                 >
                   Data
                   {getSortIcon("date")}
                 </button>
               </TableHead>
-              <TableHead className="w-[38%] text-right">
+              <TableHead className="w-[38%] text-right py-2">
                 <button
                   onClick={() => handleSort("amount")}
-                  className="flex items-center justify-end font-semibold hover:text-foreground transition-colors w-full"
+                  className="flex items-center justify-end text-xs font-semibold hover:text-foreground transition-colors w-full"
                 >
                   Débito
                   {getSortIcon("amount")}
                 </button>
               </TableHead>
-              <TableHead className="w-[12%] text-right font-semibold">Saldo</TableHead>
+              <TableHead className="w-[12%] text-right py-2 text-xs font-semibold">Saldo</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -420,9 +420,9 @@ export default function WealthTransactionsTable() {
                 const displayName = transaction.counterparty || transaction.description || "";
 
                 return (
-                  <TableRow key={transaction.id} className="group hover:bg-muted/30">
+                  <TableRow key={transaction.id} className="group hover:bg-muted/30 text-xs">
                     {/* Crédito Column */}
-                    <TableCell className="text-left py-2">
+                    <TableCell className="text-left py-1.5">
                       {isCredit ? (
                         <div className="flex items-center gap-2">
                           <CategoryDropdown
@@ -433,15 +433,15 @@ export default function WealthTransactionsTable() {
                           <EditableCell
                             value={displayName}
                             onSave={(val) => handleInlineEdit(transaction.id, "counterparty", val)}
-                            className="font-medium text-sm truncate flex-1"
+                            className="font-medium text-xs truncate flex-1"
                           />
                           <EditableCell
                             value={transaction.amount.toLocaleString("pt-PT", { minimumFractionDigits: 2 })}
                             onSave={(val) => handleInlineEdit(transaction.id, "amount", val)}
                             type="text"
-                            className="text-green-600 font-semibold text-sm whitespace-nowrap"
+                            className="text-green-600 font-semibold text-xs whitespace-nowrap"
                           />
-                          <span className="text-muted-foreground text-sm">€</span>
+                          <span className="text-muted-foreground text-xs">€</span>
                           {/* Action buttons on hover */}
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 ml-1">
                             <Button
@@ -466,12 +466,12 @@ export default function WealthTransactionsTable() {
                     </TableCell>
 
                     {/* Data Column */}
-                    <TableCell className="text-center text-sm text-muted-foreground py-2">
+                    <TableCell className="text-center text-xs text-muted-foreground py-1.5">
                       {format(new Date(transaction.date), "dd/MM/yyyy", { locale: pt })}
                     </TableCell>
 
                     {/* Débito Column */}
-                    <TableCell className="text-right py-2">
+                    <TableCell className="text-right py-1.5">
                       {!isCredit ? (
                         <div className="flex items-center gap-2 justify-end">
                           {/* Action buttons on hover */}
@@ -502,13 +502,13 @@ export default function WealthTransactionsTable() {
                               }
                             }}
                             type="text"
-                            className="text-red-500 font-semibold text-sm whitespace-nowrap"
+                            className="text-red-500 font-semibold text-xs whitespace-nowrap"
                           />
-                          <span className="text-muted-foreground text-sm">€</span>
+                          <span className="text-muted-foreground text-xs">€</span>
                           <EditableCell
                             value={displayName}
                             onSave={(val) => handleInlineEdit(transaction.id, "counterparty", val)}
-                            className="font-medium text-sm truncate flex-1 text-right"
+                            className="font-medium text-xs truncate flex-1 text-right"
                           />
                           <CategoryDropdown
                             value={transaction.category}
@@ -520,8 +520,8 @@ export default function WealthTransactionsTable() {
                     </TableCell>
 
                     {/* Saldo Column */}
-                    <TableCell className="text-right py-2">
-                      <span className={cn("font-semibold text-sm", transaction.running_balance >= 0 ? "text-green-600" : "text-red-500")}>
+                    <TableCell className="text-right py-1.5">
+                      <span className={cn("font-semibold text-xs", transaction.running_balance >= 0 ? "text-green-600" : "text-red-500")}>
                         {formatCurrency(transaction.running_balance)}
                       </span>
                     </TableCell>
@@ -530,18 +530,18 @@ export default function WealthTransactionsTable() {
               })
             )}
           </TableBody>
-          <TableFooter className="bg-muted/30">
+          <TableFooter className="bg-muted/30 text-xs">
             <TableRow>
-              <TableCell className="text-left font-semibold text-green-600">
+              <TableCell className="text-left font-semibold text-green-600 py-1.5">
                 Total: {formatCurrency(totalCredits)}
               </TableCell>
-              <TableCell className="text-center text-sm text-muted-foreground">
+              <TableCell className="text-center text-xs text-muted-foreground py-1.5">
                 {transactions.length} mov.
               </TableCell>
-              <TableCell className="text-right font-semibold text-red-500">
+              <TableCell className="text-right font-semibold text-red-500 py-1.5">
                 Total: {formatCurrency(totalDebits)}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right py-1.5">
                 <span className={cn("font-bold", currentBalance >= 0 ? "text-green-600" : "text-red-500")}>
                   {formatCurrency(currentBalance)}
                 </span>
