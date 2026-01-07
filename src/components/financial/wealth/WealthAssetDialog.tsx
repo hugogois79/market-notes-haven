@@ -73,7 +73,7 @@ interface WealthAssetDialogProps {
 }
 
 const CATEGORIES = [
-  "Real Estate",
+  "Real Estate Fund",
   "Vehicles",
   "Marine",
   "Art",
@@ -187,7 +187,7 @@ export default function WealthAssetDialog({
   const form = useForm<FormValues>({
     defaultValues: {
       name: "",
-      category: "Real Estate",
+      category: "Real Estate Fund",
       subcategory: "",
       status: "Active",
       current_value: "",
@@ -236,7 +236,7 @@ export default function WealthAssetDialog({
     if (asset) {
       form.reset({
         name: asset.name || "",
-        category: asset.category || "Real Estate",
+        category: asset.category || "Real Estate Fund",
         subcategory: asset.subcategory || "",
         status: asset.status || "Active",
         current_value: asset.current_value?.toString() || "",
@@ -252,7 +252,7 @@ export default function WealthAssetDialog({
     } else {
       form.reset({
         name: "",
-        category: "Real Estate",
+        category: "Real Estate Fund",
         subcategory: "",
         status: "Active",
         current_value: "",
