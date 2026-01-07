@@ -5,23 +5,13 @@ export default function MarketsPage() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Markets</h1>
+        <h1 className="text-2xl font-bold">Market Holdings</h1>
         <p className="text-muted-foreground">
-          Gestão de holdings de mercado nas suas contas Cash.
+          Visualize e gerencie os seus investimentos em contas de mercado.
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Market Holdings</CardTitle>
-          <CardDescription>
-            Visualize e gerencie os seus investimentos em contas de mercado.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <MarketHoldingsTable />
-        </CardContent>
-      </Card>
+      <MarketHoldingsTable />
     </div>
   );
 }
