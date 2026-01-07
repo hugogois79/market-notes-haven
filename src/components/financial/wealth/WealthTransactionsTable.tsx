@@ -13,13 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Plus, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -37,6 +30,8 @@ type WealthTransaction = {
   category: string | null;
   notes: string | null;
   created_at: string;
+  asset_id: string | null;
+  wealth_assets: { name: string } | null;
 };
 
 type SortField = "date" | "amount" | "counterparty" | "category";
@@ -50,17 +45,6 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-const CATEGORIES = [
-  "Real Estate",
-  "Salário",
-  "Dividendos",
-  "Juros",
-  "Investimento",
-  "Despesas",
-  "Impostos",
-  "Transferência",
-  "Outros",
-];
 // Inline editable cell component
 function EditableCell({
   value,
@@ -134,49 +118,26 @@ function EditableCell({
   );
 }
 
-// Category dropdown component
-function CategoryDropdown({
-  value,
-  onSave,
+// Asset badge component (read-only, shows asset name)
+function AssetBadge({
+  assetName,
   isCredit,
 }: {
-  value: string | null;
-  onSave: (newValue: string) => void;
+  assetName: string | null;
   isCredit: boolean;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
-    <Select
-      value={value || ""}
-      onValueChange={(newValue) => {
-        onSave(newValue);
-        setIsOpen(false);
-      }}
-      open={isOpen}
-      onOpenChange={setIsOpen}
+    <Badge
+      variant="outline"
+      className={cn(
+        "text-[10px] px-1.5 py-0",
+        isCredit
+          ? "bg-green-50 text-green-700 border-green-200"
+          : "bg-red-50 text-red-700 border-red-200"
+      )}
     >
-      <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none hover:bg-muted/50 rounded transition-colors w-auto">
-        <Badge
-          variant="outline"
-          className={cn(
-            "text-[10px] cursor-pointer px-1.5 py-0",
-            isCredit
-              ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-              : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-          )}
-        >
-          {value || (isCredit ? "Entrada" : "Saída")}
-        </Badge>
-      </SelectTrigger>
-      <SelectContent className="bg-background border shadow-lg z-50">
-        {CATEGORIES.map((cat) => (
-          <SelectItem key={cat} value={cat} className="text-xs">
-            {cat}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      {assetName || (isCredit ? "Entrada" : "Saída")}
+    </Badge>
   );
 }
 
@@ -192,7 +153,7 @@ export default function WealthTransactionsTable() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("wealth_transactions")
-        .select("*")
+        .select("*, wealth_assets(name)")
         .order("date", { ascending: false });
 
       if (error) throw error;
@@ -425,9 +386,8 @@ export default function WealthTransactionsTable() {
                     <TableCell className="text-left py-1.5">
                       {isCredit ? (
                         <div className="flex items-center gap-2">
-                          <CategoryDropdown
-                            value={transaction.category}
-                            onSave={(val) => handleInlineEdit(transaction.id, "category", val)}
+                          <AssetBadge
+                            assetName={transaction.wealth_assets?.name || null}
                             isCredit={true}
                           />
                           <EditableCell
@@ -510,9 +470,8 @@ export default function WealthTransactionsTable() {
                             onSave={(val) => handleInlineEdit(transaction.id, "counterparty", val)}
                             className="font-medium text-xs truncate flex-1 text-right"
                           />
-                          <CategoryDropdown
-                            value={transaction.category}
-                            onSave={(val) => handleInlineEdit(transaction.id, "category", val)}
+                          <AssetBadge
+                            assetName={transaction.wealth_assets?.name || null}
                             isCredit={false}
                           />
                         </div>
