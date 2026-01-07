@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, X } from "lucide-react";
+import { Loader2, Plus, X, TrendingDown, TrendingUp } from "lucide-react";
 import { format, addMonths, addYears, addDays, differenceInDays } from "date-fns";
 import { pt } from "date-fns/locale";
 import ForecastAdjustmentDialog, { ForecastAdjustment } from "./ForecastAdjustmentDialog";
@@ -66,6 +66,28 @@ export default function PortfolioForecastTable() {
     },
   });
 
+  // Fetch future transactions with assets (date >= today)
+  const { data: futureTransactions = [] } = useQuery({
+    queryKey: ["future-transactions-with-assets"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+
+      const { data, error } = await supabase
+        .from("wealth_transactions")
+        .select("id, date, amount, transaction_type, asset_id")
+        .eq("user_id", user.id)
+        .not("asset_id", "is", null)
+        .gte("date", todayStr)
+        .order("date");
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const handleAddAdjustment = (adjustment: ForecastAdjustment) => {
     setAdjustments((prev) => [...prev, adjustment]);
   };
@@ -74,13 +96,44 @@ export default function PortfolioForecastTable() {
     setAdjustments((prev) => prev.filter((a) => a.id !== id));
   };
 
-  // Get adjustment delta for an asset up to a target date
-  const getAdjustmentDelta = (assetId: string, targetDate: Date) => {
-    return adjustments
+  // Get combined delta (manual adjustments + future transactions) for an asset up to a target date
+  const getAssetDelta = (assetId: string, targetDate: Date) => {
+    // Manual adjustments delta
+    const manualDelta = adjustments
       .filter((adj) => adj.assetId === assetId && new Date(adj.date) <= targetDate)
       .reduce((delta, adj) => {
         return adj.type === "credit" ? delta + adj.amount : delta - adj.amount;
       }, 0);
+
+    // Future transactions delta (INVERTED LOGIC)
+    // Crédito no cashflow = entrada para ti = VENDA do ativo = reduz valor
+    // Débito no cashflow = saída para ti = COMPRA do ativo = aumenta valor
+    const transactionDelta = futureTransactions
+      .filter((tx) => tx.asset_id === assetId && new Date(tx.date) <= targetDate)
+      .reduce((delta, tx) => {
+        return tx.transaction_type === "credit"
+          ? delta - tx.amount  // Venda: reduz o ativo
+          : delta + tx.amount; // Compra: aumenta o ativo
+      }, 0);
+
+    return manualDelta + transactionDelta;
+  };
+
+  // Get total delta for all assets (for totals row)
+  const getTotalDelta = (targetDate: Date) => {
+    const manualDelta = adjustments
+      .filter((adj) => new Date(adj.date) <= targetDate)
+      .reduce((sum, adj) => sum + (adj.type === "credit" ? adj.amount : -adj.amount), 0);
+
+    const transactionDelta = futureTransactions
+      .filter((tx) => new Date(tx.date) <= targetDate)
+      .reduce((sum, tx) => {
+        return tx.transaction_type === "credit"
+          ? sum - tx.amount
+          : sum + tx.amount;
+      }, 0);
+
+    return manualDelta + transactionDelta;
   };
 
   if (isLoading) {
@@ -120,20 +173,49 @@ export default function PortfolioForecastTable() {
     (a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b)
   );
 
-  // Calculate total adjustment deltas for each forecast column
-  const totalDeltaCustom = adjustments
-    .filter((adj) => new Date(adj.date) <= customDateObj)
-    .reduce((sum, adj) => sum + (adj.type === "credit" ? adj.amount : -adj.amount), 0);
-  const totalDelta6M = adjustments
-    .filter((adj) => new Date(adj.date) <= date6M)
-    .reduce((sum, adj) => sum + (adj.type === "credit" ? adj.amount : -adj.amount), 0);
-  const totalDelta1Y = adjustments
-    .filter((adj) => new Date(adj.date) <= date1Y)
-    .reduce((sum, adj) => sum + (adj.type === "credit" ? adj.amount : -adj.amount), 0);
+  // Calculate total deltas for each forecast column (including future transactions)
+  const totalDeltaCustom = getTotalDelta(customDateObj);
+  const totalDelta6M = getTotalDelta(date6M);
+  const totalDelta1Y = getTotalDelta(date1Y);
 
   return (
     <div className="space-y-4">
-      {/* Adjustments Section */}
+      {/* Future Transactions from Cashflow */}
+      {futureTransactions.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap p-2 bg-muted/30 rounded-md">
+          <span className="text-xs text-muted-foreground font-medium">Transações Futuras:</span>
+          {futureTransactions.map((tx) => {
+            const asset = assets.find((a) => a.id === tx.asset_id);
+            const isAssetSale = tx.transaction_type === "credit";
+            return (
+              <div
+                key={tx.id}
+                className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md ${
+                  isAssetSale
+                    ? "bg-amber-50 text-amber-700 border border-amber-200"
+                    : "bg-blue-50 text-blue-700 border border-blue-200"
+                }`}
+              >
+                {isAssetSale ? (
+                  <TrendingDown className="h-3 w-3" />
+                ) : (
+                  <TrendingUp className="h-3 w-3" />
+                )}
+                <span className="font-medium">
+                  {isAssetSale ? "-" : "+"}
+                  {formatCurrency(tx.amount)}
+                </span>
+                <span>em {asset?.name || "Ativo"}</span>
+                <span className="text-muted-foreground">
+                  ({format(new Date(tx.date), "dd/MM/yy")})
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Manual Adjustments Section */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 flex-wrap">
           {adjustments.map((adj) => (
@@ -217,10 +299,10 @@ export default function PortfolioForecastTable() {
                   const value = asset.current_value || 0;
                   const weight = totalValue > 0 ? (value / totalValue) * 100 : 0;
                   
-                  // Get adjustment deltas for each forecast date
-                  const deltaCustom = getAdjustmentDelta(asset.id, customDateObj);
-                  const delta6M = getAdjustmentDelta(asset.id, date6M);
-                  const delta1Y = getAdjustmentDelta(asset.id, date1Y);
+                  // Get combined deltas (adjustments + future transactions) for each forecast date
+                  const deltaCustom = getAssetDelta(asset.id, customDateObj);
+                  const delta6M = getAssetDelta(asset.id, date6M);
+                  const delta1Y = getAssetDelta(asset.id, date1Y);
                   
                   // Projections based on 5% annual growth + adjustments
                   const forecastCustom = (value + deltaCustom) * customGrowthFactor;
