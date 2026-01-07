@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, X, TrendingDown, TrendingUp, Circle } from "lucide-react";
+import { Loader2, Plus, X, TrendingDown, TrendingUp, Circle, ChevronRight, ChevronDown, Building2, Car, Anchor, Palette, Watch, Coins } from "lucide-react";
 import { format, addMonths, addYears, addDays, differenceInDays } from "date-fns";
 import { pt } from "date-fns/locale";
 import ForecastAdjustmentDialog, { ForecastAdjustment } from "./ForecastAdjustmentDialog";
@@ -34,17 +34,28 @@ const COLOR_OPTIONS: { value: ColorOption; label: string; bg: string; text: stri
   { value: "purple", label: "Roxo", bg: "bg-purple-100", text: "text-purple-700" },
 ];
 
+// Same order as WealthAssetsTable - Cash first, then others sorted by value
 const CATEGORY_ORDER = [
-  "Real Estate",
-  "Private Equity",
+  "Cash",
+  "Marine",
+  "Real Estate Fund",
+  "Vehicles",
+  "Watches",
   "Crypto",
   "Art",
-  "Watches",
-  "Vehicles",
-  "Marine",
-  "Cash",
+  "Private Equity",
   "Other",
 ];
+
+const categoryIcons: Record<string, React.ElementType> = {
+  "Real Estate Fund": Building2,
+  "Vehicles": Car,
+  "Marine": Anchor,
+  "Art": Palette,
+  "Watches": Watch,
+  "Crypto": Coins,
+  "Cash": Coins,
+};
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-PT", {
@@ -64,6 +75,7 @@ export default function PortfolioForecastTable() {
   );
   const [adjustments, setAdjustments] = useState<ForecastAdjustment[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
   const [columnColors, setColumnColors] = useState<Record<ColumnKey, ColorOption>>({
     current: "none",
     custom: "none",
@@ -71,6 +83,10 @@ export default function PortfolioForecastTable() {
     "6m": "none",
     "1y": "none",
   });
+
+  const toggleCategory = (category: string) => {
+    setCollapsedCategories(prev => ({ ...prev, [category]: !prev[category] }));
+  };
 
   const handleSetColumnColor = (column: ColumnKey, color: ColorOption) => {
     setColumnColors((prev) => ({ ...prev, [column]: color }));
@@ -261,17 +277,17 @@ export default function PortfolioForecastTable() {
         </div>
       )}
 
-      <Table>
+      <Table className="text-xs">
         <TableHeader>
-          <TableRow>
-            <TableHead className="w-[250px]">Ativo</TableHead>
-            <TableHead className="text-right">
+          <TableRow className="h-8">
+            <TableHead className="w-[220px] py-1">Ativo</TableHead>
+            <TableHead className="text-right py-1">
               <div>Valor Atual</div>
               <div className="text-[10px] text-muted-foreground font-normal">
                 {formatDateShort(today)}
               </div>
             </TableHead>
-            <TableHead className="text-right">
+            <TableHead className="text-right py-1">
               <div className="flex items-center justify-end gap-1">
                 <Input
                   type="date"
@@ -281,25 +297,25 @@ export default function PortfolioForecastTable() {
                 />
               </div>
             </TableHead>
-            <TableHead className="text-right">
+            <TableHead className="text-right py-1">
               <div>3M</div>
               <div className="text-[10px] text-muted-foreground font-normal">
                 {formatDateShort(date3M)}
               </div>
             </TableHead>
-            <TableHead className="text-right">
+            <TableHead className="text-right py-1">
               <div>6M</div>
               <div className="text-[10px] text-muted-foreground font-normal">
                 {formatDateShort(date6M)}
               </div>
             </TableHead>
-            <TableHead className="text-right">
+            <TableHead className="text-right py-1">
               <div>1Y</div>
               <div className="text-[10px] text-muted-foreground font-normal">
                 {formatDateShort(date1Y)}
               </div>
             </TableHead>
-            <TableHead className="text-right">% Portfolio</TableHead>
+            <TableHead className="text-right py-1">% Portfolio</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -307,18 +323,33 @@ export default function PortfolioForecastTable() {
             const categoryAssets = groupedAssets[category];
             const catTotal = categoryTotals[category] || 0;
             const catWeight = totalValue > 0 ? (catTotal / totalValue) * 100 : 0;
+            const Icon = categoryIcons[category] || Coins;
+            const isCollapsed = collapsedCategories[category] ?? false;
 
             return (
               <>
                 {/* Category header */}
-                <TableRow key={`cat-${category}`} className="bg-muted/50">
-                  <TableCell colSpan={7} className="font-semibold text-xs uppercase tracking-wide">
-                    {category} ({catWeight.toFixed(1)}%)
+                <TableRow 
+                  key={`cat-${category}`} 
+                  className="bg-muted/50 h-8 cursor-pointer hover:bg-muted/70"
+                  onClick={() => toggleCategory(category)}
+                >
+                  <TableCell colSpan={7} className="font-semibold py-1">
+                    <div className="flex items-center gap-2">
+                      {isCollapsed ? (
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                      )}
+                      <Icon className="h-3.5 w-3.5" />
+                      <span className="uppercase tracking-wide">{category}</span>
+                      <span className="text-muted-foreground font-normal">({catWeight.toFixed(1)}%)</span>
+                    </div>
                   </TableCell>
                 </TableRow>
 
-                {/* Assets */}
-                {categoryAssets.map((asset) => {
+                {/* Assets - only show if not collapsed */}
+                {!isCollapsed && categoryAssets.map((asset) => {
                   const value = asset.current_value || 0;
                   const weight = totalValue > 0 ? (value / totalValue) * 100 : 0;
                   
@@ -337,29 +368,31 @@ export default function PortfolioForecastTable() {
                   const hasAdjustment = deltaCustom !== 0 || delta3M !== 0 || delta6M !== 0 || delta1Y !== 0;
 
                   return (
-                    <TableRow key={asset.id} className="text-xs">
-                      <TableCell className="py-1.5">
-                        <div className="font-medium">{asset.name}</div>
-                        {asset.subcategory && (
-                          <div className="text-muted-foreground text-[10px]">
-                            {asset.subcategory}
-                          </div>
-                        )}
+                    <TableRow key={asset.id} className="h-8">
+                      <TableCell className="py-1">
+                        <div className="flex flex-col leading-tight">
+                          <span className="font-medium">{asset.name}</span>
+                          {asset.subcategory && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {asset.subcategory}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell className={`text-right py-1.5 ${getColumnStyle("current").bg}`}>{formatCurrency(value)}</TableCell>
-                      <TableCell className={`text-right py-1.5 ${getColumnStyle("custom").bg} ${deltaCustom !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
+                      <TableCell className={`text-right py-1 ${getColumnStyle("current").bg}`}>{formatCurrency(value)}</TableCell>
+                      <TableCell className={`text-right py-1 ${getColumnStyle("custom").bg} ${deltaCustom !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
                         {formatCurrency(forecastCustom)}
                       </TableCell>
-                      <TableCell className={`text-right py-1.5 ${getColumnStyle("3m").bg} ${delta3M !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
+                      <TableCell className={`text-right py-1 ${getColumnStyle("3m").bg} ${delta3M !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
                         {formatCurrency(forecast3M)}
                       </TableCell>
-                      <TableCell className={`text-right py-1.5 ${getColumnStyle("6m").bg} ${delta6M !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
+                      <TableCell className={`text-right py-1 ${getColumnStyle("6m").bg} ${delta6M !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
                         {formatCurrency(forecast6M)}
                       </TableCell>
-                      <TableCell className={`text-right py-1.5 ${getColumnStyle("1y").bg} ${delta1Y !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
+                      <TableCell className={`text-right py-1 ${getColumnStyle("1y").bg} ${delta1Y !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
                         {formatCurrency(forecast1Y)}
                       </TableCell>
-                      <TableCell className="text-right py-1.5">{weight.toFixed(1)}%</TableCell>
+                      <TableCell className="text-right py-1">{weight.toFixed(1)}%</TableCell>
                     </TableRow>
                   );
                 })}
@@ -368,37 +401,37 @@ export default function PortfolioForecastTable() {
           })}
 
           {/* Cashflow row */}
-          <TableRow className="bg-emerald-50/50 border-t">
-            <TableCell className="py-2 font-medium">
+          <TableRow className="bg-emerald-50/50 border-t h-8">
+            <TableCell className="py-1 font-medium">
               <div className="flex items-center gap-2">
                 <span className="text-base">💰</span>
                 <span>Cashflow</span>
               </div>
             </TableCell>
-            <TableCell className={`text-right py-2 font-medium ${getColumnStyle("current").bg} ${getCashflowPosition(today) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+            <TableCell className={`text-right py-1 font-medium ${getColumnStyle("current").bg} ${getCashflowPosition(today) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {formatCurrency(getCashflowPosition(today))}
             </TableCell>
-            <TableCell className={`text-right py-2 font-medium ${getColumnStyle("custom").bg} ${getCashflowPosition(customDateObj) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+            <TableCell className={`text-right py-1 font-medium ${getColumnStyle("custom").bg} ${getCashflowPosition(customDateObj) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {formatCurrency(getCashflowPosition(customDateObj))}
             </TableCell>
-            <TableCell className={`text-right py-2 font-medium ${getColumnStyle("3m").bg} ${getCashflowPosition(date3M) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+            <TableCell className={`text-right py-1 font-medium ${getColumnStyle("3m").bg} ${getCashflowPosition(date3M) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {formatCurrency(getCashflowPosition(date3M))}
             </TableCell>
-            <TableCell className={`text-right py-2 font-medium ${getColumnStyle("6m").bg} ${getCashflowPosition(date6M) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+            <TableCell className={`text-right py-1 font-medium ${getColumnStyle("6m").bg} ${getCashflowPosition(date6M) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {formatCurrency(getCashflowPosition(date6M))}
             </TableCell>
-            <TableCell className={`text-right py-2 font-medium ${getColumnStyle("1y").bg} ${getCashflowPosition(date1Y) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+            <TableCell className={`text-right py-1 font-medium ${getColumnStyle("1y").bg} ${getCashflowPosition(date1Y) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {formatCurrency(getCashflowPosition(date1Y))}
             </TableCell>
-            <TableCell className="text-right py-2 text-muted-foreground">—</TableCell>
+            <TableCell className="text-right py-1 text-muted-foreground">—</TableCell>
           </TableRow>
 
           {/* Total row */}
-          <TableRow className="bg-primary/5 border-t-2 font-semibold">
-            <TableCell className="py-2">Total Líquido</TableCell>
+          <TableRow className="bg-primary/5 border-t-2 font-semibold h-8">
+            <TableCell className="py-1">Total Líquido</TableCell>
             <ContextMenu>
               <ContextMenuTrigger asChild>
-                <TableCell className={`text-right py-2 cursor-context-menu ${getColumnStyle("current").bg}`}>
+                <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("current").bg}`}>
                   {formatCurrency(totalValue + getCashflowPosition(today))}
                 </TableCell>
               </ContextMenuTrigger>
@@ -413,7 +446,7 @@ export default function PortfolioForecastTable() {
             </ContextMenu>
             <ContextMenu>
               <ContextMenuTrigger asChild>
-                <TableCell className={`text-right py-2 cursor-context-menu ${getColumnStyle("custom").bg} ${totalDeltaCustom !== 0 ? "text-blue-600" : ""}`}>
+                <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("custom").bg} ${totalDeltaCustom !== 0 ? "text-blue-600" : ""}`}>
                   {formatCurrency((totalValue + totalDeltaCustom) * customGrowthFactor + getCashflowPosition(customDateObj))}
                 </TableCell>
               </ContextMenuTrigger>
@@ -428,7 +461,7 @@ export default function PortfolioForecastTable() {
             </ContextMenu>
             <ContextMenu>
               <ContextMenuTrigger asChild>
-                <TableCell className={`text-right py-2 cursor-context-menu ${getColumnStyle("3m").bg} ${totalDelta3M !== 0 ? "text-blue-600" : ""}`}>
+                <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("3m").bg} ${totalDelta3M !== 0 ? "text-blue-600" : ""}`}>
                   {formatCurrency((totalValue + totalDelta3M) * Math.pow(1.05, 0.25) + getCashflowPosition(date3M))}
                 </TableCell>
               </ContextMenuTrigger>
@@ -443,7 +476,7 @@ export default function PortfolioForecastTable() {
             </ContextMenu>
             <ContextMenu>
               <ContextMenuTrigger asChild>
-                <TableCell className={`text-right py-2 cursor-context-menu ${getColumnStyle("6m").bg} ${totalDelta6M !== 0 ? "text-blue-600" : ""}`}>
+                <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("6m").bg} ${totalDelta6M !== 0 ? "text-blue-600" : ""}`}>
                   {formatCurrency((totalValue + totalDelta6M) * Math.pow(1.05, 0.5) + getCashflowPosition(date6M))}
                 </TableCell>
               </ContextMenuTrigger>
@@ -458,7 +491,7 @@ export default function PortfolioForecastTable() {
             </ContextMenu>
             <ContextMenu>
               <ContextMenuTrigger asChild>
-                <TableCell className={`text-right py-2 cursor-context-menu ${getColumnStyle("1y").bg} ${totalDelta1Y !== 0 ? "text-blue-600" : ""}`}>
+                <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("1y").bg} ${totalDelta1Y !== 0 ? "text-blue-600" : ""}`}>
                   {formatCurrency((totalValue + totalDelta1Y) * 1.05 + getCashflowPosition(date1Y))}
                 </TableCell>
               </ContextMenuTrigger>
@@ -471,7 +504,7 @@ export default function PortfolioForecastTable() {
                 ))}
               </ContextMenuContent>
             </ContextMenu>
-            <TableCell className="text-right py-2">100%</TableCell>
+            <TableCell className="text-right py-1">100%</TableCell>
           </TableRow>
         </TableBody>
       </Table>
