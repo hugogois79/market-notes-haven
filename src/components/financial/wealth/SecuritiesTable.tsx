@@ -453,6 +453,22 @@ export default function SecuritiesTable() {
           if (isNaN(num)) return "";
           return (num * 100).toFixed(4).replace(".", ",");
         };
+        
+        // Helper para valores que já vêm em percentagem do n8n (ex: 6.79 -> 6,79)
+        const asPercent = (val: any): string => {
+          if (val === null || val === undefined || val === "") return "";
+          const num = parseFloat(val);
+          if (isNaN(num)) return "";
+          return num.toFixed(4).replace(".", ",");
+        };
+        
+        // Helper para valores numéricos simples
+        const toNumStr = (val: any): string => {
+          if (val === null || val === undefined || val === "") return "";
+          const num = parseFloat(val);
+          if (isNaN(num)) return "";
+          return num.toString().replace(".", ",");
+        };
 
         setFormData(prev => ({
           ...prev,
@@ -470,16 +486,16 @@ export default function SecuritiesTable() {
           pe_ratio: result.data.pe_ratio || result.data.peRatio || prev.pe_ratio,
           pb_ratio: result.data.pb_ratio || result.data.pbRatio || prev.pb_ratio,
           fcf: result.data.fcf || prev.fcf,
-          debt_to_equity: result.data.debt_to_equity || result.data.debtToEquity || prev.debt_to_equity,
+          debt_to_equity: toNumStr(result.data.debt_to_equity || result.data.debtToEquity || result.data.debtEquityRatio) || prev.debt_to_equity,
           interest_coverage: result.data.interest_coverage || result.data.interestCoverage || prev.interest_coverage,
           
-          // Campos Equity - percentagens (convertidas de decimal)
+          // Campos Equity - percentagens (n8n já envia em %, não multiplicar)
           fcf_yield: toPercent(result.data.fcf_yield || result.data.fcfYield) || prev.fcf_yield,
-          roe: toPercent(result.data.roe || result.data.returnOnEquity) || prev.roe,
-          operating_margin: toPercent(result.data.operating_margin || result.data.operatingMargin) || prev.operating_margin,
-          revenue_growth: toPercent(result.data.revenue_growth || result.data.revenueGrowth) || prev.revenue_growth,
+          roe: asPercent(result.data.roe || result.data.returnOnEquity) || prev.roe,
+          operating_margin: asPercent(result.data.operating_margin || result.data.operatingMargin) || prev.operating_margin,
+          revenue_growth: asPercent(result.data.revenue_growth || result.data.revenueGrowth) || prev.revenue_growth,
           dividend_yield: toPercent(result.data.dividend_yield || result.data.dividendYield) || prev.dividend_yield,
-          payout_ratio: toPercent(result.data.payout_ratio || result.data.payoutRatio) || prev.payout_ratio,
+          payout_ratio: asPercent(result.data.payout_ratio || result.data.payoutRatio) || prev.payout_ratio,
           
           // Campos ETF - valores absolutos (aceitar múltiplos nomes possíveis)
           aum: (result.data.aum || result.data.totalAssets || result.data.AUM)?.toString() || prev.aum,
