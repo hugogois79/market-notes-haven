@@ -480,7 +480,7 @@ export default function WealthTransactionsTable() {
                             </ContextMenuTrigger>
                             <ContextMenuContent className="bg-background border shadow-lg z-50">
                               {COLOR_OPTIONS.map((opt) => (
-                                <ContextMenuItem key={opt.value} onClick={() => handleSetCellColor(transaction.id, opt.value)}>
+                                <ContextMenuItem key={opt.value} onClick={() => handleSetCellColor(transaction.id, opt.value)} className={opt.text}>
                                   <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
                                   {opt.label}
                                 </ContextMenuItem>
@@ -563,7 +563,7 @@ export default function WealthTransactionsTable() {
                             </ContextMenuTrigger>
                             <ContextMenuContent className="bg-background border shadow-lg z-50">
                               {COLOR_OPTIONS.map((opt) => (
-                                <ContextMenuItem key={opt.value} onClick={() => handleSetCellColor(transaction.id, opt.value)}>
+                                <ContextMenuItem key={opt.value} onClick={() => handleSetCellColor(transaction.id, opt.value)} className={opt.text}>
                                   <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
                                   {opt.label}
                                 </ContextMenuItem>
