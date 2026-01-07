@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Building2, Car, Anchor, Palette, Watch, Coins, TrendingUp, TrendingDown, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, Building2, Car, Anchor, Palette, Watch, Coins, TrendingUp, TrendingDown, FileText, ChevronRight, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import WealthAssetDialog from "./WealthAssetDialog";
@@ -90,6 +90,11 @@ export default function WealthAssetsTable() {
   const [editingAsset, setEditingAsset] = useState<WealthAsset | null>(null);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [notesAsset, setNotesAsset] = useState<WealthAsset | null>(null);
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+
+  const toggleCategory = (category: string) => {
+    setCollapsedCategories(prev => ({ ...prev, [category]: !prev[category] }));
+  };
 
   const { data: assets = [], isLoading } = useQuery({
     queryKey: ["wealth-assets"],
@@ -188,15 +193,15 @@ export default function WealthAssetsTable() {
       <div className="rounded-md border">
         <Table className="text-xs">
           <TableHeader>
-            <TableRow>
-              <TableHead className="w-[220px]">Posição</TableHead>
-              <TableHead className="text-right">Valor Atual</TableHead>
-              <TableHead className="text-right">P/L</TableHead>
-              <TableHead className="text-right">CAGR</TableHead>
-              <TableHead className="text-right">Yld Exp.</TableHead>
-              <TableHead className="text-right">Peso Cat.</TableHead>
-              <TableHead className="text-right">Peso Total</TableHead>
-              <TableHead className="w-[80px]"></TableHead>
+            <TableRow className="h-8">
+              <TableHead className="w-[220px] py-1">Posição</TableHead>
+              <TableHead className="text-right py-1">Valor Atual</TableHead>
+              <TableHead className="text-right py-1">P/L</TableHead>
+              <TableHead className="text-right py-1">CAGR</TableHead>
+              <TableHead className="text-right py-1">Yld Exp.</TableHead>
+              <TableHead className="text-right py-1">Peso Cat.</TableHead>
+              <TableHead className="text-right py-1">Peso Total</TableHead>
+              <TableHead className="w-[80px] py-1"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -232,42 +237,53 @@ export default function WealthAssetsTable() {
 
                 const showSeparator = hasCashCategory && category === "Cash" && sortedCategories.length > 1;
 
+                const isCollapsed = collapsedCategories[category] ?? false;
+                const filteredAssets = categoryAssets.filter((a) => a.status !== "In Recovery");
+
                 return (
                   <>
-                    <TableRow key={`header-${category}`} className="bg-muted/50">
-                      <TableCell className="font-semibold">
+                    <TableRow 
+                      key={`header-${category}`} 
+                      className="bg-muted/50 h-8 cursor-pointer hover:bg-muted/70"
+                      onClick={() => toggleCategory(category)}
+                    >
+                      <TableCell className="font-semibold py-1">
                         <div className="flex items-center gap-2">
-                          <Icon className="h-4 w-4" />
+                          {isCollapsed ? (
+                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                          )}
+                          <Icon className="h-3.5 w-3.5" />
                           {category}
+                          <span className="text-muted-foreground font-normal ml-1">{filteredAssets.length}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right font-semibold">
+                      <TableCell className="text-right font-semibold py-1">
                         {formatCurrency(categoryTotal)}
                       </TableCell>
-                      <TableCell colSpan={4}></TableCell>
-                      <TableCell className="text-right font-semibold text-muted-foreground">
+                      <TableCell colSpan={4} className="py-1"></TableCell>
+                      <TableCell className="text-right font-semibold text-muted-foreground py-1">
                         {totalValue > 0 ? formatPercent((categoryTotal / totalValue) * 100) : "—"}
                       </TableCell>
-                      <TableCell></TableCell>
+                      <TableCell className="py-1"></TableCell>
                     </TableRow>
-                    {categoryAssets
-                      .filter((a) => a.status !== "In Recovery")
-                      .map((asset) => (
-                        <TableRow key={asset.id}>
-                          <TableCell className="font-medium">
-                            <div className="flex flex-col">
+                    {!isCollapsed && filteredAssets.map((asset) => (
+                        <TableRow key={asset.id} className="h-8">
+                          <TableCell className="font-medium py-1">
+                            <div className="flex flex-col leading-tight">
                               <span>{asset.name}</span>
                               {asset.subcategory && (
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-[10px] text-muted-foreground">
                                   {asset.subcategory}
                                 </span>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right py-1">
                             {formatCurrency(asset.current_value, asset.currency || "EUR")}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right py-1">
                             {asset.profit_loss_value !== null ? (
                               <div className="flex items-center justify-end gap-1">
                                 {asset.profit_loss_value >= 0 ? (
@@ -287,7 +303,7 @@ export default function WealthAssetsTable() {
                               "—"
                             )}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right py-1">
                             {(() => {
                               const cagr = calculateCAGR(
                                 asset.current_value || 0,
@@ -302,48 +318,55 @@ export default function WealthAssetsTable() {
                               );
                             })()}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right py-1">
                             {formatPercent(asset.yield_expected)}
                           </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
+                          <TableCell className="text-right text-muted-foreground py-1">
                             {categoryTotal > 0 && asset.current_value
                               ? formatPercent((asset.current_value / categoryTotal) * 100)
                               : "—"}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right py-1">
                             {totalValue > 0 && asset.current_value
                               ? formatPercent((asset.current_value / totalValue) * 100)
                               : "—"}
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
+                          <TableCell className="py-1">
+                            <div className="flex items-center gap-0.5">
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7"
-                                onClick={() => {
+                                className="h-6 w-6"
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setNotesAsset(asset);
                                   setNotesDialogOpen(true);
                                 }}
                                 title="Notas de Research"
                               >
-                                <FileText className="h-3.5 w-3.5" />
+                                <FileText className="h-3 w-3" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7"
-                                onClick={() => handleEdit(asset)}
+                                className="h-6 w-6"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEdit(asset);
+                                }}
                               >
-                                <Pencil className="h-3.5 w-3.5" />
+                                <Pencil className="h-3 w-3" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-destructive"
-                                onClick={() => deleteMutation.mutate(asset.id)}
+                                className="h-6 w-6 text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteMutation.mutate(asset.id);
+                                }}
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
+                                <Trash2 className="h-3 w-3" />
                               </Button>
                             </div>
                           </TableCell>
@@ -351,23 +374,23 @@ export default function WealthAssetsTable() {
                       ))}
                     {/* Separator row after Cash showing non-cash portfolio total */}
                     {showSeparator && (
-                      <TableRow key="separator-non-cash" className="bg-primary/5 border-t-2 border-primary/20">
-                        <TableCell className="font-semibold text-primary">
+                      <TableRow key="separator-non-cash" className="bg-primary/5 border-t-2 border-primary/20 h-8">
+                        <TableCell className="font-semibold text-primary py-1">
                           Portfolio Ativos (excl. Cash)
                         </TableCell>
-                        <TableCell className="text-right font-semibold text-primary">
+                        <TableCell className="text-right font-semibold text-primary py-1">
                           {formatCurrency(nonCashTotal)}
                         </TableCell>
-                        <TableCell className="text-right font-semibold">
+                        <TableCell className="text-right font-semibold py-1">
                           <span className={cn(nonCashPL >= 0 ? "text-green-500" : "text-red-500")}>
                             {formatCurrency(nonCashPL)}
                           </span>
                         </TableCell>
-                        <TableCell colSpan={3}></TableCell>
-                        <TableCell className="text-right font-semibold text-primary">
+                        <TableCell colSpan={3} className="py-1"></TableCell>
+                        <TableCell className="text-right font-semibold text-primary py-1">
                           {totalValue > 0 ? formatPercent((nonCashTotal / totalValue) * 100) : "—"}
                         </TableCell>
-                        <TableCell></TableCell>
+                        <TableCell className="py-1"></TableCell>
                       </TableRow>
                     )}
                   </>
