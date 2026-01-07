@@ -1159,7 +1159,7 @@ export default function SecuritiesTable() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
+        <DialogContent className="max-w-4xl max-h-[95vh]">
           <DialogHeader>
             <DialogTitle>
               {editingSecurity ? "Editar Título" : "Novo Título"}
@@ -1177,7 +1177,7 @@ export default function SecuritiesTable() {
                 </TabsTrigger>
               </TabsList>
               
-              <ScrollArea className="h-[400px] pr-4 mt-4">
+              <ScrollArea className="h-[600px] pr-4 mt-4">
                 <TabsContent value="basic" className="space-y-4 mt-0">
                   {/* Tipo + Ticker (com botão refresh) */}
                   <div className="grid grid-cols-2 gap-4">
