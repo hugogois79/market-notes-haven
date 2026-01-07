@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +37,7 @@ type WealthTransaction = {
   transaction_type: string;
   category: string | null;
   notes: string | null;
+  currency?: string | null;
 };
 
 type FormValues = {
@@ -47,6 +48,7 @@ type FormValues = {
   transaction_type: string;
   category: string;
   notes: string;
+  currency: string;
 };
 
 interface WealthTransactionDialogProps {
@@ -72,6 +74,45 @@ const CATEGORIES = [
   "Other",
 ];
 
+const CURRENCIES = [
+  { value: "EUR", label: "EUR €", symbol: "€" },
+  { value: "USD", label: "USD $", symbol: "$" },
+  { value: "GBP", label: "GBP £", symbol: "£" },
+  { value: "CHF", label: "CHF", symbol: "CHF" },
+  { value: "BTC", label: "BTC ₿", symbol: "₿" },
+  { value: "USDT", label: "USDT", symbol: "USDT" },
+];
+
+// Format number with Portuguese convention (spaces for thousands, comma for decimals)
+const formatCurrencyInput = (value: string): string => {
+  // Remove all non-numeric characters except comma and dot
+  let cleaned = value.replace(/[^\d,.-]/g, "");
+  
+  // Replace dot with comma for consistency
+  cleaned = cleaned.replace(".", ",");
+  
+  // Split by comma
+  const parts = cleaned.split(",");
+  
+  // Format integer part with spaces
+  if (parts[0]) {
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  }
+  
+  // Join back with comma, limit to 2 decimal places
+  if (parts.length > 1) {
+    return parts[0] + "," + parts[1].slice(0, 2);
+  }
+  
+  return parts[0];
+};
+
+// Parse formatted string back to number
+const parseCurrencyInput = (value: string): number => {
+  const cleaned = value.replace(/\s/g, "").replace(",", ".");
+  return parseFloat(cleaned) || 0;
+};
+
 export default function WealthTransactionDialog({
   open,
   onOpenChange,
@@ -89,19 +130,28 @@ export default function WealthTransactionDialog({
       transaction_type: "credit",
       category: "",
       notes: "",
+      currency: "EUR",
     },
   });
 
+  const selectedCurrency = form.watch("currency");
+  const currencySymbol = CURRENCIES.find(c => c.value === selectedCurrency)?.symbol || "€";
+
   useEffect(() => {
     if (transaction) {
+      const formattedAmount = Math.abs(transaction.amount).toLocaleString("pt-PT", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
       form.reset({
         date: transaction.date,
         counterparty: transaction.counterparty || "",
         description: transaction.description,
-        amount: Math.abs(transaction.amount).toString(),
+        amount: formattedAmount,
         transaction_type: transaction.amount >= 0 ? "credit" : "debit",
         category: transaction.category || "",
         notes: transaction.notes || "",
+        currency: transaction.currency || "EUR",
       });
     } else {
       form.reset({
@@ -112,6 +162,7 @@ export default function WealthTransactionDialog({
         transaction_type: "credit",
         category: "",
         notes: "",
+        currency: "EUR",
       });
     }
   }, [transaction, form]);
@@ -121,7 +172,7 @@ export default function WealthTransactionDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const amount = parseFloat(values.amount.replace(",", "."));
+      const amount = parseCurrencyInput(values.amount);
       const finalAmount = values.transaction_type === "debit" ? -Math.abs(amount) : Math.abs(amount);
 
       const payload = {
@@ -132,6 +183,7 @@ export default function WealthTransactionDialog({
         transaction_type: values.transaction_type,
         category: values.category || null,
         notes: values.notes || null,
+        currency: values.currency,
         user_id: user.id,
       };
 
@@ -159,6 +211,11 @@ export default function WealthTransactionDialog({
 
   const onSubmit = (values: FormValues) => {
     mutation.mutate(values);
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>, onChange: (value: string) => void) => {
+    const formatted = formatCurrencyInput(e.target.value);
+    onChange(formatted);
   };
 
   return (
@@ -248,13 +305,48 @@ export default function WealthTransactionDialog({
                   <FormItem>
                     <FormLabel>Valor</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="text" 
-                        inputMode="decimal"
-                        placeholder="0,00" 
-                        {...field} 
-                      />
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0,00"
+                          className="pr-12"
+                          value={field.value}
+                          onChange={(e) => handleAmountChange(e, field.onChange)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                          {currencySymbol}
+                        </span>
+                      </div>
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="currency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Moeda</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CURRENCIES.map((curr) => (
+                          <SelectItem key={curr.value} value={curr.value}>
+                            {curr.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
