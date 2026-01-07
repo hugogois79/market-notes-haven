@@ -252,11 +252,14 @@ export default function WealthTransactionsTable() {
     setEditingTransaction(null);
   };
 
-  // Calculate running balance (sorted by date ascending for calculation)
+  // Calculate running balance (sorted by date ascending, then by created_at for stability)
   const transactionsWithBalance = useMemo(() => {
-    const sorted = [...transactions].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
+    const sorted = [...transactions].sort((a, b) => {
+      const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
+      if (dateCompare !== 0) return dateCompare;
+      // Secondary sort by created_at for stable ordering
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
 
     let runningBalance = 0;
     const withBalance = sorted.map((t) => {
@@ -267,7 +270,7 @@ export default function WealthTransactionsTable() {
     return withBalance;
   }, [transactions]);
 
-  // Apply user sorting
+  // Apply user sorting with stable secondary sort
   const sortedTransactions = useMemo(() => {
     return [...transactionsWithBalance].sort((a, b) => {
       let comparison = 0;
@@ -275,6 +278,10 @@ export default function WealthTransactionsTable() {
       switch (sortField) {
         case "date":
           comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+          // Secondary sort by created_at when dates are equal
+          if (comparison === 0) {
+            comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          }
           break;
         case "amount":
           comparison = a.amount - b.amount;
