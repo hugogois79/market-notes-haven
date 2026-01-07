@@ -170,10 +170,54 @@ export default function WealthTransactionsTable() {
   const [editingTransaction, setEditingTransaction] = useState<WealthTransaction | null>(null);
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [coloredCells, setColoredCells] = useState<Record<string, ColorOption>>(() => {
     const saved = localStorage.getItem("wealth-transactions-colors");
     return saved ? JSON.parse(saved) : {};
   });
+
+  // Load sort preferences from Supabase
+  useEffect(() => {
+    const loadSortPreferences = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("user_ui_preferences")
+        .select("preference_value")
+        .eq("user_id", user.id)
+        .eq("preference_key", "wealth_transactions_sort")
+        .single();
+
+      if (data?.preference_value) {
+        const prefs = data.preference_value as { field: SortField; direction: SortDirection };
+        setSortField(prefs.field || "date");
+        setSortDirection(prefs.direction || "desc");
+      }
+      setPreferencesLoaded(true);
+    };
+    loadSortPreferences();
+  }, []);
+
+  // Save sort preferences to Supabase when they change
+  useEffect(() => {
+    if (!preferencesLoaded) return;
+    
+    const saveSortPreferences = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase
+        .from("user_ui_preferences")
+        .upsert({
+          user_id: user.id,
+          preference_key: "wealth_transactions_sort",
+          preference_value: { field: sortField, direction: sortDirection },
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id,preference_key" });
+    };
+    saveSortPreferences();
+  }, [sortField, sortDirection, preferencesLoaded]);
 
   // Persist colors to localStorage
   useEffect(() => {
