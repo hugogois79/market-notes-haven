@@ -4936,6 +4936,7 @@ export type Database = {
       }
       wealth_transactions: {
         Row: {
+          affects_asset_value: boolean | null
           amount: number
           asset_id: string | null
           category: string | null
@@ -4954,6 +4955,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          affects_asset_value?: boolean | null
           amount: number
           asset_id?: string | null
           category?: string | null
@@ -4972,6 +4974,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          affects_asset_value?: boolean | null
           amount?: number
           asset_id?: string | null
           category?: string | null
