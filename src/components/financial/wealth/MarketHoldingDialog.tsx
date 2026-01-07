@@ -70,7 +70,6 @@ type FormData = {
   ticker: string;
   isin: string;
   currency: string;
-  current_value: string;
   cost_basis: string;
   quantity: string;
   notes: string;
@@ -108,7 +107,6 @@ export default function MarketHoldingDialog({
       ticker: "",
       isin: "",
       currency: "EUR",
-      current_value: "",
       cost_basis: "",
       quantity: "",
       notes: "",
@@ -142,7 +140,6 @@ export default function MarketHoldingDialog({
       
       // Calcular preço unitário a partir do valor total e quantidade
       const quantity = holding.quantity || 1;
-      const unitPrice = holding.current_value ? holding.current_value / quantity : 0;
       const unitCostBasis = holding.cost_basis ? holding.cost_basis / quantity : 0;
       
       reset({
@@ -150,23 +147,21 @@ export default function MarketHoldingDialog({
         ticker: holding.ticker || "",
         isin: holding.isin || "",
         currency: holding.currency || "EUR",
-        current_value: unitPrice.toLocaleString("pt-PT") || "",
         cost_basis: unitCostBasis.toLocaleString("pt-PT") || "",
         quantity: quantity.toLocaleString("pt-PT") || "",
         notes: holding.notes || "",
       });
     } else {
       setCustomSecurityName("");
-      reset({
-        name: "",
-        ticker: "",
-        isin: "",
-        currency: "EUR",
-        current_value: "",
-        cost_basis: "",
-        quantity: "",
-        notes: "",
-      });
+        reset({
+          name: "",
+          ticker: "",
+          isin: "",
+          currency: "EUR",
+          cost_basis: "",
+          quantity: "",
+          notes: "",
+        });
     }
   }, [holding, reset, securities]);
 
@@ -202,12 +197,10 @@ export default function MarketHoldingDialog({
         }
       }
 
-      const unitPrice = parsePortugueseNumber(data.current_value);
       const quantity = parsePortugueseNumber(data.quantity) || 1;
       const costBasisUnit = parsePortugueseNumber(data.cost_basis);
       
-      // Valor total = preço unitário × quantidade
-      const totalValue = unitPrice * quantity;
+      // Valor total cost basis = custo unitário × quantidade
       const totalCostBasis = costBasisUnit * quantity;
 
       const payload = {
@@ -215,7 +208,7 @@ export default function MarketHoldingDialog({
         ticker: data.ticker || null,
         isin: data.isin || null,
         currency: data.currency || "EUR",
-        current_value: totalValue,
+        current_value: null,
         cost_basis: totalCostBasis,
         quantity: quantity,
         notes: data.notes || null,
@@ -409,16 +402,7 @@ export default function MarketHoldingDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="current_value">Preço Unit. ({watch("currency") || "EUR"})</Label>
-                <Input
-                  id="current_value"
-                  placeholder="10 000"
-                  value={watch("current_value")}
-                  onChange={handleNumberChange("current_value")}
-                />
-              </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="cost_basis">Custo Unit. ({watch("currency") || "EUR"})</Label>
                 <Input
