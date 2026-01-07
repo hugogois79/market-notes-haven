@@ -9,12 +9,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, X, TrendingDown, TrendingUp } from "lucide-react";
+import { Loader2, Plus, X, TrendingDown, TrendingUp, Circle } from "lucide-react";
 import { format, addMonths, addYears, addDays, differenceInDays } from "date-fns";
 import { pt } from "date-fns/locale";
 import ForecastAdjustmentDialog, { ForecastAdjustment } from "./ForecastAdjustmentDialog";
+
+type ColumnKey = "current" | "custom" | "3m" | "6m" | "1y";
+type ColorOption = "none" | "green" | "blue" | "amber" | "red" | "purple";
+
+const COLOR_OPTIONS: { value: ColorOption; label: string; bg: string; text: string }[] = [
+  { value: "none", label: "Sem cor", bg: "", text: "" },
+  { value: "green", label: "Verde", bg: "bg-emerald-100", text: "text-emerald-700" },
+  { value: "blue", label: "Azul", bg: "bg-blue-100", text: "text-blue-700" },
+  { value: "amber", label: "Amarelo", bg: "bg-amber-100", text: "text-amber-700" },
+  { value: "red", label: "Vermelho", bg: "bg-red-100", text: "text-red-700" },
+  { value: "purple", label: "Roxo", bg: "bg-purple-100", text: "text-purple-700" },
+];
 
 const CATEGORY_ORDER = [
   "Real Estate",
@@ -46,6 +64,23 @@ export default function PortfolioForecastTable() {
   );
   const [adjustments, setAdjustments] = useState<ForecastAdjustment[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [columnColors, setColumnColors] = useState<Record<ColumnKey, ColorOption>>({
+    current: "none",
+    custom: "none",
+    "3m": "none",
+    "6m": "none",
+    "1y": "none",
+  });
+
+  const handleSetColumnColor = (column: ColumnKey, color: ColorOption) => {
+    setColumnColors((prev) => ({ ...prev, [column]: color }));
+  };
+
+  const getColumnStyle = (column: ColumnKey) => {
+    const color = columnColors[column];
+    const option = COLOR_OPTIONS.find((c) => c.value === color);
+    return option ? { bg: option.bg, text: option.text } : { bg: "", text: "" };
+  };
 
   const { data: assets = [], isLoading } = useQuery({
     queryKey: ["wealth-assets-forecast"],
@@ -234,40 +269,100 @@ export default function PortfolioForecastTable() {
         <TableHeader>
           <TableRow>
             <TableHead className="w-[250px]">Ativo</TableHead>
-            <TableHead className="text-right">
-              <div>Valor Atual</div>
-              <div className="text-[10px] text-muted-foreground font-normal">
-                {formatDateShort(today)}
-              </div>
-            </TableHead>
-            <TableHead className="text-right">
-              <div className="flex items-center justify-end gap-1">
-                <Input
-                  type="date"
-                  value={customDate}
-                  onChange={(e) => setCustomDate(e.target.value)}
-                  className="h-6 w-28 text-xs px-1"
-                />
-              </div>
-            </TableHead>
-            <TableHead className="text-right">
-              <div>3M</div>
-              <div className="text-[10px] text-muted-foreground font-normal">
-                {formatDateShort(date3M)}
-              </div>
-            </TableHead>
-            <TableHead className="text-right">
-              <div>6M</div>
-              <div className="text-[10px] text-muted-foreground font-normal">
-                {formatDateShort(date6M)}
-              </div>
-            </TableHead>
-            <TableHead className="text-right">
-              <div>1Y</div>
-              <div className="text-[10px] text-muted-foreground font-normal">
-                {formatDateShort(date1Y)}
-              </div>
-            </TableHead>
+            <ContextMenu>
+              <ContextMenuTrigger asChild>
+                <TableHead className={`text-right cursor-context-menu ${getColumnStyle("current").bg}`}>
+                  <div>Valor Atual</div>
+                  <div className="text-[10px] text-muted-foreground font-normal">
+                    {formatDateShort(today)}
+                  </div>
+                </TableHead>
+              </ContextMenuTrigger>
+              <ContextMenuContent className="bg-background border shadow-lg z-50">
+                {COLOR_OPTIONS.map((opt) => (
+                  <ContextMenuItem key={opt.value} onClick={() => handleSetColumnColor("current", opt.value)}>
+                    <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
+                    {opt.label}
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuContent>
+            </ContextMenu>
+            <ContextMenu>
+              <ContextMenuTrigger asChild>
+                <TableHead className={`text-right cursor-context-menu ${getColumnStyle("custom").bg}`}>
+                  <div className="flex items-center justify-end gap-1">
+                    <Input
+                      type="date"
+                      value={customDate}
+                      onChange={(e) => setCustomDate(e.target.value)}
+                      className="h-6 w-28 text-xs px-1"
+                    />
+                  </div>
+                </TableHead>
+              </ContextMenuTrigger>
+              <ContextMenuContent className="bg-background border shadow-lg z-50">
+                {COLOR_OPTIONS.map((opt) => (
+                  <ContextMenuItem key={opt.value} onClick={() => handleSetColumnColor("custom", opt.value)}>
+                    <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
+                    {opt.label}
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuContent>
+            </ContextMenu>
+            <ContextMenu>
+              <ContextMenuTrigger asChild>
+                <TableHead className={`text-right cursor-context-menu ${getColumnStyle("3m").bg}`}>
+                  <div>3M</div>
+                  <div className="text-[10px] text-muted-foreground font-normal">
+                    {formatDateShort(date3M)}
+                  </div>
+                </TableHead>
+              </ContextMenuTrigger>
+              <ContextMenuContent className="bg-background border shadow-lg z-50">
+                {COLOR_OPTIONS.map((opt) => (
+                  <ContextMenuItem key={opt.value} onClick={() => handleSetColumnColor("3m", opt.value)}>
+                    <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
+                    {opt.label}
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuContent>
+            </ContextMenu>
+            <ContextMenu>
+              <ContextMenuTrigger asChild>
+                <TableHead className={`text-right cursor-context-menu ${getColumnStyle("6m").bg}`}>
+                  <div>6M</div>
+                  <div className="text-[10px] text-muted-foreground font-normal">
+                    {formatDateShort(date6M)}
+                  </div>
+                </TableHead>
+              </ContextMenuTrigger>
+              <ContextMenuContent className="bg-background border shadow-lg z-50">
+                {COLOR_OPTIONS.map((opt) => (
+                  <ContextMenuItem key={opt.value} onClick={() => handleSetColumnColor("6m", opt.value)}>
+                    <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
+                    {opt.label}
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuContent>
+            </ContextMenu>
+            <ContextMenu>
+              <ContextMenuTrigger asChild>
+                <TableHead className={`text-right cursor-context-menu ${getColumnStyle("1y").bg}`}>
+                  <div>1Y</div>
+                  <div className="text-[10px] text-muted-foreground font-normal">
+                    {formatDateShort(date1Y)}
+                  </div>
+                </TableHead>
+              </ContextMenuTrigger>
+              <ContextMenuContent className="bg-background border shadow-lg z-50">
+                {COLOR_OPTIONS.map((opt) => (
+                  <ContextMenuItem key={opt.value} onClick={() => handleSetColumnColor("1y", opt.value)}>
+                    <Circle className={`h-3 w-3 mr-2 ${opt.value !== "none" ? opt.bg : ""}`} fill={opt.value !== "none" ? "currentColor" : "none"} />
+                    {opt.label}
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuContent>
+            </ContextMenu>
             <TableHead className="text-right">% Portfolio</TableHead>
           </TableRow>
         </TableHeader>
@@ -315,17 +410,17 @@ export default function PortfolioForecastTable() {
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className="text-right py-1.5">{formatCurrency(value)}</TableCell>
-                      <TableCell className={`text-right py-1.5 ${deltaCustom !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
+                      <TableCell className={`text-right py-1.5 ${getColumnStyle("current").bg}`}>{formatCurrency(value)}</TableCell>
+                      <TableCell className={`text-right py-1.5 ${getColumnStyle("custom").bg} ${deltaCustom !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
                         {formatCurrency(forecastCustom)}
                       </TableCell>
-                      <TableCell className={`text-right py-1.5 ${delta3M !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
+                      <TableCell className={`text-right py-1.5 ${getColumnStyle("3m").bg} ${delta3M !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
                         {formatCurrency(forecast3M)}
                       </TableCell>
-                      <TableCell className={`text-right py-1.5 ${delta6M !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
+                      <TableCell className={`text-right py-1.5 ${getColumnStyle("6m").bg} ${delta6M !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
                         {formatCurrency(forecast6M)}
                       </TableCell>
-                      <TableCell className={`text-right py-1.5 ${delta1Y !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
+                      <TableCell className={`text-right py-1.5 ${getColumnStyle("1y").bg} ${delta1Y !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
                         {formatCurrency(forecast1Y)}
                       </TableCell>
                       <TableCell className="text-right py-1.5">{weight.toFixed(1)}%</TableCell>
@@ -344,19 +439,19 @@ export default function PortfolioForecastTable() {
                 <span>Cashflow</span>
               </div>
             </TableCell>
-            <TableCell className={`text-right py-2 font-medium ${getCashflowPosition(today) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+            <TableCell className={`text-right py-2 font-medium ${getColumnStyle("current").bg} ${getCashflowPosition(today) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {formatCurrency(getCashflowPosition(today))}
             </TableCell>
-            <TableCell className={`text-right py-2 font-medium ${getCashflowPosition(customDateObj) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+            <TableCell className={`text-right py-2 font-medium ${getColumnStyle("custom").bg} ${getCashflowPosition(customDateObj) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {formatCurrency(getCashflowPosition(customDateObj))}
             </TableCell>
-            <TableCell className={`text-right py-2 font-medium ${getCashflowPosition(date3M) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+            <TableCell className={`text-right py-2 font-medium ${getColumnStyle("3m").bg} ${getCashflowPosition(date3M) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {formatCurrency(getCashflowPosition(date3M))}
             </TableCell>
-            <TableCell className={`text-right py-2 font-medium ${getCashflowPosition(date6M) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+            <TableCell className={`text-right py-2 font-medium ${getColumnStyle("6m").bg} ${getCashflowPosition(date6M) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {formatCurrency(getCashflowPosition(date6M))}
             </TableCell>
-            <TableCell className={`text-right py-2 font-medium ${getCashflowPosition(date1Y) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+            <TableCell className={`text-right py-2 font-medium ${getColumnStyle("1y").bg} ${getCashflowPosition(date1Y) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {formatCurrency(getCashflowPosition(date1Y))}
             </TableCell>
             <TableCell className="text-right py-2 text-muted-foreground">—</TableCell>
@@ -365,23 +460,68 @@ export default function PortfolioForecastTable() {
           {/* Total row */}
           <TableRow className="bg-primary/5 border-t-2 font-semibold">
             <TableCell className="py-2">Total Portfolio</TableCell>
-            <TableCell className="text-right py-2">{formatCurrency(totalValue)}</TableCell>
-            <TableCell className={`text-right py-2 ${totalDeltaCustom !== 0 ? "text-blue-600" : ""}`}>
+            <TableCell className={`text-right py-2 ${getColumnStyle("current").bg}`}>{formatCurrency(totalValue)}</TableCell>
+            <TableCell className={`text-right py-2 ${getColumnStyle("custom").bg} ${totalDeltaCustom !== 0 ? "text-blue-600" : ""}`}>
               {formatCurrency((totalValue + totalDeltaCustom) * customGrowthFactor)}
             </TableCell>
-            <TableCell className={`text-right py-2 ${totalDelta3M !== 0 ? "text-blue-600" : ""}`}>
+            <TableCell className={`text-right py-2 ${getColumnStyle("3m").bg} ${totalDelta3M !== 0 ? "text-blue-600" : ""}`}>
               {formatCurrency((totalValue + totalDelta3M) * Math.pow(1.05, 0.25))}
             </TableCell>
-            <TableCell className={`text-right py-2 ${totalDelta6M !== 0 ? "text-blue-600" : ""}`}>
+            <TableCell className={`text-right py-2 ${getColumnStyle("6m").bg} ${totalDelta6M !== 0 ? "text-blue-600" : ""}`}>
               {formatCurrency((totalValue + totalDelta6M) * Math.pow(1.05, 0.5))}
             </TableCell>
-            <TableCell className={`text-right py-2 ${totalDelta1Y !== 0 ? "text-blue-600" : ""}`}>
+            <TableCell className={`text-right py-2 ${getColumnStyle("1y").bg} ${totalDelta1Y !== 0 ? "text-blue-600" : ""}`}>
               {formatCurrency((totalValue + totalDelta1Y) * 1.05)}
             </TableCell>
             <TableCell className="text-right py-2">100%</TableCell>
           </TableRow>
         </TableBody>
       </Table>
+
+      {/* Observações - Soma das colunas selecionadas */}
+      {(() => {
+        const selectedColumns = Object.entries(columnColors).filter(([_, color]) => color !== "none");
+        if (selectedColumns.length === 0) return null;
+        
+        const totals: Record<ColumnKey, number> = {
+          current: totalValue,
+          custom: (totalValue + totalDeltaCustom) * customGrowthFactor,
+          "3m": (totalValue + totalDelta3M) * Math.pow(1.05, 0.25),
+          "6m": (totalValue + totalDelta6M) * Math.pow(1.05, 0.5),
+          "1y": (totalValue + totalDelta1Y) * 1.05,
+        };
+        
+        const columnLabels: Record<ColumnKey, string> = {
+          current: "Valor Atual",
+          custom: format(customDateObj, "dd/MM/yy"),
+          "3m": "3M",
+          "6m": "6M",
+          "1y": "1Y",
+        };
+        
+        const sumOfSelected = selectedColumns.reduce((sum, [key]) => sum + totals[key as ColumnKey], 0);
+        
+        return (
+          <div className="p-3 bg-muted/30 rounded-md">
+            <div className="text-xs font-medium text-muted-foreground mb-2">Observações</div>
+            <div className="flex items-center gap-4 flex-wrap">
+              {selectedColumns.map(([key, color]) => {
+                const opt = COLOR_OPTIONS.find((c) => c.value === color);
+                return (
+                  <div key={key} className={`flex items-center gap-2 px-2 py-1 rounded ${opt?.bg}`}>
+                    <span className={`text-xs font-medium ${opt?.text}`}>{columnLabels[key as ColumnKey]}:</span>
+                    <span className={`text-sm font-semibold ${opt?.text}`}>{formatCurrency(totals[key as ColumnKey])}</span>
+                  </div>
+                );
+              })}
+              <div className="flex items-center gap-2 px-2 py-1 rounded bg-primary/10 ml-auto">
+                <span className="text-xs font-medium">Total Selecionado:</span>
+                <span className="text-sm font-bold">{formatCurrency(sumOfSelected)}</span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Future Transactions from Cashflow */}
       {futureTransactions.length > 0 && (
