@@ -106,7 +106,7 @@ export default function PortfolioForecastTable() {
 
       const { data, error } = await supabase
         .from("wealth_assets")
-        .select("id, name, category, subcategory, current_value, profit_loss_value")
+        .select("id, name, category, subcategory, current_value, profit_loss_value, appreciation_type, annual_rate_percent, consider_appreciation")
         .eq("user_id", user.id)
         .neq("status", "In Recovery")
         .order("category")
@@ -251,11 +251,33 @@ export default function PortfolioForecastTable() {
   const totalDelta1Y = getTotalDelta(date1Y);
 
   // Calculate projected totals for each column (for weight calculations)
+  // Use asset-specific appreciation/depreciation rates
+  const calculateProjectedTotal = (targetDate: Date, totalDelta: number) => {
+    let projectedAssetsTotal = 0;
+    
+    for (const asset of assets) {
+      const value = asset.current_value || 0;
+      const assetDelta = getAssetDelta(asset.id, targetDate);
+      
+      const useAppreciation = asset.consider_appreciation !== false;
+      const annualRate = asset.annual_rate_percent ?? 5;
+      const isDepreciation = asset.appreciation_type === "depreciates";
+      const effectiveRate = useAppreciation ? (isDepreciation ? -annualRate : annualRate) / 100 : 0;
+      
+      const daysToTarget = differenceInDays(targetDate, today);
+      const growthFactor = Math.pow(1 + effectiveRate, daysToTarget / 365);
+      
+      projectedAssetsTotal += (value + assetDelta) * growthFactor;
+    }
+    
+    return projectedAssetsTotal + getCashflowPosition(targetDate);
+  };
+  
   const projectedTotalCurrent = totalValue + getCashflowPosition(today);
-  const projectedTotalCustom = (totalValue + totalDeltaCustom) * customGrowthFactor + getCashflowPosition(customDateObj);
-  const projectedTotal3M = (totalValue + totalDelta3M) * Math.pow(1.05, 0.25) + getCashflowPosition(date3M);
-  const projectedTotal6M = (totalValue + totalDelta6M) * Math.pow(1.05, 0.5) + getCashflowPosition(date6M);
-  const projectedTotal1Y = (totalValue + totalDelta1Y) * 1.05 + getCashflowPosition(date1Y);
+  const projectedTotalCustom = calculateProjectedTotal(customDateObj, totalDeltaCustom);
+  const projectedTotal3M = calculateProjectedTotal(date3M, totalDelta3M);
+  const projectedTotal6M = calculateProjectedTotal(date6M, totalDelta6M);
+  const projectedTotal1Y = calculateProjectedTotal(date1Y, totalDelta1Y);
 
   // Helper function to calculate weight for a projected value
   const calcWeight = (value: number, total: number) => total > 0 ? (value / total) * 100 : 0;
@@ -367,11 +389,23 @@ export default function PortfolioForecastTable() {
                   const delta6M = getAssetDelta(asset.id, date6M);
                   const delta1Y = getAssetDelta(asset.id, date1Y);
                   
-                  // Projections based on 5% annual growth + adjustments
-                  const forecastCustom = (value + deltaCustom) * customGrowthFactor;
-                  const forecast3M = (value + delta3M) * Math.pow(1.05, 0.25);
-                  const forecast6M = (value + delta6M) * Math.pow(1.05, 0.5);
-                  const forecast1Y = (value + delta1Y) * 1.05;
+                  // Calculate growth factor based on asset's appreciation settings
+                  const useAppreciation = asset.consider_appreciation !== false;
+                  const annualRate = asset.annual_rate_percent ?? 5; // Default 5% if not set
+                  const isDepreciation = asset.appreciation_type === "depreciates";
+                  const effectiveRate = useAppreciation ? (isDepreciation ? -annualRate : annualRate) / 100 : 0;
+                  
+                  // Growth factors for each period
+                  const assetGrowthCustom = Math.pow(1 + effectiveRate, daysToCustom / 365);
+                  const assetGrowth3M = Math.pow(1 + effectiveRate, 0.25);
+                  const assetGrowth6M = Math.pow(1 + effectiveRate, 0.5);
+                  const assetGrowth1Y = 1 + effectiveRate;
+                  
+                  // Projections based on asset-specific growth + adjustments
+                  const forecastCustom = (value + deltaCustom) * assetGrowthCustom;
+                  const forecast3M = (value + delta3M) * assetGrowth3M;
+                  const forecast6M = (value + delta6M) * assetGrowth6M;
+                  const forecast1Y = (value + delta1Y) * assetGrowth1Y;
 
                   // Calculate weights for each projection column
                   const weightCurrent = calcWeight(value, projectedTotalCurrent);
