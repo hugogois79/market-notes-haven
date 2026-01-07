@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { TrendingUp, TrendingDown, Minus, RefreshCw, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, RefreshCw, Plus, Pencil, Trash2, Loader2, ChevronRight, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { toast } from "sonner";
@@ -407,6 +407,19 @@ export default function SecuritiesTable() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [formData, setFormData] = useState<SecurityFormData>(emptyFormData);
   const [isLoadingSecurityData, setIsLoadingSecurityData] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    new Set(["equity", "etf", "currency"])
+  );
+
+  const toggleGroup = (type: string) => {
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(type)) {
+      newExpanded.delete(type);
+    } else {
+      newExpanded.add(type);
+    }
+    setExpandedGroups(newExpanded);
+  };
 
   // n8n webhook URL for fetching security data
   const N8N_SECURITY_WEBHOOK = "https://n8n.gvvcapital.com/webhook/fetch-security";
@@ -903,6 +916,27 @@ export default function SecuritiesTable() {
     return { ...sec, price };
   });
 
+  // Group securities by type
+  const groupedSecurities = useMemo(() => {
+    const groups: Record<string, { securities: typeof securitiesWithPrices; count: number }> = {};
+    
+    // Initialize all types
+    SECURITY_TYPES.forEach(type => {
+      groups[type.value] = { securities: [], count: 0 };
+    });
+    
+    // Group securities
+    securitiesWithPrices.forEach(sec => {
+      const type = sec.security_type || "equity";
+      if (groups[type]) {
+        groups[type].securities.push(sec);
+        groups[type].count++;
+      }
+    });
+    
+    return groups;
+  }, [securitiesWithPrices]);
+
   // Also show FX rates (EUR* symbols)
   const fxRates = stockPrices.filter((p) => p.symbol.startsWith("EUR"));
 
@@ -919,6 +953,18 @@ export default function SecuritiesTable() {
   const getChangeColor = (value: number | null) => {
     if (value === null || value === 0) return "text-muted-foreground";
     return value > 0 ? "text-green-500" : "text-red-500";
+  };
+
+  const getTypeBarColor = (type: SecurityType | null) => {
+    switch (type) {
+      case "equity": return "bg-blue-500";
+      case "etf": return "bg-purple-500";
+      case "bond": return "bg-amber-500";
+      case "commodity": return "bg-orange-500";
+      case "currency": return "bg-green-500";
+      case "crypto": return "bg-cyan-500";
+      default: return "bg-muted";
+    }
   };
 
   return (
@@ -979,7 +1025,7 @@ export default function SecuritiesTable() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Tipo</TableHead>
+                <TableHead className="w-[40px]"></TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>Ticker</TableHead>
                 <TableHead>Moeda</TableHead>
@@ -1004,66 +1050,107 @@ export default function SecuritiesTable() {
                   </TableCell>
                 </TableRow>
               ) : (
-                securitiesWithPrices.map((sec) => (
-                    <TableRow key={sec.id}>
-                      <TableCell>
-                        <Badge variant="outline" className={`text-xs ${getTypeBadgeColor(sec.security_type)}`}>
-                          {SECURITY_TYPES.find(t => t.value === sec.security_type)?.label || "Equity"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium max-w-[180px] truncate" title={sec.name}>
-                        {sec.name}
-                      </TableCell>
-                      <TableCell>
-                        {sec.ticker ? (
-                          <Badge variant="outline" className="text-xs">{sec.ticker}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="text-xs">{sec.currency || "EUR"}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs">
-                        {sec.current_price ? (
-                          formatCurrency(sec.current_price, sec.currency || "EUR")
-                        ) : sec.price ? (
-                          formatCurrency(sec.price.current_price, sec.currency || "EUR")
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className={`text-right font-mono text-xs ${getChangeColor(sec.change_1d)}`}>
-                        {formatChange(sec.change_1d)}
-                      </TableCell>
-                      <TableCell className={`text-right font-mono text-xs ${getChangeColor(sec.change_1w)}`}>
-                        {formatChange(sec.change_1w)}
-                      </TableCell>
-                      <TableCell className={`text-right font-mono text-xs ${getChangeColor(sec.change_ytd)}`}>
-                        {formatChange(sec.change_ytd)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => handleOpenEdit(sec)}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => setDeleteConfirmId(sec.id)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                Object.entries(groupedSecurities).map(([type, group]) => {
+                  if (group.count === 0) return null;
+                  const isExpanded = expandedGroups.has(type);
+                  const typeInfo = SECURITY_TYPES.find(t => t.value === type);
+                  
+                  return (
+                    <Fragment key={type}>
+                      {/* Group Header Row */}
+                      <TableRow
+                        className="bg-muted/30 hover:bg-muted/40 cursor-pointer"
+                        onClick={() => toggleGroup(type)}
+                      >
+                        <TableCell className="py-3">
+                          {isExpanded ? (
+                            <ChevronDown size={16} className="text-muted-foreground" />
+                          ) : (
+                            <ChevronRight size={16} className="text-muted-foreground" />
+                          )}
+                        </TableCell>
+                        <TableCell colSpan={7} className="py-3 font-medium">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className={`text-xs ${getTypeBadgeColor(type as SecurityType)}`}>
+                              {typeInfo?.label || type}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              ({group.count} {group.count === 1 ? 'título' : 'títulos'})
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
+
+                      {/* Security Rows */}
+                      {isExpanded && group.securities.map((sec, index) => (
+                        <TableRow key={sec.id} className="hover:bg-muted/50">
+                          <TableCell className="py-2">
+                            <div className={`w-1 h-6 rounded-full ml-2 ${getTypeBarColor(sec.security_type)}`} />
+                          </TableCell>
+                          <TableCell className="font-medium max-w-[180px] truncate" title={sec.name}>
+                            <span className="text-xs text-muted-foreground mr-2">{index + 1}.</span>
+                            {sec.name}
+                          </TableCell>
+                          <TableCell>
+                            {sec.ticker ? (
+                              <Badge variant="outline" className="text-xs">{sec.ticker}</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-xs">{sec.currency || "EUR"}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs">
+                            {sec.current_price ? (
+                              formatCurrency(sec.current_price, sec.currency || "EUR")
+                            ) : sec.price ? (
+                              formatCurrency(sec.price.current_price, sec.currency || "EUR")
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className={`text-right font-mono text-xs ${getChangeColor(sec.change_1d)}`}>
+                            {formatChange(sec.change_1d)}
+                          </TableCell>
+                          <TableCell className={`text-right font-mono text-xs ${getChangeColor(sec.change_1w)}`}>
+                            {formatChange(sec.change_1w)}
+                          </TableCell>
+                          <TableCell className={`text-right font-mono text-xs ${getChangeColor(sec.change_ytd)}`}>
+                            {formatChange(sec.change_ytd)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEdit(sec);
+                                }}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteConfirmId(sec.id);
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </Fragment>
+                  );
+                })
               )}
             </TableBody>
           </Table>
