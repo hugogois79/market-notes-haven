@@ -353,19 +353,43 @@ export default function PortfolioForecastTable() {
           {sortedCategories.map((category) => {
             const categoryAssets = groupedAssets[category];
             const catTotal = categoryTotals[category] || 0;
-            const catWeight = totalValue > 0 ? (catTotal / totalValue) * 100 : 0;
+            const catWeight = calcWeight(catTotal, projectedTotalCurrent);
             const Icon = categoryIcons[category] || Coins;
             const isCollapsed = collapsedCategories[category] ?? false;
 
+            // Calculate category totals for each forecast column
+            const calculateCategoryForecast = (targetDate: Date, daysToTarget: number) => {
+              return categoryAssets.reduce((sum, asset) => {
+                const value = asset.current_value || 0;
+                const assetDelta = getAssetDelta(asset.id, targetDate);
+                const useAppreciation = asset.consider_appreciation !== false;
+                const annualRate = asset.annual_rate_percent ?? 5;
+                const isDepreciation = asset.appreciation_type === "depreciates";
+                const effectiveRate = useAppreciation ? (isDepreciation ? -annualRate : annualRate) / 100 : 0;
+                const growthFactor = Math.pow(1 + effectiveRate, daysToTarget / 365);
+                return sum + (value + assetDelta) * growthFactor;
+              }, 0);
+            };
+
+            const catForecastCustom = calculateCategoryForecast(customDateObj, daysToCustom);
+            const catForecast3M = calculateCategoryForecast(date3M, 365 * 0.25);
+            const catForecast6M = calculateCategoryForecast(date6M, 365 * 0.5);
+            const catForecast1Y = calculateCategoryForecast(date1Y, 365);
+
+            const catWeightCustom = calcWeight(catForecastCustom, projectedTotalCustom);
+            const catWeight3M = calcWeight(catForecast3M, projectedTotal3M);
+            const catWeight6M = calcWeight(catForecast6M, projectedTotal6M);
+            const catWeight1Y = calcWeight(catForecast1Y, projectedTotal1Y);
+
             return (
               <>
-                {/* Category header */}
+                {/* Category header with forecast columns */}
                 <TableRow 
                   key={`cat-${category}`} 
                   className="bg-muted/50 h-8 cursor-pointer hover:bg-muted/70"
                   onClick={() => toggleCategory(category)}
                 >
-                  <TableCell colSpan={6} className="font-semibold py-1">
+                  <TableCell className="font-semibold py-1">
                     <div className="flex items-center gap-2">
                       {isCollapsed ? (
                         <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
@@ -374,7 +398,36 @@ export default function PortfolioForecastTable() {
                       )}
                       <Icon className="h-3.5 w-3.5" />
                       <span className="uppercase tracking-wide">{category}</span>
-                      <span className="text-muted-foreground font-normal">({catWeight.toFixed(1)}%)</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className={`text-right py-1 font-semibold ${getColumnStyle("current").bg}`}>
+                    <div className="flex flex-col items-end leading-tight">
+                      <span>{formatCurrency(catTotal)}</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">{catWeight.toFixed(1)}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className={`text-right py-1 font-semibold ${getColumnStyle("custom").bg}`}>
+                    <div className="flex flex-col items-end leading-tight">
+                      <span>{formatCurrency(catForecastCustom)}</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">{catWeightCustom.toFixed(1)}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className={`text-right py-1 font-semibold ${getColumnStyle("3m").bg}`}>
+                    <div className="flex flex-col items-end leading-tight">
+                      <span>{formatCurrency(catForecast3M)}</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">{catWeight3M.toFixed(1)}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className={`text-right py-1 font-semibold ${getColumnStyle("6m").bg}`}>
+                    <div className="flex flex-col items-end leading-tight">
+                      <span>{formatCurrency(catForecast6M)}</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">{catWeight6M.toFixed(1)}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className={`text-right py-1 font-semibold ${getColumnStyle("1y").bg}`}>
+                    <div className="flex flex-col items-end leading-tight">
+                      <span>{formatCurrency(catForecast1Y)}</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">{catWeight1Y.toFixed(1)}%</span>
                     </div>
                   </TableCell>
                 </TableRow>
