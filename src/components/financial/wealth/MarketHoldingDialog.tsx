@@ -11,17 +11,25 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type MarketHolding = {
   id: string;
@@ -83,6 +91,8 @@ export default function MarketHoldingDialog({
   const queryClient = useQueryClient();
   const isEditing = !!holding;
   const [customSecurityName, setCustomSecurityName] = useState("");
+  const [securityComboOpen, setSecurityComboOpen] = useState(false);
+  const [securitySearch, setSecuritySearch] = useState("");
 
   const {
     register,
@@ -119,27 +129,6 @@ export default function MarketHoldingDialog({
       return data as Security[];
     },
   });
-
-  // Handle security selection from dropdown
-  const handleSecurityChange = (value: string) => {
-    if (value === "__new__") {
-      // User wants to add new security - show input
-      setCustomSecurityName("");
-      setValue("name", "");
-      setValue("ticker", "");
-      setValue("isin", "");
-      setValue("currency", "EUR");
-    } else {
-      const security = securities.find((s) => s.id === value);
-      if (security) {
-        setValue("name", security.name);
-        setValue("ticker", security.ticker || "");
-        setValue("isin", security.isin || "");
-        setValue("currency", security.currency || "EUR");
-        setCustomSecurityName("");
-      }
-    }
-  };
 
   useEffect(() => {
     if (holding) {
@@ -286,27 +275,87 @@ export default function MarketHoldingDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nome *</Label>
-                <Select
-                  value={
-                    customSecurityName 
-                      ? "__new__" 
-                      : securities.find((s) => s.name === nameValue)?.id || ""
-                  }
-                  onValueChange={handleSecurityChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um ativo" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    <SelectItem value="__new__">+ Adicionar novo</SelectItem>
-                    {securities.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name} {s.ticker && `(${s.ticker})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {(customSecurityName !== "" || (nameValue === "" && !securities.find((s) => s.name === nameValue))) && watch("name") === "" && (
+                <Popover open={securityComboOpen} onOpenChange={setSecurityComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={securityComboOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      {nameValue ? (
+                        <span className="truncate">
+                          {nameValue} {watch("ticker") && `(${watch("ticker")})`}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">Selecione um ativo</span>
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0 bg-popover" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput 
+                        placeholder="Pesquisar por nome ou ticker..." 
+                        value={securitySearch}
+                        onValueChange={setSecuritySearch}
+                      />
+                      <CommandList>
+                        <CommandEmpty>Nenhum ativo encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value="__new__"
+                            onSelect={() => {
+                              setCustomSecurityName("");
+                              setValue("name", "");
+                              setValue("ticker", "");
+                              setValue("isin", "");
+                              setValue("currency", "EUR");
+                              setSecurityComboOpen(false);
+                              setSecuritySearch("");
+                            }}
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Adicionar novo
+                          </CommandItem>
+                          {securities
+                            .filter((s) => {
+                              if (!securitySearch) return true;
+                              const search = securitySearch.toLowerCase();
+                              return (
+                                s.name.toLowerCase().includes(search) ||
+                                (s.ticker && s.ticker.toLowerCase().includes(search))
+                              );
+                            })
+                            .map((s) => (
+                              <CommandItem
+                                key={s.id}
+                                value={s.id}
+                                onSelect={() => {
+                                  setValue("name", s.name);
+                                  setValue("ticker", s.ticker || "");
+                                  setValue("isin", s.isin || "");
+                                  setValue("currency", s.currency || "EUR");
+                                  setCustomSecurityName("");
+                                  setSecurityComboOpen(false);
+                                  setSecuritySearch("");
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    nameValue === s.name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {s.name} {s.ticker && `(${s.ticker})`}
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {nameValue === "" && customSecurityName === "" && (
                   <Input
                     id="name-custom"
                     placeholder="Nome do novo ativo"
