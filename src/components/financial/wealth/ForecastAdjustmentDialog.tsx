@@ -24,8 +24,6 @@ export interface ForecastAdjustment {
   type: "credit" | "debit";
   amount: number;
   date: string;
-  relatedAssetId?: string;
-  relatedAssetName?: string;
 }
 
 interface Asset {
@@ -51,7 +49,6 @@ export default function ForecastAdjustmentDialog({
   const [type, setType] = useState<"credit" | "debit">("credit");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [relatedAssetId, setRelatedAssetId] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,8 +58,6 @@ export default function ForecastAdjustmentDialog({
     const parsedAmount = parseFloat(amount.replace(/\s/g, "").replace(",", "."));
     if (isNaN(parsedAmount)) return;
 
-    const relatedAsset = assets.find((a) => a.id === relatedAssetId);
-
     onSave({
       id: crypto.randomUUID(),
       assetId,
@@ -70,8 +65,6 @@ export default function ForecastAdjustmentDialog({
       type,
       amount: parsedAmount,
       date,
-      relatedAssetId: relatedAsset?.id,
-      relatedAssetName: relatedAsset?.name,
     });
 
     // Reset form
@@ -79,7 +72,6 @@ export default function ForecastAdjustmentDialog({
     setType("credit");
     setAmount("");
     setDate(format(new Date(), "yyyy-MM-dd"));
-    setRelatedAssetId("");
     onOpenChange(false);
   };
 
@@ -125,25 +117,6 @@ export default function ForecastAdjustmentDialog({
                     {asset.name}
                   </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Contraparte (Ativo Relacionado)</Label>
-            <Select value={relatedAssetId} onValueChange={setRelatedAssetId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Opcional..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
-                {assets
-                  .filter((a) => a.id !== assetId)
-                  .map((asset) => (
-                    <SelectItem key={asset.id} value={asset.id}>
-                      {asset.name}
-                    </SelectItem>
-                  ))}
               </SelectContent>
             </Select>
           </div>
