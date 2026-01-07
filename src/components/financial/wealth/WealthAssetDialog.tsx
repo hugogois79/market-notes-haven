@@ -82,6 +82,7 @@ const CATEGORIES = [
   "Properties",
   "Vehicles",
   "Marine",
+  "Airplanes",
   "Art",
   "Watches",
   "Crypto",
