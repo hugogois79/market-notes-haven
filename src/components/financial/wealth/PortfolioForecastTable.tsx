@@ -10,9 +10,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Plus, X } from "lucide-react";
 import { format, addMonths, addYears, addDays, differenceInDays } from "date-fns";
 import { pt } from "date-fns/locale";
+import ForecastAdjustmentDialog, { ForecastAdjustment } from "./ForecastAdjustmentDialog";
 
 const CATEGORY_ORDER = [
   "Real Estate",
@@ -42,6 +44,8 @@ export default function PortfolioForecastTable() {
   const [customDate, setCustomDate] = useState<string>(
     format(addDays(today, 8), "yyyy-MM-dd")
   );
+  const [adjustments, setAdjustments] = useState<ForecastAdjustment[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: assets = [], isLoading } = useQuery({
     queryKey: ["wealth-assets-forecast"],
@@ -61,6 +65,23 @@ export default function PortfolioForecastTable() {
       return data || [];
     },
   });
+
+  const handleAddAdjustment = (adjustment: ForecastAdjustment) => {
+    setAdjustments((prev) => [...prev, adjustment]);
+  };
+
+  const handleRemoveAdjustment = (id: string) => {
+    setAdjustments((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  // Get adjustment delta for an asset up to a target date
+  const getAdjustmentDelta = (assetId: string, targetDate: Date) => {
+    return adjustments
+      .filter((adj) => adj.assetId === assetId && new Date(adj.date) <= targetDate)
+      .reduce((delta, adj) => {
+        return adj.type === "credit" ? delta + adj.amount : delta - adj.amount;
+      }, 0);
+  };
 
   if (isLoading) {
     return (
@@ -87,7 +108,7 @@ export default function PortfolioForecastTable() {
     return acc;
   }, {} as Record<string, typeof assets>);
 
-  // Calculate totals
+  // Calculate base totals (without adjustments)
   const totalValue = assets.reduce((sum, a) => sum + (a.current_value || 0), 0);
   const categoryTotals = Object.entries(groupedAssets).reduce((acc, [cat, items]) => {
     acc[cat] = items.reduce((s, a) => s + (a.current_value || 0), 0);
@@ -99,8 +120,48 @@ export default function PortfolioForecastTable() {
     (a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b)
   );
 
+  // Calculate total adjustment deltas for each forecast column
+  const totalDeltaCustom = adjustments
+    .filter((adj) => new Date(adj.date) <= customDateObj)
+    .reduce((sum, adj) => sum + (adj.type === "credit" ? adj.amount : -adj.amount), 0);
+  const totalDelta6M = adjustments
+    .filter((adj) => new Date(adj.date) <= date6M)
+    .reduce((sum, adj) => sum + (adj.type === "credit" ? adj.amount : -adj.amount), 0);
+  const totalDelta1Y = adjustments
+    .filter((adj) => new Date(adj.date) <= date1Y)
+    .reduce((sum, adj) => sum + (adj.type === "credit" ? adj.amount : -adj.amount), 0);
+
   return (
     <div className="space-y-4">
+      {/* Adjustments Section */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 flex-wrap">
+          {adjustments.map((adj) => (
+            <div
+              key={adj.id}
+              className="flex items-center gap-1 text-xs bg-muted px-2 py-1 rounded-md"
+            >
+              <span className={adj.type === "credit" ? "text-green-600" : "text-red-600"}>
+                {adj.type === "credit" ? "+" : "-"}
+                {formatCurrency(adj.amount)}
+              </span>
+              <span className="text-muted-foreground">em {adj.assetName}</span>
+              <span className="text-muted-foreground">({format(new Date(adj.date), "dd/MM")})</span>
+              <button
+                onClick={() => handleRemoveAdjustment(adj.id)}
+                className="ml-1 hover:text-destructive"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <Button size="sm" variant="outline" onClick={() => setDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" />
+          Ajuste
+        </Button>
+      </div>
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -155,10 +216,18 @@ export default function PortfolioForecastTable() {
                 {categoryAssets.map((asset) => {
                   const value = asset.current_value || 0;
                   const weight = totalValue > 0 ? (value / totalValue) * 100 : 0;
-                  // Projections based on 5% annual growth
-                  const forecastCustom = value * customGrowthFactor;
-                  const forecast6M = value * Math.pow(1.05, 0.5);
-                  const forecast1Y = value * 1.05;
+                  
+                  // Get adjustment deltas for each forecast date
+                  const deltaCustom = getAdjustmentDelta(asset.id, customDateObj);
+                  const delta6M = getAdjustmentDelta(asset.id, date6M);
+                  const delta1Y = getAdjustmentDelta(asset.id, date1Y);
+                  
+                  // Projections based on 5% annual growth + adjustments
+                  const forecastCustom = (value + deltaCustom) * customGrowthFactor;
+                  const forecast6M = (value + delta6M) * Math.pow(1.05, 0.5);
+                  const forecast1Y = (value + delta1Y) * 1.05;
+
+                  const hasAdjustment = deltaCustom !== 0 || delta6M !== 0 || delta1Y !== 0;
 
                   return (
                     <TableRow key={asset.id} className="text-xs">
@@ -171,9 +240,15 @@ export default function PortfolioForecastTable() {
                         )}
                       </TableCell>
                       <TableCell className="text-right py-1.5">{formatCurrency(value)}</TableCell>
-                      <TableCell className="text-right py-1.5 text-muted-foreground">{formatCurrency(forecastCustom)}</TableCell>
-                      <TableCell className="text-right py-1.5 text-muted-foreground">{formatCurrency(forecast6M)}</TableCell>
-                      <TableCell className="text-right py-1.5 text-muted-foreground">{formatCurrency(forecast1Y)}</TableCell>
+                      <TableCell className={`text-right py-1.5 ${deltaCustom !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
+                        {formatCurrency(forecastCustom)}
+                      </TableCell>
+                      <TableCell className={`text-right py-1.5 ${delta6M !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
+                        {formatCurrency(forecast6M)}
+                      </TableCell>
+                      <TableCell className={`text-right py-1.5 ${delta1Y !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
+                        {formatCurrency(forecast1Y)}
+                      </TableCell>
                       <TableCell className="text-right py-1.5">{weight.toFixed(1)}%</TableCell>
                     </TableRow>
                   );
@@ -186,13 +261,26 @@ export default function PortfolioForecastTable() {
           <TableRow className="bg-primary/5 border-t-2 font-semibold">
             <TableCell className="py-2">Total Portfolio</TableCell>
             <TableCell className="text-right py-2">{formatCurrency(totalValue)}</TableCell>
-            <TableCell className="text-right py-2">{formatCurrency(totalValue * customGrowthFactor)}</TableCell>
-            <TableCell className="text-right py-2">{formatCurrency(totalValue * Math.pow(1.05, 0.5))}</TableCell>
-            <TableCell className="text-right py-2">{formatCurrency(totalValue * 1.05)}</TableCell>
+            <TableCell className={`text-right py-2 ${totalDeltaCustom !== 0 ? "text-blue-600" : ""}`}>
+              {formatCurrency((totalValue + totalDeltaCustom) * customGrowthFactor)}
+            </TableCell>
+            <TableCell className={`text-right py-2 ${totalDelta6M !== 0 ? "text-blue-600" : ""}`}>
+              {formatCurrency((totalValue + totalDelta6M) * Math.pow(1.05, 0.5))}
+            </TableCell>
+            <TableCell className={`text-right py-2 ${totalDelta1Y !== 0 ? "text-blue-600" : ""}`}>
+              {formatCurrency((totalValue + totalDelta1Y) * 1.05)}
+            </TableCell>
             <TableCell className="text-right py-2">100%</TableCell>
           </TableRow>
         </TableBody>
       </Table>
+
+      <ForecastAdjustmentDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        assets={assets}
+        onSave={handleAddAdjustment}
+      />
     </div>
   );
 }
