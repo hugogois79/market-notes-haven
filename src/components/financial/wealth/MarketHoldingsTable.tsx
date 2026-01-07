@@ -133,10 +133,14 @@ export default function MarketHoldingsTable() {
   const { data: cashAssets = [], isLoading } = useQuery({
     queryKey: ["cash-assets-with-holdings"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       const { data: assets, error: assetsError } = await supabase
         .from("wealth_assets")
         .select("id, name, subcategory, current_value")
         .eq("category", "Cash")
+        .eq("user_id", user.id)
         .order("name");
 
       if (assetsError) throw assetsError;
