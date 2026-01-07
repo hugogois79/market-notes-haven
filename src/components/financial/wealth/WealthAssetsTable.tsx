@@ -201,12 +201,37 @@ export default function WealthAssetsTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Object.entries(groupedAssets)
-              .filter(([cat]) => cat !== "In Recovery")
-              .map(([category, categoryAssets]) => {
+            {(() => {
+              const sortedCategories = Object.entries(groupedAssets)
+                .filter(([cat]) => cat !== "In Recovery");
+              
+              // Calculate non-cash portfolio value
+              const nonCashTotal = sortedCategories
+                .filter(([cat]) => cat !== "Cash")
+                .reduce((sum, [, catAssets]) => {
+                  return sum + catAssets
+                    .filter((a) => a.status !== "In Recovery")
+                    .reduce((s, a) => s + (a.current_value || 0), 0);
+                }, 0);
+
+              const nonCashPL = sortedCategories
+                .filter(([cat]) => cat !== "Cash")
+                .reduce((sum, [, catAssets]) => {
+                  return sum + catAssets
+                    .filter((a) => a.status !== "In Recovery")
+                    .reduce((s, a) => s + (a.profit_loss_value || 0), 0);
+                }, 0);
+
+              // Check if Cash category exists
+              const hasCashCategory = sortedCategories.some(([cat]) => cat === "Cash");
+              const cashIndex = sortedCategories.findIndex(([cat]) => cat === "Cash");
+
+              return sortedCategories.map(([category, categoryAssets], index) => {
                 const Icon = categoryIcons[category] || Coins;
                 const colorClass = categoryColors[category] || "bg-muted text-muted-foreground";
                 const categoryTotal = categoryAssets.reduce((s, a) => s + (a.current_value || 0), 0);
+
+                const showSeparator = hasCashCategory && category === "Cash" && sortedCategories.length > 1;
 
                 return (
                   <>
@@ -330,9 +355,31 @@ export default function WealthAssetsTable() {
                           </TableCell>
                         </TableRow>
                       ))}
+                    {/* Separator row after Cash showing non-cash portfolio total */}
+                    {showSeparator && (
+                      <TableRow key="separator-non-cash" className="bg-primary/5 border-t-2 border-primary/20">
+                        <TableCell colSpan={2} className="font-semibold text-primary">
+                          Portfolio Ativos (excl. Cash)
+                        </TableCell>
+                        <TableCell className="text-right font-semibold text-primary">
+                          {formatCurrency(nonCashTotal)}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          <span className={cn(nonCashPL >= 0 ? "text-green-500" : "text-red-500")}>
+                            {formatCurrency(nonCashPL)}
+                          </span>
+                        </TableCell>
+                        <TableCell colSpan={3}></TableCell>
+                        <TableCell className="text-right font-semibold text-primary">
+                          {totalValue > 0 ? formatPercent((nonCashTotal / totalValue) * 100) : "—"}
+                        </TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
+                    )}
                   </>
                 );
-              })}
+              });
+            })()}
           </TableBody>
         </Table>
       </div>
