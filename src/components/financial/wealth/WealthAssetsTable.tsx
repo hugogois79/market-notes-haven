@@ -39,6 +39,7 @@ type WealthAsset = {
 
 const categoryIcons: Record<string, React.ElementType> = {
   "Real Estate Fund": Building2,
+  "Properties": Building2,
   "Vehicles": Car,
   "Marine": Anchor,
   "Art": Palette,
@@ -48,6 +49,7 @@ const categoryIcons: Record<string, React.ElementType> = {
 
 const categoryColors: Record<string, string> = {
   "Real Estate Fund": "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  "Properties": "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
   "Vehicles": "bg-orange-500/10 text-orange-500 border-orange-500/20",
   "Marine": "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
   "Art": "bg-purple-500/10 text-purple-500 border-purple-500/20",

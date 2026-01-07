@@ -74,6 +74,7 @@ interface WealthAssetDialogProps {
 
 const CATEGORIES = [
   "Real Estate Fund",
+  "Properties",
   "Vehicles",
   "Marine",
   "Art",
