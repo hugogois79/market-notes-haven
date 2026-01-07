@@ -198,15 +198,18 @@ export default function MarketHoldingsTable() {
     return asset.holdings.reduce((sum, h) => {
       const quantity = h.quantity || 1;
       const currency = h.currency || "EUR";
-      
-      // Get security current price if available
+
       const security = h.security_id ? securitiesMap[h.security_id] : null;
       const securityCurrentPrice = security?.current_price || null;
-      
-      // Calculate current value from security price if available
-      const currentValue = securityCurrentPrice ? securityCurrentPrice * quantity : (h.current_value || 0);
+      const isFxSecurity = security?.security_type === "currency";
+
+      // For FX securities (e.g., EURUSD), the holding represents an amount of the foreign currency,
+      // so the value is the quantity itself (USD amount), not (FX rate * quantity).
+      const currentValue = isFxSecurity
+        ? quantity
+        : (securityCurrentPrice ? securityCurrentPrice * quantity : (h.current_value || 0));
+
       const valueEUR = convertToEUR(currentValue, currency);
-      
       return sum + valueEUR;
     }, 0);
   };
@@ -263,15 +266,20 @@ export default function MarketHoldingsTable() {
                 // Get security current price
                 const security = holding.security_id ? securitiesMap[holding.security_id] : null;
                 const securityCurrentPrice = security?.current_price || null;
+                const isFxSecurity = security?.security_type === "currency";
                 
                 // Calculate unit prices
                 const costBasisUnit = holding.cost_basis ? holding.cost_basis / quantity : null;
                 const currentPriceUnit = securityCurrentPrice || (holding.current_value ? holding.current_value / quantity : null);
                 
-                // Calculate current value from security price if available
-                const currentValueFromSecurity = securityCurrentPrice ? securityCurrentPrice * quantity : holding.current_value;
+                // Calculate current value:
+                // - FX securities (e.g., EURUSD): value is the foreign currency amount (quantity)
+                // - Regular securities: value is price * quantity
+                const currentValue = isFxSecurity
+                  ? quantity
+                  : (securityCurrentPrice ? securityCurrentPrice * quantity : holding.current_value);
                 
-                const valueEUR = convertToEUR(currentValueFromSecurity || 0, currency);
+                const valueEUR = convertToEUR(currentValue || 0, currency);
                 const costBasisEUR = convertToEUR(holding.cost_basis || 0, currency);
                 const plEUR = valueEUR - costBasisEUR;
                 const plPercent = costBasisEUR !== 0 ? (plEUR / Math.abs(costBasisEUR)) * 100 : 0;
