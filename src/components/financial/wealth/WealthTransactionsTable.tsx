@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -12,7 +12,15 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -39,6 +47,137 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
+const CATEGORIES = [
+  "Real Estate",
+  "Salário",
+  "Dividendos",
+  "Juros",
+  "Investimento",
+  "Despesas",
+  "Impostos",
+  "Transferência",
+  "Outros",
+];
+
+// Inline editable cell component
+function EditableCell({
+  value,
+  onSave,
+  type = "text",
+  className,
+}: {
+  value: string;
+  onSave: (newValue: string) => void;
+  type?: "text" | "number";
+  className?: string;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleSave = () => {
+    if (editValue !== value) {
+      onSave(editValue);
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditValue(value);
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSave();
+    } else if (e.key === "Escape") {
+      handleCancel();
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-1">
+        <Input
+          ref={inputRef}
+          type={type}
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleSave}
+          className="h-7 text-sm px-2 py-1"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <span
+      onClick={() => setIsEditing(true)}
+      className={cn(
+        "cursor-pointer hover:bg-muted/50 px-1 py-0.5 rounded transition-colors",
+        className
+      )}
+      title="Clique para editar"
+    >
+      {value || "-"}
+    </span>
+  );
+}
+
+// Category dropdown component
+function CategoryDropdown({
+  value,
+  onSave,
+  isCredit,
+}: {
+  value: string | null;
+  onSave: (newValue: string) => void;
+  isCredit: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <Select
+      value={value || ""}
+      onValueChange={(newValue) => {
+        onSave(newValue);
+        setIsOpen(false);
+      }}
+      open={isOpen}
+      onOpenChange={setIsOpen}
+    >
+      <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none hover:bg-muted/50 rounded transition-colors w-auto">
+        <Badge
+          variant="outline"
+          className={cn(
+            "text-xs cursor-pointer",
+            isCredit
+              ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+              : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+          )}
+        >
+          {value || (isCredit ? "Entrada" : "Saída")}
+        </Badge>
+      </SelectTrigger>
+      <SelectContent className="bg-background border shadow-lg z-50">
+        {CATEGORIES.map((cat) => (
+          <SelectItem key={cat} value={cat} className="text-sm">
+            {cat}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 export default function WealthTransactionsTable() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -57,6 +196,30 @@ export default function WealthTransactionsTable() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({
+      id,
+      field,
+      value,
+    }: {
+      id: string;
+      field: string;
+      value: string | number;
+    }) => {
+      const { error } = await supabase
+        .from("wealth_transactions")
+        .update({ [field]: value })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wealth-transactions"] });
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar");
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("wealth_transactions").delete().eq("id", id);
@@ -70,6 +233,18 @@ export default function WealthTransactionsTable() {
       toast.error("Erro ao eliminar transação");
     },
   });
+
+  const handleInlineEdit = (id: string, field: string, value: string) => {
+    if (field === "amount") {
+      // Parse Portuguese number format
+      const numValue = parseFloat(value.replace(/\s/g, "").replace(",", "."));
+      if (!isNaN(numValue)) {
+        updateMutation.mutate({ id, field, value: numValue });
+      }
+    } else {
+      updateMutation.mutate({ id, field, value });
+    }
+  };
 
   const handleEdit = (transaction: WealthTransaction) => {
     setEditingTransaction(transaction);
@@ -91,13 +266,13 @@ export default function WealthTransactionsTable() {
     const sorted = [...transactions].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
-    
+
     let runningBalance = 0;
     const withBalance = sorted.map((t) => {
       runningBalance += t.amount;
       return { ...t, running_balance: runningBalance };
     });
-    
+
     // Return in reverse order (newest first) for display
     return withBalance.reverse();
   }, [transactions]);
@@ -106,11 +281,11 @@ export default function WealthTransactionsTable() {
   const totalCredits = transactions
     .filter((t) => t.amount > 0)
     .reduce((sum, t) => sum + t.amount, 0);
-  
+
   const totalDebits = transactions
     .filter((t) => t.amount < 0)
     .reduce((sum, t) => sum + t.amount, 0);
-  
+
   const currentBalance = transactionsWithBalance[0]?.running_balance || 0;
 
   if (isLoading) {
@@ -168,7 +343,7 @@ export default function WealthTransactionsTable() {
             ) : (
               transactionsWithBalance.map((transaction) => {
                 const isCredit = transaction.amount > 0;
-                const displayName = transaction.counterparty || transaction.description || "Sem descrição";
+                const displayName = transaction.counterparty || transaction.description || "";
 
                 return (
                   <TableRow key={transaction.id} className="group hover:bg-muted/30">
@@ -176,18 +351,23 @@ export default function WealthTransactionsTable() {
                     <TableCell className="text-left py-2">
                       {isCredit ? (
                         <div className="flex items-center gap-2">
-                          <Badge 
-                            variant="outline" 
-                            className="bg-green-50 text-green-700 border-green-200 text-xs shrink-0"
-                          >
-                            {transaction.category || "Entrada"}
-                          </Badge>
-                          <span className="font-medium text-sm truncate flex-1">
-                            {displayName}
-                          </span>
-                          <span className="text-green-600 font-semibold text-sm whitespace-nowrap">
-                            {formatCurrency(transaction.amount)}
-                          </span>
+                          <CategoryDropdown
+                            value={transaction.category}
+                            onSave={(val) => handleInlineEdit(transaction.id, "category", val)}
+                            isCredit={true}
+                          />
+                          <EditableCell
+                            value={displayName}
+                            onSave={(val) => handleInlineEdit(transaction.id, "counterparty", val)}
+                            className="font-medium text-sm truncate flex-1"
+                          />
+                          <EditableCell
+                            value={transaction.amount.toLocaleString("pt-PT", { minimumFractionDigits: 2 })}
+                            onSave={(val) => handleInlineEdit(transaction.id, "amount", val)}
+                            type="text"
+                            className="text-green-600 font-semibold text-sm whitespace-nowrap"
+                          />
+                          <span className="text-muted-foreground text-sm">€</span>
                           {/* Action buttons on hover */}
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 ml-1">
                             <Button
@@ -239,18 +419,28 @@ export default function WealthTransactionsTable() {
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
-                          <span className="text-red-500 font-semibold text-sm whitespace-nowrap">
-                            {formatCurrency(transaction.amount)}
-                          </span>
-                          <span className="font-medium text-sm truncate flex-1 text-right">
-                            {displayName}
-                          </span>
-                          <Badge 
-                            variant="outline" 
-                            className="bg-red-50 text-red-700 border-red-200 text-xs shrink-0"
-                          >
-                            {transaction.category || "Saída"}
-                          </Badge>
+                          <EditableCell
+                            value={Math.abs(transaction.amount).toLocaleString("pt-PT", { minimumFractionDigits: 2 })}
+                            onSave={(val) => {
+                              const numVal = parseFloat(val.replace(/\s/g, "").replace(",", "."));
+                              if (!isNaN(numVal)) {
+                                handleInlineEdit(transaction.id, "amount", (-Math.abs(numVal)).toString());
+                              }
+                            }}
+                            type="text"
+                            className="text-red-500 font-semibold text-sm whitespace-nowrap"
+                          />
+                          <span className="text-muted-foreground text-sm">€</span>
+                          <EditableCell
+                            value={displayName}
+                            onSave={(val) => handleInlineEdit(transaction.id, "counterparty", val)}
+                            className="font-medium text-sm truncate flex-1 text-right"
+                          />
+                          <CategoryDropdown
+                            value={transaction.category}
+                            onSave={(val) => handleInlineEdit(transaction.id, "category", val)}
+                            isCredit={false}
+                          />
                         </div>
                       ) : null}
                     </TableCell>
