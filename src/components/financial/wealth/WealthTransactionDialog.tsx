@@ -66,18 +66,6 @@ const TRANSACTION_TYPES = [
   { value: "debit", label: "Débito (Saída)" },
 ];
 
-const CATEGORIES = [
-  "Investment",
-  "Maintenance",
-  "Personal",
-  "Business",
-  "Real Estate",
-  "Crypto",
-  "Art",
-  "Vehicles",
-  "Other",
-];
-
 const CURRENCIES = [
   { value: "EUR", label: "EUR €", symbol: "€" },
   { value: "USD", label: "USD $", symbol: "$" },
@@ -124,19 +112,6 @@ export default function WealthTransactionDialog({
 }: WealthTransactionDialogProps) {
   const queryClient = useQueryClient();
   const isEditing = !!transaction;
-
-  const { data: projects = [] } = useQuery({
-    queryKey: ["expense-projects"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("expense_projects")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return data || [];
-    },
-  });
 
   const { data: assets = [] } = useQuery({
     queryKey: ["wealth-assets-for-transactions"],
@@ -396,7 +371,7 @@ export default function WealthTransactionDialog({
                 control={form.control}
                 name="asset_id"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="col-span-2">
                     <FormLabel className="text-xs">Ativo</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
@@ -408,56 +383,6 @@ export default function WealthTransactionDialog({
                         {assets.map((asset) => (
                           <SelectItem key={asset.id} value={asset.id}>
                             {asset.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Categoria</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue placeholder="Selecionar..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {CATEGORIES.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="project_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Projeto</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue placeholder="Selecionar..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {projects.map((proj) => (
-                          <SelectItem key={proj.id} value={proj.id}>
-                            {proj.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
