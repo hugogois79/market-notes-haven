@@ -233,12 +233,30 @@ export default function WealthAssetsTable() {
               return sortedCategories.map(([category, categoryAssets], index) => {
                 const Icon = categoryIcons[category] || Coins;
                 const colorClass = categoryColors[category] || "bg-muted text-muted-foreground";
-                const categoryTotal = categoryAssets.reduce((s, a) => s + (a.current_value || 0), 0);
+                const filteredAssets = categoryAssets.filter((a) => a.status !== "In Recovery");
+                
+                const categoryTotal = filteredAssets.reduce((s, a) => s + (a.current_value || 0), 0);
+                const categoryPL = filteredAssets.reduce((s, a) => s + (a.profit_loss_value || 0), 0);
+                
+                // Calculate weighted CAGR for category
+                let weightedCAGRSum = 0;
+                let weightedCAGRDenom = 0;
+                filteredAssets.forEach((asset) => {
+                  const cagr = calculateCAGR(
+                    asset.current_value || 0,
+                    asset.purchase_price || 0,
+                    asset.purchase_date || ""
+                  );
+                  if (cagr !== null && asset.current_value) {
+                    weightedCAGRSum += cagr * asset.current_value;
+                    weightedCAGRDenom += asset.current_value;
+                  }
+                });
+                const categoryCAGR = weightedCAGRDenom > 0 ? weightedCAGRSum / weightedCAGRDenom : null;
 
                 const showSeparator = hasCashCategory && category === "Cash" && sortedCategories.length > 1;
 
                 const isCollapsed = collapsedCategories[category] ?? false;
-                const filteredAssets = categoryAssets.filter((a) => a.status !== "In Recovery");
 
                 return (
                   <>
@@ -262,7 +280,20 @@ export default function WealthAssetsTable() {
                       <TableCell className="text-right font-semibold py-1">
                         {formatCurrency(categoryTotal)}
                       </TableCell>
-                      <TableCell colSpan={4} className="py-1"></TableCell>
+                      <TableCell className="text-right font-semibold py-1">
+                        <span className={cn(categoryPL >= 0 ? "text-green-500" : "text-red-500")}>
+                          {formatCurrency(categoryPL)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold py-1">
+                        {categoryCAGR !== null ? (
+                          <span className={cn(categoryCAGR >= 0 ? "text-green-500" : "text-red-500")}>
+                            {formatPercent(categoryCAGR)}
+                          </span>
+                        ) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground py-1">—</TableCell>
+                      <TableCell className="text-right text-muted-foreground py-1">—</TableCell>
                       <TableCell className="text-right font-semibold text-muted-foreground py-1">
                         {totalValue > 0 ? formatPercent((categoryTotal / totalValue) * 100) : "—"}
                       </TableCell>
