@@ -399,11 +399,11 @@ export default function PortfolioForecastTable() {
 
           {/* Total row */}
           <TableRow className="bg-primary/5 border-t-2 font-semibold">
-            <TableCell className="py-2">Total Portfolio</TableCell>
+            <TableCell className="py-2">Total Líquido</TableCell>
             <ContextMenu>
               <ContextMenuTrigger asChild>
                 <TableCell className={`text-right py-2 cursor-context-menu ${getColumnStyle("current").bg}`}>
-                  {formatCurrency(totalValue)}
+                  {formatCurrency(totalValue + getCashflowPosition(today))}
                 </TableCell>
               </ContextMenuTrigger>
               <ContextMenuContent className="bg-background border shadow-lg z-50">
@@ -418,7 +418,7 @@ export default function PortfolioForecastTable() {
             <ContextMenu>
               <ContextMenuTrigger asChild>
                 <TableCell className={`text-right py-2 cursor-context-menu ${getColumnStyle("custom").bg} ${totalDeltaCustom !== 0 ? "text-blue-600" : ""}`}>
-                  {formatCurrency((totalValue + totalDeltaCustom) * customGrowthFactor)}
+                  {formatCurrency((totalValue + totalDeltaCustom) * customGrowthFactor + getCashflowPosition(customDateObj))}
                 </TableCell>
               </ContextMenuTrigger>
               <ContextMenuContent className="bg-background border shadow-lg z-50">
@@ -433,7 +433,7 @@ export default function PortfolioForecastTable() {
             <ContextMenu>
               <ContextMenuTrigger asChild>
                 <TableCell className={`text-right py-2 cursor-context-menu ${getColumnStyle("3m").bg} ${totalDelta3M !== 0 ? "text-blue-600" : ""}`}>
-                  {formatCurrency((totalValue + totalDelta3M) * Math.pow(1.05, 0.25))}
+                  {formatCurrency((totalValue + totalDelta3M) * Math.pow(1.05, 0.25) + getCashflowPosition(date3M))}
                 </TableCell>
               </ContextMenuTrigger>
               <ContextMenuContent className="bg-background border shadow-lg z-50">
@@ -448,7 +448,7 @@ export default function PortfolioForecastTable() {
             <ContextMenu>
               <ContextMenuTrigger asChild>
                 <TableCell className={`text-right py-2 cursor-context-menu ${getColumnStyle("6m").bg} ${totalDelta6M !== 0 ? "text-blue-600" : ""}`}>
-                  {formatCurrency((totalValue + totalDelta6M) * Math.pow(1.05, 0.5))}
+                  {formatCurrency((totalValue + totalDelta6M) * Math.pow(1.05, 0.5) + getCashflowPosition(date6M))}
                 </TableCell>
               </ContextMenuTrigger>
               <ContextMenuContent className="bg-background border shadow-lg z-50">
@@ -463,7 +463,7 @@ export default function PortfolioForecastTable() {
             <ContextMenu>
               <ContextMenuTrigger asChild>
                 <TableCell className={`text-right py-2 cursor-context-menu ${getColumnStyle("1y").bg} ${totalDelta1Y !== 0 ? "text-blue-600" : ""}`}>
-                  {formatCurrency((totalValue + totalDelta1Y) * 1.05)}
+                  {formatCurrency((totalValue + totalDelta1Y) * 1.05 + getCashflowPosition(date1Y))}
                 </TableCell>
               </ContextMenuTrigger>
               <ContextMenuContent className="bg-background border shadow-lg z-50">
@@ -486,11 +486,11 @@ export default function PortfolioForecastTable() {
         if (selectedColumns.length === 0) return null;
         
         const totals: Record<ColumnKey, number> = {
-          current: totalValue,
-          custom: (totalValue + totalDeltaCustom) * customGrowthFactor,
-          "3m": (totalValue + totalDelta3M) * Math.pow(1.05, 0.25),
-          "6m": (totalValue + totalDelta6M) * Math.pow(1.05, 0.5),
-          "1y": (totalValue + totalDelta1Y) * 1.05,
+          current: totalValue + getCashflowPosition(today),
+          custom: (totalValue + totalDeltaCustom) * customGrowthFactor + getCashflowPosition(customDateObj),
+          "3m": (totalValue + totalDelta3M) * Math.pow(1.05, 0.25) + getCashflowPosition(date3M),
+          "6m": (totalValue + totalDelta6M) * Math.pow(1.05, 0.5) + getCashflowPosition(date6M),
+          "1y": (totalValue + totalDelta1Y) * 1.05 + getCashflowPosition(date1Y),
         };
         
         const columnLabels: Record<ColumnKey, string> = {
