@@ -88,6 +88,31 @@ export default function PortfolioForecastTable() {
     },
   });
 
+  // Fetch ALL transactions for cashflow calculation
+  const { data: allTransactions = [] } = useQuery({
+    queryKey: ["all-wealth-transactions-cashflow"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from("wealth_transactions")
+        .select("id, date, amount")
+        .eq("user_id", user.id)
+        .order("date");
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Calculate cashflow position (accumulated balance) up to a target date
+  const getCashflowPosition = (targetDate: Date) => {
+    return allTransactions
+      .filter((tx) => new Date(tx.date) <= targetDate)
+      .reduce((sum, tx) => sum + tx.amount, 0);
+  };
+
   const handleAddAdjustment = (adjustment: ForecastAdjustment) => {
     setAdjustments((prev) => [...prev, adjustment]);
   };
@@ -342,6 +367,29 @@ export default function PortfolioForecastTable() {
               </>
             );
           })}
+
+          {/* Cashflow row */}
+          <TableRow className="bg-emerald-50/50 border-t">
+            <TableCell className="py-2 font-medium">
+              <div className="flex items-center gap-2">
+                <span className="text-base">💰</span>
+                <span>Cashflow</span>
+              </div>
+            </TableCell>
+            <TableCell className={`text-right py-2 font-medium ${getCashflowPosition(today) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+              {formatCurrency(getCashflowPosition(today))}
+            </TableCell>
+            <TableCell className={`text-right py-2 font-medium ${getCashflowPosition(customDateObj) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+              {formatCurrency(getCashflowPosition(customDateObj))}
+            </TableCell>
+            <TableCell className={`text-right py-2 font-medium ${getCashflowPosition(date6M) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+              {formatCurrency(getCashflowPosition(date6M))}
+            </TableCell>
+            <TableCell className={`text-right py-2 font-medium ${getCashflowPosition(date1Y) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+              {formatCurrency(getCashflowPosition(date1Y))}
+            </TableCell>
+            <TableCell className="text-right py-2 text-muted-foreground">—</TableCell>
+          </TableRow>
 
           {/* Total row */}
           <TableRow className="bg-primary/5 border-t-2 font-semibold">
