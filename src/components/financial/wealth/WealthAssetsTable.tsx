@@ -202,7 +202,6 @@ export default function WealthAssetsTable() {
               <TableHead className="text-right py-1">Valor Atual</TableHead>
               <TableHead className="text-right py-1">P/L</TableHead>
               <TableHead className="text-right py-1">CAGR</TableHead>
-              <TableHead className="text-right py-1">Yld Exp.</TableHead>
               <TableHead className="text-right py-1">Peso Cat.</TableHead>
               <TableHead className="text-right py-1">Peso Total</TableHead>
               <TableHead className="w-[80px] py-1"></TableHead>
@@ -275,7 +274,6 @@ export default function WealthAssetsTable() {
                         ) : "—"}
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground py-1">—</TableCell>
-                      <TableCell className="text-right text-muted-foreground py-1">—</TableCell>
                       <TableCell className="text-right font-semibold text-muted-foreground py-1">
                         {totalValue > 0 ? formatPercent((categoryTotal / totalValue) * 100) : "—"}
                       </TableCell>
@@ -333,9 +331,6 @@ export default function WealthAssetsTable() {
                                 </span>
                               );
                             })()}
-                          </TableCell>
-                          <TableCell className="text-right py-1">
-                            {formatPercent(asset.yield_expected)}
                           </TableCell>
                           <TableCell className="text-right text-muted-foreground py-1">
                             {categoryTotal > 0 && asset.current_value
