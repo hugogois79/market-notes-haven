@@ -196,7 +196,17 @@ export default function MarketHoldingsTable() {
   // Calculate totals based on holdings sum (converted to EUR)
   const getAccountHoldingsValueEUR = (asset: CashAsset) => {
     return asset.holdings.reduce((sum, h) => {
-      const valueEUR = convertToEUR(h.current_value || 0, h.currency || "EUR");
+      const quantity = h.quantity || 1;
+      const currency = h.currency || "EUR";
+      
+      // Get security current price if available
+      const security = h.security_id ? securitiesMap[h.security_id] : null;
+      const securityCurrentPrice = security?.current_price || null;
+      
+      // Calculate current value from security price if available
+      const currentValue = securityCurrentPrice ? securityCurrentPrice * quantity : (h.current_value || 0);
+      const valueEUR = convertToEUR(currentValue, currency);
+      
       return sum + valueEUR;
     }, 0);
   };
