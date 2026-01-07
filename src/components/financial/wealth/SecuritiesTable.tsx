@@ -462,12 +462,23 @@ export default function SecuritiesTable() {
           return num.toFixed(4).replace(".", ",");
         };
         
-        // Helper para valores numéricos simples
+        // Helper para valores numéricos simples (2 casas decimais)
         const toNumStr = (val: any): string => {
           if (val === null || val === undefined || val === "") return "";
           const num = parseFloat(val);
           if (isNaN(num)) return "";
-          return num.toString().replace(".", ",");
+          return num.toFixed(2).replace(".", ",");
+        };
+        
+        // Helper para Market Cap (formato abreviado: 1.41T, 500B, etc.)
+        const formatMarketCap = (val: any): string => {
+          if (val === null || val === undefined || val === "") return "";
+          const num = parseFloat(val);
+          if (isNaN(num)) return "";
+          if (num >= 1e12) return (num / 1e12).toFixed(2).replace(".", ",") + "T";
+          if (num >= 1e9) return (num / 1e9).toFixed(2).replace(".", ",") + "B";
+          if (num >= 1e6) return (num / 1e6).toFixed(2).replace(".", ",") + "M";
+          return num.toLocaleString("pt-PT");
         };
 
         setFormData(prev => ({
@@ -481,13 +492,13 @@ export default function SecuritiesTable() {
           exchange: result.data.exchange || prev.exchange,
           
           // Campos Equity - valores absolutos
-          market_cap: result.data.market_cap || result.data.marketCap || prev.market_cap,
-          eps: result.data.eps || prev.eps,
-          pe_ratio: result.data.pe_ratio || result.data.peRatio || prev.pe_ratio,
-          pb_ratio: result.data.pb_ratio || result.data.pbRatio || prev.pb_ratio,
+          market_cap: formatMarketCap(result.data.market_cap || result.data.marketCap) || prev.market_cap,
+          eps: toNumStr(result.data.eps) || prev.eps,
+          pe_ratio: toNumStr(result.data.pe_ratio || result.data.peRatio) || prev.pe_ratio,
+          pb_ratio: toNumStr(result.data.pb_ratio || result.data.pbRatio) || prev.pb_ratio,
           fcf: result.data.fcf || prev.fcf,
           debt_to_equity: toNumStr(result.data.debt_to_equity || result.data.debtToEquity || result.data.debtEquityRatio) || prev.debt_to_equity,
-          interest_coverage: result.data.interest_coverage || result.data.interestCoverage || prev.interest_coverage,
+          interest_coverage: toNumStr(result.data.interest_coverage || result.data.interestCoverage) || prev.interest_coverage,
           
           // Campos Equity - percentagens (n8n já envia em %, não multiplicar)
           fcf_yield: toPercent(result.data.fcf_yield || result.data.fcfYield) || prev.fcf_yield,
