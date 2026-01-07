@@ -226,17 +226,17 @@ export default function WealthTransactionDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 text-sm">
+            <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
                 name="date"
                 rules={{ required: "Data é obrigatória" }}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Data</FormLabel>
+                    <FormLabel className="text-xs">Data</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input type="date" className="h-8 text-sm" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -248,10 +248,10 @@ export default function WealthTransactionDialog({
                 name="transaction_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tipo</FormLabel>
+                    <FormLabel className="text-xs">Tipo</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-8 text-sm">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -273,9 +273,9 @@ export default function WealthTransactionDialog({
                 name="counterparty"
                 render={({ field }) => (
                   <FormItem className="col-span-2">
-                    <FormLabel>Contraparte</FormLabel>
+                    <FormLabel className="text-xs">Contraparte</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: Juliao Sarmento, Banco" {...field} />
+                      <Input className="h-8 text-sm" placeholder="Ex: Juliao Sarmento, Banco" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -288,9 +288,9 @@ export default function WealthTransactionDialog({
                 rules={{ required: "Descrição é obrigatória" }}
                 render={({ field }) => (
                   <FormItem className="col-span-2">
-                    <FormLabel>Descrição</FormLabel>
+                    <FormLabel className="text-xs">Descrição</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: Quadro Pedro Falcao, Crypto Investment" {...field} />
+                      <Input className="h-8 text-sm" placeholder="Ex: Quadro Pedro Falcao, Crypto Investment" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -303,14 +303,14 @@ export default function WealthTransactionDialog({
                 rules={{ required: "Valor é obrigatório" }}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Valor</FormLabel>
+                    <FormLabel className="text-xs">Valor</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
                           type="text"
                           inputMode="decimal"
                           placeholder="0,00"
-                          className="pr-12"
+                          className="h-8 text-sm pr-12"
                           value={field.value}
                           onChange={(e) => handleAmountChange(e, field.onChange)}
                           onBlur={field.onBlur}
@@ -332,10 +332,10 @@ export default function WealthTransactionDialog({
                 name="currency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Moeda</FormLabel>
+                    <FormLabel className="text-xs">Moeda</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-8 text-sm">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -357,10 +357,10 @@ export default function WealthTransactionDialog({
                 name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Categoria</FormLabel>
+                    <FormLabel className="text-xs">Categoria</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-8 text-sm">
                           <SelectValue placeholder="Selecionar..." />
                         </SelectTrigger>
                       </FormControl>
@@ -382,9 +382,9 @@ export default function WealthTransactionDialog({
                 name="notes"
                 render={({ field }) => (
                   <FormItem className="col-span-2">
-                    <FormLabel>Notas</FormLabel>
+                    <FormLabel className="text-xs">Notas</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Observações..." {...field} />
+                      <Textarea className="text-sm min-h-[60px]" placeholder="Observações..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -392,11 +392,11 @@ export default function WealthTransactionDialog({
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button type="submit" size="sm" disabled={mutation.isPending}>
                 {mutation.isPending ? "A guardar..." : isEditing ? "Atualizar" : "Criar"}
               </Button>
             </div>

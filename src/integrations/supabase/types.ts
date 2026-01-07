@@ -4942,6 +4942,7 @@ export type Database = {
           category_weight: number | null
           counterparty: string | null
           created_at: string
+          currency: string | null
           date: string
           description: string
           id: string
@@ -4958,6 +4959,7 @@ export type Database = {
           category_weight?: number | null
           counterparty?: string | null
           created_at?: string
+          currency?: string | null
           date?: string
           description: string
           id?: string
@@ -4974,6 +4976,7 @@ export type Database = {
           category_weight?: number | null
           counterparty?: string | null
           created_at?: string
+          currency?: string | null
           date?: string
           description?: string
           id?: string
