@@ -199,51 +199,6 @@ export default function PortfolioForecastTable() {
 
   return (
     <div className="space-y-4">
-      {/* Future Transactions from Cashflow */}
-      {futureTransactions.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap p-2 bg-muted/30 rounded-md">
-          <span className="text-xs text-muted-foreground font-medium">Transações Futuras:</span>
-          {futureTransactions.map((tx) => {
-            const asset = assets.find((a) => a.id === tx.asset_id);
-            const isAssetSale = tx.transaction_type === "credit";
-            const affectsValue = tx.affects_asset_value !== false;
-            return (
-              <div
-                key={tx.id}
-                className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md ${
-                  !affectsValue
-                    ? "bg-muted text-muted-foreground border border-muted-foreground/20"
-                    : isAssetSale
-                    ? "bg-amber-50 text-amber-700 border border-amber-200"
-                    : "bg-blue-50 text-blue-700 border border-blue-200"
-                }`}
-              >
-                {affectsValue ? (
-                  isAssetSale ? (
-                    <TrendingDown className="h-3 w-3" />
-                  ) : (
-                    <TrendingUp className="h-3 w-3" />
-                  )
-                ) : (
-                  <span className="text-[10px]">💰</span>
-                )}
-                <span className={`font-medium ${!affectsValue ? "line-through opacity-60" : ""}`}>
-                  {isAssetSale ? "-" : "+"}
-                  {formatCurrency(Math.abs(tx.amount))}
-                </span>
-                <span>em {asset?.name || "Ativo"}</span>
-                <span className="text-muted-foreground">
-                  ({format(new Date(tx.date), "dd/MM/yy")})
-                </span>
-                {!affectsValue && (
-                  <span className="text-[9px] opacity-60">(custo)</span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
       {/* Manual Adjustments Section */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 flex-wrap">
@@ -408,6 +363,51 @@ export default function PortfolioForecastTable() {
           </TableRow>
         </TableBody>
       </Table>
+
+      {/* Future Transactions from Cashflow */}
+      {futureTransactions.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap p-2 bg-muted/30 rounded-md">
+          <span className="text-xs text-muted-foreground font-medium">Transações Futuras:</span>
+          {futureTransactions.map((tx) => {
+            const asset = assets.find((a) => a.id === tx.asset_id);
+            const isAssetSale = tx.transaction_type === "credit";
+            const affectsValue = tx.affects_asset_value !== false;
+            return (
+              <div
+                key={tx.id}
+                className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md ${
+                  !affectsValue
+                    ? "bg-muted text-muted-foreground border border-muted-foreground/20"
+                    : isAssetSale
+                    ? "bg-amber-50 text-amber-700 border border-amber-200"
+                    : "bg-blue-50 text-blue-700 border border-blue-200"
+                }`}
+              >
+                {affectsValue ? (
+                  isAssetSale ? (
+                    <TrendingDown className="h-3 w-3" />
+                  ) : (
+                    <TrendingUp className="h-3 w-3" />
+                  )
+                ) : (
+                  <span className="text-[10px]">💰</span>
+                )}
+                <span className={`font-medium ${!affectsValue ? "line-through opacity-60" : ""}`}>
+                  {isAssetSale ? "-" : "+"}
+                  {formatCurrency(Math.abs(tx.amount))}
+                </span>
+                <span>em {asset?.name || "Ativo"}</span>
+                <span className="text-muted-foreground">
+                  ({format(new Date(tx.date), "dd/MM/yy")})
+                </span>
+                {!affectsValue && (
+                  <span className="text-[9px] opacity-60">(custo)</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <ForecastAdjustmentDialog
         open={dialogOpen}
