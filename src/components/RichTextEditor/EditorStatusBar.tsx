@@ -142,14 +142,23 @@ const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onSelect={async () => {
-                    console.log("EditorStatusBar: Print with Attachments clicked");
+                    console.log("EditorStatusBar: Print with Attachments clicked", { 
+                      hasPdfAttachments, 
+                      pdfAttachmentsCount: pdfAttachments.length,
+                      attachmentsCount: attachments.length,
+                      hasCallback: !!onPrintWithAttachments 
+                    });
                     if (!onPrintWithAttachments) {
                       toast.error("Print with Attachments indisponível nesta nota");
                       return;
                     }
                     toast.info("A combinar PDFs… (pode demorar)");
                     console.log("EditorStatusBar: calling onPrintWithAttachments");
-                    await onPrintWithAttachments();
+                    try {
+                      await onPrintWithAttachments();
+                    } catch (err) {
+                      console.error("EditorStatusBar: onPrintWithAttachments failed", err);
+                    }
                   }}
                 >
                   <Files className="h-4 w-4 mr-2" />
