@@ -14,14 +14,54 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Require admin authentication for this batch operation
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Create client with user's JWT
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    
+    // Validate user via getClaims
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Verify caller has admin role before proceeding with batch operation
+    const { data: isAdmin, error: roleError } = await supabase.rpc('has_role', {
+      _user_id: claimsData.claims.sub,
+      _role: 'admin'
+    });
+    
+    if (roleError || !isAdmin) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Forbidden: Admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    console.log('Starting workflow files indexing...');
+    console.log('Starting workflow files indexing for admin:', claimsData.claims.sub);
 
     // Get all workflow files that need indexing (new or updated since last index)
-    const { data: files, error: filesError } = await supabase
+    // Note: Using service role for batch indexing after admin verification
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    
+    const { data: files, error: filesError } = await supabaseAdmin
       .from('workflow_files')
       .select('id, file_name, status, category, notes, priority, created_at, updated_at');
 
@@ -39,7 +79,7 @@ serve(async (req) => {
     for (const file of files || []) {
       try {
         // Check if file already indexed and up to date
-        const { data: existingIndex } = await supabase
+        const { data: existingIndex } = await supabaseAdmin
           .from('workflow_file_index')
           .select('indexed_at')
           .eq('file_id', file.id)
@@ -68,7 +108,7 @@ serve(async (req) => {
         }
 
         // Upsert the index entry
-        const { error: upsertError } = await supabase
+        const { error: upsertError } = await supabaseAdmin
           .from('workflow_file_index')
           .upsert({
             file_id: file.id,
@@ -91,7 +131,7 @@ serve(async (req) => {
     }
 
     // Clean up orphaned index entries (files that were deleted)
-    const { error: cleanupError } = await supabase
+    const { error: cleanupError } = await supabaseAdmin
       .from('workflow_file_index')
       .delete()
       .not('file_id', 'in', `(${(files || []).map(f => `'${f.id}'`).join(',')})`);

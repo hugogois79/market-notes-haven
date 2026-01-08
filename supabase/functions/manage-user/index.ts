@@ -25,8 +25,52 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     
+    // Require authentication for admin operations
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    // Create client with user's JWT to verify caller identity
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    
+    // Validate user via getClaims
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    const callerId = claimsData.claims.sub;
+    
+    // Verify caller has admin role before allowing any admin operations
+    const { data: isAdmin, error: roleError } = await supabaseClient.rpc("has_role", {
+      _user_id: callerId,
+      _role: "admin"
+    });
+    
+    if (roleError || !isAdmin) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden: Admin access required" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    console.log("Admin verified:", callerId);
+    
+    // Create admin client for privileged operations after authorization check
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
@@ -36,7 +80,7 @@ Deno.serve(async (req) => {
 
     const { action, email, password, name, assigned_project_ids, is_requester, feature_permissions, user_id, new_password, expense_user_id } = await req.json() as ManageUserRequest;
 
-    console.log("manage-user action:", action, "email:", email);
+    console.log("manage-user action:", action, "email:", email, "by admin:", callerId);
 
     // Check auth status for existing expense_users
     if (action === "check_auth_status") {

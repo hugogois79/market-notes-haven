@@ -66,21 +66,36 @@ serve(async (req) => {
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
 
     if (!openAIApiKey) throw new Error('OPENAI_API_KEY is not configured');
-    if (!supabaseUrl || !supabaseServiceKey) throw new Error('Supabase configuration is missing');
+    if (!supabaseUrl || !supabaseAnonKey) throw new Error('Supabase configuration is missing');
 
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) throw new Error('Authorization header is required');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
+    // Create Supabase client with user's JWT - RLS enforces access
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    
+    // Validate user via getClaims
     const token = authHeader.replace('Bearer ', '');
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !user) throw new Error('Invalid authentication token');
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
-    const userId = user.id;
+    const userId = claimsData.claims.sub;
     console.log('Calendar Assistant - User:', userId);
 
     // Fetch calendar events for next 30 days
