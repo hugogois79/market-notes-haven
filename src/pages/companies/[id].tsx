@@ -304,6 +304,11 @@ export default function CompanyDetailPage() {
   const [moveFolderPath, setMoveFolderPath] = useState<string>("__root__");
   const [moveFolderPopoverOpen, setMoveFolderPopoverOpen] = useState(false);
   
+  // Bulk move documents dialog state
+  const [bulkMoveDialogOpen, setBulkMoveDialogOpen] = useState(false);
+  const [bulkMoveFolderPath, setBulkMoveFolderPath] = useState<string>("__root__");
+  const [bulkMoveFolderPopoverOpen, setBulkMoveFolderPopoverOpen] = useState(false);
+  
   // Move folder dialog state
   const [moveFolderDialogOpen, setMoveFolderDialogOpen] = useState(false);
   const [folderToMove, setFolderToMove] = useState<any>(null);
@@ -719,6 +724,26 @@ export default function CompanyDetailPage() {
     },
   });
 
+  const bulkMoveDocumentsMutation = useMutation({
+    mutationFn: async ({ docIds, folderId }: { docIds: string[]; folderId: string | null }) => {
+      const { error } = await supabase
+        .from("company_documents")
+        .update({ folder_id: folderId })
+        .in("id", docIds);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateDocuments();
+      toast.success(`${selectedDocs.size} ficheiro(s) movido(s)`);
+      setBulkMoveDialogOpen(false);
+      setSelectedDocs(new Set());
+      setBulkMoveFolderPath("__root__");
+    },
+    onError: (error) => {
+      toast.error("Erro ao mover: " + error.message);
+    },
+  });
+
   const handleConfirmMove = () => {
     if (!docToMove?.id) return;
     const targetFolderId =
@@ -727,6 +752,16 @@ export default function CompanyDetailPage() {
         : (folderOptions.find((f) => f.path === moveFolderPath)?.id ?? null);
 
     moveDocumentMutation.mutate({ docId: docToMove.id, folderId: targetFolderId });
+  };
+
+  const handleConfirmBulkMove = () => {
+    if (selectedDocs.size === 0) return;
+    const targetFolderId =
+      bulkMoveFolderPath === "__root__"
+        ? null
+        : (folderOptions.find((f) => f.path === bulkMoveFolderPath)?.id ?? null);
+
+    bulkMoveDocumentsMutation.mutate({ docIds: Array.from(selectedDocs), folderId: targetFolderId });
   };
 
   // Helper function to build folder path from hierarchy
@@ -1899,6 +1934,15 @@ export default function CompanyDetailPage() {
                 {selectedDocs.size > 0 && (
                   <>
                     <div className="w-px h-5 bg-border mx-1" />
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 gap-1"
+                      onClick={() => setBulkMoveDialogOpen(true)}
+                    >
+                      <FolderInput className="h-4 w-4" />
+                      Mover para... ({selectedDocs.size})
+                    </Button>
                     <Button 
                       variant="ghost" 
                       size="sm" 
@@ -3193,6 +3237,87 @@ export default function CompanyDetailPage() {
             </Button>
             <Button onClick={handleConfirmMove} disabled={moveDocumentMutation.isPending}>
               {moveDocumentMutation.isPending ? "A mover..." : "Mover"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Move Documents Dialog */}
+      <Dialog
+        open={bulkMoveDialogOpen}
+        onOpenChange={(open) => {
+          setBulkMoveDialogOpen(open);
+          if (!open) {
+            setBulkMoveFolderPath("__root__");
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Mover {selectedDocs.size} Ficheiro(s) para Pasta</DialogTitle>
+            <DialogDescription>
+              Selecione a pasta de destino para os ficheiros selecionados.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="p-3 bg-muted/20 rounded-lg border">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Ficheiros Selecionados</Label>
+              <p className="mt-1 text-sm font-medium">{selectedDocs.size} ficheiro(s)</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Pasta de Destino</Label>
+              <Popover open={bulkMoveFolderPopoverOpen} onOpenChange={setBulkMoveFolderPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    {bulkMoveFolderPath === "__root__" 
+                      ? "📁 Raiz (sem pasta)" 
+                      : `📂 ${bulkMoveFolderPath}`}
+                    <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Pesquisar pasta..." />
+                    <CommandList className="max-h-48 overflow-y-auto">
+                      <CommandEmpty>Nenhuma pasta encontrada.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem 
+                          value="__root__"
+                          onSelect={() => {
+                            setBulkMoveFolderPath("__root__");
+                            setBulkMoveFolderPopoverOpen(false);
+                          }}
+                        >
+                          📁 Raiz (sem pasta)
+                        </CommandItem>
+                        {folderOptions.map((f) => (
+                          <CommandItem 
+                            key={f.id} 
+                            value={f.path}
+                            onSelect={() => {
+                              setBulkMoveFolderPath(f.path);
+                              setBulkMoveFolderPopoverOpen(false);
+                            }}
+                          >
+                            📂 {f.path}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkMoveDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmBulkMove} disabled={bulkMoveDocumentsMutation.isPending}>
+              {bulkMoveDocumentsMutation.isPending ? "A mover..." : `Mover ${selectedDocs.size} ficheiro(s)`}
             </Button>
           </DialogFooter>
         </DialogContent>
