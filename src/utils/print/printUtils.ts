@@ -10,7 +10,7 @@ import { toast } from "sonner";
 
 let reservedPrintWindow: Window | null = null;
 
-// HTML template for the print status window - uses message passing for reliable updates
+// HTML template for the print status window
 const STATUS_WINDOW_HTML = `<!doctype html>
 <html>
 <head>
@@ -32,32 +32,41 @@ const STATUS_WINDOW_HTML = `<!doctype html>
     <div id="status"><span class="spinner"></span>A iniciar…</div>
     <div id="log"></div>
   </div>
-  <script>
-    window.addEventListener("message", function(e) {
-      if (!e.data || typeof e.data !== "object") return;
-      var statusEl = document.getElementById("status");
-      var logEl = document.getElementById("log");
-      if (e.data.type === "status") {
-        statusEl.innerHTML = '<span class="spinner"></span>' + e.data.message;
-      } else if (e.data.type === "error") {
-        statusEl.innerHTML = '<span class="error">' + e.data.message + '</span>';
-        if (e.data.details) logEl.textContent = e.data.details;
-      } else if (e.data.type === "log") {
-        logEl.textContent += e.data.message + "\\n";
-      }
-    });
-  </script>
 </body>
 </html>`;
+
+/**
+ * Updates the status in the print window using direct DOM manipulation
+ */
+function updatePrintWindowStatus(win: Window, message: string, isError = false) {
+  try {
+    const statusEl = win.document?.getElementById?.("status");
+    const logEl = win.document?.getElementById?.("log");
+    if (statusEl) {
+      if (isError) {
+        statusEl.innerHTML = `<span class="error">${message}</span>`;
+      } else {
+        statusEl.innerHTML = `<span class="spinner"></span>${message}`;
+      }
+    }
+    if (logEl) {
+      logEl.textContent = (logEl.textContent || "") + message + "\n";
+    }
+  } catch (err) {
+    console.warn("updatePrintWindowStatus: could not update", err);
+  }
+}
 
 /**
  * Pre-opens a blank tab/window synchronously to avoid popup blockers.
  * The next call to printNoteWithAttachments will reuse it.
  */
 export function preopenPrintWindow(): Window | null {
+  console.log("preopenPrintWindow: called");
   try {
-    const w = window.open("about:blank", "_blank");
+    const w = window.open("", "_blank");
     if (!w) {
+      console.error("preopenPrintWindow: popup blocked");
       toast.error("O browser bloqueou a janela de impressão (popup blocker)");
       return null;
     }
@@ -67,13 +76,15 @@ export function preopenPrintWindow(): Window | null {
       w.document.open();
       w.document.write(STATUS_WINDOW_HTML);
       w.document.close();
+      console.log("preopenPrintWindow: wrote HTML to window");
     } catch (err) {
       console.warn("preopenPrintWindow: could not write status HTML", err);
     }
 
     reservedPrintWindow = w;
     return w;
-  } catch {
+  } catch (err) {
+    console.error("preopenPrintWindow: error", err);
     toast.error("Não foi possível abrir a janela de impressão");
     return null;
   }
@@ -303,9 +314,12 @@ export const printNoteWithAttachments = async (
     : null;
   reservedPrintWindow = null;
 
+  console.log("printNoteWithAttachments: reserved window?", !!printWindow);
+
   // If no pre-opened window, open one now (may be blocked)
   if (!printWindow) {
-    printWindow = window.open("about:blank", "_blank");
+    console.log("printNoteWithAttachments: opening new window");
+    printWindow = window.open("", "_blank");
     if (printWindow) {
       try {
         printWindow.document.open();
@@ -318,40 +332,21 @@ export const printNoteWithAttachments = async (
   }
 
   if (!printWindow) {
+    console.error("printNoteWithAttachments: popup blocked");
     toast.error("O browser bloqueou a janela de impressão (popup blocker)");
     return;
   }
 
-  // Helper to send status updates via postMessage (more reliable than document.write)
-  const sendStatus = (message: string) => {
-    try {
-      printWindow!.postMessage({ type: "status", message }, "*");
-    } catch {
-      // Window might be closed or cross-origin
-    }
-  };
-
-  const sendError = (message: string, details?: string) => {
-    try {
-      printWindow!.postMessage({ type: "error", message, details }, "*");
-    } catch {
-      // ignore
-    }
-  };
-
-  const sendLog = (message: string) => {
-    try {
-      printWindow!.postMessage({ type: "log", message }, "*");
-    } catch {
-      // ignore
-    }
-  };
-
+  // Helper to update status using direct DOM manipulation (same-origin)
   const report = (message: string) => {
     console.log("printNoteWithAttachments:", message);
     onProgress?.(message);
-    sendStatus(message);
-    sendLog(message);
+    updatePrintWindowStatus(printWindow!, message, false);
+  };
+
+  const reportError = (message: string) => {
+    console.error("printNoteWithAttachments error:", message);
+    updatePrintWindowStatus(printWindow!, message, true);
   };
 
   report("A preparar o PDF combinado…");
@@ -460,11 +455,8 @@ export const printNoteWithAttachments = async (
     const message = error instanceof Error ? error.message : String(error);
     toast.error(message || "Erro ao combinar PDFs");
 
-    // Show the error in the print window via postMessage
-    sendError(
-      "Não foi possível combinar os anexos",
-      `${message}\n\nDica: confirme que os anexos PDF estão acessíveis e não estão corrompidos/protegidos.`
-    );
+    // Show the error in the print window
+    reportError(`Não foi possível combinar os anexos: ${message}`);
   } finally {
     window.clearTimeout(watchdog);
     if (blobUrl) {
