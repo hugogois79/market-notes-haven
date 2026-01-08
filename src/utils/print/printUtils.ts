@@ -94,12 +94,14 @@ export function preopenPrintWindow(): Window | null {
  * Converts HTML content to a PDF blob using html2canvas and pdf-lib
  */
 async function htmlToPdf(html: string): Promise<Blob> {
-  // Create hidden iframe with content
+  // Create hidden iframe with content - use auto height to capture all content
   const iframe = document.createElement("iframe");
   iframe.style.position = "absolute";
   iframe.style.left = "-9999px";
   iframe.style.width = "794px"; // A4 width at 96 DPI
-  iframe.style.height = "1123px"; // A4 height at 96 DPI
+  iframe.style.height = "auto"; // Let it expand to fit content
+  iframe.style.minHeight = "1123px"; // At least one A4 page
+  iframe.style.border = "none";
   document.body.appendChild(iframe);
 
   const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
@@ -112,14 +114,22 @@ async function htmlToPdf(html: string): Promise<Blob> {
   iframeDoc.write(html);
   iframeDoc.close();
 
-  // Wait for content to render
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  // Wait for content to render and fonts to load
+  await new Promise((resolve) => setTimeout(resolve, 800));
 
+  // Get the actual content height
   const body = iframeDoc.body;
   if (!body) {
     document.body.removeChild(iframe);
     throw new Error("No body found in iframe");
   }
+
+  // Force the iframe to match content height
+  const contentHeight = Math.max(body.scrollHeight, body.offsetHeight, 1123);
+  iframe.style.height = `${contentHeight}px`;
+
+  // Wait a bit more after resizing
+  await new Promise((resolve) => setTimeout(resolve, 200));
 
   const withTimeout = async <T,>(p: Promise<T>, ms: number, label: string): Promise<T> => {
     const timeout = new Promise<never>((_, reject) =>
@@ -128,7 +138,7 @@ async function htmlToPdf(html: string): Promise<Blob> {
     return Promise.race([p, timeout]);
   };
 
-  // Render to canvas (can hang on some CORS/font/image cases, so guard with timeout)
+  // Render to canvas - capture the entire body from the top
   const canvas = await withTimeout(
     html2canvas(body, {
       scale: 2,
@@ -136,7 +146,13 @@ async function htmlToPdf(html: string): Promise<Blob> {
       allowTaint: true,
       backgroundColor: "#ffffff",
       width: 794,
+      height: contentHeight,
       windowWidth: 794,
+      windowHeight: contentHeight,
+      scrollX: 0,
+      scrollY: 0,
+      x: 0,
+      y: 0,
     }),
     30_000,
     "Falha a renderizar a nota para PDF"
@@ -163,19 +179,26 @@ async function htmlToPdf(html: string): Promise<Blob> {
   for (let i = 0; i < pagesCount; i++) {
     const page = pdfDoc.addPage([pageWidth, pageHeight]);
 
+    // Calculate the source height for this page section
+    const sourceHeightPerPage = pageHeight / scale;
+    const sourceY = i * sourceHeightPerPage;
+    const sourceHeight = Math.min(sourceHeightPerPage, imgHeight - sourceY);
+
+    if (sourceHeight <= 0) continue;
+
     // Create a canvas for this page section
     const pageCanvas = document.createElement("canvas");
     pageCanvas.width = imgWidth;
-    pageCanvas.height = Math.min(pageHeight / scale, imgHeight - i * (pageHeight / scale));
+    pageCanvas.height = Math.ceil(sourceHeight);
 
     const ctx = pageCanvas.getContext("2d");
     if (ctx) {
       ctx.drawImage(
         canvas,
         0,
-        i * (pageHeight / scale),
+        sourceY,
         imgWidth,
-        pageCanvas.height,
+        sourceHeight,
         0,
         0,
         imgWidth,
