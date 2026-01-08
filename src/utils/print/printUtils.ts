@@ -209,6 +209,12 @@ export const printNoteWithAttachments = async (
   attachments: string[],
   onProgress?: (message: string) => void
 ): Promise<void> => {
+  console.log("printNoteWithAttachments: triggered", {
+    title: noteData.title,
+    attachmentsCount: attachments?.length ?? 0,
+  });
+  toast.info("A preparar impressão com anexos...");
+
   // IMPORTANT: open a window synchronously to avoid popup blockers
   const printWindow = window.open('', '_blank');
   if (!printWindow) {

@@ -131,26 +131,25 @@ const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
                   <ChevronDown size={10} className="ml-0.5" />
                 </Button>
               </DropdownMenuTrigger>
-               <DropdownMenuContent align="end">
-                 <DropdownMenuItem
-                   onSelect={(e) => {
-                     e.preventDefault();
-                     handlePrint();
-                   }}
-                 >
-                   <FileText className="h-4 w-4 mr-2" />
-                   Print Note Only
-                 </DropdownMenuItem>
-                 <DropdownMenuItem
-                   onSelect={(e) => {
-                     e.preventDefault();
-                     onPrintWithAttachments?.();
-                   }}
-                 >
-                   <Files className="h-4 w-4 mr-2" />
-                   Print with Attachments ({pdfAttachments.length})
-                 </DropdownMenuItem>
-               </DropdownMenuContent>
+              <DropdownMenuContent align="end" className="z-[200] bg-popover">
+                <DropdownMenuItem
+                  onSelect={() => {
+                    handlePrint();
+                  }}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Print Note Only
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => {
+                    toast.info("A preparar PDF combinado...");
+                    onPrintWithAttachments?.();
+                  }}
+                >
+                  <Files className="h-4 w-4 mr-2" />
+                  Print with Attachments ({pdfAttachments.length})
+                </DropdownMenuItem>
+              </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <Button
