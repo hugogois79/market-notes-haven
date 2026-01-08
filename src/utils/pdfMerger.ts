@@ -62,9 +62,62 @@ async function loadPdfWithEncryptionHandling(pdfBytes: ArrayBuffer, source: stri
 }
 
 /**
- * NOTE: We intentionally do NOT attempt to "convert" encrypted/protected PDFs.
- * This keeps the TypeScript build stable and avoids heavyweight PDF.js typings.
+ * Converts a protected/encrypted PDF to a clean PDF by rendering each page to an image
+ * and rebuilding the PDF with pdf-lib. Uses pdfjs-dist which can handle encrypted PDFs.
  */
+async function convertProtectedPdfToClean(pdfBytes: ArrayBuffer, onProgress?: (message: string) => void): Promise<ArrayBuffer> {
+  console.log('Converting protected PDF via rendering...');
+  
+  // Dynamic import to avoid TypeScript issues with pdfjs-dist types
+  const pdfjsLib = await import('pdfjs-dist');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.mjs',
+    import.meta.url
+  ).toString();
+
+  // Load PDF with pdfjs (handles encryption)
+  const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+  console.log(`Protected PDF has ${pdf.numPages} pages`);
+  
+  // Create new clean PDF
+  const cleanPdf = await PDFDocument.create();
+  
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    onProgress?.(`A converter página ${pageNum}/${pdf.numPages}...`);
+    
+    const page = await pdf.getPage(pageNum);
+    const viewport = page.getViewport({ scale: 2.0 }); // High quality
+    
+    // Create canvas and render page
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) throw new Error('Failed to get canvas context');
+    
+    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+    
+    // Convert canvas to PNG
+    const imageDataUrl = canvas.toDataURL('image/png');
+    const pngResponse = await fetch(imageDataUrl);
+    const pngBytes = await pngResponse.arrayBuffer();
+    const pngImage = await cleanPdf.embedPng(pngBytes);
+    
+    // Add page with the image (scale down by 2 since we rendered at 2x)
+    const pdfPage = cleanPdf.addPage([viewport.width / 2, viewport.height / 2]);
+    pdfPage.drawImage(pngImage, {
+      x: 0,
+      y: 0,
+      width: viewport.width / 2,
+      height: viewport.height / 2
+    });
+  }
+  
+  console.log('Protected PDF converted successfully');
+  const savedBytes = await cleanPdf.save();
+  return savedBytes.buffer as ArrayBuffer;
+}
 
 /**
  * Merges two PDFs: the original document (invoice) first, then the payment document second
@@ -170,10 +223,15 @@ export async function mergeMultiplePdfs(
         const errorMessage = error instanceof Error ? error.message : String(error);
         
         if (errorMessage.toLowerCase().includes('encrypt')) {
-          throw new EncryptedPdfError(`O PDF "${source.name}" está protegido e não pode ser combinado`);
+          // Convert protected PDF via rendering
+          console.log(`PDF ${source.name} is protected, converting via rendering...`);
+          onProgress?.(`A converter PDF protegido: ${source.name}...`);
+          
+          const cleanBytes = await convertProtectedPdfToClean(pdfBytes, onProgress);
+          pdfDoc = await PDFDocument.load(cleanBytes);
+        } else {
+          throw error;
         }
-
-        throw error;
       }
       
       // Copy all pages to merged PDF
