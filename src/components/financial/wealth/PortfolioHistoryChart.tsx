@@ -2,8 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { format, addMonths, addYears, differenceInDays } from "date-fns";
+import { format } from "date-fns";
 import { pt } from "date-fns/locale";
+import { useForecastCalculations } from "@/hooks/useForecastCalculations";
 
 interface PortfolioSnapshot {
   id: string;
@@ -37,80 +38,16 @@ export default function PortfolioHistoryChart() {
     },
   });
 
-  // Fetch assets for forecast calculation
-  const { data: assets = [] } = useQuery({
-    queryKey: ["wealth-assets-for-chart-forecast"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
-      const { data, error } = await supabase
-        .from("wealth_assets")
-        .select("id, current_value, appreciation_type, annual_rate_percent, consider_appreciation")
-        .eq("user_id", user.id)
-        .neq("status", "In Recovery");
-
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Fetch ALL transactions for cashflow calculation
-  const { data: allTransactions = [] } = useQuery({
-    queryKey: ["all-wealth-transactions-chart-cashflow"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
-      const { data, error } = await supabase
-        .from("wealth_transactions")
-        .select("id, date, amount, asset_id, affects_asset_value")
-        .eq("user_id", user.id)
-        .order("date");
-
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Calculate cashflow position up to a target date
-  const getCashflowPosition = (targetDate: Date) => {
-    return allTransactions
-      .filter((tx) => new Date(tx.date) <= targetDate)
-      .reduce((sum, tx) => sum + tx.amount, 0);
-  };
-
-  // Get future transaction delta for assets (affects value) up to a target date
-  const getAssetTransactionDelta = (assetId: string, targetDate: Date, todayDate: Date) => {
-    return allTransactions
-      .filter((tx) => 
-        tx.asset_id === assetId && 
-        new Date(tx.date) > todayDate && 
-        new Date(tx.date) <= targetDate && 
-        tx.affects_asset_value !== false
-      )
-      .reduce((delta, tx) => delta - tx.amount, 0);
-  };
-
-  // Calculate projected total for a future date (matching forecast table logic)
-  const calculateProjectedTotal = (targetDate: Date) => {
-    const todayDate = new Date();
-    const daysToTarget = differenceInDays(targetDate, todayDate);
-    
-    let projectedAssetsTotal = 0;
-    for (const asset of assets) {
-      const value = asset.current_value || 0;
-      const assetDelta = getAssetTransactionDelta(asset.id, targetDate, todayDate);
-      const useAppreciation = asset.consider_appreciation !== false;
-      const annualRate = asset.annual_rate_percent ?? 5;
-      const isDepreciation = asset.appreciation_type === "depreciates";
-      const effectiveRate = useAppreciation ? (isDepreciation ? -annualRate : annualRate) / 100 : 0;
-      const growthFactor = Math.pow(1 + effectiveRate, daysToTarget / 365);
-      projectedAssetsTotal += (value + assetDelta) * growthFactor;
-    }
-    
-    return projectedAssetsTotal + getCashflowPosition(targetDate);
-  };
+  // Use shared forecast calculations hook
+  const {
+    assets,
+    date3M,
+    date6M,
+    date1Y,
+    projectedTotal3M,
+    projectedTotal6M,
+    projectedTotal1Y,
+  } = useForecastCalculations();
 
   if (snapshots.length === 0) {
     return (
@@ -130,19 +67,10 @@ export default function PortfolioHistoryChart() {
     );
   }
 
-  const today = new Date();
-  const lastSnapshot = snapshots[snapshots.length - 1];
-  const currentValue = lastSnapshot?.total_value || 0;
-  const currentPL = lastSnapshot?.total_pl || 0;
-
-  // Calculate forecast projections
-  const date3M = addMonths(today, 3);
-  const date6M = addMonths(today, 6);
-  const date1Y = addYears(today, 1);
-
-  const forecast3M = assets.length > 0 ? calculateProjectedTotal(date3M) : null;
-  const forecast6M = assets.length > 0 ? calculateProjectedTotal(date6M) : null;
-  const forecast1Y = assets.length > 0 ? calculateProjectedTotal(date1Y) : null;
+  // Get forecast values from hook (already calculated with same logic as table)
+  const forecast3M = assets.length > 0 ? projectedTotal3M : null;
+  const forecast6M = assets.length > 0 ? projectedTotal6M : null;
+  const forecast1Y = assets.length > 0 ? projectedTotal1Y : null;
 
   // Build chart data with historical + forecast points
   const historicalData = snapshots.map((s) => ({
