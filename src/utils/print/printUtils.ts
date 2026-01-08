@@ -104,113 +104,114 @@ function generatePrintReadyHtml(originalHtml: string): string {
       /* Force print-like styles for canvas rendering */
       body {
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-        line-height: 1.3 !important;
+        line-height: 1.2 !important;
         color: #333 !important;
-        padding: 24px 32px !important;
+        padding: 16px 24px !important;
+        padding-bottom: 60px !important;
         max-width: 100% !important;
         margin: 0 !important;
-        font-size: 11pt !important;
+        font-size: 9pt !important;
         font-weight: normal !important;
         background: white !important;
       }
       
       .print-header {
         border-bottom: 2px solid #1a56db !important;
-        padding-bottom: 12px !important;
-        margin-bottom: 16px !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 12px !important;
       }
       
       .print-title {
-        font-size: 22pt !important;
+        font-size: 18pt !important;
         font-weight: bold !important;
-        margin-bottom: 8px !important;
+        margin-bottom: 6px !important;
         color: #1a56db !important;
         text-decoration: underline !important;
       }
       
       .print-meta {
-        font-size: 9pt !important;
+        font-size: 7pt !important;
         color: #666 !important;
-        margin-bottom: 8px !important;
+        margin-bottom: 6px !important;
         font-weight: normal !important;
       }
       
       .print-category {
         display: inline-block !important;
-        font-size: 9pt !important;
+        font-size: 7pt !important;
         background-color: #dbeafe !important;
         color: #1e40af !important;
-        padding: 2px 8px !important;
+        padding: 1px 6px !important;
         border-radius: 4px !important;
-        margin-right: 8px !important;
+        margin-right: 6px !important;
         font-weight: 500 !important;
       }
       
       .print-tags {
-        margin-bottom: 12px !important;
+        margin-bottom: 8px !important;
       }
       
       .print-tag {
         display: inline-block !important;
-        font-size: 8pt !important;
+        font-size: 6pt !important;
         background-color: #e0e7ff !important;
         color: #3730a3 !important;
-        padding: 2px 6px !important;
+        padding: 1px 4px !important;
         border-radius: 4px !important;
-        margin-right: 4px !important;
+        margin-right: 3px !important;
         font-weight: normal !important;
       }
       
       .print-content {
-        font-size: 11pt !important;
-        margin-bottom: 16px !important;
+        font-size: 9pt !important;
+        margin-bottom: 12px !important;
         font-weight: normal !important;
-        line-height: 1.5 !important;
+        line-height: 1.3 !important;
       }
       
       .print-content p {
         font-weight: normal !important;
         margin-top: 0 !important;
-        margin-bottom: 8px !important;
-        font-size: 11pt !important;
-        line-height: 1.5 !important;
+        margin-bottom: 5px !important;
+        font-size: 9pt !important;
+        line-height: 1.3 !important;
       }
       
       .print-content h1 {
-        font-size: 18pt !important;
+        font-size: 14pt !important;
         font-weight: bold !important;
-        margin-top: 20px !important;
-        margin-bottom: 12px !important;
+        margin-top: 14px !important;
+        margin-bottom: 8px !important;
         color: #1e3a5f !important;
         border-bottom: 1px solid #ccc !important;
-        padding-bottom: 4px !important;
+        padding-bottom: 3px !important;
       }
       
       .print-content h2 {
-        font-size: 15pt !important;
+        font-size: 12pt !important;
         font-weight: bold !important;
-        margin-top: 16px !important;
-        margin-bottom: 10px !important;
+        margin-top: 12px !important;
+        margin-bottom: 6px !important;
         color: #2c4a6e !important;
       }
       
       .print-content h3 {
-        font-size: 13pt !important;
+        font-size: 10pt !important;
         font-weight: 600 !important;
-        margin-top: 12px !important;
-        margin-bottom: 8px !important;
+        margin-top: 10px !important;
+        margin-bottom: 5px !important;
         color: #374151 !important;
       }
       
       .print-content ul, .print-content ol {
-        padding-left: 24px !important;
-        margin: 8px 0 !important;
+        padding-left: 18px !important;
+        margin: 5px 0 !important;
       }
       
       .print-content li {
-        margin-bottom: 4px !important;
-        font-size: 11pt !important;
-        line-height: 1.4 !important;
+        margin-bottom: 2px !important;
+        font-size: 9pt !important;
+        line-height: 1.3 !important;
       }
       
       .print-content strong, .print-content b {
@@ -220,35 +221,36 @@ function generatePrintReadyHtml(originalHtml: string): string {
       .print-summary {
         background-color: #f0f9ff !important;
         border: 1px solid #bae6fd !important;
-        border-radius: 8px !important;
-        padding: 12px 16px !important;
-        margin-bottom: 16px !important;
+        border-radius: 6px !important;
+        padding: 8px 12px !important;
+        margin-bottom: 12px !important;
       }
       
       .print-summary-header {
         font-weight: bold !important;
         color: #0369a1 !important;
-        margin-bottom: 8px !important;
-        font-size: 10pt !important;
+        margin-bottom: 5px !important;
+        font-size: 8pt !important;
       }
       
       .print-summary-content {
-        font-size: 10pt !important;
-        line-height: 1.4 !important;
+        font-size: 8pt !important;
+        line-height: 1.3 !important;
       }
       
       .print-conclusion {
         background-color: #f0fdf4 !important;
         border: 1px solid #86efac !important;
-        border-radius: 8px !important;
-        padding: 12px 16px !important;
-        margin-top: 16px !important;
+        border-radius: 6px !important;
+        padding: 8px 12px !important;
+        margin-top: 12px !important;
+        margin-bottom: 40px !important;
       }
       
       .print-conclusion-header {
         font-weight: bold !important;
         color: #15803d !important;
-        margin-bottom: 8px !important;
+        margin-bottom: 5px !important;
       }
       
       .print-footer {
