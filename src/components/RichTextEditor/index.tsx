@@ -119,22 +119,27 @@ const RichTextEditor = ({
   };
 
   // Handle print with attachments
-  const handlePrintWithAttachments = () => {
-    printNoteWithAttachments(
-      {
-        id: noteId,
-        title: currentTitle || title || "Untitled Note",
-        content: currentContent || content,
-        category: category || "General",
-        tags: linkedTags.map(tag => typeof tag === 'string' ? tag : tag.id),
-        summary: summary,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        attachment_url: attachment_url,
-        tradeInfo: tradeInfo
-      },
-      attachments
-    );
+  const handlePrintWithAttachments = async () => {
+    console.log("handlePrintWithAttachments called", { attachmentsCount: attachments.length });
+    try {
+      await printNoteWithAttachments(
+        {
+          id: noteId,
+          title: currentTitle || title || "Untitled Note",
+          content: currentContent || content,
+          category: category || "General",
+          tags: linkedTags.map(tag => typeof tag === 'string' ? tag : tag.id),
+          summary: summary,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          attachment_url: attachment_url,
+          tradeInfo: tradeInfo
+        },
+        attachments
+      );
+    } catch (error) {
+      console.error("handlePrintWithAttachments error:", error);
+    }
   };
 
   return (
