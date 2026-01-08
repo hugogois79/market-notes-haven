@@ -46,69 +46,80 @@ export function preopenPrintWindow(): Window | null {
  */
 async function htmlToPdf(html: string): Promise<Blob> {
   // Create hidden iframe with content
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'absolute';
-  iframe.style.left = '-9999px';
-  iframe.style.width = '794px'; // A4 width at 96 DPI
-  iframe.style.height = '1123px'; // A4 height at 96 DPI
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "absolute";
+  iframe.style.left = "-9999px";
+  iframe.style.width = "794px"; // A4 width at 96 DPI
+  iframe.style.height = "1123px"; // A4 height at 96 DPI
   document.body.appendChild(iframe);
-  
+
   const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
   if (!iframeDoc) {
     document.body.removeChild(iframe);
-    throw new Error('Failed to access iframe document');
+    throw new Error("Failed to access iframe document");
   }
-  
+
   iframeDoc.open();
   iframeDoc.write(html);
   iframeDoc.close();
-  
+
   // Wait for content to render
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
   const body = iframeDoc.body;
   if (!body) {
     document.body.removeChild(iframe);
-    throw new Error('No body found in iframe');
+    throw new Error("No body found in iframe");
   }
-  
-  // Render to canvas
-  const canvas = await html2canvas(body, {
-    scale: 2, // Higher quality
-    useCORS: true,
-    allowTaint: true,
-    backgroundColor: '#ffffff',
-    width: 794,
-    windowWidth: 794,
-  });
-  
+
+  const withTimeout = async <T,>(p: Promise<T>, ms: number, label: string): Promise<T> => {
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} (timeout ${ms}ms)`)), ms)
+    );
+    return Promise.race([p, timeout]);
+  };
+
+  // Render to canvas (can hang on some CORS/font/image cases, so guard with timeout)
+  const canvas = await withTimeout(
+    html2canvas(body, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: "#ffffff",
+      width: 794,
+      windowWidth: 794,
+    }),
+    30_000,
+    "Falha a renderizar a nota para PDF"
+  );
+
   document.body.removeChild(iframe);
-  
+
   // Create PDF from canvas
   const pdfDoc = await PDFDocument.create();
-  
+
   // Calculate number of pages needed based on canvas height
   const pageWidth = 595.28; // A4 in points
   const pageHeight = 841.89; // A4 in points
   const imgWidth = canvas.width;
   const imgHeight = canvas.height;
-  
+
   // Scale to fit page width
   const scale = pageWidth / imgWidth;
   const scaledHeight = imgHeight * scale;
-  
+
   // Calculate pages
   const pagesCount = Math.ceil(scaledHeight / pageHeight);
-  
+
   for (let i = 0; i < pagesCount; i++) {
     const page = pdfDoc.addPage([pageWidth, pageHeight]);
-    
+
     // Create a canvas for this page section
-    const pageCanvas = document.createElement('canvas');
+    const pageCanvas = document.createElement("canvas");
     pageCanvas.width = imgWidth;
-    pageCanvas.height = Math.min(pageHeight / scale, imgHeight - (i * (pageHeight / scale)));
-    
-    const ctx = pageCanvas.getContext('2d');
+    pageCanvas.height = Math.min(pageHeight / scale, imgHeight - i * (pageHeight / scale));
+
+    const ctx = pageCanvas.getContext("2d");
     if (ctx) {
       ctx.drawImage(
         canvas,
@@ -121,11 +132,11 @@ async function htmlToPdf(html: string): Promise<Blob> {
         imgWidth,
         pageCanvas.height
       );
-      
-      const imageDataUrl = pageCanvas.toDataURL('image/png');
-      const pngBytes = await fetch(imageDataUrl).then(res => res.arrayBuffer());
+
+      const imageDataUrl = pageCanvas.toDataURL("image/png");
+      const pngBytes = await fetch(imageDataUrl).then((res) => res.arrayBuffer());
       const pngImage = await pdfDoc.embedPng(pngBytes);
-      
+
       const drawHeight = pageCanvas.height * scale;
       page.drawImage(pngImage, {
         x: 0,
@@ -135,12 +146,12 @@ async function htmlToPdf(html: string): Promise<Blob> {
       });
     }
   }
-  
+
   const pdfBytes = await pdfDoc.save();
   // Ensure we pass a real ArrayBuffer (not SharedArrayBuffer) for strict DOM typings
   const ab = new ArrayBuffer(pdfBytes.byteLength);
   new Uint8Array(ab).set(pdfBytes);
-  return new Blob([ab], { type: 'application/pdf' });
+  return new Blob([ab], { type: "application/pdf" });
 }
 
 /**
@@ -246,9 +257,7 @@ export const printNoteWithAttachments = async (
     title: noteData.title,
     attachmentsCount: attachments?.length ?? 0,
   });
-  toast.info("A preparar impressão com anexos...");
 
-  // IMPORTANT: use a pre-opened window if available to avoid popup blockers
   const printWindow = reservedPrintWindow && !reservedPrintWindow.closed
     ? reservedPrintWindow
     : window.open("", "_blank");
@@ -259,37 +268,47 @@ export const printNoteWithAttachments = async (
     return;
   }
 
-  // Basic placeholder while we prepare the PDF
-  try {
-    printWindow.document.open();
-    printWindow.document.write(
-      `<!doctype html><html><head><title>A preparar impressão…</title></head><body style="font-family: system-ui; padding: 24px;">A preparar o PDF combinado…</body></html>`
-    );
-    printWindow.document.close();
-  } catch {
-    // ignore
-  }
+  const setWindowStatus = (message: string) => {
+    try {
+      printWindow.document.open();
+      printWindow.document.write(
+        `<!doctype html><html><head><title>A preparar impressão…</title></head><body style="font-family: system-ui; padding: 24px;">${message}</body></html>`
+      );
+      printWindow.document.close();
+    } catch {
+      // ignore
+    }
+  };
+
+  const report = (message: string) => {
+    console.log("printNoteWithAttachments:", message);
+    onProgress?.(message);
+    setWindowStatus(message);
+  };
+
+  report("A preparar o PDF combinado…");
 
   // Filter for PDF attachments only
   const pdfAttachments = attachments.filter((url) => url && isPdfUrl(url));
 
   if (pdfAttachments.length === 0) {
     toast.warning("Não existem anexos PDF para combinar");
-    // fallback: print note only (this will open another tab; so instead reuse current tab)
-    try {
-      printWindow.close();
-    } catch {
-      // ignore
-    }
+    report("Não existem anexos PDF para combinar. A imprimir apenas a nota…");
     printNote(noteData);
     return;
   }
 
+  // Watchdog: if something hangs, show a useful error in the opened tab
+  const watchdog = window.setTimeout(() => {
+    report(
+      "Isto está a demorar mais do que o esperado. Se estiver a usar anexos grandes/protegidos, pode demorar — caso contrário, feche esta aba e tente novamente."
+    );
+  }, 45_000);
+
   let blobUrl: string | null = null;
 
   try {
-    onProgress?.("A gerar PDF da nota...");
-    toast.info("A preparar documento combinado...");
+    report("A gerar PDF da nota…");
 
     // Process note content (same as printNote)
     let processedSummary = noteData.summary;
@@ -330,27 +349,23 @@ export const printNoteWithAttachments = async (
     const printContent = generatePrintHtml(note);
     const notePdfBlob = await htmlToPdf(printContent);
 
-    onProgress?.("A combinar PDFs...");
+    report("A combinar PDFs…");
 
     const pdfSources = [
       { blob: notePdfBlob, name: "Nota" },
       ...pdfAttachments.map((url) => ({ url, name: getFilenameFromUrl(url) })),
     ];
 
-    const mergedBlob = await mergeMultiplePdfs(pdfSources, onProgress);
+    const mergedBlob = await mergeMultiplePdfs(pdfSources, report);
 
     blobUrl = URL.createObjectURL(mergedBlob);
+    report("PDF combinado pronto. A abrir…");
 
     // Navigate the already-open window to the blob URL
     printWindow.location.href = blobUrl;
 
-    toast.success(
-      `PDF combinado pronto (${pdfAttachments.length} anexo${pdfAttachments.length > 1 ? "s" : ""})`
-    );
-
     // Trigger print after the PDF loads
     const onLoad = () => {
-      // Some browsers need a small delay
       setTimeout(() => {
         try {
           printWindow.focus();
@@ -358,35 +373,33 @@ export const printNoteWithAttachments = async (
         } catch {
           // ignore
         }
-      }, 300);
+      }, 350);
     };
 
-    // Best-effort: attach load handler
     try {
       printWindow.addEventListener?.("load", onLoad);
     } catch {
       // ignore
     }
 
-    // Fallback in case load event doesn't fire
-    setTimeout(onLoad, 1200);
+    setTimeout(onLoad, 1400);
 
+    toast.success(
+      `PDF combinado pronto (${pdfAttachments.length} anexo${pdfAttachments.length > 1 ? "s" : ""})`
+    );
   } catch (error) {
     console.error("Error printing with attachments:", error);
     const message = error instanceof Error ? error.message : String(error);
     toast.error(message || "Erro ao combinar PDFs");
 
     // Keep the already-open window and show the error there (instead of silently falling back)
-    try {
-      printWindow.document.open();
-      printWindow.document.write(
-        `<!doctype html><html><head><title>Erro ao imprimir</title></head><body style="font-family: system-ui; padding: 24px;"><h1 style="font-size: 18px; margin: 0 0 12px;">Não foi possível combinar os anexos</h1><p style="margin: 0 0 12px;">${message}</p><p style="margin: 0; opacity: .7;">Dica: confirme que os anexos PDF estão acessíveis e não estão corrompidos/protegidos.</p></body></html>`
-      );
-      printWindow.document.close();
-    } catch {
-      // ignore
-    }
+    setWindowStatus(
+      `<h1 style="font-size: 18px; margin: 0 0 12px;">Não foi possível combinar os anexos</h1>` +
+        `<p style="margin: 0 0 12px;">${message}</p>` +
+        `<p style="margin: 0; opacity: .7;">Dica: confirme que os anexos PDF estão acessíveis e não estão corrompidos/protegidos.</p>`
+    );
   } finally {
+    window.clearTimeout(watchdog);
     if (blobUrl) {
       setTimeout(() => URL.revokeObjectURL(blobUrl!), 60_000);
     }
