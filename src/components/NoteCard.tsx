@@ -115,14 +115,14 @@ const NoteCard = ({
   };
 
   // Extract plain text from HTML content for preview
+  // Uses textContent for safe text extraction without XSS risk
   const getTextPreview = (htmlContent: string) => {
     // Handle null/undefined content
     if (!htmlContent) return "";
     
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = htmlContent;
-    const textContent = tempDiv.textContent || tempDiv.innerText || "";
-    return textContent.substring(0, 75) + (textContent.length > 75 ? "..." : "");
+    // Strip HTML tags using regex for plain text extraction (safe - no rendering)
+    const plainText = htmlContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    return plainText.substring(0, 75) + (plainText.length > 75 ? "..." : "");
   };
 
   const handleNoteClick = (event: React.MouseEvent) => {
