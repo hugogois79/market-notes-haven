@@ -547,6 +547,45 @@ export function DocumentVault({
             Clear
           </Button>
           <div className="flex-1" />
+          
+          {/* Move to Folder */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-7 text-xs">
+                <FolderInput className="h-3 w-3 mr-1.5" />
+                Move to
+                <ChevronDown className="h-3 w-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="max-h-64 overflow-y-auto">
+              {currentFolderId && (
+                <>
+                  <DropdownMenuItem onClick={() => handleMoveToFolder(Array.from(selectedIds), null)}>
+                    <ArrowLeft className="h-3.5 w-3.5 mr-2" />
+                    Root (Documents)
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              {allFolders
+                .filter(f => f.id !== currentFolderId)
+                .map(folder => (
+                  <DropdownMenuItem 
+                    key={folder.id} 
+                    onClick={() => handleMoveToFolder(Array.from(selectedIds), folder.id)}
+                  >
+                    <FolderInput className="h-3.5 w-3.5 mr-2" />
+                    {folder.name}
+                  </DropdownMenuItem>
+                ))}
+              {allFolders.filter(f => f.id !== currentFolderId).length === 0 && !currentFolderId && (
+                <DropdownMenuItem disabled className="text-muted-foreground">
+                  No folders available
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button
             variant="outline"
             size="sm"
