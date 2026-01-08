@@ -10,27 +10,65 @@ import { toast } from "sonner";
 
 let reservedPrintWindow: Window | null = null;
 
+// HTML template for the print status window - uses message passing for reliable updates
+const STATUS_WINDOW_HTML = `<!doctype html>
+<html>
+<head>
+  <title>A preparar impressão…</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 32px; background: #f9fafb; margin: 0; }
+    .container { max-width: 500px; margin: 0 auto; }
+    h1 { font-size: 18px; margin: 0 0 16px; color: #111; }
+    #status { font-size: 16px; color: #374151; margin-bottom: 12px; }
+    #log { font-size: 12px; color: #6b7280; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+    .error { color: #dc2626; }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>A preparar PDF combinado</h1>
+    <div id="status"><span class="spinner"></span>A iniciar…</div>
+    <div id="log"></div>
+  </div>
+  <script>
+    window.addEventListener("message", function(e) {
+      if (!e.data || typeof e.data !== "object") return;
+      var statusEl = document.getElementById("status");
+      var logEl = document.getElementById("log");
+      if (e.data.type === "status") {
+        statusEl.innerHTML = '<span class="spinner"></span>' + e.data.message;
+      } else if (e.data.type === "error") {
+        statusEl.innerHTML = '<span class="error">' + e.data.message + '</span>';
+        if (e.data.details) logEl.textContent = e.data.details;
+      } else if (e.data.type === "log") {
+        logEl.textContent += e.data.message + "\\n";
+      }
+    });
+  </script>
+</body>
+</html>`;
+
 /**
  * Pre-opens a blank tab/window synchronously to avoid popup blockers.
  * The next call to printNoteWithAttachments will reuse it.
  */
 export function preopenPrintWindow(): Window | null {
   try {
-    const w = window.open("", "_blank");
+    const w = window.open("about:blank", "_blank");
     if (!w) {
       toast.error("O browser bloqueou a janela de impressão (popup blocker)");
       return null;
     }
 
-    // Avoid a blank page while we work
+    // Write the status page HTML
     try {
       w.document.open();
-      w.document.write(
-        `<!doctype html><html><head><title>A preparar impressão…</title></head><body style="font-family: system-ui; padding: 24px;">A preparar o PDF combinado…</body></html>`
-      );
+      w.document.write(STATUS_WINDOW_HTML);
       w.document.close();
-    } catch {
-      // ignore
+    } catch (err) {
+      console.warn("preopenPrintWindow: could not write status HTML", err);
     }
 
     reservedPrintWindow = w;
@@ -253,28 +291,57 @@ export const printNoteWithAttachments = async (
   attachments: string[],
   onProgress?: (message: string) => void
 ): Promise<void> => {
-  console.log("printNoteWithAttachments: triggered", {
+  console.log("printNoteWithAttachments: ENTER", {
     title: noteData.title,
     attachmentsCount: attachments?.length ?? 0,
+    attachmentsSample: attachments?.slice(0, 2),
   });
 
-  const printWindow = reservedPrintWindow && !reservedPrintWindow.closed
+  // Get the pre-opened window or open a new one
+  let printWindow = reservedPrintWindow && !reservedPrintWindow.closed
     ? reservedPrintWindow
-    : window.open("", "_blank");
+    : null;
   reservedPrintWindow = null;
+
+  // If no pre-opened window, open one now (may be blocked)
+  if (!printWindow) {
+    printWindow = window.open("about:blank", "_blank");
+    if (printWindow) {
+      try {
+        printWindow.document.open();
+        printWindow.document.write(STATUS_WINDOW_HTML);
+        printWindow.document.close();
+      } catch (err) {
+        console.warn("printNoteWithAttachments: could not write status HTML", err);
+      }
+    }
+  }
 
   if (!printWindow) {
     toast.error("O browser bloqueou a janela de impressão (popup blocker)");
     return;
   }
 
-  const setWindowStatus = (message: string) => {
+  // Helper to send status updates via postMessage (more reliable than document.write)
+  const sendStatus = (message: string) => {
     try {
-      printWindow.document.open();
-      printWindow.document.write(
-        `<!doctype html><html><head><title>A preparar impressão…</title></head><body style="font-family: system-ui; padding: 24px;">${message}</body></html>`
-      );
-      printWindow.document.close();
+      printWindow!.postMessage({ type: "status", message }, "*");
+    } catch {
+      // Window might be closed or cross-origin
+    }
+  };
+
+  const sendError = (message: string, details?: string) => {
+    try {
+      printWindow!.postMessage({ type: "error", message, details }, "*");
+    } catch {
+      // ignore
+    }
+  };
+
+  const sendLog = (message: string) => {
+    try {
+      printWindow!.postMessage({ type: "log", message }, "*");
     } catch {
       // ignore
     }
@@ -283,7 +350,8 @@ export const printNoteWithAttachments = async (
   const report = (message: string) => {
     console.log("printNoteWithAttachments:", message);
     onProgress?.(message);
-    setWindowStatus(message);
+    sendStatus(message);
+    sendLog(message);
   };
 
   report("A preparar o PDF combinado…");
@@ -392,11 +460,10 @@ export const printNoteWithAttachments = async (
     const message = error instanceof Error ? error.message : String(error);
     toast.error(message || "Erro ao combinar PDFs");
 
-    // Keep the already-open window and show the error there (instead of silently falling back)
-    setWindowStatus(
-      `<h1 style="font-size: 18px; margin: 0 0 12px;">Não foi possível combinar os anexos</h1>` +
-        `<p style="margin: 0 0 12px;">${message}</p>` +
-        `<p style="margin: 0; opacity: .7;">Dica: confirme que os anexos PDF estão acessíveis e não estão corrompidos/protegidos.</p>`
+    // Show the error in the print window via postMessage
+    sendError(
+      "Não foi possível combinar os anexos",
+      `${message}\n\nDica: confirme que os anexos PDF estão acessíveis e não estão corrompidos/protegidos.`
     );
   } finally {
     window.clearTimeout(watchdog);
