@@ -243,8 +243,8 @@ export async function mergeMultiplePdfs(
       }
       
       // Try to load PDF, with fallback for encrypted ones
-      let pdfDoc: Awaited<ReturnType<typeof PDFDocument.load>>;
-      
+      let pdfDoc: PDFDocument;
+
       try {
         pdfDoc = await PDFDocument.load(pdfBytes);
       } catch (error) {
