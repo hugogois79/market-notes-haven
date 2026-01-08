@@ -296,84 +296,48 @@ export const printNote = (noteData: Partial<Note>): void => {
 
 /**
  * Handles printing a note with all PDF attachments merged into one document
+ *
+ * Requested behavior: do the merge first, then open the print window.
+ * (This avoids leaving users stuck on an about:blank status page.)
  */
 export const printNoteWithAttachments = async (
   noteData: Partial<Note>,
   attachments: string[],
   onProgress?: (message: string) => void
 ): Promise<void> => {
+  const progress = (m: string) => {
+    console.log("printNoteWithAttachments:", m);
+    onProgress?.(m);
+  };
+
   console.log("printNoteWithAttachments: ENTER", {
     title: noteData.title,
     attachmentsCount: attachments?.length ?? 0,
     attachmentsSample: attachments?.slice(0, 2),
   });
 
-  // Get the pre-opened window or open a new one
-  let printWindow = reservedPrintWindow && !reservedPrintWindow.closed
-    ? reservedPrintWindow
-    : null;
-  reservedPrintWindow = null;
-
-  console.log("printNoteWithAttachments: reserved window?", !!printWindow);
-
-  // If no pre-opened window, open one now (may be blocked)
-  if (!printWindow) {
-    console.log("printNoteWithAttachments: opening new window");
-    printWindow = window.open("", "_blank");
-    if (printWindow) {
-      try {
-        printWindow.document.open();
-        printWindow.document.write(STATUS_WINDOW_HTML);
-        printWindow.document.close();
-      } catch (err) {
-        console.warn("printNoteWithAttachments: could not write status HTML", err);
-      }
-    }
-  }
-
-  if (!printWindow) {
-    console.error("printNoteWithAttachments: popup blocked");
-    toast.error("O browser bloqueou a janela de impressão (popup blocker)");
-    return;
-  }
-
-  // Helper to update status using direct DOM manipulation (same-origin)
-  const report = (message: string) => {
-    console.log("printNoteWithAttachments:", message);
-    onProgress?.(message);
-    updatePrintWindowStatus(printWindow!, message, false);
-  };
-
-  const reportError = (message: string) => {
-    console.error("printNoteWithAttachments error:", message);
-    updatePrintWindowStatus(printWindow!, message, true);
-  };
-
-  // Small delay to ensure the DOM is ready after document.write
-  await new Promise((r) => setTimeout(r, 100));
-  report("A preparar o PDF combinado…");
+  progress("A preparar o PDF combinado…");
 
   // Filter for PDF attachments only
-  const pdfAttachments = attachments.filter((url) => url && isPdfUrl(url));
+  const pdfAttachments = (attachments || []).filter((url) => url && isPdfUrl(url));
 
   if (pdfAttachments.length === 0) {
     toast.warning("Não existem anexos PDF para combinar");
-    report("Não existem anexos PDF para combinar. A imprimir apenas a nota…");
     printNote(noteData);
     return;
   }
 
-  // Watchdog: if something hangs, show a useful error in the opened tab
+  // Watchdog: if something hangs, show a useful hint
   const watchdog = window.setTimeout(() => {
-    report(
-      "Isto está a demorar mais do que o esperado. Se estiver a usar anexos grandes/protegidos, pode demorar — caso contrário, feche esta aba e tente novamente."
+    progress(
+      "Isto está a demorar mais do que o esperado. Se os anexos forem grandes/protegidos, pode demorar."
     );
   }, 45_000);
 
   let blobUrl: string | null = null;
 
   try {
-    report("A gerar PDF da nota…");
+    progress("A gerar PDF da nota…");
 
     // Process note content (same as printNote)
     let processedSummary = noteData.summary;
@@ -414,19 +378,32 @@ export const printNoteWithAttachments = async (
     const printContent = generatePrintHtml(note);
     const notePdfBlob = await htmlToPdf(printContent);
 
-    report("A combinar PDFs…");
+    progress("A combinar PDFs…");
 
     const pdfSources = [
       { blob: notePdfBlob, name: "Nota" },
       ...pdfAttachments.map((url) => ({ url, name: getFilenameFromUrl(url) })),
     ];
 
-    const mergedBlob = await mergeMultiplePdfs(pdfSources, report);
-
+    const mergedBlob = await mergeMultiplePdfs(pdfSources, progress);
     blobUrl = URL.createObjectURL(mergedBlob);
-    report("PDF combinado pronto. A abrir…");
 
-    // Navigate the already-open window to the blob URL
+    // Only now open the print window
+    const printWindow =
+      reservedPrintWindow && !reservedPrintWindow.closed ? reservedPrintWindow : window.open("", "_blank");
+    reservedPrintWindow = null;
+
+    if (!printWindow) {
+      toast.error("O browser bloqueou a janela de impressão (popup blocker)");
+      // fallback: download
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `${noteTitle || "nota"}-com-anexos.pdf`;
+      a.click();
+      return;
+    }
+
+    progress("PDF combinado pronto. A abrir…");
     printWindow.location.href = blobUrl;
 
     // Trigger print after the PDF loads
@@ -449,16 +426,11 @@ export const printNoteWithAttachments = async (
 
     setTimeout(onLoad, 1400);
 
-    toast.success(
-      `PDF combinado pronto (${pdfAttachments.length} anexo${pdfAttachments.length > 1 ? "s" : ""})`
-    );
+    toast.success(`PDF combinado pronto (${pdfAttachments.length} anexo${pdfAttachments.length > 1 ? "s" : ""})`);
   } catch (error) {
     console.error("Error printing with attachments:", error);
     const message = error instanceof Error ? error.message : String(error);
     toast.error(message || "Erro ao combinar PDFs");
-
-    // Show the error in the print window
-    reportError(`Não foi possível combinar os anexos: ${message}`);
   } finally {
     window.clearTimeout(watchdog);
     if (blobUrl) {
