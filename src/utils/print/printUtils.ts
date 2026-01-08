@@ -352,20 +352,23 @@ async function htmlToPdf(html: string): Promise<Blob> {
   // Calculate pages
   const pagesCount = Math.ceil(scaledHeight / pageHeight);
 
+  // Source pixels per PDF page (exact, avoid rounding issues)
+  const sourceHeightPerPage = imgHeight / pagesCount;
+
   for (let i = 0; i < pagesCount; i++) {
     const page = pdfDoc.addPage([pageWidth, pageHeight]);
 
-    // Calculate the source height for this page section
-    const sourceHeightPerPage = pageHeight / scale;
-    const sourceY = i * sourceHeightPerPage;
-    const sourceHeight = Math.min(sourceHeightPerPage, imgHeight - sourceY);
+    // Calculate source coordinates with precise floats
+    const sourceY = Math.round(i * sourceHeightPerPage);
+    const nextSourceY = Math.round((i + 1) * sourceHeightPerPage);
+    const sourceHeight = Math.min(nextSourceY - sourceY, imgHeight - sourceY);
 
     if (sourceHeight <= 0) continue;
 
     // Create a canvas for this page section
     const pageCanvas = document.createElement("canvas");
     pageCanvas.width = imgWidth;
-    pageCanvas.height = Math.ceil(sourceHeight);
+    pageCanvas.height = sourceHeight;
 
     const ctx = pageCanvas.getContext("2d");
     if (ctx) {
@@ -378,14 +381,15 @@ async function htmlToPdf(html: string): Promise<Blob> {
         0,
         0,
         imgWidth,
-        pageCanvas.height
+        sourceHeight
       );
 
       const imageDataUrl = pageCanvas.toDataURL("image/png");
       const pngBytes = await fetch(imageDataUrl).then((res) => res.arrayBuffer());
       const pngImage = await pdfDoc.embedPng(pngBytes);
 
-      const drawHeight = pageCanvas.height * scale;
+      // Scale this slice to fill page width, calculate proportional height
+      const drawHeight = (sourceHeight / imgWidth) * pageWidth;
       page.drawImage(pngImage, {
         x: 0,
         y: pageHeight - drawHeight,
