@@ -15,12 +15,17 @@ export class EncryptedPdfError extends Error {
 async function fetchPdfAsArrayBuffer(url: string): Promise<ArrayBuffer> {
   console.log('Fetching PDF from URL:', url);
 
-  // Try to extract the path from the Supabase storage URL
-  const supabaseStorageMatch = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/);
+  // Handle Supabase storage URLs (public and signed)
+  // Examples:
+  // - /storage/v1/object/public/<bucket>/<path>
+  // - /storage/v1/object/sign/<bucket>/<path>?token=...
+  const supabaseStorageMatch = url.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)/);
 
   if (supabaseStorageMatch) {
     const bucketName = supabaseStorageMatch[1];
-    const filePath = supabaseStorageMatch[2];
+    const rawPath = supabaseStorageMatch[2];
+    const filePath = decodeURIComponent(rawPath.split('?')[0]);
+
     console.log(`Downloading from Supabase bucket: ${bucketName}, path: ${filePath}`);
 
     const { data, error } = await supabase.storage.from(bucketName).download(filePath);
@@ -241,7 +246,8 @@ export async function mergeMultiplePdfs(
       console.log(`Added ${pages.length} pages from ${source.name}`);
     } catch (error) {
       console.error(`Failed to process ${source.name}:`, error);
-      throw new Error(`Falha ao processar: ${source.name}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Falha ao processar: ${source.name}. ${errorMessage}`);
     }
   }
   

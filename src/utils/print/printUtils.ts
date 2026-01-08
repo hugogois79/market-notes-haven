@@ -21,6 +21,18 @@ export function preopenPrintWindow(): Window | null {
       toast.error("O browser bloqueou a janela de impressão (popup blocker)");
       return null;
     }
+
+    // Avoid a blank page while we work
+    try {
+      w.document.open();
+      w.document.write(
+        `<!doctype html><html><head><title>A preparar impressão…</title></head><body style="font-family: system-ui; padding: 24px;">A preparar o PDF combinado…</body></html>`
+      );
+      w.document.close();
+    } catch {
+      // ignore
+    }
+
     reservedPrintWindow = w;
     return w;
   } catch {
@@ -361,13 +373,19 @@ export const printNoteWithAttachments = async (
 
   } catch (error) {
     console.error("Error printing with attachments:", error);
-    toast.error("Erro ao combinar PDFs. A imprimir apenas a nota...");
+    const message = error instanceof Error ? error.message : String(error);
+    toast.error(message || "Erro ao combinar PDFs");
+
+    // Keep the already-open window and show the error there (instead of silently falling back)
     try {
-      printWindow.close();
+      printWindow.document.open();
+      printWindow.document.write(
+        `<!doctype html><html><head><title>Erro ao imprimir</title></head><body style="font-family: system-ui; padding: 24px;"><h1 style="font-size: 18px; margin: 0 0 12px;">Não foi possível combinar os anexos</h1><p style="margin: 0 0 12px;">${message}</p><p style="margin: 0; opacity: .7;">Dica: confirme que os anexos PDF estão acessíveis e não estão corrompidos/protegidos.</p></body></html>`
+      );
+      printWindow.document.close();
     } catch {
       // ignore
     }
-    printNote(noteData);
   } finally {
     if (blobUrl) {
       setTimeout(() => URL.revokeObjectURL(blobUrl!), 60_000);
