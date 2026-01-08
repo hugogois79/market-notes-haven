@@ -411,11 +411,10 @@ export const printNoteWithAttachments = async (
     const mergedBlob = await mergeMultiplePdfs(pdfSources, progress);
     blobUrl = URL.createObjectURL(mergedBlob);
 
-    // Only now open the print window
-    const printWindow =
-      reservedPrintWindow && !reservedPrintWindow.closed
-        ? reservedPrintWindow
-        : window.open("", "_blank");
+    // Print without navigating a new tab to a blob: URL (some extensions block it as ERR_BLOCKED_BY_CLIENT).
+    // We keep the pre-opened status window only for user feedback, then print via a hidden iframe.
+    const statusWindow =
+      reservedPrintWindow && !reservedPrintWindow.closed ? reservedPrintWindow : null;
     reservedPrintWindow = null;
 
     const downloadMergedPdf = () => {
@@ -427,57 +426,70 @@ export const printNoteWithAttachments = async (
       a.click();
     };
 
-    if (!printWindow) {
-      toast.error("O browser bloqueou a janela de impressão (popup blocker)");
-      downloadMergedPdf();
-      return;
+    if (statusWindow) {
+      updatePrintWindowStatus(statusWindow, "PDF combinado pronto. A imprimir…");
     }
 
-    progress("PDF combinado pronto. A abrir…");
-    printWindow.location.href = blobUrl;
+    progress("PDF combinado pronto. A imprimir…");
 
-    // If an extension blocks blob navigation (ERR_BLOCKED_BY_CLIENT), fallback to download.
-    // We detect it by checking the window title shortly after navigation.
-    setTimeout(() => {
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.src = blobUrl;
+
+    let finished = false;
+
+    const cleanup = () => {
       try {
-        const title = (printWindow.document?.title || "").toLowerCase();
-        const looksBlocked =
-          title.includes("bloqueado") ||
-          title.includes("blocked") ||
-          title.includes("err_blocked_by_client");
-        if (looksBlocked) {
-          toast.error("O Chrome/uma extensão bloqueou a pré-visualização. A transferir o PDF…");
-          downloadMergedPdf();
-        }
+        iframe.remove();
       } catch {
-        // If we can't read the window (e.g. Chrome error page), still fallback.
-        toast.error("O Chrome bloqueou a pré-visualização. A transferir o PDF…");
-        downloadMergedPdf();
+        // ignore
       }
-    }, 1200);
-
-    // Trigger print after the PDF loads
-    const onLoad = () => {
-      setTimeout(() => {
+      if (statusWindow && !statusWindow.closed) {
         try {
-          printWindow.focus();
-          printWindow.print();
+          statusWindow.close();
         } catch {
-          // If print fails, fallback to download
-          downloadMergedPdf();
+          // ignore
         }
-      }, 350);
+      }
     };
 
-    try {
-      printWindow.addEventListener?.("load", onLoad);
-    } catch {
-      // ignore
-    }
+    const fallbackToDownload = () => {
+      if (finished) return;
+      finished = true;
+      toast.error("O Chrome/uma extensão bloqueou a pré-visualização. A transferir o PDF…");
+      downloadMergedPdf();
+      cleanup();
+    };
 
-    setTimeout(onLoad, 1400);
+    iframe.onload = () => {
+      if (finished) return;
+      try {
+        const w = iframe.contentWindow;
+        if (!w) throw new Error("no iframe window");
+        w.focus();
+        w.print();
+        finished = true;
+        toast.success(
+          `PDF combinado pronto (${pdfAttachments.length} anexo${pdfAttachments.length > 1 ? "s" : ""})`
+        );
+        setTimeout(cleanup, 800);
+      } catch {
+        fallbackToDownload();
+      }
+    };
 
-    toast.success(`PDF combinado pronto (${pdfAttachments.length} anexo${pdfAttachments.length > 1 ? "s" : ""})`);
+    document.body.appendChild(iframe);
+
+    // Safety timeout: if the iframe never loads (blocked), fallback to download.
+    setTimeout(() => {
+      if (!finished) fallbackToDownload();
+    }, 2500);
+
   } catch (error) {
     console.error("Error printing with attachments:", error);
     const message = error instanceof Error ? error.message : String(error);
