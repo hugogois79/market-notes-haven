@@ -351,13 +351,12 @@ async function htmlToPdf(html: string): Promise<Blob> {
 
   // Scale to fit page width
   const scale = pageWidth / imgWidth;
-  const scaledHeight = imgHeight * scale;
 
-  // Calculate pages based on usable height
-  const pagesCount = Math.ceil(scaledHeight / usableHeight);
+  // Calculate how many source pixels fit in one usable page area
+  const sourceHeightPerPage = usableHeight / scale;
 
-  // Source pixels per PDF page
-  const sourceHeightPerPage = imgHeight / pagesCount;
+  // Calculate pages based on this
+  const pagesCount = Math.ceil(imgHeight / sourceHeightPerPage);
 
   for (let i = 0; i < pagesCount; i++) {
     const page = pdfDoc.addPage([pageWidth, pageHeight]);
@@ -392,12 +391,15 @@ async function htmlToPdf(html: string): Promise<Blob> {
       const pngBytes = await fetch(imageDataUrl).then((res) => res.arrayBuffer());
       const pngImage = await pdfDoc.embedPng(pngBytes);
 
-      // Calculate draw height maintaining aspect ratio
-      const drawHeight = sourceHeight * scale;
+      // Calculate draw height maintaining aspect ratio, capped at usable height
+      const drawHeight = Math.min(sourceHeight * scale, usableHeight);
       
+      // Position content from bottom up, leaving marginBottom as footer
+      const yPos = pageHeight - marginTop - drawHeight;
+
       page.drawImage(pngImage, {
         x: 0,
-        y: marginBottom, // Leave footer space at bottom
+        y: yPos,
         width: pageWidth,
         height: drawHeight,
       });
