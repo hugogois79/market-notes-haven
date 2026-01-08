@@ -553,7 +553,7 @@ export function DocumentVault({
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-7 text-xs">
                 <FolderInput className="h-3 w-3 mr-1.5" />
-                Move to
+                Mover para...
                 <ChevronDown className="h-3 w-3 ml-1" />
               </Button>
             </DropdownMenuTrigger>
