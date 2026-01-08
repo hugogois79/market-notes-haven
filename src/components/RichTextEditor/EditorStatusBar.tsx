@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { isPdfUrl } from "@/utils/pdfMerger";
+import { preopenPrintWindow } from "@/utils/printUtils";
 
 interface EditorStatusBarProps {
   isSaving: boolean;
@@ -142,6 +143,9 @@ const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onSelect={() => {
+                    // Pre-open a window synchronously to avoid popup blockers.
+                    // The print util will reuse this window.
+                    preopenPrintWindow();
                     toast.info("A preparar PDF combinado...");
                     onPrintWithAttachments?.();
                   }}

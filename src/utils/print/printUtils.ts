@@ -8,6 +8,27 @@ import html2canvas from "html2canvas";
 import { PDFDocument } from "pdf-lib";
 import { toast } from "sonner";
 
+let reservedPrintWindow: Window | null = null;
+
+/**
+ * Pre-opens a blank tab/window synchronously to avoid popup blockers.
+ * The next call to printNoteWithAttachments will reuse it.
+ */
+export function preopenPrintWindow(): Window | null {
+  try {
+    const w = window.open("", "_blank");
+    if (!w) {
+      toast.error("O browser bloqueou a janela de impressão (popup blocker)");
+      return null;
+    }
+    reservedPrintWindow = w;
+    return w;
+  } catch {
+    toast.error("Não foi possível abrir a janela de impressão");
+    return null;
+  }
+}
+
 /**
  * Converts HTML content to a PDF blob using html2canvas and pdf-lib
  */
@@ -215,8 +236,12 @@ export const printNoteWithAttachments = async (
   });
   toast.info("A preparar impressão com anexos...");
 
-  // IMPORTANT: open a window synchronously to avoid popup blockers
-  const printWindow = window.open('', '_blank');
+  // IMPORTANT: use a pre-opened window if available to avoid popup blockers
+  const printWindow = reservedPrintWindow && !reservedPrintWindow.closed
+    ? reservedPrintWindow
+    : window.open("", "_blank");
+  reservedPrintWindow = null;
+
   if (!printWindow) {
     toast.error("O browser bloqueou a janela de impressão (popup blocker)");
     return;
