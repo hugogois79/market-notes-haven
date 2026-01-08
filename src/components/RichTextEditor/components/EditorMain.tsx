@@ -46,7 +46,7 @@ interface EditorMainProps {
   onTradeInfoChange?: (tradeInfo: TradeInfo) => void;
   hasConclusion?: boolean;
   onPrint?: () => void;
-  onPrintWithAttachments?: () => void;
+  onPrintWithAttachments?: () => void | Promise<void>;
   onDelete?: () => void;
   isDeleting?: boolean;
   canDelete?: boolean;

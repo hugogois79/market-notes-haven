@@ -22,14 +22,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { isPdfUrl } from "@/utils/pdfMerger";
-import { preopenPrintWindow } from "@/utils/printUtils";
 
 interface EditorStatusBarProps {
   isSaving: boolean;
   lastSaved: Date | null;
   onSave: () => void;
   onPrint?: () => void;
-  onPrintWithAttachments?: () => void;
+  onPrintWithAttachments?: () => void | Promise<void>;
   onDelete?: () => void;
   isDeleting?: boolean;
   canDelete?: boolean;
@@ -142,14 +141,15 @@ const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
                   Print Note Only
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onSelect={() => {
+                  onSelect={async () => {
                     console.log("EditorStatusBar: Print with Attachments clicked");
-                    // Pre-open a window synchronously to avoid popup blockers.
-                    // The print util will reuse this window.
-                    preopenPrintWindow();
-                    toast.info("A preparar PDF combinado...");
+                    if (!onPrintWithAttachments) {
+                      toast.error("Print with Attachments indisponível nesta nota");
+                      return;
+                    }
+                    toast.info("A combinar PDFs… (pode demorar)");
                     console.log("EditorStatusBar: calling onPrintWithAttachments");
-                    onPrintWithAttachments?.();
+                    await onPrintWithAttachments();
                   }}
                 >
                   <Files className="h-4 w-4 mr-2" />
