@@ -290,10 +290,22 @@ export function isPdfFile(file: File): boolean {
  * Checks if a URL points to a PDF file
  */
 export function isPdfUrl(url: string): boolean {
+  if (!url) return false;
+  
   try {
-    const pathname = new URL(url).pathname.toLowerCase();
-    return pathname.endsWith('.pdf');
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname.toLowerCase();
+    
+    // Check if pathname ends with .pdf
+    if (pathname.endsWith('.pdf')) return true;
+    
+    // Also check if the URL contains .pdf anywhere (for Supabase storage URLs)
+    if (pathname.includes('.pdf')) return true;
+    
+    // Check the full URL in case the extension is in a different part
+    return url.toLowerCase().includes('.pdf');
   } catch {
-    return url.toLowerCase().endsWith('.pdf');
+    // Fallback for invalid URLs - just check the string
+    return url.toLowerCase().includes('.pdf');
   }
 }
