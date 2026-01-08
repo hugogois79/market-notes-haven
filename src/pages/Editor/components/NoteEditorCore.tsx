@@ -3,7 +3,7 @@ import React, { useState, useCallback } from "react";
 import { Note, Tag, Token, TradeInfo } from "@/types";
 import { useDebounce } from "@/hooks/useDebounce";
 import EditorMain from "@/components/RichTextEditor/components/EditorMain";
-import { printNote } from "@/utils/printUtils";
+import { preopenPrintWindow, printNote, printNoteWithAttachments } from "@/utils/printUtils";
 
 interface NoteEditorCoreProps {
   currentNote: Note;
@@ -95,12 +95,32 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
       title: localTitle || "Untitled Note",
       content: content,
       category: localCategory,
-      tags: linkedTags.map(tag => typeof tag === 'string' ? tag : tag.id),
+      tags: linkedTags.map((tag) => (typeof tag === "string" ? tag : tag.id)),
       summary: summaryState?.summary,
       attachment_url: currentNote.attachment_url,
       attachments: attachments,
     });
   }, [currentNote, localTitle, content, localCategory, linkedTags, summaryState, attachments]);
+
+  // Handle printing the note merged with PDF attachments
+  const handlePrintWithAttachments = useCallback(async () => {
+    // Pre-open synchronously (helps avoid popup blockers)
+    preopenPrintWindow();
+
+    await printNoteWithAttachments(
+      {
+        id: currentNote.id,
+        title: localTitle || "Untitled Note",
+        content: content,
+        category: localCategory,
+        tags: linkedTags.map((tag) => (typeof tag === "string" ? tag : tag.id)),
+        summary: summaryState?.summary,
+        attachment_url: currentNote.attachment_url,
+        tradeInfo: localTradeInfo,
+      },
+      attachments
+    );
+  }, [attachments, content, currentNote.attachment_url, currentNote.id, localCategory, localTitle, linkedTags, localTradeInfo, summaryState?.summary]);
 
   // Handler for adding a tag
   const handleAddTag = async () => {
@@ -190,6 +210,7 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
       onTradeInfoChange={onTradeInfoChange}
       hasConclusion={hasConclusion}
       onPrint={handlePrint}
+      onPrintWithAttachments={handlePrintWithAttachments}
       onDelete={onDelete}
       isDeleting={isDeleting}
       canDelete={canDelete}
