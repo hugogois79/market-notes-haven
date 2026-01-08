@@ -390,21 +390,48 @@ export const printNoteWithAttachments = async (
 
     // Only now open the print window
     const printWindow =
-      reservedPrintWindow && !reservedPrintWindow.closed ? reservedPrintWindow : window.open("", "_blank");
+      reservedPrintWindow && !reservedPrintWindow.closed
+        ? reservedPrintWindow
+        : window.open("", "_blank");
     reservedPrintWindow = null;
 
-    if (!printWindow) {
-      toast.error("O browser bloqueou a janela de impressão (popup blocker)");
-      // fallback: download
+    const downloadMergedPdf = () => {
+      if (!blobUrl) return;
       const a = document.createElement("a");
       a.href = blobUrl;
       a.download = `${noteTitle || "nota"}-com-anexos.pdf`;
+      a.rel = "noopener";
       a.click();
+    };
+
+    if (!printWindow) {
+      toast.error("O browser bloqueou a janela de impressão (popup blocker)");
+      downloadMergedPdf();
       return;
     }
 
     progress("PDF combinado pronto. A abrir…");
     printWindow.location.href = blobUrl;
+
+    // If an extension blocks blob navigation (ERR_BLOCKED_BY_CLIENT), fallback to download.
+    // We detect it by checking the window title shortly after navigation.
+    setTimeout(() => {
+      try {
+        const title = (printWindow.document?.title || "").toLowerCase();
+        const looksBlocked =
+          title.includes("bloqueado") ||
+          title.includes("blocked") ||
+          title.includes("err_blocked_by_client");
+        if (looksBlocked) {
+          toast.error("O Chrome/uma extensão bloqueou a pré-visualização. A transferir o PDF…");
+          downloadMergedPdf();
+        }
+      } catch {
+        // If we can't read the window (e.g. Chrome error page), still fallback.
+        toast.error("O Chrome bloqueou a pré-visualização. A transferir o PDF…");
+        downloadMergedPdf();
+      }
+    }, 1200);
 
     // Trigger print after the PDF loads
     const onLoad = () => {
@@ -413,7 +440,8 @@ export const printNoteWithAttachments = async (
           printWindow.focus();
           printWindow.print();
         } catch {
-          // ignore
+          // If print fails, fallback to download
+          downloadMergedPdf();
         }
       }, 350);
     };
