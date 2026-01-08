@@ -111,8 +111,8 @@ export default function PortfolioForecastTable() {
     projectedTotal1Y,
     getCashflowPosition,
     getAssetDelta,
-    getTotalDelta,
     calculateProjectedTotal,
+    calculateProjectedAssetValue,
   } = useForecastCalculations(adjustments);
 
   const handleAddAdjustment = (adjustment: ForecastAdjustment) => {
@@ -235,24 +235,11 @@ export default function PortfolioForecastTable() {
             const Icon = categoryIcons[category] || Coins;
             const isCollapsed = collapsedCategories[category] ?? false;
 
-            // Calculate category totals for each forecast column
-            const calculateCategoryForecast = (targetDate: Date, daysToTarget: number) => {
-              return categoryAssets.reduce((sum, asset) => {
-                const value = asset.current_value || 0;
-                const assetDelta = getAssetDelta(asset.id, targetDate);
-                const useAppreciation = asset.consider_appreciation !== false;
-                const annualRate = asset.annual_rate_percent ?? 5;
-                const isDepreciation = asset.appreciation_type === "depreciates";
-                const effectiveRate = useAppreciation ? (isDepreciation ? -annualRate : annualRate) / 100 : 0;
-                const growthFactor = Math.pow(1 + effectiveRate, daysToTarget / 365);
-                return sum + (value + assetDelta) * growthFactor;
-              }, 0);
-            };
-
-            const catForecastCustom = calculateCategoryForecast(customDateObj, daysToCustom);
-            const catForecast3M = calculateCategoryForecast(date3M, 365 * 0.25);
-            const catForecast6M = calculateCategoryForecast(date6M, 365 * 0.5);
-            const catForecast1Y = calculateCategoryForecast(date1Y, 365);
+            // Calculate category totals for each forecast column using shared logic
+            const catForecastCustom = categoryAssets.reduce((sum, a) => sum + calculateProjectedAssetValue(a, customDateObj), 0);
+            const catForecast3M = categoryAssets.reduce((sum, a) => sum + calculateProjectedAssetValue(a, date3M), 0);
+            const catForecast6M = categoryAssets.reduce((sum, a) => sum + calculateProjectedAssetValue(a, date6M), 0);
+            const catForecast1Y = categoryAssets.reduce((sum, a) => sum + calculateProjectedAssetValue(a, date1Y), 0);
 
             const catWeightCustom = calcWeight(catForecastCustom, projectedTotalCustom);
             const catWeight3M = calcWeight(catForecast3M, projectedTotal3M);
@@ -314,29 +301,17 @@ export default function PortfolioForecastTable() {
                 {!isCollapsed && categoryAssets.map((asset) => {
                   const value = asset.current_value || 0;
                   
-                  // Get combined deltas (adjustments + future transactions) for each forecast date
-                  const deltaCustom = getAssetDelta(asset.id, customDateObj);
-                  const delta3M = getAssetDelta(asset.id, date3M);
-                  const delta6M = getAssetDelta(asset.id, date6M);
-                  const delta1Y = getAssetDelta(asset.id, date1Y);
+                  // Use shared calculation with proportional appreciation
+                  const forecastCustom = calculateProjectedAssetValue(asset, customDateObj);
+                  const forecast3M = calculateProjectedAssetValue(asset, date3M);
+                  const forecast6M = calculateProjectedAssetValue(asset, date6M);
+                  const forecast1Y = calculateProjectedAssetValue(asset, date1Y);
                   
-                  // Calculate growth factor based on asset's appreciation settings
-                  const useAppreciation = asset.consider_appreciation !== false;
-                  const annualRate = asset.annual_rate_percent ?? 5; // Default 5% if not set
-                  const isDepreciation = asset.appreciation_type === "depreciates";
-                  const effectiveRate = useAppreciation ? (isDepreciation ? -annualRate : annualRate) / 100 : 0;
-                  
-                  // Growth factors for each period
-                  const assetGrowthCustom = Math.pow(1 + effectiveRate, daysToCustom / 365);
-                  const assetGrowth3M = Math.pow(1 + effectiveRate, 0.25);
-                  const assetGrowth6M = Math.pow(1 + effectiveRate, 0.5);
-                  const assetGrowth1Y = 1 + effectiveRate;
-                  
-                  // Projections based on asset-specific growth + adjustments
-                  const forecastCustom = (value + deltaCustom) * assetGrowthCustom;
-                  const forecast3M = (value + delta3M) * assetGrowth3M;
-                  const forecast6M = (value + delta6M) * assetGrowth6M;
-                  const forecast1Y = (value + delta1Y) * assetGrowth1Y;
+                  // Check if there are changes (for blue styling)
+                  const hasChangeCustom = Math.abs(forecastCustom - value) > 1;
+                  const hasChange3M = Math.abs(forecast3M - value) > 1;
+                  const hasChange6M = Math.abs(forecast6M - value) > 1;
+                  const hasChange1Y = Math.abs(forecast1Y - value) > 1;
 
                   // Calculate weights for each projection column
                   const weightCurrent = calcWeight(value, projectedTotalCurrent);
@@ -363,25 +338,25 @@ export default function PortfolioForecastTable() {
                           <span className="text-[10px] text-muted-foreground">{weightCurrent.toFixed(1)}%</span>
                         </div>
                       </TableCell>
-                      <TableCell className={`text-right py-1 ${getColumnStyle("custom").bg} ${deltaCustom !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
+                      <TableCell className={`text-right py-1 ${getColumnStyle("custom").bg} ${hasChangeCustom ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
                         <div className="flex flex-col items-end leading-tight">
                           <span>{formatCurrency(forecastCustom)}</span>
                           <span className="text-[10px] text-muted-foreground">{weightCustom.toFixed(1)}%</span>
                         </div>
                       </TableCell>
-                      <TableCell className={`text-right py-1 ${getColumnStyle("3m").bg} ${delta3M !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
+                      <TableCell className={`text-right py-1 ${getColumnStyle("3m").bg} ${hasChange3M ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
                         <div className="flex flex-col items-end leading-tight">
                           <span>{formatCurrency(forecast3M)}</span>
                           <span className="text-[10px] text-muted-foreground">{weight3M.toFixed(1)}%</span>
                         </div>
                       </TableCell>
-                      <TableCell className={`text-right py-1 ${getColumnStyle("6m").bg} ${delta6M !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
+                      <TableCell className={`text-right py-1 ${getColumnStyle("6m").bg} ${hasChange6M ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
                         <div className="flex flex-col items-end leading-tight">
                           <span>{formatCurrency(forecast6M)}</span>
                           <span className="text-[10px] text-muted-foreground">{weight6M.toFixed(1)}%</span>
                         </div>
                       </TableCell>
-                      <TableCell className={`text-right py-1 ${getColumnStyle("1y").bg} ${delta1Y !== 0 ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
+                      <TableCell className={`text-right py-1 ${getColumnStyle("1y").bg} ${hasChange1Y ? "text-blue-600 font-medium" : "text-muted-foreground"}`}>
                         <div className="flex flex-col items-end leading-tight">
                           <span>{formatCurrency(forecast1Y)}</span>
                           <span className="text-[10px] text-muted-foreground">{weight1Y.toFixed(1)}%</span>
