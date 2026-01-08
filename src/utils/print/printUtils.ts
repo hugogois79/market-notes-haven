@@ -339,9 +339,13 @@ async function htmlToPdf(html: string): Promise<Blob> {
   // Create PDF from canvas
   const pdfDoc = await PDFDocument.create();
 
-  // Calculate number of pages needed based on canvas height
+  // Page dimensions with margins
   const pageWidth = 595.28; // A4 in points
   const pageHeight = 841.89; // A4 in points
+  const marginTop = 20;
+  const marginBottom = 40; // Footer space
+  const usableHeight = pageHeight - marginTop - marginBottom;
+
   const imgWidth = canvas.width;
   const imgHeight = canvas.height;
 
@@ -349,16 +353,16 @@ async function htmlToPdf(html: string): Promise<Blob> {
   const scale = pageWidth / imgWidth;
   const scaledHeight = imgHeight * scale;
 
-  // Calculate pages
-  const pagesCount = Math.ceil(scaledHeight / pageHeight);
+  // Calculate pages based on usable height
+  const pagesCount = Math.ceil(scaledHeight / usableHeight);
 
-  // Source pixels per PDF page (exact, avoid rounding issues)
+  // Source pixels per PDF page
   const sourceHeightPerPage = imgHeight / pagesCount;
 
   for (let i = 0; i < pagesCount; i++) {
     const page = pdfDoc.addPage([pageWidth, pageHeight]);
 
-    // Calculate source coordinates with precise floats
+    // Calculate source coordinates
     const sourceY = Math.round(i * sourceHeightPerPage);
     const nextSourceY = Math.round((i + 1) * sourceHeightPerPage);
     const sourceHeight = Math.min(nextSourceY - sourceY, imgHeight - sourceY);
@@ -388,11 +392,12 @@ async function htmlToPdf(html: string): Promise<Blob> {
       const pngBytes = await fetch(imageDataUrl).then((res) => res.arrayBuffer());
       const pngImage = await pdfDoc.embedPng(pngBytes);
 
-      // Scale this slice to fill page width, calculate proportional height
-      const drawHeight = (sourceHeight / imgWidth) * pageWidth;
+      // Calculate draw height maintaining aspect ratio
+      const drawHeight = sourceHeight * scale;
+      
       page.drawImage(pngImage, {
         x: 0,
-        y: pageHeight - drawHeight,
+        y: marginBottom, // Leave footer space at bottom
         width: pageWidth,
         height: drawHeight,
       });
