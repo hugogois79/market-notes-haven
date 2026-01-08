@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
@@ -16,11 +14,11 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Loader2, Plus, X, TrendingDown, TrendingUp, Circle, ChevronRight, ChevronDown, Building2, Car, Anchor, Palette, Watch, Coins } from "lucide-react";
-import { format, addMonths, addYears, addDays, differenceInDays } from "date-fns";
+import { Loader2, X, ChevronRight, ChevronDown, Building2, Car, Anchor, Palette, Watch, Coins, Circle, TrendingDown, TrendingUp } from "lucide-react";
+import { format, addDays, differenceInDays } from "date-fns";
 import { pt } from "date-fns/locale";
 import ForecastAdjustmentDialog, { ForecastAdjustment } from "./ForecastAdjustmentDialog";
+import { useForecastCalculations } from "@/hooks/useForecastCalculations";
 
 type ColumnKey = "current" | "custom" | "3m" | "6m" | "1y";
 type ColorOption = "none" | "green" | "blue" | "amber" | "red" | "purple";
@@ -98,71 +96,24 @@ export default function PortfolioForecastTable() {
     return option ? { bg: option.bg, text: option.text } : { bg: "", text: "" };
   };
 
-  const { data: assets = [], isLoading } = useQuery({
-    queryKey: ["wealth-assets-forecast"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { data, error } = await supabase
-        .from("wealth_assets")
-        .select("id, name, category, subcategory, current_value, profit_loss_value, appreciation_type, annual_rate_percent, consider_appreciation")
-        .eq("user_id", user.id)
-        .neq("status", "In Recovery")
-        .order("category")
-        .order("name");
-
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Fetch future transactions with assets (date >= today)
-  const { data: futureTransactions = [] } = useQuery({
-    queryKey: ["future-transactions-with-assets"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
-      const todayStr = format(new Date(), "yyyy-MM-dd");
-
-      const { data, error } = await supabase
-        .from("wealth_transactions")
-        .select("id, date, amount, transaction_type, asset_id, affects_asset_value")
-        .eq("user_id", user.id)
-        .not("asset_id", "is", null)
-        .gte("date", todayStr)
-        .order("date");
-
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Fetch ALL transactions for cashflow calculation
-  const { data: allTransactions = [] } = useQuery({
-    queryKey: ["all-wealth-transactions-cashflow"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
-      const { data, error } = await supabase
-        .from("wealth_transactions")
-        .select("id, date, amount")
-        .eq("user_id", user.id)
-        .order("date");
-
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Calculate cashflow position (accumulated balance) up to a target date
-  const getCashflowPosition = (targetDate: Date) => {
-    return allTransactions
-      .filter((tx) => new Date(tx.date) <= targetDate)
-      .reduce((sum, tx) => sum + tx.amount, 0);
-  };
+  // Use shared forecast calculations hook
+  const {
+    assets,
+    futureTransactions,
+    isLoading,
+    date3M,
+    date6M,
+    date1Y,
+    totalValue,
+    projectedTotalCurrent,
+    projectedTotal3M,
+    projectedTotal6M,
+    projectedTotal1Y,
+    getCashflowPosition,
+    getAssetDelta,
+    getTotalDelta,
+    calculateProjectedTotal,
+  } = useForecastCalculations(adjustments);
 
   const handleAddAdjustment = (adjustment: ForecastAdjustment) => {
     setAdjustments((prev) => [...prev, adjustment]);
@@ -170,40 +121,6 @@ export default function PortfolioForecastTable() {
 
   const handleRemoveAdjustment = (id: string) => {
     setAdjustments((prev) => prev.filter((a) => a.id !== id));
-  };
-
-  // Get combined delta (manual adjustments + future transactions) for an asset up to a target date
-  const getAssetDelta = (assetId: string, targetDate: Date) => {
-    // Manual adjustments delta
-    const manualDelta = adjustments
-      .filter((adj) => adj.assetId === assetId && new Date(adj.date) <= targetDate)
-      .reduce((delta, adj) => {
-        return adj.type === "credit" ? delta + adj.amount : delta - adj.amount;
-      }, 0);
-
-    // Future transactions delta
-    // O amount já tem sinal: positivo (crédito/venda) ou negativo (débito/compra)
-    // Inverter para o impacto no ativo: venda reduz, compra aumenta
-    // Only include transactions that affect asset value
-    const transactionDelta = futureTransactions
-      .filter((tx) => tx.asset_id === assetId && new Date(tx.date) <= targetDate && tx.affects_asset_value !== false)
-      .reduce((delta, tx) => delta - tx.amount, 0);
-
-    return manualDelta + transactionDelta;
-  };
-
-  // Get total delta for all assets (for totals row)
-  const getTotalDelta = (targetDate: Date) => {
-    const manualDelta = adjustments
-      .filter((adj) => new Date(adj.date) <= targetDate)
-      .reduce((sum, adj) => sum + (adj.type === "credit" ? adj.amount : -adj.amount), 0);
-
-    // Only include transactions that affect asset value
-    const transactionDelta = futureTransactions
-      .filter((tx) => new Date(tx.date) <= targetDate && tx.affects_asset_value !== false)
-      .reduce((sum, tx) => sum - tx.amount, 0);
-
-    return manualDelta + transactionDelta;
   };
 
   if (isLoading) {
@@ -214,15 +131,9 @@ export default function PortfolioForecastTable() {
     );
   }
 
-  // Dates for forecasts
-  const date3M = addMonths(today, 3);
-  const date6M = addMonths(today, 6);
-  const date1Y = addYears(today, 1);
+  // Custom date calculations
   const customDateObj = new Date(customDate);
-  
-  // Calculate growth factor for custom date based on 5% annual rate
   const daysToCustom = differenceInDays(customDateObj, today);
-  const customGrowthFactor = Math.pow(1.05, daysToCustom / 365);
 
   // Group assets by category
   const groupedAssets = assets.reduce((acc, asset) => {
@@ -233,7 +144,6 @@ export default function PortfolioForecastTable() {
   }, {} as Record<string, typeof assets>);
 
   // Calculate base totals (without adjustments)
-  const totalValue = assets.reduce((sum, a) => sum + (a.current_value || 0), 0);
   const categoryTotals = Object.entries(groupedAssets).reduce((acc, [cat, items]) => {
     acc[cat] = items.reduce((s, a) => s + (a.current_value || 0), 0);
     return acc;
@@ -244,40 +154,8 @@ export default function PortfolioForecastTable() {
     (a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b)
   );
 
-  // Calculate total deltas for each forecast column (including future transactions)
-  const totalDeltaCustom = getTotalDelta(customDateObj);
-  const totalDelta3M = getTotalDelta(date3M);
-  const totalDelta6M = getTotalDelta(date6M);
-  const totalDelta1Y = getTotalDelta(date1Y);
-
-  // Calculate projected totals for each column (for weight calculations)
-  // Use asset-specific appreciation/depreciation rates
-  const calculateProjectedTotal = (targetDate: Date, totalDelta: number) => {
-    let projectedAssetsTotal = 0;
-    
-    for (const asset of assets) {
-      const value = asset.current_value || 0;
-      const assetDelta = getAssetDelta(asset.id, targetDate);
-      
-      const useAppreciation = asset.consider_appreciation !== false;
-      const annualRate = asset.annual_rate_percent ?? 5;
-      const isDepreciation = asset.appreciation_type === "depreciates";
-      const effectiveRate = useAppreciation ? (isDepreciation ? -annualRate : annualRate) / 100 : 0;
-      
-      const daysToTarget = differenceInDays(targetDate, today);
-      const growthFactor = Math.pow(1 + effectiveRate, daysToTarget / 365);
-      
-      projectedAssetsTotal += (value + assetDelta) * growthFactor;
-    }
-    
-    return projectedAssetsTotal + getCashflowPosition(targetDate);
-  };
-  
-  const projectedTotalCurrent = totalValue + getCashflowPosition(today);
-  const projectedTotalCustom = calculateProjectedTotal(customDateObj, totalDeltaCustom);
-  const projectedTotal3M = calculateProjectedTotal(date3M, totalDelta3M);
-  const projectedTotal6M = calculateProjectedTotal(date6M, totalDelta6M);
-  const projectedTotal1Y = calculateProjectedTotal(date1Y, totalDelta1Y);
+  // Calculate projected total for custom date
+  const projectedTotalCustom = calculateProjectedTotal(customDateObj);
 
   // Helper function to calculate weight for a projected value
   const calcWeight = (value: number, total: number) => total > 0 ? (value / total) * 100 : 0;
@@ -579,7 +457,7 @@ export default function PortfolioForecastTable() {
             </ContextMenu>
             <ContextMenu>
               <ContextMenuTrigger asChild>
-                <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("custom").bg} ${totalDeltaCustom !== 0 ? "text-blue-600" : ""}`}>
+                <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("custom").bg}`}>
                   <div className="flex flex-col items-end leading-tight">
                     <span>{formatCurrency(projectedTotalCustom)}</span>
                     <span className="text-[10px] text-muted-foreground font-normal">100%</span>
@@ -597,7 +475,7 @@ export default function PortfolioForecastTable() {
             </ContextMenu>
             <ContextMenu>
               <ContextMenuTrigger asChild>
-                <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("3m").bg} ${totalDelta3M !== 0 ? "text-blue-600" : ""}`}>
+                <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("3m").bg}`}>
                   <div className="flex flex-col items-end leading-tight">
                     <span>{formatCurrency(projectedTotal3M)}</span>
                     <span className="text-[10px] text-muted-foreground font-normal">100%</span>
@@ -615,7 +493,7 @@ export default function PortfolioForecastTable() {
             </ContextMenu>
             <ContextMenu>
               <ContextMenuTrigger asChild>
-                <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("6m").bg} ${totalDelta6M !== 0 ? "text-blue-600" : ""}`}>
+                <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("6m").bg}`}>
                   <div className="flex flex-col items-end leading-tight">
                     <span>{formatCurrency(projectedTotal6M)}</span>
                     <span className="text-[10px] text-muted-foreground font-normal">100%</span>
@@ -633,7 +511,7 @@ export default function PortfolioForecastTable() {
             </ContextMenu>
             <ContextMenu>
               <ContextMenuTrigger asChild>
-                <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("1y").bg} ${totalDelta1Y !== 0 ? "text-blue-600" : ""}`}>
+                <TableCell className={`text-right py-1 cursor-context-menu ${getColumnStyle("1y").bg}`}>
                   <div className="flex flex-col items-end leading-tight">
                     <span>{formatCurrency(projectedTotal1Y)}</span>
                     <span className="text-[10px] text-muted-foreground font-normal">100%</span>
