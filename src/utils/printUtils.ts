@@ -1,3 +1,5 @@
-
 // This file serves as a central export point for print utilities
-export { printNote, printNoteWithAttachments } from "./print/printUtils";
+
+import { printNote, printNoteWithAttachments } from "./print/printUtils";
+
+export { printNote, printNoteWithAttachments };

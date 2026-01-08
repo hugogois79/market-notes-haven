@@ -206,41 +206,67 @@ export const printNoteWithAttachments = async (
   attachments: string[],
   onProgress?: (message: string) => void
 ): Promise<void> => {
+  // IMPORTANT: open a window synchronously to avoid popup blockers
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    toast.error("O browser bloqueou a janela de impressão (popup blocker)");
+    return;
+  }
+
+  // Basic placeholder while we prepare the PDF
+  try {
+    printWindow.document.open();
+    printWindow.document.write(
+      `<!doctype html><html><head><title>A preparar impressão…</title></head><body style="font-family: system-ui; padding: 24px;">A preparar o PDF combinado…</body></html>`
+    );
+    printWindow.document.close();
+  } catch {
+    // ignore
+  }
+
   // Filter for PDF attachments only
-  const pdfAttachments = attachments.filter(url => url && isPdfUrl(url));
-  
+  const pdfAttachments = attachments.filter((url) => url && isPdfUrl(url));
+
   if (pdfAttachments.length === 0) {
     toast.warning("Não existem anexos PDF para combinar");
+    // fallback: print note only (this will open another tab; so instead reuse current tab)
+    try {
+      printWindow.close();
+    } catch {
+      // ignore
+    }
     printNote(noteData);
     return;
   }
-  
+
+  let blobUrl: string | null = null;
+
   try {
     onProgress?.("A gerar PDF da nota...");
     toast.info("A preparar documento combinado...");
-    
+
     // Process note content (same as printNote)
     let processedSummary = noteData.summary;
     if (processedSummary) {
       try {
         const parsedSummary = JSON.parse(processedSummary);
-        if (parsedSummary && typeof parsedSummary === 'object' && parsedSummary.summary) {
+        if (parsedSummary && typeof parsedSummary === "object" && parsedSummary.summary) {
           processedSummary = parsedSummary.summary;
         }
       } catch {
         // Not JSON, use as-is
       }
     }
-    
-    let normalizedContent = noteData.content ? normalizeContent(noteData.content) : '';
-    const isVacationNote = noteData.category === 'Vacations' || noteData.category === 'Vacation';
-    
+
+    let normalizedContent = noteData.content ? normalizeContent(noteData.content) : "";
+    const isVacationNote = noteData.category === "Vacations" || noteData.category === "Vacation";
+
     if (isVacationNote) {
       normalizedContent = enhanceVacationContent(normalizedContent);
     }
-    
+
     const noteTitle = noteData.title ? noteData.title.trim() : "Untitled Note";
-    
+
     const note: Note = {
       id: "temp-print-id",
       title: noteTitle,
@@ -251,48 +277,66 @@ export const printNoteWithAttachments = async (
       updatedAt: noteData.updatedAt || new Date(),
       attachment_url: noteData.attachment_url,
       summary: processedSummary,
-      tradeInfo: noteData.tradeInfo
+      tradeInfo: noteData.tradeInfo,
     };
-    
+
     // Generate HTML and convert to PDF
     const printContent = generatePrintHtml(note);
     const notePdfBlob = await htmlToPdf(printContent);
-    
+
     onProgress?.("A combinar PDFs...");
-    
-    // Prepare PDF sources - note first, then attachments
+
     const pdfSources = [
       { blob: notePdfBlob, name: "Nota" },
-      ...pdfAttachments.map(url => ({
-        url,
-        name: getFilenameFromUrl(url)
-      }))
+      ...pdfAttachments.map((url) => ({ url, name: getFilenameFromUrl(url) })),
     ];
-    
-    // Merge all PDFs
+
     const mergedBlob = await mergeMultiplePdfs(pdfSources, onProgress);
-    
-    // Open merged PDF in new tab for printing
-    const url = URL.createObjectURL(mergedBlob);
-    const printWindow = window.open(url, '_blank');
-    
-    if (printWindow) {
-      toast.success(`PDF combinado pronto (${pdfAttachments.length} anexo${pdfAttachments.length > 1 ? 's' : ''})`);
-      
-      // Trigger print after PDF loads
+
+    blobUrl = URL.createObjectURL(mergedBlob);
+
+    // Navigate the already-open window to the blob URL
+    printWindow.location.href = blobUrl;
+
+    toast.success(
+      `PDF combinado pronto (${pdfAttachments.length} anexo${pdfAttachments.length > 1 ? "s" : ""})`
+    );
+
+    // Trigger print after the PDF loads
+    const onLoad = () => {
+      // Some browsers need a small delay
       setTimeout(() => {
-        printWindow.print();
-      }, 1000);
-    } else {
-      toast.error("Não foi possível abrir janela de impressão");
+        try {
+          printWindow.focus();
+          printWindow.print();
+        } catch {
+          // ignore
+        }
+      }, 300);
+    };
+
+    // Best-effort: attach load handler
+    try {
+      printWindow.addEventListener?.("load", onLoad);
+    } catch {
+      // ignore
     }
-    
-    // Clean up blob URL after some time
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-    
+
+    // Fallback in case load event doesn't fire
+    setTimeout(onLoad, 1200);
+
   } catch (error) {
-    console.error('Error printing with attachments:', error);
+    console.error("Error printing with attachments:", error);
     toast.error("Erro ao combinar PDFs. A imprimir apenas a nota...");
+    try {
+      printWindow.close();
+    } catch {
+      // ignore
+    }
     printNote(noteData);
+  } finally {
+    if (blobUrl) {
+      setTimeout(() => URL.revokeObjectURL(blobUrl!), 60_000);
+    }
   }
 };
