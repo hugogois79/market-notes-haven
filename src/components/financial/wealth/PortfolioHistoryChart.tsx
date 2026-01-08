@@ -55,23 +55,61 @@ export default function PortfolioHistoryChart() {
     },
   });
 
-  // Calculate projected total for a future date
-  const calculateProjectedTotal = (baseValue: number, basePL: number, targetDate: Date) => {
-    const today = new Date();
-    const daysToTarget = differenceInDays(targetDate, today);
+  // Fetch ALL transactions for cashflow calculation
+  const { data: allTransactions = [] } = useQuery({
+    queryKey: ["all-wealth-transactions-chart-cashflow"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from("wealth_transactions")
+        .select("id, date, amount, asset_id, affects_asset_value")
+        .eq("user_id", user.id)
+        .order("date");
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Calculate cashflow position up to a target date
+  const getCashflowPosition = (targetDate: Date) => {
+    return allTransactions
+      .filter((tx) => new Date(tx.date) <= targetDate)
+      .reduce((sum, tx) => sum + tx.amount, 0);
+  };
+
+  // Get future transaction delta for assets (affects value) up to a target date
+  const getAssetTransactionDelta = (assetId: string, targetDate: Date, todayDate: Date) => {
+    return allTransactions
+      .filter((tx) => 
+        tx.asset_id === assetId && 
+        new Date(tx.date) > todayDate && 
+        new Date(tx.date) <= targetDate && 
+        tx.affects_asset_value !== false
+      )
+      .reduce((delta, tx) => delta - tx.amount, 0);
+  };
+
+  // Calculate projected total for a future date (matching forecast table logic)
+  const calculateProjectedTotal = (targetDate: Date) => {
+    const todayDate = new Date();
+    const daysToTarget = differenceInDays(targetDate, todayDate);
     
-    let projectedTotal = 0;
+    let projectedAssetsTotal = 0;
     for (const asset of assets) {
       const value = asset.current_value || 0;
+      const assetDelta = getAssetTransactionDelta(asset.id, targetDate, todayDate);
       const useAppreciation = asset.consider_appreciation !== false;
       const annualRate = asset.annual_rate_percent ?? 5;
       const isDepreciation = asset.appreciation_type === "depreciates";
       const effectiveRate = useAppreciation ? (isDepreciation ? -annualRate : annualRate) / 100 : 0;
       const growthFactor = Math.pow(1 + effectiveRate, daysToTarget / 365);
-      projectedTotal += value * growthFactor;
+      projectedAssetsTotal += (value + assetDelta) * growthFactor;
     }
     
-    return projectedTotal;
+    return projectedAssetsTotal + getCashflowPosition(targetDate);
   };
 
   if (snapshots.length === 0) {
@@ -102,9 +140,9 @@ export default function PortfolioHistoryChart() {
   const date6M = addMonths(today, 6);
   const date1Y = addYears(today, 1);
 
-  const forecast3M = assets.length > 0 ? calculateProjectedTotal(currentValue, currentPL, date3M) : null;
-  const forecast6M = assets.length > 0 ? calculateProjectedTotal(currentValue, currentPL, date6M) : null;
-  const forecast1Y = assets.length > 0 ? calculateProjectedTotal(currentValue, currentPL, date1Y) : null;
+  const forecast3M = assets.length > 0 ? calculateProjectedTotal(date3M) : null;
+  const forecast6M = assets.length > 0 ? calculateProjectedTotal(date6M) : null;
+  const forecast1Y = assets.length > 0 ? calculateProjectedTotal(date1Y) : null;
 
   // Build chart data with historical + forecast points
   const historicalData = snapshots.map((s) => ({
