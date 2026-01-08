@@ -219,11 +219,12 @@ const Index = () => {
     navigate(`/editor/${noteId}`);
   };
 
+  // Extract plain text from HTML content for preview
+  // Uses regex for safe text extraction without XSS risk
   const getTextPreview = (htmlContent: string) => {
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = htmlContent;
-    const textContent = tempDiv.textContent || tempDiv.innerText || "";
-    return textContent.substring(0, 100) + (textContent.length > 100 ? "..." : "");
+    if (!htmlContent) return "";
+    const plainText = htmlContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    return plainText.substring(0, 100) + (plainText.length > 100 ? "..." : "");
   };
 
   const getTagName = (tagId: string) => {

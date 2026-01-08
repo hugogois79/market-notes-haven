@@ -1,4 +1,4 @@
-
+import DOMPurify from 'dompurify';
 import { TradeInfo } from "@/types";
 import { Token } from "@/types";
 
@@ -46,8 +46,12 @@ export const extractTradeInfo = (content: string, availableTokens: Token[]): Tra
 const extractTradeInfoFromTable = (content: string, result: TradeInfo, availableTokens: Token[]) => {
   try {
     // Create a temporary DOM element to parse the HTML
+    // Sanitize content before parsing to prevent XSS
     const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = content;
+    tempDiv.innerHTML = DOMPurify.sanitize(content, {
+      ALLOWED_TAGS: ['table', 'tr', 'td', 'th', 'thead', 'tbody'],
+      ALLOWED_ATTR: []
+    });
     
     // Look for tables with trade information
     const tables = tempDiv.querySelectorAll('table');
