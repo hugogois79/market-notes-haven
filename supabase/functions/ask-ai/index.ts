@@ -25,37 +25,43 @@ serve(async (req) => {
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
 
     if (!openAIApiKey) {
       throw new Error('OPENAI_API_KEY is not configured');
     }
 
-    if (!supabaseUrl || !supabaseServiceKey) {
+    if (!supabaseUrl || !supabaseAnonKey) {
       throw new Error('Supabase configuration is missing');
     }
 
     // Get auth header from request to identify user
     const authHeader = req.headers.get('Authorization');
     
-    if (!authHeader) {
-      throw new Error('Authorization header is required');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Extract the JWT token and get the user
+    // Create Supabase client with user's JWT - RLS enforces access
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    
+    // Validate user via getClaims
     const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     
-    // Create Supabase client with service role to bypass RLS
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
-    // Decode the JWT to get user ID
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
-    if (userError || !user) {
-      throw new Error('Invalid authentication token');
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
-    const userId = user.id;
+    const userId = claimsData.claims.sub;
     console.log('Authenticated user:', userId);
 
     console.log('Step A: Generating embedding for query:', query.substring(0, 100));
