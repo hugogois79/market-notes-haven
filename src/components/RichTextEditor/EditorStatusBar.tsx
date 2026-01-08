@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Save, Clock, Copy, Printer, Trash2 } from "lucide-react";
+import { Save, Clock, Copy, Printer, Trash2, ChevronDown, FileText, Files } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import {
@@ -15,15 +15,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { isPdfUrl } from "@/utils/pdfMerger";
 
 interface EditorStatusBarProps {
   isSaving: boolean;
   lastSaved: Date | null;
   onSave: () => void;
   onPrint?: () => void;
+  onPrintWithAttachments?: () => void;
   onDelete?: () => void;
   isDeleting?: boolean;
   canDelete?: boolean;
+  attachments?: string[];
   noteContent?: {
     title: string;
     category: string;
@@ -38,11 +47,16 @@ const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
   lastSaved,
   onSave,
   onPrint,
+  onPrintWithAttachments,
   onDelete,
   isDeleting = false,
   canDelete = false,
+  attachments = [],
   noteContent
 }) => {
+  // Check if there are PDF attachments
+  const pdfAttachments = attachments.filter(url => url && isPdfUrl(url));
+  const hasPdfAttachments = pdfAttachments.length > 0;
   const handleCopyToClipboard = async () => {
     if (!noteContent) {
       toast.error("No content to copy");
@@ -103,16 +117,43 @@ const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
         </Button>
         
         {onPrint && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs flex items-center gap-1"
-            onClick={handlePrint}
-            title="Print note"
-          >
-            <Printer size={12} />
-            Print
-          </Button>
+          hasPdfAttachments ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs flex items-center gap-1"
+                  title="Print options"
+                >
+                  <Printer size={12} />
+                  Print
+                  <ChevronDown size={10} className="ml-0.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handlePrint}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Print Note Only
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onPrintWithAttachments}>
+                  <Files className="h-4 w-4 mr-2" />
+                  Print with Attachments ({pdfAttachments.length})
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs flex items-center gap-1"
+              onClick={handlePrint}
+              title="Print note"
+            >
+              <Printer size={12} />
+              Print
+            </Button>
+          )
         )}
         
         <Button

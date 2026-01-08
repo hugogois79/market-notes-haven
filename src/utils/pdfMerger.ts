@@ -210,6 +210,76 @@ export async function mergePdfs(
 }
 
 /**
+ * Merges multiple PDFs together in order
+ * @param pdfSources - Array of PDF sources (URL or Blob) with names
+ * @param onProgress - Optional callback for progress updates
+ * @returns A Blob of the merged PDF
+ */
+export async function mergeMultiplePdfs(
+  pdfSources: Array<{ url?: string; blob?: Blob; name: string }>,
+  onProgress?: (message: string) => void
+): Promise<Blob> {
+  console.log('Starting multi-PDF merge with', pdfSources.length, 'sources');
+  
+  const mergedPdf = await PDFDocument.create();
+  
+  for (let i = 0; i < pdfSources.length; i++) {
+    const source = pdfSources[i];
+    onProgress?.(`A adicionar: ${source.name} (${i + 1}/${pdfSources.length})...`);
+    
+    let pdfBytes: ArrayBuffer;
+    
+    try {
+      if (source.blob) {
+        pdfBytes = await source.blob.arrayBuffer();
+      } else if (source.url) {
+        pdfBytes = await fetchPdfAsArrayBuffer(source.url);
+      } else {
+        console.warn(`Skipping source ${source.name}: no url or blob provided`);
+        continue;
+      }
+      
+      // Try to load PDF, with fallback for encrypted ones
+      let pdfDoc: Awaited<ReturnType<typeof PDFDocument.load>>;
+      
+      try {
+        pdfDoc = await PDFDocument.load(pdfBytes);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        
+        if (errorMessage.toLowerCase().includes('encrypt') && source.url) {
+          console.log(`PDF ${source.name} is protected, converting...`);
+          onProgress?.(`A converter PDF protegido: ${source.name}...`);
+          
+          const cleanBlob = await convertProtectedPdfToClean(source.url);
+          pdfBytes = await cleanBlob.arrayBuffer();
+          pdfDoc = await PDFDocument.load(pdfBytes);
+        } else {
+          throw error;
+        }
+      }
+      
+      // Copy all pages to merged PDF
+      const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+      pages.forEach(page => mergedPdf.addPage(page));
+      
+      console.log(`Added ${pages.length} pages from ${source.name}`);
+    } catch (error) {
+      console.error(`Failed to process ${source.name}:`, error);
+      throw new Error(`Falha ao processar: ${source.name}`);
+    }
+  }
+  
+  const mergedBytes = await mergedPdf.save();
+  console.log('Multi-PDF merge complete, total pages:', mergedPdf.getPageCount());
+  
+  return new Blob([new Uint8Array(mergedBytes)], { type: 'application/pdf' });
+}
+
+// Export the fetch function for external use
+export { fetchPdfAsArrayBuffer };
+
+/**
  * Checks if a file is a PDF based on its mime type or extension
  */
 export function isPdfFile(file: File): boolean {

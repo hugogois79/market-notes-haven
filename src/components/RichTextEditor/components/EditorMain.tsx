@@ -46,6 +46,7 @@ interface EditorMainProps {
   onTradeInfoChange?: (tradeInfo: TradeInfo) => void;
   hasConclusion?: boolean;
   onPrint?: () => void;
+  onPrintWithAttachments?: () => void;
   onDelete?: () => void;
   isDeleting?: boolean;
   canDelete?: boolean;
@@ -88,6 +89,7 @@ const EditorMain: React.FC<EditorMainProps> = ({
   onTradeInfoChange = () => {},
   hasConclusion = true,
   onPrint,
+  onPrintWithAttachments,
   onDelete,
   isDeleting = false,
   canDelete = false,
@@ -120,9 +122,11 @@ const EditorMain: React.FC<EditorMainProps> = ({
         lastSaved={lastSaved}
         onSave={handleManualSave}
         onPrint={onPrint}
+        onPrintWithAttachments={onPrintWithAttachments}
         onDelete={onDelete}
         isDeleting={isDeleting}
         canDelete={canDelete}
+        attachments={attachments}
         noteContent={{
           title,
           category,
