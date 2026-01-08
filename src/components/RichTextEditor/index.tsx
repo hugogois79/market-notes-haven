@@ -4,7 +4,7 @@ import { Tag, Token, Note, TradeInfo } from "@/types";
 import { useEditorState } from "./hooks/useEditorState";
 import { useTokenHandling } from "./hooks/useTokenHandling";
 import EditorMain from "./components/EditorMain";
-import { printNote } from "@/utils/printUtils";
+import { printNote, printNoteWithAttachments } from "@/utils/printUtils";
 
 interface RichTextEditorProps {
   title: string;
@@ -103,15 +103,6 @@ const RichTextEditor = ({
   
   // Handle direct print for current note
   const handlePrint = () => {
-    console.log("Print function called with:", {
-      title: currentTitle || title,
-      content: currentContent || content,
-      category,
-      tags: linkedTags,
-      summary,
-      attachments
-    });
-    
     printNote({
       id: noteId,
       title: currentTitle || title || "Untitled Note",
@@ -125,6 +116,25 @@ const RichTextEditor = ({
       attachments: attachments,
       tradeInfo: tradeInfo
     });
+  };
+
+  // Handle print with attachments
+  const handlePrintWithAttachments = () => {
+    printNoteWithAttachments(
+      {
+        id: noteId,
+        title: currentTitle || title || "Untitled Note",
+        content: currentContent || content,
+        category: category || "General",
+        tags: linkedTags.map(tag => typeof tag === 'string' ? tag : tag.id),
+        summary: summary,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        attachment_url: attachment_url,
+        tradeInfo: tradeInfo
+      },
+      attachments
+    );
   };
 
   return (
@@ -158,6 +168,7 @@ const RichTextEditor = ({
       onTradeInfoChange={onTradeInfoChange}
       hasConclusion={hasConclusion}
       onPrint={handlePrint}
+      onPrintWithAttachments={handlePrintWithAttachments}
     />
   );
 };
