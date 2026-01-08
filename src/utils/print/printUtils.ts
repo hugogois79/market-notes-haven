@@ -342,8 +342,8 @@ async function htmlToPdf(html: string): Promise<Blob> {
   // Page dimensions with margins
   const pageWidth = 595.28; // A4 in points
   const pageHeight = 841.89; // A4 in points
-  const marginTop = 30;
-  const marginBottom = 80; // Footer space
+  const marginTop = 40;
+  const marginBottom = 140; // Footer space
   const usableHeight = pageHeight - marginTop - marginBottom;
 
   const imgWidth = canvas.width;
