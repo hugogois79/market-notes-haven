@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { format } from "date-fns";
+import { format, addMonths, addYears, differenceInDays } from "date-fns";
 import { pt } from "date-fns/locale";
 
 interface PortfolioSnapshot {
@@ -37,6 +37,43 @@ export default function PortfolioHistoryChart() {
     },
   });
 
+  // Fetch assets for forecast calculation
+  const { data: assets = [] } = useQuery({
+    queryKey: ["wealth-assets-for-chart-forecast"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from("wealth_assets")
+        .select("id, current_value, appreciation_type, annual_rate_percent, consider_appreciation")
+        .eq("user_id", user.id)
+        .neq("status", "In Recovery");
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Calculate projected total for a future date
+  const calculateProjectedTotal = (baseValue: number, basePL: number, targetDate: Date) => {
+    const today = new Date();
+    const daysToTarget = differenceInDays(targetDate, today);
+    
+    let projectedTotal = 0;
+    for (const asset of assets) {
+      const value = asset.current_value || 0;
+      const useAppreciation = asset.consider_appreciation !== false;
+      const annualRate = asset.annual_rate_percent ?? 5;
+      const isDepreciation = asset.appreciation_type === "depreciates";
+      const effectiveRate = useAppreciation ? (isDepreciation ? -annualRate : annualRate) / 100 : 0;
+      const growthFactor = Math.pow(1 + effectiveRate, daysToTarget / 365);
+      projectedTotal += value * growthFactor;
+    }
+    
+    return projectedTotal;
+  };
+
   if (snapshots.length === 0) {
     return (
       <Card>
@@ -55,13 +92,64 @@ export default function PortfolioHistoryChart() {
     );
   }
 
-  const chartData = snapshots.map((s) => ({
+  const today = new Date();
+  const lastSnapshot = snapshots[snapshots.length - 1];
+  const currentValue = lastSnapshot?.total_value || 0;
+  const currentPL = lastSnapshot?.total_pl || 0;
+
+  // Calculate forecast projections
+  const date3M = addMonths(today, 3);
+  const date6M = addMonths(today, 6);
+  const date1Y = addYears(today, 1);
+
+  const forecast3M = assets.length > 0 ? calculateProjectedTotal(currentValue, currentPL, date3M) : null;
+  const forecast6M = assets.length > 0 ? calculateProjectedTotal(currentValue, currentPL, date6M) : null;
+  const forecast1Y = assets.length > 0 ? calculateProjectedTotal(currentValue, currentPL, date1Y) : null;
+
+  // Build chart data with historical + forecast points
+  const historicalData = snapshots.map((s) => ({
     date: format(new Date(s.snapshot_date), "dd MMM", { locale: pt }),
     fullDate: s.snapshot_date,
     value: s.total_value,
     pl: s.total_pl,
     yield: s.average_yield,
+    forecast: null as number | null,
   }));
+
+  // Add forecast points (only value projections)
+  const forecastData = assets.length > 0 ? [
+    {
+      date: format(date3M, "dd MMM", { locale: pt }),
+      fullDate: format(date3M, "yyyy-MM-dd"),
+      value: null as number | null,
+      pl: null as number | null,
+      yield: null,
+      forecast: forecast3M,
+    },
+    {
+      date: format(date6M, "dd MMM", { locale: pt }),
+      fullDate: format(date6M, "yyyy-MM-dd"),
+      value: null,
+      pl: null,
+      yield: null,
+      forecast: forecast6M,
+    },
+    {
+      date: format(date1Y, "dd MMM", { locale: pt }),
+      fullDate: format(date1Y, "yyyy-MM-dd"),
+      value: null,
+      pl: null,
+      yield: null,
+      forecast: forecast1Y,
+    },
+  ] : [];
+
+  // Connect last historical point to forecast
+  if (historicalData.length > 0 && forecastData.length > 0) {
+    historicalData[historicalData.length - 1].forecast = historicalData[historicalData.length - 1].value;
+  }
+
+  const chartData = [...historicalData, ...forecastData];
 
   return (
     <Card>
@@ -104,7 +192,12 @@ export default function PortfolioHistoryChart() {
                 }}
               />
               <Legend 
-                formatter={(value) => value === "value" ? "Valor Total" : "P/L"}
+                formatter={(value) => {
+                  if (value === "value") return "Valor Total";
+                  if (value === "pl") return "P/L";
+                  if (value === "forecast") return "Projeção";
+                  return value;
+                }}
               />
               <Line
                 type="monotone"
@@ -113,6 +206,7 @@ export default function PortfolioHistoryChart() {
                 strokeWidth={2}
                 dot={{ fill: "hsl(var(--primary))", strokeWidth: 0, r: 4 }}
                 activeDot={{ r: 6 }}
+                connectNulls={false}
               />
               <Line
                 type="monotone"
@@ -120,6 +214,16 @@ export default function PortfolioHistoryChart() {
                 stroke="hsl(142 76% 36%)"
                 strokeWidth={2}
                 dot={{ fill: "hsl(142 76% 36%)", strokeWidth: 0, r: 3 }}
+                connectNulls={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="forecast"
+                stroke="hsl(var(--primary))"
+                strokeWidth={1}
+                strokeDasharray="5 5"
+                dot={{ fill: "hsl(var(--primary))", strokeWidth: 0, r: 3 }}
+                connectNulls
               />
             </LineChart>
           </ResponsiveContainer>
