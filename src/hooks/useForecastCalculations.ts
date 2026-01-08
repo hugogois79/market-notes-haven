@@ -85,7 +85,7 @@ export function useForecastCalculations(adjustments: ForecastAdjustment[] = []) 
 
       const { data, error } = await supabase
         .from("wealth_transactions")
-        .select("id, date, amount")
+        .select("id, date, amount, asset_id")
         .eq("user_id", user.id)
         .order("date");
 
@@ -95,9 +95,17 @@ export function useForecastCalculations(adjustments: ForecastAdjustment[] = []) 
   });
 
   // Calculate cashflow position (accumulated balance) up to a target date
+  // Excludes future transactions with asset_id (those are counted in asset projections)
   const getCashflowPosition = (targetDate: Date) => {
     return allTransactions
-      .filter((tx) => new Date(tx.date) <= targetDate)
+      .filter((tx) => {
+        const txDate = new Date(tx.date);
+        const hasAssetId = tx.asset_id != null;
+        const isFuture = txDate > today;
+        // Exclude future transactions with asset_id (already counted in getAssetDelta)
+        if (hasAssetId && isFuture) return false;
+        return txDate <= targetDate;
+      })
       .reduce((sum, tx) => sum + tx.amount, 0);
   };
 
@@ -141,17 +149,42 @@ export function useForecastCalculations(adjustments: ForecastAdjustment[] = []) 
     
     for (const asset of assets) {
       const value = asset.current_value || 0;
-      const assetDelta = getAssetDelta(asset.id, targetDate);
       
       const useAppreciation = asset.consider_appreciation !== false;
       const annualRate = asset.annual_rate_percent ?? 5;
       const isDepreciation = asset.appreciation_type === "depreciates";
       const effectiveRate = useAppreciation ? (isDepreciation ? -annualRate : annualRate) / 100 : 0;
       
+      // Appreciate base value from today to target
       const daysToTarget = differenceInDays(targetDate, today);
-      const growthFactor = Math.pow(1 + effectiveRate, daysToTarget / 365);
+      const baseGrowthFactor = Math.pow(1 + effectiveRate, daysToTarget / 365);
+      let projectedValue = value * baseGrowthFactor;
       
-      projectedAssetsTotal += (value + assetDelta) * growthFactor;
+      // Add manual adjustments with proportional appreciation
+      const assetAdjustments = adjustments.filter(
+        (adj) => adj.assetId === asset.id && new Date(adj.date) <= targetDate
+      );
+      for (const adj of assetAdjustments) {
+        const adjDate = new Date(adj.date);
+        const daysFromAdjToTarget = Math.max(0, differenceInDays(targetDate, adjDate));
+        const adjGrowthFactor = Math.pow(1 + effectiveRate, daysFromAdjToTarget / 365);
+        const adjAmount = adj.type === "credit" ? adj.amount : -adj.amount;
+        projectedValue += adjAmount * adjGrowthFactor;
+      }
+      
+      // Add future transactions with proportional appreciation (from tx date to target)
+      const assetTransactions = futureTransactions.filter(
+        (tx) => tx.asset_id === asset.id && new Date(tx.date) <= targetDate && tx.affects_asset_value !== false
+      );
+      for (const tx of assetTransactions) {
+        const txDate = new Date(tx.date);
+        const daysFromTxToTarget = Math.max(0, differenceInDays(targetDate, txDate));
+        const txGrowthFactor = Math.pow(1 + effectiveRate, daysFromTxToTarget / 365);
+        // tx.amount is negative for debits (investment), so -tx.amount adds to asset
+        projectedValue += (-tx.amount) * txGrowthFactor;
+      }
+      
+      projectedAssetsTotal += projectedValue;
     }
     
     return projectedAssetsTotal + getCashflowPosition(targetDate);
