@@ -143,10 +143,12 @@ const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onSelect={() => {
+                    console.log("EditorStatusBar: Print with Attachments clicked");
                     // Pre-open a window synchronously to avoid popup blockers.
                     // The print util will reuse this window.
                     preopenPrintWindow();
                     toast.info("A preparar PDF combinado...");
+                    console.log("EditorStatusBar: calling onPrintWithAttachments");
                     onPrintWithAttachments?.();
                   }}
                 >
