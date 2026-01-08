@@ -104,7 +104,10 @@ async function htmlToPdf(html: string): Promise<Blob> {
   }
   
   const pdfBytes = await pdfDoc.save();
-  return new Blob([pdfBytes], { type: 'application/pdf' });
+  // Ensure we pass a real ArrayBuffer (not SharedArrayBuffer) for strict DOM typings
+  const ab = new ArrayBuffer(pdfBytes.byteLength);
+  new Uint8Array(ab).set(pdfBytes);
+  return new Blob([ab], { type: 'application/pdf' });
 }
 
 /**
