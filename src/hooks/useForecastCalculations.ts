@@ -95,16 +95,10 @@ export function useForecastCalculations(adjustments: ForecastAdjustment[] = []) 
   });
 
   // Calculate cashflow position (accumulated balance) up to a target date
-  // Excludes ALL transactions with asset_id (those are already reflected in asset values)
+  // Includes ALL transactions to show real account balance
   const getCashflowPosition = (targetDate: Date) => {
     return allTransactions
-      .filter((tx) => {
-        // Exclude all transactions with asset_id (past and future)
-        // Past: already reflected in asset current_value
-        // Future: counted in calculateProjectedAssetValue
-        if (tx.asset_id != null) return false;
-        return new Date(tx.date) <= targetDate;
-      })
+      .filter((tx) => new Date(tx.date) <= targetDate)
       .reduce((sum, tx) => sum + tx.amount, 0);
   };
 
