@@ -54,18 +54,21 @@ async function fetchPdfAsArrayBuffer(url: string): Promise<ArrayBuffer> {
 /**
  * Loads a PDF document, handling encrypted PDFs by trying ignoreEncryption option
  */
-async function loadPdfWithEncryptionHandling(pdfBytes: ArrayBuffer, source: string): Promise<ReturnType<typeof PDFDocument.load>> {
+async function loadPdfWithEncryptionHandling(
+  pdfBytes: ArrayBuffer,
+  source: string
+): Promise<PDFDocument> {
   try {
     return await PDFDocument.load(pdfBytes);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    
+
     // If encrypted, fail immediately - ignoreEncryption loads structure but not content
     if (errorMessage.toLowerCase().includes('encrypt')) {
       console.error(`PDF from ${source} is encrypted and cannot be merged`);
       throw new EncryptedPdfError(`O PDF "${source}" está protegido e não pode ser combinado`);
     }
-    
+
     throw error;
   }
 }
@@ -144,29 +147,29 @@ export async function mergePdfs(
   console.log('Starting PDF merge...');
   console.log('Original PDF URL:', originalPdfUrl);
   console.log('Payment file:', paymentPdfFile.name, paymentPdfFile.size, 'bytes');
-  
+
   // Create a new PDF document
   const mergedPdf = await PDFDocument.create();
 
   // Try to load the original PDF, with fallback to conversion for protected PDFs
-  let originalPdf: Awaited<ReturnType<typeof PDFDocument.load>>;
-  
+  let originalPdf: PDFDocument;
+
   try {
     // First, try to load normally
     console.log('Loading original PDF...');
     const originalPdfBytes = await fetchPdfAsArrayBuffer(originalPdfUrl);
     console.log('Original PDF loaded, size:', originalPdfBytes.byteLength, 'bytes');
-    
+
     originalPdf = await PDFDocument.load(originalPdfBytes);
     console.log('Original PDF parsed, pages:', originalPdf.getPageCount());
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    
+
     // If encrypted, try converting via rendering
     if (errorMessage.toLowerCase().includes('encrypt')) {
       console.log('PDF is protected, attempting conversion via rendering...');
       onProgress?.('A converter PDF protegido...');
-      
+
       try {
         const cleanPdfBlob = await convertProtectedPdfToClean(originalPdfUrl, (current, total) => {
           onProgress?.(`A converter página ${current}/${total}...`);
