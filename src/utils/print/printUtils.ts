@@ -349,6 +349,8 @@ export const printNoteWithAttachments = async (
     updatePrintWindowStatus(printWindow!, message, true);
   };
 
+  // Small delay to ensure the DOM is ready after document.write
+  await new Promise((r) => setTimeout(r, 100));
   report("A preparar o PDF combinado…");
 
   // Filter for PDF attachments only
