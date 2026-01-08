@@ -1,12 +1,5 @@
 import { PDFDocument } from 'pdf-lib';
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 import { supabase } from '@/integrations/supabase/client';
-
-// Configure pdfjs worker
-GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url
-).toString();
 
 // Custom error class for encrypted PDFs
 export class EncryptedPdfError extends Error {
@@ -21,27 +14,25 @@ export class EncryptedPdfError extends Error {
  */
 async function fetchPdfAsArrayBuffer(url: string): Promise<ArrayBuffer> {
   console.log('Fetching PDF from URL:', url);
-  
+
   // Try to extract the path from the Supabase storage URL
   const supabaseStorageMatch = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/);
-  
+
   if (supabaseStorageMatch) {
     const bucketName = supabaseStorageMatch[1];
     const filePath = supabaseStorageMatch[2];
     console.log(`Downloading from Supabase bucket: ${bucketName}, path: ${filePath}`);
-    
-    const { data, error } = await supabase.storage
-      .from(bucketName)
-      .download(filePath);
-    
+
+    const { data, error } = await supabase.storage.from(bucketName).download(filePath);
+
     if (error) {
       console.error('Supabase download error:', error);
       throw new Error(`Failed to download PDF: ${error.message}`);
     }
-    
+
     return data.arrayBuffer();
   }
-  
+
   // Fallback to regular fetch for external URLs
   console.log('Using regular fetch for URL');
   const response = await fetch(url, { mode: 'cors' });
@@ -52,18 +43,15 @@ async function fetchPdfAsArrayBuffer(url: string): Promise<ArrayBuffer> {
 }
 
 /**
- * Loads a PDF document, handling encrypted PDFs by trying ignoreEncryption option
+ * Loads a PDF document, failing fast for encrypted PDFs.
  */
-async function loadPdfWithEncryptionHandling(
-  pdfBytes: ArrayBuffer,
-  source: string
-): Promise<PDFDocument> {
+async function loadPdfWithEncryptionHandling(pdfBytes: ArrayBuffer, source: string): Promise<PDFDocument> {
   try {
     return await PDFDocument.load(pdfBytes);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
 
-    // If encrypted, fail immediately - ignoreEncryption loads structure but not content
+    // If encrypted, fail immediately
     if (errorMessage.toLowerCase().includes('encrypt')) {
       console.error(`PDF from ${source} is encrypted and cannot be merged`);
       throw new EncryptedPdfError(`O PDF "${source}" está protegido e não pode ser combinado`);
@@ -74,62 +62,9 @@ async function loadPdfWithEncryptionHandling(
 }
 
 /**
- * Converts a protected PDF to a clean PDF by rendering pages as images
- * Uses pdfjs-dist which can read protected PDFs
+ * NOTE: We intentionally do NOT attempt to "convert" encrypted/protected PDFs.
+ * This keeps the TypeScript build stable and avoids heavyweight PDF.js typings.
  */
-async function convertProtectedPdfToClean(pdfUrl: string, onProgress?: (current: number, total: number) => void): Promise<Blob> {
-  console.log('Converting protected PDF via rendering...');
-  
-  // Load PDF with pdfjs (supports protected PDFs)
-  const loadingTask = getDocument(pdfUrl);
-  const pdf = await loadingTask.promise;
-  
-  console.log(`Protected PDF loaded, pages: ${pdf.numPages}`);
-  
-  // Create new clean PDF
-  const cleanPdf = await PDFDocument.create();
-  const renderScale = 2; // High quality for readability
-  
-  for (let i = 1; i <= pdf.numPages; i++) {
-    onProgress?.(i, pdf.numPages);
-    console.log(`Rendering page ${i}/${pdf.numPages}...`);
-    
-    const page = await pdf.getPage(i);
-    const viewport = page.getViewport({ scale: renderScale });
-    
-    // Create canvas and render page
-    const canvas = document.createElement('canvas');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    const ctx = canvas.getContext('2d');
-    
-    if (!ctx) throw new Error('Failed to get canvas context');
-    
-    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
-    
-    // Convert to PNG and embed in new PDF
-    const imageDataUrl = canvas.toDataURL('image/png');
-    const pngImageBytes = await fetch(imageDataUrl).then(res => res.arrayBuffer());
-    const pngImage = await cleanPdf.embedPng(pngImageBytes);
-    
-    // Add page with the image - use original page dimensions (without scale)
-    const originalViewport = page.getViewport({ scale: 1 });
-    const pdfPage = cleanPdf.addPage([originalViewport.width, originalViewport.height]);
-    pdfPage.drawImage(pngImage, {
-      x: 0,
-      y: 0,
-      width: originalViewport.width,
-      height: originalViewport.height
-    });
-  }
-  
-  pdf.destroy();
-  
-  const pdfBytes = await cleanPdf.save();
-  console.log(`Clean PDF created, size: ${pdfBytes.byteLength} bytes`);
-  
-  return new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
-}
 
 /**
  * Merges two PDFs: the original document (invoice) first, then the payment document second
@@ -151,11 +86,10 @@ export async function mergePdfs(
   // Create a new PDF document
   const mergedPdf = await PDFDocument.create();
 
-  // Try to load the original PDF, with fallback to conversion for protected PDFs
+  // Try to load the original PDF
   let originalPdf: PDFDocument;
 
   try {
-    // First, try to load normally
     console.log('Loading original PDF...');
     const originalPdfBytes = await fetchPdfAsArrayBuffer(originalPdfUrl);
     console.log('Original PDF loaded, size:', originalPdfBytes.byteLength, 'bytes');
@@ -165,26 +99,11 @@ export async function mergePdfs(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
 
-    // If encrypted, try converting via rendering
     if (errorMessage.toLowerCase().includes('encrypt')) {
-      console.log('PDF is protected, attempting conversion via rendering...');
-      onProgress?.('A converter PDF protegido...');
-
-      try {
-        const cleanPdfBlob = await convertProtectedPdfToClean(originalPdfUrl, (current, total) => {
-          onProgress?.(`A converter página ${current}/${total}...`);
-        });
-        const cleanPdfBytes = await cleanPdfBlob.arrayBuffer();
-        originalPdf = await PDFDocument.load(cleanPdfBytes);
-        console.log('Protected PDF converted successfully, pages:', originalPdf.getPageCount());
-        onProgress?.('PDF convertido com sucesso!');
-      } catch (convertError) {
-        console.error('Failed to convert protected PDF:', convertError);
-        throw new EncryptedPdfError('Não foi possível processar o PDF protegido');
-      }
-    } else {
-      throw error;
+      throw new EncryptedPdfError('O PDF original está protegido e não pode ser combinado');
     }
+
+    throw error;
   }
 
   // Copy all pages from the original PDF
@@ -250,16 +169,11 @@ export async function mergeMultiplePdfs(
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         
-        if (errorMessage.toLowerCase().includes('encrypt') && source.url) {
-          console.log(`PDF ${source.name} is protected, converting...`);
-          onProgress?.(`A converter PDF protegido: ${source.name}...`);
-          
-          const cleanBlob = await convertProtectedPdfToClean(source.url);
-          pdfBytes = await cleanBlob.arrayBuffer();
-          pdfDoc = await PDFDocument.load(pdfBytes);
-        } else {
-          throw error;
+        if (errorMessage.toLowerCase().includes('encrypt')) {
+          throw new EncryptedPdfError(`O PDF "${source.name}" está protegido e não pode ser combinado`);
         }
+
+        throw error;
       }
       
       // Copy all pages to merged PDF
