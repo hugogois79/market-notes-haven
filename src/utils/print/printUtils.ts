@@ -91,9 +91,183 @@ export function preopenPrintWindow(): Window | null {
 }
 
 /**
+ * Generates print-ready HTML with embedded styles (not @media print)
+ * so that html2canvas renders it correctly
+ */
+function generatePrintReadyHtml(originalHtml: string): string {
+  // Extract the body content and inject inline styles that html2canvas will actually render
+  // html2canvas doesn't apply @media print styles, so we need to force them inline
+  
+  // Replace @media print blocks with regular styles - simple approach: inject override styles
+  const overrideStyles = `
+    <style>
+      /* Force print-like styles for canvas rendering */
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        line-height: 1.3 !important;
+        color: #333 !important;
+        padding: 24px 32px !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        font-size: 11pt !important;
+        font-weight: normal !important;
+        background: white !important;
+      }
+      
+      .print-header {
+        border-bottom: 2px solid #1a56db !important;
+        padding-bottom: 12px !important;
+        margin-bottom: 16px !important;
+      }
+      
+      .print-title {
+        font-size: 22pt !important;
+        font-weight: bold !important;
+        margin-bottom: 8px !important;
+        color: #1a56db !important;
+        text-decoration: underline !important;
+      }
+      
+      .print-meta {
+        font-size: 9pt !important;
+        color: #666 !important;
+        margin-bottom: 8px !important;
+        font-weight: normal !important;
+      }
+      
+      .print-category {
+        display: inline-block !important;
+        font-size: 9pt !important;
+        background-color: #dbeafe !important;
+        color: #1e40af !important;
+        padding: 2px 8px !important;
+        border-radius: 4px !important;
+        margin-right: 8px !important;
+        font-weight: 500 !important;
+      }
+      
+      .print-tags {
+        margin-bottom: 12px !important;
+      }
+      
+      .print-tag {
+        display: inline-block !important;
+        font-size: 8pt !important;
+        background-color: #e0e7ff !important;
+        color: #3730a3 !important;
+        padding: 2px 6px !important;
+        border-radius: 4px !important;
+        margin-right: 4px !important;
+        font-weight: normal !important;
+      }
+      
+      .print-content {
+        font-size: 11pt !important;
+        margin-bottom: 16px !important;
+        font-weight: normal !important;
+        line-height: 1.5 !important;
+      }
+      
+      .print-content p {
+        font-weight: normal !important;
+        margin-top: 0 !important;
+        margin-bottom: 8px !important;
+        font-size: 11pt !important;
+        line-height: 1.5 !important;
+      }
+      
+      .print-content h1 {
+        font-size: 18pt !important;
+        font-weight: bold !important;
+        margin-top: 20px !important;
+        margin-bottom: 12px !important;
+        color: #1e3a5f !important;
+        border-bottom: 1px solid #ccc !important;
+        padding-bottom: 4px !important;
+      }
+      
+      .print-content h2 {
+        font-size: 15pt !important;
+        font-weight: bold !important;
+        margin-top: 16px !important;
+        margin-bottom: 10px !important;
+        color: #2c4a6e !important;
+      }
+      
+      .print-content h3 {
+        font-size: 13pt !important;
+        font-weight: 600 !important;
+        margin-top: 12px !important;
+        margin-bottom: 8px !important;
+        color: #374151 !important;
+      }
+      
+      .print-content ul, .print-content ol {
+        padding-left: 24px !important;
+        margin: 8px 0 !important;
+      }
+      
+      .print-content li {
+        margin-bottom: 4px !important;
+        font-size: 11pt !important;
+        line-height: 1.4 !important;
+      }
+      
+      .print-content strong, .print-content b {
+        font-weight: bold !important;
+      }
+      
+      .print-summary {
+        background-color: #f0f9ff !important;
+        border: 1px solid #bae6fd !important;
+        border-radius: 8px !important;
+        padding: 12px 16px !important;
+        margin-bottom: 16px !important;
+      }
+      
+      .print-summary-header {
+        font-weight: bold !important;
+        color: #0369a1 !important;
+        margin-bottom: 8px !important;
+        font-size: 10pt !important;
+      }
+      
+      .print-summary-content {
+        font-size: 10pt !important;
+        line-height: 1.4 !important;
+      }
+      
+      .print-conclusion {
+        background-color: #f0fdf4 !important;
+        border: 1px solid #86efac !important;
+        border-radius: 8px !important;
+        padding: 12px 16px !important;
+        margin-top: 16px !important;
+      }
+      
+      .print-conclusion-header {
+        font-weight: bold !important;
+        color: #15803d !important;
+        margin-bottom: 8px !important;
+      }
+      
+      .print-footer {
+        display: none !important;
+      }
+    </style>
+  `;
+  
+  // Insert override styles right before </head>
+  return originalHtml.replace('</head>', overrideStyles + '</head>');
+}
+
+/**
  * Converts HTML content to a PDF blob using html2canvas and pdf-lib
  */
 async function htmlToPdf(html: string): Promise<Blob> {
+  // Transform HTML to have proper print styles for canvas rendering
+  const printReadyHtml = generatePrintReadyHtml(html);
+  
   // Create hidden iframe with content - use auto height to capture all content
   const iframe = document.createElement("iframe");
   iframe.style.position = "absolute";
@@ -111,11 +285,11 @@ async function htmlToPdf(html: string): Promise<Blob> {
   }
 
   iframeDoc.open();
-  iframeDoc.write(html);
+  iframeDoc.write(printReadyHtml);
   iframeDoc.close();
 
   // Wait for content to render and fonts to load
-  await new Promise((resolve) => setTimeout(resolve, 800));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 
   // Get the actual content height
   const body = iframeDoc.body;
@@ -129,7 +303,7 @@ async function htmlToPdf(html: string): Promise<Blob> {
   iframe.style.height = `${contentHeight}px`;
 
   // Wait a bit more after resizing
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  await new Promise((resolve) => setTimeout(resolve, 300));
 
   const withTimeout = async <T,>(p: Promise<T>, ms: number, label: string): Promise<T> => {
     const timeout = new Promise<never>((_, reject) =>
