@@ -920,8 +920,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
 
               {/* Description */}
               <div>
-                <Label className="text-xs">Descrição</Label>
-                <Textarea {...register("description")} className="text-sm min-h-[60px]" placeholder="Descrição do empréstimo..." />
+                <Label className="text-xs">Descrição *</Label>
+                <Textarea {...register("description", { required: true })} className="text-sm min-h-[60px]" placeholder="Descrição do empréstimo..." />
               </div>
             </>
           ) : (
