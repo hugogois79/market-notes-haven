@@ -63,6 +63,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   const [showMoveSection, setShowMoveSection] = useState(false);
   const [tags, setTags] = useState<string[]>((card as any).tags || []);
   const [tagInput, setTagInput] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (isOpen && card.id) {
@@ -86,15 +87,11 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
+  const uploadFiles = async (files: FileList | File[]) => {
     const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+    const fileArray = Array.from(files);
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      
+    for (const file of fileArray) {
       if (file.size > MAX_FILE_SIZE) {
         toast.error(`File ${file.name} exceeds 50MB limit`);
         continue;
@@ -112,9 +109,39 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
         setIsUploading(false);
       }
     }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    await uploadFiles(files);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await uploadFiles(files);
     }
   };
 
@@ -350,7 +377,16 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
 
           <div>
             <Label>Attachments</Label>
-            <div className="space-y-2">
+            <div 
+              className={`space-y-2 rounded-lg border-2 border-dashed p-3 transition-colors ${
+                isDragging 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-transparent'
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               {attachments.length > 0 && (
                 <div className="border rounded-lg p-3 space-y-2">
                   {attachments.map((attachment) => (
@@ -387,6 +423,13 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+              
+              {isDragging && (
+                <div className="flex items-center justify-center py-8 text-primary">
+                  <Upload className="h-8 w-8 mr-2" />
+                  <span className="text-lg font-medium">Drop files here</span>
                 </div>
               )}
               
