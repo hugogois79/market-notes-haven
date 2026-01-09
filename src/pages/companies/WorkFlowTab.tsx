@@ -1781,6 +1781,23 @@ export default function WorkFlowTab() {
         return;
       }
       
+      const target = e.target as HTMLElement;
+      
+      // Ignore if inside a dialog, combobox, select, menu or any Radix popover
+      if (target.closest('[role="dialog"]') ||
+          target.closest('[role="combobox"]') ||
+          target.closest('[role="listbox"]') ||
+          target.closest('[role="menu"]') ||
+          target.closest('[data-radix-popper-content-wrapper]') ||
+          target.isContentEditable) {
+        return;
+      }
+      
+      // If expense panel is open, only allow Escape to work (ignore file navigation shortcuts)
+      if (showExpensePanel && e.key !== 'Escape') {
+        return;
+      }
+      
       // If dropdown menu is open, don't handle arrow navigation
       // (let the menu handle its own keyboard navigation)
       if (openMenuFileId && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
