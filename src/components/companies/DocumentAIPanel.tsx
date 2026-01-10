@@ -4,6 +4,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sparkles, RefreshCw, AlertCircle, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Set the worker source for pdf.js
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface DocumentAIPanelProps {
   fileUrl: string;
@@ -58,25 +62,42 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanel
 
   const extractTextFromPDF = async (url: string): Promise<string> => {
     try {
-      const urlParts = url.split('/storage/v1/object/public/');
-      if (urlParts.length < 2) {
-        throw new Error('Invalid storage URL format');
+      console.log('Extracting text from PDF:', url);
+      
+      // Fetch the PDF file
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch PDF: ${response.status}`);
       }
       
-      const pathParts = urlParts[1].split('/');
-      const bucket = pathParts[0];
-      const filePath = pathParts.slice(1).join('/');
-
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .download(filePath);
-
-      if (error) throw error;
-
-      return `[PDF Document: ${fileName}]\n\nNote: This is a PDF file. The AI will analyze based on the filename and document type.`;
+      const arrayBuffer = await response.arrayBuffer();
+      
+      // Load the PDF document
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      console.log(`PDF loaded, pages: ${pdf.numPages}`);
+      
+      let fullText = '';
+      
+      // Extract text from each page (limit to first 20 pages for performance)
+      const maxPages = Math.min(pdf.numPages, 20);
+      for (let i = 1; i <= maxPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        fullText += `\n--- Página ${i} ---\n${pageText}`;
+      }
+      
+      if (pdf.numPages > maxPages) {
+        fullText += `\n\n[Nota: Documento tem ${pdf.numPages} páginas, apenas as primeiras ${maxPages} foram analisadas]`;
+      }
+      
+      console.log(`Extracted ${fullText.length} characters from PDF`);
+      return fullText.trim() || `[PDF sem texto extraível: ${fileName}]`;
     } catch (err) {
       console.error('Error extracting PDF:', err);
-      return `[Document: ${fileName}]`;
+      return `[Erro ao extrair PDF: ${fileName}]`;
     }
   };
 
