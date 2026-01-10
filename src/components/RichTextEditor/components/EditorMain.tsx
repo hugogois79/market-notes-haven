@@ -1,13 +1,15 @@
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import EditorHeader from "../EditorHeader";
 import EditorStatusBar from "../EditorStatusBar";
+import EditorToolbar from "../EditorToolbar";
 import EditorTabs from "../EditorTabs";
 import MetadataSection from "../MetadataSection";
 import SpecialSections from "../SpecialSections";
 import PrintModal from "../PrintModal";
 import { Tag, Token, TradeInfo } from "@/types";
+import { useTextFormatting } from "../hooks/formatting";
 
 interface EditorMainProps {
   title: string;
@@ -96,6 +98,18 @@ const EditorMain: React.FC<EditorMainProps> = ({
 }) => {
   const isTradingCategory = category === "Trading" || category === "Pair Trading";
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  
+  // Create editor ref and formatting functions at this level
+  const editorRef = useRef<HTMLDivElement>(null);
+  const {
+    execCommand,
+    formatTableCells,
+    insertVerticalSeparator,
+    highlightText,
+    boldText,
+    underlineText,
+    yellowUnderlineText
+  } = useTextFormatting(editorRef);
 
   const handleOpenPrintModal = () => {
     setIsPrintModalOpen(true);
@@ -135,6 +149,23 @@ const EditorMain: React.FC<EditorMainProps> = ({
           summary
         }}
       />
+      
+      {/* Formatting Toolbar - positioned right below status bar */}
+      <div className="sticky top-0 z-[100] bg-background border-b shadow-sm">
+        <EditorToolbar 
+          editorRef={editorRef}
+          execCommand={execCommand}
+          formatTableCells={formatTableCells}
+          insertVerticalSeparator={insertVerticalSeparator}
+          highlightText={highlightText}
+          boldText={boldText}
+          underlineText={underlineText}
+          yellowUnderlineText={yellowUnderlineText}
+          hasConclusion={hasConclusion}
+          category={category}
+          className="py-0.5"
+        />
+      </div>
       
       <div className="flex flex-col overflow-hidden flex-1 relative">
         <div className="overflow-y-auto flex-1">
@@ -177,6 +208,14 @@ const EditorMain: React.FC<EditorMainProps> = ({
                 onAttachmentChange={onAttachmentChange}
                 hasConclusion={hasConclusion}
                 category={category}
+                editorRef={editorRef}
+                execCommand={execCommand}
+                formatTableCells={formatTableCells}
+                insertVerticalSeparator={insertVerticalSeparator}
+                highlightText={highlightText}
+                boldText={boldText}
+                underlineText={underlineText}
+                yellowUnderlineText={yellowUnderlineText}
               />
             </Card>
           </div>

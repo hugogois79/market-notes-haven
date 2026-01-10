@@ -20,20 +20,39 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
   hasConclusion = true,
   category = "General",
   onPrint,
+  // Use external refs/functions if provided, otherwise use internal ones
+  editorRef: externalEditorRef,
+  execCommand: externalExecCommand,
+  formatTableCells: externalFormatTableCells,
+  insertVerticalSeparator: externalInsertVerticalSeparator,
+  highlightText: externalHighlightText,
+  boldText: externalBoldText,
+  underlineText: externalUnderlineText,
+  yellowUnderlineText: externalYellowUnderlineText,
 }) => {
   const [activeTab, setActiveTab] = useState("editor");
   
   // Use custom hooks to manage state and behavior
   const {
-    editorRef,
-    execCommand,
-    formatTableCells,
-    insertVerticalSeparator,
-    highlightText,
-    boldText,
-    underlineText,
-    yellowUnderlineText
+    editorRef: internalEditorRef,
+    execCommand: internalExecCommand,
+    formatTableCells: internalFormatTableCells,
+    insertVerticalSeparator: internalInsertVerticalSeparator,
+    highlightText: internalHighlightText,
+    boldText: internalBoldText,
+    underlineText: internalUnderlineText,
+    yellowUnderlineText: internalYellowUnderlineText
   } = useTabState(activeTab, hasConclusion);
+  
+  // Use external if provided, otherwise internal
+  const editorRef = externalEditorRef || internalEditorRef;
+  const execCommand = externalExecCommand || internalExecCommand;
+  const formatTableCells = externalFormatTableCells || internalFormatTableCells;
+  const insertVerticalSeparator = externalInsertVerticalSeparator || internalInsertVerticalSeparator;
+  const highlightText = externalHighlightText || internalHighlightText;
+  const boldText = externalBoldText || internalBoldText;
+  const underlineText = externalUnderlineText || internalUnderlineText;
+  const yellowUnderlineText = externalYellowUnderlineText || internalYellowUnderlineText;
   
   // Handle cursor placement for empty content
   useCursorPlacement(editorRef, content, activeTab);
@@ -93,22 +112,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
 
       {activeTab === "editor" && (
         <>
-          {/* Top toolbar - hidden by default */}
-          <FloatingToolbarWrapper
-            editorRef={editorRef}
-            boldText={boldText}
-            underlineText={underlineText}
-            highlightText={highlightText}
-            yellowUnderlineText={yellowUnderlineText}
-            execCommand={execCommand}
-            formatTableCells={formatTableCells}
-            insertVerticalSeparator={insertVerticalSeparator}
-            isVisible={false}
-            position="top"
-            variant="floating"
-          />
-          
-          {/* Bottom toolbar - changed from fixed to floating */}
+          {/* Bottom toolbar - floating */}
           <FloatingToolbarWrapper
             editorRef={editorRef}
             boldText={boldText}

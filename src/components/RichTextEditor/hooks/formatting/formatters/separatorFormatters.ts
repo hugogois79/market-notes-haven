@@ -4,34 +4,16 @@
  */
 
 /**
- * Creates a horizontal separator with styling
+ * Creates a horizontal separator with minimal styling (single line)
  */
 export function createSeparator(editorRef: HTMLDivElement | null) {
   if (!editorRef) return;
   
-  console.log("Inserting separator");
-  
   // Focus the editor first
   editorRef.focus();
   
-  // Create HTML for a clean, styled separator
-  const separatorHTML = `
-    <div class="editor-separator" style="
-      width: 100%;
-      margin: 1rem 0;
-      text-align: center;
-      position: relative;
-      clear: both;
-    ">
-      <hr style="
-        border: none;
-        height: 1px;
-        background-color: #d1d5db;
-        margin: 0;
-      "/>
-    </div>
-    <p><br></p>
-  `;
+  // Create HTML for a clean, minimal separator - just a single hr line
+  const separatorHTML = '<hr style="border: none; height: 1px; background-color: #d1d5db; margin: 0.5rem 0;" />';
   
   // Insert the separator HTML
   document.execCommand('insertHTML', false, separatorHTML);
