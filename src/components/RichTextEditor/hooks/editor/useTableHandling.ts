@@ -1,5 +1,5 @@
 
-import { RefObject, useCallback, useEffect } from "react";
+import { RefObject, useCallback } from "react";
 
 export const useTableHandling = (editorRef: RefObject<HTMLDivElement>) => {
   const handlePaste = useCallback((event: ClipboardEvent) => {
@@ -14,12 +14,10 @@ export const useTableHandling = (editorRef: RefObject<HTMLDivElement>) => {
     }
     
     const html = clipboardData.getData('text/html');
-    const plainText = clipboardData.getData('text/plain');
     
     // Only process if content contains tables or lists that need special handling
     if (html.includes('<table') || html.includes('<tbody') || html.includes('<tr') || html.includes('<td') ||
         html.includes('<ul') || html.includes('<ol') || html.includes('<li')) {
-      event.preventDefault();
       
       // Create a temporary div to sanitize the HTML
       const tempDiv = document.createElement('div');
@@ -55,41 +53,45 @@ export const useTableHandling = (editorRef: RefObject<HTMLDivElement>) => {
         });
       });
       
-      // Insert using modern Selection API
+      // Validate selection is inside the editor before manipulating
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
-        range.deleteContents();
         
-        // Create a document fragment from the processed HTML
-        const fragment = document.createRange().createContextualFragment(tempDiv.innerHTML);
-        range.insertNode(fragment);
-        
-        // Move cursor to end of inserted content
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
-      }
-      
-      // Trigger input event
-      if (editorRef.current) {
-        const inputEvent = new Event('input', { bubbles: true });
-        editorRef.current.dispatchEvent(inputEvent);
+        // Safety check: ensure range is within the editor
+        if (editorRef.current && editorRef.current.contains(range.commonAncestorContainer)) {
+          event.preventDefault();
+          range.deleteContents();
+          
+          // Create a document fragment from the processed HTML
+          const fragment = document.createRange().createContextualFragment(tempDiv.innerHTML);
+          range.insertNode(fragment);
+          
+          // Move cursor to end of inserted content
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          
+          // Trigger input event
+          const inputEvent = new Event('input', { bubbles: true });
+          editorRef.current.dispatchEvent(inputEvent);
+        } else if (editorRef.current) {
+          // Fallback: focus editor and append at end
+          event.preventDefault();
+          editorRef.current.focus();
+          
+          const fragment = document.createRange().createContextualFragment(tempDiv.innerHTML);
+          editorRef.current.appendChild(fragment);
+          
+          // Trigger input event
+          const inputEvent = new Event('input', { bubbles: true });
+          editorRef.current.dispatchEvent(inputEvent);
+        }
       }
     }
     // For non-table/list HTML, let the browser handle it normally
   }, [editorRef]);
 
-  // Attach paste listener
-  useEffect(() => {
-    const editor = editorRef.current;
-    if (editor) {
-      editor.addEventListener('paste', handlePaste);
-      return () => {
-        editor.removeEventListener('paste', handlePaste);
-      };
-    }
-  }, [editorRef, handlePaste]);
-
+  // NOTE: Do NOT attach listener here - useEditorCore handles registration
   return { handlePaste };
 };

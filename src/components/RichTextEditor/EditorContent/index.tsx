@@ -4,7 +4,6 @@ import DOMPurify from "dompurify";
 import ContentStyles from "./ContentStyles";
 import { useContentChange } from "./useContentChange";
 import { processExistingListsFormatting } from "../hooks/formatting/formatters";
-import { useTableHandling } from "../hooks/editor/useTableHandling";
 
 interface EditorContentProps {
   content: string;
@@ -40,8 +39,8 @@ const EditorContent: React.FC<EditorContentProps> = ({
     editorRef
   });
   
-  // Handle paste with table/list formatting
-  useTableHandling(editorRef);
+  // Track last applied content to avoid overwriting user edits
+  const lastAppliedContentRef = useRef<string>('');
   
   // Set initial content when the component mounts and ensure it's editable
   useEffect(() => {
@@ -54,9 +53,19 @@ const EditorContent: React.FC<EditorContentProps> = ({
         ALLOWED_ATTR: ['class', 'style', 'type', 'checked', 'href', 'target', 'data-*', 'src', 'alt']
       });
       
-      // Only set innerHTML if it's different from current content to prevent cursor jumping
-      if (editorRef.current.innerHTML !== sanitizedContent) {
+      // Only apply content if:
+      // 1. Content is genuinely different from what we last applied (note changed)
+      // 2. AND editor is NOT focused (user not actively editing)
+      const isFocused = document.activeElement === editorRef.current;
+      const contentChanged = sanitizedContent !== lastAppliedContentRef.current;
+      
+      if (contentChanged && !isFocused) {
         editorRef.current.innerHTML = sanitizedContent;
+        lastAppliedContentRef.current = sanitizedContent;
+      } else if (!lastAppliedContentRef.current && sanitizedContent) {
+        // Initial load - always apply
+        editorRef.current.innerHTML = sanitizedContent;
+        lastAppliedContentRef.current = sanitizedContent;
       }
       
       // Process any checkboxes that might be in the content
