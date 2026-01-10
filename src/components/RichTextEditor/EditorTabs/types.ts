@@ -13,6 +13,15 @@ export interface EditorTabsProps {
   hasConclusion?: boolean;
   category?: string;
   onPrint?: () => void;
+  // Formatting functions passed from parent
+  editorRef?: React.RefObject<HTMLDivElement>;
+  execCommand?: (command: string, value?: string) => void;
+  formatTableCells?: (alignment: string) => void;
+  insertVerticalSeparator?: () => void;
+  highlightText?: () => void;
+  boldText?: () => void;
+  underlineText?: () => void;
+  yellowUnderlineText?: () => void;
 }
 
 export interface TabContentProps {
