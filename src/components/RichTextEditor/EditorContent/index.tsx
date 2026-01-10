@@ -4,6 +4,7 @@ import DOMPurify from "dompurify";
 import ContentStyles from "./ContentStyles";
 import { useContentChange } from "./useContentChange";
 import { processExistingListsFormatting } from "../hooks/formatting/formatters";
+import { useTableHandling } from "../hooks/editor/useTableHandling";
 
 interface EditorContentProps {
   content: string;
@@ -38,6 +39,9 @@ const EditorContent: React.FC<EditorContentProps> = ({
     autoSaveDelay,
     editorRef
   });
+  
+  // Keep hook call for consistency (hook no longer auto-registers listener)
+  useTableHandling(editorRef);
   
   // Track last applied content to avoid overwriting user edits
   const lastAppliedContentRef = useRef<string>('');
