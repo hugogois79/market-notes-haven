@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt, Flag, Percent, Save, History, TrendingUpDown } from "lucide-react";
+import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt, Flag, Percent, Save, History, TrendingUpDown, GitBranch } from "lucide-react";
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { toast } from "sonner";
 import WealthAssetsTable from "./wealth/WealthAssetsTable";
@@ -11,6 +12,9 @@ import WealthTransactionsTable from "./wealth/WealthTransactionsTable";
 import WealthMilestonesTable from "./wealth/WealthMilestonesTable";
 import PortfolioHistoryChart from "./wealth/PortfolioHistoryChart";
 import PortfolioForecastTable from "./wealth/PortfolioForecastTable";
+import SavePlanVersionDialog from "./wealth/SavePlanVersionDialog";
+import PlanVersionsList from "./wealth/PlanVersionsList";
+import { useForecastCalculations } from "@/hooks/useForecastCalculations";
 
 interface FinancePlanProps {
   companyId: string;
@@ -54,6 +58,16 @@ const calculateCAGR = (currentValue: number, purchasePrice: number, purchaseDate
 
 export default function FinancePlan({ companyId }: FinancePlanProps) {
   const queryClient = useQueryClient();
+  const [savePlanDialogOpen, setSavePlanDialogOpen] = useState(false);
+
+  // Get forecast calculations for plan versioning
+  const {
+    projectedTotal3M,
+    projectedTotal6M,
+    projectedTotal1Y,
+    totalValue: forecastTotalValue,
+    futureTransactions,
+  } = useForecastCalculations();
 
   const { data: assets = [] } = useQuery({
     queryKey: ["wealth-assets"],
@@ -172,6 +186,10 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
           <TabsTrigger value="snapshots" className="flex items-center gap-2">
             <History className="h-4 w-4" />
             Snapshots
+          </TabsTrigger>
+          <TabsTrigger value="plan-versions" className="flex items-center gap-2">
+            <GitBranch className="h-4 w-4" />
+            Versões
           </TabsTrigger>
         </TabsList>
 
@@ -337,11 +355,21 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
 
         <TabsContent value="cashflow">
           <Card>
-            <CardHeader>
-              <CardTitle>Plano Financeiro</CardTitle>
-              <CardDescription>
-                Registo de transações, créditos, débitos e saldo corrente.
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Plano Financeiro</CardTitle>
+                <CardDescription>
+                  Registo de transações, créditos, débitos e saldo corrente.
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSavePlanDialogOpen(true)}
+              >
+                <GitBranch className="h-4 w-4 mr-2" />
+                Guardar Versão
+              </Button>
             </CardHeader>
             <CardContent>
               <WealthTransactionsTable />
@@ -396,7 +424,48 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
           </div>
           <PortfolioHistoryChart />
         </TabsContent>
+
+        <TabsContent value="plan-versions" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">Versões do Plano</h3>
+              <p className="text-sm text-muted-foreground">
+                Histórico de versões do plano financeiro para comparação
+              </p>
+            </div>
+            <Button 
+              onClick={() => setSavePlanDialogOpen(true)}
+              size="sm"
+            >
+              <GitBranch className="h-4 w-4 mr-2" />
+              Guardar Versão
+            </Button>
+          </div>
+          <PlanVersionsList
+            currentProjected3M={projectedTotal3M}
+            currentProjected6M={projectedTotal6M}
+            currentProjected1Y={projectedTotal1Y}
+            currentTotalValue={forecastTotalValue}
+          />
+        </TabsContent>
       </Tabs>
+
+      {/* Save Plan Version Dialog */}
+      <SavePlanVersionDialog
+        open={savePlanDialogOpen}
+        onOpenChange={setSavePlanDialogOpen}
+        projected3M={projectedTotal3M}
+        projected6M={projectedTotal6M}
+        projected1Y={projectedTotal1Y}
+        totalValue={forecastTotalValue}
+        futureTransactions={futureTransactions.map((tx) => ({
+          id: tx.id,
+          date: tx.date,
+          amount: tx.amount,
+          asset_id: tx.asset_id,
+          affects_asset_value: tx.affects_asset_value,
+        }))}
+      />
     </div>
   );
 }
