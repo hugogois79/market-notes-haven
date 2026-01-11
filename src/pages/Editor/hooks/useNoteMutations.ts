@@ -64,6 +64,21 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     }
   });
 
+  // Handler that saves summary immediately along with current local state
+  const handleSummaryGeneratedAndSave = (summary: string, conclusion?: boolean) => {
+    console.log("useNoteMutations: Summary generated, saving with current state");
+    handleSummaryGenerated(summary, conclusion);
+    
+    // Save immediately including the current local state
+    handleSaveWithChanges({
+      ...pendingChanges,
+      title: localTitle,           // Preserve current title
+      category: localCategory,     // Preserve current category
+      summary: summary,
+      hasConclusion: conclusion ?? true
+    }, false);
+  };
+
   // Simple title change handler - no auto-save
   const handleTitleChangeOnly = (title: string) => {
     console.log("useNoteMutations: Title change (no auto-save):", title);
@@ -172,7 +187,7 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     handleTitleChange: handleTitleChangeOnly,
     handleContentChange,
     handleCategoryChange: handleCategoryChangeOnly,
-    handleSummaryGenerated,
+    handleSummaryGenerated: handleSummaryGeneratedAndSave,
     handleTradeInfoChange,
     handleAttachmentChange: handleAttachmentChangeAndSave,
     handleSaveWithChanges,

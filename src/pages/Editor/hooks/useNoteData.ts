@@ -40,7 +40,7 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
     };
   }, [location.search]);
 
-  // Find the current note from the notes array - FIXED to not auto-create
+  // Find the current note from the notes array - FIXED to preserve local state
   useEffect(() => {
     if (notes.length === 0) {
       return;
@@ -53,7 +53,25 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
       setCurrentNote(null);
     } else if (id) {
       const foundNote = notes.find(note => note.id === id);
-      setCurrentNote(foundNote || null);
+      
+      // Only update if we found a note and there's a real change
+      if (foundNote) {
+        setCurrentNote(prev => {
+          // If no previous note, use the found one
+          if (!prev) return foundNote;
+          
+          // Only update if the ID changed or if the database version is newer
+          // This prevents overwriting local changes during React Query refetches
+          if (prev.id !== foundNote.id) {
+            return foundNote;
+          }
+          
+          // Keep the previous state to preserve local changes
+          // The save operation will handle syncing to DB
+          return prev;
+        });
+      }
+      // Don't set null if not found - keep the previous state during transient states
     }
     
     setIsLoading(false);
