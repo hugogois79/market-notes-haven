@@ -5,7 +5,6 @@ import EditorHeader from "../EditorHeader";
 import EditorStatusBar from "../EditorStatusBar";
 import EditorToolbar from "../EditorToolbar";
 import EditorTabs from "../EditorTabs";
-import MetadataSection from "../MetadataSection";
 import SpecialSections from "../SpecialSections";
 import PrintModal from "../PrintModal";
 import { Tag, Token, TradeInfo } from "@/types";
@@ -98,8 +97,8 @@ const EditorMain: React.FC<EditorMainProps> = ({
 }) => {
   const isTradingCategory = category === "Trading" || category === "Pair Trading";
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const tabsRef = useRef<HTMLDivElement>(null);
   
-  // Create editor ref and formatting functions at this level
   const editorRef = useRef<HTMLDivElement>(null);
   const {
     execCommand,
@@ -111,13 +110,15 @@ const EditorMain: React.FC<EditorMainProps> = ({
     yellowUnderlineText
   } = useTextFormatting(editorRef);
 
-  const handleOpenPrintModal = () => {
-    setIsPrintModalOpen(true);
-  };
-
-  const handlePrintAction = () => {
-    if (onPrint) {
-      onPrint();
+  const handleRelationsClick = () => {
+    // Scroll to tabs and switch to relations tab
+    if (tabsRef.current) {
+      tabsRef.current.scrollIntoView({ behavior: 'smooth' });
+      // Find and click the relations tab
+      const relationsTab = tabsRef.current.querySelector('[value="relations"]');
+      if (relationsTab instanceof HTMLElement) {
+        relationsTab.click();
+      }
     }
   };
 
@@ -129,6 +130,18 @@ const EditorMain: React.FC<EditorMainProps> = ({
         category={category}
         onCategoryChange={onCategoryChange}
         isPrintMode={false}
+        linkedTags={linkedTags}
+        tagInput={tagInput}
+        setTagInput={setTagInput}
+        handleAddTag={handleAddTag}
+        handleRemoveTag={handleRemoveTag}
+        handleSelectTag={handleSelectTag}
+        isLoadingTags={isLoadingTags}
+        getAvailableTagsForSelection={getAvailableTagsForSelection}
+        selectedProjectId={selectedProjectId}
+        onProjectSelect={onProjectSelect}
+        noteId={noteId}
+        onRelationsClick={handleRelationsClick}
       />
       
       <EditorStatusBar 
@@ -150,7 +163,7 @@ const EditorMain: React.FC<EditorMainProps> = ({
         }}
       />
       
-      {/* Formatting Toolbar - positioned right below status bar */}
+      {/* Formatting Toolbar */}
       <div className="sticky top-0 z-[100] bg-background border-b shadow-sm">
         <EditorToolbar 
           editorRef={editorRef}
@@ -182,41 +195,28 @@ const EditorMain: React.FC<EditorMainProps> = ({
               onTradeInfoChange={onTradeInfoChange}
             />
             
-            <MetadataSection 
-              linkedTags={linkedTags}
-              tagInput={tagInput}
-              setTagInput={setTagInput}
-              handleAddTag={handleAddTag}
-              handleRemoveTag={handleRemoveTag}
-              handleSelectTag={handleSelectTag}
-              isLoadingTags={isLoadingTags}
-              getAvailableTagsForSelection={getAvailableTagsForSelection}
-              selectedProjectId={selectedProjectId}
-              onProjectSelect={onProjectSelect}
-              category={category}
-              categoryFilter={category}
-            />
-            
             <Card className="p-0 border rounded-md overflow-hidden flex-1 min-h-0 flex flex-col">
-              <EditorTabs 
-                content={content}
-                onContentChange={onContentChange}
-                onContentUpdate={handleContentUpdate}
-                noteId={noteId}
-                attachment_url={attachment_url}
-                attachments={attachments}
-                onAttachmentChange={onAttachmentChange}
-                hasConclusion={hasConclusion}
-                category={category}
-                editorRef={editorRef}
-                execCommand={execCommand}
-                formatTableCells={formatTableCells}
-                insertVerticalSeparator={insertVerticalSeparator}
-                highlightText={highlightText}
-                boldText={boldText}
-                underlineText={underlineText}
-                yellowUnderlineText={yellowUnderlineText}
-              />
+              <div ref={tabsRef}>
+                <EditorTabs 
+                  content={content}
+                  onContentChange={onContentChange}
+                  onContentUpdate={handleContentUpdate}
+                  noteId={noteId}
+                  attachment_url={attachment_url}
+                  attachments={attachments}
+                  onAttachmentChange={onAttachmentChange}
+                  hasConclusion={hasConclusion}
+                  category={category}
+                  editorRef={editorRef}
+                  execCommand={execCommand}
+                  formatTableCells={formatTableCells}
+                  insertVerticalSeparator={insertVerticalSeparator}
+                  highlightText={highlightText}
+                  boldText={boldText}
+                  underlineText={underlineText}
+                  yellowUnderlineText={yellowUnderlineText}
+                />
+              </div>
             </Card>
           </div>
         </div>
@@ -237,3 +237,4 @@ const EditorMain: React.FC<EditorMainProps> = ({
 };
 
 export default EditorMain;
+
