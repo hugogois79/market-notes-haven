@@ -28,6 +28,7 @@ import { fetchTags } from "@/services/tag";
 import { useNotes } from "@/contexts/NotesContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useSemanticSearch } from "@/hooks/useSemanticSearch";
+import { useNoteRelationClusters } from "@/hooks/useNoteRelationClusters";
 import { printNote, printNoteWithAttachments } from "@/utils/printUtils";
 import { toast } from "sonner";
 import {
@@ -88,6 +89,7 @@ const Notes = () => {
   const [tagSearchQuery, setTagSearchQuery] = useState("");
   const [projectSearchQuery, setProjectSearchQuery] = useState("");
   const { isSearching, searchResults, semanticSearch, clearSearch } = useSemanticSearch();
+  const { getClusterColorForNote } = useNoteRelationClusters();
   const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
 
   // Fetch projects for filter
@@ -746,6 +748,7 @@ const Notes = () => {
                 onDelete={handleDeleteClick}
                 onPrint={handlePrintNote}
                 onPdfAttachment={handlePdfAttachment}
+                clusterColor={getClusterColorForNote(note.id)}
               />
             ))}
           </div>

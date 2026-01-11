@@ -33,6 +33,7 @@ interface NoteCardProps {
   onDelete?: (noteId: string) => void;
   onPrint?: (noteId: string) => void;
   onPdfAttachment?: (noteId: string) => void;
+  clusterColor?: { bg: string; darkBg: string } | null;
 }
 
 const NoteCard = ({ 
@@ -44,7 +45,8 @@ const NoteCard = ({
   searchQuery = "",
   onDelete,
   onPrint,
-  onPdfAttachment
+  onPdfAttachment,
+  clusterColor
 }: NoteCardProps) => {
   const navigate = useNavigate();
   const [tokens, setTokens] = useState<Token[]>([]);
@@ -194,8 +196,9 @@ const NoteCard = ({
       <ContextMenuTrigger asChild>
         <Card 
           className={cn(
-            "h-auto overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1 glass-card cursor-pointer border-l-4",
+            "h-auto overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer border-l-4",
             note.category === "Trading" ? "border-l-blue-500" : "border-l-gray-300",
+            clusterColor ? `${clusterColor.bg} ${clusterColor.darkBg}` : "glass-card",
             isListView ? "flex" : "",
             className
           )}
