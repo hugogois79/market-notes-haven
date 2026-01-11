@@ -116,6 +116,7 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
 
   // Override tags change to save immediately (since tags are usually intentional actions)
   const handleTagsChangeAndSave = (tags: Tag[] | string[]) => {
+    // Update UI immediately
     handleTagsChange(tags);
     
     const processedTags = tags.map(tag => {
@@ -128,20 +129,14 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     // Use localCategory if available, fallback to currentNote.category
     const categoryToSave = localCategory || currentNote.category || "General";
     
-    console.log("==== SAVING TAGS ====");
-    console.log("Processed tags:", processedTags);
-    console.log("Current localCategory:", localCategory);
-    console.log("Current note category:", currentNote.category);
-    console.log("Category to save:", categoryToSave);
-    console.log("Pending changes (including content):", pendingChanges);
-    console.log("Fields to save:", { tags: processedTags, category: categoryToSave, ...pendingChanges });
-    
-    // Include any pending content changes when saving tags
-    handleSaveWithChanges({ 
-      ...pendingChanges, // Include pending content and other changes
-      tags: processedTags,
-      category: categoryToSave // Explicitly preserve the category
-    }, false);
+    // Save in background - non-blocking for faster UI response
+    Promise.resolve().then(() => {
+      handleSaveWithChanges({ 
+        ...pendingChanges,
+        tags: processedTags,
+        category: categoryToSave
+      }, false);
+    });
   };
 
   // Handle attachment change and save immediately
@@ -158,15 +153,18 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     }
   };
 
-  // Handle project change and save immediately
+  // Handle project change and save immediately - non-blocking
   const handleProjectChangeAndSave = (projectId: string | null) => {
-    console.log("useNoteMutations: Project change and save:", projectId);
-    console.log("Including pending changes:", pendingChanges);
+    // Update UI immediately
     handleProjectChange(projectId);
-    handleSaveWithChanges({ 
-      ...pendingChanges, // Include pending content and other changes
-      project_id: projectId 
-    }, false);
+    
+    // Save in background - non-blocking for faster UI response
+    Promise.resolve().then(() => {
+      handleSaveWithChanges({ 
+        ...pendingChanges,
+        project_id: projectId 
+      }, false);
+    });
   };
 
   return {
