@@ -29,19 +29,17 @@ const Editor = () => {
     getTagsFilteredByCategory
   } = useNoteData({ notes, onSaveNote: handleSaveNote });
 
-  // Handle creating a new note from URL params - FIXED to prevent duplicate creations
+  // Initialize temp note for new note creation (without saving to DB yet)
   useEffect(() => {
-    if (isNewNote && !currentNote && !hasCreatedNote && notes.length > 0) {
-      console.log("Creating new note from URL params");
-      setHasCreatedNote(true);
+    if (isNewNote && !hasCreatedNote && !tempNoteRef.current) {
+      console.log("Initializing temp note from URL params");
       
-      // Check for query parameters to pre-fill the note
       const queryParams = new URLSearchParams(location.search);
       const title = queryParams.get('title') || "Untitled Note";
       const category = queryParams.get('category') || "General";
       const tags = queryParams.get('tags')?.split(',') || [];
-      
-      const newNote: Note = {
+
+      tempNoteRef.current = {
         id: `temp-${Date.now()}`,
         title,
         content: "",
@@ -50,30 +48,9 @@ const Editor = () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         attachments: []
-      };
-      
-      // Create and navigate to the new note
-      handleSaveNote(newNote).then(savedNote => {
-        if (savedNote) {
-          console.log("New note created with ID:", savedNote.id);
-          // Set pending note ID BEFORE navigating to prevent "Note Not Found"
-          setPendingNoteId(savedNote.id);
-          // Navigate directly to the editor path with the new ID
-          navigate(`/editor/${savedNote.id}`, { replace: true });
-          // Clear pending after a short delay
-          setTimeout(() => setPendingNoteId(null), 500);
-        } else {
-          console.error("Failed to create new note");
-          toast.error("Failed to create new note");
-          setHasCreatedNote(false);
-        }
-      }).catch(error => {
-        console.error("Error creating note:", error);
-        toast.error("Error creating note: " + (error.message || "Unknown error"));
-        setHasCreatedNote(false);
-      });
+      } as Note;
     }
-  }, [isNewNote, currentNote, location.search, handleSaveNote, navigate, refetch, hasCreatedNote, notes.length]);
+  }, [isNewNote, location.search, hasCreatedNote]);
 
   // Reset hasCreatedNote when navigating away from new note route
   useEffect(() => {
@@ -111,10 +88,36 @@ const Editor = () => {
     }
   }, [notes, id, isNewNote, isLoading, pendingNoteId]);
 
-  // Enhanced save handler that ensures refetch after save and properly handles title changes
+  // Enhanced save handler that creates note on first save (for new notes) or updates existing
   const handleEnhancedSave = async (updatedFields: Partial<Note>) => {
     try {
       console.log("Enhanced save called with fields:", updatedFields);
+      
+      // If this is a new note and we haven't created it yet, create it now
+      if (isNewNote && !hasCreatedNote && tempNoteRef.current) {
+        console.log("Creating new note on first save");
+        setHasCreatedNote(true);
+        
+        const newNote: Note = {
+          ...tempNoteRef.current,
+          ...updatedFields,
+        };
+        
+        const savedNote = await handleSaveNote(newNote);
+        if (savedNote) {
+          console.log("New note created with ID:", savedNote.id);
+          setPendingNoteId(savedNote.id);
+          navigate(`/editor/${savedNote.id}`, { replace: true });
+          setTimeout(() => setPendingNoteId(null), 500);
+          if (refetch) await refetch();
+          return;
+        } else {
+          console.error("Failed to create new note");
+          toast.error("Failed to create new note");
+          setHasCreatedNote(false);
+          return;
+        }
+      }
       
       // Make sure we immediately save title changes
       if (updatedFields.title !== undefined) {
