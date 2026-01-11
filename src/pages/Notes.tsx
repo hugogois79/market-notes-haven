@@ -748,7 +748,7 @@ const Notes = () => {
                 onDelete={handleDeleteClick}
                 onPrint={handlePrintNote}
                 onPdfAttachment={handlePdfAttachment}
-                clusterColor={getClusterColorForNote(note.id)}
+                clusterColor={getClusterColorForNote(note.id, note.cluster_index)}
               />
             ))}
           </div>

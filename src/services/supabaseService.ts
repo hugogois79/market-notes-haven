@@ -18,6 +18,7 @@ export interface DbNote {
   trade_info: Json | null; // Changed from TradeInfo to Json for Supabase compatibility
   has_conclusion: boolean | null;
   project_id: string | null; // Added project_id field
+  cluster_index: number | null; // Cluster index for relation grouping
 }
 
 // Type for our user profile
@@ -60,10 +61,11 @@ export const dbNoteToNote = (dbNote: DbNote): Note => ({
   tradeInfo: jsonToTradeInfo(dbNote.trade_info), // Convert JSON to TradeInfo
   hasConclusion: dbNote.has_conclusion, // Include hasConclusion field
   project_id: dbNote.project_id || undefined, // Include project_id
+  cluster_index: dbNote.cluster_index, // Include cluster_index for relation coloring
 });
 
 // Convert app note to database format
-export const noteToDbNote = (note: Note): Omit<DbNote, 'created_at' | 'updated_at'> => ({
+export const noteToDbNote = (note: Note): Omit<DbNote, 'created_at' | 'updated_at' | 'cluster_index'> => ({
   id: note.id,
   title: note.title,
   content: note.content,
@@ -87,7 +89,7 @@ export const fetchNotes = async (): Promise<Note[]> => {
     // Select specific columns instead of * to avoid fetching the large embedding column
     const { data, error } = await supabase
       .from('notes')
-      .select('id, title, content, summary, tags, category, created_at, updated_at, user_id, attachment_url, attachments, trade_info, has_conclusion, project_id')
+      .select('id, title, content, summary, tags, category, created_at, updated_at, user_id, attachment_url, attachments, trade_info, has_conclusion, project_id, cluster_index')
       .order('updated_at', { ascending: false });
 
     if (error) {
