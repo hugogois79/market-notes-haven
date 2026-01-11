@@ -19,6 +19,7 @@ import {
   FileText,
   Folder,
   Tags as TagsIcon,
+  Palette,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import NoteCard from "@/components/NoteCard";
@@ -29,6 +30,7 @@ import { useNotes } from "@/contexts/NotesContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useSemanticSearch } from "@/hooks/useSemanticSearch";
 import { useNoteRelationClusters } from "@/hooks/useNoteRelationClusters";
+import { clusterColors } from "@/utils/noteRelationClusters";
 import { printNote, printNoteWithAttachments } from "@/utils/printUtils";
 import { toast } from "sonner";
 import {
@@ -88,6 +90,7 @@ const Notes = () => {
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [tagSearchQuery, setTagSearchQuery] = useState("");
   const [projectSearchQuery, setProjectSearchQuery] = useState("");
+  const [selectedClusterColors, setSelectedClusterColors] = useState<number[]>([]);
   const { isSearching, searchResults, semanticSearch, clearSearch } = useSemanticSearch();
   const { getClusterColorForNote } = useNoteRelationClusters();
   const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
@@ -190,10 +193,15 @@ const Notes = () => {
       const projectMatch =
         selectedProjects.length === 0 || 
         (note.project_id && selectedProjects.includes(note.project_id));
+
+      const clusterMatch =
+        selectedClusterColors.length === 0 ||
+        (note.cluster_index !== null && note.cluster_index !== undefined && 
+         selectedClusterColors.includes(note.cluster_index % clusterColors.length));
       
-      return searchMatch && categoryMatch && tagMatch && projectMatch;
+      return searchMatch && categoryMatch && tagMatch && projectMatch && clusterMatch;
     });
-  }, [baseNotes, searchQuery, selectedCategories, selectedTags, selectedProjects, searchResults]);
+  }, [baseNotes, searchQuery, selectedCategories, selectedTags, selectedProjects, selectedClusterColors, searchResults]);
 
   const handleCreateNote = () => {
     navigate("/editor/new");
@@ -220,6 +228,25 @@ const Notes = () => {
         : [...prev, projectId]
     );
   };
+
+  const toggleClusterColor = (colorIndex: number) => {
+    setSelectedClusterColors(prev => 
+      prev.includes(colorIndex)
+        ? prev.filter(c => c !== colorIndex)
+        : [...prev, colorIndex]
+    );
+  };
+
+  // Get available cluster colors from notes that have relations
+  const availableClusterColors = useMemo(() => {
+    const colors = new Set<number>();
+    contextNotes.forEach(note => {
+      if (note.cluster_index !== null && note.cluster_index !== undefined) {
+        colors.add(note.cluster_index % clusterColors.length);
+      }
+    });
+    return Array.from(colors).sort((a, b) => a - b);
+  }, [contextNotes]);
 
   const handleAddTag = async () => {
     return Promise.resolve();
@@ -268,13 +295,15 @@ const Notes = () => {
     setSelectedCategories([]);
     setSelectedTags([]);
     setSelectedProjects([]);
+    setSelectedClusterColors([]);
   };
 
   const areFiltersActive =
     searchQuery !== "" || 
     selectedCategories.length > 0 || 
     selectedTags.length > 0 || 
-    selectedProjects.length > 0;
+    selectedProjects.length > 0 ||
+    selectedClusterColors.length > 0;
 
   const filteredNoteCount = filteredNotes.length;
 
@@ -592,6 +621,61 @@ const Notes = () => {
           </DropdownMenuContent>
         </DropdownMenu>
 
+        {/* Cluster Color Filter */}
+        {availableClusterColors.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-1"
+              >
+                <Palette size={14} />
+                <span>Relações</span>
+                {selectedClusterColors.length > 0 && (
+                  <Badge className="ml-1 h-5 px-1.5">
+                    {selectedClusterColors.length}
+                  </Badge>
+                )}
+                <ChevronDown size={14} className="ml-1 opacity-70" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-[200px]">
+              <DropdownMenuLabel>Filtrar por Cor</DropdownMenuLabel>
+              <div className="max-h-40 overflow-y-auto">
+                {availableClusterColors.map(colorIndex => {
+                  const color = clusterColors[colorIndex];
+                  const colorNames = ['Azul', 'Verde', 'Roxo', 'Âmbar', 'Rosa', 'Ciano', 'Índigo', 'Teal'];
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={colorIndex}
+                      checked={selectedClusterColors.includes(colorIndex)}
+                      onCheckedChange={() => toggleClusterColor(colorIndex)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-4 h-4 rounded ${color.bg} ${color.darkBg} border`} />
+                        {colorNames[colorIndex] || `Cor ${colorIndex + 1}`}
+                      </div>
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+              </div>
+              {selectedClusterColors.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => setSelectedClusterColors([])} 
+                    className="justify-center text-red-500"
+                  >
+                    <X size={14} className="mr-2" />
+                    Limpar cores
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
         <Button
           variant="outline"
           onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
@@ -672,6 +756,26 @@ const Notes = () => {
             );
           })}
           
+          {selectedClusterColors.map(colorIndex => {
+            const color = clusterColors[colorIndex];
+            const colorNames = ['Azul', 'Verde', 'Roxo', 'Âmbar', 'Rosa', 'Ciano', 'Índigo', 'Teal'];
+            return (
+              <Badge
+                key={`cluster-${colorIndex}`}
+                variant="outline"
+                className="flex items-center gap-1 bg-muted/40"
+              >
+                <div className={`w-3 h-3 rounded ${color.bg} ${color.darkBg} border`} />
+                {colorNames[colorIndex] || `Cor ${colorIndex + 1}`}
+                <X
+                  size={12}
+                  className="cursor-pointer ml-1"
+                  onClick={() => toggleClusterColor(colorIndex)}
+                />
+              </Badge>
+            );
+          })}
+
           {searchQuery && (
             <Badge
               variant="outline"
