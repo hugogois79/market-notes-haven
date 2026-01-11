@@ -1,7 +1,6 @@
-
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Tag, ChevronRight, FolderOpen } from "lucide-react";
+import { Calendar, Tag, ChevronRight, FolderOpen, ExternalLink, Trash2, Printer, FileText } from "lucide-react";
 import { Note, Token } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -11,6 +10,12 @@ import TokenBadge from "./TokenBadge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import HighlightText from "./HighlightText";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 interface ExpenseProject {
   id: string;
@@ -25,6 +30,9 @@ interface NoteCardProps {
   selectedTokenIds?: string[] | null;
   onTokenMatch?: (noteId: string, tokenId: string, matches: boolean) => void;
   searchQuery?: string;
+  onDelete?: (noteId: string) => void;
+  onPrint?: (noteId: string) => void;
+  onPdfAttachment?: (noteId: string) => void;
 }
 
 const NoteCard = ({ 
@@ -33,7 +41,10 @@ const NoteCard = ({
   tagMapping = {},
   selectedTokenIds = null,
   onTokenMatch,
-  searchQuery = ""
+  searchQuery = "",
+  onDelete,
+  onPrint,
+  onPdfAttachment
 }: NoteCardProps) => {
   const navigate = useNavigate();
   const [tokens, setTokens] = useState<Token[]>([]);
@@ -140,17 +151,39 @@ const NoteCard = ({
   // Check if the card is in list view mode based on className
   const isListView = className?.includes("flex-row");
 
+  const handleOpen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/editor/${note.id}`);
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete?.(note.id);
+  };
+
+  const handlePrint = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onPrint?.(note.id);
+  };
+
+  const handlePdfAttachment = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onPdfAttachment?.(note.id);
+  };
+
   return (
-    <Card 
-      className={cn(
-        "h-auto overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1 glass-card cursor-pointer border-l-4",
-        note.category === "Trading" ? "border-l-blue-500" : "border-l-gray-300",
-        isListView ? "flex" : "",
-        className
-      )}
-      onClick={handleNoteClick}
-      data-note-id={note.id}
-    >
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <Card 
+          className={cn(
+            "h-auto overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1 glass-card cursor-pointer border-l-4",
+            note.category === "Trading" ? "border-l-blue-500" : "border-l-gray-300",
+            isListView ? "flex" : "",
+            className
+          )}
+          onClick={handleNoteClick}
+          data-note-id={note.id}
+        >
       {isListView ? (
         // List view layout
         <div className="flex flex-1 p-3">
@@ -291,7 +324,27 @@ const NoteCard = ({
           </CardFooter>
         </>
       )}
-    </Card>
+        </Card>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-48">
+        <ContextMenuItem onClick={handleOpen} className="flex items-center gap-2 cursor-pointer">
+          <ExternalLink size={16} />
+          Abrir
+        </ContextMenuItem>
+        <ContextMenuItem onClick={handleDelete} className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive">
+          <Trash2 size={16} />
+          Eliminar
+        </ContextMenuItem>
+        <ContextMenuItem onClick={handlePrint} className="flex items-center gap-2 cursor-pointer">
+          <Printer size={16} />
+          Imprimir
+        </ContextMenuItem>
+        <ContextMenuItem onClick={handlePdfAttachment} className="flex items-center gap-2 cursor-pointer">
+          <FileText size={16} />
+          PDF Attachment
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 };
 
