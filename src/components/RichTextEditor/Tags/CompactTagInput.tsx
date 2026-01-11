@@ -36,6 +36,17 @@ const CompactTagInput: React.FC<CompactTagInputProps> = ({
 }) => {
   const [tagSearchQuery, setTagSearchQuery] = React.useState("");
 
+  // Filter tags based on search query
+  const searchFilteredTags = React.useMemo(() => {
+    if (!tagSearchQuery.trim()) {
+      return filteredAvailableTags;
+    }
+    const query = tagSearchQuery.toLowerCase();
+    return filteredAvailableTags.filter(tag => 
+      tag.name.toLowerCase().includes(query)
+    );
+  }, [filteredAvailableTags, tagSearchQuery]);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -64,10 +75,10 @@ const CompactTagInput: React.FC<CompactTagInputProps> = ({
           </div>
         </div>
         
-        {filteredAvailableTags.length > 0 && (
+        {searchFilteredTags.length > 0 && (
           <>
             <div className="max-h-32 overflow-y-auto px-1 py-1">
-              {filteredAvailableTags.map((tag) => (
+              {searchFilteredTags.map((tag) => (
                 <DropdownMenuItem
                   key={tag.id}
                   onClick={() => handleSelectTag(tag)}
@@ -80,6 +91,11 @@ const CompactTagInput: React.FC<CompactTagInputProps> = ({
             </div>
             <DropdownMenuSeparator />
           </>
+        )}
+        {tagSearchQuery && searchFilteredTags.length === 0 && filteredAvailableTags.length > 0 && (
+          <div className="px-2 py-2 text-sm text-muted-foreground text-center">
+            No tags found for "{tagSearchQuery}"
+          </div>
         )}
         
         <div className="p-2">
