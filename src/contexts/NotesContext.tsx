@@ -25,7 +25,7 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
   const { data: notesData, isLoading, refetch } = useQuery({
     queryKey: ['notes'],
     queryFn: fetchNotes,
-    staleTime: 0, // Always fetch fresh data on mount
+    staleTime: 30 * 1000, // 30 seconds - reduces unnecessary refetches
   });
 
   // Use notesData directly, fallback to empty array
@@ -103,7 +103,11 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
         
         if (result.note) {
           console.log("Note updated:", result.note.id);
-          await refetch();
+          // Optimistic update - update cache locally instead of refetching
+          queryClient.setQueryData(['notes'], (oldNotes: Note[] | undefined) => {
+            if (!oldNotes) return [result.note];
+            return oldNotes.map(n => n.id === result.note.id ? result.note : n);
+          });
           return result.note;
         }
       }

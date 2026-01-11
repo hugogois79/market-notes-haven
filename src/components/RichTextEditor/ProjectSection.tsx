@@ -41,7 +41,7 @@ const ProjectSection: React.FC<ProjectSectionProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
 
-  // Fetch all active expense projects
+  // Fetch all active expense projects with 5 min staleTime (projects rarely change)
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['expense-projects'],
     queryFn: async () => {
@@ -54,6 +54,7 @@ const ProjectSection: React.FC<ProjectSectionProps> = ({
       if (error) throw error;
       return data as ExpenseProject[];
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes - projects rarely change
   });
   
   const selectedProject = projects.find(p => p.id === selectedProjectId);

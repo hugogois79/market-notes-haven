@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Note } from "@/types";
 import { toast } from "sonner";
 
@@ -10,84 +10,92 @@ interface UseSaveNoteProps {
 export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
   const [isSaving, setIsSaving] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<Partial<Note>>({});
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingChangesRef = useRef<Partial<Note>>({});
 
-  const handleSaveWithChanges = async (changes: Partial<Note>, isAutoSave = false) => {
-    if (isSaving) return;
+  const handleSaveWithChanges = useCallback(async (changes: Partial<Note>, isAutoSave = false) => {
+    // Merge with any pending changes
+    pendingChangesRef.current = { ...pendingChangesRef.current, ...changes };
     
-    if (Object.keys(changes).length === 0) {
-      console.log("No changes to save");
-      return;
+    // Clear any existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
     
-    console.log("Saving changes:", changes);
-    setIsSaving(true);
+    // Debounce: 100ms for manual actions, 500ms for auto-save
+    const delay = isAutoSave ? 500 : 100;
     
-    try {
-      const validatedChanges: Partial<Note> = {};
+    saveTimeoutRef.current = setTimeout(async () => {
+      if (isSaving) return;
       
-      // Only include fields that are explicitly passed in changes
-      if ('title' in changes) {
-        validatedChanges.title = changes.title;
-      }
-      if ('category' in changes) {
-        validatedChanges.category = changes.category;
-      }
-      if ('content' in changes) {
-        validatedChanges.content = changes.content;
-      }
-      if ('tags' in changes) {
-        validatedChanges.tags = Array.isArray(changes.tags) ? changes.tags : 
-          (changes.tags ? [changes.tags] : []);
-      }
-      if ('attachments' in changes) {
-        validatedChanges.attachments = Array.isArray(changes.attachments) ? changes.attachments : 
-          (changes.attachments ? [changes.attachments] : []);
-      }
-      if ('attachment_url' in changes) {
-        validatedChanges.attachment_url = changes.attachment_url;
-      }
-      if ('project_id' in changes) {
-        validatedChanges.project_id = changes.project_id;
-      }
-      if ('summary' in changes) {
-        validatedChanges.summary = changes.summary;
-      }
-      if ('tradeInfo' in changes) {
-        validatedChanges.tradeInfo = changes.tradeInfo;
-      }
-      if ('hasConclusion' in changes) {
-        validatedChanges.hasConclusion = changes.hasConclusion;
+      const changesToSave = { ...pendingChangesRef.current };
+      pendingChangesRef.current = {};
+    
+      if (Object.keys(changesToSave).length === 0) {
+        return;
       }
       
-      console.log("Saving note with validated changes:", validatedChanges);
+      setIsSaving(true);
       
-      await onSave(validatedChanges);
-      
-      // Clear pending changes that were just saved
-      setPendingChanges(prev => {
-        const updated = {...prev};
-        Object.keys(changes).forEach(key => {
-          delete updated[key as keyof Note];
-        });
-        return updated;
-      });
-      
-      if (!isAutoSave) {
-        if (changes.title !== undefined) {
-          toast.success("Title saved successfully");
-        } else if (changes.category !== undefined) {
-          toast.success("Category saved successfully");
-        } else {
-          toast.success("Note saved successfully");
+      try {
+        const validatedChanges: Partial<Note> = {};
+        
+        // Only include fields that are explicitly passed in changes
+        if ('title' in changesToSave) {
+          validatedChanges.title = changesToSave.title;
         }
+        if ('category' in changesToSave) {
+          validatedChanges.category = changesToSave.category;
+        }
+        if ('content' in changesToSave) {
+          validatedChanges.content = changesToSave.content;
+        }
+        if ('tags' in changesToSave) {
+          validatedChanges.tags = Array.isArray(changesToSave.tags) ? changesToSave.tags : 
+            (changesToSave.tags ? [changesToSave.tags] : []);
+        }
+        if ('attachments' in changesToSave) {
+          validatedChanges.attachments = Array.isArray(changesToSave.attachments) ? changesToSave.attachments : 
+            (changesToSave.attachments ? [changesToSave.attachments] : []);
+        }
+        if ('attachment_url' in changesToSave) {
+          validatedChanges.attachment_url = changesToSave.attachment_url;
+        }
+        if ('project_id' in changesToSave) {
+          validatedChanges.project_id = changesToSave.project_id;
+        }
+        if ('summary' in changesToSave) {
+          validatedChanges.summary = changesToSave.summary;
+        }
+        if ('tradeInfo' in changesToSave) {
+          validatedChanges.tradeInfo = changesToSave.tradeInfo;
+        }
+        if ('hasConclusion' in changesToSave) {
+          validatedChanges.hasConclusion = changesToSave.hasConclusion;
+        }
+        
+        await onSave(validatedChanges);
+        
+        // Clear pending changes that were just saved
+        setPendingChanges(prev => {
+          const updated = {...prev};
+          Object.keys(changesToSave).forEach(key => {
+            delete updated[key as keyof Note];
+          });
+          return updated;
+        });
+        
+        if (!isAutoSave) {
+          toast.success("Nota guardada");
+        }
+      } catch (error) {
+        console.error("Error saving note:", error);
+        toast.error("Failed to save note");
+      } finally {
+        setIsSaving(false);
       }
-    } catch (error) {
-      console.error("Error saving note:", error);
-      toast.error("Failed to save note");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    }, delay);
+  }, [onSave, isSaving]);
 
   const handleManualSave = async () => {
     if (Object.keys(pendingChanges).length === 0) return;

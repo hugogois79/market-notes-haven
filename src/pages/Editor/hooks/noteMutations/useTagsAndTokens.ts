@@ -40,9 +40,9 @@ export const useTagsAndTokens = ({ noteId, initialTags = [] }: UseTagsAndTokensP
 
   const { mutate: createTagMutation, isPending: isCreatingTag } = useMutation({
     mutationFn: createNoteTag,
-    onSuccess: (newTag) => {
-      queryClient.invalidateQueries({ queryKey: ['note-tags', noteId] });
-      toast.success('Tag created successfully');
+    onSuccess: () => {
+      // Skip invalidateQueries - rely on optimistic local update for speed
+      toast.success('Tag criada');
     },
     onError: (error: Error) => {
       toast.error(`Failed to create tag: ${error.message}`);
@@ -52,8 +52,8 @@ export const useTagsAndTokens = ({ noteId, initialTags = [] }: UseTagsAndTokensP
   const { mutate: deleteTagMutation, isPending: isDeletingTag } = useMutation({
     mutationFn: deleteNoteTag,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['note-tags', noteId] });
-      toast.success('Tag deleted successfully');
+      // Skip invalidateQueries - rely on optimistic local update for speed
+      toast.success('Tag removida');
     },
     onError: (error: Error) => {
       toast.error(`Failed to delete tag: ${error.message}`);
