@@ -91,6 +91,7 @@ const RelationsTabContent: React.FC<RelationsTabContentProps> = ({ noteId, onRel
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['note-relations', noteId] });
       queryClient.invalidateQueries({ queryKey: ['note-relations-count', noteId] });
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
       toast.success('Relação criada');
       setSearchQuery("");
       onRelationChange?.();
@@ -117,6 +118,7 @@ const RelationsTabContent: React.FC<RelationsTabContentProps> = ({ noteId, onRel
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['note-relations', noteId] });
       queryClient.invalidateQueries({ queryKey: ['note-relations-count', noteId] });
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
       toast.success('Relação removida');
       onRelationChange?.();
     },
