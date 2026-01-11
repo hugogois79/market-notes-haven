@@ -34,6 +34,17 @@ const FullTagInput: React.FC<FullTagInputProps> = ({
 }) => {
   const [tagSearchQuery, setTagSearchQuery] = React.useState("");
 
+  // Filter tags based on search query
+  const searchFilteredTags = React.useMemo(() => {
+    if (!tagSearchQuery.trim()) {
+      return filteredAvailableTags;
+    }
+    const query = tagSearchQuery.toLowerCase();
+    return filteredAvailableTags.filter(tag => 
+      tag.name.toLowerCase().includes(query)
+    );
+  }, [filteredAvailableTags, tagSearchQuery]);
+
   return (
     <div className="flex gap-2">
       <DropdownMenu>
@@ -63,7 +74,7 @@ const FullTagInput: React.FC<FullTagInputProps> = ({
             </div>
           </div>
           <div className="max-h-[180px] overflow-auto">
-            {filteredAvailableTags.map((tag) => (
+            {searchFilteredTags.map((tag) => (
               <DropdownMenuItem
                 key={tag.id}
                 onClick={() => handleSelectTag(tag)}
@@ -73,9 +84,9 @@ const FullTagInput: React.FC<FullTagInputProps> = ({
                 {renderTagCategories(tag)}
               </DropdownMenuItem>
             ))}
-            {filteredAvailableTags.length === 0 && (
+            {searchFilteredTags.length === 0 && (
               <div className="text-center p-2 text-sm text-muted-foreground">
-                No matching tags found
+                {tagSearchQuery ? `No tags found for "${tagSearchQuery}"` : "No matching tags found"}
               </div>
             )}
           </div>
