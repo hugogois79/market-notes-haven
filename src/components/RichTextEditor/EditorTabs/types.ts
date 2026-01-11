@@ -48,3 +48,7 @@ export interface AttachmentTabContentProps {
   attachments?: string[];
   onAttachmentChange?: (url: string | null) => void;
 }
+
+export interface RelationsTabContentProps {
+  noteId: string;
+}
