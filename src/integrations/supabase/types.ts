@@ -5422,6 +5422,8 @@ export type Database = {
         Args: { p_account_id: string }
         Returns: number
       }
+      exec_sql: { Args: { sql_query: string }; Returns: Json }
+      get_schema_info: { Args: never; Returns: Json }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
