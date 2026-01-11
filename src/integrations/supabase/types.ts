@@ -2365,6 +2365,36 @@ export type Database = {
           },
         ]
       }
+      memories: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          key: string
+          updated_at: string | null
+          user_id: number
+          value: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          key: string
+          updated_at?: string | null
+          user_id: number
+          value: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          key?: string
+          updated_at?: string | null
+          user_id?: number
+          value?: string
+        }
+        Relationships: []
+      }
       monthly_objectives: {
         Row: {
           category: string | null
