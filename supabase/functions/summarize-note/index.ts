@@ -13,7 +13,10 @@ const corsHeaders = {
 // Input validation schema
 const requestSchema = z.object({
   content: z.string().min(1, "Content cannot be empty"),
-  noteId: z.string().uuid("Invalid note ID format").optional(),
+  noteId: z.preprocess(
+    (val) => (val === "" || val === null) ? undefined : val,
+    z.string().uuid("Invalid note ID format").optional()
+  ),
   maxLength: z.number().min(100).max(2000).default(500),
   summarizeTradeChat: z.boolean().default(false),
   formatAsBulletPoints: z.boolean().default(false),
