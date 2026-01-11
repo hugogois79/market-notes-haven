@@ -60,7 +60,7 @@ const FullTagInput: React.FC<FullTagInputProps> = ({
             <Tag className="ml-1 h-3 w-3 shrink-0 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-[200px]">
+        <DropdownMenuContent className="w-[200px] z-50 bg-popover text-popover-foreground border shadow-md">
           <div className="p-2">
             <div className="relative mb-2">
               <Search className="absolute left-2 top-1.5 h-4 w-4 text-muted-foreground" />
