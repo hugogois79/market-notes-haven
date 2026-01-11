@@ -1694,6 +1694,13 @@ export type Database = {
             foreignKeyName: "kanban_cards_list_id_fkey"
             columns: ["list_id"]
             isOneToOne: false
+            referencedRelation: "ai_board_structure"
+            referencedColumns: ["list_id"]
+          },
+          {
+            foreignKeyName: "kanban_cards_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
             referencedRelation: "kanban_lists"
             referencedColumns: ["id"]
           },
@@ -1816,6 +1823,13 @@ export type Database = {
             foreignKeyName: "kanban_labels_board_id_fkey"
             columns: ["board_id"]
             isOneToOne: false
+            referencedRelation: "ai_board_structure"
+            referencedColumns: ["board_id"]
+          },
+          {
+            foreignKeyName: "kanban_labels_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
             referencedRelation: "kanban_boards"
             referencedColumns: ["id"]
           },
@@ -1850,6 +1864,13 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "kanban_lists_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "ai_board_structure"
+            referencedColumns: ["board_id"]
+          },
           {
             foreignKeyName: "kanban_lists_board_id_fkey"
             columns: ["board_id"]
@@ -5439,6 +5460,15 @@ export type Database = {
       }
     }
     Views: {
+      ai_board_structure: {
+        Row: {
+          board_id: string | null
+          board_name: string | null
+          list_id: string | null
+          list_name: string | null
+        }
+        Relationships: []
+      }
       tag_usage_counts: {
         Row: {
           category_id: string | null
