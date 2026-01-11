@@ -1,10 +1,11 @@
 
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Paperclip } from "lucide-react";
+import { Edit, Paperclip, Link2 } from "lucide-react";
 import { EditorTabsProps } from "./types";
 import EditorTabContent from "./EditorTabContent";
 import AttachmentTabContent from "./AttachmentTabContent";
+import RelationsTabContent from "./RelationsTabContent";
 import { useTabState, useCursorPlacement, useHandleContainerClick } from "./useTabState";
 
 const EditorTabs: React.FC<EditorTabsProps> = ({
@@ -62,7 +63,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
   return (
     <Tabs defaultValue="editor" className="w-full flex flex-col h-full" onValueChange={setActiveTab}>
       <div className="flex justify-between items-center px-1 border-b sticky top-0 bg-background z-50">
-        <TabsList className="grid grid-cols-2 w-auto h-6">
+        <TabsList className="grid grid-cols-3 w-auto h-6">
           <TabsTrigger value="editor" className="flex items-center gap-0.5 px-2 text-xs h-5">
             <Edit className="h-3 w-3" />
             <span>Editor</span>
@@ -70,6 +71,10 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
           <TabsTrigger value="attachment" className="flex items-center gap-0.5 px-2 text-xs h-5">
             <Paperclip className="h-3 w-3" />
             <span>Attachment</span>
+          </TabsTrigger>
+          <TabsTrigger value="relations" className="flex items-center gap-0.5 px-2 text-xs h-5">
+            <Link2 className="h-3 w-3" />
+            <span>Relations</span>
           </TabsTrigger>
         </TabsList>
       </div>
@@ -105,6 +110,10 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
           attachments={attachments}
           onAttachmentChange={onAttachmentChange}
         />
+      </TabsContent>
+
+      <TabsContent value="relations" className="mt-0 flex-1 overflow-auto">
+        <RelationsTabContent noteId={noteId} />
       </TabsContent>
     </Tabs>
   );
