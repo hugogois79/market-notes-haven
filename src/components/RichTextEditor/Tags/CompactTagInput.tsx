@@ -56,7 +56,7 @@ const CompactTagInput: React.FC<CompactTagInputProps> = ({
           <ChevronDown size={14} className="opacity-70" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-64 z-50 bg-popover text-popover-foreground border shadow-md">
+      <DropdownMenuContent className="w-64 z-[100] bg-popover text-popover-foreground border shadow-lg">
         <DropdownMenuLabel>
           {categoryFilter ? `Tags for ${categoryFilter}` : "Select or Create Tag"}
         </DropdownMenuLabel>
