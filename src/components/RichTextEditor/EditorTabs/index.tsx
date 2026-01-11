@@ -20,6 +20,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
   hasConclusion = true,
   category = "General",
   onPrint,
+  onRelationChange,
   // Use external refs/functions if provided, otherwise use internal ones
   editorRef: externalEditorRef,
   execCommand: externalExecCommand,
@@ -113,7 +114,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
       </TabsContent>
 
       <TabsContent value="relations" className="mt-0 flex-1 overflow-auto">
-        <RelationsTabContent noteId={noteId} />
+        <RelationsTabContent noteId={noteId} onRelationChange={onRelationChange} />
       </TabsContent>
     </Tabs>
   );

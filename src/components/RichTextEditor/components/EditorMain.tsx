@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import EditorHeader from "../EditorHeader";
 import EditorStatusBar from "../EditorStatusBar";
@@ -40,6 +40,7 @@ interface EditorMainProps {
   onCategoryChange: (category: string) => void;
   isSaving: boolean;
   lastSaved: Date | null;
+  setLastSaved?: (date: Date) => void;
   handleManualSave: () => void;
   summary?: string;
   onSummaryGenerated?: (summary: string, hasConclusion?: boolean) => void;
@@ -83,6 +84,7 @@ const EditorMain: React.FC<EditorMainProps> = ({
   onCategoryChange,
   isSaving,
   lastSaved,
+  setLastSaved,
   handleManualSave,
   summary = "",
   onSummaryGenerated,
@@ -121,6 +123,13 @@ const EditorMain: React.FC<EditorMainProps> = ({
       }
     }
   };
+
+  // Handle relation changes - update lastSaved to show feedback
+  const handleRelationChange = useCallback(() => {
+    if (setLastSaved) {
+      setLastSaved(new Date());
+    }
+  }, [setLastSaved]);
 
   return (
     <div className="flex flex-col h-full max-h-[calc(100vh-100px)] overflow-hidden">
@@ -207,6 +216,7 @@ const EditorMain: React.FC<EditorMainProps> = ({
                   onAttachmentChange={onAttachmentChange}
                   hasConclusion={hasConclusion}
                   category={category}
+                  onRelationChange={handleRelationChange}
                   editorRef={editorRef}
                   execCommand={execCommand}
                   formatTableCells={formatTableCells}
