@@ -1,6 +1,6 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Tag, ChevronRight, FolderOpen, ExternalLink, Trash2, Printer, FileText } from "lucide-react";
+import { Calendar, Tag, ChevronRight, FolderOpen, ExternalLink, Trash2, Printer, FileText, Link2 } from "lucide-react";
 import { Note, Token } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -64,6 +64,24 @@ const NoteCard = ({
       return data as ExpenseProject;
     },
     enabled: !!note.project_id,
+  });
+
+  // Fetch relations count
+  const { data: relationsCount = 0 } = useQuery({
+    queryKey: ['note-relations-count', note.id],
+    queryFn: async () => {
+      if (!note.id || note.id.toString().startsWith('temp-')) return 0;
+      
+      const { count, error } = await supabase
+        .from('note_relations')
+        .select('*', { count: 'exact', head: true })
+        .or(`source_note_id.eq.${note.id},target_note_id.eq.${note.id}`);
+      
+      if (error) return 0;
+      return count || 0;
+    },
+    enabled: !!note.id && !note.id.toString().startsWith('temp-'),
+    staleTime: 30 * 1000,
   });
   
   useEffect(() => {
@@ -206,6 +224,12 @@ const NoteCard = ({
             <div className="flex items-center text-xs text-muted-foreground">
               <Calendar size={12} className="mr-1" />
               <span>{formatDate(note.updatedAt || new Date())}</span>
+              {relationsCount > 0 && (
+                <div className="flex items-center gap-1 ml-2 text-primary">
+                  <Link2 size={12} />
+                  <span className="font-medium">{relationsCount}</span>
+                </div>
+              )}
             </div>
             
             <div className="flex flex-wrap items-center gap-1 mt-1.5">
@@ -273,6 +297,12 @@ const NoteCard = ({
             <div className="flex items-center gap-1 text-xs text-muted-foreground mr-auto">
               <Calendar size={12} />
               <span>{formatDate(note.updatedAt || new Date())}</span>
+              {relationsCount > 0 && (
+                <div className="flex items-center gap-1 ml-2 text-primary">
+                  <Link2 size={12} />
+                  <span className="font-medium">{relationsCount}</span>
+                </div>
+              )}
             </div>
             
             {/* Combined project, tags and tokens section */}
