@@ -1741,18 +1741,21 @@ export type Database = {
       kanban_checklists: {
         Row: {
           card_id: string | null
+          created_at: string | null
           id: string
           position: number
           title: string
         }
         Insert: {
           card_id?: string | null
+          created_at?: string | null
           id?: string
           position: number
           title: string
         }
         Update: {
           card_id?: string | null
+          created_at?: string | null
           id?: string
           position?: number
           title?: string
