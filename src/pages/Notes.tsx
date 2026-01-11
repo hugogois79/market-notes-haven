@@ -28,6 +28,18 @@ import { fetchTags } from "@/services/tag";
 import { useNotes } from "@/contexts/NotesContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useSemanticSearch } from "@/hooks/useSemanticSearch";
+import { printNote, printNoteWithAttachments } from "@/utils/printUtils";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ExpenseProject {
   id: string;
@@ -60,7 +72,7 @@ import TagsContent from "@/components/notes/TagsContent";
 const Notes = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { notes: contextNotes, isLoading: isLoadingContextNotes, refetch } = useNotes();
+  const { notes: contextNotes, isLoading: isLoadingContextNotes, refetch, handleDeleteNote } = useNotes();
   const [activeMainTab, setActiveMainTab] = useState("notes");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -76,6 +88,7 @@ const Notes = () => {
   const [tagSearchQuery, setTagSearchQuery] = useState("");
   const [projectSearchQuery, setProjectSearchQuery] = useState("");
   const { isSearching, searchResults, semanticSearch, clearSearch } = useSemanticSearch();
+  const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
 
   // Fetch projects for filter
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery({
@@ -265,6 +278,71 @@ const Notes = () => {
 
   const selectedTagObjects = tags.filter((tag) => selectedTags.includes(tag.name));
   const selectedProjectObjects = projects.filter((project) => selectedProjects.includes(project.id));
+
+  // Print handler
+  const handlePrintNote = useCallback((noteId: string) => {
+    const note = contextNotes.find(n => n.id === noteId);
+    if (note) {
+      printNote({
+        title: note.title,
+        content: note.content,
+        category: note.category,
+        tags: note.tags,
+        summary: note.summary,
+        createdAt: note.createdAt,
+        updatedAt: note.updatedAt,
+      });
+    }
+  }, [contextNotes]);
+
+  // Delete handlers
+  const handleDeleteClick = useCallback((noteId: string) => {
+    setNoteToDelete(noteId);
+  }, []);
+
+  const handleDeleteNoteConfirm = useCallback(async () => {
+    if (!noteToDelete) return;
+    try {
+      const success = await handleDeleteNote(noteToDelete);
+      if (success) {
+        toast.success("Nota eliminada com sucesso");
+      }
+    } catch (error) {
+      toast.error("Erro ao eliminar nota");
+    } finally {
+      setNoteToDelete(null);
+    }
+  }, [noteToDelete, handleDeleteNote]);
+
+  // PDF Attachment handler
+  const handlePdfAttachment = useCallback(async (noteId: string) => {
+    const note = contextNotes.find(n => n.id === noteId);
+    if (!note) return;
+    
+    // Get PDF attachments
+    const attachments = note.attachments?.filter(a => a.toLowerCase().endsWith('.pdf')) || [];
+    
+    if (attachments.length === 0) {
+      toast.info("Esta nota não tem anexos PDF");
+      return;
+    }
+    
+    try {
+      await printNoteWithAttachments(
+        {
+          title: note.title,
+          content: note.content,
+          category: note.category,
+          tags: note.tags,
+          summary: note.summary,
+        },
+        attachments,
+        (message) => toast.info(message)
+      );
+    } catch (error) {
+      toast.error("Erro ao gerar PDF com anexos");
+    }
+  }, [contextNotes]);
 
   return (
     <div className="container mx-auto py-4">
@@ -665,6 +743,9 @@ const Notes = () => {
                 className={viewMode === "list" ? "flex-row" : ""}
                 tagMapping={tagMapping}
                 searchQuery={searchQuery}
+                onDelete={handleDeleteClick}
+                onPrint={handlePrintNote}
+                onPdfAttachment={handlePdfAttachment}
               />
             ))}
           </div>
@@ -680,6 +761,24 @@ const Notes = () => {
           <TagsContent />
         </TabsContent>
       </Tabs>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!noteToDelete} onOpenChange={() => setNoteToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar Nota</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem a certeza que deseja eliminar esta nota? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteNoteConfirm}>
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
