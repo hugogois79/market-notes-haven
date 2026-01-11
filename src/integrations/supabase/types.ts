@@ -2497,6 +2497,7 @@ export type Database = {
           attachment_url: string | null
           attachments: string[] | null
           category: string | null
+          cluster_index: number | null
           content: string | null
           created_at: string | null
           embedding: string | null
@@ -2514,6 +2515,7 @@ export type Database = {
           attachment_url?: string | null
           attachments?: string[] | null
           category?: string | null
+          cluster_index?: number | null
           content?: string | null
           created_at?: string | null
           embedding?: string | null
@@ -2531,6 +2533,7 @@ export type Database = {
           attachment_url?: string | null
           attachments?: string[] | null
           category?: string | null
+          cluster_index?: number | null
           content?: string | null
           created_at?: string | null
           embedding?: string | null
@@ -5524,6 +5527,10 @@ export type Database = {
               updated_at: string
             }[]
           }
+      recalculate_note_clusters: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       reorder_cards: {
         Args: { card_id: string; new_list_id: string; new_position: number }
         Returns: undefined

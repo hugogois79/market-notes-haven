@@ -115,3 +115,18 @@ export function getClusterColor(
   
   return clusterColors[colorIndex];
 }
+
+/**
+ * Get cluster color directly by index (for pre-computed clusters from DB)
+ * Returns null if clusterIndex is null/undefined
+ */
+export function getClusterColorByIndex(
+  clusterIndex: number | null | undefined
+): { bg: string; darkBg: string } | null {
+  if (clusterIndex === null || clusterIndex === undefined) {
+    return null;
+  }
+  
+  const colorIndex = clusterIndex % clusterColors.length;
+  return clusterColors[colorIndex];
+}

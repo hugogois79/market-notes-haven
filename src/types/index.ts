@@ -68,4 +68,5 @@ export interface Note {
   hasConclusion?: boolean;
   tradingSettlementNotes?: TradingSettlementNote[];
   project_id?: string | null;
+  cluster_index?: number | null;
 }
