@@ -2720,6 +2720,48 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_snapshots: {
+        Row: {
+          cashflow_snapshot: Json | null
+          created_at: string
+          id: string
+          name: string | null
+          notes: string | null
+          projected_1y: number | null
+          projected_3m: number | null
+          projected_6m: number | null
+          snapshot_date: string
+          total_value_at_snapshot: number | null
+          user_id: string
+        }
+        Insert: {
+          cashflow_snapshot?: Json | null
+          created_at?: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          projected_1y?: number | null
+          projected_3m?: number | null
+          projected_6m?: number | null
+          snapshot_date?: string
+          total_value_at_snapshot?: number | null
+          user_id: string
+        }
+        Update: {
+          cashflow_snapshot?: Json | null
+          created_at?: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          projected_1y?: number | null
+          projected_3m?: number | null
+          projected_6m?: number | null
+          snapshot_date?: string
+          total_value_at_snapshot?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       portfolio_snapshots: {
         Row: {
           allocation_by_category: Json | null
