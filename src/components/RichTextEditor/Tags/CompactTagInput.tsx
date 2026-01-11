@@ -75,9 +75,13 @@ const CompactTagInput: React.FC<CompactTagInputProps> = ({
           </div>
         </div>
         
-        {searchFilteredTags.length > 0 && (
+        {isLoadingTags ? (
+          <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+            A carregar tags...
+          </div>
+        ) : searchFilteredTags.length > 0 ? (
           <>
-            <div className="max-h-32 overflow-y-auto px-1 py-1">
+            <div className="max-h-48 overflow-y-auto px-1 py-1">
               {searchFilteredTags.map((tag) => (
                 <DropdownMenuItem
                   key={tag.id}
@@ -91,7 +95,11 @@ const CompactTagInput: React.FC<CompactTagInputProps> = ({
             </div>
             <DropdownMenuSeparator />
           </>
-        )}
+        ) : filteredAvailableTags.length === 0 && !tagSearchQuery ? (
+          <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+            Nenhuma tag disponível
+          </div>
+        ) : null}
         {tagSearchQuery && searchFilteredTags.length === 0 && filteredAvailableTags.length > 0 && (
           <div className="px-2 py-2 text-sm text-muted-foreground text-center">
             No tags found for "{tagSearchQuery}"
