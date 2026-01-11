@@ -1,5 +1,5 @@
 
-import React, { Dispatch, SetStateAction, useState } from "react";
+import React, { Dispatch, SetStateAction } from "react";
 import { Tags } from "lucide-react";
 import { Tag } from "@/types";
 import TagList from "./Tags/TagList";
@@ -33,12 +33,7 @@ const TagsSection: React.FC<TagsSectionProps> = ({
   compact = false,
   categoryFilter,
 }) => {
-  const [tagSearchQuery, setTagSearchQuery] = useState("");
   const availableTags = getAvailableTagsForSelection();
-  
-  const filteredAvailableTags = availableTags.filter(tag => 
-    tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
-  );
 
   const renderTagCategories = (tag: Tag) => {
     if (!tag.categories || tag.categories.length === 0) {
@@ -71,7 +66,7 @@ const TagsSection: React.FC<TagsSectionProps> = ({
           handleAddTag={handleAddTag}
           handleSelectTag={handleSelectTag}
           isLoadingTags={isLoadingTags}
-          filteredAvailableTags={filteredAvailableTags}
+          filteredAvailableTags={availableTags}
           renderTagCategories={renderTagCategories}
           categoryFilter={categoryFilter || undefined}
         />
@@ -100,7 +95,7 @@ const TagsSection: React.FC<TagsSectionProps> = ({
         handleAddTag={handleAddTag}
         handleSelectTag={handleSelectTag}
         isLoadingTags={isLoadingTags}
-        filteredAvailableTags={filteredAvailableTags}
+        filteredAvailableTags={availableTags}
         renderTagCategories={renderTagCategories}
         categoryFilter={categoryFilter || undefined}
       />
