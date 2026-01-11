@@ -68,6 +68,18 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
   const [content, setContent] = useState(currentNote.content);
   const [tagInput, setTagInput] = useState("");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  
+  // Track the note ID to detect when we switch notes
+  const previousNoteIdRef = React.useRef(currentNote.id);
+  
+  // Sync content state when currentNote changes (different note loaded)
+  React.useEffect(() => {
+    if (currentNote.id !== previousNoteIdRef.current) {
+      console.log("Note changed, syncing content from:", previousNoteIdRef.current, "to:", currentNote.id);
+      setContent(currentNote.content);
+      previousNoteIdRef.current = currentNote.id;
+    }
+  }, [currentNote.id, currentNote.content]);
 
   // Enhanced manual save that includes current content state
   const handleManualSaveWithContent = useCallback(() => {
@@ -78,13 +90,18 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
     // Then trigger the manual save
     handleManualSave();
   }, [content, currentNote.content, onContentChange, handleManualSave]);
-  // Debounce the content change handler
+  // Debounce the content change handler - but also sync to pending changes immediately
   const debouncedContentChange = useDebounce((value: string) => {
     setContent(value);
+    // Also sync to pending changes so any save action includes current content
+    onContentChange(value);
   }, 500);
 
   // Handler for updating content
   const handleContentUpdate = (value: string) => {
+    // Update local state immediately for responsiveness
+    setContent(value);
+    // Debounce the sync to pending changes
     debouncedContentChange(value);
   };
 

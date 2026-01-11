@@ -118,9 +118,12 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     console.log("Current localCategory:", localCategory);
     console.log("Current note category:", currentNote.category);
     console.log("Category to save:", categoryToSave);
-    console.log("Fields to save:", { tags: processedTags, category: categoryToSave });
+    console.log("Pending changes (including content):", pendingChanges);
+    console.log("Fields to save:", { tags: processedTags, category: categoryToSave, ...pendingChanges });
     
+    // Include any pending content changes when saving tags
     handleSaveWithChanges({ 
+      ...pendingChanges, // Include pending content and other changes
       tags: processedTags,
       category: categoryToSave // Explicitly preserve the category
     }, false);
@@ -131,7 +134,9 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     const result = handleAttachmentChange(attachmentData);
     if (result) {
       console.log("Saving attachment change:", result);
+      console.log("Including pending changes:", pendingChanges);
       handleSaveWithChanges({
+        ...pendingChanges, // Include pending content and other changes
         attachment_url: result.attachment_url,
         attachments: result.attachments
       }, false);
@@ -141,8 +146,12 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
   // Handle project change and save immediately
   const handleProjectChangeAndSave = (projectId: string | null) => {
     console.log("useNoteMutations: Project change and save:", projectId);
+    console.log("Including pending changes:", pendingChanges);
     handleProjectChange(projectId);
-    handleSaveWithChanges({ project_id: projectId }, false);
+    handleSaveWithChanges({ 
+      ...pendingChanges, // Include pending content and other changes
+      project_id: projectId 
+    }, false);
   };
 
   return {
