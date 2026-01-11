@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 interface RelationsTabContentProps {
   noteId: string;
+  onRelationChange?: () => void;
 }
 
 interface NoteRelation {
@@ -28,7 +29,7 @@ interface Note {
   created_at: string;
 }
 
-const RelationsTabContent: React.FC<RelationsTabContentProps> = ({ noteId }) => {
+const RelationsTabContent: React.FC<RelationsTabContentProps> = ({ noteId, onRelationChange }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const queryClient = useQueryClient();
 
@@ -89,8 +90,10 @@ const RelationsTabContent: React.FC<RelationsTabContentProps> = ({ noteId }) => 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['note-relations', noteId] });
+      queryClient.invalidateQueries({ queryKey: ['note-relations-count', noteId] });
       toast.success('Relação criada');
       setSearchQuery("");
+      onRelationChange?.();
     },
     onError: (error: Error) => {
       if (error.message.includes('unique')) {
@@ -113,7 +116,9 @@ const RelationsTabContent: React.FC<RelationsTabContentProps> = ({ noteId }) => 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['note-relations', noteId] });
+      queryClient.invalidateQueries({ queryKey: ['note-relations-count', noteId] });
       toast.success('Relação removida');
+      onRelationChange?.();
     },
     onError: () => {
       toast.error('Erro ao remover relação');

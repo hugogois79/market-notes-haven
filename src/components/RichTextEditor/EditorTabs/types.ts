@@ -13,6 +13,7 @@ export interface EditorTabsProps {
   hasConclusion?: boolean;
   category?: string;
   onPrint?: () => void;
+  onRelationChange?: () => void;
   // Formatting functions passed from parent
   editorRef?: React.RefObject<HTMLDivElement>;
   execCommand?: (command: string, value?: string) => void;
@@ -51,4 +52,5 @@ export interface AttachmentTabContentProps {
 
 export interface RelationsTabContentProps {
   noteId: string;
+  onRelationChange?: () => void;
 }

@@ -220,6 +220,7 @@ const NoteEditorCore: React.FC<NoteEditorCoreProps> = ({
       onCategoryChange={onCategoryChange}
       isSaving={isSaving}
       lastSaved={lastSaved}
+      setLastSaved={setLastSaved}
       handleManualSave={handleManualSaveWithContent}
       summary={currentNote.summary}
       onSummaryGenerated={onSummaryGenerated}
