@@ -60,6 +60,8 @@ export const useBasicNoteFields = (currentNote: Note) => {
       summary,
       hasConclusion: newHasConclusion
     });
+    // Return the values so the caller can save them if needed
+    return { summary, hasConclusion: newHasConclusion };
   };
 
   const handleProjectChange = (projectId: string | null) => {
