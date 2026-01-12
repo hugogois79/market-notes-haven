@@ -14,37 +14,17 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Eye, GitCompare, TrendingUp, TrendingDown } from "lucide-react";
+import { Trash2, Eye, GitCompare, TrendingUp, TrendingDown, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Json } from "@/integrations/supabase/types";
-
-interface PlanSnapshot {
-  id: string;
-  snapshot_date: string;
-  name: string | null;
-  notes: string | null;
-  projected_3m: number | null;
-  projected_6m: number | null;
-  projected_1y: number | null;
-  total_value_at_snapshot: number | null;
-  cashflow_snapshot: Json;
-  created_at: string;
-}
-
-interface CashflowItem {
-  id: string;
-  date: string;
-  amount: number;
-  asset_id: string | null;
-  description: string;
-  category: string | null;
-}
+import { PlanSnapshot, CashflowItem } from "./restore/types";
+import RestorePlanDialog from "./restore/RestorePlanDialog";
 
 const formatCurrency = (value: number | null) => {
   if (value === null) return "-";
@@ -72,6 +52,8 @@ export default function PlanVersionsList({
   const queryClient = useQueryClient();
   const [selectedSnapshot, setSelectedSnapshot] = useState<PlanSnapshot | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [restoreSnapshot, setRestoreSnapshot] = useState<PlanSnapshot | null>(null);
+  const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
 
   const { data: snapshots = [], isLoading } = useQuery({
     queryKey: ["plan-snapshots"],
@@ -110,6 +92,11 @@ export default function PlanVersionsList({
   const handleViewDetails = (snapshot: PlanSnapshot) => {
     setSelectedSnapshot(snapshot);
     setDetailsOpen(true);
+  };
+
+  const handleRestore = (snapshot: PlanSnapshot) => {
+    setRestoreSnapshot(snapshot);
+    setRestoreDialogOpen(true);
   };
 
   const getDifference = (snapshotValue: number | null, currentValue: number) => {
@@ -160,7 +147,7 @@ export default function PlanVersionsList({
               <TableHead className="text-right py-2">Proj. 3M</TableHead>
               <TableHead className="text-right py-2">Proj. 1A</TableHead>
               <TableHead className="text-right py-2">Transações</TableHead>
-              <TableHead className="text-right py-2 w-[80px]">Acções</TableHead>
+              <TableHead className="text-right py-2 w-[100px]">Acções</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -215,6 +202,15 @@ export default function PlanVersionsList({
                         title="Ver detalhes"
                       >
                         <Eye className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-primary hover:text-primary"
+                        onClick={() => handleRestore(snapshot)}
+                        title="Restaurar"
+                      >
+                        <RotateCcw className="h-3 w-3" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -358,8 +354,39 @@ export default function PlanVersionsList({
               </div>
             </div>
           )}
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setDetailsOpen(false)}
+            >
+              Fechar
+            </Button>
+            <Button 
+              onClick={() => {
+                setDetailsOpen(false);
+                if (selectedSnapshot) handleRestore(selectedSnapshot);
+              }}
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Restaurar Este Plano
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Restore Dialog */}
+      <RestorePlanDialog
+        open={restoreDialogOpen}
+        onOpenChange={setRestoreDialogOpen}
+        snapshot={restoreSnapshot}
+        currentProjections={{
+          projected3M: currentProjected3M,
+          projected6M: currentProjected6M,
+          projected1Y: currentProjected1Y,
+          totalValue: currentTotalValue,
+        }}
+      />
     </>
   );
 }
