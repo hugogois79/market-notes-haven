@@ -704,13 +704,17 @@ export default function WorkFlowTab() {
       if (error) throw error;
       return data as WorkflowFile[];
     },
-    staleTime: 30 * 1000, // 30 seconds cache (changes more frequently)
+    staleTime: 60 * 1000, // 1 minute cache
   });
 
-  // Fetch transactions linked to workflow files (by invoice_file_url)
+  // Fetch transactions linked to workflow files (by invoice_file_url) - optimized to only fetch user's files
   const { data: linkedTransactions } = useQuery({
-    queryKey: ["workflow-linked-transactions"],
+    queryKey: ["workflow-linked-transactions", workflowFiles?.map(f => f.file_url)],
     queryFn: async () => {
+      // Only query transactions for the current user's file URLs
+      const fileUrls = workflowFiles?.map(f => f.file_url).filter(Boolean) || [];
+      if (fileUrls.length === 0) return [];
+      
       const { data, error } = await supabase
         .from("financial_transactions")
         .select(`
@@ -728,12 +732,13 @@ export default function WorkFlowTab() {
             name
           )
         `)
-        .not("invoice_file_url", "is", null);
+        .in("invoice_file_url", fileUrls);
       
       if (error) throw error;
       return data;
     },
-    staleTime: 30 * 1000, // 30 seconds cache
+    staleTime: 2 * 60 * 1000, // 2 minutes cache (transactions change less frequently)
+    enabled: !!workflowFiles && workflowFiles.length > 0, // Only run after files are loaded
   });
 
   // Fetch all projects for dropdown
@@ -773,7 +778,7 @@ export default function WorkFlowTab() {
     enabled: markCompleteWarningOpen || !!fileToComplete, // Only load when needed
   });
 
-  // Fetch companies for mark as complete and move dialog
+  // Fetch companies for mark as complete and move dialog - lazy load when dialog opens
   const { data: allCompanies } = useQuery({
     queryKey: ["all-companies"],
     queryFn: async () => {
@@ -786,6 +791,7 @@ export default function WorkFlowTab() {
       return data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes cache
+    enabled: moveFileDialogOpen || markCompleteWarningOpen || !!fileToComplete, // Only load when needed
   });
 
   // Fetch folders for selected company in move file dialog - lazy load
