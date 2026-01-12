@@ -501,7 +501,20 @@ export default function WorkFlowTab() {
         return prevColumns.map(col => {
           const savedConfig = columnConfig.find(c => c.column_id === col.id);
           if (savedConfig && savedConfig.options) {
-            return { ...col, options: savedConfig.options as unknown as ColumnOption[] };
+            let mergedOptions = savedConfig.options as unknown as ColumnOption[];
+            
+            // For status column, merge with defaults to ensure all options are available
+            if (col.id === 'status') {
+              const savedLabels = new Set(mergedOptions.map(o => o.label.toLowerCase()));
+              const missingOptions = DEFAULT_STATUS_OPTIONS.filter(
+                opt => !savedLabels.has(opt.label.toLowerCase())
+              );
+              if (missingOptions.length > 0) {
+                mergedOptions = [...mergedOptions, ...missingOptions];
+              }
+            }
+            
+            return { ...col, options: mergedOptions };
           }
           return col;
         });
