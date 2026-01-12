@@ -5,9 +5,10 @@ import { Sparkles, RefreshCw, AlertCircle, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-// Set the worker source for pdf.js
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Set the worker source for pdf.js (use local bundled worker, not CDN)
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface DocumentAIPanelProps {
   fileUrl: string;
