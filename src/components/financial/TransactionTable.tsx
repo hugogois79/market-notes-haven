@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import {
   Table,
@@ -216,12 +217,33 @@ export default function TransactionTable({
                           onClick={async (e) => {
                             e.stopPropagation();
                             try {
-                              const response = await fetch(transaction.invoice_file_url);
+                              const fileUrl = transaction.invoice_file_url;
+                              let downloadUrl = fileUrl;
+                              
+                              // Check if it's a Supabase Storage URL and get a signed URL
+                              if (fileUrl.includes('/storage/v1/object/')) {
+                                // Extract bucket and path from URL
+                                const match = fileUrl.match(/\/storage\/v1\/object\/(?:public|sign)?\/([^/]+)\/(.+)/);
+                                if (match) {
+                                  const [, bucket, path] = match;
+                                  const { data: signedData, error: signedError } = await supabase
+                                    .storage
+                                    .from(bucket)
+                                    .createSignedUrl(path, 60); // 60 seconds expiry
+                                  
+                                  if (!signedError && signedData?.signedUrl) {
+                                    downloadUrl = signedData.signedUrl;
+                                  }
+                                }
+                              }
+                              
+                              const response = await fetch(downloadUrl);
+                              if (!response.ok) throw new Error('Failed to fetch file');
                               const blob = await response.blob();
                               const url = window.URL.createObjectURL(blob);
                               const a = document.createElement('a');
                               a.href = url;
-                              const filename = transaction.invoice_file_url.split('/').pop() || 'anexo';
+                              const filename = fileUrl.split('/').pop() || 'anexo';
                               a.download = filename;
                               document.body.appendChild(a);
                               a.click();
