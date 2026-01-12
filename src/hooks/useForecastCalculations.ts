@@ -46,6 +46,7 @@ export function useForecastCalculations(adjustments: ForecastAdjustment[] = []) 
         .select("id, name, category, subcategory, current_value, profit_loss_value, appreciation_type, annual_rate_percent, consider_appreciation")
         .eq("user_id", user.id)
         .neq("status", "In Recovery")
+        .is("deleted_at", null)
         .order("category")
         .order("name");
 
