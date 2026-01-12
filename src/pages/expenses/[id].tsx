@@ -235,11 +235,9 @@ const ExpenseDetailPage = () => {
           // Dynamically import pdf.js
           const pdfjsLib = await import('pdfjs-dist');
           
-          // Set up the worker using Vite's import.meta.url approach
-          pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-            'pdfjs-dist/build/pdf.worker.mjs',
-            import.meta.url
-          ).toString();
+          // Set up the worker using Vite's ?url import for proper bundling
+          const workerModule = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
+          pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
 
           // Process all receipts
           const receiptPromises = expensesWithReceipts.map(async (expense) => {
