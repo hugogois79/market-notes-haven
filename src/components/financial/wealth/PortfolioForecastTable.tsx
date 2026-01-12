@@ -13,16 +13,6 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, X, ChevronRight, ChevronDown, Building2, Car, Anchor, Palette, Watch, Coins, Circle, TrendingDown, TrendingUp, Trash2 } from "lucide-react";
@@ -96,37 +86,21 @@ export default function PortfolioForecastTable() {
     "6m": "none",
     "1y": "none",
   });
-  const [assetToDelete, setAssetToDelete] = useState<{ id: string; name: string; value: number } | null>(null);
 
-  // Soft delete asset mutation
+  // Delete asset mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("wealth_assets")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", id);
+      const { error } = await supabase.from("wealth_assets").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wealth-assets"] });
-      queryClient.invalidateQueries({ queryKey: ["wealth-assets-forecast"] });
-      toast.success("Ativo movido para a lixeira");
-      setAssetToDelete(null);
+      toast.success("Ativo eliminado");
     },
     onError: () => {
       toast.error("Erro ao eliminar ativo");
     },
   });
-
-  const handleDeleteClick = (asset: { id: string; name: string; current_value: number | null }) => {
-    setAssetToDelete({ id: asset.id, name: asset.name, value: asset.current_value || 0 });
-  };
-
-  const confirmDelete = () => {
-    if (assetToDelete) {
-      deleteMutation.mutate(assetToDelete.id);
-    }
-  };
 
   const toggleCategory = (category: string) => {
     setCollapsedCategories(prev => ({ ...prev, [category]: !prev[category] }));
@@ -415,7 +389,7 @@ export default function PortfolioForecastTable() {
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleDeleteClick(asset)}
+                          onClick={() => deleteMutation.mutate(asset.id)}
                           disabled={deleteMutation.isPending}
                           title="Eliminar ativo"
                         >
@@ -662,30 +636,6 @@ export default function PortfolioForecastTable() {
         assets={assets}
         onSave={handleAddAdjustment}
       />
-
-      <AlertDialog open={!!assetToDelete} onOpenChange={() => setAssetToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar Ativo</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem a certeza que pretende eliminar o ativo{" "}
-              <strong>{assetToDelete?.name}</strong> com valor de{" "}
-              <strong>{formatCurrency(assetToDelete?.value || 0)}</strong>?
-              <br /><br />
-              O ativo será movido para a lixeira e poderá ser restaurado posteriormente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
