@@ -119,9 +119,11 @@ const DEFAULT_CATEGORY_OPTIONS: ColumnOption[] = [
 
 const DEFAULT_STATUS_OPTIONS: ColumnOption[] = [
   { label: "Pending", color: "#f59e0b" },
-  { label: "In Progress", color: "#3b82f6" },
-  { label: "Completed", color: "#22c55e" },
-  { label: "Archived", color: "#6b7280" },
+  { label: "processing", color: "#3b82f6" },
+  { label: "Payment", color: "#22c55e" },
+  { label: "Claim", color: "#ec4899" },
+  { label: "Completed", color: "#6b7280" },
+  { label: "Archived", color: "#64748b" },
 ];
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
