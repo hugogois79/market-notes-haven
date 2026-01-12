@@ -14,11 +14,15 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
-import { Loader2, X, ChevronRight, ChevronDown, Building2, Car, Anchor, Palette, Watch, Coins, Circle, TrendingDown, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, X, ChevronRight, ChevronDown, Building2, Car, Anchor, Palette, Watch, Coins, Circle, TrendingDown, TrendingUp, Trash2 } from "lucide-react";
 import { format, addDays, differenceInDays } from "date-fns";
 import { pt } from "date-fns/locale";
 import ForecastAdjustmentDialog, { ForecastAdjustment } from "./ForecastAdjustmentDialog";
 import { useForecastCalculations } from "@/hooks/useForecastCalculations";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 type ColumnKey = "current" | "custom" | "3m" | "6m" | "1y";
 type ColorOption = "none" | "green" | "blue" | "amber" | "red" | "purple";
@@ -68,6 +72,7 @@ const formatDateShort = (date: Date) =>
 
 export default function PortfolioForecastTable() {
   const today = new Date();
+  const queryClient = useQueryClient();
   const [customDate, setCustomDate] = useState<string>(
     format(addDays(today, 8), "yyyy-MM-dd")
   );
@@ -80,6 +85,21 @@ export default function PortfolioForecastTable() {
     "3m": "none",
     "6m": "none",
     "1y": "none",
+  });
+
+  // Delete asset mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("wealth_assets").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wealth-assets"] });
+      toast.success("Ativo eliminado");
+    },
+    onError: () => {
+      toast.error("Erro ao eliminar ativo");
+    },
   });
 
   const toggleCategory = (category: string) => {
@@ -225,6 +245,7 @@ export default function PortfolioForecastTable() {
                 {formatDateShort(date1Y)}
               </div>
             </TableHead>
+            <TableHead className="w-10 py-1"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -295,6 +316,7 @@ export default function PortfolioForecastTable() {
                       <span className="text-[10px] text-muted-foreground font-normal">{catWeight1Y.toFixed(1)}%</span>
                     </div>
                   </TableCell>
+                  <TableCell className="py-1"></TableCell>
                 </TableRow>
 
                 {/* Assets - only show if not collapsed */}
@@ -361,6 +383,18 @@ export default function PortfolioForecastTable() {
                           <span>{formatCurrency(forecast1Y)}</span>
                           <span className="text-[10px] text-muted-foreground">{weight1Y.toFixed(1)}%</span>
                         </div>
+                      </TableCell>
+                      <TableCell className="py-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                          onClick={() => deleteMutation.mutate(asset.id)}
+                          disabled={deleteMutation.isPending}
+                          title="Eliminar ativo"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );
