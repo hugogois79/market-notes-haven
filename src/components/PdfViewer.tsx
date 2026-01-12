@@ -10,13 +10,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from "pdfjs-dist";
+import * as pdfjs from "pdfjs-dist";
+import type { PDFDocumentProxy } from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-// pdf.js worker (Vite-friendly)
-GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url
-).toString();
+// pdf.js worker setup
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface PdfViewerProps {
   url: string;
@@ -151,7 +150,7 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
       setPageNumber(1);
 
       try {
-        const task = getDocument(url);
+        const task = pdfjs.getDocument(url);
         const pdf = await task.promise;
         if (cancelled) return;
 
