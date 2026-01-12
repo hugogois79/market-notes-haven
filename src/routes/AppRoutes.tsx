@@ -3,7 +3,6 @@ import React from "react";
 import { Route, Routes } from "react-router-dom";
 
 import MainLayout from "@/layouts/MainLayout";
-import AuthLayout from "@/layouts/AuthLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 import Notes from "@/pages/Notes";
@@ -28,7 +27,7 @@ import TAOLayout from "@/pages/tao/layout";
 import TAODashboard from "@/pages/tao/index";
 import TAOPerformance from "@/pages/tao/performance";
 import TAOManagement from "@/pages/tao/management";
-import TAOValidatorManagement from "@/pages/tao/validators";
+import TAOValidatorManagement from "@/pages/tao/validators"; // Add import for the validators page
 import TAOValidatorRelationshipManagement from "@/pages/tao/validator-relationship-management";
 import InvestorOpportunitiesPage from "@/pages/tao/investor-opportunities";
 import FollowUpSequencesPage from "@/pages/tao/follow-up-sequences";
@@ -52,21 +51,15 @@ import RealEstatePage from "@/pages/real-estate";
 const AppRoutes = () => {
 
   return (
-    <Routes>
-      {/* Auth route - outside MainLayout (no sidebar) */}
-      <Route path="/auth" element={
-        <AuthLayout>
-          <Auth />
-        </AuthLayout>
-      } />
-
-      {/* Protected routes with MainLayout */}
-      <Route path="/" element={<MainLayout />}>
-        <Route index element={
-          <ProtectedRoute>
-            <Index />
-          </ProtectedRoute>
-        } />
+    <>
+      <Routes>
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={
+            <ProtectedRoute>
+              <Index />
+            </ProtectedRoute>
+          } />
+          <Route path="auth" element={<Auth />} />
           <Route
             path="notes"
             element={
@@ -324,12 +317,13 @@ const AppRoutes = () => {
               path="follow-up-sequences"
               element={<FollowUpSequencesPage />}
             />
-          <Route path="projects" element={<TAOProjects />} />
+            <Route path="projects" element={<TAOProjects />} />
+          </Route>
+          
+          <Route path="*" element={<NotFound />} />
         </Route>
-        
-        <Route path="*" element={<NotFound />} />
-      </Route>
-    </Routes>
+      </Routes>
+    </>
   );
 };
 

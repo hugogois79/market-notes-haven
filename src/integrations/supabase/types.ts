@@ -4920,7 +4920,6 @@ export type Database = {
           created_at: string
           currency: string | null
           current_value: number | null
-          deleted_at: string | null
           id: string
           image_url: string | null
           metadata: Json | null
@@ -4950,7 +4949,6 @@ export type Database = {
           created_at?: string
           currency?: string | null
           current_value?: number | null
-          deleted_at?: string | null
           id?: string
           image_url?: string | null
           metadata?: Json | null
@@ -4980,7 +4978,6 @@ export type Database = {
           created_at?: string
           currency?: string | null
           current_value?: number | null
-          deleted_at?: string | null
           id?: string
           image_url?: string | null
           metadata?: Json | null
