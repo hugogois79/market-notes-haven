@@ -347,17 +347,30 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   });
 
 
-  // Fetch suppliers
+  // Fetch suppliers from suppliers table AND entity_names from transactions
   const { data: suppliers } = useQuery({
-    queryKey: ["suppliers"],
+    queryKey: ["suppliers-combined"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get suppliers from suppliers table
+      const { data: suppliersData, error: suppliersError } = await supabase
+        .from("suppliers")
+        .select("name")
+        .eq("is_active", true);
+      
+      // Get entity names from transactions as fallback
+      const { data: transactionsData, error: transactionsError } = await supabase
         .from("financial_transactions")
         .select("entity_name")
         .not("entity_name", "is", null);
-      if (error) throw error;
-      const uniqueSuppliers = [...new Set(data.map((d) => d.entity_name).filter((s): s is string => typeof s === 'string' && s.length > 0))];
-      return uniqueSuppliers.sort();
+      
+      if (suppliersError && transactionsError) throw suppliersError;
+      
+      const supplierNames = suppliersData?.map((s) => s.name) || [];
+      const transactionNames = transactionsData?.map((d) => d.entity_name).filter((s): s is string => typeof s === 'string' && s.length > 0) || [];
+      
+      // Combine and deduplicate
+      const allNames = [...new Set([...supplierNames, ...transactionNames])];
+      return allNames.sort();
     },
     staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
