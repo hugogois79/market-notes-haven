@@ -647,13 +647,26 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         if (error) throw error;
       }
 
-      // Update workflow_files with the new filename if it changed
+      // Update workflow_files with company_id, project_id, and filename if changed
+      const workflowUpdateData: Record<string, any> = {};
+      if (data.company_id) {
+        workflowUpdateData.company_id = data.company_id;
+      }
+      if (data.project_id) {
+        workflowUpdateData.project_id = data.project_id;
+      }
       if (attachmentName !== file.file_name) {
+        workflowUpdateData.file_name = attachmentName;
+      }
+      
+      if (Object.keys(workflowUpdateData).length > 0) {
         const { error: fileUpdateError } = await supabase
           .from("workflow_files")
-          .update({ file_name: attachmentName })
+          .update(workflowUpdateData)
           .eq("id", file.id);
-        if (fileUpdateError) throw fileUpdateError;
+        if (fileUpdateError) {
+          console.error("Erro ao atualizar workflow_files:", fileUpdateError);
+        }
       }
     },
     onSuccess: () => {
