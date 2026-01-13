@@ -1969,6 +1969,45 @@ export type Database = {
           },
         ]
       }
+      legal_case_note_links: {
+        Row: {
+          case_id: string
+          created_at: string
+          id: string
+          note_id: string
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          id?: string
+          note_id: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          id?: string
+          note_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_case_note_links_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "legal_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_case_note_links_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_cases: {
         Row: {
           case_number: string | null
@@ -5403,6 +5442,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           currency: string | null
+          document_number: string | null
           file_name: string
           file_size: number | null
           file_url: string
@@ -5414,6 +5454,7 @@ export type Database = {
           notes: string | null
           payment_method: string | null
           priority: string | null
+          project_id: string | null
           status: string | null
           subtotal: number | null
           tax_amount: number | null
@@ -5429,6 +5470,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           currency?: string | null
+          document_number?: string | null
           file_name: string
           file_size?: number | null
           file_url: string
@@ -5440,6 +5482,7 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           priority?: string | null
+          project_id?: string | null
           status?: string | null
           subtotal?: number | null
           tax_amount?: number | null
@@ -5455,6 +5498,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           currency?: string | null
+          document_number?: string | null
           file_name?: string
           file_size?: number | null
           file_url?: string
@@ -5466,6 +5510,7 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           priority?: string | null
+          project_id?: string | null
           status?: string | null
           subtotal?: number | null
           tax_amount?: number | null
@@ -5481,6 +5526,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "expense_projects"
             referencedColumns: ["id"]
           },
         ]
