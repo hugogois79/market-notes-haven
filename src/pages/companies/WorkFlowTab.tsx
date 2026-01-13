@@ -707,19 +707,19 @@ export default function WorkFlowTab() {
     staleTime: 60 * 1000, // 1 minute cache
   });
 
-  // Fetch transactions linked to workflow files (by invoice_file_url) - optimized to only fetch user's files
+  // Fetch transactions linked to workflow files (by document_file_id) - stable ID-based linking
   const { data: linkedTransactions } = useQuery({
-    queryKey: ["workflow-linked-transactions", workflowFiles?.map(f => f.file_url)],
+    queryKey: ["workflow-linked-transactions", workflowFiles?.map(f => f.id)],
     queryFn: async () => {
-      // Only query transactions for the current user's file URLs
-      const fileUrls = workflowFiles?.map(f => f.file_url).filter(Boolean) || [];
-      if (fileUrls.length === 0) return [];
+      // Only query transactions for the current user's file IDs
+      const fileIds = workflowFiles?.map(f => f.id).filter(Boolean) || [];
+      if (fileIds.length === 0) return [];
       
       const { data, error } = await supabase
         .from("financial_transactions")
         .select(`
           id,
-          invoice_file_url,
+          document_file_id,
           total_amount,
           project_id,
           company_id,
@@ -732,7 +732,7 @@ export default function WorkFlowTab() {
             name
           )
         `)
-        .in("invoice_file_url", fileUrls);
+        .in("document_file_id", fileIds);
       
       if (error) throw error;
       return data;
@@ -827,10 +827,10 @@ export default function WorkFlowTab() {
     path: getMoveFolderPath(folder.id, moveFolders || [])
   })).sort((a, b) => a.path.localeCompare(b.path)) || [];
 
-  // Create lookup map for transactions by file_url
-  const transactionsByFileUrl = linkedTransactions?.reduce((acc, tx) => {
-    if (tx.invoice_file_url) {
-      acc[tx.invoice_file_url] = {
+  // Create lookup map for transactions by file ID (document_file_id)
+  const transactionsByFileId = linkedTransactions?.reduce((acc, tx) => {
+    if (tx.document_file_id) {
+      acc[tx.document_file_id] = {
         transactionId: tx.id,
         projectId: tx.project_id,
         projectName: (tx.expense_projects as any)?.name || null,
@@ -1711,7 +1711,7 @@ export default function WorkFlowTab() {
       
       // Special handling for empresa filter (prefer direct company_id, fallback to transaction)
       if (filter.column === 'empresa') {
-        fileValue = file.companies?.name || transactionsByFileUrl?.[file.file_url]?.companyName || '';
+        fileValue = file.companies?.name || transactionsByFileId?.[file.id]?.companyName || '';
       } else {
         const col = columns.find(c => c.id === filter.column);
         if (col) {
@@ -1764,16 +1764,16 @@ export default function WorkFlowTab() {
         bValue = b.status || '';
         break;
       case 'project':
-        aValue = transactionsByFileUrl?.[a.file_url]?.projectName || '';
-        bValue = transactionsByFileUrl?.[b.file_url]?.projectName || '';
+        aValue = transactionsByFileId?.[a.id]?.projectName || '';
+        bValue = transactionsByFileId?.[b.id]?.projectName || '';
         break;
       case 'empresa':
-        aValue = a.companies?.name || transactionsByFileUrl?.[a.file_url]?.companyName || '';
-        bValue = b.companies?.name || transactionsByFileUrl?.[b.file_url]?.companyName || '';
+        aValue = a.companies?.name || transactionsByFileId?.[a.id]?.companyName || '';
+        bValue = b.companies?.name || transactionsByFileId?.[b.id]?.companyName || '';
         break;
       case 'value':
-        aValue = transactionsByFileUrl?.[a.file_url]?.value || 0;
-        bValue = transactionsByFileUrl?.[b.file_url]?.value || 0;
+        aValue = transactionsByFileId?.[a.id]?.value || 0;
+        bValue = transactionsByFileId?.[b.id]?.value || 0;
         break;
       default:
         // For custom columns
@@ -1784,7 +1784,7 @@ export default function WorkFlowTab() {
     if (aValue < bValue) return -1 * multiplier;
     if (aValue > bValue) return 1 * multiplier;
     return 0;
-  }), [workflowFiles, searchQuery, activeFilters, transactionsByFileUrl, columns, customData, sortConfig]);
+  }), [workflowFiles, searchQuery, activeFilters, transactionsByFileId, columns, customData, sortConfig]);
 
   // Sort handler
   const handleSort = (columnId: string) => {
@@ -1949,8 +1949,8 @@ export default function WorkFlowTab() {
       if (file.companies?.name) companyNames.add(file.companies.name);
     });
     // Also add from transactions for backwards compatibility
-    if (transactionsByFileUrl) {
-      Object.values(transactionsByFileUrl).forEach(tx => {
+    if (transactionsByFileId) {
+      Object.values(transactionsByFileId).forEach((tx: any) => {
         if (tx.companyName) companyNames.add(tx.companyName);
       });
     }
@@ -2883,24 +2883,24 @@ export default function WorkFlowTab() {
                       {isColumnVisible("empresa") && (
                         <td className="px-3 py-1.5">
                           <span className="text-xs text-slate-600 whitespace-nowrap">
-                            {file.companies?.name || transactionsByFileUrl?.[file.file_url]?.companyName || <span className="text-slate-400">—</span>}
+                            {file.companies?.name || transactionsByFileId?.[file.id]?.companyName || <span className="text-slate-400">—</span>}
                           </span>
                         </td>
                       )}
                       {isColumnVisible("project") && (
                         <td className="px-3 py-1.5">
-                          {transactionsByFileUrl?.[file.file_url] ? (
+                          {transactionsByFileId?.[file.id] ? (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <button className="text-left text-xs text-slate-600 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer whitespace-nowrap">
-                                  {transactionsByFileUrl[file.file_url]?.projectName || <span className="text-slate-400">—</span>}
+                                  {transactionsByFileId[file.id]?.projectName || <span className="text-slate-400">—</span>}
                                 </button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-white z-50">
                                 <DropdownMenuItem 
                                   className="flex justify-center"
                                   onClick={() => updateTransactionMutation.mutate({
-                                    transactionId: transactionsByFileUrl[file.file_url].transactionId,
+                                    transactionId: transactionsByFileId[file.id].transactionId,
                                     updates: { project_id: null }
                                   })}
                                 >
@@ -2911,7 +2911,7 @@ export default function WorkFlowTab() {
                                     key={project.id}
                                     className="flex justify-center"
                                     onClick={() => updateTransactionMutation.mutate({
-                                      transactionId: transactionsByFileUrl[file.file_url].transactionId,
+                                      transactionId: transactionsByFileId[file.id].transactionId,
                                       updates: { project_id: project.id }
                                     })}
                                   >
@@ -2947,8 +2947,8 @@ export default function WorkFlowTab() {
                       )}
                       {isColumnVisible("value") && (
                         <td className="px-3 py-1.5 text-right">
-                          {transactionsByFileUrl?.[file.file_url] ? (
-                            editingCell?.fileUrl === file.file_url && editingCell?.field === 'value' ? (
+                          {transactionsByFileId?.[file.id] ? (
+                            editingCell?.fileUrl === file.id && editingCell?.field === 'value' ? (
                               <Input
                                 type="number"
                                 step="0.01"
@@ -2958,7 +2958,7 @@ export default function WorkFlowTab() {
                                   const numValue = parseFloat(editValue);
                                   if (!isNaN(numValue)) {
                                     updateTransactionMutation.mutate({
-                                      transactionId: transactionsByFileUrl[file.file_url].transactionId,
+                                      transactionId: transactionsByFileId[file.id].transactionId,
                                       updates: { total_amount: numValue }
                                     });
                                   } else {
@@ -2970,7 +2970,7 @@ export default function WorkFlowTab() {
                                     const numValue = parseFloat(editValue);
                                     if (!isNaN(numValue)) {
                                       updateTransactionMutation.mutate({
-                                        transactionId: transactionsByFileUrl[file.file_url].transactionId,
+                                        transactionId: transactionsByFileId[file.id].transactionId,
                                         updates: { total_amount: numValue }
                                       });
                                     } else {
@@ -2987,11 +2987,11 @@ export default function WorkFlowTab() {
                               <button
                                 className="text-xs font-medium hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer"
                                 onClick={() => {
-                                  setEditingCell({ fileUrl: file.file_url, field: 'value' });
-                                  setEditValue(transactionsByFileUrl[file.file_url].value?.toString() || "0");
+                                  setEditingCell({ fileUrl: file.id, field: 'value' });
+                                  setEditValue(transactionsByFileId[file.id].value?.toString() || "0");
                                 }}
                               >
-                                {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(transactionsByFileUrl[file.file_url].value)}
+                                {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(transactionsByFileId[file.id].value)}
                               </button>
                             )
                           ) : (
@@ -3115,7 +3115,7 @@ export default function WorkFlowTab() {
                   <span className="font-semibold text-sm tabular-nums">
                     {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(
                       filteredFiles?.reduce((sum, file) => {
-                        const value = transactionsByFileUrl?.[file.file_url]?.value || 0;
+                        const value = transactionsByFileId?.[file.id]?.value || 0;
                         return sum + value;
                       }, 0) || 0
                     )}
