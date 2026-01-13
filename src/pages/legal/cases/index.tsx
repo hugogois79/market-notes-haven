@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search, FileText, Filter } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search, FileText, Filter, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link, useNavigate } from "react-router-dom";
 import { CaseDialog } from "../components/CaseDialog";
+import LegalCaseNotesDialog from "../components/LegalCaseNotesDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -110,6 +112,30 @@ export default function LegalCasesPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
+  const [notesDialogCase, setNotesDialogCase] = useState<LegalCase | null>(null);
+
+  // Fetch note counts for all cases
+  const { data: noteCounts = {} } = useQuery({
+    queryKey: ["case-notes-count"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return {};
+
+      const { data, error } = await supabase
+        .from("legal_case_note_links")
+        .select("case_id")
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      // Count notes per case
+      const counts: Record<string, number> = {};
+      data?.forEach(link => {
+        counts[link.case_id] = (counts[link.case_id] || 0) + 1;
+      });
+      return counts;
+    },
+  });
 
   useEffect(() => {
     fetchCases();
@@ -345,6 +371,7 @@ export default function LegalCasesPage() {
                 <TableHead className="min-w-[90px]">Prioridade</TableHead>
                 <TableHead className="min-w-[120px]">Data Abertura</TableHead>
                 <TableHead className="min-w-[150px]">Descrição</TableHead>
+                <TableHead className="min-w-[70px] text-center">Notas</TableHead>
                 <TableHead className="w-[100px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -485,6 +512,21 @@ export default function LegalCasesPage() {
                       <span className="text-muted-foreground text-sm">-</span>
                     )}
                   </TableCell>
+                  <TableCell className="text-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 gap-1"
+                      onClick={() => setNotesDialogCase(caseItem)}
+                    >
+                      <StickyNote className="h-4 w-4" />
+                      {noteCounts[caseItem.id] > 0 && (
+                        <Badge variant="secondary" className="h-5 min-w-[20px] px-1.5 text-xs">
+                          {noteCounts[caseItem.id]}
+                        </Badge>
+                      )}
+                    </Button>
+                  </TableCell>
                   <TableCell className="text-right">
                     {editingId === caseItem.id ? (
                       <div className="flex justify-end gap-1">
@@ -536,6 +578,15 @@ export default function LegalCasesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {notesDialogCase && (
+        <LegalCaseNotesDialog
+          open={!!notesDialogCase}
+          onOpenChange={(open) => !open && setNotesDialogCase(null)}
+          caseId={notesDialogCase.id}
+          caseTitle={notesDialogCase.title}
+        />
+      )}
     </div>
   );
 }
