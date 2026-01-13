@@ -707,39 +707,115 @@ export default function WorkFlowTab() {
     staleTime: 60 * 1000, // 1 minute cache
   });
 
-  // Fetch transactions linked to workflow files (by document_file_id) - stable ID-based linking
+  // Fetch transactions linked to workflow files.
+  // Prefer stable ID-based linking (document_file_id), with legacy fallback to invoice_file_url
+  // to support older movements created before we stored document_file_id.
   const { data: linkedTransactions } = useQuery({
-    queryKey: ["workflow-linked-transactions", workflowFiles?.map(f => f.id)],
+    queryKey: [
+      "workflow-linked-transactions",
+      workflowFiles?.map(f => f.id),
+      workflowFiles?.map(f => f.file_url),
+    ],
     queryFn: async () => {
-      // Only query transactions for the current user's file IDs
       const fileIds = workflowFiles?.map(f => f.id).filter(Boolean) || [];
-      if (fileIds.length === 0) return [];
-      
-      const { data, error } = await supabase
-        .from("financial_transactions")
-        .select(`
-          id,
-          document_file_id,
-          total_amount,
-          project_id,
-          company_id,
-          expense_projects:project_id (
-            id,
-            name
-          ),
-          companies:company_id (
-            id,
-            name
-          )
-        `)
-        .in("document_file_id", fileIds);
-      
-      if (error) throw error;
-      return data;
+      const fileUrls = workflowFiles?.map(f => f.file_url).filter(Boolean) || [];
+      if (fileIds.length === 0 && fileUrls.length === 0) return [];
+
+      const [byIdRes, byUrlRes] = await Promise.all([
+        fileIds.length
+          ? supabase
+              .from("financial_transactions")
+              .select(`
+                id,
+                document_file_id,
+                invoice_file_url,
+                total_amount,
+                project_id,
+                company_id,
+                expense_projects:project_id (
+                  id,
+                  name
+                ),
+                companies:company_id (
+                  id,
+                  name
+                )
+              `)
+              .in("document_file_id", fileIds)
+          : Promise.resolve({ data: [], error: null } as any),
+        fileUrls.length
+          ? supabase
+              .from("financial_transactions")
+              .select(`
+                id,
+                document_file_id,
+                invoice_file_url,
+                total_amount,
+                project_id,
+                company_id,
+                expense_projects:project_id (
+                  id,
+                  name
+                ),
+                companies:company_id (
+                  id,
+                  name
+                )
+              `)
+              .in("invoice_file_url", fileUrls)
+          : Promise.resolve({ data: [], error: null } as any),
+      ]);
+
+      if (byIdRes.error) throw byIdRes.error;
+      if (byUrlRes.error) throw byUrlRes.error;
+
+      const merged = [...(byIdRes.data || []), ...(byUrlRes.data || [])];
+      // De-dupe by transaction ID
+      const uniqueById = new Map<string, any>();
+      for (const tx of merged) uniqueById.set(tx.id, tx);
+      return Array.from(uniqueById.values());
     },
     staleTime: 2 * 60 * 1000, // 2 minutes cache (transactions change less frequently)
-    enabled: !!workflowFiles && workflowFiles.length > 0, // Only run after files are loaded
+    enabled: !!workflowFiles && workflowFiles.length > 0,
   });
+
+  type LinkedTx = {
+    transactionId: string;
+    projectId: string | null;
+    projectName: string | null;
+    companyId: string | null;
+    companyName: string | null;
+    value: number;
+  };
+
+  // Lookup maps (ID preferred, URL fallback)
+  const transactionsByFileId = linkedTransactions?.reduce((acc, tx) => {
+    if (tx.document_file_id) {
+      acc[tx.document_file_id] = {
+        transactionId: tx.id,
+        projectId: tx.project_id,
+        projectName: (tx.expense_projects as any)?.name || null,
+        companyId: tx.company_id,
+        companyName: (tx.companies as any)?.name || null,
+        value: tx.total_amount,
+      } satisfies LinkedTx;
+    }
+    return acc;
+  }, {} as Record<string, LinkedTx>);
+
+  const transactionsByFileUrl = linkedTransactions?.reduce((acc, tx) => {
+    if (tx.invoice_file_url) {
+      acc[tx.invoice_file_url] = {
+        transactionId: tx.id,
+        projectId: tx.project_id,
+        projectName: (tx.expense_projects as any)?.name || null,
+        companyId: tx.company_id,
+        companyName: (tx.companies as any)?.name || null,
+        value: tx.total_amount,
+      } satisfies LinkedTx;
+    }
+    return acc;
+  }, {} as Record<string, LinkedTx>);
 
   // Fetch all projects for dropdown
   const { data: allProjects } = useQuery({
@@ -750,7 +826,7 @@ export default function WorkFlowTab() {
         .select("id, name")
         .eq("is_active", true)
         .order("name");
-      
+
       if (error) throw error;
       return data;
     },
@@ -770,12 +846,12 @@ export default function WorkFlowTab() {
             name
           )
         `);
-      
+
       if (error) throw error;
       return data;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes cache
-    enabled: markCompleteWarningOpen || !!fileToComplete, // Only load when needed
+    staleTime: 5 * 60 * 1000,
+    enabled: markCompleteWarningOpen || !!fileToComplete,
   });
 
   // Fetch companies for mark as complete and move dialog - lazy load when dialog opens
@@ -786,12 +862,12 @@ export default function WorkFlowTab() {
         .from("companies")
         .select("id, name")
         .order("name");
-      
+
       if (error) throw error;
       return data;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes cache
-    enabled: moveFileDialogOpen || markCompleteWarningOpen || !!fileToComplete, // Only load when needed
+    staleTime: 5 * 60 * 1000,
+    enabled: moveFileDialogOpen || markCompleteWarningOpen || !!fileToComplete,
   });
 
   // Fetch folders for selected company in move file dialog - lazy load
@@ -804,12 +880,12 @@ export default function WorkFlowTab() {
         .select("*")
         .eq("company_id", moveForm.company_id)
         .order("name");
-      
+
       if (error) throw error;
       return data || [];
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes cache
-    enabled: moveFileDialogOpen && !!moveForm.company_id, // Only load when dialog is open
+    staleTime: 5 * 60 * 1000,
+    enabled: moveFileDialogOpen && !!moveForm.company_id,
   });
 
   // Build folder paths recursively for move dialog
@@ -821,26 +897,14 @@ export default function WorkFlowTab() {
     return parentPath ? `${parentPath}/${folder.name}` : folder.name;
   };
 
-  const moveFolderOptions = moveFolders?.map(folder => ({
-    id: folder.id,
-    name: folder.name,
-    path: getMoveFolderPath(folder.id, moveFolders || [])
-  })).sort((a, b) => a.path.localeCompare(b.path)) || [];
-
-  // Create lookup map for transactions by file ID (document_file_id)
-  const transactionsByFileId = linkedTransactions?.reduce((acc, tx) => {
-    if (tx.document_file_id) {
-      acc[tx.document_file_id] = {
-        transactionId: tx.id,
-        projectId: tx.project_id,
-        projectName: (tx.expense_projects as any)?.name || null,
-        companyId: tx.company_id,
-        companyName: (tx.companies as any)?.name || null,
-        value: tx.total_amount,
-      };
-    }
-    return acc;
-  }, {} as Record<string, { transactionId: string; projectId: string | null; projectName: string | null; companyId: string | null; companyName: string | null; value: number }>);
+  const moveFolderOptions =
+    moveFolders
+      ?.map(folder => ({
+        id: folder.id,
+        name: folder.name,
+        path: getMoveFolderPath(folder.id, moveFolders || []),
+      }))
+      .sort((a, b) => a.path.localeCompare(b.path)) || [];
 
   // State for inline editing
   const [editingCell, setEditingCell] = useState<{ fileUrl: string; field: 'project' | 'value' } | null>(null);
@@ -1711,7 +1775,7 @@ export default function WorkFlowTab() {
       
       // Special handling for empresa filter (prefer direct company_id, fallback to transaction)
       if (filter.column === 'empresa') {
-        fileValue = file.companies?.name || transactionsByFileId?.[file.id]?.companyName || '';
+        fileValue = file.companies?.name || getTxForFile(file)?.companyName || '';
       } else {
         const col = columns.find(c => c.id === filter.column);
         if (col) {
@@ -1764,16 +1828,16 @@ export default function WorkFlowTab() {
         bValue = b.status || '';
         break;
       case 'project':
-        aValue = transactionsByFileId?.[a.id]?.projectName || '';
-        bValue = transactionsByFileId?.[b.id]?.projectName || '';
+        aValue = getTxForFile(a)?.projectName || '';
+        bValue = getTxForFile(b)?.projectName || '';
         break;
       case 'empresa':
-        aValue = a.companies?.name || transactionsByFileId?.[a.id]?.companyName || '';
-        bValue = b.companies?.name || transactionsByFileId?.[b.id]?.companyName || '';
+        aValue = a.companies?.name || getTxForFile(a)?.companyName || '';
+        bValue = b.companies?.name || getTxForFile(b)?.companyName || '';
         break;
       case 'value':
-        aValue = transactionsByFileId?.[a.id]?.value || 0;
-        bValue = transactionsByFileId?.[b.id]?.value || 0;
+        aValue = getTxForFile(a)?.value || 0;
+        bValue = getTxForFile(b)?.value || 0;
         break;
       default:
         // For custom columns
@@ -2882,38 +2946,45 @@ export default function WorkFlowTab() {
                       )}
                       {isColumnVisible("empresa") && (
                         <td className="px-3 py-1.5 max-w-[150px]">
-                          <span className="text-xs text-slate-600 block truncate" title={file.companies?.name || transactionsByFileId?.[file.id]?.companyName || undefined}>
-                            {file.companies?.name || transactionsByFileId?.[file.id]?.companyName || <span className="text-slate-400">—</span>}
+                          <span
+                            className="text-xs text-slate-600 block truncate"
+                            title={file.companies?.name || getTxForFile(file)?.companyName || undefined}
+                          >
+                            {file.companies?.name || getTxForFile(file)?.companyName || <span className="text-slate-400">—</span>}
                           </span>
                         </td>
                       )}
                       {isColumnVisible("project") && (
                         <td className="px-3 py-1.5">
-                          {transactionsByFileId?.[file.id] ? (
+                          {getTxForFile(file) ? (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <button className="text-left text-xs text-slate-600 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer whitespace-nowrap">
-                                  {transactionsByFileId[file.id]?.projectName || <span className="text-slate-400">—</span>}
+                                  {getTxForFile(file)?.projectName || <span className="text-slate-400">—</span>}
                                 </button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-white z-50">
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   className="flex justify-center"
-                                  onClick={() => updateTransactionMutation.mutate({
-                                    transactionId: transactionsByFileId[file.id].transactionId,
-                                    updates: { project_id: null }
-                                  })}
+                                  onClick={() =>
+                                    updateTransactionMutation.mutate({
+                                      transactionId: getTxForFile(file)!.transactionId,
+                                      updates: { project_id: null },
+                                    })
+                                  }
                                 >
                                   <span className="text-slate-400">— None —</span>
                                 </DropdownMenuItem>
-                                {allProjects?.map((project) => (
-                                  <DropdownMenuItem 
+                                {allProjects?.map(project => (
+                                  <DropdownMenuItem
                                     key={project.id}
                                     className="flex justify-center"
-                                    onClick={() => updateTransactionMutation.mutate({
-                                      transactionId: transactionsByFileId[file.id].transactionId,
-                                      updates: { project_id: project.id }
-                                    })}
+                                    onClick={() =>
+                                      updateTransactionMutation.mutate({
+                                        transactionId: getTxForFile(file)!.transactionId,
+                                        updates: { project_id: project.id },
+                                      })
+                                    }
                                   >
                                     {project.name}
                                   </DropdownMenuItem>
@@ -2947,7 +3018,7 @@ export default function WorkFlowTab() {
                       )}
                       {isColumnVisible("value") && (
                         <td className="px-3 py-1.5 text-right">
-                          {transactionsByFileId?.[file.id] ? (
+                          {getTxForFile(file) ? (
                             editingCell?.fileUrl === file.id && editingCell?.field === 'value' ? (
                               <Input
                                 type="number"
@@ -2958,8 +3029,8 @@ export default function WorkFlowTab() {
                                   const numValue = parseFloat(editValue);
                                   if (!isNaN(numValue)) {
                                     updateTransactionMutation.mutate({
-                                      transactionId: transactionsByFileId[file.id].transactionId,
-                                      updates: { total_amount: numValue }
+                                      transactionId: getTxForFile(file)!.transactionId,
+                                      updates: { total_amount: numValue },
                                     });
                                   } else {
                                     setEditingCell(null);
@@ -2970,8 +3041,8 @@ export default function WorkFlowTab() {
                                     const numValue = parseFloat(editValue);
                                     if (!isNaN(numValue)) {
                                       updateTransactionMutation.mutate({
-                                        transactionId: transactionsByFileId[file.id].transactionId,
-                                        updates: { total_amount: numValue }
+                                        transactionId: getTxForFile(file)!.transactionId,
+                                        updates: { total_amount: numValue },
                                       });
                                     } else {
                                       setEditingCell(null);
@@ -2988,10 +3059,10 @@ export default function WorkFlowTab() {
                                 className="text-xs font-medium hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer"
                                 onClick={() => {
                                   setEditingCell({ fileUrl: file.id, field: 'value' });
-                                  setEditValue(transactionsByFileId[file.id].value?.toString() || "0");
+                                  setEditValue(getTxForFile(file)!.value?.toString() || "0");
                                 }}
                               >
-                                {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(transactionsByFileId[file.id].value)}
+                                {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(getTxForFile(file)!.value)}
                               </button>
                             )
                           ) : (
@@ -3115,7 +3186,7 @@ export default function WorkFlowTab() {
                   <span className="font-semibold text-sm tabular-nums">
                     {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(
                       filteredFiles?.reduce((sum, file) => {
-                        const value = transactionsByFileId?.[file.id]?.value || 0;
+                        const value = getTxForFile(file)?.value || 0;
                         return sum + value;
                       }, 0) || 0
                     )}
