@@ -473,6 +473,31 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         return uuidRegex.test(value) ? value : null;
       };
 
+      // Keep workflow_files in sync so the table shows Empresa/Project after saving.
+      const updateWorkflowFile = async (patch: Record<string, any> = {}) => {
+        const workflowUpdateData: Record<string, any> = { ...patch };
+
+        // Only set these when present in the form
+        if (data.company_id) workflowUpdateData.company_id = data.company_id;
+        if (data.project_id) workflowUpdateData.project_id = data.project_id;
+
+        // Always keep filename consistent if it was auto-renamed
+        if (attachmentName !== file.file_name) {
+          workflowUpdateData.file_name = attachmentName;
+        }
+
+        if (Object.keys(workflowUpdateData).length === 0) return;
+
+        const { error: fileUpdateError } = await supabase
+          .from("workflow_files")
+          .update(workflowUpdateData)
+          .eq("id", file.id);
+
+        if (fileUpdateError) {
+          console.error("Erro ao atualizar workflow_files:", fileUpdateError);
+        }
+      };
+
       // Handle loan type
       if (data.type === "loan") {
         // Get company names for auto-generated description
@@ -511,14 +536,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           
           if (loanUpdateError) throw loanUpdateError;
 
-          // Update workflow_files with the new filename if it changed
-          if (attachmentName !== file.file_name) {
-            const { error: fileUpdateError } = await supabase
-              .from("workflow_files")
-              .update({ file_name: attachmentName })
-              .eq("id", file.id);
-            if (fileUpdateError) throw fileUpdateError;
-          }
+          // Update workflow_files so the table reflects filename/company/project
+          await updateWorkflowFile();
 
           // Invalidate queries and notify success
           queryClient.invalidateQueries({ queryKey: ["company-loans"] });
@@ -543,14 +562,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           borrowing_company_name: borrowingCompanyName,
         };
 
-        // Update workflow_files with the new filename if it changed
-        if (attachmentName !== file.file_name) {
-          const { error: fileUpdateError } = await supabase
-            .from("workflow_files")
-            .update({ file_name: attachmentName })
-            .eq("id", file.id);
-          if (fileUpdateError) throw fileUpdateError;
-        }
+        // Update workflow_files so the table reflects filename/company/project
+        await updateWorkflowFile();
 
         // Pass pending loan data via callback - will be created when confirming file send
         onSaved?.({ fileName: attachmentName, fileUrl: attachmentUrl, pendingLoanData });
@@ -596,14 +609,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           if (docError) throw docError;
         }
 
-        // Update workflow_files with the new filename if it changed
-        if (attachmentName !== file.file_name) {
-          const { error: fileUpdateError } = await supabase
-            .from("workflow_files")
-            .update({ file_name: attachmentName })
-            .eq("id", file.id);
-          if (fileUpdateError) throw fileUpdateError;
-        }
+        // Update workflow_files so the table reflects filename/company/project
+        await updateWorkflowFile();
 
         queryClient.invalidateQueries({ queryKey: ["company-documents"] });
         toast.success("Documento guardado com sucesso");
@@ -647,27 +654,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         if (error) throw error;
       }
 
-      // Update workflow_files with company_id, project_id, and filename if changed
-      const workflowUpdateData: Record<string, any> = {};
-      if (data.company_id) {
-        workflowUpdateData.company_id = data.company_id;
-      }
-      if (data.project_id) {
-        workflowUpdateData.project_id = data.project_id;
-      }
-      if (attachmentName !== file.file_name) {
-        workflowUpdateData.file_name = attachmentName;
-      }
-      
-      if (Object.keys(workflowUpdateData).length > 0) {
-        const { error: fileUpdateError } = await supabase
-          .from("workflow_files")
-          .update(workflowUpdateData)
-          .eq("id", file.id);
-        if (fileUpdateError) {
-          console.error("Erro ao atualizar workflow_files:", fileUpdateError);
-        }
-      }
+      // Update workflow_files so the table reflects filename/company/project
+      await updateWorkflowFile();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
