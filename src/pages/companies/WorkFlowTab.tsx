@@ -2881,8 +2881,8 @@ export default function WorkFlowTab() {
                         </td>
                       )}
                       {isColumnVisible("empresa") && (
-                        <td className="px-3 py-1.5">
-                          <span className="text-xs text-slate-600 whitespace-nowrap">
+                        <td className="px-3 py-1.5 max-w-[150px]">
+                          <span className="text-xs text-slate-600 block truncate" title={file.companies?.name || transactionsByFileId?.[file.id]?.companyName || undefined}>
                             {file.companies?.name || transactionsByFileId?.[file.id]?.companyName || <span className="text-slate-400">—</span>}
                           </span>
                         </td>
