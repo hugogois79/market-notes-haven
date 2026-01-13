@@ -683,7 +683,9 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
               ? "Editar Empréstimo (pendente)" 
               : isEditMode 
                 ? "Editar Movimento" 
-                : "Novo Movimento"}
+                : (file.company_id || file.invoice_date || file.total_amount || file.vendor_name)
+                  ? "Movimento Draft"
+                  : "Novo Movimento"}
         </h3>
         <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
           <X className="h-4 w-4" />
