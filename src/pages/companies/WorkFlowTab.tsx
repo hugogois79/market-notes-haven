@@ -817,6 +817,11 @@ export default function WorkFlowTab() {
     return acc;
   }, {} as Record<string, LinkedTx>);
 
+  // Helper to get transaction for a file (ID-based preferred, URL fallback for legacy)
+  const getTxForFile = (file: WorkflowFile): LinkedTx | undefined => {
+    return transactionsByFileId?.[file.id] || transactionsByFileUrl?.[file.file_url];
+  };
+
   // Fetch all projects for dropdown
   const { data: allProjects } = useQuery({
     queryKey: ["expense-projects-list"],
