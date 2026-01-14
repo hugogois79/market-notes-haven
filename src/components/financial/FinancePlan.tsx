@@ -60,6 +60,10 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
   const queryClient = useQueryClient();
   const [savePlanDialogOpen, setSavePlanDialogOpen] = useState(false);
   const [cashflowPrintFn, setCashflowPrintFn] = useState<(() => Promise<void>) | null>(null);
+  
+  const handleCashflowPrintReady = useCallback((fn: () => Promise<void>) => {
+    setCashflowPrintFn(() => fn);
+  }, []);
 
   // Get forecast calculations for plan versioning
   const {
@@ -385,7 +389,7 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
             </CardHeader>
             <CardContent>
               <WealthTransactionsTable 
-                onPrintReady={useCallback((fn) => setCashflowPrintFn(() => fn), [])} 
+                onPrintReady={handleCashflowPrintReady} 
               />
             </CardContent>
           </Card>
