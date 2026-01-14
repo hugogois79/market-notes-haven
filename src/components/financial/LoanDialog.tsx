@@ -89,10 +89,16 @@ export default function LoanDialog({
 
     setIsUploading(true);
     try {
+      // Get user ID for secure folder-based storage
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        throw new Error('User not authenticated');
+      }
+      
       // Keep original filename, just sanitize it and add timestamp to avoid conflicts
       const timestamp = Date.now();
       const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const filePath = `loans/${timestamp}-${safeFileName}`;
+      const filePath = `${userData.user.id}/loans/${timestamp}-${safeFileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('attachments')

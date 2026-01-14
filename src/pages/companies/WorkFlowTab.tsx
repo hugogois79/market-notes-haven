@@ -1341,10 +1341,11 @@ export default function WorkFlowTab() {
             const safeId = crypto.randomUUID().substring(0, 8);
             const newFileName = `${safeId}_${borrowingName}_${formattedDate}_${amount}_${lendingName}.${fileExt}`;
             
-            // Upload to loans folder
+            // Upload to loans folder with user-scoped path
+            const loansFilePath = `${user.id}/loans/${newFileName}`;
             const { error: uploadError } = await supabase.storage
               .from('attachments')
-              .upload(`loans/${newFileName}`, blob, {
+              .upload(loansFilePath, blob, {
                 contentType: file.mime_type || 'application/pdf',
                 upsert: true
               });
@@ -1352,7 +1353,7 @@ export default function WorkFlowTab() {
             if (!uploadError) {
               const { data: urlData } = supabase.storage
                 .from('attachments')
-                .getPublicUrl(`loans/${newFileName}`);
+                .getPublicUrl(loansFilePath);
               loanAttachmentUrl = urlData.publicUrl;
             }
           }

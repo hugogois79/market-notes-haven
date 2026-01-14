@@ -383,13 +383,19 @@ export default function TransactionDialog({
           throw new Error(`Ficheiro demasiado grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Máximo: 20MB`);
         }
         
+        // Get user ID for secure folder-based storage
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) {
+          throw new Error('User not authenticated');
+        }
+        
         // Sanitize and truncate filename to avoid issues
         const ext = file.name.split('.').pop() || 'pdf';
         let baseName = file.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9._-]/g, "_").replace(/undefined/gi, '');
         // Truncate to max 80 chars to avoid path length issues
         if (baseName.length > 80) baseName = baseName.slice(0, 80);
         const fileName = `${crypto.randomUUID().slice(0, 8)}_${baseName}.${ext}`;
-        const filePath = `transactions/${fileName}`;
+        const filePath = `${userData.user.id}/transactions/${fileName}`;
 
         const tryUpload = async (upsert: boolean) => {
           const { data, error } = await supabase.storage
