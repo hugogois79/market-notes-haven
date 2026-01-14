@@ -316,27 +316,51 @@ export async function printCashflowTable(options: PrintCashflowOptions): Promise
       width: 100%;
       border-collapse: collapse;
       font-size: 7pt;
+      table-layout: fixed;
     }
     #table-placeholder th {
       background: #f3f4f6 !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
-      padding: 4px 6px;
+      padding: 4px 4px;
       text-align: left;
       font-weight: 600;
       font-size: 7pt;
       border-bottom: 1px solid #d1d5db;
     }
     #table-placeholder td {
-      padding: 3px 6px;
+      padding: 2px 4px;
       border-bottom: 1px solid #e5e7eb;
       vertical-align: middle;
       font-size: 7pt;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
-    /* Center credits column (column 1) */
+    /* Column widths: Crédito (28%), Data (12%), Débito (28%), Saldo (12%), Preço column between (10% each) */
     #table-placeholder th:nth-child(1),
     #table-placeholder td:nth-child(1) {
+      width: 28% !important;
+      text-align: left !important;
+    }
+    #table-placeholder th:nth-child(2),
+    #table-placeholder td:nth-child(2) {
+      width: 12% !important;
       text-align: center !important;
+    }
+    #table-placeholder th:nth-child(3),
+    #table-placeholder td:nth-child(3) {
+      width: 28% !important;
+      text-align: right !important;
+    }
+    #table-placeholder th:nth-child(4),
+    #table-placeholder td:nth-child(4) {
+      width: 12% !important;
+      text-align: right !important;
+    }
+    /* Make flex containers inside cells more compact */
+    #table-placeholder td > div {
+      gap: 2px !important;
     }
     /* Ensure all columns are visible */
     #table-placeholder td,
