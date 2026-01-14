@@ -333,34 +333,37 @@ export async function printCashflowTable(options: PrintCashflowOptions): Promise
       border-bottom: 1px solid #e5e7eb;
       vertical-align: middle;
       font-size: 7pt;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      overflow: visible !important;
+      white-space: normal !important;
+      word-break: break-word !important;
     }
-    /* Column widths: Crédito (28%), Data (12%), Débito (28%), Saldo (12%), Preço column between (10% each) */
+    /* Column widths totaling 100%: Crédito (40%), Data (10%), Débito (40%), Saldo (10%) */
     #table-placeholder th:nth-child(1),
     #table-placeholder td:nth-child(1) {
-      width: 28% !important;
-      text-align: left !important;
+      width: 40% !important;
+      text-align: center !important;
     }
     #table-placeholder th:nth-child(2),
     #table-placeholder td:nth-child(2) {
-      width: 12% !important;
+      width: 10% !important;
       text-align: center !important;
     }
     #table-placeholder th:nth-child(3),
     #table-placeholder td:nth-child(3) {
-      width: 28% !important;
+      width: 40% !important;
       text-align: right !important;
     }
     #table-placeholder th:nth-child(4),
     #table-placeholder td:nth-child(4) {
-      width: 12% !important;
+      width: 10% !important;
       text-align: right !important;
     }
-    /* Make flex containers inside cells more compact */
+    /* Ensure flex content inside cells is visible */
     #table-placeholder td > div {
+      display: flex !important;
+      flex-wrap: wrap !important;
       gap: 2px !important;
+      justify-content: inherit !important;
     }
     /* Ensure all columns are visible */
     #table-placeholder td,
