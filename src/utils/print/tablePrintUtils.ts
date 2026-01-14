@@ -252,8 +252,9 @@ export async function printCashflowTable(options: PrintCashflowOptions): Promise
   // Clone the table to preserve styles
   const tableClone = tableRef.cloneNode(true) as HTMLElement;
   
-  // Remove interactive elements (buttons, context menus, etc.)
-  tableClone.querySelectorAll("button, [data-radix-collection-item], .opacity-0").forEach((el) => {
+  // Remove interactive elements (buttons, hover-only elements, context menu dropdowns)
+  // Note: Keep ContextMenuTrigger content (values) but remove ContextMenuContent (dropdowns)
+  tableClone.querySelectorAll("button, .opacity-0, [data-radix-menu-content]").forEach((el) => {
     el.remove();
   });
 
