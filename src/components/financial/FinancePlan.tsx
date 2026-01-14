@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt, Flag, Percent, Save, History, TrendingUpDown, GitBranch } from "lucide-react";
+import { Target, TrendingUp, Calendar, PieChart, LayoutDashboard, Briefcase, Receipt, Flag, Percent, Save, History, TrendingUpDown, GitBranch, Printer } from "lucide-react";
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { toast } from "sonner";
 import WealthAssetsTable from "./wealth/WealthAssetsTable";
@@ -59,6 +59,7 @@ const calculateCAGR = (currentValue: number, purchasePrice: number, purchaseDate
 export default function FinancePlan({ companyId }: FinancePlanProps) {
   const queryClient = useQueryClient();
   const [savePlanDialogOpen, setSavePlanDialogOpen] = useState(false);
+  const [cashflowPrintFn, setCashflowPrintFn] = useState<(() => Promise<void>) | null>(null);
 
   // Get forecast calculations for plan versioning
   const {
@@ -362,17 +363,30 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
                   Registo de transações, créditos, débitos e saldo corrente.
                 </CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSavePlanDialogOpen(true)}
-              >
-                <GitBranch className="h-4 w-4 mr-2" />
-                Guardar Versão
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => cashflowPrintFn?.()}
+                  disabled={!cashflowPrintFn}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Imprimir
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSavePlanDialogOpen(true)}
+                >
+                  <GitBranch className="h-4 w-4 mr-2" />
+                  Guardar Versão
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <WealthTransactionsTable />
+              <WealthTransactionsTable 
+                onPrintReady={useCallback((fn) => setCashflowPrintFn(() => fn), [])} 
+              />
             </CardContent>
           </Card>
         </TabsContent>

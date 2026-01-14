@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import WealthTransactionDialog from "./WealthTransactionDialog";
+import { printCashflowTable } from "@/utils/print/tablePrintUtils";
 
 type ColorOption = "none" | "green" | "blue" | "amber" | "red" | "purple";
 
@@ -164,8 +165,13 @@ function AssetBadge({
   );
 }
 
-export default function WealthTransactionsTable() {
+interface WealthTransactionsTableProps {
+  onPrintReady?: (printFn: () => Promise<void>) => void;
+}
+
+export default function WealthTransactionsTable({ onPrintReady }: WealthTransactionsTableProps) {
   const queryClient = useQueryClient();
+  const tableContainerRef = useRef<HTMLDivElement>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<WealthTransaction | null>(null);
   const [sortField, setSortField] = useState<SortField>("date");
@@ -407,6 +413,31 @@ export default function WealthTransactionsTable() {
 
   const currentBalance = transactionsWithBalance[transactionsWithBalance.length - 1]?.running_balance || 0;
 
+  // Print handler
+  const handlePrint = useCallback(async () => {
+    if (!tableContainerRef.current) return;
+    await printCashflowTable({
+      tableRef: tableContainerRef.current,
+      title: "Plano Financeiro - Cashflow",
+      credits: totalCredits,
+      debits: totalDebits,
+      balance: currentBalance,
+      coloredCells,
+      transactions: transactions.map((t) => ({
+        id: t.id,
+        amount: t.amount,
+        transaction_type: t.transaction_type,
+      })),
+    });
+  }, [totalCredits, totalDebits, currentBalance, coloredCells, transactions]);
+
+  // Expose print function to parent
+  useEffect(() => {
+    if (onPrintReady) {
+      onPrintReady(handlePrint);
+    }
+  }, [onPrintReady, handlePrint]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12 text-muted-foreground">
@@ -442,7 +473,7 @@ export default function WealthTransactionsTable() {
       </div>
 
       {/* Ledger Table */}
-      <div className="rounded-md border">
+      <div className="rounded-md border" ref={tableContainerRef}>
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow className="text-xs">
