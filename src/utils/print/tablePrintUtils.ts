@@ -315,21 +315,30 @@ export async function printCashflowTable(options: PrintCashflowOptions): Promise
     #table-placeholder table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 8pt;
+      font-size: 7pt;
     }
     #table-placeholder th {
       background: #f3f4f6 !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
-      padding: 6px 8px;
+      padding: 4px 6px;
       text-align: left;
       font-weight: 600;
+      font-size: 7pt;
       border-bottom: 1px solid #d1d5db;
     }
     #table-placeholder td {
-      padding: 5px 8px;
+      padding: 3px 6px;
       border-bottom: 1px solid #e5e7eb;
       vertical-align: middle;
+      font-size: 7pt;
+    }
+    /* Center credits and debits columns (typically columns 3 and 4) */
+    #table-placeholder th:nth-child(3),
+    #table-placeholder td:nth-child(3),
+    #table-placeholder th:nth-child(4),
+    #table-placeholder td:nth-child(4) {
+      text-align: center !important;
     }
     #table-placeholder tr:nth-child(even) { 
       background: #fafafa !important;
@@ -341,6 +350,7 @@ export async function printCashflowTable(options: PrintCashflowOptions): Promise
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
       font-weight: 600;
+      font-size: 7pt;
       border-top: 2px solid #d1d5db;
     }
     /* Ensure text colors print */
@@ -352,12 +362,14 @@ export async function printCashflowTable(options: PrintCashflowOptions): Promise
       color: #166534 !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
+      font-size: 6pt;
     }
     [class*="bg-red"]:not(.text-red) { 
       background-color: #fee2e2 !important; 
       color: #991b1b !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
+      font-size: 6pt;
     }
     /* Hide interactive elements */
     button, [role="button"], .cursor-pointer { display: none !important; }
