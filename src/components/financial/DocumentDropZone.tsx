@@ -158,9 +158,15 @@ export default function DocumentDropZone({ companyId }: DocumentDropZoneProps) {
     // Upload the file first
     let attachmentUrl: string | null = null;
     try {
+      // Get user ID for secure folder-based storage
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        throw new Error('User not authenticated');
+      }
+      
       const fileExt = uploadedFile.name.split('.').pop();
       const sanitizedName = uploadedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const filePath = `loans/${crypto.randomUUID().slice(0, 8)}_${sanitizedName}`;
+      const filePath = `${userData.user.id}/loans/${crypto.randomUUID().slice(0, 8)}_${sanitizedName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('attachments')

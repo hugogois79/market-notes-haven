@@ -3597,6 +3597,27 @@ export type Database = {
           },
         ]
       }
+      reminder_context: {
+        Row: {
+          chat_id: number
+          last_reminder_id: string | null
+          last_reminder_message: string | null
+          sent_at: string | null
+        }
+        Insert: {
+          chat_id: number
+          last_reminder_id?: string | null
+          last_reminder_message?: string | null
+          sent_at?: string | null
+        }
+        Update: {
+          chat_id?: number
+          last_reminder_id?: string | null
+          last_reminder_message?: string | null
+          sent_at?: string | null
+        }
+        Relationships: []
+      }
       reminders: {
         Row: {
           chat_id: number
