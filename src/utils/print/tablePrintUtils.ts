@@ -333,12 +333,16 @@ export async function printCashflowTable(options: PrintCashflowOptions): Promise
       vertical-align: middle;
       font-size: 7pt;
     }
-    /* Center credits and debits columns (typically columns 3 and 4) */
-    #table-placeholder th:nth-child(3),
-    #table-placeholder td:nth-child(3),
-    #table-placeholder th:nth-child(4),
-    #table-placeholder td:nth-child(4) {
+    /* Center credits column (column 1) */
+    #table-placeholder th:nth-child(1),
+    #table-placeholder td:nth-child(1) {
       text-align: center !important;
+    }
+    /* Ensure all columns are visible */
+    #table-placeholder td,
+    #table-placeholder th {
+      display: table-cell !important;
+      visibility: visible !important;
     }
     #table-placeholder tr:nth-child(even) { 
       background: #fafafa !important;
