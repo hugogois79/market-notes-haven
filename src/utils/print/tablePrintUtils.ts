@@ -252,10 +252,15 @@ export async function printCashflowTable(options: PrintCashflowOptions): Promise
   // Clone the table to preserve styles
   const tableClone = tableRef.cloneNode(true) as HTMLElement;
   
-  // Remove interactive elements (buttons, hover-only elements, context menu dropdowns)
+  // Remove interactive elements (buttons, context menu dropdowns)
   // Note: Keep ContextMenuTrigger content (values) but remove ContextMenuContent (dropdowns)
-  tableClone.querySelectorAll("button, .opacity-0, [data-radix-menu-content]").forEach((el) => {
+  tableClone.querySelectorAll("button, [data-radix-menu-content]").forEach((el) => {
     el.remove();
+  });
+  
+  // Hide opacity-0 containers instead of removing them (preserves DOM structure for :has() selectors)
+  tableClone.querySelectorAll(".opacity-0").forEach((el) => {
+    (el as HTMLElement).style.display = "none";
   });
 
   // Apply inline styles for colors to ensure they print
@@ -350,16 +355,14 @@ export async function printCashflowTable(options: PrintCashflowOptions): Promise
     #table-placeholder td:nth-child(3) { text-align: right !important; }
     #table-placeholder td:nth-child(4) { width: 10% !important; text-align: right !important; }
     
-    /* Collapse empty cells and expand the one with content */
+    /* Collapse empty cells and expand the one with content - keep border-bottom for separator lines */
     #table-placeholder td:nth-child(1):not(:has(*)) {
       width: 0 !important;
       padding: 0 !important;
-      border: none !important;
     }
     #table-placeholder td:nth-child(3):not(:has(*)) {
       width: 0 !important;
       padding: 0 !important;
-      border: none !important;
     }
     /* When Credit is empty, Debit takes more space */
     #table-placeholder tr:has(td:nth-child(1):not(:has(*))) td:nth-child(3) {
