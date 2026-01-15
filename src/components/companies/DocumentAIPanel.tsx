@@ -196,8 +196,11 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanel
     }
   };
 
+  // Reset state when document changes - don't auto-analyze
   useEffect(() => {
-    analyzeDocument(false);
+    setExplanation(null);
+    setError(null);
+    setIsCached(false);
   }, [fileUrl]);
 
   const renderMarkdown = (text: string) => {
@@ -277,6 +280,23 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanel
       </div>
 
       <ScrollArea className="flex-1 p-4">
+        {!explanation && !isLoading && !error && (
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <Sparkles className="h-10 w-10 mb-4 text-primary/40" />
+            <p className="text-sm text-center mb-4">
+              Clique para analisar este documento com AI
+            </p>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => analyzeDocument(false)}
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              Iniciar Análise
+            </Button>
+          </div>
+        )}
+
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
             <RefreshCw className="h-8 w-8 animate-spin mb-3" />
