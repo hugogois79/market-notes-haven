@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,9 +13,43 @@ serve(async (req) => {
   }
 
   try {
-    const { fileUrl, fileName, mimeType, fileContent, documentId, companyId } = await req.json();
+    const { fileUrl, fileName, mimeType, documentId, companyId, bucket = 'company-documents' } = await req.json();
 
-    console.log('Received document analysis request:', { fileName, mimeType, documentId, companyId });
+    console.log('Received document analysis request:', { fileName, mimeType, documentId, companyId, fileUrl });
+
+    // Initialize Supabase client with service role for signed URL generation
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+
+    // Extract file path from public URL
+    // URL format: .../storage/v1/object/public/bucket-name/path/to/file.pdf
+    let filePath = '';
+    if (fileUrl) {
+      const match = fileUrl.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/);
+      if (match) {
+        filePath = decodeURIComponent(match[1]);
+      }
+    }
+
+    console.log('Extracted file path:', filePath);
+
+    // Generate signed URL (valid for 1 hour) - this URL is accessible even for private buckets
+    let accessibleUrl = fileUrl;
+    if (filePath) {
+      const { data: signedUrlData, error: signedError } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(filePath, 3600); // 1 hour validity
+
+      if (signedError) {
+        console.error('Error creating signed URL:', signedError);
+        // Fall back to original URL if signed URL fails
+      } else if (signedUrlData?.signedUrl) {
+        accessibleUrl = signedUrlData.signedUrl;
+        console.log('Generated signed URL successfully');
+      }
+    }
 
     // Get n8n webhook URL from environment
     const n8nWebhookUrl = Deno.env.get('N8N_ANALYZE_DOCUMENT_WEBHOOK');
@@ -34,7 +69,7 @@ serve(async (req) => {
       );
     }
 
-    // Forward request to n8n webhook
+    // Forward request to n8n webhook with accessible signed URL
     console.log('Forwarding to n8n webhook:', n8nWebhookUrl);
     
     const n8nResponse = await fetch(n8nWebhookUrl, {
@@ -43,10 +78,9 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        fileUrl,
+        fileUrl: accessibleUrl, // Signed URL that n8n can access
         fileName,
         mimeType,
-        fileContent,
         documentId,
         companyId,
         timestamp: new Date().toISOString(),
