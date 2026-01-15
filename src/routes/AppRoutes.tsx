@@ -48,6 +48,12 @@ import CompanyDetailPage from "@/pages/companies/[id]";
 import ProjectsPage from "@/pages/Projects";
 import RealEstatePage from "@/pages/real-estate";
 
+// Procurement routes
+import ProcurementDashboard from "@/pages/procurement/index";
+import ProcurementSuppliers from "@/pages/procurement/suppliers";
+import ProcurementProjects from "@/pages/procurement/projects/index";
+import ProcurementProjectDetail from "@/pages/procurement/projects/[id]";
+
 const AppRoutes = () => {
 
   return (
@@ -295,6 +301,40 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <CompanyDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Procurement Routes */}
+          <Route
+            path="procurement"
+            element={
+              <ProtectedRoute>
+                <ProcurementDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="procurement/suppliers"
+            element={
+              <ProtectedRoute>
+                <ProcurementSuppliers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="procurement/projects"
+            element={
+              <ProtectedRoute>
+                <ProcurementProjects />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="procurement/projects/:id"
+            element={
+              <ProtectedRoute>
+                <ProcurementProjectDetail />
               </ProtectedRoute>
             }
           />
