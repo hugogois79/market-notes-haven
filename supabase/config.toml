@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.index-workflow-files]
 verify_jwt = false
+
+[functions.analyze-document-webhook]
+verify_jwt = false
