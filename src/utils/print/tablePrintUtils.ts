@@ -377,14 +377,15 @@ export async function printCashflowTable(options: PrintCashflowOptions): Promise
       align-items: center !important;
       width: 100% !important;
     }
-    /* Credit column: value on the right (next to Date) */
+    /* Credit column: centered description for print */
     #table-placeholder td:nth-child(1) > div {
-      justify-content: space-between !important;
+      justify-content: center !important;
+      text-align: center !important;
     }
-    /* Debit column: value on the left (next to Date) */
+    /* Debit column: centered description for print */
     #table-placeholder td:nth-child(3) > div {
-      flex-direction: row-reverse !important;
-      justify-content: space-between !important;
+      justify-content: center !important;
+      text-align: center !important;
     }
     /* Ensure all columns are visible */
     #table-placeholder td,
