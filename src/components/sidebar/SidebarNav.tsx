@@ -17,6 +17,7 @@ import {
   Building2,
   FolderKanban,
   Home,
+  ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useMemo } from "react";
@@ -148,6 +149,13 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       title: "Work",
       icon: <Building2 size={20} />,
       path: "/companies",
+      workerAllowed: false,
+      featureKey: "finance",
+    },
+    {
+      title: "Procurement",
+      icon: <ShoppingCart size={20} />,
+      path: "/procurement",
       workerAllowed: false,
       featureKey: "finance",
     },

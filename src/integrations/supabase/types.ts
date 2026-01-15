@@ -2873,6 +2873,116 @@ export type Database = {
           },
         ]
       }
+      procurement_assignments: {
+        Row: {
+          contacted_at: string | null
+          created_at: string | null
+          id: string
+          last_email_content: string | null
+          last_reply_content: string | null
+          notes: string | null
+          project_id: string
+          quoted_price: number | null
+          responded_at: string | null
+          status: string | null
+          supplier_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          contacted_at?: string | null
+          created_at?: string | null
+          id?: string
+          last_email_content?: string | null
+          last_reply_content?: string | null
+          notes?: string | null
+          project_id: string
+          quoted_price?: number | null
+          responded_at?: string | null
+          status?: string | null
+          supplier_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          contacted_at?: string | null
+          created_at?: string | null
+          id?: string
+          last_email_content?: string | null
+          last_reply_content?: string | null
+          notes?: string | null
+          project_id?: string
+          quoted_price?: number | null
+          responded_at?: string | null
+          status?: string | null
+          supplier_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procurement_assignments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "procurement_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_assignments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      procurement_projects: {
+        Row: {
+          budget: number | null
+          category: string | null
+          company_id: string | null
+          created_at: string | null
+          created_by: string | null
+          deadline: string | null
+          description: string | null
+          id: string
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          budget?: number | null
+          category?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          budget?: number | null
+          category?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procurement_projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -4073,27 +4183,126 @@ export type Database = {
         }
         Relationships: []
       }
-      suppliers: {
+      supplier_contact_logs: {
         Row: {
-          created_at: string
+          contact_date: string
+          created_at: string | null
+          direction: string | null
           id: string
-          is_active: boolean
-          name: string
-          updated_at: string
+          method: string | null
+          next_steps: string | null
+          project_id: string | null
+          subject: string | null
+          summary: string | null
+          supplier_id: string
+          updated_at: string | null
+          user_id: string
         }
         Insert: {
-          created_at?: string
+          contact_date?: string
+          created_at?: string | null
+          direction?: string | null
           id?: string
-          is_active?: boolean
-          name: string
-          updated_at?: string
+          method?: string | null
+          next_steps?: string | null
+          project_id?: string | null
+          subject?: string | null
+          summary?: string | null
+          supplier_id: string
+          updated_at?: string | null
+          user_id: string
         }
         Update: {
+          contact_date?: string
+          created_at?: string | null
+          direction?: string | null
+          id?: string
+          method?: string | null
+          next_steps?: string | null
+          project_id?: string | null
+          subject?: string | null
+          summary?: string | null
+          supplier_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_contact_logs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "procurement_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_contact_logs_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          category: string | null
+          contact_person: string | null
+          created_at: string
+          crm_stage: string | null
+          description: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          last_interaction_at: string | null
+          name: string
+          phone: string | null
+          priority: string | null
+          specialty: string | null
+          tax_id: string | null
+          trust_score: number | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          category?: string | null
+          contact_person?: string | null
           created_at?: string
+          crm_stage?: string | null
+          description?: string | null
+          email?: string | null
           id?: string
           is_active?: boolean
-          name?: string
+          last_interaction_at?: string | null
+          name: string
+          phone?: string | null
+          priority?: string | null
+          specialty?: string | null
+          tax_id?: string | null
+          trust_score?: number | null
           updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          category?: string | null
+          contact_person?: string | null
+          created_at?: string
+          crm_stage?: string | null
+          description?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          last_interaction_at?: string | null
+          name?: string
+          phone?: string | null
+          priority?: string | null
+          specialty?: string | null
+          tax_id?: string | null
+          trust_score?: number | null
+          updated_at?: string
+          website?: string | null
         }
         Relationships: []
       }
