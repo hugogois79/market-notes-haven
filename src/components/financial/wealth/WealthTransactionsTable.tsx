@@ -477,7 +477,7 @@ export default function WealthTransactionsTable({ onPrintReady }: WealthTransact
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow className="text-xs">
-              <TableHead className="w-[38%] text-left py-2">
+              <TableHead className="w-[42%] text-left py-2">
                 <button
                   onClick={() => handleSort("counterparty")}
                   className="flex items-center text-xs font-semibold hover:text-foreground transition-colors"
@@ -486,7 +486,7 @@ export default function WealthTransactionsTable({ onPrintReady }: WealthTransact
                   {getSortIcon("counterparty")}
                 </button>
               </TableHead>
-              <TableHead className="w-[12%] text-center py-2">
+              <TableHead className="w-[6%] text-center py-2">
                 <button
                   onClick={() => handleSort("date")}
                   className="flex items-center justify-center text-xs font-semibold hover:text-foreground transition-colors w-full"
@@ -495,7 +495,7 @@ export default function WealthTransactionsTable({ onPrintReady }: WealthTransact
                   {getSortIcon("date")}
                 </button>
               </TableHead>
-              <TableHead className="w-[38%] text-right py-2">
+              <TableHead className="w-[42%] text-right py-2">
                 <button
                   onClick={() => handleSort("amount")}
                   className="flex items-center justify-end text-xs font-semibold hover:text-foreground transition-colors w-full"
@@ -504,7 +504,7 @@ export default function WealthTransactionsTable({ onPrintReady }: WealthTransact
                   {getSortIcon("amount")}
                 </button>
               </TableHead>
-              <TableHead className="w-[12%] text-right py-2 text-xs font-semibold">Saldo</TableHead>
+              <TableHead className="w-[10%] text-right py-2 text-xs font-semibold">Saldo</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
