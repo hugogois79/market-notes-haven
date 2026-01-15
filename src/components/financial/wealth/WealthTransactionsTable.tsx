@@ -524,17 +524,39 @@ export default function WealthTransactionsTable({ onPrintReady }: WealthTransact
                     {/* Crédito Column */}
                     <TableCell className="text-left py-1.5">
                     {isCredit ? (
-                        <div className="flex items-center gap-2">
-                          <AssetBadge
-                            assetName={transaction.wealth_assets?.name || null}
-                            isCredit={true}
-                            affectsValue={transaction.affects_asset_value !== false}
-                          />
-                          <EditableCell
-                            value={displayName}
-                            onSave={(val) => handleInlineEdit(transaction.id, "counterparty", val)}
-                            className="font-medium text-xs truncate flex-1 min-w-0"
-                          />
+                        <div className="flex items-center gap-2 justify-between w-full">
+                          {/* Grupo esquerdo: Botões + Badge + Descrição */}
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 flex-shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => handleEdit(transaction)}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-destructive hover:text-destructive"
+                                onClick={() => deleteMutation.mutate(transaction.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <AssetBadge
+                              assetName={transaction.wealth_assets?.name || null}
+                              isCredit={true}
+                              affectsValue={transaction.affects_asset_value !== false}
+                            />
+                            <EditableCell
+                              value={displayName}
+                              onSave={(val) => handleInlineEdit(transaction.id, "counterparty", val)}
+                              className="font-medium text-xs truncate min-w-0"
+                            />
+                          </div>
+                          {/* Valor - sempre à direita, junto à Data */}
                           <ContextMenu>
                             <ContextMenuTrigger asChild>
                               <span className={cn(
@@ -562,25 +584,6 @@ export default function WealthTransactionsTable({ onPrintReady }: WealthTransact
                               ))}
                             </ContextMenuContent>
                           </ContextMenu>
-                          {/* Action buttons on hover */}
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 flex-shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => handleEdit(transaction)}
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-destructive hover:text-destructive"
-                              onClick={() => deleteMutation.mutate(transaction.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
                         </div>
                       ) : null}
                     </TableCell>
@@ -593,30 +596,12 @@ export default function WealthTransactionsTable({ onPrintReady }: WealthTransact
                     {/* Débito Column */}
                     <TableCell className="text-right py-1.5">
                       {!isCredit ? (
-                        <div className="flex items-center gap-2 justify-end">
-                          {/* Action buttons on hover */}
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 mr-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => handleEdit(transaction)}
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-destructive hover:text-destructive"
-                              onClick={() => deleteMutation.mutate(transaction.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
+                        <div className="flex items-center gap-2 justify-between w-full">
+                          {/* Valor - sempre à esquerda, junto à Data */}
                           <ContextMenu>
                             <ContextMenuTrigger asChild>
                               <span className={cn(
-                                "cursor-context-menu px-1 py-0.5 rounded",
+                                "cursor-context-menu px-1 py-0.5 rounded flex-shrink-0",
                                 getCellStyle(transaction.id).bg || ""
                               )}>
                                 <EditableCell
@@ -645,16 +630,37 @@ export default function WealthTransactionsTable({ onPrintReady }: WealthTransact
                               ))}
                             </ContextMenuContent>
                           </ContextMenu>
-                          <EditableCell
-                            value={displayName}
-                            onSave={(val) => handleInlineEdit(transaction.id, "counterparty", val)}
-                            className="font-medium text-xs truncate flex-1 text-right"
-                          />
-                          <AssetBadge
-                            assetName={transaction.wealth_assets?.name || null}
-                            isCredit={false}
-                            affectsValue={transaction.affects_asset_value !== false}
-                          />
+                          {/* Grupo direito: Descrição + Badge + Botões */}
+                          <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+                            <EditableCell
+                              value={displayName}
+                              onSave={(val) => handleInlineEdit(transaction.id, "counterparty", val)}
+                              className="font-medium text-xs truncate min-w-0 text-right"
+                            />
+                            <AssetBadge
+                              assetName={transaction.wealth_assets?.name || null}
+                              isCredit={false}
+                              affectsValue={transaction.affects_asset_value !== false}
+                            />
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 flex-shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => handleEdit(transaction)}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-destructive hover:text-destructive"
+                                onClick={() => deleteMutation.mutate(transaction.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       ) : null}
                     </TableCell>
