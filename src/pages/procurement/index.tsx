@@ -9,10 +9,9 @@ import {
   FolderKanban, 
   Clock, 
   ArrowRight,
-  TrendingUp,
   Mail,
   CheckCircle2,
-  AlertCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import { useProcurementProjects, useProcurementSuppliers, useProcurementStats } from '@/hooks/procurement/useProcurementData';
 import { format } from 'date-fns';
@@ -105,17 +104,19 @@ export default function ProcurementDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={stats.needsAttention > 0 ? 'border-amber-500/50' : ''}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Completed
+            <CardTitle className={`text-sm font-medium ${stats.needsAttention > 0 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+              Needs Attention
             </CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+            <AlertTriangle className={`h-4 w-4 ${stats.needsAttention > 0 ? 'text-amber-500' : 'text-muted-foreground'}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.projectsByStatus?.completed || 0}</div>
+            <div className={`text-2xl font-bold ${stats.needsAttention > 0 ? 'text-amber-500' : ''}`}>
+              {stats.needsAttention || 0}
+            </div>
             <p className="text-xs text-muted-foreground">
-              This period
+              Awaiting your response
             </p>
           </CardContent>
         </Card>

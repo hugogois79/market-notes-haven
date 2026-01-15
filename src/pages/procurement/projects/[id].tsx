@@ -14,6 +14,8 @@ import {
   MoreHorizontal,
   Mail,
   Phone,
+  AlertTriangle,
+  MessageSquare,
 } from 'lucide-react';
 import { 
   useProcurementProject, 
@@ -69,8 +71,8 @@ const statusLabels: Record<string, string> = {
 const assignmentStatuses = [
   { value: 'to_contact', label: 'To Contact', color: 'bg-slate-500/20 text-slate-400' },
   { value: 'contacted', label: 'Contacted', color: 'bg-blue-500/20 text-blue-400' },
-  { value: 'awaiting_reply', label: 'Awaiting Reply', color: 'bg-amber-500/20 text-amber-400' },
-  { value: 'responded', label: 'Responded', color: 'bg-purple-500/20 text-purple-400' },
+  { value: 'technical_clarification', label: 'Needs Info', color: 'bg-amber-500/20 text-amber-500', icon: 'AlertTriangle', attention: true },
+  { value: 'proposal_received', label: 'Proposal Received', color: 'bg-purple-500/20 text-purple-400' },
   { value: 'negotiating', label: 'Negotiating', color: 'bg-orange-500/20 text-orange-400' },
   { value: 'awarded', label: 'Awarded', color: 'bg-green-500/20 text-green-400' },
   { value: 'rejected', label: 'Rejected', color: 'bg-red-500/20 text-red-400' },
@@ -254,59 +256,83 @@ export default function ProjectDetail() {
             </div>
           ) : (
             <div className="grid gap-3">
-              {assignments.map((assignment) => (
-                <div
-                  key={assignment.id}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h4 className="font-medium">{assignment.supplier?.name}</h4>
-                      <Badge className={
-                        assignmentStatuses.find(s => s.value === assignment.status)?.color || ''
-                      }>
-                        {assignmentStatuses.find(s => s.value === assignment.status)?.label || assignment.status}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                      {assignment.supplier?.email && (
-                        <div className="flex items-center gap-1">
-                          <Mail size={12} />
-                          {assignment.supplier.email}
+              {/* Sort: technical_clarification first */}
+              {[...(assignments || [])].sort((a, b) => {
+                if (a.status === 'technical_clarification') return -1;
+                if (b.status === 'technical_clarification') return 1;
+                return 0;
+              }).map((assignment) => {
+                const statusConfig = assignmentStatuses.find(s => s.value === assignment.status);
+                const needsAttention = statusConfig?.attention;
+                
+                return (
+                  <div
+                    key={assignment.id}
+                    className={`flex flex-col p-4 rounded-lg border bg-card ${needsAttention ? 'border-amber-500/50 ring-1 ring-amber-500/20' : ''}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <h4 className="font-medium">{assignment.supplier?.name}</h4>
+                          <Badge className={`${statusConfig?.color || ''} ${needsAttention ? 'animate-pulse' : ''}`}>
+                            {needsAttention && <AlertTriangle size={12} className="mr-1" />}
+                            {statusConfig?.label || assignment.status}
+                          </Badge>
                         </div>
-                      )}
-                      {assignment.supplier?.phone && (
-                        <div className="flex items-center gap-1">
-                          <Phone size={12} />
-                          {assignment.supplier.phone}
+                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                          {assignment.supplier?.email && (
+                            <div className="flex items-center gap-1">
+                              <Mail size={12} />
+                              {assignment.supplier.email}
+                            </div>
+                          )}
+                          {assignment.supplier?.phone && (
+                            <div className="flex items-center gap-1">
+                              <Phone size={12} />
+                              {assignment.supplier.phone}
+                            </div>
+                          )}
+                          {assignment.quoted_price && (
+                            <span>Quote: €{assignment.quoted_price.toLocaleString()}</span>
+                          )}
                         </div>
-                      )}
-                      {assignment.quoted_price && (
-                        <span>Quote: €{assignment.quoted_price.toLocaleString()}</span>
-                      )}
+                      </div>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal size={16} />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {assignmentStatuses.map((status) => (
+                            <DropdownMenuItem 
+                              key={status.value}
+                              onClick={() => handleStatusChange(assignment.id, status.value)}
+                              disabled={assignment.status === status.value}
+                            >
+                              Set as {status.label}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
+                    
+                    {/* Show vendor question if in technical_clarification status */}
+                    {assignment.status === 'technical_clarification' && (assignment as any).clarification_question && (
+                      <div className="mt-3 p-3 rounded-md bg-amber-500/10 border border-amber-500/20">
+                        <div className="flex items-start gap-2">
+                          <MessageSquare size={14} className="text-amber-500 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-medium text-amber-500 mb-1">Vendor Question:</p>
+                            <p className="text-sm text-amber-200/90">{(assignment as any).clarification_question}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal size={16} />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {assignmentStatuses.map((status) => (
-                        <DropdownMenuItem 
-                          key={status.value}
-                          onClick={() => handleStatusChange(assignment.id, status.value)}
-                          disabled={assignment.status === status.value}
-                        >
-                          Set as {status.label}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
