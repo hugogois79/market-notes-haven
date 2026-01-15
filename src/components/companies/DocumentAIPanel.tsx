@@ -14,9 +14,10 @@ interface DocumentAIPanelProps {
   fileUrl: string;
   fileName: string;
   mimeType: string | null;
+  documentId: string;
 }
 
-export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanelProps) {
+export function DocumentAIPanel({ fileUrl, fileName, mimeType, documentId }: DocumentAIPanelProps) {
   const [explanation, setExplanation] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -171,6 +172,7 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanel
           fileUrl,
           fileName, 
           mimeType,
+          documentId,
           fileContent 
         }
       });
