@@ -338,26 +338,36 @@ export async function printCashflowTable(options: PrintCashflowOptions): Promise
       white-space: normal !important;
       word-break: break-word !important;
     }
-    /* Column widths totaling 100%: Crédito (40%), Data (10%), Débito (40%), Saldo (10%) */
-    #table-placeholder th:nth-child(1),
-    #table-placeholder td:nth-child(1) {
-      width: 40% !important;
-      text-align: center !important;
+    /* Column widths - headers keep fixed widths */
+    #table-placeholder th:nth-child(1) { width: 40% !important; text-align: left !important; }
+    #table-placeholder th:nth-child(2) { width: 10% !important; text-align: center !important; }
+    #table-placeholder th:nth-child(3) { width: 40% !important; text-align: right !important; }
+    #table-placeholder th:nth-child(4) { width: 10% !important; text-align: right !important; }
+    
+    /* Data cells - base widths */
+    #table-placeholder td:nth-child(1) { text-align: left !important; }
+    #table-placeholder td:nth-child(2) { width: 10% !important; text-align: center !important; }
+    #table-placeholder td:nth-child(3) { text-align: right !important; }
+    #table-placeholder td:nth-child(4) { width: 10% !important; text-align: right !important; }
+    
+    /* Collapse empty cells and expand the one with content */
+    #table-placeholder td:nth-child(1):not(:has(*)) {
+      width: 0 !important;
+      padding: 0 !important;
+      border: none !important;
     }
-    #table-placeholder th:nth-child(2),
-    #table-placeholder td:nth-child(2) {
-      width: 10% !important;
-      text-align: center !important;
+    #table-placeholder td:nth-child(3):not(:has(*)) {
+      width: 0 !important;
+      padding: 0 !important;
+      border: none !important;
     }
-    #table-placeholder th:nth-child(3),
-    #table-placeholder td:nth-child(3) {
-      width: 40% !important;
-      text-align: right !important;
+    /* When Credit is empty, Debit takes more space */
+    #table-placeholder tr:has(td:nth-child(1):not(:has(*))) td:nth-child(3) {
+      width: 80% !important;
     }
-    #table-placeholder th:nth-child(4),
-    #table-placeholder td:nth-child(4) {
-      width: 10% !important;
-      text-align: right !important;
+    /* When Debit is empty, Credit takes more space */
+    #table-placeholder tr:has(td:nth-child(3):not(:has(*))) td:nth-child(1) {
+      width: 80% !important;
     }
     /* Ensure flex content inside cells is visible */
     #table-placeholder td > div {
