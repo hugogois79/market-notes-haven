@@ -2875,6 +2875,8 @@ export type Database = {
       }
       procurement_assignments: {
         Row: {
+          clarification_question: string | null
+          clarification_requested_at: string | null
           contacted_at: string | null
           created_at: string | null
           id: string
@@ -2882,6 +2884,7 @@ export type Database = {
           last_reply_content: string | null
           notes: string | null
           project_id: string
+          proposal_received_at: string | null
           quoted_price: number | null
           responded_at: string | null
           status: string | null
@@ -2889,6 +2892,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          clarification_question?: string | null
+          clarification_requested_at?: string | null
           contacted_at?: string | null
           created_at?: string | null
           id?: string
@@ -2896,6 +2901,7 @@ export type Database = {
           last_reply_content?: string | null
           notes?: string | null
           project_id: string
+          proposal_received_at?: string | null
           quoted_price?: number | null
           responded_at?: string | null
           status?: string | null
@@ -2903,6 +2909,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          clarification_question?: string | null
+          clarification_requested_at?: string | null
           contacted_at?: string | null
           created_at?: string | null
           id?: string
@@ -2910,6 +2918,7 @@ export type Database = {
           last_reply_content?: string | null
           notes?: string | null
           project_id?: string
+          proposal_received_at?: string | null
           quoted_price?: number | null
           responded_at?: string | null
           status?: string | null

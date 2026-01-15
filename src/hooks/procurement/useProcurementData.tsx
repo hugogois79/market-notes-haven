@@ -164,10 +164,27 @@ export const useCreateContactLog = () => {
   });
 };
 
+// Fetch all assignments across all projects
+export const useAllAssignments = () => {
+  return useQuery({
+    queryKey: ['all-procurement-assignments'],
+    queryFn: async () => {
+      const { data, error } = await (await import('@/integrations/supabase/client')).supabase
+        .from('procurement_assignments')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
+};
+
 // Stats hook
 export const useProcurementStats = () => {
   const { data: projects } = useProcurementProjects();
   const { data: suppliers } = useProcurementSuppliers();
+  const { data: allAssignments } = useAllAssignments();
   
   const stats = {
     totalProjects: projects?.length || 0,
@@ -175,6 +192,13 @@ export const useProcurementStats = () => {
     totalSuppliers: suppliers?.length || 0,
     projectsByStatus: projects?.reduce((acc, p) => {
       acc[p.status] = (acc[p.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>) || {},
+    // New stats for assignment statuses
+    needsAttention: allAssignments?.filter(a => a.status === 'technical_clarification').length || 0,
+    proposalsReceived: allAssignments?.filter(a => a.status === 'proposal_received').length || 0,
+    assignmentsByStatus: allAssignments?.reduce((acc, a) => {
+      acc[a.status] = (acc[a.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>) || {},
   };

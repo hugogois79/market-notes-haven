@@ -11,6 +11,9 @@ export interface ProcurementAssignment {
   notes: string | null;
   contacted_at: string | null;
   responded_at: string | null;
+  clarification_requested_at: string | null;
+  clarification_question: string | null;
+  proposal_received_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -87,8 +90,14 @@ export const assignmentService = {
   async updateAssignmentStatus(id: string, status: string): Promise<ProcurementAssignment> {
     const updates: Record<string, unknown> = { status };
     
+    // Track status change timestamps
     if (status === 'contacted') {
       updates.contacted_at = new Date().toISOString();
+    } else if (status === 'technical_clarification') {
+      updates.clarification_requested_at = new Date().toISOString();
+    } else if (status === 'proposal_received') {
+      updates.proposal_received_at = new Date().toISOString();
+      updates.responded_at = new Date().toISOString();
     } else if (status === 'responded') {
       updates.responded_at = new Date().toISOString();
     }
@@ -96,6 +105,22 @@ export const assignmentService = {
     const { data, error } = await supabase
       .from('procurement_assignments')
       .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as ProcurementAssignment;
+  },
+
+  async saveVendorQuestion(id: string, question: string): Promise<ProcurementAssignment> {
+    const { data, error } = await supabase
+      .from('procurement_assignments')
+      .update({
+        status: 'technical_clarification',
+        clarification_question: question,
+        clarification_requested_at: new Date().toISOString(),
+      })
       .eq('id', id)
       .select()
       .single();
