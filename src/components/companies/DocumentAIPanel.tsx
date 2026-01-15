@@ -165,19 +165,32 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType }: DocumentAIPanel
         fileContent = `[Document: ${fileName}]`;
       }
 
-      const { data, error: fnError } = await supabase.functions.invoke('explain-document', {
-        body: { fileContent, fileName }
+      // Call n8n webhook via Edge Function
+      const { data, error: fnError } = await supabase.functions.invoke('analyze-document-webhook', {
+        body: { 
+          fileUrl,
+          fileName, 
+          mimeType,
+          fileContent 
+        }
       });
 
       if (fnError) throw fnError;
 
-      setExplanation(data.explanation);
-      await saveAnalysis(data.explanation);
-      toast.success('Análise gerada e guardada');
+      // If n8n returns an explanation directly, use it
+      if (data?.data?.explanation) {
+        setExplanation(data.data.explanation);
+        await saveAnalysis(data.data.explanation);
+        toast.success('Análise gerada e guardada');
+      } else {
+        // n8n will process asynchronously - show pending message
+        setExplanation('Documento enviado para análise. A análise será processada em background pelo n8n.');
+        toast.success('Documento enviado para análise n8n');
+      }
     } catch (err) {
       console.error('Error analyzing document:', err);
-      setError('Não foi possível analisar o documento. Tente novamente.');
-      toast.error('Erro ao analisar documento');
+      setError('Não foi possível enviar para análise. Tente novamente.');
+      toast.error('Erro ao enviar documento');
     } finally {
       setIsLoading(false);
     }
