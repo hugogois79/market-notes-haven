@@ -3653,6 +3653,7 @@ export default function CompanyDetailPage() {
                     fileUrl={viewingDocument.file_url}
                     fileName={viewingDocument.name}
                     mimeType={viewingDocument.mime_type}
+                    documentId={viewingDocument.id}
                   />
                 </div>
               )}

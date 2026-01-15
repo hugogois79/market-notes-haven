@@ -3489,6 +3489,7 @@ export default function WorkFlowTab() {
                   fileUrl={previewFile.file_url}
                   fileName={previewFile.file_name}
                   mimeType={previewFile.mime_type}
+                  documentId={previewFile.id}
                 />
               </div>
             )}
