@@ -23,23 +23,25 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Extract file path from public URL
+    // Extract bucket name and file path from public URL
     // URL format: .../storage/v1/object/public/bucket-name/path/to/file.pdf
     let filePath = '';
+    let detectedBucket = bucket;
     if (fileUrl) {
-      const match = fileUrl.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/);
+      const match = fileUrl.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
       if (match) {
-        filePath = decodeURIComponent(match[1]);
+        detectedBucket = match[1]; // Extract actual bucket name from URL
+        filePath = decodeURIComponent(match[2]);
       }
     }
 
-    console.log('Extracted file path:', filePath);
+    console.log('Extracted bucket:', detectedBucket, 'file path:', filePath);
 
     // Generate signed URL (valid for 1 hour) - this URL is accessible even for private buckets
     let accessibleUrl = fileUrl;
     if (filePath) {
       const { data: signedUrlData, error: signedError } = await supabase.storage
-        .from(bucket)
+        .from(detectedBucket)
         .createSignedUrl(filePath, 3600); // 1 hour validity
 
       if (signedError) {
@@ -93,13 +95,25 @@ serve(async (req) => {
       throw new Error(`n8n webhook failed: ${n8nResponse.status}`);
     }
 
-    const n8nResult = await n8nResponse.json();
-    console.log('n8n response:', n8nResult);
+    // Handle n8n response - may be empty if processing async
+    let n8nResult = null;
+    const responseText = await n8nResponse.text();
+    if (responseText && responseText.trim()) {
+      try {
+        n8nResult = JSON.parse(responseText);
+        console.log('n8n response:', n8nResult);
+      } catch {
+        console.log('n8n returned non-JSON response:', responseText);
+        n8nResult = { message: responseText };
+      }
+    } else {
+      console.log('n8n returned empty response (async processing)');
+    }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Document sent to n8n for analysis',
+        message: n8nResult ? 'Document analysis received' : 'Document sent to n8n for async analysis',
         data: n8nResult 
       }),
       { 
