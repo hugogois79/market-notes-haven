@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sparkles, RefreshCw, AlertCircle, Copy } from "lucide-react";
@@ -23,6 +24,7 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType, documentId }: Doc
   const [error, setError] = useState<string | null>(null);
   const [isCached, setIsCached] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
   const copyAnalysisAsRichText = async () => {
     if (!contentRef.current || !explanation) return;
@@ -178,6 +180,9 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType, documentId }: Doc
       });
 
       if (fnError) throw fnError;
+
+      // Invalidate workflow-files query to trigger polling for OCR updates
+      queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
 
       // If n8n returns an explanation directly, use it
       if (data?.data?.explanation) {

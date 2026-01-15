@@ -683,8 +683,11 @@ export default function WorkFlowTab() {
   };
 
   // Fetch workflow files with company info
-  const { data: workflowFiles, isLoading } = useQuery({
+  // Enable polling when a file is being processed to get OCR updates
+  const isProcessing = previewFile?.status === 'processing';
+  const { data: workflowFiles, isLoading, refetch: refetchWorkflowFiles } = useQuery({
     queryKey: ["workflow-files"],
+    refetchInterval: isProcessing ? 5000 : false, // Poll every 5s when processing
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -706,6 +709,26 @@ export default function WorkFlowTab() {
     },
     staleTime: 60 * 1000, // 1 minute cache
   });
+
+  // Sync previewFile with latest data from query when OCR data arrives
+  useEffect(() => {
+    if (previewFile && workflowFiles) {
+      const updatedFile = workflowFiles.find((f: WorkflowFile) => f.id === previewFile.id);
+      if (updatedFile) {
+        // Check if new OCR data has arrived that wasn't in previewFile
+        const hasNewOcrData = 
+          (updatedFile.vendor_name && !previewFile.vendor_name) ||
+          (updatedFile.total_amount !== null && previewFile.total_amount === null) ||
+          (updatedFile.invoice_date && !previewFile.invoice_date) ||
+          (updatedFile.company_id && !previewFile.company_id);
+        
+        if (hasNewOcrData) {
+          setPreviewFile(updatedFile);
+          toast.info('Dados OCR carregados automaticamente');
+        }
+      }
+    }
+  }, [workflowFiles, previewFile]);
 
   // Fetch transactions linked to workflow files.
   // Prefer stable ID-based linking (document_file_id), with legacy fallback to invoice_file_url
