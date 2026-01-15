@@ -533,12 +533,12 @@ export default function WealthTransactionsTable({ onPrintReady }: WealthTransact
                           <EditableCell
                             value={displayName}
                             onSave={(val) => handleInlineEdit(transaction.id, "counterparty", val)}
-                            className="font-medium text-xs truncate flex-1"
+                            className="font-medium text-xs truncate flex-1 min-w-0"
                           />
                           <ContextMenu>
                             <ContextMenuTrigger asChild>
                               <span className={cn(
-                                "cursor-context-menu px-1 py-0.5 rounded",
+                                "cursor-context-menu px-1 py-0.5 rounded flex-shrink-0",
                                 getCellStyle(transaction.id).bg || ""
                               )}>
                                 <EditableCell
@@ -563,7 +563,7 @@ export default function WealthTransactionsTable({ onPrintReady }: WealthTransact
                             </ContextMenuContent>
                           </ContextMenu>
                           {/* Action buttons on hover */}
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 ml-1">
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 flex-shrink-0">
                             <Button
                               variant="ghost"
                               size="icon"
