@@ -91,8 +91,21 @@ serve(async (req) => {
 
     if (!n8nResponse.ok) {
       const errorText = await n8nResponse.text();
-      console.error('n8n webhook error:', errorText);
-      throw new Error(`n8n webhook failed: ${n8nResponse.status}`);
+      console.error('n8n webhook error:', n8nResponse.status, errorText);
+      
+      // Return error details instead of throwing - let frontend handle gracefully
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `n8n processing error (${n8nResponse.status})`,
+          details: errorText,
+          message: 'O workflow n8n encontrou um erro. Verifique a configuração do workflow.'
+        }),
+        { 
+          status: 200, // Return 200 to frontend with error info
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
     // Handle n8n response - may be empty if processing async
