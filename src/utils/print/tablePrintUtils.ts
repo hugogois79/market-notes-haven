@@ -362,9 +362,19 @@ export async function printCashflowTable(options: PrintCashflowOptions): Promise
     /* Ensure flex content inside cells is visible */
     #table-placeholder td > div {
       display: flex !important;
-      flex-wrap: wrap !important;
-      gap: 2px !important;
-      justify-content: inherit !important;
+      flex-wrap: nowrap !important;
+      gap: 4px !important;
+      align-items: center !important;
+      width: 100% !important;
+    }
+    /* Credit column: value on the right (next to Date) */
+    #table-placeholder td:nth-child(1) > div {
+      justify-content: space-between !important;
+    }
+    /* Debit column: value on the left (next to Date) */
+    #table-placeholder td:nth-child(3) > div {
+      flex-direction: row-reverse !important;
+      justify-content: space-between !important;
     }
     /* Ensure all columns are visible */
     #table-placeholder td,
