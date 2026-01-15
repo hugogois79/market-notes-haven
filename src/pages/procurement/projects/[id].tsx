@@ -23,8 +23,11 @@ import {
   useDeleteProject,
   useProcurementSuppliers,
   useBulkCreateAssignments,
+  useBulkCreateSuppliersByName,
   useUpdateAssignmentStatus,
 } from '@/hooks/procurement/useProcurementData';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
 import ProjectFormDialog from '@/components/procurement/ProjectFormDialog';
 import {
@@ -86,6 +89,7 @@ export default function ProjectDetail() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddSuppliers, setShowAddSuppliers] = useState(false);
   const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([]);
+  const [bulkNames, setBulkNames] = useState('');
 
   const { data: project, isLoading: projectLoading } = useProcurementProject(id);
   const { data: assignments, isLoading: assignmentsLoading } = useProjectAssignments(id);
@@ -93,6 +97,7 @@ export default function ProjectDetail() {
   
   const deleteProject = useDeleteProject();
   const bulkCreateAssignments = useBulkCreateAssignments();
+  const bulkCreateByName = useBulkCreateSuppliersByName();
   const updateAssignmentStatus = useUpdateAssignmentStatus();
 
   if (projectLoading) {
@@ -129,6 +134,26 @@ export default function ProjectDetail() {
       supplierIds: selectedSuppliers 
     });
     setSelectedSuppliers([]);
+    setShowAddSuppliers(false);
+  };
+
+  // Parse bulk names from textarea
+  const parseBulkNames = (input: string): string[] => {
+    return input
+      .split(/[\n,]/)
+      .map(name => name.trim())
+      .filter(name => name.length > 0);
+  };
+
+  const parsedNames = parseBulkNames(bulkNames);
+
+  const handleAddSuppliersByName = async () => {
+    if (parsedNames.length === 0) return;
+    await bulkCreateByName.mutateAsync({
+      projectId: project.id,
+      names: parsedNames,
+    });
+    setBulkNames('');
     setShowAddSuppliers(false);
   };
 
@@ -368,67 +393,114 @@ export default function ProjectDetail() {
 
       {/* Add Suppliers Dialog */}
       <Dialog open={showAddSuppliers} onOpenChange={setShowAddSuppliers}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Add Suppliers to Project</DialogTitle>
           </DialogHeader>
           
-          {availableSuppliers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              All suppliers are already assigned to this project
-            </div>
-          ) : (
-            <>
-              <ScrollArea className="h-[300px] pr-4">
-                <div className="space-y-2">
-                  {availableSuppliers.map((supplier) => (
-                    <div
-                      key={supplier.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent/50 cursor-pointer"
-                      onClick={() => {
-                        setSelectedSuppliers(prev =>
-                          prev.includes(supplier.id)
-                            ? prev.filter(id => id !== supplier.id)
-                            : [...prev, supplier.id]
-                        );
-                      }}
-                    >
-                      <Checkbox 
-                        checked={selectedSuppliers.includes(supplier.id)}
-                        onCheckedChange={(checked) => {
-                          setSelectedSuppliers(prev =>
-                            checked
-                              ? [...prev, supplier.id]
-                              : prev.filter(id => id !== supplier.id)
-                          );
-                        }}
-                      />
-                      <div>
-                        <p className="font-medium">{supplier.name}</p>
-                        {(supplier as any).specialty && (
-                          <p className="text-sm text-muted-foreground">
-                            {(supplier as any).specialty}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+          <Tabs defaultValue="existing" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="existing">Seleccionar Existentes</TabsTrigger>
+              <TabsTrigger value="bulk">Adicionar por Nome</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="existing" className="mt-4">
+              {availableSuppliers.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  All suppliers are already assigned to this project
                 </div>
-              </ScrollArea>
-              
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setShowAddSuppliers(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleAddSuppliers}
-                  disabled={selectedSuppliers.length === 0 || bulkCreateAssignments.isPending}
-                >
-                  Add {selectedSuppliers.length} Supplier{selectedSuppliers.length !== 1 ? 's' : ''}
-                </Button>
+              ) : (
+                <>
+                  <ScrollArea className="h-[300px] pr-4">
+                    <div className="space-y-2">
+                      {availableSuppliers.map((supplier) => (
+                        <div
+                          key={supplier.id}
+                          className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent/50 cursor-pointer"
+                          onClick={() => {
+                            setSelectedSuppliers(prev =>
+                              prev.includes(supplier.id)
+                                ? prev.filter(id => id !== supplier.id)
+                                : [...prev, supplier.id]
+                            );
+                          }}
+                        >
+                          <Checkbox 
+                            checked={selectedSuppliers.includes(supplier.id)}
+                            onCheckedChange={(checked) => {
+                              setSelectedSuppliers(prev =>
+                                checked
+                                  ? [...prev, supplier.id]
+                                  : prev.filter(id => id !== supplier.id)
+                              );
+                            }}
+                          />
+                          <div>
+                            <p className="font-medium">{supplier.name}</p>
+                            {(supplier as any).specialty && (
+                              <p className="text-sm text-muted-foreground">
+                                {(supplier as any).specialty}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                  
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button variant="outline" onClick={() => setShowAddSuppliers(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleAddSuppliers}
+                      disabled={selectedSuppliers.length === 0 || bulkCreateAssignments.isPending}
+                    >
+                      Add {selectedSuppliers.length} Supplier{selectedSuppliers.length !== 1 ? 's' : ''}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="bulk" className="mt-4">
+              <div className="space-y-4">
+                <Textarea
+                  placeholder={`Escreva os nomes dos fornecedores, um por linha ou separados por vírgula:
+
+Exemplo:
+HELISWISS IBERICA
+Cisco Systems Portugal
+Dell Technologies, HP Enterprise`}
+                  value={bulkNames}
+                  onChange={(e) => setBulkNames(e.target.value)}
+                  rows={10}
+                  className="resize-none"
+                />
+                <p className="text-sm text-muted-foreground">
+                  {parsedNames.length > 0 
+                    ? `${parsedNames.length} fornecedor(es) detectado(s). Os que não existirem serão criados automaticamente.`
+                    : 'Fornecedores que não existam serão criados automaticamente.'
+                  }
+                </p>
+                
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setShowAddSuppliers(false)}>
+                    Cancelar
+                  </Button>
+                  <Button 
+                    onClick={handleAddSuppliersByName}
+                    disabled={parsedNames.length === 0 || bulkCreateByName.isPending}
+                  >
+                    {bulkCreateByName.isPending 
+                      ? 'A processar...' 
+                      : `Adicionar ${parsedNames.length} Fornecedor${parsedNames.length !== 1 ? 'es' : ''}`
+                    }
+                  </Button>
+                </div>
               </div>
-            </>
-          )}
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
     </div>

@@ -70,4 +70,38 @@ export const supplierService = {
     if (error) throw error;
     return data;
   },
+
+  async getOrCreateSuppliersByNames(names: string[]): Promise<{
+    suppliers: Supplier[];
+    created: string[];
+    existing: string[];
+  }> {
+    const suppliers: Supplier[] = [];
+    const created: string[] = [];
+    const existing: string[] = [];
+
+    for (const name of names) {
+      const trimmed = name.trim();
+      if (!trimmed) continue;
+
+      // Check if exists (case-insensitive)
+      const { data: existingSupplier } = await supabase
+        .from('suppliers')
+        .select('*')
+        .ilike('name', trimmed)
+        .single();
+
+      if (existingSupplier) {
+        suppliers.push(existingSupplier);
+        existing.push(trimmed);
+      } else {
+        // Create new supplier
+        const newSupplier = await this.getOrCreateSupplier(trimmed);
+        suppliers.push(newSupplier);
+        created.push(trimmed);
+      }
+    }
+
+    return { suppliers, created, existing };
+  },
 };

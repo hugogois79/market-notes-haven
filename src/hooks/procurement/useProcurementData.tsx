@@ -144,6 +144,41 @@ export const useBulkCreateAssignments = () => {
   });
 };
 
+export const useBulkCreateSuppliersByName = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ projectId, names }: { projectId: string; names: string[] }) => {
+      // 1. Get or create all suppliers by name
+      const { suppliers, created, existing } = await supplierService.getOrCreateSuppliersByNames(names);
+      
+      // 2. Create assignments for all suppliers
+      const supplierIds = suppliers.map(s => s.id);
+      if (supplierIds.length > 0) {
+        await assignmentService.bulkCreateAssignments(projectId, supplierIds);
+      }
+      
+      return { suppliers, created, existing };
+    },
+    onSuccess: (result, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['procurement-assignments', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['procurement-suppliers'] });
+      
+      if (result.created.length > 0) {
+        toast.success(`${result.created.length} novo(s) fornecedor(es) criado(s)`);
+      }
+      if (result.existing.length > 0) {
+        toast.info(`${result.existing.length} fornecedor(es) já existiam`);
+      }
+      toast.success(`${result.suppliers.length} fornecedor(es) associado(s) ao projecto`);
+    },
+    onError: (error) => {
+      toast.error('Falha ao adicionar fornecedores');
+      console.error('Bulk create suppliers by name error:', error);
+    },
+  });
+};
+
 export const useCreateContactLog = () => {
   const queryClient = useQueryClient();
   
