@@ -403,8 +403,8 @@ export async function printCashflowTable(options: PrintCashflowOptions): Promise
       print-color-adjust: exact !important;
       font-size: 6pt;
     }
-    /* Hide interactive elements */
-    button, [role="button"], .cursor-pointer { display: none !important; }
+    /* Hide interactive elements (keep EditableCell values) */
+    button { display: none !important; }
   `;
   printWindow.document.head.appendChild(style);
 
