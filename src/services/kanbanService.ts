@@ -511,4 +511,24 @@ export class KanbanService {
     
     if (error) throw error;
   }
+
+  static async getSignedDownloadUrl(fileUrl: string): Promise<string> {
+    // Extract the file path from the public URL
+    // URL format: .../storage/v1/object/public/kanban-attachments/{cardId}/{filename}
+    const urlParts = fileUrl.split('/kanban-attachments/');
+    if (urlParts.length < 2) {
+      throw new Error('Invalid file URL format');
+    }
+    
+    const filePath = urlParts[1];
+    
+    const { data, error } = await supabase.storage
+      .from('kanban-attachments')
+      .createSignedUrl(filePath, 3600); // 1 hour expiry
+    
+    if (error) throw error;
+    if (!data?.signedUrl) throw new Error('Failed to generate signed URL');
+    
+    return data.signedUrl;
+  }
 }
