@@ -170,7 +170,14 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
 
   const handleDownloadAttachment = async (attachment: KanbanAttachment) => {
     try {
-      const response = await fetch(attachment.file_url);
+      // Get signed URL for private bucket
+      const signedUrl = await KanbanService.getSignedDownloadUrl(attachment.file_url);
+      
+      const response = await fetch(signedUrl);
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+      
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -180,10 +187,10 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      toast.success('Download started');
+      toast.success('Download concluído');
     } catch (error) {
       console.error('Error downloading attachment:', error);
-      toast.error('Failed to download attachment');
+      toast.error('Falha ao descarregar ficheiro');
     }
   };
 
