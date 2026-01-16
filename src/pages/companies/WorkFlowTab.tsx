@@ -3442,7 +3442,7 @@ export default function WorkFlowTab() {
           <DialogHeader className="p-4 pb-0 flex-shrink-0">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-lg">Visualizar Documento</DialogTitle>
-              <div className="flex items-center gap-2 mr-8">
+              <div className="flex items-center gap-2 mr-12">
                 <Button
                   variant={showAIPanel ? "default" : "outline"}
                   size="sm"
