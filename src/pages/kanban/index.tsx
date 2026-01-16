@@ -472,7 +472,7 @@ const KanbanPage = () => {
   return (
     <div className="p-6">
       <div className="mb-6 space-y-4 no-print">
-        {/* Back button and board selector */}
+        {/* Back button, board title and board selector */}
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -481,11 +481,19 @@ const KanbanPage = () => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Boards
           </Button>
+          
+          {/* Board title prominently displayed */}
+          {currentBoard && (
+            <h1 className="text-2xl font-bold text-foreground">
+              {currentBoard.title}
+            </h1>
+          )}
+          
           <div className="flex items-center gap-2">
-            <KanbanIcon className="h-6 w-6" />
+            <KanbanIcon className="h-5 w-5 text-muted-foreground" />
             <Select value={boardId} onValueChange={(value) => navigate(`/kanban/${value}`)}>
-              <SelectTrigger className="w-[280px]">
-                <SelectValue placeholder="Select a board" />
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Switch board" />
               </SelectTrigger>
               <SelectContent>
                 {boards.map((board) => (
@@ -539,14 +547,9 @@ const KanbanPage = () => {
           </div>
         </div>
 
-        {/* Board title and description */}
-        {currentBoard && (
-          <div>
-            <h1 className="text-3xl font-bold">{currentBoard.title}</h1>
-            {currentBoard.description && (
-              <p className="text-muted-foreground">{currentBoard.description}</p>
-            )}
-          </div>
+        {/* Board description (if exists) */}
+        {currentBoard?.description && (
+          <p className="text-sm text-muted-foreground">{currentBoard.description}</p>
         )}
       </div>
 
