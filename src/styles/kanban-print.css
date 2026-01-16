@@ -54,23 +54,26 @@
   }
 
   .print-header-left {
-    display: flex;
+    display: flex !important;
     align-items: center;
     gap: 0.15cm;
   }
 
   .print-space-title {
+    display: inline !important;
     font-size: 10pt;
     font-weight: bold;
     color: #333 !important;
   }
 
   .print-separator {
+    display: inline !important;
     font-size: 10pt;
     color: #666 !important;
   }
 
   .print-board-name {
+    display: inline !important;
     font-size: 12pt;
     font-weight: bold;
     color: black !important;
