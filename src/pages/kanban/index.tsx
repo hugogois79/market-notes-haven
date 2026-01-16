@@ -85,7 +85,7 @@ const KanbanPage = () => {
   const [showArchivedBoards, setShowArchivedBoards] = useState(false);
   const [showArchivedLists, setShowArchivedLists] = useState(false);
 
-  const currentBoard = boards.find(b => b.id === boardId);
+  const currentBoard = allBoards.find(b => b.id === boardId) || boards.find(b => b.id === boardId);
   const currentSpace = spaces.find(s => s.id === currentBoard?.space_id);
 
   // Filter boards based on archived status
