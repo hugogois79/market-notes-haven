@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Search, Kanban as KanbanIcon, Archive, ArrowLeft, MoreVertical, Pencil, Trash2, ArchiveRestore } from 'lucide-react';
+import { Plus, Search, Kanban as KanbanIcon, Archive, ArrowLeft, MoreVertical, Pencil, Trash2, ArchiveRestore, Printer } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -544,6 +544,17 @@ const KanbanPage = () => {
                 onCheckedChange={setShowArchivedLists}
               />
             </div>
+            
+            {/* Print Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.print()}
+              className="no-print"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
           </div>
         </div>
 
@@ -572,9 +583,18 @@ const KanbanPage = () => {
                     .filter(card => card.list_id === list.id && !card.concluded)
                     .sort((a, b) => a.position - b.position);
                   
+                  const listTotal = listCards.reduce((acc, card) => acc + (card.value || 0), 0);
+                  
                   return (
                     <div key={list.id} className="kanban-list-print">
-                      <div className="kanban-list-title">{list.title}</div>
+                      <div className="kanban-list-title">
+                        {list.title} ({listCards.length})
+                        {listTotal > 0 && (
+                          <span className="kanban-list-total">
+                            €{listTotal.toLocaleString('pt-PT', { minimumFractionDigits: 2 })}
+                          </span>
+                        )}
+                      </div>
                       {listCards.length > 0 ? (
                         listCards.map(card => (
                           <div 
@@ -590,14 +610,19 @@ const KanbanPage = () => {
                               <div className="kanban-card-description">{card.description}</div>
                             )}
                             <div className="kanban-card-meta">
+                              {card.value && card.value > 0 && (
+                                <span className="kanban-card-badge kanban-card-value">
+                                  €{card.value.toLocaleString('pt-PT', { minimumFractionDigits: 2 })}
+                                </span>
+                              )}
                               {card.priority && (
                                 <span className="kanban-card-badge">
-                                  Priority: {card.priority}
+                                  {card.priority}
                                 </span>
                               )}
                               {card.due_date && (
                                 <span className="kanban-card-badge">
-                                  Due: {new Date(card.due_date).toLocaleDateString()}
+                                  {new Date(card.due_date).toLocaleDateString('pt-PT')}
                                 </span>
                               )}
                               {card.tasks && Array.isArray(card.tasks) && card.tasks.length > 0 && (() => {
@@ -605,13 +630,13 @@ const KanbanPage = () => {
                                 const total = card.tasks.length;
                                 return (
                                   <span className="kanban-card-badge">
-                                    Tasks: {completed}/{total}
+                                    {completed}/{total}
                                   </span>
                                 );
                               })()}
                               {card.attachment_count && card.attachment_count > 0 && (
                                 <span className="kanban-card-badge">
-                                  Attachments: {card.attachment_count}
+                                  📎 {card.attachment_count}
                                 </span>
                               )}
                             </div>
