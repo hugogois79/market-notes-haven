@@ -574,7 +574,7 @@ const KanbanPage = () => {
       ) : (
         <>
           {/* Print View - Hidden on screen, visible when printing */}
-          <div className="hidden print:block">
+          <div style={{ position: 'absolute', left: '-9999px' }} className="print:!static print:!left-auto print:!block">
             <div className="print-header">
               <div className="print-header-left">
                 {currentSpace && <span className="print-space-title">{currentSpace.title}</span>}

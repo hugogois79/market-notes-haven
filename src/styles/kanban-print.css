@@ -45,7 +45,8 @@
 
   /* Print header - Space > Board + Date */
   .print-header {
-    display: flex;
+    display: flex !important;
+    visibility: visible !important;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.3cm;
@@ -55,12 +56,15 @@
 
   .print-header-left {
     display: flex !important;
+    visibility: visible !important;
     align-items: center;
     gap: 0.15cm;
   }
 
   .print-space-title {
     display: inline !important;
+    visibility: visible !important;
+    opacity: 1 !important;
     font-size: 10pt;
     font-weight: bold;
     color: black !important;
@@ -68,18 +72,25 @@
 
   .print-separator {
     display: inline !important;
+    visibility: visible !important;
+    opacity: 1 !important;
     font-size: 10pt;
     color: #666 !important;
   }
 
   .print-board-name {
     display: inline !important;
+    visibility: visible !important;
+    opacity: 1 !important;
     font-size: 12pt;
     font-weight: bold;
     color: black !important;
   }
 
   .print-header-date {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
     font-size: 8pt;
     color: #666 !important;
   }
