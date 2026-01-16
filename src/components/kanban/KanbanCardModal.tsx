@@ -64,6 +64,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   const [tags, setTags] = useState<string[]>((card as any).tags || []);
   const [tagInput, setTagInput] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const [value, setValue] = useState<number>(card.value || 0);
 
   useEffect(() => {
     if (isOpen && card.id) {
@@ -215,6 +216,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
           title,
           description,
           priority,
+          value,
           due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
           tasks: tasks as any,
           tags: tags as any
@@ -233,6 +235,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
         title,
         description,
         priority,
+        value,
         due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
         tasks: tasks as any,
         tags: tags as any
@@ -280,6 +283,22 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
               placeholder="Add a more detailed description..."
               rows={4}
             />
+          </div>
+
+          <div>
+            <Label>Valor (€)</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={value || ''}
+                onChange={(e) => setValue(parseFloat(e.target.value) || 0)}
+                placeholder="0.00"
+                className="pl-8"
+              />
+            </div>
           </div>
 
           <div>

@@ -150,6 +150,14 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                       <span className="ml-2 text-xs text-muted-foreground">
                         ({cards.length})
                       </span>
+                      {(() => {
+                        const totalValue = cards.reduce((acc, card) => acc + (card.value || 0), 0);
+                        return totalValue > 0 ? (
+                          <span className="ml-2 text-xs text-green-600 font-medium">
+                            €{totalValue.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        ) : null;
+                      })()}
                     </h3>
                   )}
                 </div>

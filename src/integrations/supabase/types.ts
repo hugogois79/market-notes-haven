@@ -1652,6 +1652,7 @@ export type Database = {
           tasks: Json | null
           title: string
           updated_at: string | null
+          value: number | null
         }
         Insert: {
           archived?: boolean | null
@@ -1670,6 +1671,7 @@ export type Database = {
           tasks?: Json | null
           title: string
           updated_at?: string | null
+          value?: number | null
         }
         Update: {
           archived?: boolean | null
@@ -1688,6 +1690,7 @@ export type Database = {
           tasks?: Json | null
           title?: string
           updated_at?: string | null
+          value?: number | null
         }
         Relationships: [
           {
