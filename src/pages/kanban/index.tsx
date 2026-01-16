@@ -86,6 +86,7 @@ const KanbanPage = () => {
   const [showArchivedLists, setShowArchivedLists] = useState(false);
 
   const currentBoard = boards.find(b => b.id === boardId);
+  const currentSpace = spaces.find(s => s.id === currentBoard?.space_id);
 
   // Filter boards based on archived status
   const filteredBoards = useMemo(() => {
@@ -574,7 +575,16 @@ const KanbanPage = () => {
         <>
           {/* Print View - Hidden on screen, visible when printing */}
           <div className="hidden print:block">
-            <div className="print-board-title">{currentBoard?.title}</div>
+            <div className="print-header">
+              <div className="print-header-left">
+                {currentSpace && <span className="print-space-title">{currentSpace.title}</span>}
+                {currentSpace && <span className="print-separator">›</span>}
+                <span className="print-board-name">{currentBoard?.title}</span>
+              </div>
+              <div className="print-header-date">
+                {new Date().toLocaleDateString('pt-PT')}
+              </div>
+            </div>
             <div className="kanban-board-print">
               {[...filteredLists]
                 .sort((a, b) => a.position - b.position)

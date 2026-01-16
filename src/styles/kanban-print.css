@@ -43,14 +43,42 @@
     align-items: flex-start;
   }
 
-  /* Board title - PROMINENT AT TOP */
-  .print-board-title {
-    font-size: 14pt;
-    font-weight: bold;
-    margin-bottom: 0.4cm;
+  /* Print header - Space > Board + Date */
+  .print-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.3cm;
     padding-bottom: 0.2cm;
     border-bottom: 2px solid #333;
-    text-align: left;
+  }
+
+  .print-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.15cm;
+  }
+
+  .print-space-title {
+    font-size: 10pt;
+    font-weight: bold;
+    color: #333 !important;
+  }
+
+  .print-separator {
+    font-size: 10pt;
+    color: #666 !important;
+  }
+
+  .print-board-name {
+    font-size: 12pt;
+    font-weight: bold;
+    color: black !important;
+  }
+
+  .print-header-date {
+    font-size: 8pt;
+    color: #666 !important;
   }
 
   /* List container - side by side, compact */
