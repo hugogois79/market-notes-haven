@@ -1030,6 +1030,8 @@ export type Database = {
           is_active: boolean
           is_requester: boolean | null
           name: string
+          telegram_user_id: number | null
+          telegram_username: string | null
           updated_at: string
           user_id: string
         }
@@ -1042,6 +1044,8 @@ export type Database = {
           is_active?: boolean
           is_requester?: boolean | null
           name: string
+          telegram_user_id?: number | null
+          telegram_username?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1054,6 +1058,8 @@ export type Database = {
           is_active?: boolean
           is_requester?: boolean | null
           name?: string
+          telegram_user_id?: number | null
+          telegram_username?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -4735,6 +4741,178 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_conversation_state: {
+        Row: {
+          current_state: string
+          editing_field: string | null
+          last_activity_at: string
+          pending_expense_id: string | null
+          selected_expense_user_id: string | null
+          telegram_user_id: number
+          updated_at: string
+        }
+        Insert: {
+          current_state?: string
+          editing_field?: string | null
+          last_activity_at?: string
+          pending_expense_id?: string | null
+          selected_expense_user_id?: string | null
+          telegram_user_id: number
+          updated_at?: string
+        }
+        Update: {
+          current_state?: string
+          editing_field?: string | null
+          last_activity_at?: string
+          pending_expense_id?: string | null
+          selected_expense_user_id?: string | null
+          telegram_user_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_conversation_state_pending_expense_id_fkey"
+            columns: ["pending_expense_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_pending_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_conversation_state_selected_expense_user_id_fkey"
+            columns: ["selected_expense_user_id"]
+            isOneToOne: false
+            referencedRelation: "expense_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_pending_expenses: {
+        Row: {
+          amount: number | null
+          category_id: string | null
+          created_at: string
+          description: string | null
+          expense_claim_id: string | null
+          expense_date: string | null
+          expense_user_id: string
+          file_type: string | null
+          file_url: string | null
+          id: string
+          project_id: string | null
+          raw_ocr_text: string | null
+          status: string
+          supplier: string | null
+          telegram_message_id: number | null
+          telegram_user_id: number
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          expense_claim_id?: string | null
+          expense_date?: string | null
+          expense_user_id: string
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          project_id?: string | null
+          raw_ocr_text?: string | null
+          status?: string
+          supplier?: string | null
+          telegram_message_id?: number | null
+          telegram_user_id: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          expense_claim_id?: string | null
+          expense_date?: string | null
+          expense_user_id?: string
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          project_id?: string | null
+          raw_ocr_text?: string | null
+          status?: string
+          supplier?: string | null
+          telegram_message_id?: number | null
+          telegram_user_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_pending_expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_pending_expenses_expense_claim_id_fkey"
+            columns: ["expense_claim_id"]
+            isOneToOne: false
+            referencedRelation: "expense_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_pending_expenses_expense_user_id_fkey"
+            columns: ["expense_user_id"]
+            isOneToOne: false
+            referencedRelation: "expense_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_pending_expenses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "expense_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_sessions: {
+        Row: {
+          authenticated_at: string
+          created_at: string
+          expense_user_id: string
+          expires_at: string
+          id: string
+          is_active: boolean
+          telegram_user_id: number
+        }
+        Insert: {
+          authenticated_at?: string
+          created_at?: string
+          expense_user_id: string
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          telegram_user_id: number
+        }
+        Update: {
+          authenticated_at?: string
+          created_at?: string
+          expense_user_id?: string
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          telegram_user_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_sessions_expense_user_id_fkey"
+            columns: ["expense_user_id"]
+            isOneToOne: false
+            referencedRelation: "expense_users"
             referencedColumns: ["id"]
           },
         ]
