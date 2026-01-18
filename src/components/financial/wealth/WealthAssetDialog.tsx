@@ -87,6 +87,7 @@ const CATEGORIES = [
   "Watches",
   "Crypto",
   "Private Equity",
+  "Markets",
   "Cash",
   "Other",
 ];
