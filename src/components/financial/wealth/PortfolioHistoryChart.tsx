@@ -73,14 +73,30 @@ export default function PortfolioHistoryChart() {
   const forecast1Y = assets.length > 0 ? projectedTotal1Y : null;
 
   // Build chart data with historical + forecast points
-  const historicalData = snapshots.map((s) => ({
-    date: format(new Date(s.snapshot_date), "dd MMM", { locale: pt }),
-    fullDate: s.snapshot_date,
-    value: s.total_value,
-    pl: s.total_pl,
-    yield: s.average_yield,
-    forecast: null as number | null,
-  }));
+  const historicalData = snapshots.map((s, index) => {
+    const prevSnapshot = index > 0 ? snapshots[index - 1] : null;
+    const valueDiff = prevSnapshot ? s.total_value - prevSnapshot.total_value : null;
+    const valueDiffPercent = prevSnapshot && prevSnapshot.total_value > 0 
+      ? ((s.total_value - prevSnapshot.total_value) / prevSnapshot.total_value) * 100 
+      : null;
+    const plDiff = prevSnapshot ? s.total_pl - prevSnapshot.total_pl : null;
+    const plDiffPercent = prevSnapshot && prevSnapshot.total_pl !== 0
+      ? ((s.total_pl - prevSnapshot.total_pl) / Math.abs(prevSnapshot.total_pl)) * 100
+      : null;
+
+    return {
+      date: format(new Date(s.snapshot_date), "dd MMM", { locale: pt }),
+      fullDate: s.snapshot_date,
+      value: s.total_value,
+      pl: s.total_pl,
+      yield: s.average_yield,
+      forecast: null as number | null,
+      valueDiff,
+      valueDiffPercent,
+      plDiff,
+      plDiffPercent,
+    };
+  });
 
   // Add forecast points (only value projections)
   const forecastData = assets.length > 0 ? [
@@ -91,6 +107,10 @@ export default function PortfolioHistoryChart() {
       pl: null as number | null,
       yield: null,
       forecast: forecast3M,
+      valueDiff: null as number | null,
+      valueDiffPercent: null as number | null,
+      plDiff: null as number | null,
+      plDiffPercent: null as number | null,
     },
     {
       date: format(date6M, "dd MMM", { locale: pt }),
@@ -99,6 +119,10 @@ export default function PortfolioHistoryChart() {
       pl: null,
       yield: null,
       forecast: forecast6M,
+      valueDiff: null,
+      valueDiffPercent: null,
+      plDiff: null,
+      plDiffPercent: null,
     },
     {
       date: format(date1Y, "dd MMM", { locale: pt }),
@@ -107,6 +131,10 @@ export default function PortfolioHistoryChart() {
       pl: null,
       yield: null,
       forecast: forecast1Y,
+      valueDiff: null,
+      valueDiffPercent: null,
+      plDiff: null,
+      plDiffPercent: null,
     },
   ] : [];
 
@@ -146,15 +174,48 @@ export default function PortfolioHistoryChart() {
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "8px",
                 }}
-                formatter={(value: number, name: string) => [
-                  formatCurrency(value),
-                  name === "value" ? "Valor Total" : "P/L",
-                ]}
-                labelFormatter={(label, payload) => {
-                  if (payload?.[0]?.payload?.fullDate) {
-                    return format(new Date(payload[0].payload.fullDate), "dd MMMM yyyy", { locale: pt });
-                  }
-                  return label;
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  const data = payload[0]?.payload;
+                  if (!data) return null;
+
+                  const formatDiff = (diff: number | null, percent: number | null) => {
+                    if (diff === null) return null;
+                    const sign = diff >= 0 ? "+" : "";
+                    const percentStr = percent !== null ? ` (${sign}${percent.toFixed(1)}%)` : "";
+                    return `${sign}${formatCurrency(diff)}${percentStr}`;
+                  };
+
+                  return (
+                    <div className="bg-popover border rounded-lg p-3 shadow-lg text-sm">
+                      <p className="font-medium mb-2">
+                        {data.fullDate && format(new Date(data.fullDate), "dd MMMM yyyy", { locale: pt })}
+                      </p>
+                      {data.value !== null && (
+                        <p>Valor Total : {formatCurrency(data.value)}</p>
+                      )}
+                      {data.valueDiff !== null && (
+                        <p className={data.valueDiff >= 0 ? "text-green-500" : "text-red-500"}>
+                          Δ Valor: {formatDiff(data.valueDiff, data.valueDiffPercent)}
+                        </p>
+                      )}
+                      {data.pl !== null && (
+                        <p className={data.pl >= 0 ? "text-green-500" : "text-red-500"}>
+                          P/L : {formatCurrency(data.pl)}
+                        </p>
+                      )}
+                      {data.plDiff !== null && (
+                        <p className={data.plDiff >= 0 ? "text-green-500" : "text-red-500"}>
+                          Δ P/L: {formatDiff(data.plDiff, data.plDiffPercent)}
+                        </p>
+                      )}
+                      {data.forecast !== null && data.value === null && (
+                        <p className="text-muted-foreground">
+                          Projeção: {formatCurrency(data.forecast)}
+                        </p>
+                      )}
+                    </div>
+                  );
                 }}
               />
               <Legend 
