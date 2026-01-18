@@ -47,6 +47,7 @@ import CompaniesPage from "@/pages/companies";
 import CompanyDetailPage from "@/pages/companies/[id]";
 import ProjectsPage from "@/pages/Projects";
 import RealEstatePage from "@/pages/real-estate";
+import OperationsPage from "@/pages/operations";
 
 // Procurement routes
 import ProcurementDashboard from "@/pages/procurement/index";
@@ -283,6 +284,16 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <RealEstatePage />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Operations Routes */}
+          <Route
+            path="operations"
+            element={
+              <ProtectedRoute>
+                <OperationsPage />
               </ProtectedRoute>
             }
           />
