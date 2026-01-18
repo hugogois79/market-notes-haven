@@ -145,17 +145,15 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
   };
 
   // Dynamic P/L calculation for Markets category
+  // Uses asset.purchase_price as cost basis (aligned with WealthAssetsTable logic)
   const getAssetDynamicPL = (asset: typeof assets[0]): number | null => {
     if (asset.category !== "Markets") {
       return asset.profit_loss_value;
     }
-    const assetHoldings = marketHoldings.filter(h => h.asset_id === asset.id);
+    // Get dynamic current value from holdings
     const totalValueEUR = getAssetDynamicValue(asset);
-    const totalCostEUR = assetHoldings.reduce((sum, h) => {
-      const costBasis = h.cost_basis || 0;
-      const currency = h.currency || "EUR";
-      return sum + convertToEUR(costBasis, currency);
-    }, 0);
+    // Use purchase_price from the asset as the cost basis (more reliable)
+    const totalCostEUR = asset.purchase_price || 0;
     return totalValueEUR - totalCostEUR;
   };
 
