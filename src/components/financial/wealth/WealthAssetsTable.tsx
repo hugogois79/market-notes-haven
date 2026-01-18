@@ -254,6 +254,29 @@ export default function WealthAssetsTable() {
     .filter((a) => a.status !== "In Recovery")
     .reduce((sum, a) => sum + (getAssetDynamicPL(a) || 0), 0);
 
+  // Calculate weighted average CAGR for entire portfolio (professional methodology)
+  let portfolioWeightedCAGRSum = 0;
+  let portfolioWeightedCAGRDenom = 0;
+
+  assets
+    .filter((a) => a.status !== "In Recovery")
+    .forEach((asset) => {
+      const assetValue = getAssetDynamicValue(asset);
+      const cagr = calculateCAGR(
+        assetValue,
+        asset.purchase_price || 0,
+        asset.purchase_date || ""
+      );
+      if (cagr !== null && assetValue > 0) {
+        portfolioWeightedCAGRSum += cagr * assetValue;
+        portfolioWeightedCAGRDenom += assetValue;
+      }
+    });
+
+  const portfolioCAGR = portfolioWeightedCAGRDenom > 0 
+    ? portfolioWeightedCAGRSum / portfolioWeightedCAGRDenom 
+    : null;
+
   const recoveryAssets = assets.filter((a) => a.status === "In Recovery");
   const recoveryTotal = recoveryAssets.reduce((sum, a) => sum + (a.current_value || 0), 0);
 
@@ -273,6 +296,14 @@ export default function WealthAssetsTable() {
           <span className={cn(totalPL >= 0 ? "text-green-500" : "text-red-500")}>
             {formatCurrency(totalPL)}
           </span>
+          {portfolioCAGR !== null && (
+            <>
+              {" "}| CAGR:{" "}
+              <span className={cn(portfolioCAGR >= 0 ? "text-green-500" : "text-red-500")}>
+                {portfolioCAGR.toFixed(2)}%
+              </span>
+            </>
+          )}
         </p>
         <Button onClick={handleAdd} size="sm">
           <Plus className="h-4 w-4 mr-2" />
