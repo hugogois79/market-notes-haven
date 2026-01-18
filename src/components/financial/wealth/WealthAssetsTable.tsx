@@ -114,6 +114,76 @@ export default function WealthAssetsTable() {
     },
   });
 
+  // Fetch securities for FX rates and current prices
+  const { data: securities = [] } = useQuery({
+    queryKey: ["securities-for-wealth"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("securities")
+        .select("id, name, ticker, current_price, currency, security_type");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch market holdings for Markets category assets
+  const { data: marketHoldings = [] } = useQuery({
+    queryKey: ["market-holdings-for-wealth"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("market_holdings")
+        .select("*");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Create securities map
+  const securitiesMap = securities.reduce((acc, sec) => {
+    acc[sec.id] = sec;
+    return acc;
+  }, {} as Record<string, typeof securities[0]>);
+
+  // Create FX rates map
+  const fxRates = securities
+    .filter(s => s.security_type === 'currency' && s.ticker && s.current_price)
+    .reduce((acc, s) => {
+      acc[s.ticker!] = s.current_price!;
+      return acc;
+    }, {} as Record<string, number>);
+
+  // Convert value to EUR
+  const convertToEUR = (value: number, currency: string): number => {
+    if (!value || currency === "EUR") return value;
+    const fxSymbol = `EUR${currency}`;
+    const rate = fxRates[fxSymbol];
+    return rate && rate > 0 ? value / rate : value;
+  };
+
+  // Calculate dynamic value for Markets category assets
+  const getAssetDynamicValue = (asset: WealthAsset): number => {
+    if (asset.category !== "Markets") {
+      return asset.current_value || 0;
+    }
+    
+    // Sum all holdings for this Markets asset
+    const assetHoldings = marketHoldings.filter(h => h.asset_id === asset.id);
+    return assetHoldings.reduce((sum, h) => {
+      const quantity = h.quantity || 1;
+      const currency = h.currency || "EUR";
+      
+      const security = h.security_id ? securitiesMap[h.security_id] : null;
+      const securityCurrentPrice = security?.current_price || null;
+      const isFxSecurity = security?.security_type === "currency";
+      
+      const currentValue = isFxSecurity
+        ? quantity
+        : (securityCurrentPrice ? securityCurrentPrice * quantity : (h.current_value || 0));
+      
+      return sum + convertToEUR(currentValue, currency);
+    }, 0);
+  };
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("wealth_assets").delete().eq("id", id);
@@ -143,10 +213,10 @@ export default function WealthAssetsTable() {
     setEditingAsset(null);
   };
 
-  // Calculate totals first
+  // Calculate totals first (using dynamic values for Markets)
   const totalValue = assets
     .filter((a) => a.status !== "In Recovery")
-    .reduce((sum, a) => sum + (a.current_value || 0), 0);
+    .reduce((sum, a) => sum + getAssetDynamicValue(a), 0);
 
   // Group assets by category with category totals
   const groupedAssets = assets.reduce((acc, asset) => {
@@ -156,11 +226,11 @@ export default function WealthAssetsTable() {
     return acc;
   }, {} as Record<string, WealthAsset[]>);
 
-  // Calculate category totals for weight calculations
+  // Calculate category totals for weight calculations (using dynamic values for Markets)
   const categoryTotals = Object.entries(groupedAssets).reduce((acc, [cat, catAssets]) => {
     acc[cat] = catAssets
       .filter((a) => a.status !== "In Recovery")
-      .reduce((sum, a) => sum + (a.current_value || 0), 0);
+      .reduce((sum, a) => sum + getAssetDynamicValue(a), 0);
     return acc;
   }, {} as Record<string, number>);
 
@@ -218,21 +288,22 @@ export default function WealthAssetsTable() {
                 const colorClass = categoryColors[category] || "bg-muted text-muted-foreground";
                 const filteredAssets = categoryAssets.filter((a) => a.status !== "In Recovery");
                 
-                const categoryTotal = filteredAssets.reduce((s, a) => s + (a.current_value || 0), 0);
+                const categoryTotal = filteredAssets.reduce((s, a) => s + getAssetDynamicValue(a), 0);
                 const categoryPL = filteredAssets.reduce((s, a) => s + (a.profit_loss_value || 0), 0);
                 
                 // Calculate weighted CAGR for category
                 let weightedCAGRSum = 0;
                 let weightedCAGRDenom = 0;
                 filteredAssets.forEach((asset) => {
+                  const assetValue = getAssetDynamicValue(asset);
                   const cagr = calculateCAGR(
-                    asset.current_value || 0,
+                    assetValue,
                     asset.purchase_price || 0,
                     asset.purchase_date || ""
                   );
-                  if (cagr !== null && asset.current_value) {
-                    weightedCAGRSum += cagr * asset.current_value;
-                    weightedCAGRDenom += asset.current_value;
+                  if (cagr !== null && assetValue > 0) {
+                    weightedCAGRSum += cagr * assetValue;
+                    weightedCAGRDenom += assetValue;
                   }
                 });
                 const categoryCAGR = weightedCAGRDenom > 0 ? weightedCAGRSum / weightedCAGRDenom : null;
@@ -279,7 +350,9 @@ export default function WealthAssetsTable() {
                       </TableCell>
                       <TableCell className="py-1"></TableCell>
                     </TableRow>
-                    {!isCollapsed && filteredAssets.map((asset, assetIndex) => (
+                    {!isCollapsed && filteredAssets.map((asset, assetIndex) => {
+                        const assetValue = getAssetDynamicValue(asset);
+                        return (
                         <TableRow key={asset.id} className="h-8">
                           <TableCell className="font-medium py-1">
                             <div className="flex items-start gap-2 leading-tight">
@@ -295,7 +368,7 @@ export default function WealthAssetsTable() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right py-1">
-                            {formatCurrency(asset.current_value, asset.currency || "EUR")}
+                            {formatCurrency(assetValue, "EUR")}
                           </TableCell>
                           <TableCell className="text-right py-1">
                             {asset.profit_loss_value !== null ? (
@@ -320,7 +393,7 @@ export default function WealthAssetsTable() {
                           <TableCell className="text-right py-1">
                             {(() => {
                               const cagr = calculateCAGR(
-                                asset.current_value || 0,
+                                assetValue,
                                 asset.purchase_price || 0,
                                 asset.purchase_date || ""
                               );
@@ -333,13 +406,13 @@ export default function WealthAssetsTable() {
                             })()}
                           </TableCell>
                           <TableCell className="text-right text-muted-foreground py-1">
-                            {categoryTotal > 0 && asset.current_value
-                              ? formatPercent((asset.current_value / categoryTotal) * 100)
+                            {categoryTotal > 0 && assetValue > 0
+                              ? formatPercent((assetValue / categoryTotal) * 100)
                               : "—"}
                           </TableCell>
                           <TableCell className="text-right py-1">
-                            {totalValue > 0 && asset.current_value
-                              ? formatPercent((asset.current_value / totalValue) * 100)
+                            {totalValue > 0 && assetValue > 0
+                              ? formatPercent((assetValue / totalValue) * 100)
                               : "—"}
                           </TableCell>
                           <TableCell className="py-1">
@@ -382,7 +455,9 @@ export default function WealthAssetsTable() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
+                      );
+                      })}
+
                   </>
                 );
               });
