@@ -83,6 +83,24 @@ const formatPercent = (value: number | null) => {
   return `${value.toFixed(2)}%`;
 };
 
+const formatQuantityWithSpaces = (value: number | null): string => {
+  if (value === null || value === undefined) return "—";
+  
+  const strValue = value.toString();
+  const parts = strValue.split(".");
+  let integerPart = parts[0] || "";
+  const decimalPart = parts.length > 1 ? parts[1] : "";
+  
+  // Adiciona espaços como separador de milhares
+  integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  
+  // Reconstrói com vírgula decimal se existir
+  if (parts.length > 1) {
+    return `${integerPart},${decimalPart}`;
+  }
+  return integerPart;
+};
+
 export default function MarketHoldingsTable() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -328,7 +346,7 @@ export default function MarketHoldingsTable() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">
-                      {quantity.toLocaleString("pt-PT")}
+                      {formatQuantityWithSpaces(quantity)}
                     </TableCell>
                     <TableCell className="text-right text-sm">
                       {formatUnitPrice(costBasisUnit, currency)}
