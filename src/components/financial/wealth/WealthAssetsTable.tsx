@@ -513,6 +513,7 @@ export default function WealthAssetsTable() {
         open={dialogOpen}
         onOpenChange={handleDialogClose}
         asset={editingAsset}
+        dynamicValue={editingAsset ? getAssetDynamicValue(editingAsset) : undefined}
       />
 
       {notesAsset && (
