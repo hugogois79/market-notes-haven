@@ -80,6 +80,26 @@ const parsePortugueseNumber = (value: string): number => {
   return parseFloat(normalized) || 0;
 };
 
+const formatNumberWithSpaces = (value: string | number): string => {
+  const strValue = typeof value === "number" ? value.toString() : value;
+  // Remove tudo exceto dígitos, vírgula e ponto
+  const cleaned = strValue.replace(/[^\d,.\-]/g, "");
+  
+  // Separa parte inteira e decimal
+  const parts = cleaned.split(/[,.]/);
+  let integerPart = parts[0] || "";
+  const decimalPart = parts.length > 1 ? parts[parts.length - 1] : "";
+  
+  // Adiciona espaços como separador de milhares
+  integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  
+  // Reconstrói com vírgula decimal se existir
+  if (parts.length > 1) {
+    return `${integerPart},${decimalPart}`;
+  }
+  return integerPart;
+};
+
 export default function MarketHoldingDialog({
   open,
   onOpenChange,
@@ -147,8 +167,8 @@ export default function MarketHoldingDialog({
         ticker: holding.ticker || "",
         isin: holding.isin || "",
         currency: holding.currency || "EUR",
-        cost_basis: unitCostBasis.toLocaleString("pt-PT") || "",
-        quantity: quantity.toLocaleString("pt-PT") || "",
+        cost_basis: formatNumberWithSpaces(unitCostBasis),
+        quantity: formatNumberWithSpaces(quantity),
         notes: holding.notes || "",
       });
     } else {
@@ -243,25 +263,6 @@ export default function MarketHoldingDialog({
 
   const onSubmit = (data: FormData) => {
     mutation.mutate(data);
-  };
-
-  const formatNumberWithSpaces = (value: string): string => {
-    // Remove tudo exceto dígitos, vírgula e ponto
-    const cleaned = value.replace(/[^\d,.\-]/g, "");
-    
-    // Separa parte inteira e decimal
-    const parts = cleaned.split(/[,.]/) ;
-    let integerPart = parts[0] || "";
-    const decimalPart = parts.length > 1 ? parts[parts.length - 1] : "";
-    
-    // Adiciona espaços como separador de milhares
-    integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-    
-    // Reconstrói com vírgula decimal se existir
-    if (parts.length > 1) {
-      return `${integerPart},${decimalPart}`;
-    }
-    return integerPart;
   };
 
   const handleNumberChange = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
