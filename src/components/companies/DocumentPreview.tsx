@@ -25,22 +25,48 @@ export function DocumentPreview({ document, onDownload }: DocumentPreviewProps) 
       
       try {
         // Extract the path from the file_url
-        // URL format: https://xxx.supabase.co/storage/v1/object/public/bucket-name/path
-        const urlParts = document.file_url.split('/storage/v1/object/public/');
-        if (urlParts.length < 2) {
+        // Support both public and signed URL formats
+        let bucket: string;
+        let filePath: string;
+        
+        // Check for public URL format: /storage/v1/object/public/bucket-name/path
+        const publicMatch = document.file_url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/);
+        // Check for signed URL format: /storage/v1/object/sign/bucket-name/path
+        const signedMatch = document.file_url.match(/\/storage\/v1\/object\/sign\/([^/]+)\/([^?]+)/);
+        
+        if (publicMatch) {
+          bucket = publicMatch[1];
+          filePath = decodeURIComponent(publicMatch[2]);
+        } else if (signedMatch) {
+          bucket = signedMatch[1];
+          filePath = decodeURIComponent(signedMatch[2]);
+        } else {
           throw new Error('Invalid URL format');
         }
         
-        const pathWithBucket = urlParts[1];
-        const [bucket, ...pathParts] = pathWithBucket.split('/');
-        const filePath = pathParts.join('/');
-        
-        // Download the file using authenticated Supabase client
-        const { data, error: downloadError } = await supabase.storage
+        // Try to download directly first
+        let { data, error: downloadError } = await supabase.storage
           .from(bucket)
           .download(filePath);
         
-        if (downloadError) throw downloadError;
+        // If direct download fails (private bucket), try with signed URL
+        if (downloadError) {
+          console.log('Direct download failed, trying signed URL...', downloadError.message);
+          
+          // Generate a signed URL for private buckets
+          const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+            .from(bucket)
+            .createSignedUrl(filePath, 3600); // 1 hour expiry
+          
+          if (signedUrlError) throw signedUrlError;
+          
+          // Fetch using the signed URL
+          const response = await fetch(signedUrlData.signedUrl);
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          data = await response.blob();
+        }
+        
+        if (!data) throw new Error('No data received');
         
         // Create blob URL
         const url = URL.createObjectURL(data);

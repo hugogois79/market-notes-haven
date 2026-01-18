@@ -6117,6 +6117,7 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      update_claim_total: { Args: { claim_id: string }; Returns: undefined }
       user_can_access_company: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
