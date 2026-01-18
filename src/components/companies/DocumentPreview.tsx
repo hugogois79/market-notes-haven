@@ -24,8 +24,26 @@ export function DocumentPreview({ document, onDownload }: DocumentPreviewProps) 
       setError(false);
       
       try {
+        console.log('Loading document from URL:', document.file_url);
+        
+        // First, try to fetch directly from the public URL
+        // This works for public buckets without needing Supabase SDK
+        try {
+          const directResponse = await fetch(document.file_url);
+          if (directResponse.ok) {
+            const data = await directResponse.blob();
+            const url = URL.createObjectURL(data);
+            setBlobUrl(url);
+            setLoading(false);
+            return;
+          }
+          console.log('Direct fetch failed with status:', directResponse.status);
+        } catch (fetchErr) {
+          console.log('Direct fetch failed:', fetchErr);
+        }
+        
+        // If direct fetch fails, try Supabase Storage SDK
         // Extract the path from the file_url
-        // Support both public and signed URL formats
         let bucket: string;
         let filePath: string;
         
@@ -36,7 +54,6 @@ export function DocumentPreview({ document, onDownload }: DocumentPreviewProps) 
         
         if (publicMatch) {
           bucket = publicMatch[1];
-          // Don't decode - the path in URL might already be the correct storage path
           filePath = publicMatch[2];
         } else if (signedMatch) {
           bucket = signedMatch[1];
@@ -45,56 +62,68 @@ export function DocumentPreview({ document, onDownload }: DocumentPreviewProps) 
           throw new Error('Invalid URL format');
         }
         
-        console.log('Attempting to download:', { bucket, filePath, originalUrl: document.file_url });
+        console.log('Trying Supabase SDK:', { bucket, filePath });
         
-        // Try to download directly first
-        let { data, error: downloadError } = await supabase.storage
-          .from(bucket)
-          .download(filePath);
+        // Try paths: original, decoded, and double-decoded
+        const pathsToTry = [filePath];
+        if (filePath.includes('%')) {
+          pathsToTry.push(decodeURIComponent(filePath));
+          // Double decode for cases like %2528 -> %28 -> (
+          try {
+            const doubleDecoded = decodeURIComponent(decodeURIComponent(filePath));
+            if (!pathsToTry.includes(doubleDecoded)) {
+              pathsToTry.push(doubleDecoded);
+            }
+          } catch { /* ignore decode errors */ }
+        }
         
-        // If download fails, try with decoded path
-        if (downloadError && filePath.includes('%')) {
-          console.log('Trying with decoded path...');
-          const decodedPath = decodeURIComponent(filePath);
-          const retryResult = await supabase.storage
+        let data: Blob | null = null;
+        
+        // Try download with each path
+        for (const pathToTry of pathsToTry) {
+          console.log('Trying download path:', pathToTry);
+          const { data: downloadData, error: downloadError } = await supabase.storage
             .from(bucket)
-            .download(decodedPath);
+            .download(pathToTry);
           
-          if (!retryResult.error) {
-            data = retryResult.data;
-            downloadError = null;
+          if (!downloadError && downloadData) {
+            data = downloadData;
+            console.log('Download succeeded with path:', pathToTry);
+            break;
+          } else {
+            console.log('Download failed:', downloadError?.message);
           }
         }
         
-        // If direct download fails (private bucket), try with signed URL
-        if (downloadError) {
-          console.log('Direct download failed, trying signed URL...', downloadError.message);
-          
-          // Try both encoded and decoded paths for signed URL
-          const pathsToTry = [filePath];
-          if (filePath.includes('%')) {
-            pathsToTry.push(decodeURIComponent(filePath));
-          }
-          
-          let signedUrlSuccess = false;
+        // If download still fails, try signed URL
+        if (!data) {
+          console.log('Trying signed URLs...');
           for (const pathToTry of pathsToTry) {
+            console.log('Trying signed URL for path:', pathToTry);
             const { data: signedUrlData, error: signedUrlError } = await supabase.storage
               .from(bucket)
               .createSignedUrl(pathToTry, 3600);
             
-            if (!signedUrlError && signedUrlData) {
+            if (signedUrlError) {
+              console.log('Signed URL error:', signedUrlError.message);
+              continue;
+            }
+            
+            if (signedUrlData) {
+              console.log('Got signed URL, fetching...');
               const response = await fetch(signedUrlData.signedUrl);
               if (response.ok) {
                 data = await response.blob();
-                signedUrlSuccess = true;
+                console.log('Signed URL fetch succeeded');
                 break;
               }
+              console.log('Signed URL fetch failed with status:', response.status);
             }
           }
-          
-          if (!signedUrlSuccess) {
-            throw new Error('Failed to generate signed URL');
-          }
+        }
+        
+        if (!data) {
+          throw new Error('All download methods failed');
         }
         
         if (!data) throw new Error('No data received');
