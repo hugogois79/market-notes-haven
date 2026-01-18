@@ -76,6 +76,7 @@ interface WealthAssetDialogProps {
   onOpenChange: (open: boolean) => void;
   asset: WealthAsset | null;
   dynamicValue?: number; // Dynamic value from holdings for Markets category
+  dynamicPL?: number | null; // Dynamic P/L from holdings for Markets category
 }
 
 const CATEGORIES = [
@@ -190,6 +191,7 @@ export default function WealthAssetDialog({
   onOpenChange,
   asset,
   dynamicValue,
+  dynamicPL,
 }: WealthAssetDialogProps) {
   const queryClient = useQueryClient();
   const isEditing = !!asset;
@@ -545,12 +547,26 @@ export default function WealthAssetDialog({
               {/* Calculated fields - read only */}
               <FormItem>
                 <FormLabel>P/L (Calculado)</FormLabel>
-                <div className={cn(
-                  "h-10 px-3 py-2 rounded-md border bg-muted text-sm flex items-center",
-                  calculations.pnl !== null && calculations.pnl >= 0 ? "text-green-600" : "text-red-600"
-                )}>
-                  {calculations.pnl !== null ? formatCurrency(calculations.pnl, currency || "EUR") : "—"}
-                </div>
+                {selectedCategory === "Markets" && dynamicPL !== undefined ? (
+                  <div className={cn(
+                    "h-10 px-3 py-2 rounded-md border bg-muted text-sm flex items-center font-medium",
+                    dynamicPL !== null && dynamicPL >= 0 ? "text-green-600" : "text-red-600"
+                  )}>
+                    {dynamicPL !== null ? formatCurrency(dynamicPL, "EUR") : "—"}
+                  </div>
+                ) : (
+                  <div className={cn(
+                    "h-10 px-3 py-2 rounded-md border bg-muted text-sm flex items-center",
+                    calculations.pnl !== null && calculations.pnl >= 0 ? "text-green-600" : "text-red-600"
+                  )}>
+                    {calculations.pnl !== null ? formatCurrency(calculations.pnl, currency || "EUR") : "—"}
+                  </div>
+                )}
+                {selectedCategory === "Markets" && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Calculado a partir dos cost basis dos holdings
+                  </p>
+                )}
               </FormItem>
 
               <FormItem>

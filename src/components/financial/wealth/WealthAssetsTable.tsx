@@ -184,6 +184,36 @@ export default function WealthAssetsTable() {
     }, 0);
   };
 
+  // Calculate dynamic P/L for Markets category assets (based on holdings cost_basis)
+  const getAssetDynamicPL = (asset: WealthAsset): number | null => {
+    if (asset.category !== "Markets") {
+      return asset.profit_loss_value;
+    }
+    
+    const assetHoldings = marketHoldings.filter(h => h.asset_id === asset.id);
+    if (assetHoldings.length === 0) return null;
+    
+    let totalValueEUR = 0;
+    let totalCostEUR = 0;
+    
+    assetHoldings.forEach(h => {
+      const quantity = h.quantity || 1;
+      const currency = h.currency || "EUR";
+      const security = h.security_id ? securitiesMap[h.security_id] : null;
+      const currentPrice = security?.current_price || null;
+      const isFxSecurity = security?.security_type === "currency";
+      
+      const currentValue = isFxSecurity 
+        ? quantity 
+        : (currentPrice ? currentPrice * quantity : (h.current_value || 0));
+      
+      totalValueEUR += convertToEUR(currentValue, currency);
+      totalCostEUR += convertToEUR(h.cost_basis || 0, currency);
+    });
+    
+    return totalValueEUR - totalCostEUR;
+  };
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("wealth_assets").delete().eq("id", id);
@@ -236,7 +266,7 @@ export default function WealthAssetsTable() {
 
   const totalPL = assets
     .filter((a) => a.status !== "In Recovery")
-    .reduce((sum, a) => sum + (a.profit_loss_value || 0), 0);
+    .reduce((sum, a) => sum + (getAssetDynamicPL(a) || 0), 0);
 
   const recoveryAssets = assets.filter((a) => a.status === "In Recovery");
   const recoveryTotal = recoveryAssets.reduce((sum, a) => sum + (a.current_value || 0), 0);
@@ -289,7 +319,7 @@ export default function WealthAssetsTable() {
                 const filteredAssets = categoryAssets.filter((a) => a.status !== "In Recovery");
                 
                 const categoryTotal = filteredAssets.reduce((s, a) => s + getAssetDynamicValue(a), 0);
-                const categoryPL = filteredAssets.reduce((s, a) => s + (a.profit_loss_value || 0), 0);
+                const categoryPL = filteredAssets.reduce((s, a) => s + (getAssetDynamicPL(a) || 0), 0);
                 
                 // Calculate weighted CAGR for category
                 let weightedCAGRSum = 0;
@@ -371,24 +401,27 @@ export default function WealthAssetsTable() {
                             {formatCurrency(assetValue, "EUR")}
                           </TableCell>
                           <TableCell className="text-right py-1">
-                            {asset.profit_loss_value !== null ? (
-                              <div className="flex items-center justify-end gap-1">
-                                {asset.profit_loss_value >= 0 ? (
-                                  <TrendingUp className="h-3 w-3 text-green-500" />
-                                ) : (
-                                  <TrendingDown className="h-3 w-3 text-red-500" />
-                                )}
-                                <span
-                                  className={cn(
-                                    asset.profit_loss_value >= 0 ? "text-green-500" : "text-red-500"
+                            {(() => {
+                              const dynamicPL = getAssetDynamicPL(asset);
+                              return dynamicPL !== null ? (
+                                <div className="flex items-center justify-end gap-1">
+                                  {dynamicPL >= 0 ? (
+                                    <TrendingUp className="h-3 w-3 text-green-500" />
+                                  ) : (
+                                    <TrendingDown className="h-3 w-3 text-red-500" />
                                   )}
-                                >
-                                  {formatCurrency(asset.profit_loss_value)}
-                                </span>
-                              </div>
-                            ) : (
-                              "—"
-                            )}
+                                  <span
+                                    className={cn(
+                                      dynamicPL >= 0 ? "text-green-500" : "text-red-500"
+                                    )}
+                                  >
+                                    {formatCurrency(dynamicPL)}
+                                  </span>
+                                </div>
+                              ) : (
+                                "—"
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="text-right py-1">
                             {(() => {
@@ -513,7 +546,8 @@ export default function WealthAssetsTable() {
         open={dialogOpen}
         onOpenChange={handleDialogClose}
         asset={editingAsset}
-        dynamicValue={editingAsset ? getAssetDynamicValue(editingAsset) : undefined}
+        dynamicValue={editingAsset?.category === "Markets" ? getAssetDynamicValue(editingAsset) : undefined}
+        dynamicPL={editingAsset?.category === "Markets" ? getAssetDynamicPL(editingAsset) : undefined}
       />
 
       {notesAsset && (
