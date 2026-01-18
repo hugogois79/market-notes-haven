@@ -245,10 +245,28 @@ export default function MarketHoldingDialog({
     mutation.mutate(data);
   };
 
+  const formatNumberWithSpaces = (value: string): string => {
+    // Remove tudo exceto dígitos, vírgula e ponto
+    const cleaned = value.replace(/[^\d,.\-]/g, "");
+    
+    // Separa parte inteira e decimal
+    const parts = cleaned.split(/[,.]/) ;
+    let integerPart = parts[0] || "";
+    const decimalPart = parts.length > 1 ? parts[parts.length - 1] : "";
+    
+    // Adiciona espaços como separador de milhares
+    integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    
+    // Reconstrói com vírgula decimal se existir
+    if (parts.length > 1) {
+      return `${integerPart},${decimalPart}`;
+    }
+    return integerPart;
+  };
+
   const handleNumberChange = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Permitir números, vírgula, ponto, menos e espaços
-    const raw = e.target.value.replace(/[^\d,.\-\s]/g, "");
-    setValue(field, raw);
+    const formatted = formatNumberWithSpaces(e.target.value);
+    setValue(field, formatted);
   };
 
   return (
