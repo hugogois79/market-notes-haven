@@ -6,6 +6,7 @@ import {
   Coins,
   Banknote,
   User,
+  Users,
   Kanban,
   ChevronDown,
   ChevronRight,
@@ -151,6 +152,13 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       path: "/companies",
       workerAllowed: false,
       featureKey: "finance",
+    },
+    {
+      title: "Operations",
+      icon: <Users size={20} />,
+      path: "/operations",
+      workerAllowed: false,
+      featureKey: "operations",
     },
     {
       title: "Procurement",

@@ -11,6 +11,7 @@ export interface FeaturePermissions {
   projects: boolean;
   notes: boolean;
   tao: boolean;
+  operations: boolean;
 }
 
 export const defaultPermissions: FeaturePermissions = {
@@ -22,6 +23,7 @@ export const defaultPermissions: FeaturePermissions = {
   projects: false,
   notes: false,
   tao: false,
+  operations: false,
 };
 
 export function useFeatureAccess() {
@@ -61,6 +63,7 @@ export function useFeatureAccess() {
             projects: true,
             notes: true,
             tao: true,
+            operations: true,
           });
           setIsRequester(true);
           setLoading(false);
