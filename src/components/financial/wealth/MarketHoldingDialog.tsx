@@ -423,15 +423,6 @@ export default function MarketHoldingDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="cost_basis">Custo Unit. ({watch("currency") || "EUR"})</Label>
-                <Input
-                  id="cost_basis"
-                  placeholder="9 500"
-                  value={watch("cost_basis")}
-                  onChange={handleNumberChange("cost_basis")}
-                />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="quantity">Quantidade</Label>
                 <Input
                   id="quantity"
@@ -440,6 +431,33 @@ export default function MarketHoldingDialog({
                   onChange={handleNumberChange("quantity")}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="cost_basis">Custo Unit. ({watch("currency") || "EUR"})</Label>
+                <Input
+                  id="cost_basis"
+                  placeholder="9 500"
+                  value={watch("cost_basis")}
+                  onChange={handleNumberChange("cost_basis")}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="total_value">Valor Total ({watch("currency") || "EUR"})</Label>
+                <Input
+                  id="total_value"
+                  disabled
+                  className="bg-muted"
+                  value={(() => {
+                    const quantity = parsePortugueseNumber(watch("quantity") || "0");
+                    const costBasis = parsePortugueseNumber(watch("cost_basis") || "0");
+                    const total = quantity * costBasis;
+                    return formatNumberWithSpaces(total.toFixed(2));
+                  })()}
+                />
+              </div>
+              <div />
             </div>
 
             <div className="space-y-2">
