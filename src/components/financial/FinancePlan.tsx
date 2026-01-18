@@ -87,6 +87,78 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
     },
   });
 
+  // Query for market holdings (for dynamic Markets category calculation)
+  const { data: marketHoldings = [] } = useQuery({
+    queryKey: ["market-holdings-for-plan"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("market_holdings")
+        .select("*");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Query for securities (prices and FX rates)
+  const { data: securities = [] } = useQuery({
+    queryKey: ["securities-for-plan"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("securities")
+        .select("id, ticker, current_price, security_type");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Securities map for quick lookup
+  const securitiesMap = securities.reduce((acc, s) => {
+    acc[s.id] = s;
+    return acc;
+  }, {} as Record<string, typeof securities[0]>);
+
+  // Convert value to EUR using FX rates
+  const convertToEUR = (value: number, currency: string): number => {
+    if (currency === "EUR") return value;
+    const pair = `EUR${currency}`;
+    const rate = securities.find(s => s.ticker === pair)?.current_price;
+    return rate ? value / rate : value;
+  };
+
+  // Dynamic value calculation for Markets category
+  const getAssetDynamicValue = (asset: typeof assets[0]): number => {
+    if (asset.category !== "Markets") {
+      return asset.current_value || 0;
+    }
+    const assetHoldings = marketHoldings.filter(h => h.asset_id === asset.id);
+    return assetHoldings.reduce((sum, h) => {
+      const quantity = h.quantity || 1;
+      const currency = h.currency || "EUR";
+      const security = h.security_id ? securitiesMap[h.security_id] : null;
+      const currentPrice = security?.current_price || null;
+      const isFxSecurity = security?.security_type === "currency";
+      const currentValue = isFxSecurity 
+        ? quantity 
+        : (currentPrice ? currentPrice * quantity : (h.current_value || 0));
+      return sum + convertToEUR(currentValue, currency);
+    }, 0);
+  };
+
+  // Dynamic P/L calculation for Markets category
+  const getAssetDynamicPL = (asset: typeof assets[0]): number | null => {
+    if (asset.category !== "Markets") {
+      return asset.profit_loss_value;
+    }
+    const assetHoldings = marketHoldings.filter(h => h.asset_id === asset.id);
+    const totalValueEUR = getAssetDynamicValue(asset);
+    const totalCostEUR = assetHoldings.reduce((sum, h) => {
+      const costBasis = h.cost_basis || 0;
+      const currency = h.currency || "EUR";
+      return sum + convertToEUR(costBasis, currency);
+    }, 0);
+    return totalValueEUR - totalCostEUR;
+  };
+
   // Snapshot mutation
   const snapshotMutation = useMutation({
     mutationFn: async () => {
@@ -96,7 +168,7 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
       const allocationByCategory = Object.entries(
         assets.reduce((acc, asset) => {
           const cat = asset.category || "Other";
-          acc[cat] = (acc[cat] || 0) + (asset.current_value || 0);
+          acc[cat] = (acc[cat] || 0) + getAssetDynamicValue(asset);
           return acc;
         }, {} as Record<string, number>)
       ).reduce((obj, [k, v]) => ({ ...obj, [k]: v }), {});
@@ -123,13 +195,13 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
     },
   });
 
-  // Calculate allocation by category
-  const totalValue = assets.reduce((sum, a) => sum + (a.current_value || 0), 0);
+  // Calculate allocation by category using dynamic values
+  const totalValue = assets.reduce((sum, a) => sum + getAssetDynamicValue(a), 0);
   
   const allocationData = Object.entries(
     assets.reduce((acc, asset) => {
       const cat = asset.category || "Other";
-      acc[cat] = (acc[cat] || 0) + (asset.current_value || 0);
+      acc[cat] = (acc[cat] || 0) + getAssetDynamicValue(asset);
       return acc;
     }, {} as Record<string, number>)
   )
@@ -142,19 +214,20 @@ export default function FinancePlan({ companyId }: FinancePlanProps) {
 
   const topCategory = allocationData[0];
 
-  // Calculate total P/L
-  const totalPL = assets.reduce((sum, a) => sum + (a.profit_loss_value || 0), 0);
+  // Calculate total P/L using dynamic values
+  const totalPL = assets.reduce((sum, a) => sum + (getAssetDynamicPL(a) || 0), 0);
 
-  // Calculate weighted average CAGR
+  // Calculate weighted average CAGR using dynamic values
   const assetsWithCAGR = assets
     .map((a) => ({
       ...a,
-      cagr: calculateCAGR(a.current_value || 0, a.purchase_price || 0, a.purchase_date || ""),
+      dynamicValue: getAssetDynamicValue(a),
+      cagr: calculateCAGR(getAssetDynamicValue(a), a.purchase_price || 0, a.purchase_date || ""),
     }))
-    .filter((a) => a.cagr !== null && a.current_value && a.current_value > 0);
+    .filter((a) => a.cagr !== null && a.dynamicValue > 0);
 
   const weightedAverageCAGR = assetsWithCAGR.length > 0
-    ? assetsWithCAGR.reduce((sum, a) => sum + (a.cagr! * (a.current_value! / totalValue)), 0)
+    ? assetsWithCAGR.reduce((sum, a) => sum + (a.cagr! * (a.dynamicValue / totalValue)), 0)
     : null;
 
   return (
