@@ -531,6 +531,59 @@ export type Database = {
           },
         ]
       }
+      contracts_docs: {
+        Row: {
+          created_at: string
+          doc_type: Database["public"]["Enums"]["staff_doc_type"]
+          expiry_date: string | null
+          file_name: string
+          file_url: string
+          id: string
+          is_verified: boolean | null
+          issue_date: string | null
+          notes: string | null
+          staff_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          doc_type?: Database["public"]["Enums"]["staff_doc_type"]
+          expiry_date?: string | null
+          file_name: string
+          file_url: string
+          id?: string
+          is_verified?: boolean | null
+          issue_date?: string | null
+          notes?: string | null
+          staff_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          doc_type?: Database["public"]["Enums"]["staff_doc_type"]
+          expiry_date?: string | null
+          file_name?: string
+          file_url?: string
+          id?: string
+          is_verified?: boolean | null
+          issue_date?: string | null
+          notes?: string | null
+          staff_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_docs_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crypto_assets: {
         Row: {
           created_at: string | null
@@ -4096,6 +4149,57 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_profiles: {
+        Row: {
+          annual_vacation_days: number | null
+          avatar_url: string | null
+          base_salary: number | null
+          contact_info: Json | null
+          created_at: string
+          full_name: string
+          hire_date: string | null
+          id: string
+          notes: string | null
+          role_category: Database["public"]["Enums"]["staff_role_category"]
+          specific_title: string | null
+          status: Database["public"]["Enums"]["staff_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          annual_vacation_days?: number | null
+          avatar_url?: string | null
+          base_salary?: number | null
+          contact_info?: Json | null
+          created_at?: string
+          full_name: string
+          hire_date?: string | null
+          id?: string
+          notes?: string | null
+          role_category?: Database["public"]["Enums"]["staff_role_category"]
+          specific_title?: string | null
+          status?: Database["public"]["Enums"]["staff_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          annual_vacation_days?: number | null
+          avatar_url?: string | null
+          base_salary?: number | null
+          contact_info?: Json | null
+          created_at?: string
+          full_name?: string
+          hire_date?: string | null
+          id?: string
+          notes?: string | null
+          role_category?: Database["public"]["Enums"]["staff_role_category"]
+          specific_title?: string | null
+          status?: Database["public"]["Enums"]["staff_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       stock_prices: {
         Row: {
           change: number | null
@@ -5257,6 +5361,53 @@ export type Database = {
         }
         Relationships: []
       }
+      vacation_logs: {
+        Row: {
+          approval_status: Database["public"]["Enums"]["vacation_approval_status"]
+          created_at: string
+          end_date: string
+          id: string
+          notes: string | null
+          staff_id: string
+          start_date: string
+          updated_at: string
+          user_id: string
+          vacation_type: Database["public"]["Enums"]["vacation_type"]
+        }
+        Insert: {
+          approval_status?: Database["public"]["Enums"]["vacation_approval_status"]
+          created_at?: string
+          end_date: string
+          id?: string
+          notes?: string | null
+          staff_id: string
+          start_date: string
+          updated_at?: string
+          user_id: string
+          vacation_type?: Database["public"]["Enums"]["vacation_type"]
+        }
+        Update: {
+          approval_status?: Database["public"]["Enums"]["vacation_approval_status"]
+          created_at?: string
+          end_date?: string
+          id?: string
+          notes?: string | null
+          staff_id?: string
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+          vacation_type?: Database["public"]["Enums"]["vacation_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vacation_logs_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wealth_asset_note_links: {
         Row: {
           asset_id: string
@@ -6050,7 +6201,38 @@ export type Database = {
         Args: { p_account_id: string }
         Returns: number
       }
+      calculate_vacation_balance: {
+        Args: { p_staff_id: string }
+        Returns: Json
+      }
+      check_vacation_conflicts: {
+        Args: {
+          p_end_date: string
+          p_exclude_staff_id?: string
+          p_role_category: Database["public"]["Enums"]["staff_role_category"]
+          p_start_date: string
+          p_user_id: string
+        }
+        Returns: {
+          overlap_end: string
+          overlap_start: string
+          staff_id: string
+          staff_name: string
+        }[]
+      }
       exec_sql: { Args: { sql_query: string }; Returns: Json }
+      get_expiring_documents: {
+        Args: { days_threshold?: number; p_user_id: string }
+        Returns: {
+          days_remaining: number
+          doc_id: string
+          doc_type: Database["public"]["Enums"]["staff_doc_type"]
+          expiry_date: string
+          file_name: string
+          staff_id: string
+          staff_name: string
+        }[]
+      }
       get_schema_info: { Args: never; Returns: Json }
       get_user_role: {
         Args: { _user_id: string }
@@ -6139,6 +6321,20 @@ export type Database = {
       investment_status: "pending" | "committed" | "deployed" | "exited"
       loan_status: "active" | "paid" | "overdue" | "cancelled"
       report_status: "draft" | "submitted" | "approved" | "rejected"
+      staff_doc_type:
+        | "NDA"
+        | "Employment_Contract"
+        | "Passport"
+        | "License"
+        | "Medical_Cert"
+        | "Other"
+      staff_role_category:
+        | "Aviation"
+        | "Maritime"
+        | "Ground"
+        | "Office"
+        | "Household"
+      staff_status: "Active" | "Leave" | "Terminated" | "Mission"
       task_priority: "low" | "medium" | "high" | "urgent"
       task_status: "pending" | "in_progress" | "completed" | "cancelled"
       transaction_category:
@@ -6150,6 +6346,8 @@ export type Database = {
         | "utilities"
         | "other"
       transaction_type: "income" | "expense" | "notification" | "receipt"
+      vacation_approval_status: "Pending" | "Approved" | "Denied"
+      vacation_type: "Paid" | "Sick" | "Unpaid"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -6293,6 +6491,22 @@ export const Constants = {
       investment_status: ["pending", "committed", "deployed", "exited"],
       loan_status: ["active", "paid", "overdue", "cancelled"],
       report_status: ["draft", "submitted", "approved", "rejected"],
+      staff_doc_type: [
+        "NDA",
+        "Employment_Contract",
+        "Passport",
+        "License",
+        "Medical_Cert",
+        "Other",
+      ],
+      staff_role_category: [
+        "Aviation",
+        "Maritime",
+        "Ground",
+        "Office",
+        "Household",
+      ],
+      staff_status: ["Active", "Leave", "Terminated", "Mission"],
       task_priority: ["low", "medium", "high", "urgent"],
       task_status: ["pending", "in_progress", "completed", "cancelled"],
       transaction_category: [
@@ -6305,6 +6519,8 @@ export const Constants = {
         "other",
       ],
       transaction_type: ["income", "expense", "notification", "receipt"],
+      vacation_approval_status: ["Pending", "Approved", "Denied"],
+      vacation_type: ["Paid", "Sick", "Unpaid"],
     },
   },
 } as const
