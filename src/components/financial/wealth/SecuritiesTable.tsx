@@ -436,9 +436,17 @@ export default function SecuritiesTable() {
       const ticker = encodeURIComponent(formData.ticker.trim().toUpperCase());
       const type = encodeURIComponent(formData.security_type);
 
+      const timestamp = Date.now();
       const response = await fetch(
-        `${N8N_SECURITY_WEBHOOK}?ticker=${ticker}&type=${type}`,
-        { method: "GET" }
+        `${N8N_SECURITY_WEBHOOK}?ticker=${ticker}&type=${type}&_t=${timestamp}`,
+        { 
+          method: "GET",
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+          },
+          cache: 'no-store',
+        }
       );
 
       const result = await response.json();
