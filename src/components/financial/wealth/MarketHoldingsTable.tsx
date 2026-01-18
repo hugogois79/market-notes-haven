@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -244,9 +244,72 @@ export default function MarketHoldingsTable() {
   // Set default active account when data loads
   const effectiveActiveAccount = activeAccountId || (cashAssets.length > 0 ? cashAssets[0].id : null);
 
+  // Asset type labels and colors
+  const ASSET_TYPES = [
+    { value: "equity", label: "Equity" },
+    { value: "etf", label: "ETF" },
+    { value: "bond", label: "Bond" },
+    { value: "commodity", label: "Commodity" },
+    { value: "currency", label: "Currency" },
+    { value: "crypto", label: "Crypto" },
+    { value: "other", label: "Other" },
+  ];
+
+  const getTypeBadgeColor = (type: string) => {
+    switch (type) {
+      case "equity": return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
+      case "etf": return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400";
+      case "bond": return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
+      case "commodity": return "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400";
+      case "currency": return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+      case "crypto": return "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400";
+      default: return "bg-muted text-muted-foreground";
+    }
+  };
+
+  const getTypeBarColor = (type: string) => {
+    switch (type) {
+      case "equity": return "bg-blue-500";
+      case "etf": return "bg-purple-500";
+      case "bond": return "bg-amber-500";
+      case "commodity": return "bg-orange-500";
+      case "currency": return "bg-green-500";
+      case "crypto": return "bg-cyan-500";
+      default: return "bg-muted";
+    }
+  };
+
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    new Set(["equity", "etf", "bond", "commodity", "currency", "crypto", "other"])
+  );
+
+  const toggleGroup = (type: string) => {
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(type)) {
+      newExpanded.delete(type);
+    } else {
+      newExpanded.add(type);
+    }
+    setExpandedGroups(newExpanded);
+  };
+
   const renderHoldingsTable = (asset: CashAsset) => {
     const holdingsValueEUR = getAccountHoldingsValueEUR(asset);
     const accountWeight = totalValue > 0 ? (holdingsValueEUR / totalValue) * 100 : 0;
+
+    // Group holdings by security_type
+    const groupedHoldings = asset.holdings.reduce((groups, holding) => {
+      const security = holding.security_id ? securitiesMap[holding.security_id] : null;
+      const securityType = security?.security_type || "other";
+      if (!groups[securityType]) {
+        groups[securityType] = [];
+      }
+      groups[securityType].push(holding);
+      return groups;
+    }, {} as Record<string, MarketHolding[]>);
+
+    // Filter to only show groups with holdings
+    const activeGroups = ASSET_TYPES.filter(t => groupedHoldings[t.value]?.length > 0);
 
     return (
       <div className="space-y-4">
@@ -279,6 +342,7 @@ export default function MarketHoldingsTable() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[40px]"></TableHead>
                 <TableHead className="w-[200px]">Holding</TableHead>
                 <TableHead>Ticker</TableHead>
                 <TableHead>Moeda</TableHead>
@@ -293,115 +357,154 @@ export default function MarketHoldingsTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {asset.holdings.map((holding) => {
-                const currency = holding.currency || "EUR";
-                const quantity = holding.quantity || 1;
-                
-                // Get security current price
-                const security = holding.security_id ? securitiesMap[holding.security_id] : null;
-                const securityCurrentPrice = security?.current_price || null;
-                const isFxSecurity = security?.security_type === "currency";
-                
-                // Calculate unit prices
-                const costBasisUnit = holding.cost_basis ? holding.cost_basis / quantity : null;
-                const currentPriceUnit = securityCurrentPrice || (holding.current_value ? holding.current_value / quantity : null);
-                
-                // Calculate current value:
-                // - FX securities (e.g., EURUSD): value is the foreign currency amount (quantity)
-                // - Regular securities: value is price * quantity
-                const currentValue = isFxSecurity
-                  ? quantity
-                  : (securityCurrentPrice ? securityCurrentPrice * quantity : holding.current_value);
-                
-                const valueEUR = convertToEUR(currentValue || 0, currency);
-                const costBasisEUR = convertToEUR(holding.cost_basis || 0, currency);
-                const plEUR = valueEUR - costBasisEUR;
-                const plPercent = costBasisEUR !== 0 ? (plEUR / Math.abs(costBasisEUR)) * 100 : 0;
-                const holdingWeight = totalValue > 0 ? (valueEUR / totalValue) * 100 : 0;
-
-                // Format currency for display
-                const formatUnitPrice = (value: number | null, curr: string) => {
-                  if (value === null || value === undefined) return "—";
-                  return new Intl.NumberFormat("pt-PT", {
-                    style: "currency",
-                    currency: curr === "USDT" || curr === "BTC" ? "USD" : curr,
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 4,
-                  }).format(value);
-                };
-
-                return (
-                  <TableRow key={holding.id}>
-                    <TableCell className="font-medium">{holding.name}</TableCell>
-                    <TableCell>
-                      {holding.ticker && (
-                        <Badge variant="outline" className="font-mono text-xs">
-                          {holding.ticker}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="text-xs">
-                        {currency}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right text-sm text-muted-foreground">
-                      {formatQuantityWithSpaces(quantity)}
-                    </TableCell>
-                    <TableCell className="text-right text-sm">
-                      {formatUnitPrice(costBasisUnit, currency)}
-                    </TableCell>
-                    <TableCell className="text-right text-sm font-medium">
-                      {securityCurrentPrice ? (
-                        formatUnitPrice(currentPriceUnit, currency)
-                      ) : (
-                        <span className="text-muted-foreground">{formatUnitPrice(currentPriceUnit, currency)}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(valueEUR)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {holding.cost_basis ? (
-                        <span className={plEUR >= 0 ? "text-green-600" : "text-red-600"}>
-                          {formatCurrency(plEUR)}
-                        </span>
-                      ) : "—"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {holding.cost_basis ? (
-                        <span className={`text-sm font-medium ${plPercent >= 0 ? "text-green-600" : "text-red-600"}`}>
-                          {plPercent >= 0 ? "+" : ""}{plPercent.toFixed(2)}%
-                        </span>
-                      ) : "—"}
-                    </TableCell>
-                    <TableCell className="text-right text-sm text-muted-foreground">
-                      {formatPercent(holdingWeight)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(holding, asset.name)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive"
-                          onClick={() => setDeleteId(holding.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {asset.holdings.length === 0 && (
+              {activeGroups.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={12} className="text-center text-muted-foreground py-8">
                     Sem holdings nesta conta. Clique em "Adicionar Holding" para começar.
                   </TableCell>
                 </TableRow>
+              ) : (
+                activeGroups.map(typeInfo => {
+                  const holdings = groupedHoldings[typeInfo.value] || [];
+                  const isExpanded = expandedGroups.has(typeInfo.value);
+
+                  return (
+                    <Fragment key={typeInfo.value}>
+                      {/* Group Header */}
+                      <TableRow
+                        className="bg-muted/30 hover:bg-muted/40 cursor-pointer"
+                        onClick={() => toggleGroup(typeInfo.value)}
+                      >
+                        <TableCell className="py-3">
+                          {isExpanded ? (
+                            <ChevronDown size={16} className="text-muted-foreground" />
+                          ) : (
+                            <ChevronRight size={16} className="text-muted-foreground" />
+                          )}
+                        </TableCell>
+                        <TableCell colSpan={10} className="py-3 font-medium">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className={`text-xs ${getTypeBadgeColor(typeInfo.value)}`}>
+                              {typeInfo.label}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              ({holdings.length} {holdings.length === 1 ? 'título' : 'títulos'})
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
+
+                      {/* Holdings in group */}
+                      {isExpanded && holdings.map((holding, index) => {
+                        const currency = holding.currency || "EUR";
+                        const quantity = holding.quantity || 1;
+                        
+                        // Get security current price
+                        const security = holding.security_id ? securitiesMap[holding.security_id] : null;
+                        const securityCurrentPrice = security?.current_price || null;
+                        const isFxSecurity = security?.security_type === "currency";
+                        
+                        // Calculate unit prices
+                        const costBasisUnit = holding.cost_basis ? holding.cost_basis / quantity : null;
+                        const currentPriceUnit = securityCurrentPrice || (holding.current_value ? holding.current_value / quantity : null);
+                        
+                        // Calculate current value
+                        const currentValue = isFxSecurity
+                          ? quantity
+                          : (securityCurrentPrice ? securityCurrentPrice * quantity : holding.current_value);
+                        
+                        const valueEUR = convertToEUR(currentValue || 0, currency);
+                        const costBasisEUR = convertToEUR(holding.cost_basis || 0, currency);
+                        const plEUR = valueEUR - costBasisEUR;
+                        const plPercent = costBasisEUR !== 0 ? (plEUR / Math.abs(costBasisEUR)) * 100 : 0;
+                        const holdingWeight = totalValue > 0 ? (valueEUR / totalValue) * 100 : 0;
+
+                        const formatUnitPrice = (value: number | null, curr: string) => {
+                          if (value === null || value === undefined) return "—";
+                          return new Intl.NumberFormat("pt-PT", {
+                            style: "currency",
+                            currency: curr === "USDT" || curr === "BTC" ? "USD" : curr,
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 4,
+                          }).format(value);
+                        };
+
+                        return (
+                          <TableRow key={holding.id} className="hover:bg-muted/50">
+                            <TableCell className="py-2">
+                              <div className={`w-1 h-6 rounded-full ml-2 ${getTypeBarColor(typeInfo.value)}`} />
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              <span className="text-xs text-muted-foreground mr-2">{index + 1}.</span>
+                              {holding.name}
+                            </TableCell>
+                            <TableCell>
+                              {holding.ticker && (
+                                <Badge variant="outline" className="font-mono text-xs">
+                                  {holding.ticker}
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className="text-xs">
+                                {currency}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right text-sm text-muted-foreground">
+                              {formatQuantityWithSpaces(quantity)}
+                            </TableCell>
+                            <TableCell className="text-right text-sm">
+                              {formatUnitPrice(costBasisUnit, currency)}
+                            </TableCell>
+                            <TableCell className="text-right text-sm font-medium">
+                              {securityCurrentPrice ? (
+                                formatUnitPrice(currentPriceUnit, currency)
+                              ) : (
+                                <span className="text-muted-foreground">{formatUnitPrice(currentPriceUnit, currency)}</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(valueEUR)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {holding.cost_basis ? (
+                                <span className={plEUR >= 0 ? "text-green-600" : "text-red-600"}>
+                                  {formatCurrency(plEUR)}
+                                </span>
+                              ) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {holding.cost_basis ? (
+                                <span className={`text-sm font-medium ${plPercent >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                  {plPercent >= 0 ? "+" : ""}{plPercent.toFixed(2)}%
+                                </span>
+                              ) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right text-sm text-muted-foreground">
+                              {formatPercent(holdingWeight)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => handleEdit(holding, asset.name)}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive"
+                                  onClick={() => setDeleteId(holding.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </Fragment>
+                  );
+                })
               )}
             </TableBody>
           </Table>
