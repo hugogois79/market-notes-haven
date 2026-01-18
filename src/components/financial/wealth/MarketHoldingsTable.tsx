@@ -240,6 +240,33 @@ export default function MarketHoldingsTable() {
     }, 0);
   };
 
+  // Calculate P/L data for an account
+  const getAccountPLData = (asset: CashAsset) => {
+    let totalValueEUR = 0;
+    let totalCostEUR = 0;
+
+    asset.holdings.forEach(h => {
+      const quantity = h.quantity || 1;
+      const currency = h.currency || "EUR";
+      
+      const security = h.security_id ? securitiesMap[h.security_id] : null;
+      const securityCurrentPrice = security?.current_price || null;
+      const isFxSecurity = security?.security_type === "currency";
+      
+      const currentValue = isFxSecurity
+        ? quantity
+        : (securityCurrentPrice ? securityCurrentPrice * quantity : (h.current_value || 0));
+      
+      totalValueEUR += convertToEUR(currentValue, currency);
+      totalCostEUR += convertToEUR(h.cost_basis || 0, currency);
+    });
+
+    const plEUR = totalValueEUR - totalCostEUR;
+    const plPercent = totalCostEUR !== 0 ? (plEUR / Math.abs(totalCostEUR)) * 100 : 0;
+
+    return { totalValueEUR, totalCostEUR, plEUR, plPercent };
+  };
+
   const totalValue = cashAssets.reduce((sum, a) => sum + getAccountHoldingsValueEUR(a), 0);
 
   // Set default active account when data loads
@@ -297,6 +324,7 @@ export default function MarketHoldingsTable() {
   const renderHoldingsTable = (asset: CashAsset) => {
     const holdingsValueEUR = getAccountHoldingsValueEUR(asset);
     const accountWeight = totalValue > 0 ? (holdingsValueEUR / totalValue) * 100 : 0;
+    const { plEUR, plPercent } = getAccountPLData(asset);
 
     // Group holdings by security_type
     const groupedHoldings = asset.holdings.reduce((groups, holding) => {
@@ -322,6 +350,14 @@ export default function MarketHoldingsTable() {
               Peso: <span className="font-medium">{formatPercent(accountWeight)}</span>
               <span className="mx-2">|</span>
               {asset.holdings.length} holdings
+              <span className="mx-2">|</span>
+              P/L: <span className={`font-semibold ${plEUR >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {formatCurrency(plEUR)}
+              </span>
+              <span className="mx-2">|</span>
+              Margem: <span className={`font-medium ${plPercent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {plPercent >= 0 ? '+' : ''}{formatPercent(plPercent)}
+              </span>
             </p>
           </div>
           <div className="flex items-center gap-2">
