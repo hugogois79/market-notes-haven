@@ -75,6 +75,7 @@ interface WealthAssetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   asset: WealthAsset | null;
+  dynamicValue?: number; // Dynamic value from holdings for Markets category
 }
 
 const CATEGORIES = [
@@ -188,6 +189,7 @@ export default function WealthAssetDialog({
   open,
   onOpenChange,
   asset,
+  dynamicValue,
 }: WealthAssetDialogProps) {
   const queryClient = useQueryClient();
   const isEditing = !!asset;
@@ -244,12 +246,17 @@ export default function WealthAssetDialog({
 
   useEffect(() => {
     if (asset) {
+      // For Markets category, use dynamicValue if provided
+      const effectiveCurrentValue = asset.category === "Markets" && dynamicValue !== undefined
+        ? dynamicValue.toString()
+        : asset.current_value?.toString() || "";
+      
       form.reset({
         name: asset.name || "",
         category: asset.category || "Real Estate Fund",
         subcategory: asset.subcategory || "",
         status: asset.status || "Active",
-        current_value: asset.current_value?.toString() || "",
+        current_value: effectiveCurrentValue,
         purchase_price: asset.purchase_price?.toString() || "",
         purchase_date: asset.purchase_date || "",
         allocation_weight: asset.allocation_weight?.toString() || "",
@@ -280,14 +287,17 @@ export default function WealthAssetDialog({
         consider_appreciation: true,
       });
     }
-  }, [asset, form]);
+  }, [asset, form, dynamicValue]);
 
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const cv = parseFloat(values.current_value) || null;
+      // For Markets category, use dynamicValue if provided
+      const cv = values.category === "Markets" && dynamicValue !== undefined
+        ? dynamicValue
+        : (parseFloat(values.current_value) || null);
       const pp = parseFloat(values.purchase_price) || null;
       
       // Calculate P/L
@@ -501,23 +511,36 @@ export default function WealthAssetDialog({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="current_value"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Valor Atual</FormLabel>
-                    <FormControl>
-                      <PortugueseNumberInput
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="0,00"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* For Markets category, show read-only calculated value */}
+              {selectedCategory === "Markets" && dynamicValue !== undefined ? (
+                <FormItem>
+                  <FormLabel>Valor Atual (Calculado)</FormLabel>
+                  <div className="h-10 px-3 py-2 rounded-md border bg-muted text-sm flex items-center font-medium">
+                    {formatCurrency(dynamicValue, "EUR")}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Calculado automaticamente a partir dos holdings da conta
+                  </p>
+                </FormItem>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="current_value"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor Atual</FormLabel>
+                      <FormControl>
+                        <PortugueseNumberInput
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="0,00"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {/* Calculated fields - read only */}
               <FormItem>
