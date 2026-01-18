@@ -184,32 +184,18 @@ export default function WealthAssetsTable() {
     }, 0);
   };
 
-  // Calculate dynamic P/L for Markets category assets (based on holdings cost_basis)
+  // Calculate dynamic P/L for Markets category assets
+  // Uses asset.purchase_price as cost basis (more reliable than individual holdings cost_basis)
   const getAssetDynamicPL = (asset: WealthAsset): number | null => {
     if (asset.category !== "Markets") {
       return asset.profit_loss_value;
     }
     
-    const assetHoldings = marketHoldings.filter(h => h.asset_id === asset.id);
-    if (assetHoldings.length === 0) return null;
+    // Get dynamic current value from holdings
+    const totalValueEUR = getAssetDynamicValue(asset);
     
-    let totalValueEUR = 0;
-    let totalCostEUR = 0;
-    
-    assetHoldings.forEach(h => {
-      const quantity = h.quantity || 1;
-      const currency = h.currency || "EUR";
-      const security = h.security_id ? securitiesMap[h.security_id] : null;
-      const currentPrice = security?.current_price || null;
-      const isFxSecurity = security?.security_type === "currency";
-      
-      const currentValue = isFxSecurity 
-        ? quantity 
-        : (currentPrice ? currentPrice * quantity : (h.current_value || 0));
-      
-      totalValueEUR += convertToEUR(currentValue, currency);
-      totalCostEUR += convertToEUR(h.cost_basis || 0, currency);
-    });
+    // Use purchase_price from the asset as the cost basis
+    const totalCostEUR = asset.purchase_price || 0;
     
     return totalValueEUR - totalCostEUR;
   };
