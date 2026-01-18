@@ -158,7 +158,7 @@ export default function MarketHoldingsTable() {
       const { data: assets, error: assetsError } = await supabase
         .from("wealth_assets")
         .select("id, name, subcategory, current_value, category")
-        .in("category", ["Cash", "Markets"])
+        .eq("category", "Markets")
         .eq("user_id", user.id)
         .order("name");
 
