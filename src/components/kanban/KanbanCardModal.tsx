@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { KanbanCard, KanbanService, KanbanAttachment } from '@/services/kanbanService';
 import {
   Dialog,
@@ -207,7 +207,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     setTags(tags.filter(t => t !== tagToRemove));
   };
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     // Check if card should be moved
     if (moveToListId !== card.list_id && onMove) {
       try {
@@ -242,7 +242,25 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
       });
     }
     onClose();
-  };
+  }, [card.id, card.list_id, title, description, priority, value, dueDate, tasks, tags, moveToListId, moveToBoardId, onMove, onUpdate, onClose]);
+
+  // Keyboard shortcut: Ctrl+S / Cmd+S to save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, handleSave]);
 
   const handleDelete = () => {
     if (confirm('Are you sure you want to delete this card?')) {
