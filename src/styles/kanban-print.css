@@ -34,6 +34,23 @@
     box-shadow: none !important;
   }
 
+  /* Force print container to start at top */
+  .print-container {
+    position: relative !important;
+    top: 0 !important;
+    left: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Ensure screen view is completely removed from print flow */
+  .print\:hidden {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
   /* Board print container */
   .kanban-board-print {
     display: flex !important;
@@ -41,6 +58,8 @@
     gap: 0.3cm;
     width: 100% !important;
     align-items: flex-start;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
   }
 
   /* Print header - Space > Board + Date */
@@ -102,7 +121,7 @@
     border: 1px solid #333;
     border-radius: 3px;
     padding: 0.2cm;
-    page-break-inside: avoid;
+    /* Allow lists to break across pages when they have many cards */
     background: #f8f8f8 !important;
   }
 
@@ -122,6 +141,7 @@
     padding: 0.15cm;
     margin-bottom: 0.15cm;
     page-break-inside: avoid;
+    break-inside: avoid; /* Modern browsers */
     background: white !important;
   }
 
