@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +27,10 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 type WealthTransaction = {
@@ -114,6 +118,7 @@ export default function WealthTransactionDialog({
 }: WealthTransactionDialogProps) {
   const queryClient = useQueryClient();
   const isEditing = !!transaction;
+  const [assetOpen, setAssetOpen] = useState(false);
 
   const { data: assets = [] } = useQuery({
     queryKey: ["wealth-assets-for-transactions"],
@@ -444,20 +449,66 @@ export default function WealthTransactionDialog({
                 render={({ field }) => (
                   <FormItem className="col-span-2">
                     <FormLabel className="text-xs">Ativo</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue placeholder="Selecionar..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {assets.map((asset) => (
-                          <SelectItem key={asset.id} value={asset.id}>
-                            {asset.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={assetOpen} onOpenChange={setAssetOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={assetOpen}
+                            className="h-8 w-full justify-between text-sm font-normal"
+                          >
+                            {field.value
+                              ? assets.find((a) => a.id === field.value)?.name
+                              : "Selecionar..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[300px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Pesquisar ativo..." />
+                          <CommandList>
+                            <CommandEmpty>Nenhum ativo encontrado.</CommandEmpty>
+                            <CommandGroup>
+                              <CommandItem
+                                value="none"
+                                onSelect={() => {
+                                  field.onChange("");
+                                  setAssetOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    !field.value ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                Nenhum
+                              </CommandItem>
+                              {assets.map((asset) => (
+                                <CommandItem
+                                  key={asset.id}
+                                  value={asset.name}
+                                  onSelect={() => {
+                                    field.onChange(asset.id);
+                                    setAssetOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value === asset.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {asset.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
