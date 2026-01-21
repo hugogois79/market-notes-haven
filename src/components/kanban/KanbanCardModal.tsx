@@ -65,6 +65,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   const [tagInput, setTagInput] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [value, setValue] = useState<number>(card.value || 0);
+  const [isFilePickerOpen, setIsFilePickerOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen && card.id) {
@@ -113,6 +114,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsFilePickerOpen(false);
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -121,6 +123,24 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  // Handle file picker cancel (window regains focus without file selection)
+  useEffect(() => {
+    const handleWindowFocus = () => {
+      // Small delay to allow file input change event to fire first
+      setTimeout(() => {
+        setIsFilePickerOpen(false);
+      }, 100);
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    return () => window.removeEventListener('focus', handleWindowFocus);
+  }, []);
+
+  const handleAttachmentClick = () => {
+    setIsFilePickerOpen(true);
+    fileInputRef.current?.click();
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -280,7 +300,11 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      // Prevent closing during file picker or upload
+      if (!open && (isFilePickerOpen || isUploading)) return;
+      if (!open) onClose();
+    }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -487,7 +511,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
               
               <Button
                 variant="outline"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={handleAttachmentClick}
                 disabled={isUploading}
                 className="w-full"
               >
