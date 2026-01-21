@@ -166,6 +166,21 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     }
   };
 
+  const handleOpenAttachment = async (attachment: KanbanAttachment) => {
+    try {
+      // The bucket is private, so we need to generate a signed URL
+      const signedUrl = await KanbanService.getSignedDownloadUrl(attachment.file_url);
+      if (signedUrl) {
+        window.open(signedUrl, '_blank');
+      } else {
+        toast.error('Could not open attachment');
+      }
+    } catch (error) {
+      console.error('Error opening attachment:', error);
+      toast.error('Failed to open attachment');
+    }
+  };
+
   const handleDeleteAttachment = async (attachment: KanbanAttachment) => {
     try {
       await KanbanService.deleteAttachment(attachment.id, attachment.file_url);
@@ -462,15 +477,13 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
                       key={attachment.id}
                       className="flex items-center justify-between p-2 bg-muted rounded hover:bg-muted/80 transition-colors"
                     >
-                      <a
-                        href={attachment.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 flex-1 min-w-0 hover:underline"
+                      <button
+                        onClick={() => handleOpenAttachment(attachment)}
+                        className="flex items-center gap-2 flex-1 min-w-0 hover:underline text-left"
                       >
                         <span className="text-lg">{getFileIcon(attachment.filename)}</span>
                         <span className="text-sm truncate">{attachment.filename}</span>
-                      </a>
+                      </button>
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <Button
                           variant="ghost"
