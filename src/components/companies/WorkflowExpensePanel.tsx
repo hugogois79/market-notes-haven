@@ -574,6 +574,19 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
       if (data.type === "document") {
         const fileUrlToMatch = attachmentUrl || file.file_url;
         
+        // If we were editing a financial transaction and now changing to document type,
+        // we need to delete the old transaction first
+        if (isEditMode && existingTransaction && existingTransaction.id && !existingTransaction._isLoan) {
+          const { error: deleteError } = await supabase
+            .from("financial_transactions")
+            .delete()
+            .eq("id", existingTransaction.id);
+          
+          if (deleteError) {
+            console.error("Error deleting old transaction when changing to document type:", deleteError);
+          }
+        }
+        
         // Check if document already exists by file_url (regardless of company - allows company changes)
         const { data: existingDoc } = await supabase
           .from("company_documents")
@@ -613,6 +626,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         await updateWorkflowFile();
 
         queryClient.invalidateQueries({ queryKey: ["company-documents"] });
+        queryClient.invalidateQueries({ queryKey: ["transactions"] });
+        queryClient.invalidateQueries({ queryKey: ["file-transaction"] });
         toast.success("Documento guardado com sucesso");
         onSaved?.({ fileName: attachmentName, fileUrl: attachmentUrl });
         return;
