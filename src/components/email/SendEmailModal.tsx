@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
-import { Mail, Send, CheckCircle, AlertCircle, Loader2, Paperclip, Search } from "lucide-react";
+import { Mail, Send, CheckCircle, AlertCircle, Loader2, Paperclip, RefreshCw } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +39,7 @@ interface DiscoveryResult {
   source?: 'google_contacts' | 'document_ocr' | 'manual';
 }
 
-type ModalState = 'search' | 'discovering' | 'found' | 'not_found' | 'sending' | 'success' | 'error';
+type ModalState = 'form' | 'discovering' | 'sending' | 'success' | 'error';
 
 const generateDefaultSubject = (doc: DocumentData): string => {
   const dateStr = doc.date 
@@ -50,8 +50,9 @@ const generateDefaultSubject = (doc: DocumentData): string => {
     return `Fatura #${doc.invoiceNumber} - ${dateStr}`;
   }
   
-  if (doc.entityName) {
-    return `Documento - ${doc.entityName} - ${dateStr}`;
+  const name = doc.vendorName || doc.entityName;
+  if (name) {
+    return `Documento - ${name} - ${dateStr}`;
   }
   
   return `Documento - ${dateStr}`;
@@ -73,13 +74,11 @@ export default function SendEmailModal({
 }: SendEmailModalProps) {
   const { sendEmail, reset } = useSendDocumentEmail();
   
-  const [modalState, setModalState] = useState<ModalState>('search');
-  // Default to vendorName (supplier/client), fallback to entityName
+  const [modalState, setModalState] = useState<ModalState>('form');
   const [entityName, setEntityName] = useState(document.vendorName || document.entityName || '');
-  const [discoveredEmail, setDiscoveredEmail] = useState('');
-  const [discoveredName, setDiscoveredName] = useState('');
+  const [recipientEmail, setRecipientEmail] = useState('');
   const [emailSource, setEmailSource] = useState<string>('');
-  const [manualEmail, setManualEmail] = useState('');
+  const [isDiscovering, setIsDiscovering] = useState(false);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [sendResult, setSendResult] = useState<SendEmailResponse | null>(null);
@@ -87,13 +86,11 @@ export default function SendEmailModal({
   // Reset form when modal opens
   useEffect(() => {
     if (open) {
-      setModalState('search');
-      // Default to vendorName (supplier/client), fallback to entityName
+      setModalState('form');
       setEntityName(document.vendorName || document.entityName || '');
-      setDiscoveredEmail('');
-      setDiscoveredName('');
+      setRecipientEmail('');
       setEmailSource('');
-      setManualEmail('');
+      setIsDiscovering(false);
       setSubject(generateDefaultSubject(document));
       setMessage(generateDefaultMessage());
       setSendResult(null);
@@ -104,7 +101,7 @@ export default function SendEmailModal({
   const handleDiscoverEmail = async () => {
     if (!entityName.trim()) return;
 
-    setModalState('discovering');
+    setIsDiscovering(true);
 
     try {
       const response = await fetch('https://n8n.gvvcapital.com/webhook/contact-discovery', {
@@ -124,22 +121,20 @@ export default function SendEmailModal({
       const result: DiscoveryResult = await response.json();
 
       if (result.found && result.email) {
-        setDiscoveredEmail(result.email);
-        setDiscoveredName(result.name || entityName);
+        setRecipientEmail(result.email);
         setEmailSource(result.source || 'manual');
-        setModalState('found');
       } else {
-        setModalState('not_found');
+        setEmailSource('not_found');
       }
     } catch (err) {
       console.error('Error discovering email:', err);
-      setModalState('not_found');
+      setEmailSource('error');
+    } finally {
+      setIsDiscovering(false);
     }
   };
 
   const handleSend = async () => {
-    const recipientEmail = modalState === 'found' ? discoveredEmail : manualEmail;
-    
     if (!recipientEmail.trim()) return;
 
     setModalState('sending');
@@ -169,10 +164,8 @@ export default function SendEmailModal({
   };
 
   const handleRetry = () => {
-    setModalState('search');
+    setModalState('form');
     setSendResult(null);
-    setDiscoveredEmail('');
-    setManualEmail('');
   };
 
   const handleClose = () => {
@@ -183,12 +176,15 @@ export default function SendEmailModal({
     switch (source) {
       case 'google_contacts': return 'Google Contacts';
       case 'document_ocr': return 'OCR do documento';
-      default: return 'Manual';
+      case 'not_found': return 'Não encontrado';
+      case 'error': return 'Erro na procura';
+      default: return '';
     }
   };
 
-  const renderSearch = () => (
+  const renderForm = () => (
     <div className="space-y-4">
+      {/* Recipient Name */}
       <div className="space-y-2">
         <Label htmlFor="entityName">Destinatário (nome da entidade)</Label>
         <Input
@@ -196,89 +192,60 @@ export default function SendEmailModal({
           value={entityName}
           onChange={(e) => setEntityName(e.target.value)}
           placeholder="Nome da empresa ou entidade"
-          onKeyDown={(e) => e.key === 'Enter' && handleDiscoverEmail()}
         />
-        <p className="text-xs text-muted-foreground">
-          O email será descoberto automaticamente via Google Contacts ou OCR do documento.
-        </p>
       </div>
 
-      <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50 text-sm overflow-hidden min-w-0">
-        <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-        <span className="text-muted-foreground truncate min-w-0">
-          Anexo: {document.fileName}
-        </span>
-      </div>
-
-      <div className="flex justify-end gap-2 pt-2">
-        <Button variant="outline" onClick={handleClose}>
-          Cancelar
-        </Button>
-        <Button onClick={handleDiscoverEmail} disabled={!entityName.trim()}>
-          <Search className="h-4 w-4 mr-2" />
-          Procurar Email
-        </Button>
-      </div>
-    </div>
-  );
-
-  const renderDiscovering = () => (
-    <div className="flex flex-col items-center justify-center py-8 space-y-4">
-      <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      <div className="text-center space-y-2">
-        <p className="font-medium">A procurar contacto...</p>
-        <p className="text-sm text-muted-foreground">
-          A pesquisar email para "{entityName}"
-        </p>
-      </div>
-    </div>
-  );
-
-  const renderEmailForm = (isManual: boolean) => (
-    <div className="space-y-4">
-      {/* Email Status */}
-      {isManual ? (
-        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 rounded-md">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-            <div className="space-y-2 flex-1">
-              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                Email não encontrado para "{entityName}"
-              </p>
-              <div className="space-y-1">
-                <Label htmlFor="manualEmail" className="text-xs text-amber-700 dark:text-amber-300">
-                  Inserir email manualmente
-                </Label>
-                <Input
-                  id="manualEmail"
-                  type="email"
-                  value={manualEmail}
-                  onChange={(e) => setManualEmail(e.target.value)}
-                  placeholder="email@exemplo.com"
-                  className="bg-white dark:bg-background"
-                />
-              </div>
-            </div>
-          </div>
+      {/* Email with Discover Button */}
+      <div className="space-y-2">
+        <Label htmlFor="recipientEmail">Email do destinatário</Label>
+        <div className="flex gap-2">
+          <Input
+            id="recipientEmail"
+            type="email"
+            value={recipientEmail}
+            onChange={(e) => {
+              setRecipientEmail(e.target.value);
+              setEmailSource('manual');
+            }}
+            placeholder="email@exemplo.com"
+            className="flex-1"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={handleDiscoverEmail}
+            disabled={!entityName.trim() || isDiscovering}
+            title="Procurar email automaticamente"
+          >
+            {isDiscovering ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+          </Button>
         </div>
-      ) : (
-        <div className="bg-primary/5 border border-primary/20 p-3 rounded-md">
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-primary/10 p-2">
-              <CheckCircle className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{discoveredEmail}</p>
-              {discoveredName && discoveredName !== entityName && (
-                <p className="text-sm text-muted-foreground truncate">{discoveredName}</p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Fonte: {getSourceLabel(emailSource)}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+        {emailSource && emailSource !== 'manual' && (
+          <p className={`text-xs ${emailSource === 'not_found' || emailSource === 'error' ? 'text-amber-600' : 'text-muted-foreground'}`}>
+            {emailSource === 'not_found' || emailSource === 'error' ? (
+              <span className="flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {getSourceLabel(emailSource)}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1">
+                <CheckCircle className="h-3 w-3 text-primary" />
+                Encontrado via {getSourceLabel(emailSource)}
+              </span>
+            )}
+          </p>
+        )}
+        {!emailSource && (
+          <p className="text-xs text-muted-foreground">
+            Clique no ícone para procurar o email automaticamente via Google Contacts ou OCR.
+          </p>
+        )}
+      </div>
 
       {/* Subject */}
       <div className="space-y-2">
@@ -312,22 +279,14 @@ export default function SendEmailModal({
       </div>
 
       {/* Actions */}
-      <div className="flex justify-between gap-2 pt-2">
-        <Button variant="ghost" onClick={handleRetry} size="sm">
-          ← Voltar
+      <div className="flex justify-end gap-2 pt-2">
+        <Button variant="outline" onClick={handleClose}>
+          Cancelar
         </Button>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleClose}>
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleSend} 
-            disabled={isManual ? !manualEmail.trim() : false}
-          >
-            <Send className="h-4 w-4 mr-2" />
-            Enviar Email
-          </Button>
-        </div>
+        <Button onClick={handleSend} disabled={!recipientEmail.trim()}>
+          <Send className="h-4 w-4 mr-2" />
+          Enviar Email
+        </Button>
       </div>
     </div>
   );
@@ -360,11 +319,6 @@ export default function SendEmailModal({
             {sendResult.recipientName && (
               <p className="text-muted-foreground">
                 {sendResult.recipientName}
-              </p>
-            )}
-            {sendResult.source && (
-              <p className="text-xs text-muted-foreground">
-                Fonte: {getSourceLabel(sendResult.source)}
               </p>
             )}
           </div>
@@ -408,10 +362,8 @@ export default function SendEmailModal({
           </DialogTitle>
         </DialogHeader>
         
-        {modalState === 'search' && renderSearch()}
-        {modalState === 'discovering' && renderDiscovering()}
-        {modalState === 'found' && renderEmailForm(false)}
-        {modalState === 'not_found' && renderEmailForm(true)}
+        {modalState === 'form' && renderForm()}
+        {modalState === 'discovering' && renderSending()}
         {modalState === 'sending' && renderSending()}
         {modalState === 'success' && renderSuccess()}
         {modalState === 'error' && renderError()}
