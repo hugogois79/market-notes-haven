@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, CreditCard, Bookmark, Save, FolderInput, Sparkles } from "lucide-react";
+import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, CreditCard, Bookmark, Save, FolderInput, Sparkles, Mail } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +46,7 @@ import { DocumentPreview } from "@/components/companies/DocumentPreview";
 import { WorkflowExpensePanel } from "@/components/companies/WorkflowExpensePanel";
 import DocumentPaymentDialog from "@/components/companies/DocumentPaymentDialog";
 import { DocumentAIPanel } from "@/components/companies/DocumentAIPanel";
+import SendEmailModal from "@/components/email/SendEmailModal";
 import { cn } from "@/lib/utils";
 
 interface WorkflowFile {
@@ -339,6 +340,7 @@ export default function WorkFlowTab() {
   const [showExpensePanel, setShowExpensePanel] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showSendEmailModal, setShowSendEmailModal] = useState(false);
 
   // Mark as completed state
   const [markCompleteWarningOpen, setMarkCompleteWarningOpen] = useState(false);
@@ -3487,6 +3489,14 @@ export default function WorkFlowTab() {
                             )}
                             {isLoadingTransaction ? "..." : ((existingTransaction as any)?.bank_account_id ? "Pagamento Registado" : "Registar Pagamento")}
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowSendEmailModal(true)}
+                          >
+                            <Mail className="h-4 w-4 mr-2" />
+                            Enviar Email
+                          </Button>
               </div>
             </div>
           </DialogHeader>
@@ -3905,6 +3915,26 @@ export default function WorkFlowTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Send Email Modal */}
+      {previewFile && (
+        <SendEmailModal
+          open={showSendEmailModal}
+          onOpenChange={setShowSendEmailModal}
+          document={{
+            id: previewFile.id,
+            fileName: previewFile.file_name,
+            fileUrl: previewFile.file_url,
+            entityName: previewFile.vendor_name || previewFile.companies?.name,
+            invoiceNumber: previewFile.invoice_number || undefined,
+            date: previewFile.invoice_date || undefined,
+            amount: previewFile.total_amount || undefined,
+          }}
+          onSuccess={() => {
+            toast.success("Email enviado com sucesso!");
+          }}
+        />
+      )}
     </div>
   );
 }
