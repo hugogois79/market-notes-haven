@@ -192,7 +192,7 @@ export default function SendEmailModal({
     setIsDiscovering(true);
 
     try {
-      const response = await fetch('https://n8n.gvvcapital.com/webhook/contact-discovery', {
+      const response = await fetch('https://n8n.gvvcapital.com/webhook/send-document-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
