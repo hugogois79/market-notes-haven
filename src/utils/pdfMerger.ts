@@ -144,22 +144,32 @@ export async function mergePdfs(
 
   // Try to load the original PDF
   let originalPdf: PDFDocument;
+  const originalPdfBytes = await fetchPdfAsArrayBuffer(originalPdfUrl);
+  console.log('Original PDF loaded, size:', originalPdfBytes.byteLength, 'bytes');
 
   try {
-    console.log('Loading original PDF...');
-    const originalPdfBytes = await fetchPdfAsArrayBuffer(originalPdfUrl);
-    console.log('Original PDF loaded, size:', originalPdfBytes.byteLength, 'bytes');
-
+    // Attempt 1: Load directly
     originalPdf = await PDFDocument.load(originalPdfBytes);
     console.log('Original PDF parsed, pages:', originalPdf.getPageCount());
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+  } catch (loadError) {
+    const errorMessage = loadError instanceof Error ? loadError.message : String(loadError);
 
     if (errorMessage.toLowerCase().includes('encrypt')) {
-      throw new EncryptedPdfError('O PDF original está protegido e não pode ser combinado');
+      // Attempt 2: Convert protected PDF via rendering
+      console.log('Original PDF is protected, converting via rendering...');
+      onProgress?.('A converter documento protegido...');
+      
+      try {
+        const cleanBytes = await convertProtectedPdfToClean(originalPdfBytes, onProgress);
+        originalPdf = await PDFDocument.load(cleanBytes);
+        console.log('Protected PDF converted successfully, pages:', originalPdf.getPageCount());
+      } catch (convertError) {
+        console.error('Failed to convert protected PDF:', convertError);
+        throw new EncryptedPdfError('O PDF original está protegido e não foi possível convertê-lo');
+      }
+    } else {
+      throw loadError;
     }
-
-    throw error;
   }
 
   // Copy all pages from the original PDF
