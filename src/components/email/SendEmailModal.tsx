@@ -159,9 +159,9 @@ export default function SendEmailModal({
         />
       </div>
 
-      <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50 text-sm">
+      <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50 text-sm overflow-hidden min-w-0">
         <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-        <span className="text-muted-foreground truncate">
+        <span className="text-muted-foreground truncate min-w-0">
           Anexo: {document.fileName}
         </span>
       </div>
