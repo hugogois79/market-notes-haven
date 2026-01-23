@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
-import { Mail, Send, CheckCircle, AlertCircle, Loader2, Paperclip, RefreshCw } from "lucide-react";
+import { Mail, Send, CheckCircle, AlertCircle, Loader2, Paperclip, RefreshCw, User } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +40,13 @@ interface DiscoveryResult {
 }
 
 type ModalState = 'form' | 'discovering' | 'sending' | 'success' | 'error';
+
+interface EmailSuggestion {
+  name: string;
+  email: string;
+  organization?: string;
+  matchedOn: string;
+}
 
 const generateDefaultSubject = (doc: DocumentData): string => {
   const dateStr = doc.date 
@@ -82,6 +89,13 @@ export default function SendEmailModal({
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [sendResult, setSendResult] = useState<SendEmailResponse | null>(null);
+  
+  // Autocomplete states
+  const [emailSuggestions, setEmailSuggestions] = useState<EmailSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -94,9 +108,83 @@ export default function SendEmailModal({
       setSubject(generateDefaultSubject(document));
       setMessage(generateDefaultMessage());
       setSendResult(null);
+      setEmailSuggestions([]);
+      setShowSuggestions(false);
       reset();
     }
   }, [open, document]);
+
+  // Search email suggestions with debounce
+  const searchEmailSuggestions = useCallback(async (query: string) => {
+    if (query.length < 2) {
+      setEmailSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await fetch('https://n8n.gvvcapital.com/webhook/email-autocomplete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, limit: 5 })
+      });
+
+      if (!response.ok) throw new Error('Erro na comunicação');
+
+      const data = await response.json();
+      if (data.success && Array.isArray(data.suggestions)) {
+        setEmailSuggestions(data.suggestions);
+        setShowSuggestions(data.suggestions.length > 0);
+      } else {
+        setEmailSuggestions([]);
+        setShowSuggestions(false);
+      }
+    } catch (err) {
+      console.error('Error searching emails:', err);
+      setEmailSuggestions([]);
+      setShowSuggestions(false);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  const handleEmailInputChange = (value: string) => {
+    setRecipientEmail(value);
+    setEmailSource('manual');
+
+    // Clear previous debounce
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    // Debounce search
+    debounceRef.current = setTimeout(() => {
+      searchEmailSuggestions(value);
+    }, 300);
+  };
+
+  const handleSelectSuggestion = (suggestion: EmailSuggestion) => {
+    setRecipientEmail(suggestion.email);
+    if (!entityName.trim() && suggestion.name) {
+      setEntityName(suggestion.name);
+    }
+    setEmailSource('google_contacts');
+    setShowSuggestions(false);
+    setEmailSuggestions([]);
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    window.addEventListener('mousedown', handleClickOutside);
+    return () => window.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleDiscoverEmail = async () => {
     if (!entityName.trim()) return;
@@ -195,28 +283,61 @@ export default function SendEmailModal({
         />
       </div>
 
-      {/* Email with Discover Button */}
+      {/* Email with Autocomplete and Discover Button */}
       <div className="space-y-2">
         <Label htmlFor="recipientEmail">Email do destinatário</Label>
         <div className="flex gap-2">
-          <Input
-            id="recipientEmail"
-            type="email"
-            value={recipientEmail}
-            onChange={(e) => {
-              setRecipientEmail(e.target.value);
-              setEmailSource('manual');
-            }}
-            placeholder="email@exemplo.com"
-            className="flex-1"
-          />
+          <div className="relative flex-1" ref={suggestionsRef}>
+            <Input
+              id="recipientEmail"
+              type="email"
+              value={recipientEmail}
+              onChange={(e) => handleEmailInputChange(e.target.value)}
+              onFocus={() => {
+                if (emailSuggestions.length > 0) setShowSuggestions(true);
+              }}
+              placeholder="email@exemplo.com"
+              className="w-full"
+              autoComplete="off"
+            />
+            {isSearching && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            
+            {/* Suggestions Dropdown */}
+            {showSuggestions && emailSuggestions.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto">
+                {emailSuggestions.map((suggestion, index) => (
+                  <button
+                    key={`${suggestion.email}-${index}`}
+                    type="button"
+                    className="w-full px-3 py-2 text-left hover:bg-accent transition-colors flex items-start gap-3 border-b border-border last:border-b-0"
+                    onClick={() => handleSelectSuggestion(suggestion)}
+                  >
+                    <div className="flex-shrink-0 mt-0.5">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{suggestion.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{suggestion.email}</p>
+                      {suggestion.organization && (
+                        <p className="text-xs text-muted-foreground/70 truncate">{suggestion.organization}</p>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <Button
             type="button"
             variant="outline"
             size="icon"
             onClick={handleDiscoverEmail}
             disabled={!entityName.trim() || isDiscovering}
-            title="Procurar email automaticamente"
+            title="Procurar email automaticamente via OCR"
           >
             {isDiscovering ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -242,7 +363,7 @@ export default function SendEmailModal({
         )}
         {!emailSource && (
           <p className="text-xs text-muted-foreground">
-            Clique no ícone para procurar o email automaticamente via Google Contacts ou OCR.
+            Comece a digitar para ver sugestões do Google Contacts, ou clique no ícone para procurar via OCR.
           </p>
         )}
       </div>
