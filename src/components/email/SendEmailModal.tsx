@@ -19,6 +19,7 @@ interface DocumentData {
   fileName: string;
   fileUrl: string;
   entityName?: string;
+  vendorName?: string;
   invoiceNumber?: string;
   date?: string;
   amount?: number;
@@ -73,7 +74,8 @@ export default function SendEmailModal({
   const { sendEmail, reset } = useSendDocumentEmail();
   
   const [modalState, setModalState] = useState<ModalState>('search');
-  const [entityName, setEntityName] = useState(document.entityName || '');
+  // Default to vendorName (supplier/client), fallback to entityName
+  const [entityName, setEntityName] = useState(document.vendorName || document.entityName || '');
   const [discoveredEmail, setDiscoveredEmail] = useState('');
   const [discoveredName, setDiscoveredName] = useState('');
   const [emailSource, setEmailSource] = useState<string>('');
@@ -86,7 +88,8 @@ export default function SendEmailModal({
   useEffect(() => {
     if (open) {
       setModalState('search');
-      setEntityName(document.entityName || '');
+      // Default to vendorName (supplier/client), fallback to entityName
+      setEntityName(document.vendorName || document.entityName || '');
       setDiscoveredEmail('');
       setDiscoveredName('');
       setEmailSource('');
@@ -397,7 +400,7 @@ export default function SendEmailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[min(92vw,500px)] max-w-[min(92vw,500px)] sm:max-w-none overflow-hidden">
+      <DialogContent className="w-[min(92vw,600px)] max-w-[min(92vw,600px)] sm:max-w-none overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
