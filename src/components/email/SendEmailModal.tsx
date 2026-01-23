@@ -354,7 +354,7 @@ export default function SendEmailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[min(92vw,600px)] max-w-[min(92vw,600px)] sm:max-w-none overflow-hidden">
+      <DialogContent className="w-[min(92vw,750px)] max-w-[min(92vw,750px)] sm:max-w-none overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
