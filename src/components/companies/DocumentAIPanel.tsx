@@ -184,11 +184,38 @@ export function DocumentAIPanel({ fileUrl, fileName, mimeType, documentId }: Doc
       // Invalidate workflow-files query to trigger polling for OCR updates
       queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
 
-      // If n8n returns an explanation directly, use it
+      // Check for different response formats from n8n
       if (data?.data?.explanation) {
+        // Direct explanation from n8n
         setExplanation(data.data.explanation);
         await saveAnalysis(data.data.explanation);
         toast.success('Análise gerada e guardada');
+      } else if (data?.data?.vendor_name || data?.data?.total_amount) {
+        // n8n returned extracted invoice data - format it as explanation
+        const extractedData = data.data;
+        const formattedExplanation = `**Tipo de Documento**: Fatura
+
+**Resumo**: Documento fiscal de ${extractedData.vendor_name || 'fornecedor desconhecido'}
+
+**Pontos Importantes**:
+- **Número da fatura**: ${extractedData.invoice_number || 'N/A'}
+- **Data**: ${extractedData.invoice_date || 'N/A'}
+- **Categoria**: ${extractedData.category || 'N/A'}
+
+**Entidades Envolvidas**:
+- **Fornecedor**: ${extractedData.vendor_name || 'N/A'}
+- **NIF Fornecedor**: ${extractedData.vendor_vat || 'N/A'}
+
+**Valores**:
+- **Subtotal**: ${extractedData.subtotal ? `€${extractedData.subtotal.toFixed(2)}` : 'N/A'}
+- **IVA**: ${extractedData.tax_amount ? `€${extractedData.tax_amount.toFixed(2)}` : 'N/A'}
+- **Total**: ${extractedData.total_amount ? `€${extractedData.total_amount.toFixed(2)}` : 'N/A'}
+
+**Descrição**: ${extractedData.line_items_summary || 'Sem descrição disponível'}`;
+
+        setExplanation(formattedExplanation);
+        await saveAnalysis(formattedExplanation);
+        toast.success('Dados extraídos com sucesso!');
       } else {
         // n8n will process asynchronously - show pending message
         setExplanation('Documento enviado para análise. A análise será processada em background pelo n8n.');
