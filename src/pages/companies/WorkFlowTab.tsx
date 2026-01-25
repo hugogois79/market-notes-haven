@@ -371,8 +371,11 @@ export default function WorkFlowTab() {
     isLoan: boolean;
     loanInfo?: {
       lendingCompanyName: string;
+      lendingFolderPath: string;
       borrowingCompanyName: string;
+      borrowingFolderPath: string;
       amount: number;
+      loanDate: string;
     };
   } | null>(null);
 
@@ -1302,15 +1305,61 @@ export default function WorkFlowTab() {
       
       // Check if there's a pending loan for this file
       const pendingLoanStr = customData[file.id]?._pendingLoan;
-      let loanInfo: { lendingCompanyName: string; borrowingCompanyName: string; amount: number } | undefined;
+      let loanInfo: { 
+        lendingCompanyName: string; 
+        lendingFolderPath: string;
+        borrowingCompanyName: string; 
+        borrowingFolderPath: string;
+        amount: number;
+        loanDate: string;
+      } | undefined;
       
       if (pendingLoanStr) {
         try {
           const loanData = JSON.parse(pendingLoanStr);
+          
+          // Use loan date to determine month/year for folder paths
+          const loanDate = new Date(loanData.start_date);
+          const loanMonth = loanDate.getMonth() + 1;
+          const loanYear = loanDate.getFullYear();
+          
+          // Fetch folder path for LENDER
+          let lendingFolderPath = "";
+          if (loanData.lending_company_id) {
+            const { data: lendingLocation } = await supabase
+              .from("workflow_storage_locations")
+              .select("folder_path")
+              .eq("company_id", loanData.lending_company_id)
+              .eq("year", loanYear)
+              .eq("month", loanMonth)
+              .maybeSingle();
+            if (lendingLocation?.folder_path) {
+              lendingFolderPath = lendingLocation.folder_path;
+            }
+          }
+          
+          // Fetch folder path for BORROWER
+          let borrowingFolderPath = "";
+          if (loanData.borrowing_company_id) {
+            const { data: borrowingLocation } = await supabase
+              .from("workflow_storage_locations")
+              .select("folder_path")
+              .eq("company_id", loanData.borrowing_company_id)
+              .eq("year", loanYear)
+              .eq("month", loanMonth)
+              .maybeSingle();
+            if (borrowingLocation?.folder_path) {
+              borrowingFolderPath = borrowingLocation.folder_path;
+            }
+          }
+          
           loanInfo = {
             lendingCompanyName: loanData.lending_company_name || "Empresa credora",
+            lendingFolderPath,
             borrowingCompanyName: loanData.borrowing_company_name || "Empresa devedora",
+            borrowingFolderPath,
             amount: loanData.amount || 0,
+            loanDate: loanData.start_date,
           };
         } catch (e) {
           console.error('Error parsing pending loan data:', e);
@@ -3808,23 +3857,94 @@ export default function WorkFlowTab() {
 
       {/* Skip Payment Confirmation Dialog */}
       <AlertDialog open={showSkipPaymentConfirmation} onOpenChange={setShowSkipPaymentConfirmation}>
-        <AlertDialogContent className="max-w-lg">
+        <AlertDialogContent className="max-w-xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" />
-              {skipPaymentDestination?.isLoan ? "Confirmar Empréstimo" : "Sem Registo Financeiro"}
+              {skipPaymentDestination?.isLoan ? "Confirmar Empréstimo Inter-Empresas" : "Sem Registo Financeiro"}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-4 pt-2">
                 <p className="text-muted-foreground">
                   {skipPaymentDestination?.isLoan 
-                    ? "Este documento será processado como um empréstimo inter-empresas."
+                    ? "Este documento será processado como um empréstimo inter-empresas e arquivado nas pastas de ambas as empresas."
                     : "Este documento não tem registo financeiro associado. Deseja mover para a pasta destino sem criar registo financeiro?"
                   }
                 </p>
                 
-                {/* Destination info */}
-                {skipPaymentDestination && (
+                {/* Loan-specific destination info with both companies */}
+                {skipPaymentDestination?.isLoan && skipPaymentDestination.loanInfo && (
+                  <>
+                    {/* Loan details */}
+                    <div className="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                      <p className="font-semibold text-amber-800 dark:text-amber-200 text-base mb-3 flex items-center gap-2">
+                        💰 Detalhes do Empréstimo
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <span className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wide">Data</span>
+                          <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">
+                            {format(new Date(skipPaymentDestination.loanInfo.loanDate), "dd/MM/yyyy")}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wide">Valor</span>
+                          <p className="text-sm text-amber-800 dark:text-amber-200 font-semibold">
+                            {skipPaymentDestination.loanInfo.amount.toLocaleString("pt-PT", {
+                              style: "currency",
+                              currency: "EUR"
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Lender destination */}
+                    <div className="bg-green-50 dark:bg-green-950/30 border-2 border-green-200 dark:border-green-800 rounded-xl p-4">
+                      <p className="font-semibold text-green-800 dark:text-green-200 text-sm mb-2 flex items-center gap-2">
+                        📁 Credor (quem empresta)
+                      </p>
+                      <div className="ml-4 space-y-1">
+                        <p className="text-green-800 dark:text-green-200 font-medium">
+                          {skipPaymentDestination.loanInfo.lendingCompanyName}
+                        </p>
+                        {skipPaymentDestination.loanInfo.lendingFolderPath ? (
+                          <p className="text-sm text-green-600 dark:text-green-400">
+                            📂 {skipPaymentDestination.loanInfo.lendingFolderPath}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-green-600 dark:text-green-400 italic">
+                            ⚠️ Pasta não configurada para este mês
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Borrower destination */}
+                    <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                      <p className="font-semibold text-blue-800 dark:text-blue-200 text-sm mb-2 flex items-center gap-2">
+                        📁 Devedor (quem recebe)
+                      </p>
+                      <div className="ml-4 space-y-1">
+                        <p className="text-blue-800 dark:text-blue-200 font-medium">
+                          {skipPaymentDestination.loanInfo.borrowingCompanyName}
+                        </p>
+                        {skipPaymentDestination.loanInfo.borrowingFolderPath ? (
+                          <p className="text-sm text-blue-600 dark:text-blue-400">
+                            📂 {skipPaymentDestination.loanInfo.borrowingFolderPath}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-blue-600 dark:text-blue-400 italic">
+                            ⚠️ Pasta não configurada para este mês
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+                
+                {/* Non-loan destination info */}
+                {skipPaymentDestination && !skipPaymentDestination.isLoan && (
                   <div className="bg-muted/50 border-2 border-muted rounded-xl p-4">
                     <p className="font-semibold text-foreground text-base mb-2 flex items-center gap-2">
                       📁 Documento será gravado em:
@@ -3843,37 +3963,6 @@ export default function WorkFlowTab() {
                         </p>
                       )}
                     </div>
-                  </div>
-                )}
-                
-                {/* Loan processing info */}
-                {skipPaymentDestination?.isLoan && skipPaymentDestination.loanInfo && (
-                  <div className="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-4">
-                    <p className="font-semibold text-amber-800 dark:text-amber-200 text-base mb-3 flex items-center gap-2">
-                      💰 Processamento do Empréstimo:
-                    </p>
-                    <div className="ml-4 space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-amber-700 dark:text-amber-300 font-medium">Credor:</span>
-                        <span className="text-amber-800 dark:text-amber-200">{skipPaymentDestination.loanInfo.lendingCompanyName}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-amber-700 dark:text-amber-300 font-medium">Devedor:</span>
-                        <span className="text-amber-800 dark:text-amber-200">{skipPaymentDestination.loanInfo.borrowingCompanyName}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-amber-700 dark:text-amber-300 font-medium">Valor:</span>
-                        <span className="text-amber-800 dark:text-amber-200 font-semibold">
-                          {skipPaymentDestination.loanInfo.amount.toLocaleString("pt-PT", {
-                            style: "currency",
-                            currency: "EUR"
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-3 italic">
-                      O documento será copiado para as pastas de ambas as empresas.
-                    </p>
                   </div>
                 )}
               </div>
