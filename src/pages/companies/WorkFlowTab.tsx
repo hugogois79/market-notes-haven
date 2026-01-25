@@ -3791,15 +3791,15 @@ export default function WorkFlowTab() {
                 
                 {/* Destination info */}
                 {skipPaymentDestination && (
-                  <div className="bg-muted/50 border rounded-lg p-3">
-                    <p className="font-medium text-foreground mb-1">
+                  <div className="bg-muted/50 border rounded-lg p-4 mt-2">
+                    <p className="font-medium text-foreground text-base mb-2">
                       📁 Destino:
                     </p>
-                    <p className="text-sm text-foreground">
+                    <p className="text-foreground text-base">
                       {skipPaymentDestination.companyName}
                     </p>
                     {skipPaymentDestination.folderPath && (
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-sm text-muted-foreground mt-2">
                         {skipPaymentDestination.folderPath}
                       </p>
                     )}
