@@ -3845,6 +3845,7 @@ export default function WorkFlowTab() {
           fileName={previewFile.file_name}
           documentFileUrl={previewFile.file_url}
           existingTransaction={existingTransaction}
+          vendorName={previewFile.vendor_name}
           onDocumentUrlUpdated={(newUrl) => {
             setPreviewFile((prev) => (prev ? { ...prev, file_url: newUrl } : prev));
           }}
