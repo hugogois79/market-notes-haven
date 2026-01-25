@@ -124,7 +124,7 @@ serve(async (req) => {
           
           const updatePayload: Record<string, unknown> = {
             updated_at: new Date().toISOString(),
-            status: extractedData.status || 'draft', // Reset to draft after successful OCR
+            status: 'draft', // Sempre 'draft' após OCR - ignora status do n8n para permitir revisão humana
           };
           
           // Map all available OCR fields
