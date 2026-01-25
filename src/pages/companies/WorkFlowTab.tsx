@@ -366,6 +366,21 @@ export default function WorkFlowTab() {
   const [showSkipPaymentConfirmation, setShowSkipPaymentConfirmation] = useState(false);
   const [fileToSkipPayment, setFileToSkipPayment] = useState<WorkflowFile | null>(null);
 
+  // Complete confirmation dialog state (shows where document will be saved and what loan will be created)
+  const [showCompleteConfirmation, setShowCompleteConfirmation] = useState(false);
+  const [completeConfirmationData, setCompleteConfirmationData] = useState<{
+    file: WorkflowFile;
+    storageLocation: any;
+    settings: any;
+    paymentAccountStorageLocation: any | null;
+    destinationCompanies: { id: string; name: string; role: string }[];
+    loanInfo: { 
+      lendingCompany: string; 
+      borrowingCompany: string; 
+      amount: number;
+    } | null;
+  } | null>(null);
+
   // Query existing transaction for current file using document_file_id
   // Also check for loans linked via file_url in company_documents
   const { data: existingTransaction, isLoading: isLoadingTransaction } = useQuery({
@@ -1299,6 +1314,7 @@ export default function WorkFlowTab() {
 
     // Find the company that owns the bank account used for payment (for dual-company copy)
     let paymentAccountStorageLocation = null;
+    let payerCompanyName = "";
     if (existingTransaction?.bank_account_id) {
       // Get the company_id from the bank account
       const { data: bankAccount } = await supabase
@@ -1309,6 +1325,17 @@ export default function WorkFlowTab() {
       
       // If the bank account owner is different from the invoice company
       if (bankAccount?.company_id && bankAccount.company_id !== targetCompanyId) {
+        // Get payer company name
+        const { data: payerCompany } = await supabase
+          .from("companies")
+          .select("name")
+          .eq("id", bankAccount.company_id)
+          .maybeSingle();
+        
+        if (payerCompany) {
+          payerCompanyName = payerCompany.name;
+        }
+        
         // Find storage location for the bank account owner's company
         const { data: bankAccountOwnerLocation } = await supabase
           .from("workflow_storage_locations")
@@ -1324,8 +1351,75 @@ export default function WorkFlowTab() {
       }
     }
 
-    // Proceed with completion (passing both storage locations)
-    await completeFile(file, matchingLocation, settings, paymentAccountStorageLocation);
+    // Get main company name for confirmation dialog
+    let mainCompanyName = "Empresa";
+    if (targetCompanyId) {
+      const { data: mainCompanyData } = await supabase
+        .from("companies")
+        .select("name")
+        .eq("id", targetCompanyId)
+        .maybeSingle();
+      if (mainCompanyData) {
+        mainCompanyName = mainCompanyData.name;
+      }
+    }
+
+    // Build destination companies list for confirmation
+    const destinationCompanies: { id: string; name: string; role: string }[] = [];
+    
+    // 1. Main company (invoice recipient)
+    if (targetCompanyId) {
+      destinationCompanies.push({
+        id: targetCompanyId,
+        name: mainCompanyName,
+        role: "Empresa da fatura"
+      });
+    }
+
+    // 2. Payer company (if different)
+    if (paymentAccountStorageLocation && payerCompanyName) {
+      destinationCompanies.push({
+        id: paymentAccountStorageLocation.company_id,
+        name: payerCompanyName,
+        role: "Pagou a fatura"
+      });
+    }
+
+    // Determine if a loan will be created
+    let loanInfo = null;
+    if (paymentAccountStorageLocation && payerCompanyName && targetCompanyId) {
+      loanInfo = {
+        lendingCompany: payerCompanyName,
+        borrowingCompany: mainCompanyName,
+        amount: existingTransaction?.total_amount || 0
+      };
+    }
+
+    // Show confirmation dialog instead of proceeding directly
+    setCompleteConfirmationData({
+      file,
+      storageLocation: matchingLocation,
+      settings,
+      paymentAccountStorageLocation,
+      destinationCompanies,
+      loanInfo
+    });
+    setShowCompleteConfirmation(true);
+  };
+
+  // Handler for confirming the complete action
+  const handleConfirmComplete = async () => {
+    if (!completeConfirmationData) return;
+    
+    await completeFile(
+      completeConfirmationData.file,
+      completeConfirmationData.storageLocation,
+      completeConfirmationData.settings,
+      completeConfirmationData.paymentAccountStorageLocation
+    );
+    
+    setShowCompleteConfirmation(false);
+    setCompleteConfirmationData(null);
   };
 
   const completeFile = async (
@@ -3673,6 +3767,70 @@ export default function WorkFlowTab() {
             </Button>
             <AlertDialogAction onClick={handleCompleteWithoutPayment}>
               Continuar sem registo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Complete Confirmation Dialog */}
+      <AlertDialog open={showCompleteConfirmation} onOpenChange={setShowCompleteConfirmation}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              Confirmar Conclusão
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 pt-2">
+                {/* Destination companies */}
+                <div>
+                  <p className="font-medium text-foreground mb-2">
+                    📁 Documento será gravado em:
+                  </p>
+                  <ul className="space-y-1.5 ml-4">
+                    {completeConfirmationData?.destinationCompanies.map((company) => (
+                      <li key={company.id} className="flex items-center gap-2">
+                        <Checkbox checked disabled className="opacity-70" />
+                        <span className="text-foreground">{company.name}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {company.role}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                {/* Automatic loan info */}
+                {completeConfirmationData?.loanInfo && (
+                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                    <p className="font-medium text-amber-800 dark:text-amber-200 mb-1">
+                      💰 Empréstimo será criado automaticamente:
+                    </p>
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      <strong>{completeConfirmationData.loanInfo.lendingCompany}</strong>
+                      {" → "}
+                      <strong>{completeConfirmationData.loanInfo.borrowingCompany}</strong>
+                    </p>
+                    <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+                      Valor: {completeConfirmationData.loanInfo.amount.toLocaleString("pt-PT", {
+                        style: "currency",
+                        currency: "EUR"
+                      })}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowCompleteConfirmation(false);
+              setCompleteConfirmationData(null);
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmComplete}>
+              Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
