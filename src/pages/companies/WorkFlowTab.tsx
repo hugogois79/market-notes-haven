@@ -365,6 +365,10 @@ export default function WorkFlowTab() {
   // Skip payment confirmation state
   const [showSkipPaymentConfirmation, setShowSkipPaymentConfirmation] = useState(false);
   const [fileToSkipPayment, setFileToSkipPayment] = useState<WorkflowFile | null>(null);
+  const [skipPaymentDestination, setSkipPaymentDestination] = useState<{
+    companyName: string;
+    folderPath: string;
+  } | null>(null);
 
   // Complete confirmation dialog state (shows where document will be saved and what loan will be created)
   const [showCompleteConfirmation, setShowCompleteConfirmation] = useState(false);
@@ -1250,6 +1254,44 @@ export default function WorkFlowTab() {
 
     // If no transaction or transaction has zero value, show confirmation dialog
     if (!existingTransaction || existingTransaction.total_amount === 0) {
+      // Pre-calculate destination info for the skip payment dialog
+      const dateToUse = new Date(file.created_at);
+      const fileMonth = dateToUse.getMonth() + 1;
+      const fileYear = dateToUse.getFullYear();
+      
+      const settingsStr = localStorage.getItem(TABLE_RELATIONS_KEY);
+      const settings: TableRelationsConfig = settingsStr
+        ? JSON.parse(settingsStr)
+        : { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
+      
+      let companyName = "Empresa não definida";
+      let folderPath = "";
+      
+      if (settings.defaultCompanyId) {
+        // Get company name
+        const { data: companyData } = await supabase
+          .from("companies")
+          .select("name")
+          .eq("id", settings.defaultCompanyId)
+          .maybeSingle();
+        if (companyData?.name) {
+          companyName = companyData.name;
+        }
+        
+        // Get storage location for folder path
+        const { data: locationData } = await supabase
+          .from("workflow_storage_locations")
+          .select("folder_path")
+          .eq("company_id", settings.defaultCompanyId)
+          .eq("year", fileYear)
+          .eq("month", fileMonth)
+          .maybeSingle();
+        if (locationData?.folder_path) {
+          folderPath = locationData.folder_path;
+        }
+      }
+      
+      setSkipPaymentDestination({ companyName, folderPath });
       setFileToSkipPayment(file);
       setShowSkipPaymentConfirmation(true);
       return;
@@ -3735,20 +3777,42 @@ export default function WorkFlowTab() {
 
       {/* Skip Payment Confirmation Dialog */}
       <AlertDialog open={showSkipPaymentConfirmation} onOpenChange={setShowSkipPaymentConfirmation}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" />
               Sem Registo Financeiro
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              Este documento não tem registo financeiro associado. Deseja mover para a pasta destino sem criar registo financeiro?
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-2">
+                <p className="text-muted-foreground">
+                  Este documento não tem registo financeiro associado. Deseja mover para a pasta destino sem criar registo financeiro?
+                </p>
+                
+                {/* Destination info */}
+                {skipPaymentDestination && (
+                  <div className="bg-muted/50 border rounded-lg p-3">
+                    <p className="font-medium text-foreground mb-1">
+                      📁 Destino:
+                    </p>
+                    <p className="text-sm text-foreground">
+                      {skipPaymentDestination.companyName}
+                    </p>
+                    {skipPaymentDestination.folderPath && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {skipPaymentDestination.folderPath}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel onClick={() => {
               setShowSkipPaymentConfirmation(false);
               setFileToSkipPayment(null);
+              setSkipPaymentDestination(null);
             }}>
               Cancelar
             </AlertDialogCancel>
@@ -3760,6 +3824,7 @@ export default function WorkFlowTab() {
                   setPreviewFile(fileToSkipPayment);
                   setShowPaymentDialog(true);
                   setFileToSkipPayment(null);
+                  setSkipPaymentDestination(null);
                 }
               }}
             >
