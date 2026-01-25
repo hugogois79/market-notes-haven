@@ -6013,7 +6013,9 @@ export type Database = {
           completed_at: string | null
           created_at: string
           currency: string | null
+          customer_vat: string | null
           document_number: string | null
+          document_type: string | null
           file_name: string
           file_size: number | null
           file_url: string
@@ -6028,6 +6030,7 @@ export type Database = {
           project_id: string | null
           status: string | null
           subtotal: number | null
+          supplier_id: string | null
           tax_amount: number | null
           total_amount: number | null
           updated_at: string
@@ -6041,7 +6044,9 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           currency?: string | null
+          customer_vat?: string | null
           document_number?: string | null
+          document_type?: string | null
           file_name: string
           file_size?: number | null
           file_url: string
@@ -6056,6 +6061,7 @@ export type Database = {
           project_id?: string | null
           status?: string | null
           subtotal?: number | null
+          supplier_id?: string | null
           tax_amount?: number | null
           total_amount?: number | null
           updated_at?: string
@@ -6069,7 +6075,9 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           currency?: string | null
+          customer_vat?: string | null
           document_number?: string | null
+          document_type?: string | null
           file_name?: string
           file_size?: number | null
           file_url?: string
@@ -6084,6 +6092,7 @@ export type Database = {
           project_id?: string | null
           status?: string | null
           subtotal?: number | null
+          supplier_id?: string | null
           tax_amount?: number | null
           total_amount?: number | null
           updated_at?: string
