@@ -19,7 +19,7 @@ export const SidebarFooter = ({ isExpanded, isMobile, onMobileClose }: SidebarFo
       {isExpanded ? (
         <div className="flex items-center gap-3 px-3 py-2.5">
           <span className="font-bold text-xl tracking-tight text-brand">GVVC</span>
-          <span className="font-semibold">MarketNotes</span>
+          <span className="font-semibold">One</span>
         </div>
       ) : (
         <div className="flex items-center justify-center py-2.5">
