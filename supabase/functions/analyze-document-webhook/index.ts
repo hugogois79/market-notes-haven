@@ -139,6 +139,25 @@ serve(async (req) => {
           if (extractedData.line_items_summary) updatePayload.line_items_summary = extractedData.line_items_summary;
           if (extractedData.category) updatePayload.category = extractedData.category;
           
+          // Auto-associate company via customer_vat (NIF do destinatário)
+          if (extractedData.customer_vat) {
+            console.log('Looking up company by customer_vat:', extractedData.customer_vat);
+            const { data: companyData, error: companyError } = await supabase
+              .from('companies')
+              .select('id')
+              .eq('tax_id', extractedData.customer_vat)
+              .maybeSingle();
+            
+            if (companyError) {
+              console.error('Error looking up company:', companyError);
+            } else if (companyData) {
+              console.log('Found company:', companyData.id);
+              updatePayload.company_id = companyData.id;
+            } else {
+              console.log('No company found for NIF:', extractedData.customer_vat);
+            }
+          }
+          
           const { error: updateError } = await supabase
             .from('workflow_files')
             .update(updatePayload)
