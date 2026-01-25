@@ -49,6 +49,7 @@ interface DocumentPaymentDialogProps {
   existingTransaction?: any;
   onDocumentUrlUpdated?: (newUrl: string) => void;
   vendorName?: string | null;
+  documentCompanyId?: string | null;
 }
 
 export default function DocumentPaymentDialog({
@@ -60,6 +61,7 @@ export default function DocumentPaymentDialog({
   existingTransaction,
   onDocumentUrlUpdated,
   vendorName,
+  documentCompanyId,
 }: DocumentPaymentDialogProps) {
   const queryClient = useQueryClient();
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
@@ -184,7 +186,7 @@ export default function DocumentPaymentDialog({
       }
 
       const transactionData = {
-        company_id: bankAccount.company_id,
+        company_id: documentCompanyId || bankAccount.company_id,
         type: 'expense' as const,
         category: 'services' as const,
         date: data.payment_date,
