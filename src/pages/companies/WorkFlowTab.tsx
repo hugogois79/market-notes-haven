@@ -368,6 +368,12 @@ export default function WorkFlowTab() {
   const [skipPaymentDestination, setSkipPaymentDestination] = useState<{
     companyName: string;
     folderPath: string;
+    isLoan: boolean;
+    loanInfo?: {
+      lendingCompanyName: string;
+      borrowingCompanyName: string;
+      amount: number;
+    };
   } | null>(null);
 
   // Complete confirmation dialog state (shows where document will be saved and what loan will be created)
@@ -1294,7 +1300,29 @@ export default function WorkFlowTab() {
         }
       }
       
-      setSkipPaymentDestination({ companyName, folderPath });
+      // Check if there's a pending loan for this file
+      const pendingLoanStr = customData[file.id]?._pendingLoan;
+      let loanInfo: { lendingCompanyName: string; borrowingCompanyName: string; amount: number } | undefined;
+      
+      if (pendingLoanStr) {
+        try {
+          const loanData = JSON.parse(pendingLoanStr);
+          loanInfo = {
+            lendingCompanyName: loanData.lending_company_name || "Empresa credora",
+            borrowingCompanyName: loanData.borrowing_company_name || "Empresa devedora",
+            amount: loanData.amount || 0,
+          };
+        } catch (e) {
+          console.error('Error parsing pending loan data:', e);
+        }
+      }
+      
+      setSkipPaymentDestination({ 
+        companyName, 
+        folderPath, 
+        isLoan: !!pendingLoanStr,
+        loanInfo 
+      });
       setFileToSkipPayment(file);
       setShowSkipPaymentConfirmation(true);
       return;
@@ -3780,32 +3808,72 @@ export default function WorkFlowTab() {
 
       {/* Skip Payment Confirmation Dialog */}
       <AlertDialog open={showSkipPaymentConfirmation} onOpenChange={setShowSkipPaymentConfirmation}>
-        <AlertDialogContent className="max-w-md">
+        <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" />
-              Sem Registo Financeiro
+              {skipPaymentDestination?.isLoan ? "Confirmar Empréstimo" : "Sem Registo Financeiro"}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div className="space-y-3 pt-2">
+              <div className="space-y-4 pt-2">
                 <p className="text-muted-foreground">
-                  Este documento não tem registo financeiro associado. Deseja mover para a pasta destino sem criar registo financeiro?
+                  {skipPaymentDestination?.isLoan 
+                    ? "Este documento será processado como um empréstimo inter-empresas."
+                    : "Este documento não tem registo financeiro associado. Deseja mover para a pasta destino sem criar registo financeiro?"
+                  }
                 </p>
                 
                 {/* Destination info */}
                 {skipPaymentDestination && (
-                  <div className="bg-muted/50 border-2 border-muted rounded-xl p-5 mt-3">
-                    <p className="font-semibold text-foreground text-lg mb-3 flex items-center gap-2">
-                      📁 Destino:
+                  <div className="bg-muted/50 border-2 border-muted rounded-xl p-4">
+                    <p className="font-semibold text-foreground text-base mb-2 flex items-center gap-2">
+                      📁 Documento será gravado em:
                     </p>
-                    <p className="text-foreground text-lg font-medium">
-                      {skipPaymentDestination.companyName}
-                    </p>
-                    {skipPaymentDestination.folderPath && (
-                      <p className="text-base text-muted-foreground mt-3">
-                        {skipPaymentDestination.folderPath}
+                    <div className="ml-4 space-y-1">
+                      <p className="text-foreground font-medium">
+                        {skipPaymentDestination.companyName}
                       </p>
-                    )}
+                      {skipPaymentDestination.folderPath ? (
+                        <p className="text-sm text-muted-foreground">
+                          📂 {skipPaymentDestination.folderPath}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">
+                          (Pasta de destino não definida)
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Loan processing info */}
+                {skipPaymentDestination?.isLoan && skipPaymentDestination.loanInfo && (
+                  <div className="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                    <p className="font-semibold text-amber-800 dark:text-amber-200 text-base mb-3 flex items-center gap-2">
+                      💰 Processamento do Empréstimo:
+                    </p>
+                    <div className="ml-4 space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-amber-700 dark:text-amber-300 font-medium">Credor:</span>
+                        <span className="text-amber-800 dark:text-amber-200">{skipPaymentDestination.loanInfo.lendingCompanyName}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-amber-700 dark:text-amber-300 font-medium">Devedor:</span>
+                        <span className="text-amber-800 dark:text-amber-200">{skipPaymentDestination.loanInfo.borrowingCompanyName}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-amber-700 dark:text-amber-300 font-medium">Valor:</span>
+                        <span className="text-amber-800 dark:text-amber-200 font-semibold">
+                          {skipPaymentDestination.loanInfo.amount.toLocaleString("pt-PT", {
+                            style: "currency",
+                            currency: "EUR"
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-3 italic">
+                      O documento será copiado para as pastas de ambas as empresas.
+                    </p>
                   </div>
                 )}
               </div>
@@ -3819,22 +3887,24 @@ export default function WorkFlowTab() {
             }}>
               Cancelar
             </AlertDialogCancel>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowSkipPaymentConfirmation(false);
-                if (fileToSkipPayment) {
-                  setPreviewFile(fileToSkipPayment);
-                  setShowPaymentDialog(true);
-                  setFileToSkipPayment(null);
-                  setSkipPaymentDestination(null);
-                }
-              }}
-            >
-              Registar Pagamento
-            </Button>
+            {!skipPaymentDestination?.isLoan && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowSkipPaymentConfirmation(false);
+                  if (fileToSkipPayment) {
+                    setPreviewFile(fileToSkipPayment);
+                    setShowPaymentDialog(true);
+                    setFileToSkipPayment(null);
+                    setSkipPaymentDestination(null);
+                  }
+                }}
+              >
+                Registar Pagamento
+              </Button>
+            )}
             <AlertDialogAction onClick={handleCompleteWithoutPayment}>
-              Continuar sem registo
+              {skipPaymentDestination?.isLoan ? "Confirmar Empréstimo" : "Continuar sem registo"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
