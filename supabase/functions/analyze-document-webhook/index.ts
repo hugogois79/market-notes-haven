@@ -124,6 +124,7 @@ serve(async (req) => {
           
           const updatePayload: Record<string, unknown> = {
             updated_at: new Date().toISOString(),
+            status: extractedData.status || 'draft', // Reset to draft after successful OCR
           };
           
           // Map all available OCR fields
@@ -137,7 +138,6 @@ serve(async (req) => {
           if (extractedData.payment_method) updatePayload.payment_method = extractedData.payment_method;
           if (extractedData.line_items_summary) updatePayload.line_items_summary = extractedData.line_items_summary;
           if (extractedData.category) updatePayload.category = extractedData.category;
-          if (extractedData.status) updatePayload.status = extractedData.status;
           
           const { error: updateError } = await supabase
             .from('workflow_files')
