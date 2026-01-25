@@ -1259,20 +1259,23 @@ export default function WorkFlowTab() {
       const fileMonth = dateToUse.getMonth() + 1;
       const fileYear = dateToUse.getFullYear();
       
+      // Priority: file's company_id > default company from settings
       const settingsStr = localStorage.getItem(TABLE_RELATIONS_KEY);
       const settings: TableRelationsConfig = settingsStr
         ? JSON.parse(settingsStr)
         : { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
       
+      const targetCompanyId = file.company_id || settings.defaultCompanyId;
+      
       let companyName = "Empresa não definida";
       let folderPath = "";
       
-      if (settings.defaultCompanyId) {
+      if (targetCompanyId) {
         // Get company name
         const { data: companyData } = await supabase
           .from("companies")
           .select("name")
-          .eq("id", settings.defaultCompanyId)
+          .eq("id", targetCompanyId)
           .maybeSingle();
         if (companyData?.name) {
           companyName = companyData.name;
@@ -1282,7 +1285,7 @@ export default function WorkFlowTab() {
         const { data: locationData } = await supabase
           .from("workflow_storage_locations")
           .select("folder_path")
-          .eq("company_id", settings.defaultCompanyId)
+          .eq("company_id", targetCompanyId)
           .eq("year", fileYear)
           .eq("month", fileMonth)
           .maybeSingle();
@@ -3791,15 +3794,15 @@ export default function WorkFlowTab() {
                 
                 {/* Destination info */}
                 {skipPaymentDestination && (
-                  <div className="bg-muted/50 border rounded-lg p-4 mt-2">
-                    <p className="font-medium text-foreground text-base mb-2">
+                  <div className="bg-muted/50 border-2 border-muted rounded-xl p-5 mt-3">
+                    <p className="font-semibold text-foreground text-lg mb-3 flex items-center gap-2">
                       📁 Destino:
                     </p>
-                    <p className="text-foreground text-base">
+                    <p className="text-foreground text-lg font-medium">
                       {skipPaymentDestination.companyName}
                     </p>
                     {skipPaymentDestination.folderPath && (
-                      <p className="text-sm text-muted-foreground mt-2">
+                      <p className="text-base text-muted-foreground mt-3">
                         {skipPaymentDestination.folderPath}
                       </p>
                     )}
