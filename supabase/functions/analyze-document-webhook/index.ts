@@ -115,6 +115,41 @@ serve(async (req) => {
       try {
         n8nResult = JSON.parse(responseText);
         console.log('n8n response:', n8nResult);
+        
+        // If n8n returned extracted data, update workflow_files directly as fallback
+        // This ensures data is saved even if n8n's internal PATCH failed
+        const extractedData = n8nResult?.data || n8nResult;
+        if (documentId && (extractedData?.vendor_name || extractedData?.total_amount || extractedData?.invoice_date)) {
+          console.log('Updating workflow_files with extracted data:', documentId);
+          
+          const updatePayload: Record<string, unknown> = {
+            updated_at: new Date().toISOString(),
+          };
+          
+          // Map all available OCR fields
+          if (extractedData.invoice_date) updatePayload.invoice_date = extractedData.invoice_date;
+          if (extractedData.invoice_number) updatePayload.invoice_number = extractedData.invoice_number;
+          if (extractedData.vendor_name) updatePayload.vendor_name = extractedData.vendor_name;
+          if (extractedData.vendor_vat) updatePayload.vendor_vat = extractedData.vendor_vat;
+          if (extractedData.total_amount !== undefined) updatePayload.total_amount = extractedData.total_amount;
+          if (extractedData.tax_amount !== undefined) updatePayload.tax_amount = extractedData.tax_amount;
+          if (extractedData.subtotal !== undefined) updatePayload.subtotal = extractedData.subtotal;
+          if (extractedData.payment_method) updatePayload.payment_method = extractedData.payment_method;
+          if (extractedData.line_items_summary) updatePayload.line_items_summary = extractedData.line_items_summary;
+          if (extractedData.category) updatePayload.category = extractedData.category;
+          if (extractedData.status) updatePayload.status = extractedData.status;
+          
+          const { error: updateError } = await supabase
+            .from('workflow_files')
+            .update(updatePayload)
+            .eq('id', documentId);
+          
+          if (updateError) {
+            console.error('Failed to update workflow_files:', updateError);
+          } else {
+            console.log('Successfully updated workflow_files with OCR data');
+          }
+        }
       } catch {
         console.log('n8n returned non-JSON response:', responseText);
         n8nResult = { message: responseText };
