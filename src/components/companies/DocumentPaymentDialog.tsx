@@ -48,6 +48,7 @@ interface DocumentPaymentDialogProps {
   documentFileUrl: string;
   existingTransaction?: any;
   onDocumentUrlUpdated?: (newUrl: string) => void;
+  vendorName?: string | null;
 }
 
 export default function DocumentPaymentDialog({
@@ -58,6 +59,7 @@ export default function DocumentPaymentDialog({
   documentFileUrl,
   existingTransaction,
   onDocumentUrlUpdated,
+  vendorName,
 }: DocumentPaymentDialogProps) {
   const queryClient = useQueryClient();
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
@@ -187,7 +189,7 @@ export default function DocumentPaymentDialog({
         category: 'services' as const,
         date: data.payment_date,
         description: `Pagamento: ${removeExtension(fileName)}`,
-        entity_name: existingTransaction?.entity_name || 'Fornecedor',
+        entity_name: existingTransaction?.entity_name || vendorName || 'Fornecedor',
         total_amount: Number(data.amount),
         amount_net: Number(data.amount),
         vat_amount: 0,
