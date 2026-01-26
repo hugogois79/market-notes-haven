@@ -66,6 +66,14 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [value, setValue] = useState<number>(card.value || 0);
   const [isFilePickerOpen, setIsFilePickerOpen] = useState(false);
+  const [thumbnailUrls, setThumbnailUrls] = useState<Record<string, string>>({});
+
+  const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+  const isImageFile = (filename: string): boolean => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    return IMAGE_EXTENSIONS.includes(ext || '');
+  };
 
   useEffect(() => {
     if (isOpen && card.id) {
@@ -84,6 +92,28 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     try {
       const data = await KanbanService.getAttachments(card.id);
       setAttachments(data);
+      
+      // Load thumbnail URLs for image attachments
+      const imageAttachments = data.filter(att => isImageFile(att.filename));
+      
+      if (imageAttachments.length > 0) {
+        const urlPromises = imageAttachments.map(async (img) => {
+          try {
+            const signedUrl = await KanbanService.getSignedDownloadUrl(img.file_url);
+            return { id: img.id, url: signedUrl };
+          } catch (error) {
+            console.error('Error getting thumbnail URL:', error);
+            return { id: img.id, url: '' };
+          }
+        });
+        
+        const results = await Promise.all(urlPromises);
+        const urls: Record<string, string> = {};
+        results.forEach(r => {
+          if (r.url) urls[r.id] = r.url;
+        });
+        setThumbnailUrls(urls);
+      }
     } catch (error) {
       console.error('Error loading attachments:', error);
     }
@@ -481,7 +511,24 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
                         onClick={() => handleOpenAttachment(attachment)}
                         className="flex items-center gap-2 flex-1 min-w-0 hover:underline text-left"
                       >
-                        <span className="text-lg">{getFileIcon(attachment.filename)}</span>
+                        {thumbnailUrls[attachment.id] ? (
+                          <img 
+                            src={thumbnailUrls[attachment.id]} 
+                            alt={attachment.filename}
+                            className="w-10 h-10 object-cover rounded border flex-shrink-0"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (fallback) fallback.style.display = 'inline';
+                            }}
+                          />
+                        ) : null}
+                        <span 
+                          className="text-lg" 
+                          style={{ display: thumbnailUrls[attachment.id] ? 'none' : 'inline' }}
+                        >
+                          {getFileIcon(attachment.filename)}
+                        </span>
                         <span className="text-sm truncate">{attachment.filename}</span>
                       </button>
                       <div className="flex items-center gap-1 flex-shrink-0">
