@@ -24,6 +24,12 @@ const priorityColors = {
 export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, onMarkComplete }) => {
   const [isHovered, setIsHovered] = useState(false);
 
+  // Calculate if card is overdue
+  const isOverdue = card.due_date && !card.concluded ? (() => {
+    const dueDate = new Date(card.due_date);
+    return isPast(startOfDay(dueDate)) && startOfDay(dueDate).getTime() !== startOfDay(new Date()).getTime();
+  })() : false;
+
   const handleMarkComplete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onMarkComplete(card.id);
@@ -45,7 +51,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
           {...provided.dragHandleProps}
           className={`mb-2 cursor-pointer hover:shadow-md transition-shadow relative ${
             snapshot.isDragging ? 'shadow-lg rotate-2' : ''
-          }`}
+          } ${isOverdue ? 'bg-red-50 border-red-300 dark:bg-red-950/30 dark:border-red-800' : ''}`}
           onClick={onClick}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
