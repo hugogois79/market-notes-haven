@@ -981,6 +981,7 @@ const ExpenseDetailPage = () => {
   const getTypeBadge = (type: string) => {
     if (type === "reembolso") return "Reembolso de Despesas";
     if (type === "transferencia_bancaria") return "Transferência Bancária";
+    if (type === "logbook") return "Logbook";
     return "Justificação de Cartão de Crédito";
   };
 
