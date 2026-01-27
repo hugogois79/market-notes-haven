@@ -184,9 +184,15 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
+  // Ref to skip the bank_account_id clearing effect after form reset
+  const formJustResetRef = useRef(false);
+
   // Reset form when existingTransaction changes - wait for all dropdown data to load first
   useEffect(() => {
     if (existingTransaction && companies && expenseCategories && allBankAccounts) {
+      // Mark that we're about to reset - this prevents the payment method change effect from clearing bank_account_id
+      formJustResetRef.current = true;
+      
       // Check if this is a loan transaction
       const isLoanTransaction = existingTransaction.type === "loan" || existingTransaction._isLoan;
       // Check if this is a document transaction
@@ -429,11 +435,19 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     });
   }, [allBankAccounts, paymentMethod]);
 
-  // Track previous payment method to detect changes and clear invalid selections
+  // Track previous payment method to detect USER-initiated changes only
   const previousPaymentMethodRef = useRef(paymentMethod);
 
   // Clear bank_account_id when payment_method changes if current value is invalid
+  // BUT skip this if the form was just reset (to preserve bank_account_id from existingTransaction)
   useEffect(() => {
+    // Skip clearing if we just reset the form
+    if (formJustResetRef.current) {
+      formJustResetRef.current = false;
+      previousPaymentMethodRef.current = paymentMethod;
+      return;
+    }
+    
     if (previousPaymentMethodRef.current !== paymentMethod && allBankAccounts) {
       const currentBankAccountId = watch("bank_account_id");
       if (currentBankAccountId) {
