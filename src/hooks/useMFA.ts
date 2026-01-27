@@ -223,8 +223,17 @@ export const useMFA = (): UseMFAReturn => {
   };
 
   const createChallenge = async (): Promise<ChallengeData | null> => {
-    const verifiedFactor = factors.find((f) => f.status === "verified");
+    // First, ensure we have the latest factors
+    let currentFactors = factors;
+    if (currentFactors.length === 0) {
+      const { data } = await supabase.auth.mfa.listFactors();
+      currentFactors = data?.totp || [];
+      setFactors(currentFactors);
+    }
+    
+    const verifiedFactor = currentFactors.find((f) => f.status === "verified");
     if (!verifiedFactor) {
+      console.error("No verified MFA factor found");
       toast.error("Nenhum fator de autenticação configurado");
       return null;
     }
