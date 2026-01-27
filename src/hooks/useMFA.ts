@@ -118,6 +118,7 @@ export const useMFA = (): UseMFAReturn => {
 
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
+        issuer: "GVVC One",
         friendlyName: "Google Authenticator",
       });
 
@@ -127,6 +128,7 @@ export const useMFA = (): UseMFAReturn => {
         if (error.message?.includes("already exists")) {
           const { data: retryData, error: retryError } = await supabase.auth.mfa.enroll({
             factorType: "totp",
+            issuer: "GVVC One",
             friendlyName: `Authenticator ${Date.now()}`,
           });
           
