@@ -4,7 +4,7 @@ export interface ExpenseClaim {
   id: string;
   employee_id: string;
   claim_number: number;
-  claim_type: 'reembolso' | 'justificacao_cartao' | 'logbook';
+  claim_type: 'reembolso' | 'justificacao_cartao' | 'logbook' | 'deslocacoes';
   status: 'rascunho' | 'submetido' | 'aprovado' | 'pago' | 'rejeitado';
   total_amount: number;
   description: string | null;
@@ -71,7 +71,7 @@ export const expenseClaimService = {
 
   // Create a new expense claim
   async createExpenseClaim(claim: {
-    claim_type: 'reembolso' | 'justificacao_cartao' | 'logbook';
+    claim_type: 'reembolso' | 'justificacao_cartao' | 'logbook' | 'deslocacoes';
     description: string;
     claim_date: string;
     status?: 'rascunho' | 'submetido';

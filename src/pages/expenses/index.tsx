@@ -134,6 +134,7 @@ const ExpensesPage = () => {
     if (type === "reembolso") return "Reembolso";
     if (type === "transferencia_bancaria") return "Transferência";
     if (type === "logbook") return "Logbook";
+    if (type === "deslocacoes") return "Deslocações";
     return "Justificação Cartão";
   };
 

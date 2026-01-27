@@ -982,6 +982,7 @@ const ExpenseDetailPage = () => {
     if (type === "reembolso") return "Reembolso de Despesas";
     if (type === "transferencia_bancaria") return "Transferência Bancária";
     if (type === "logbook") return "Logbook";
+    if (type === "deslocacoes") return "Deslocações";
     return "Justificação de Cartão de Crédito";
   };
 
