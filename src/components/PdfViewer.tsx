@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -6,6 +6,9 @@ import {
   FileText,
   Loader2,
   Printer,
+  Trash2,
+  Plus,
+  Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -13,6 +16,9 @@ import { toast } from "sonner";
 import * as pdfjs from "pdfjs-dist";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { DeletePageDialog } from "@/components/pdf/DeletePageDialog";
+import { AddPageDialog } from "@/components/pdf/AddPageDialog";
+import { deletePageFromPdf, addPagesToDocument } from "@/utils/pdfPageManipulation";
 
 // pdf.js worker setup
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
@@ -20,18 +26,35 @@ pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 interface PdfViewerProps {
   url: string;
   filename?: string;
+  editable?: boolean;
+  onSave?: (modifiedPdf: Blob) => Promise<void>;
 }
 
-export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) => {
+export const PdfViewer = ({ 
+  url, 
+  filename = "documento.pdf",
+  editable = false,
+  onSave,
+}: PdfViewerProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const pdfRef = useRef<PDFDocumentProxy | null>(null);
   const renderTaskRef = useRef<{ cancel: () => void } | null>(null);
+  const originalBytesRef = useRef<ArrayBuffer | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1.25);
+  
+  // Editing states
+  const [isEditing, setIsEditing] = useState(false);
+  const [modifiedPdfBytes, setModifiedPdfBytes] = useState<ArrayBuffer | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const downloadAsBlob = async () => {
     const res = await fetch(url);
@@ -140,6 +163,120 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
     }
   };
 
+  // Get current PDF bytes (modified or from URL)
+  const getCurrentPdfBytes = useCallback(async (): Promise<ArrayBuffer> => {
+    if (modifiedPdfBytes) {
+      return modifiedPdfBytes;
+    }
+    if (originalBytesRef.current) {
+      return originalBytesRef.current;
+    }
+    const response = await fetch(url);
+    const bytes = await response.arrayBuffer();
+    originalBytesRef.current = bytes;
+    return bytes;
+  }, [url, modifiedPdfBytes]);
+
+  // Handle delete page
+  const handleDeletePage = useCallback(async () => {
+    setIsDeleting(true);
+    try {
+      const currentBytes = await getCurrentPdfBytes();
+      const newBytes = await deletePageFromPdf(currentBytes, pageNumber - 1);
+      
+      setModifiedPdfBytes(newBytes);
+      setIsEditing(true);
+      setShowDeleteDialog(false);
+      
+      // Reload PDF from new bytes
+      const pdf = await pdfjs.getDocument({ data: newBytes }).promise;
+      
+      // Cleanup old ref
+      try { pdfRef.current?.destroy(); } catch { /* ignore */ }
+      
+      pdfRef.current = pdf;
+      setNumPages(pdf.numPages);
+      
+      // Adjust page number if we deleted the last page
+      if (pageNumber > pdf.numPages) {
+        setPageNumber(pdf.numPages);
+      }
+      
+      toast.success("Página eliminada. Clique em Guardar para aplicar as alterações.");
+    } catch (err) {
+      console.error("Error deleting page:", err);
+      toast.error(err instanceof Error ? err.message : "Erro ao eliminar página");
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [getCurrentPdfBytes, pageNumber]);
+
+  // Handle add pages
+  const handleAddPages = useCallback(async (
+    file: File, 
+    pageIndices: number[], 
+    insertBefore: boolean
+  ) => {
+    setIsAdding(true);
+    try {
+      const currentBytes = await getCurrentPdfBytes();
+      const sourceBytes = await file.arrayBuffer();
+      
+      // Calculate insert position
+      const insertAfterIndex = insertBefore ? pageNumber - 2 : pageNumber - 1;
+      
+      const newBytes = await addPagesToDocument(
+        currentBytes,
+        sourceBytes,
+        pageIndices,
+        insertAfterIndex
+      );
+      
+      setModifiedPdfBytes(newBytes);
+      setIsEditing(true);
+      setShowAddDialog(false);
+      
+      // Reload PDF from new bytes
+      const pdf = await pdfjs.getDocument({ data: newBytes }).promise;
+      
+      // Cleanup old ref
+      try { pdfRef.current?.destroy(); } catch { /* ignore */ }
+      
+      pdfRef.current = pdf;
+      setNumPages(pdf.numPages);
+      
+      toast.success(`${pageIndices.length} página(s) adicionada(s). Clique em Guardar para aplicar as alterações.`);
+    } catch (err) {
+      console.error("Error adding pages:", err);
+      toast.error(err instanceof Error ? err.message : "Erro ao adicionar páginas");
+    } finally {
+      setIsAdding(false);
+    }
+  }, [getCurrentPdfBytes, pageNumber]);
+
+  // Handle save changes
+  const handleSaveChanges = useCallback(async () => {
+    if (!modifiedPdfBytes || !onSave) return;
+    
+    setIsSaving(true);
+    try {
+      const blob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
+      await onSave(blob);
+      
+      // Reset editing state after successful save
+      setIsEditing(false);
+      originalBytesRef.current = modifiedPdfBytes;
+      setModifiedPdfBytes(null);
+      
+      toast.success("Documento guardado com sucesso!");
+    } catch (err) {
+      console.error("Error saving PDF:", err);
+      toast.error(err instanceof Error ? err.message : "Erro ao guardar documento");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [modifiedPdfBytes, onSave]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -148,6 +285,9 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
       setError(null);
       setNumPages(0);
       setPageNumber(1);
+      setIsEditing(false);
+      setModifiedPdfBytes(null);
+      originalBytesRef.current = null;
 
       try {
         const task = pdfjs.getDocument(url);
@@ -286,6 +426,49 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
         </div>
 
         <div className="flex items-center gap-2">
+          {editable && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={loading || numPages <= 1 || isDeleting}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Eliminar
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowAddDialog(true)}
+                disabled={loading || isAdding}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar
+              </Button>
+              
+              {isEditing && onSave && (
+                <Button
+                  size="sm"
+                  onClick={handleSaveChanges}
+                  disabled={isSaving}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-1" />
+                  )}
+                  Guardar
+                </Button>
+              )}
+              
+              <div className="w-px h-6 bg-border mx-1" />
+            </>
+          )}
+          
           <Button size="sm" variant="outline" onClick={handlePrint} disabled={loading}>
             <Printer className="h-4 w-4 mr-2" />
             Imprimir
@@ -312,6 +495,25 @@ export const PdfViewer = ({ url, filename = "documento.pdf" }: PdfViewerProps) =
           </div>
         </div>
       </div>
+
+      {/* Dialogs */}
+      <DeletePageDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        pageNumber={pageNumber}
+        totalPages={numPages}
+        onConfirm={handleDeletePage}
+        isDeleting={isDeleting}
+      />
+      
+      <AddPageDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        currentPage={pageNumber}
+        totalPages={numPages}
+        onConfirm={handleAddPages}
+        isAdding={isAdding}
+      />
     </div>
   );
 };
