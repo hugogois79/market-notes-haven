@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Plus, Pencil, Trash2, Upload, FileText, Download } from "lucide-react";
@@ -31,6 +31,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { expenseClaimService, Expense } from "@/services/expenseClaimService";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { useAuth } from "@/contexts/AuthContext";
 
 import { supplierService } from "@/services/supplierService";
 import { expenseUserService } from "@/services/expenseUserService";
@@ -55,6 +57,8 @@ interface ExpenseFormData {
 const NewExpensePage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isAdmin } = useFeatureAccess();
+  const { user } = useAuth();
   
   const [claimType, setClaimType] = useState<"reembolso" | "justificacao_cartao" | "logbook" | "deslocacoes">("reembolso");
   const [description, setDescription] = useState("");
@@ -74,11 +78,26 @@ const NewExpensePage = () => {
     category_id: "",
   });
 
-  // Get expense requesters (users marked as requesters) for dropdown
+  // Get expense requesters (users marked as requesters) for dropdown - only for admins
   const { data: expenseRequesters } = useQuery({
     queryKey: ["expense-requesters"],
     queryFn: () => expenseUserService.getRequesters(),
+    enabled: isAdmin,
   });
+
+  // Get current user's expense record - only for non-admins
+  const { data: currentUserExpenseRecord } = useQuery({
+    queryKey: ["current-expense-user", user?.id],
+    queryFn: () => expenseUserService.getCurrentUserExpenseRecord(),
+    enabled: !!user && !isAdmin,
+  });
+
+  // Auto-select requester for non-admin users
+  useEffect(() => {
+    if (!isAdmin && currentUserExpenseRecord?.id && !requesterId) {
+      setRequesterId(currentUserExpenseRecord.id);
+    }
+  }, [isAdmin, currentUserExpenseRecord, requesterId]);
 
   // Get the selected requester's assigned projects
   const selectedRequester = expenseRequesters?.find(r => r.id === requesterId);
@@ -428,18 +447,26 @@ const NewExpensePage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="requester">Requisitante *</Label>
-              <Select value={requesterId} onValueChange={setRequesterId}>
-                <SelectTrigger className="mt-2">
-                  <SelectValue placeholder="Selecione o requisitante" />
-                </SelectTrigger>
-                <SelectContent>
-                  {expenseRequesters?.map((requester) => (
-                    <SelectItem key={requester.id} value={requester.id}>
-                      {requester.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isAdmin ? (
+                <Select value={requesterId} onValueChange={setRequesterId}>
+                  <SelectTrigger className="mt-2">
+                    <SelectValue placeholder="Selecione o requisitante" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {expenseRequesters?.map((requester) => (
+                      <SelectItem key={requester.id} value={requester.id}>
+                        {requester.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  value={currentUserExpenseRecord?.name || "Carregando..."}
+                  disabled
+                  className="mt-2 bg-muted"
+                />
+              )}
             </div>
 
             <div>
