@@ -18,14 +18,29 @@ export const MFAVerification = ({ onSuccess, onCancel }: MFAVerificationProps) =
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+    
     const init = async () => {
       setIsInitializing(true);
       await refreshFactors();
-      await createChallenge();
-      setIsInitializing(false);
+      // Small delay to ensure factors are loaded before creating challenge
+      if (mounted) {
+        // Wait for factors to be available
+        setTimeout(async () => {
+          if (mounted) {
+            await createChallenge();
+            setIsInitializing(false);
+          }
+        }, 100);
+      }
     };
     init();
-  }, [refreshFactors, createChallenge]);
+    
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleVerify = async () => {
     if (code.length !== 6) return;
