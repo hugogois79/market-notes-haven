@@ -1,73 +1,83 @@
 
-# Plano: Corrigir Impressão dos Comprovativos
+# Plano: Corrigir Notas Que Não Aparecem Após Login
 
 ## Problema Identificado
 
-Os comprovativos (recibos) não aparecem na impressão porque as imagens estão a usar **blob URLs** que não são transferíveis entre janelas do browser.
+Após o login, o dashboard mostra "No Notes Yet" (sem notas), mas após um refresh manual da página, as notas aparecem corretamente.
 
-### Causa Técnica
-- Quando o comprovativo é um **PDF**: O sistema converte para imagem usando `canvas.toDataURL()`, gerando uma **data URL base64** que funciona corretamente
-- Quando o comprovativo é uma **imagem** (JPG, PNG, etc.): O sistema usa `URL.createObjectURL()`, gerando um **blob URL** que **não é acessível** na nova janela de impressão
+### Causa Raiz
 
-## Solução Proposta
+O `NotesProvider` executa a query de notas **imediatamente** quando o componente monta, sem esperar que a autenticação esteja completa:
 
-Converter as imagens para **data URL base64** (igual ao que já é feito para PDFs), garantindo que funcionam em qualquer janela.
+```text
+Timeline do Problema:
+┌────────────────────────────────────────────────────────────┐
+│ 1. Utilizador faz login                                    │
+│    ↓                                                       │
+│ 2. Auth event é disparado, mas user ainda não está pronto  │
+│    ↓                                                       │
+│ 3. NotesProvider monta e executa useQuery IMEDIATAMENTE    │
+│    ↓                                                       │
+│ 4. Query fetch notas SEM auth.uid() válido                 │
+│    ↓                                                       │
+│ 5. RLS Policy bloqueia acesso → retorna [] (vazio)         │
+│    ↓                                                       │
+│ 6. React Query guarda [] em cache                          │
+│    ↓                                                       │
+│ 7. Dashboard mostra "No Notes Yet"                         │
+│    ↓                                                       │
+│ 8. Refresh: auth já está ok → notas aparecem               │
+└────────────────────────────────────────────────────────────┘
+```
+
+### Evidência
+
+A tabela `notes` tem RLS que requer autenticação:
+- Policy `SELECT`: `auth.uid() = user_id`
+- Sem user autenticado, a query retorna sempre vazio
+
+Outros componentes no projeto (ex: `companies/index.tsx`, `real-estate/index.tsx`) já usam o padrão correto:
+```typescript
+enabled: !authLoading && !!user
+```
+
+## Solução
+
+Modificar o `NotesProvider` para aguardar a autenticação antes de executar a query.
 
 ## Alterações Técnicas
 
-### Ficheiro: `src/pages/expenses/[id].tsx`
+### Ficheiro: `src/contexts/NotesContext.tsx`
 
-Modificar a secção de processamento de imagens (linhas 269-278) para:
-
-```text
-Antes (não funciona):
-┌─────────────────────────────────────────┐
-│ Download imagem do Supabase             │
-│           ↓                             │
-│ URL.createObjectURL(data)               │
-│           ↓                             │
-│ blob:https://... (NÃO FUNCIONA)         │
-└─────────────────────────────────────────┘
-
-Depois (solução):
-┌─────────────────────────────────────────┐
-│ Download imagem do Supabase             │
-│           ↓                             │
-│ FileReader.readAsDataURL(blob)          │
-│           ↓                             │
-│ data:image/png;base64,... (FUNCIONA!)   │
-└─────────────────────────────────────────┘
-```
-
-### Código a Implementar
-
-Substituir o bloco de processamento de imagens:
-
+**Alteração 1 - Importar hook de autenticação:**
 ```typescript
-// Handle images directly - convert to base64 data URL
-if (data.type.startsWith('image/')) {
-  console.log('Processing image file...');
-  try {
-    // Convert blob to base64 data URL (works across windows)
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(data);
-    });
-    console.log('Created image data URL');
-    return {
-      expense,
-      images: [dataUrl],
-      type: 'image',
-    };
-  } catch (imgError) {
-    console.error('Error processing image:', imgError);
-    return null;
-  }
-}
+import { useAuth } from "@/contexts/AuthContext";
 ```
+
+**Alteração 2 - Usar o estado de autenticação:**
+```typescript
+export const NotesProvider = ({ children }: NotesProviderProps) => {
+  const { user, loading: authLoading } = useAuth();  // NOVO
+  const queryClient = useQueryClient();
+  
+  const { data: notesData, isLoading, refetch } = useQuery({
+    queryKey: ['notes', user?.id],  // Incluir user.id na queryKey
+    queryFn: fetchNotes,
+    staleTime: 30 * 1000,
+    enabled: !authLoading && !!user,  // NOVO - só executar após auth
+  });
+  // ...
+};
+```
+
+**Resumo das mudanças:**
+1. Adicionar `enabled: !authLoading && !!user` à query
+2. Incluir `user?.id` na `queryKey` para garantir refetch quando o utilizador muda
+3. Usar o hook `useAuth()` para aceder ao estado de autenticação
 
 ## Resultado Esperado
 
-Após esta alteração, os comprovativos (imagens JPG, PNG, etc.) aparecerão corretamente na página de impressão, tal como os PDFs já funcionam.
+Após esta alteração:
+1. A query de notas só executa quando o utilizador está autenticado
+2. As notas aparecem imediatamente após o login, sem necessidade de refresh
+3. A cache é invalidada automaticamente quando o utilizador muda (login/logout)
