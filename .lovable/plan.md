@@ -1,83 +1,82 @@
 
-# Plano: Corrigir Notas Que Não Aparecem Após Login
+# Plano: Mostrar Nome da App no Google Authenticator (2FA)
 
-## Problema Identificado
+## Problema
 
-Após o login, o dashboard mostra "No Notes Yet" (sem notas), mas após um refresh manual da página, as notas aparecem corretamente.
+Quando o utilizador configura a autenticação de dois fatores (2FA), o Google Authenticator mostra **"localhost:3000"** em vez do nome da aplicação.
 
-### Causa Raiz
-
-O `NotesProvider` executa a query de notas **imediatamente** quando o componente monta, sem esperar que a autenticação esteja completa:
+Isto acontece porque o parâmetro `issuer` não está definido no método `mfa.enroll()`, fazendo com que o Supabase use a URL de origem (localhost) como nome.
 
 ```text
-Timeline do Problema:
-┌────────────────────────────────────────────────────────────┐
-│ 1. Utilizador faz login                                    │
-│    ↓                                                       │
-│ 2. Auth event é disparado, mas user ainda não está pronto  │
-│    ↓                                                       │
-│ 3. NotesProvider monta e executa useQuery IMEDIATAMENTE    │
-│    ↓                                                       │
-│ 4. Query fetch notas SEM auth.uid() válido                 │
-│    ↓                                                       │
-│ 5. RLS Policy bloqueia acesso → retorna [] (vazio)         │
-│    ↓                                                       │
-│ 6. React Query guarda [] em cache                          │
-│    ↓                                                       │
-│ 7. Dashboard mostra "No Notes Yet"                         │
-│    ↓                                                       │
-│ 8. Refresh: auth já está ok → notas aparecem               │
-└────────────────────────────────────────────────────────────┘
+Atual no Google Authenticator:
+┌────────────────────────────────┐
+│ localhost:3000                 │
+│ 3000:sales@robsonway.com       │
+│                                │
+│      XXX XXX                   │
+└────────────────────────────────┘
+
+Desejado:
+┌────────────────────────────────┐
+│ GVVC One                       │
+│ sales@robsonway.com            │
+│                                │
+│      XXX XXX                   │
+└────────────────────────────────┘
 ```
 
-### Evidência
+## Causa Técnica
 
-A tabela `notes` tem RLS que requer autenticação:
-- Policy `SELECT`: `auth.uid() = user_id`
-- Sem user autenticado, a query retorna sempre vazio
+O método `supabase.auth.mfa.enroll()` aceita um parâmetro `issuer` que define o nome que aparece na app de autenticação. Este parâmetro **não está a ser passado** atualmente.
 
-Outros componentes no projeto (ex: `companies/index.tsx`, `real-estate/index.tsx`) já usam o padrão correto:
+**Código atual:**
 ```typescript
-enabled: !authLoading && !!user
+const { data, error } = await supabase.auth.mfa.enroll({
+  factorType: "totp",
+  friendlyName: "Google Authenticator",
+  // issuer em falta!
+});
 ```
 
 ## Solução
 
-Modificar o `NotesProvider` para aguardar a autenticação antes de executar a query.
+Adicionar o parâmetro `issuer: "GVVC One"` à chamada `mfa.enroll()`.
 
 ## Alterações Técnicas
 
-### Ficheiro: `src/contexts/NotesContext.tsx`
+### Ficheiro: `src/hooks/useMFA.ts`
 
-**Alteração 1 - Importar hook de autenticação:**
+Adicionar o parâmetro `issuer` em **todos** os locais onde `mfa.enroll()` é chamado:
+
+**Linha ~119-122 (chamada principal):**
 ```typescript
-import { useAuth } from "@/contexts/AuthContext";
+const { data, error } = await supabase.auth.mfa.enroll({
+  factorType: "totp",
+  issuer: "GVVC One",           // NOVO
+  friendlyName: "Google Authenticator",
+});
 ```
 
-**Alteração 2 - Usar o estado de autenticação:**
+**Linha ~128-131 (fallback para conflito de nome):**
 ```typescript
-export const NotesProvider = ({ children }: NotesProviderProps) => {
-  const { user, loading: authLoading } = useAuth();  // NOVO
-  const queryClient = useQueryClient();
-  
-  const { data: notesData, isLoading, refetch } = useQuery({
-    queryKey: ['notes', user?.id],  // Incluir user.id na queryKey
-    queryFn: fetchNotes,
-    staleTime: 30 * 1000,
-    enabled: !authLoading && !!user,  // NOVO - só executar após auth
-  });
-  // ...
-};
+const { data: retryData, error: retryError } = await supabase.auth.mfa.enroll({
+  factorType: "totp",
+  issuer: "GVVC One",           // NOVO
+  friendlyName: `Authenticator ${Date.now()}`,
+});
 ```
 
-**Resumo das mudanças:**
-1. Adicionar `enabled: !authLoading && !!user` à query
-2. Incluir `user?.id` na `queryKey` para garantir refetch quando o utilizador muda
-3. Usar o hook `useAuth()` para aceder ao estado de autenticação
+## Nota Importante
+
+Para utilizadores que **já configuraram** o 2FA com "localhost:3000", o nome **não será atualizado automaticamente**. Para mostrar o nome correto, teriam de:
+1. Desativar o 2FA nas Definições
+2. Reativar o 2FA (o que gerará um novo QR code com o issuer correto)
+
+Novos utilizadores verão imediatamente "GVVC One" no Google Authenticator.
 
 ## Resultado Esperado
 
-Após esta alteração:
-1. A query de notas só executa quando o utilizador está autenticado
-2. As notas aparecem imediatamente após o login, sem necessidade de refresh
-3. A cache é invalidada automaticamente quando o utilizador muda (login/logout)
+Após esta alteração, quando um utilizador escanear o QR code para configurar 2FA, o Google Authenticator mostrará:
+
+- **Nome da app:** GVVC One
+- **Conta:** [email do utilizador]
