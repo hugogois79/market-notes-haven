@@ -1,9 +1,11 @@
 
+
 import React, { createContext, useContext, ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchNotes, createNote, updateNote, deleteNote } from "@/services/supabaseService";
 import { Note, Tag } from "@/types";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NotesContextType {
   notes: Note[];
@@ -21,11 +23,13 @@ interface NotesProviderProps {
 }
 
 export const NotesProvider = ({ children }: NotesProviderProps) => {
+  const { user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const { data: notesData, isLoading, refetch } = useQuery({
-    queryKey: ['notes'],
+    queryKey: ['notes', user?.id],
     queryFn: fetchNotes,
-    staleTime: 30 * 1000, // 30 seconds - reduces unnecessary refetches
+    staleTime: 30 * 1000,
+    enabled: !authLoading && !!user,
   });
 
   // Use notesData directly, fallback to empty array
