@@ -266,15 +266,27 @@ const ExpenseDetailPage = () => {
 
             console.log('Downloaded file type:', data.type, 'size:', data.size);
 
-            // Handle images directly
+            // Handle images directly - convert to base64 data URL
             if (data.type.startsWith('image/')) {
-              const blobUrl = URL.createObjectURL(data);
-              console.log('Created image blob URL');
-              return {
-                expense,
-                images: [blobUrl],
-                type: 'image',
-              };
+              console.log('Processing image file...');
+              try {
+                // Convert blob to base64 data URL (works across windows)
+                const dataUrl = await new Promise<string>((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result as string);
+                  reader.onerror = reject;
+                  reader.readAsDataURL(data);
+                });
+                console.log('Created image data URL');
+                return {
+                  expense,
+                  images: [dataUrl],
+                  type: 'image',
+                };
+              } catch (imgError) {
+                console.error('Error processing image:', imgError);
+                return null;
+              }
             }
 
             // Handle PDFs - convert each page to image
