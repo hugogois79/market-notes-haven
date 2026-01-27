@@ -106,6 +106,16 @@ export const useMFA = (): UseMFAReturn => {
 
   const startEnrollment = async (): Promise<EnrollmentData | null> => {
     try {
+      // First, remove any unverified factors to avoid conflict
+      const unverifiedFactors = factors.filter((f) => f.status === "unverified");
+      for (const factor of unverifiedFactors) {
+        try {
+          await supabase.auth.mfa.unenroll({ factorId: factor.id });
+        } catch (e) {
+          console.warn("Failed to remove unverified factor:", e);
+        }
+      }
+
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
         friendlyName: "Google Authenticator",
@@ -113,6 +123,32 @@ export const useMFA = (): UseMFAReturn => {
 
       if (error) {
         console.error("Error starting MFA enrollment:", error);
+        // Check if it's a name conflict - try with a unique name
+        if (error.message?.includes("already exists")) {
+          const { data: retryData, error: retryError } = await supabase.auth.mfa.enroll({
+            factorType: "totp",
+            friendlyName: `Authenticator ${Date.now()}`,
+          });
+          
+          if (retryError) {
+            console.error("Error on retry enrollment:", retryError);
+            toast.error("Erro ao iniciar configuração 2FA. Por favor, tente novamente.");
+            return null;
+          }
+          
+          const enrollment: EnrollmentData = {
+            id: retryData.id,
+            type: retryData.type,
+            totp: {
+              qr_code: retryData.totp.qr_code,
+              secret: retryData.totp.secret,
+              uri: retryData.totp.uri,
+            },
+          };
+          setEnrollmentData(enrollment);
+          return enrollment;
+        }
+        
         toast.error("Erro ao iniciar configuração 2FA");
         return null;
       }
