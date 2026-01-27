@@ -425,43 +425,44 @@ export const PdfViewer = ({
           </Button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {editable && (
             <>
               <Button
-                size="sm"
+                size="icon"
                 variant="outline"
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={loading || numPages <= 1 || isDeleting}
-                className="text-destructive hover:text-destructive"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                title="Eliminar página"
               >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Eliminar
+                <Trash2 className="h-4 w-4" />
               </Button>
               
               <Button
-                size="sm"
+                size="icon"
                 variant="outline"
                 onClick={() => setShowAddDialog(true)}
                 disabled={loading || isAdding}
+                className="h-8 w-8"
+                title="Adicionar páginas"
               >
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar
+                <Plus className="h-4 w-4" />
               </Button>
               
               {isEditing && onSave && (
                 <Button
-                  size="sm"
+                  size="icon"
                   onClick={handleSaveChanges}
                   disabled={isSaving}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="h-8 w-8 bg-green-600 hover:bg-green-700 text-white"
+                  title="Guardar alterações"
                 >
                   {isSaving ? (
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Save className="h-4 w-4 mr-1" />
+                    <Save className="h-4 w-4" />
                   )}
-                  Guardar
                 </Button>
               )}
               
@@ -469,13 +470,11 @@ export const PdfViewer = ({
             </>
           )}
           
-          <Button size="sm" variant="outline" onClick={handlePrint} disabled={loading}>
-            <Printer className="h-4 w-4 mr-2" />
-            Imprimir
+          <Button size="icon" variant="outline" onClick={handlePrint} disabled={loading} className="h-8 w-8" title="Imprimir">
+            <Printer className="h-4 w-4" />
           </Button>
-          <Button size="sm" onClick={handleDownload} disabled={loading}>
-            <Download className="h-4 w-4 mr-2" />
-            Descarregar
+          <Button size="icon" onClick={handleDownload} disabled={loading} className="h-8 w-8" title="Descarregar">
+            <Download className="h-4 w-4" />
           </Button>
         </div>
       </div>
