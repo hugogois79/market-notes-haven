@@ -1,82 +1,108 @@
 
-# Plano: Mostrar Nome da App no Google Authenticator (2FA)
+# Plano: Restringir Seleção de Requisitante para Utilizadores Não-Admin
 
-## Problema
+## Contexto
 
-Quando o utilizador configura a autenticação de dois fatores (2FA), o Google Authenticator mostra **"localhost:3000"** em vez do nome da aplicação.
+Atualmente, todos os utilizadores podem selecionar qualquer pessoa como "Requisitante" ao criar uma nova requisição de despesas. Isto não faz sentido do ponto de vista de negócio - utilizadores normais devem apenas poder criar requisições para si próprios.
 
-Isto acontece porque o parâmetro `issuer` não está definido no método `mfa.enroll()`, fazendo com que o Supabase use a URL de origem (localhost) como nome.
+## Lógica de Negócio
 
 ```text
-Atual no Google Authenticator:
-┌────────────────────────────────┐
-│ localhost:3000                 │
-│ 3000:sales@robsonway.com       │
-│                                │
-│      XXX XXX                   │
-└────────────────────────────────┘
-
-Desejado:
-┌────────────────────────────────┐
-│ GVVC One                       │
-│ sales@robsonway.com            │
-│                                │
-│      XXX XXX                   │
-└────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ Comportamento do Campo "Requisitante"                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ SE utilizador É admin:                                      │
+│   → Mostrar dropdown com TODOS os requisitantes             │
+│   → Permitir seleção livre                                  │
+│                                                             │
+│ SE utilizador NÃO É admin:                                  │
+│   → Mostrar APENAS o próprio utilizador                     │
+│   → Pré-selecionar automaticamente                          │
+│   → Campo desabilitado (readonly visual)                    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
-
-## Causa Técnica
-
-O método `supabase.auth.mfa.enroll()` aceita um parâmetro `issuer` que define o nome que aparece na app de autenticação. Este parâmetro **não está a ser passado** atualmente.
-
-**Código atual:**
-```typescript
-const { data, error } = await supabase.auth.mfa.enroll({
-  factorType: "totp",
-  friendlyName: "Google Authenticator",
-  // issuer em falta!
-});
-```
-
-## Solução
-
-Adicionar o parâmetro `issuer: "GVVC One"` à chamada `mfa.enroll()`.
 
 ## Alterações Técnicas
 
-### Ficheiro: `src/hooks/useMFA.ts`
+### Ficheiro: `src/pages/expenses/new.tsx`
 
-Adicionar o parâmetro `issuer` em **todos** os locais onde `mfa.enroll()` é chamado:
-
-**Linha ~119-122 (chamada principal):**
+**1. Importar hooks necessários:**
 ```typescript
-const { data, error } = await supabase.auth.mfa.enroll({
-  factorType: "totp",
-  issuer: "GVVC One",           // NOVO
-  friendlyName: "Google Authenticator",
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { useAuth } from "@/contexts/AuthContext";
+```
+
+**2. Dentro do componente, adicionar:**
+```typescript
+const { isAdmin } = useFeatureAccess();
+const { user } = useAuth();
+```
+
+**3. Criar query para obter o expense_user do utilizador atual:**
+```typescript
+// Get current user's expense record
+const { data: currentUserExpenseRecord } = useQuery({
+  queryKey: ["current-expense-user", user?.id],
+  queryFn: () => expenseUserService.getCurrentUserExpenseRecord(),
+  enabled: !!user && !isAdmin,
 });
 ```
 
-**Linha ~128-131 (fallback para conflito de nome):**
+**4. Usar useEffect para pré-selecionar automaticamente para não-admins:**
 ```typescript
-const { data: retryData, error: retryError } = await supabase.auth.mfa.enroll({
-  factorType: "totp",
-  issuer: "GVVC One",           // NOVO
-  friendlyName: `Authenticator ${Date.now()}`,
-});
+// Auto-select requester for non-admin users
+useEffect(() => {
+  if (!isAdmin && currentUserExpenseRecord?.id && !requesterId) {
+    setRequesterId(currentUserExpenseRecord.id);
+  }
+}, [isAdmin, currentUserExpenseRecord, requesterId]);
 ```
 
-## Nota Importante
+**5. Modificar a renderização do campo Requisitante:**
 
-Para utilizadores que **já configuraram** o 2FA com "localhost:3000", o nome **não será atualizado automaticamente**. Para mostrar o nome correto, teriam de:
-1. Desativar o 2FA nas Definições
-2. Reativar o 2FA (o que gerará um novo QR code com o issuer correto)
+Para não-admins, mostrar o nome como texto readonly em vez do dropdown:
 
-Novos utilizadores verão imediatamente "GVVC One" no Google Authenticator.
+```typescript
+<div>
+  <Label htmlFor="requester">Requisitante *</Label>
+  {isAdmin ? (
+    // Admins veem dropdown completo
+    <Select value={requesterId} onValueChange={setRequesterId}>
+      <SelectTrigger className="mt-2">
+        <SelectValue placeholder="Selecione o requisitante" />
+      </SelectTrigger>
+      <SelectContent>
+        {expenseRequesters?.map((requester) => (
+          <SelectItem key={requester.id} value={requester.id}>
+            {requester.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  ) : (
+    // Não-admins veem apenas o seu nome (readonly)
+    <Input
+      value={currentUserExpenseRecord?.name || "Carregando..."}
+      disabled
+      className="mt-2 bg-muted"
+    />
+  )}
+</div>
+```
 
-## Resultado Esperado
+## Comportamento Esperado
 
-Após esta alteração, quando um utilizador escanear o QR code para configurar 2FA, o Google Authenticator mostrará:
+| Tipo de Utilizador | Antes | Depois |
+|-------------------|-------|--------|
+| **Admin** | Dropdown com todos | Dropdown com todos (sem alteração) |
+| **Não-Admin** | Dropdown com todos | Campo readonly com o seu próprio nome |
 
-- **Nome da app:** GVVC One
-- **Conta:** [email do utilizador]
+## Casos Edge Considerados
+
+1. **Utilizador sem registo expense_user**: Se o utilizador logado não tiver um registo na tabela expense_users, mostrará "Carregando..." e não conseguirá submeter (validação existente já trata isto)
+
+2. **Loading state**: Enquanto carrega o registo do utilizador, o campo mostra "Carregando..."
+
+3. **Consistência com edição**: A mesma lógica deve ser aplicada na página de edição (`edit.tsx`) se existir
