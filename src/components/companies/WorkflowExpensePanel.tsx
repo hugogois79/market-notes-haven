@@ -421,6 +421,29 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     });
   }, [allBankAccounts, paymentMethod]);
 
+  // Track previous payment method to detect changes and clear invalid selections
+  const previousPaymentMethodRef = useRef(paymentMethod);
+
+  // Clear bank_account_id when payment_method changes if current value is invalid
+  useEffect(() => {
+    if (previousPaymentMethodRef.current !== paymentMethod && allBankAccounts) {
+      const currentBankAccountId = watch("bank_account_id");
+      if (currentBankAccountId) {
+        const currentAccount = allBankAccounts.find(ba => ba.id === currentBankAccountId);
+        const isValidForNewMethod = currentAccount && (
+          (paymentMethod === "credit_card" && currentAccount.account_type === "credit_card") ||
+          (paymentMethod !== "credit_card" && currentAccount.account_type === "bank_account")
+        );
+        
+        // If current selection is not valid for the new payment method, clear it
+        if (!isValidForNewMethod) {
+          setValue("bank_account_id", "");
+        }
+      }
+      previousPaymentMethodRef.current = paymentMethod;
+    }
+  }, [paymentMethod, allBankAccounts, watch, setValue]);
+
   // Calculate VAT
   const totalAmount = parseFloat(watch("total_amount") || "0");
   const vatRate = parseFloat(watch("vat_rate") || "0");
