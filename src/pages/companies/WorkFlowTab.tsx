@@ -22,6 +22,12 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -3143,16 +3149,70 @@ export default function WorkFlowTab() {
                           >
                             {getFileNameWithoutExtension(file.file_name)}
                           </span>
-                          {/* Pending loan indicator */}
-                          {customData[file.id]?._pendingLoan && (
-                            <Badge 
-                              variant="outline" 
-                              className="text-[9px] px-1 py-0 bg-amber-50 text-amber-700 border-amber-300 flex-shrink-0"
-                              title="Empréstimo pendente - será registado ao confirmar envio"
-                            >
-                              Empréstimo
-                            </Badge>
-                          )}
+                          {/* Pending loan indicator with rich tooltip */}
+                          {customData[file.id]?._pendingLoan && (() => {
+                            try {
+                              const loanData = JSON.parse(customData[file.id]._pendingLoan);
+                              return (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge 
+                                        variant="outline" 
+                                        className="text-[9px] px-1 py-0 bg-amber-50 text-amber-700 border-amber-300 flex-shrink-0 cursor-help"
+                                      >
+                                        Empréstimo
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="p-0 max-w-xs">
+                                      <div className="p-3 space-y-2">
+                                        <p className="font-semibold text-amber-700 flex items-center gap-1.5 text-sm">
+                                          💰 Detalhes do Empréstimo
+                                        </p>
+                                        <div className="space-y-1.5 text-xs">
+                                          <div className="flex items-start gap-2">
+                                            <span className="text-green-600 font-medium whitespace-nowrap">Credor:</span>
+                                            <span className="text-foreground">{loanData.lending_company_name}</span>
+                                          </div>
+                                          <div className="flex items-start gap-2">
+                                            <span className="text-orange-600 font-medium whitespace-nowrap">Devedor:</span>
+                                            <span className="text-foreground">{loanData.borrowing_company_name}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-muted-foreground font-medium">Valor:</span>
+                                            <span className="font-semibold text-foreground">
+                                              {loanData.amount?.toLocaleString('pt-PT', {
+                                                style: 'currency', 
+                                                currency: 'EUR'
+                                              })}
+                                            </span>
+                                          </div>
+                                          {loanData.start_date && (
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-muted-foreground font-medium">Data:</span>
+                                              <span className="text-foreground">
+                                                {format(new Date(loanData.start_date), 'dd/MM/yyyy')}
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              );
+                            } catch {
+                              return (
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-[9px] px-1 py-0 bg-amber-50 text-amber-700 border-amber-300 flex-shrink-0"
+                                  title="Empréstimo pendente"
+                                >
+                                  Empréstimo
+                                </Badge>
+                              );
+                            }
+                          })()}
                         </div>
                       </td>
                       {isColumnVisible("type") && (
