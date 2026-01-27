@@ -1,8 +1,14 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Download, Eye, X, Printer, Undo2, Pencil, Check, XCircle } from "lucide-react";
+import { ArrowLeft, FileText, Download, Eye, X, Printer, Undo2, Pencil, Check, XCircle, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PdfViewer } from "@/components/PdfViewer";
@@ -1101,24 +1107,30 @@ const ExpenseDetailPage = () => {
           {claim.status === "submetido" && (
             <>
               {isAdmin && (
-                <>
-                  <Button 
-                    onClick={handleApprove} 
-                    disabled={processingStatus}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                  >
-                    <Check className="h-4 w-4 mr-2" />
-                    {processingStatus ? "A processar..." : "Aprovar"}
-                  </Button>
-                  <Button 
-                    onClick={handleReject} 
-                    variant="destructive"
-                    disabled={processingStatus}
-                  >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    {processingStatus ? "A processar..." : "Rejeitar"}
-                  </Button>
-                </>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button disabled={processingStatus}>
+                      {processingStatus ? "A processar..." : "Alterar Status"}
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-popover">
+                    <DropdownMenuItem 
+                      onClick={handleApprove}
+                      className="text-green-600 dark:text-green-400 focus:bg-accent cursor-pointer"
+                    >
+                      <Check className="mr-2 h-4 w-4" />
+                      Aprovar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={handleReject}
+                      className="text-destructive focus:bg-accent cursor-pointer"
+                    >
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Rejeitar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
               <Button 
                 onClick={handleCancelSubmission} 
