@@ -2017,6 +2017,58 @@ export default function WorkFlowTab() {
     }
   };
 
+  // Handle saving modified PDF (for page manipulation)
+  const handleSaveModifiedPdf = useCallback(async (modifiedPdf: Blob, file: WorkflowFile) => {
+    try {
+      // Parse the file URL to get bucket and path
+      const url = new URL(file.file_url);
+      const pathParts = url.pathname.split('/storage/v1/object/public/');
+      
+      if (pathParts.length <= 1) {
+        throw new Error('URL de ficheiro inválida');
+      }
+      
+      const [bucket, ...fileParts] = pathParts[1].split('/');
+      const filePath = fileParts.join('/');
+      
+      console.log(`Uploading modified PDF to bucket: ${bucket}, path: ${filePath}`);
+      
+      // Upload the modified file (upsert to replace existing)
+      const { error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, modifiedPdf, {
+          cacheControl: '3600',
+          upsert: true, // Replace existing file
+          contentType: 'application/pdf',
+        });
+      
+      if (uploadError) {
+        throw uploadError;
+      }
+      
+      // Update the file size in the database
+      const { error: updateError } = await supabase
+        .from('workflow_files')
+        .update({ 
+          file_size: modifiedPdf.size,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', file.id);
+      
+      if (updateError) {
+        console.error('Error updating file record:', updateError);
+        // Don't throw - file was saved successfully
+      }
+      
+      // Invalidate queries to refresh the file list
+      queryClient.invalidateQueries({ queryKey: ['workflow-files'] });
+      
+    } catch (error) {
+      console.error('Error saving modified PDF:', error);
+      throw error;
+    }
+  }, [queryClient]);
+
   const filteredFiles = useMemo(() => workflowFiles?.filter(file => {
     // Search filter
     const matchesSearch = file.file_name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -3788,6 +3840,8 @@ export default function WorkFlowTab() {
                     mime_type: previewFile.mime_type,
                   }}
                   onDownload={() => handleDownload(previewFile)}
+                  editable={previewFile.mime_type === 'application/pdf' || previewFile.file_name?.toLowerCase().endsWith('.pdf')}
+                  onSave={(modifiedPdf) => handleSaveModifiedPdf(modifiedPdf, previewFile)}
                 />
               )}
             </div>

@@ -11,9 +11,11 @@ interface DocumentPreviewProps {
     mime_type: string | null;
   };
   onDownload: () => void;
+  editable?: boolean;
+  onSave?: (modifiedPdf: Blob) => Promise<void>;
 }
 
-export function DocumentPreview({ document, onDownload }: DocumentPreviewProps) {
+export function DocumentPreview({ document, onDownload, editable, onSave }: DocumentPreviewProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -183,6 +185,8 @@ export function DocumentPreview({ document, onDownload }: DocumentPreviewProps) 
       <PdfViewer 
         url={blobUrl} 
         filename={document.name}
+        editable={editable}
+        onSave={onSave}
       />
     );
   }
