@@ -145,6 +145,36 @@ export const expenseClaimService = {
     return data as ExpenseClaim;
   },
 
+  // Approve expense claim (admin only)
+  async approveExpenseClaim(id: string) {
+    const { data, error } = await supabase
+      .from('expense_claims')
+      .update({
+        status: 'aprovado',
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as ExpenseClaim;
+  },
+
+  // Reject expense claim (admin only)
+  async rejectExpenseClaim(id: string) {
+    const { data, error } = await supabase
+      .from('expense_claims')
+      .update({
+        status: 'rejeitado',
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as ExpenseClaim;
+  },
+
   // Delete expense claim
   async deleteExpenseClaim(id: string) {
     const { error } = await supabase
