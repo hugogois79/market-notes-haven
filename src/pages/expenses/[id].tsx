@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Download, Eye, X, Printer, Undo2, Pencil } from "lucide-react";
+import { ArrowLeft, FileText, Download, Eye, X, Printer, Undo2, Pencil, Check, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -21,15 +21,18 @@ import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import companyLogo from "@/assets/syc-logo.png";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const ExpenseDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isAdmin } = useUserRole();
   const [viewingReceipt, setViewingReceipt] = useState<{ url: string; type: string } | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [cancellingSubmission, setCancellingSubmission] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState(false);
 
   const { data: claim, isLoading: loadingClaim } = useQuery({
     queryKey: ["expense-claim", id],
@@ -111,6 +114,50 @@ const ExpenseDetailPage = () => {
       });
     } finally {
       setCancellingSubmission(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!id) return;
+    setProcessingStatus(true);
+    try {
+      await expenseClaimService.approveExpenseClaim(id);
+      queryClient.invalidateQueries({ queryKey: ["expense-claim", id] });
+      toast({
+        title: "Requisição aprovada",
+        description: "A requisição foi aprovada com sucesso.",
+      });
+    } catch (error) {
+      console.error("Error approving claim:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível aprovar a requisição.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingStatus(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!id) return;
+    setProcessingStatus(true);
+    try {
+      await expenseClaimService.rejectExpenseClaim(id);
+      queryClient.invalidateQueries({ queryKey: ["expense-claim", id] });
+      toast({
+        title: "Requisição rejeitada",
+        description: "A requisição foi rejeitada.",
+      });
+    } catch (error) {
+      console.error("Error rejecting claim:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível rejeitar a requisição.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingStatus(false);
     }
   };
 
@@ -1053,6 +1100,26 @@ const ExpenseDetailPage = () => {
         <div className="flex gap-2">
           {claim.status === "submetido" && (
             <>
+              {isAdmin && (
+                <>
+                  <Button 
+                    onClick={handleApprove} 
+                    disabled={processingStatus}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    <Check className="h-4 w-4 mr-2" />
+                    {processingStatus ? "A processar..." : "Aprovar"}
+                  </Button>
+                  <Button 
+                    onClick={handleReject} 
+                    variant="destructive"
+                    disabled={processingStatus}
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    {processingStatus ? "A processar..." : "Rejeitar"}
+                  </Button>
+                </>
+              )}
               <Button 
                 onClick={handleCancelSubmission} 
                 variant="outline"
@@ -1066,6 +1133,12 @@ const ExpenseDetailPage = () => {
                 Imprimir
               </Button>
             </>
+          )}
+          {claim.status === "aprovado" && (
+            <Button onClick={handlePrint} variant="outline">
+              <Printer className="h-4 w-4 mr-2" />
+              Imprimir
+            </Button>
           )}
           {claim.status === "rascunho" && (
             <Button onClick={() => navigate(`/expenses/${id}/edit`)}>
