@@ -21,6 +21,7 @@ import MarketsPage from "@/pages/markets";
 import SecuritiesPage from "@/pages/securities";
 import ReceiptGenerator from "@/pages/ReceiptGenerator";
 import KanbanPage from "@/pages/kanban";
+import MFAVerify from "@/pages/auth/MFAVerify";
 
 // TAO-specific routes
 import TAOLayout from "@/pages/tao/layout";
@@ -67,6 +68,7 @@ const AppRoutes = () => {
             </ProtectedRoute>
           } />
           <Route path="auth" element={<Auth />} />
+          <Route path="auth/mfa-verify" element={<MFAVerify />} />
           <Route
             path="notes"
             element={

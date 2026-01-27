@@ -86,8 +86,16 @@ const Auth = () => {
       if (error) {
         toast.error(error.message);
       } else {
-        toast.success("Login successful!");
-        navigate("/");
+        // Check if MFA is required
+        const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        
+        if (aal?.nextLevel === 'aal2' && aal?.currentLevel !== 'aal2') {
+          // MFA is configured, redirect to verification page
+          navigate("/auth/mfa-verify");
+        } else {
+          toast.success("Login successful!");
+          navigate("/");
+        }
       }
     } catch (error) {
       if (error instanceof z.ZodError) {

@@ -28,6 +28,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { expenseUserService, ExpenseUser, FeaturePermissions } from "@/services/expenseUserService";
 import ExpenseProjectManagement from "@/components/financial/ExpenseProjectManagement";
+import MFASettings from "@/components/auth/MFASettings";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -601,12 +602,13 @@ const Settings = () => {
       </div>
       
       <Tabs defaultValue="appearance" className="space-y-4">
-        <TabsList className={`grid ${isAdmin ? 'grid-cols-7 lg:w-[840px]' : 'grid-cols-5 lg:w-[600px]'}`}>
+        <TabsList className={`grid ${isAdmin ? 'grid-cols-8 lg:w-[960px]' : 'grid-cols-6 lg:w-[720px]'}`}>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="editor">Editor</TabsTrigger>
           <TabsTrigger value="layout">Layout</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="privacy">Privacy</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
           {isAdmin && <TabsTrigger value="users">Utilizadores</TabsTrigger>}
           {isAdmin && <TabsTrigger value="projects">Projetos</TabsTrigger>}
         </TabsList>
@@ -1117,6 +1119,10 @@ const Settings = () => {
               </AlertDialog>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="security" className="space-y-4">
+          <MFASettings />
         </TabsContent>
 
         {isAdmin && (
