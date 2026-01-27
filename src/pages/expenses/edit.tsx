@@ -68,7 +68,7 @@ const EditExpensePage = () => {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   
-  const [claimType, setClaimType] = useState<"reembolso" | "justificacao_cartao">("reembolso");
+  const [claimType, setClaimType] = useState<"reembolso" | "justificacao_cartao" | "logbook">("reembolso");
   const [description, setDescription] = useState("");
   const [claimDate, setClaimDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [requesterId, setRequesterId] = useState<string>("");
@@ -181,7 +181,7 @@ const EditExpensePage = () => {
   // Load claim data when available
   useEffect(() => {
     if (claim) {
-      setClaimType(claim.claim_type as "reembolso" | "justificacao_cartao");
+      setClaimType(claim.claim_type as "reembolso" | "justificacao_cartao" | "logbook");
       setDescription(claim.description || "");
       setClaimDate(claim.claim_date || format(new Date(), "yyyy-MM-dd"));
       setRequesterId(claim.requester_id || "");
@@ -200,6 +200,9 @@ const EditExpensePage = () => {
     queryKey: ["expense-requesters"],
     queryFn: () => expenseRequesterService.getRequesters(),
   });
+
+  // Get the selected requester
+  const selectedRequester = requesters?.find(r => r.id === requesterId);
 
   // Get current user's expense record to filter projects
   const { data: currentExpenseUser } = useQuery({
@@ -583,6 +586,13 @@ const EditExpensePage = () => {
               <RadioGroupItem value="justificacao_cartao" id="justificacao" />
               <Label htmlFor="justificacao">Justificação de Cartão</Label>
             </div>
+            {/* Show Logbook option only for Vasco Vieira */}
+            {selectedRequester?.name?.toLowerCase().includes("vasco") && (
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="logbook" id="logbook" />
+                <Label htmlFor="logbook">Logbook</Label>
+              </div>
+            )}
           </RadioGroup>
 
           <div>

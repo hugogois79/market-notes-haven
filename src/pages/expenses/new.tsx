@@ -56,7 +56,7 @@ const NewExpensePage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   
-  const [claimType, setClaimType] = useState<"reembolso" | "justificacao_cartao">("reembolso");
+  const [claimType, setClaimType] = useState<"reembolso" | "justificacao_cartao" | "logbook">("reembolso");
   const [description, setDescription] = useState("");
   const [claimDate, setClaimDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [requesterId, setRequesterId] = useState<string>("");
@@ -458,7 +458,7 @@ const NewExpensePage = () => {
             <RadioGroup
               value={claimType}
               onValueChange={(value) =>
-                setClaimType(value as "reembolso" | "justificacao_cartao")
+                setClaimType(value as "reembolso" | "justificacao_cartao" | "logbook")
               }
             >
               <div className="flex items-center space-x-2">
@@ -474,6 +474,13 @@ const NewExpensePage = () => {
                   Justificação de Cartão de Crédito
                 </Label>
               </div>
+              {/* Show Logbook option only for Vasco Vieira */}
+              {selectedRequester?.name?.toLowerCase().includes("vasco") && (
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="logbook" id="logbook" />
+                  <Label htmlFor="logbook">Logbook</Label>
+                </div>
+              )}
             </RadioGroup>
           </div>
 
