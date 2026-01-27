@@ -392,7 +392,7 @@ export default function WorkFlowTab() {
     storageLocation: any;
     settings: any;
     paymentAccountStorageLocation: any | null;
-    destinationCompanies: { id: string; name: string; role: string }[];
+    destinationCompanies: { id: string; name: string; role: string; folderPath?: string }[];
     loanInfo: { 
       lendingCompany: string; 
       borrowingCompany: string; 
@@ -1493,14 +1493,15 @@ export default function WorkFlowTab() {
     }
 
     // Build destination companies list for confirmation
-    const destinationCompanies: { id: string; name: string; role: string }[] = [];
+    const destinationCompanies: { id: string; name: string; role: string; folderPath?: string }[] = [];
     
     // 1. Main company (invoice recipient)
     if (targetCompanyId) {
       destinationCompanies.push({
         id: targetCompanyId,
         name: mainCompanyName,
-        role: "Empresa da fatura"
+        role: "Empresa da fatura",
+        folderPath: matchingLocation?.folder_path || undefined
       });
     }
 
@@ -1509,7 +1510,8 @@ export default function WorkFlowTab() {
       destinationCompanies.push({
         id: paymentAccountStorageLocation.company_id,
         name: payerCompanyName,
-        role: "Pagou a fatura"
+        role: "Pagou a fatura",
+        folderPath: paymentAccountStorageLocation?.folder_path || undefined
       });
     }
 
@@ -4128,14 +4130,25 @@ export default function WorkFlowTab() {
                   <p className="font-medium text-foreground mb-2">
                     📁 Documento será gravado em:
                   </p>
-                  <ul className="space-y-1.5 ml-4">
+                  <ul className="space-y-2 ml-4">
                     {completeConfirmationData?.destinationCompanies.map((company) => (
-                      <li key={company.id} className="flex items-center gap-2">
-                        <Checkbox checked disabled className="opacity-70" />
-                        <span className="text-foreground">{company.name}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {company.role}
-                        </Badge>
+                      <li key={company.id} className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <Checkbox checked disabled className="opacity-70" />
+                          <span className="text-foreground">{company.name}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {company.role}
+                          </Badge>
+                        </div>
+                        {company.folderPath ? (
+                          <p className="text-xs text-muted-foreground ml-6">
+                            📂 {company.folderPath}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 ml-6 italic">
+                            ⚠️ Pasta não configurada para este mês
+                          </p>
+                        )}
                       </li>
                     ))}
                   </ul>
