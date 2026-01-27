@@ -31,6 +31,24 @@ import {
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+const normalizePaymentMethod = (pm?: string | null): "bank_transfer" | "credit_card" => {
+  const v = (pm || "").toLowerCase().trim();
+  if (!v) return "bank_transfer";
+
+  // Handle legacy/ocr values
+  if (
+    v === "credit_card" ||
+    v === "credit card" ||
+    v === "card" ||
+    v.includes("cartão") ||
+    v.includes("cartao")
+  ) {
+    return "credit_card";
+  }
+
+  return "bank_transfer";
+};
+
 interface WorkflowExpensePanelProps {
   file: {
     id: string;
@@ -232,7 +250,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           entity_name: existingTransaction.entity_name || "",
           total_amount: existingTransaction.total_amount?.toString() || "",
           vat_rate: existingTransaction.vat_rate?.toString() || "23",
-          payment_method: existingTransaction.payment_method || "bank_transfer",
+          payment_method: normalizePaymentMethod(existingTransaction.payment_method),
           bank_account_id: existingTransaction.bank_account_id || "",
           invoice_number: existingTransaction.invoice_number || "",
           notes: existingTransaction.notes || "",
@@ -263,17 +281,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         }
         
         // Map OCR payment_method to form values
-        let paymentMethod = "bank_transfer";
-        if (file.payment_method) {
-          const pm = file.payment_method.toLowerCase();
-          if (pm.includes("cash") || pm.includes("dinheiro") || pm.includes("numerário")) {
-            paymentMethod = "cash";
-          } else if (pm.includes("card") || pm.includes("cartão") || pm.includes("cartao")) {
-            paymentMethod = "card";
-          } else if (pm.includes("cheque") || pm.includes("check")) {
-            paymentMethod = "check";
-          }
-        }
+        const paymentMethod = normalizePaymentMethod(file.payment_method);
         
         reset({
           date: file.invoice_date || new Date().toISOString().split("T")[0],
