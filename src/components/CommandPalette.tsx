@@ -26,6 +26,7 @@ import {
   FolderKanban,
 } from 'lucide-react';
 import { KanbanService, KanbanSpace, KanbanBoard } from '@/services/kanbanService';
+import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 
 interface CommandPaletteProps {
   open: boolean;
@@ -41,10 +42,14 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
   onOpenShortcutsHelp,
 }) => {
   const navigate = useNavigate();
+  const { isAdmin, hasAccess, loading: permissionsLoading } = useFeatureAccess();
   const [viewMode, setViewMode] = useState<ViewMode>('main');
   const [spaces, setSpaces] = useState<KanbanSpace[]>([]);
   const [boards, setBoards] = useState<KanbanBoard[]>([]);
   const [isLoadingBoards, setIsLoadingBoards] = useState(false);
+  
+  // Check if user can see boards
+  const canViewBoards = isAdmin || hasAccess('projects');
 
   // Reset view mode when dialog closes
   useEffect(() => {
@@ -53,12 +58,12 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     }
   }, [open]);
 
-  // Load boards and spaces when entering boards view
+  // Load boards and spaces when entering boards view (only if user has permission)
   useEffect(() => {
-    if (viewMode === 'boards' && open) {
+    if (viewMode === 'boards' && open && canViewBoards && !permissionsLoading) {
       loadBoardsData();
     }
-  }, [viewMode, open]);
+  }, [viewMode, open, canViewBoards, permissionsLoading]);
 
   const loadBoardsData = async () => {
     setIsLoadingBoards(true);
@@ -85,7 +90,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     { icon: Home, label: 'Dashboard', shortcut: 'G I', path: '/' },
     { icon: FileText, label: 'Notas', shortcut: 'G N', path: '/notes' },
     { icon: Calendar, label: 'Calendário', shortcut: 'G C', path: '/calendar' },
-    { icon: Layout, label: 'Boards', shortcut: 'G K', path: '/kanban', keywords: ['kanban', 'boards'], hasSubmenu: true },
+    { icon: Layout, label: 'Boards', shortcut: 'G K', path: '/kanban', keywords: ['kanban', 'boards'], hasSubmenu: true, requiresProjects: true },
     { icon: FolderOpen, label: 'Projetos', shortcut: 'G P', path: '/projects' },
     { icon: Receipt, label: 'Despesas', shortcut: 'G E', path: '/expenses' },
     { icon: Building2, label: 'Workflow', shortcut: 'G W', path: '/companies', keywords: ['work', 'empresas', 'companies'] },
@@ -93,6 +98,14 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     { icon: Scale, label: 'Legal', path: '/legal' },
     { icon: Settings, label: 'Definições', shortcut: 'G S', path: '/settings' },
   ];
+
+  // Filter navigation items based on permissions
+  const filteredNavigationItems = navigationItems.filter(item => {
+    if (item.requiresProjects) {
+      return canViewBoards;
+    }
+    return true;
+  });
 
   const actionItems = [
     { 
@@ -193,7 +206,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
         
         <CommandGroup heading="Navegação">
-          {navigationItems.map((item) => (
+          {filteredNavigationItems.map((item) => (
             <CommandItem
               key={item.path}
               onSelect={() => {
