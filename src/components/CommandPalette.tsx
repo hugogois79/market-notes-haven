@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CommandDialog,
@@ -47,16 +47,24 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
   const [spaces, setSpaces] = useState<KanbanSpace[]>([]);
   const [boards, setBoards] = useState<KanbanBoard[]>([]);
   const [isLoadingBoards, setIsLoadingBoards] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
   
   // Check if user can see boards
   const canViewBoards = isAdmin || hasAccess('projects');
 
-  // Reset view mode when dialog closes
+  // Reset view mode and search when dialog closes
   useEffect(() => {
     if (!open) {
       setViewMode('main');
+      setSearchValue('');
     }
   }, [open]);
+
+  // Clear search when entering boards view
+  const handleEnterBoardsView = () => {
+    setSearchValue('');
+    setViewMode('boards');
+  };
 
   // Load boards and spaces when entering boards view (only if user has permission)
   useEffect(() => {
@@ -142,7 +150,11 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
 
     return (
       <CommandDialog open={open} onOpenChange={onOpenChange}>
-        <CommandInput placeholder="Pesquisar boards..." />
+        <CommandInput 
+          placeholder="Pesquisar boards..." 
+          value={searchValue}
+          onValueChange={setSearchValue}
+        />
         <CommandList>
           <CommandEmpty>Nenhum board encontrado.</CommandEmpty>
           
@@ -211,7 +223,11 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Escreva um comando ou pesquise..." />
+      <CommandInput 
+        placeholder="Escreva um comando ou pesquise..." 
+        value={searchValue}
+        onValueChange={setSearchValue}
+      />
       <CommandList>
         <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
         
@@ -221,7 +237,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
               key={item.path}
               onSelect={() => {
                 if (item.hasSubmenu) {
-                  setViewMode('boards');
+                  handleEnterBoardsView();
                 } else {
                   runCommand(() => navigate(item.path));
                 }
@@ -239,7 +255,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
 
         {canViewBoards && (
           <CommandGroup heading="Boards">
-            <CommandItem onSelect={() => setViewMode('boards')}>
+            <CommandItem onSelect={handleEnterBoardsView}>
               <Layout className="mr-2 h-4 w-4" />
               <span>Explorar Boards</span>
               <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground" />
