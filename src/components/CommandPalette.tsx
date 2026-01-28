@@ -65,6 +65,16 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     }
   }, [viewMode, open, canViewBoards, permissionsLoading]);
 
+  // Preload boards when opening the palette so searching "board" shows results immediately
+  useEffect(() => {
+    if (!open) return;
+    if (!canViewBoards || permissionsLoading) return;
+    // Avoid refetching on every open if we already have data
+    if (boards.length > 0) return;
+    loadBoardsData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, canViewBoards, permissionsLoading]);
+
   const loadBoardsData = async () => {
     setIsLoadingBoards(true);
     try {
@@ -226,6 +236,38 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
             </CommandItem>
           ))}
         </CommandGroup>
+
+        {canViewBoards && (
+          <CommandGroup heading="Boards">
+            <CommandItem onSelect={() => setViewMode('boards')}>
+              <Layout className="mr-2 h-4 w-4" />
+              <span>Explorar Boards</span>
+              <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground" />
+            </CommandItem>
+
+            {isLoadingBoards ? (
+              <CommandItem disabled>
+                <span className="text-muted-foreground">A carregar boards...</span>
+              </CommandItem>
+            ) : (
+              boards
+                .filter((b) => !b.archived)
+                .slice(0, 12)
+                .map((board) => (
+                  <CommandItem
+                    key={board.id}
+                    onSelect={() => runCommand(() => navigate(`/kanban/${board.id}`))}
+                  >
+                    <div
+                      className="mr-2 h-3 w-3 rounded"
+                      style={{ backgroundColor: board.color || '#0a4a6b' }}
+                    />
+                    <span>{board.title}</span>
+                  </CommandItem>
+                ))
+            )}
+          </CommandGroup>
+        )}
 
         <CommandGroup heading="Ações">
           {actionItems.map((item, index) => (
