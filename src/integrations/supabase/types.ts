@@ -232,12 +232,17 @@ export type Database = {
           created_at: string | null
           description: string | null
           due_date: string | null
+          error: string | null
           id: string
           priority: string | null
+          prompt: string | null
+          result: string | null
           source: string | null
+          started_at: string | null
           status: string
           tags: string[] | null
           title: string
+          tools: string[] | null
           updated_at: string | null
         }
         Insert: {
@@ -245,12 +250,17 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           due_date?: string | null
+          error?: string | null
           id?: string
           priority?: string | null
+          prompt?: string | null
+          result?: string | null
           source?: string | null
+          started_at?: string | null
           status?: string
           tags?: string[] | null
           title: string
+          tools?: string[] | null
           updated_at?: string | null
         }
         Update: {
@@ -258,12 +268,17 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           due_date?: string | null
+          error?: string | null
           id?: string
           priority?: string | null
+          prompt?: string | null
+          result?: string | null
           source?: string | null
+          started_at?: string | null
           status?: string
           tags?: string[] | null
           title?: string
+          tools?: string[] | null
           updated_at?: string | null
         }
         Relationships: []
@@ -2866,6 +2881,42 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_confirmations: {
+        Row: {
+          candidates: string | null
+          chat_id: string | null
+          created_at: string | null
+          date: string | null
+          id: string
+          pax: number | null
+          searched_for: string | null
+          status: string | null
+          time: string | null
+        }
+        Insert: {
+          candidates?: string | null
+          chat_id?: string | null
+          created_at?: string | null
+          date?: string | null
+          id?: string
+          pax?: number | null
+          searched_for?: string | null
+          status?: string | null
+          time?: string | null
+        }
+        Update: {
+          candidates?: string | null
+          chat_id?: string | null
+          created_at?: string | null
+          date?: string | null
+          id?: string
+          pax?: number | null
+          searched_for?: string | null
+          status?: string | null
+          time?: string | null
+        }
+        Relationships: []
+      }
       plan_snapshots: {
         Row: {
           cashflow_snapshot: Json | null
@@ -3902,6 +3953,177 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      restaurant_notes: {
+        Row: {
+          created_at: string | null
+          date_time: string | null
+          detail: string | null
+          id: string
+          info_type: string | null
+          restaurant_name: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date_time?: string | null
+          detail?: string | null
+          id?: string
+          info_type?: string | null
+          restaurant_name?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date_time?: string | null
+          detail?: string | null
+          id?: string
+          info_type?: string | null
+          restaurant_name?: string | null
+        }
+        Relationships: []
+      }
+      restaurants: {
+        Row: {
+          contact: string | null
+          created_at: string | null
+          id: string
+          name: string
+          notes: string | null
+          opening_hours: string | null
+          phone: string | null
+          preferred_table: string | null
+        }
+        Insert: {
+          contact?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          opening_hours?: string | null
+          phone?: string | null
+          preferred_table?: string | null
+        }
+        Update: {
+          contact?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          opening_hours?: string | null
+          phone?: string | null
+          preferred_table?: string | null
+        }
+        Relationships: []
+      }
+      retry_queue: {
+        Row: {
+          attempt_count: number | null
+          attempt_times: string | null
+          contacto_vip: string | null
+          created_at: string | null
+          date: string | null
+          id: string
+          mesa_preferida: string | null
+          next_retry_at: string | null
+          obs_criticas: string | null
+          pax: number | null
+          restaurant_name: string | null
+          status: string | null
+          telefone: string | null
+          telegram_chat_id: string | null
+          time: string | null
+        }
+        Insert: {
+          attempt_count?: number | null
+          attempt_times?: string | null
+          contacto_vip?: string | null
+          created_at?: string | null
+          date?: string | null
+          id?: string
+          mesa_preferida?: string | null
+          next_retry_at?: string | null
+          obs_criticas?: string | null
+          pax?: number | null
+          restaurant_name?: string | null
+          status?: string | null
+          telefone?: string | null
+          telegram_chat_id?: string | null
+          time?: string | null
+        }
+        Update: {
+          attempt_count?: number | null
+          attempt_times?: string | null
+          contacto_vip?: string | null
+          created_at?: string | null
+          date?: string | null
+          id?: string
+          mesa_preferida?: string | null
+          next_retry_at?: string | null
+          obs_criticas?: string | null
+          pax?: number | null
+          restaurant_name?: string | null
+          status?: string | null
+          telefone?: string | null
+          telegram_chat_id?: string | null
+          time?: string | null
+        }
+        Relationships: []
+      }
+      scheduled_calls: {
+        Row: {
+          call_date: string | null
+          call_datetime: string | null
+          call_time: string | null
+          called_at: string | null
+          chat_id: string | null
+          contacto_vip: string | null
+          created_at: string | null
+          date: string | null
+          id: string
+          mesa_preferida: string | null
+          obs_criticas: string | null
+          pax: number | null
+          restaurant_name: string | null
+          status: string | null
+          telefone: string | null
+          time: string | null
+        }
+        Insert: {
+          call_date?: string | null
+          call_datetime?: string | null
+          call_time?: string | null
+          called_at?: string | null
+          chat_id?: string | null
+          contacto_vip?: string | null
+          created_at?: string | null
+          date?: string | null
+          id?: string
+          mesa_preferida?: string | null
+          obs_criticas?: string | null
+          pax?: number | null
+          restaurant_name?: string | null
+          status?: string | null
+          telefone?: string | null
+          time?: string | null
+        }
+        Update: {
+          call_date?: string | null
+          call_datetime?: string | null
+          call_time?: string | null
+          called_at?: string | null
+          chat_id?: string | null
+          contacto_vip?: string | null
+          created_at?: string | null
+          date?: string | null
+          id?: string
+          mesa_preferida?: string | null
+          obs_criticas?: string | null
+          pax?: number | null
+          restaurant_name?: string | null
+          status?: string | null
+          telefone?: string | null
+          time?: string | null
+        }
+        Relationships: []
       }
       securities: {
         Row: {
