@@ -1668,6 +1668,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          is_shared: boolean
           space_id: string | null
           title: string
           updated_at: string | null
@@ -1679,6 +1680,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          is_shared?: boolean
           space_id?: string | null
           title: string
           updated_at?: string | null
@@ -1690,6 +1692,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          is_shared?: boolean
           space_id?: string | null
           title?: string
           updated_at?: string | null
@@ -6256,6 +6259,10 @@ export type Database = {
         Args: { p_staff_id: string }
         Returns: Json
       }
+      can_view_board: {
+        Args: { _board_user_id: string; _is_shared: boolean; _user_id: string }
+        Returns: boolean
+      }
       check_vacation_conflicts: {
         Args: {
           p_end_date: string
@@ -6353,6 +6360,10 @@ export type Database = {
       update_claim_total: { Args: { claim_id: string }; Returns: undefined }
       user_can_access_company: {
         Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_has_projects_permission: {
+        Args: { _user_id: string }
         Returns: boolean
       }
     }

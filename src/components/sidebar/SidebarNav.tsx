@@ -52,19 +52,26 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
   const [boards, setBoards] = useState<any[]>([]);
 
   useEffect(() => {
-    // Don't fetch boards for workers
-    if (isWorker) return;
+    // Wait for permissions to fully load before fetching
+    if (roleLoading || permissionsLoading) return;
+    
+    // Don't fetch boards for workers or users without projects permission
+    if (isWorker || (!isAdmin && !hasAccess('projects'))) return;
     
     const fetchData = async () => {
-      const [fetchedSpaces, fetchedBoards] = await Promise.all([
-        KanbanService.getSpaces(),
-        KanbanService.getBoards()
-      ]);
-      setSpaces(fetchedSpaces);
-      setBoards(fetchedBoards);
+      try {
+        const [fetchedSpaces, fetchedBoards] = await Promise.all([
+          KanbanService.getSpaces(),
+          KanbanService.getBoards()
+        ]);
+        setSpaces(fetchedSpaces);
+        setBoards(fetchedBoards);
+      } catch (error) {
+        console.error('Error loading boards:', error);
+      }
     };
     fetchData();
-  }, [isWorker]);
+  }, [isWorker, isAdmin, roleLoading, permissionsLoading, hasAccess]);
 
   const toggleSpace = (spaceId: string) => {
     const newExpanded = new Set(expandedSpaces);
