@@ -256,6 +256,18 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                           onUpdateCard(cardId, { priority });
                           toast.success(`Prioridade alterada para ${priority}`);
                         }}
+                        onToggleProcurement={(cardId) => {
+                          const card = cards.find(c => c.id === cardId);
+                          if (card) {
+                            const currentTags = card.tags || [];
+                            const hasProcurement = currentTags.includes('_procurement');
+                            const newTags = hasProcurement 
+                              ? currentTags.filter(t => t !== '_procurement')
+                              : [...currentTags, '_procurement'];
+                            onUpdateCard(cardId, { tags: newTags });
+                            toast.success(hasProcurement ? 'Procurement removido' : 'Marcado para pedir orçamentos');
+                          }
+                        }}
                         onDeleteCard={(cardId) => {
                           onDeleteCard(cardId);
                         }}

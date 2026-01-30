@@ -4,7 +4,7 @@ import { KanbanCard as KanbanCardType } from '@/services/kanbanService';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, AlertCircle, CheckCircle2, RotateCcw, Paperclip, ListChecks, Tag, Euro, Trash2 } from 'lucide-react';
+import { Calendar, AlertCircle, CheckCircle2, RotateCcw, Paperclip, ListChecks, Tag, Euro, Trash2, ShoppingCart } from 'lucide-react';
 import { format, isPast, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import {
@@ -21,6 +21,7 @@ interface KanbanCardProps {
   onClick: () => void;
   onMarkComplete: (cardId: string) => void;
   onChangePriority: (cardId: string, priority: 'low' | 'medium' | 'high') => void;
+  onToggleProcurement: (cardId: string) => void;
   onDeleteCard: (cardId: string) => void;
 }
 
@@ -30,8 +31,11 @@ const priorityColors = {
   high: 'bg-red-100 text-red-800 hover:bg-red-200'
 };
 
-export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, onMarkComplete, onChangePriority, onDeleteCard }) => {
+export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, onMarkComplete, onChangePriority, onToggleProcurement, onDeleteCard }) => {
   const [isHovered, setIsHovered] = useState(false);
+
+  // Check if card is marked for procurement
+  const isProcurement = card.tags?.includes('_procurement') ?? false;
 
   // Calculate if card is overdue
   const isOverdue = card.due_date && !card.concluded ? (() => {
@@ -61,7 +65,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
               {...provided.dragHandleProps}
               className={`mb-2 cursor-pointer hover:shadow-md transition-shadow relative ${
                 snapshot.isDragging ? 'shadow-lg rotate-2' : ''
-              } ${isOverdue ? 'bg-red-50 border-red-300 dark:bg-red-950/30 dark:border-red-800' : ''}`}
+              } ${isProcurement ? 'bg-purple-50 border-purple-400 dark:bg-purple-950/30 dark:border-purple-700' : isOverdue ? 'bg-red-50 border-red-300 dark:bg-red-950/30 dark:border-red-800' : ''}`}
               onClick={onClick}
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
@@ -165,6 +169,14 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
             >
               <AlertCircle className="h-4 w-4 mr-2" />
               Baixa prioridade
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem 
+              onClick={() => onToggleProcurement(card.id)}
+              className="text-purple-600"
+            >
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              {isProcurement ? 'Remover Procurement' : 'Pedir Orçamentos'}
             </ContextMenuItem>
             <ContextMenuSeparator />
             <ContextMenuItem 
