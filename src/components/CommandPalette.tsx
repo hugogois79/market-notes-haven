@@ -145,7 +145,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     { 
       icon: Plus, 
       label: 'Criar', 
-      keywords: ['create', 'novo', 'new', 'add', 'adicionar'],
+      keywords: ['create', 'criar', 'cria', 'novo', 'new', 'add', 'adicionar'],
       hasSubmenu: true,
       action: handleEnterCreateView 
     },
@@ -357,6 +357,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
           {actionItems.map((item, index) => (
             <CommandItem
               key={index}
+              keywords={item.keywords}
               onSelect={() => {
                 if (item.hasSubmenu) {
                   item.action();
