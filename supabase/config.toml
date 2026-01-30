@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.analyze-document-webhook]
 verify_jwt = false
+
+[functions.generate-tasks-from-text]
+verify_jwt = false

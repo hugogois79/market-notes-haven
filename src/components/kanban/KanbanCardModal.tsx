@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
-import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download, Plus, Tag } from 'lucide-react';
+import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download, Plus, Tag, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -28,6 +28,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { AiTaskGeneratorDialog } from './AiTaskGeneratorDialog';
 
 interface KanbanCardModalProps {
   card: KanbanCard;
@@ -67,6 +68,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   const [value, setValue] = useState<number>(card.value || 0);
   const [isFilePickerOpen, setIsFilePickerOpen] = useState(false);
   const [thumbnailUrls, setThumbnailUrls] = useState<Record<string, string>>({});
+  const [showAiDialog, setShowAiDialog] = useState(false);
 
   const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
@@ -344,6 +346,36 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     onClose();
   };
 
+  const handleAiTasksCreated = async (newTasks: Array<{ title: string; description: string; priority: 'low' | 'medium' | 'high' }>) => {
+    try {
+      // Get the current max position in this list
+      const existingCards = await KanbanService.getCards(card.list_id);
+      let nextPosition = existingCards.length > 0 
+        ? Math.max(...existingCards.map(c => c.position)) + 1 
+        : 0;
+
+      // Create all cards
+      for (const task of newTasks) {
+        await KanbanService.createCard({
+          title: task.title,
+          description: task.description,
+          priority: task.priority,
+          list_id: card.list_id,
+          position: nextPosition++
+        });
+      }
+
+      toast.success(`${newTasks.length} card${newTasks.length !== 1 ? 's' : ''} criado${newTasks.length !== 1 ? 's' : ''} com sucesso!`);
+      
+      // Trigger a refresh by calling onUpdate with no changes
+      // This will cause the parent to refetch the cards
+      onUpdate(card.id, {});
+    } catch (error) {
+      console.error('Error creating AI tasks:', error);
+      toast.error('Erro ao criar cards');
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       // Prevent closing during file picker or upload
@@ -352,13 +384,24 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="text-lg font-semibold border-none p-0 focus-visible:ring-0"
-            />
-          </DialogTitle>
+          <div className="flex items-center gap-2">
+            <DialogTitle className="flex-1">
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="text-lg font-semibold border-none p-0 focus-visible:ring-0"
+              />
+            </DialogTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAiDialog(true)}
+              className="flex items-center gap-1.5"
+            >
+              <Sparkles className="h-4 w-4" />
+              AI
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -608,6 +651,12 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
           </div>
         </div>
       </DialogContent>
+
+      <AiTaskGeneratorDialog
+        isOpen={showAiDialog}
+        onClose={() => setShowAiDialog(false)}
+        onTasksCreated={handleAiTasksCreated}
+      />
     </Dialog>
   );
 };
