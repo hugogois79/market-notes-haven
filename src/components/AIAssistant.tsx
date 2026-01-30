@@ -119,12 +119,59 @@ const AIAssistant = () => {
   // Context detection - check both /kanban and /kanban/:id routes
   const isCalendarPage = location.pathname === '/calendar';
   const isKanbanPage = location.pathname === '/kanban' || location.pathname.startsWith('/kanban/');
+  
+  // Extract boardId from URL if on a specific board page
+  const currentBoardId = location.pathname.startsWith('/kanban/') 
+    ? location.pathname.split('/kanban/')[1]?.split('/')[0] || null
+    : null;
 
   // Kanban mode states
   const [kanbanInputText, setKanbanInputText] = useState('');
   const [kanbanExtractedItems, setKanbanExtractedItems] = useState<ExtractedKanbanItems | null>(null);
   const [kanbanStep, setKanbanStep] = useState<'input' | 'results'>('input');
   const [isCreating, setIsCreating] = useState(false);
+  
+  // Current board context states
+  const [currentBoardInfo, setCurrentBoardInfo] = useState<{ id: string; title: string; lists: Array<{ id: string; title: string }> } | null>(null);
+  const [loadingBoardInfo, setLoadingBoardInfo] = useState(false);
+  
+  // Load current board info when on a specific board page
+  useEffect(() => {
+    const loadBoardInfo = async () => {
+      if (!currentBoardId || !isOpen) {
+        setCurrentBoardInfo(null);
+        return;
+      }
+      
+      setLoadingBoardInfo(true);
+      try {
+        // Load board info
+        const { data: boardData, error: boardError } = await supabase
+          .from('kanban_boards')
+          .select('id, title')
+          .eq('id', currentBoardId)
+          .single();
+        
+        if (boardError) throw boardError;
+        
+        // Load lists for this board
+        const lists = await KanbanService.getLists(currentBoardId);
+        
+        setCurrentBoardInfo({
+          id: boardData.id,
+          title: boardData.title,
+          lists: lists.map(l => ({ id: l.id, title: l.title }))
+        });
+      } catch (error) {
+        console.error('Error loading board info:', error);
+        setCurrentBoardInfo(null);
+      } finally {
+        setLoadingBoardInfo(false);
+      }
+    };
+    
+    loadBoardInfo();
+  }, [currentBoardId, isOpen]);
 
   // Quick actions for calendar page
   const calendarQuickActions: QuickAction[] = [
@@ -171,22 +218,52 @@ const AIAssistant = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('generate-kanban-structure', {
-        body: { text: kanbanInputText }
-      });
+      // If we're on a specific board, use generate-tasks endpoint (cards only)
+      // Otherwise use generate-kanban-structure (full structure)
+      if (currentBoardInfo) {
+        const { data, error } = await supabase.functions.invoke('generate-tasks-from-text', {
+          body: { text: kanbanInputText }
+        });
 
-      if (error) throw new Error(error.message);
-      if (data.error) throw new Error(data.error);
+        if (error) throw new Error(error.message);
+        if (data.error) throw new Error(data.error);
 
-      // Add selected: true to all items by default
-      const extractedItems: ExtractedKanbanItems = {
-        boards: (data.boards || []).map((b: any) => ({ ...b, selected: true })),
-        lists: (data.lists || []).map((l: any) => ({ ...l, selected: true })),
-        cards: (data.cards || []).map((c: any) => ({ ...c, selected: true }))
-      };
+        // Only cards when on a specific board
+        const extractedItems: ExtractedKanbanItems = {
+          boards: [],
+          lists: [],
+          cards: (data.tasks || []).map((c: any) => ({ 
+            title: c.title,
+            description: c.description,
+            priority: c.priority,
+            selected: true 
+          }))
+        };
 
-      setKanbanExtractedItems(extractedItems);
-      setKanbanStep('results');
+        if (extractedItems.cards.length === 0) {
+          toast.error('Não foram encontrados cards acionáveis no texto.');
+        } else {
+          setKanbanExtractedItems(extractedItems);
+          setKanbanStep('results');
+        }
+      } else {
+        const { data, error } = await supabase.functions.invoke('generate-kanban-structure', {
+          body: { text: kanbanInputText }
+        });
+
+        if (error) throw new Error(error.message);
+        if (data.error) throw new Error(data.error);
+
+        // Add selected: true to all items by default
+        const extractedItems: ExtractedKanbanItems = {
+          boards: (data.boards || []).map((b: any) => ({ ...b, selected: true })),
+          lists: (data.lists || []).map((l: any) => ({ ...l, selected: true })),
+          cards: (data.cards || []).map((c: any) => ({ ...c, selected: true }))
+        };
+
+        setKanbanExtractedItems(extractedItems);
+        setKanbanStep('results');
+      }
 
     } catch (error) {
       console.error("Error generating kanban structure:", error);
@@ -218,84 +295,13 @@ const AIAssistant = () => {
     setIsCreating(true);
 
     try {
-      const boardIdMap: Record<number, string> = {};
-      const listIdMap: Record<number, string> = {};
-
-      // 1. Create boards
-      const selectedBoards = kanbanExtractedItems.boards.filter(b => b.selected);
-      for (let i = 0; i < selectedBoards.length; i++) {
-        const board = selectedBoards[i];
-        const originalIndex = kanbanExtractedItems.boards.findIndex(b => b.title === board.title);
+      // MODE 1: Adding cards to existing board
+      if (currentBoardInfo && currentBoardInfo.lists.length > 0) {
+        const selectedCards = kanbanExtractedItems.cards.filter(c => c.selected);
+        const targetListId = currentBoardInfo.lists[0].id; // First list as default
         
-        const created = await KanbanService.createBoard({
-          title: board.title,
-          description: board.description,
-          color: board.color || 'blue'
-        });
-        
-        boardIdMap[originalIndex] = created.id;
-
-        // Create default lists for the board
-        await KanbanService.createList({
-          board_id: created.id,
-          title: 'A Fazer',
-          position: 0
-        });
-        await KanbanService.createList({
-          board_id: created.id,
-          title: 'Em Progresso',
-          position: 1
-        });
-        await KanbanService.createList({
-          board_id: created.id,
-          title: 'Concluído',
-          position: 2
-        });
-      }
-
-      // 2. Create lists (if they reference a created board)
-      const selectedLists = kanbanExtractedItems.lists.filter(l => l.selected);
-      for (let i = 0; i < selectedLists.length; i++) {
-        const list = selectedLists[i];
-        const originalIndex = kanbanExtractedItems.lists.findIndex(l => l.title === list.title);
-        
-        // Only create if boardRef points to a created board
-        if (list.boardRef !== undefined && boardIdMap[list.boardRef]) {
-          const created = await KanbanService.createList({
-            board_id: boardIdMap[list.boardRef],
-            title: list.title,
-            position: 10 + i // After default lists
-          });
-          listIdMap[originalIndex] = created.id;
-        }
-      }
-
-      // 3. Create cards (if they reference a created list)
-      const selectedCards = kanbanExtractedItems.cards.filter(c => c.selected);
-      let cardsCreated = 0;
-      
-      for (let i = 0; i < selectedCards.length; i++) {
-        const card = selectedCards[i];
-        
-        // Find the target list
-        let targetListId: string | undefined;
-        
-        if (card.listRef !== undefined && listIdMap[card.listRef]) {
-          targetListId = listIdMap[card.listRef];
-        }
-        
-        // If no list reference or list wasn't created, skip for now
-        // (Cards need a list to belong to)
-        if (!targetListId) {
-          // Try to find a default list from a created board
-          const firstBoardId = Object.values(boardIdMap)[0];
-          if (firstBoardId) {
-            const lists = await KanbanService.getLists(firstBoardId);
-            targetListId = lists[0]?.id;
-          }
-        }
-
-        if (targetListId) {
+        for (let i = 0; i < selectedCards.length; i++) {
+          const card = selectedCards[i];
           await KanbanService.createCard({
             list_id: targetListId,
             title: card.title,
@@ -303,15 +309,112 @@ const AIAssistant = () => {
             priority: card.priority,
             position: i
           });
-          cardsCreated++;
         }
+
+        // Refresh the current board data
+        queryClient.invalidateQueries({ queryKey: ['kanban-board', currentBoardInfo.id] });
+        queryClient.invalidateQueries({ queryKey: ['kanban-lists', currentBoardInfo.id] });
+        queryClient.invalidateQueries({ queryKey: ['kanban-cards'] });
+
+        toast.success(`${selectedCards.length} cards adicionados ao board "${currentBoardInfo.title}"!`);
+      } 
+      // MODE 2: Creating full structure (boards, lists, cards)
+      else {
+        const boardIdMap: Record<number, string> = {};
+        const listIdMap: Record<number, string> = {};
+
+        // 1. Create boards
+        const selectedBoards = kanbanExtractedItems.boards.filter(b => b.selected);
+        for (let i = 0; i < selectedBoards.length; i++) {
+          const board = selectedBoards[i];
+          const originalIndex = kanbanExtractedItems.boards.findIndex(b => b.title === board.title);
+          
+          const created = await KanbanService.createBoard({
+            title: board.title,
+            description: board.description,
+            color: board.color || 'blue'
+          });
+          
+          boardIdMap[originalIndex] = created.id;
+
+          // Create default lists for the board
+          await KanbanService.createList({
+            board_id: created.id,
+            title: 'A Fazer',
+            position: 0
+          });
+          await KanbanService.createList({
+            board_id: created.id,
+            title: 'Em Progresso',
+            position: 1
+          });
+          await KanbanService.createList({
+            board_id: created.id,
+            title: 'Concluído',
+            position: 2
+          });
+        }
+
+        // 2. Create lists (if they reference a created board)
+        const selectedLists = kanbanExtractedItems.lists.filter(l => l.selected);
+        for (let i = 0; i < selectedLists.length; i++) {
+          const list = selectedLists[i];
+          const originalIndex = kanbanExtractedItems.lists.findIndex(l => l.title === list.title);
+          
+          // Only create if boardRef points to a created board
+          if (list.boardRef !== undefined && boardIdMap[list.boardRef]) {
+            const created = await KanbanService.createList({
+              board_id: boardIdMap[list.boardRef],
+              title: list.title,
+              position: 10 + i // After default lists
+            });
+            listIdMap[originalIndex] = created.id;
+          }
+        }
+
+        // 3. Create cards (if they reference a created list)
+        const selectedCards = kanbanExtractedItems.cards.filter(c => c.selected);
+        let cardsCreated = 0;
+        
+        for (let i = 0; i < selectedCards.length; i++) {
+          const card = selectedCards[i];
+          
+          // Find the target list
+          let targetListId: string | undefined;
+          
+          if (card.listRef !== undefined && listIdMap[card.listRef]) {
+            targetListId = listIdMap[card.listRef];
+          }
+          
+          // If no list reference or list wasn't created, skip for now
+          // (Cards need a list to belong to)
+          if (!targetListId) {
+            // Try to find a default list from a created board
+            const firstBoardId = Object.values(boardIdMap)[0];
+            if (firstBoardId) {
+              const lists = await KanbanService.getLists(firstBoardId);
+              targetListId = lists[0]?.id;
+            }
+          }
+
+          if (targetListId) {
+            await KanbanService.createCard({
+              list_id: targetListId,
+              title: card.title,
+              description: card.description,
+              priority: card.priority,
+              position: i
+            });
+            cardsCreated++;
+          }
+        }
+
+        // Refresh boards data
+        queryClient.invalidateQueries({ queryKey: ['kanban-boards'] });
+
+        const totalCreated = selectedBoards.length + selectedLists.length + cardsCreated;
+        toast.success(`${totalCreated} itens criados com sucesso!`);
       }
-
-      // Refresh boards data
-      queryClient.invalidateQueries({ queryKey: ['kanban-boards'] });
-
-      const totalCreated = selectedBoards.length + selectedLists.length + cardsCreated;
-      toast.success(`${totalCreated} itens criados com sucesso!`);
 
       // Reset and close
       setKanbanInputText('');
@@ -543,7 +646,10 @@ const AIAssistant = () => {
       return (
         <>
           <LayoutGrid className="h-5 w-5 text-indigo-600" />
-          Assistente AI - Kanban
+          {currentBoardInfo 
+            ? `Adicionar a ${currentBoardInfo.title}`
+            : 'Assistente AI - Kanban'
+          }
         </>
       );
     }
@@ -612,18 +718,39 @@ const AIAssistant = () => {
       return (
         <div className="flex flex-col h-full">
           <div className="flex-1 p-4">
+            {/* Show current board context if available */}
+            {loadingBoardInfo ? (
+              <div className="text-center py-4">
+                <Loader2 className="h-5 w-5 mx-auto animate-spin text-muted-foreground" />
+              </div>
+            ) : currentBoardInfo ? (
+              <div className="mb-4 p-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800">
+                <p className="text-xs text-muted-foreground mb-1">A adicionar cards ao board:</p>
+                <p className="font-medium text-indigo-700 dark:text-indigo-300">{currentBoardInfo.title}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Lista destino: {currentBoardInfo.lists[0]?.title || 'Primeira lista'}
+                </p>
+              </div>
+            ) : null}
+
             <div className="text-center py-6 text-muted-foreground mb-4">
               <LayoutGrid className="h-12 w-12 mx-auto mb-4 opacity-50 text-indigo-500" />
               <p className="text-sm font-medium mb-1">
-                Gerar Estrutura Kanban
+                {currentBoardInfo ? 'Gerar Cards' : 'Gerar Estrutura Kanban'}
               </p>
               <p className="text-xs opacity-70">
-                Cola um texto (relatório, email, lista de tarefas) e a AI vai extrair boards, listas e cards.
+                {currentBoardInfo 
+                  ? 'Cola um texto e a AI vai extrair cards para adicionar ao board atual.'
+                  : 'Cola um texto (relatório, email, lista de tarefas) e a AI vai extrair boards, listas e cards.'
+                }
               </p>
             </div>
 
             <Textarea
-              placeholder="Cole aqui o texto para analisar...&#10;&#10;Exemplo: Relatório de projeto, email com tarefas, lista de afazeres...&#10;&#10;Pressiona Ctrl+Enter para gerar"
+              placeholder={currentBoardInfo 
+                ? "Cole aqui o texto para extrair cards...\n\nExemplo: Lista de tarefas, email com ações, relatório...\n\nPressiona Ctrl+Enter para gerar"
+                : "Cole aqui o texto para analisar...\n\nExemplo: Relatório de projeto, email com tarefas, lista de afazeres...\n\nPressiona Ctrl+Enter para gerar"
+              }
               value={kanbanInputText}
               onChange={(e) => setKanbanInputText(e.target.value)}
               onKeyDown={(e) => {
@@ -652,7 +779,7 @@ const AIAssistant = () => {
               ) : (
                 <>
                   <Sparkles className="h-4 w-4 mr-2" />
-                  Gerar Estrutura
+                  {currentBoardInfo ? 'Gerar Cards' : 'Gerar Estrutura'}
                 </>
               )}
             </Button>
@@ -783,6 +910,18 @@ const AIAssistant = () => {
             </ScrollArea>
           </div>
 
+          {/* Show target board info when on a specific board */}
+          {currentBoardInfo && (
+            <div className="px-4 pb-2">
+              <div className="p-2 rounded bg-indigo-50 dark:bg-indigo-950/30 text-xs">
+                <span className="text-muted-foreground">Destino: </span>
+                <span className="font-medium text-indigo-700 dark:text-indigo-300">
+                  {currentBoardInfo.title} → {currentBoardInfo.lists[0]?.title}
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="border-t p-4 flex gap-2">
             <Button
               variant="outline"
@@ -808,7 +947,10 @@ const AIAssistant = () => {
               ) : (
                 <>
                   <Plus className="h-4 w-4 mr-2" />
-                  Criar {getSelectedCount()} Selecionados
+                  {currentBoardInfo 
+                    ? `Adicionar ${kanbanExtractedItems?.cards.filter(c => c.selected).length || 0} Cards`
+                    : `Criar ${getSelectedCount()} Selecionados`
+                  }
                 </>
               )}
             </Button>
