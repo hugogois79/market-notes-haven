@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useKanbanShortcuts } from '@/hooks/useKanbanShortcuts';
 import { useKanban } from '@/hooks/useKanban';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { SpaceSelector } from '@/components/kanban/SpaceSelector';
@@ -84,6 +85,31 @@ const KanbanPage = () => {
   const [deletingBoardId, setDeletingBoardId] = useState<string | null>(null);
   const [showArchivedBoards, setShowArchivedBoards] = useState(false);
   const [showArchivedLists, setShowArchivedLists] = useState(false);
+  const [quickAddListId, setQuickAddListId] = useState<string | null>(null);
+  const quickAddInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcut to create new card
+  const handleQuickCreateCard = useCallback(() => {
+    if (!boardId || lists.length === 0) return;
+    
+    // Get the first non-archived list
+    const firstList = lists
+      .filter(l => !l.archived)
+      .sort((a, b) => a.position - b.position)[0];
+    
+    if (firstList) {
+      setQuickAddListId(firstList.id);
+      // Focus the input after state update
+      setTimeout(() => {
+        quickAddInputRef.current?.focus();
+      }, 100);
+    }
+  }, [boardId, lists]);
+
+  useKanbanShortcuts({
+    onCreateCard: handleQuickCreateCard,
+    enabled: !!boardId,
+  });
 
   const currentBoard = allBoards.find(b => b.id === boardId) || boards.find(b => b.id === boardId);
   const currentSpace = spaces.find(s => s.id === currentBoard?.space_id);
@@ -558,6 +584,47 @@ const KanbanPage = () => {
             </Button>
           </div>
         </div>
+
+        {/* Quick Add Card Input (triggered by Ctrl+N) */}
+        {quickAddListId && (
+          <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-primary/20">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground font-medium">
+                Nova tarefa em: 
+                <span className="text-foreground ml-1">
+                  {lists.find(l => l.id === quickAddListId)?.title}
+                </span>
+              </span>
+              <Input
+                ref={quickAddInputRef}
+                placeholder="Título da tarefa... (Enter para criar, Esc para cancelar)"
+                className="flex-1"
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter') {
+                    const title = (e.target as HTMLInputElement).value.trim();
+                    if (title) {
+                      await handleAddCard(quickAddListId, title);
+                      setQuickAddListId(null);
+                    }
+                  }
+                  if (e.key === 'Escape') {
+                    setQuickAddListId(null);
+                  }
+                }}
+              />
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setQuickAddListId(null)}
+              >
+                Cancelar
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Atalho: <kbd className="px-1 py-0.5 rounded bg-muted border text-xs">Ctrl+N</kbd>
+            </p>
+          </div>
+        )}
 
         {/* Board description (if exists) */}
         {currentBoard?.description && (
