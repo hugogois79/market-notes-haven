@@ -623,9 +623,17 @@ const AIAssistant = () => {
             </div>
 
             <Textarea
-              placeholder="Cole aqui o texto para analisar...&#10;&#10;Exemplo: Relatório de projeto, email com tarefas, lista de afazeres..."
+              placeholder="Cole aqui o texto para analisar...&#10;&#10;Exemplo: Relatório de projeto, email com tarefas, lista de afazeres...&#10;&#10;Pressiona Ctrl+Enter para gerar"
               value={kanbanInputText}
               onChange={(e) => setKanbanInputText(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                  e.preventDefault();
+                  if (kanbanInputText.trim() && kanbanInputText.length >= 30 && !isLoading) {
+                    generateKanbanStructure();
+                  }
+                }
+              }}
               className="min-h-[200px] resize-none"
             />
           </div>
