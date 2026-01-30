@@ -186,7 +186,7 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
       
       // If card is marked as concluded and we're not showing archived, remove it from view
       if (updates.concluded && !showArchived) {
-        setCards(cards.filter(c => c.id !== id));
+        setCards(prev => prev.filter(c => c.id !== id));
       } 
       // If card is being reopened (concluded: false), add it back if it's not in the list
       else if (updates.concluded === false) {
@@ -195,11 +195,12 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
           // Refetch to get the updated card
           if (boardId) fetchBoardData(boardId, showArchived);
         } else {
-          setCards(cards.map(c => c.id === id ? updated : c));
+          setCards(prev => prev.map(c => c.id === id ? { ...c, ...updated } : c));
         }
       } 
       else {
-        setCards(cards.map(c => c.id === id ? updated : c));
+        // Merge updates with existing card to ensure all fields are preserved
+        setCards(prev => prev.map(c => c.id === id ? { ...c, ...updates, ...updated } : c));
       }
     } catch (error: any) {
       toast.error('Failed to update card: ' + error.message);
