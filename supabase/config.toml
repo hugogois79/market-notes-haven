@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.generate-tasks-from-text]
 verify_jwt = false
+
+[functions.generate-kanban-structure]
+verify_jwt = false

@@ -6,10 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { Bot, Send, Loader2, User, Sparkles, CalendarDays, FileText, Copy, Check } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Bot, Send, Loader2, User, Sparkles, CalendarDays, LayoutGrid, Copy, Check, ArrowLeft, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { KanbanService } from "@/services/kanbanService";
 
 interface NoteReference {
   index: number;
@@ -35,6 +38,34 @@ interface QuickAction {
   icon: string;
   label: string;
   prompt: string;
+}
+
+// Kanban AI types
+interface ExtractedBoard {
+  title: string;
+  description?: string;
+  color?: string;
+  selected: boolean;
+}
+
+interface ExtractedList {
+  title: string;
+  boardRef?: number;
+  selected: boolean;
+}
+
+interface ExtractedCard {
+  title: string;
+  description?: string;
+  priority: 'low' | 'medium' | 'high';
+  listRef?: number;
+  selected: boolean;
+}
+
+interface ExtractedKanbanItems {
+  boards: ExtractedBoard[];
+  lists: ExtractedList[];
+  cards: ExtractedCard[];
 }
 
 const CopyButton = ({ text }: { text: string }) => {
@@ -85,7 +116,15 @@ const AIAssistant = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Context detection
   const isCalendarPage = location.pathname === '/calendar';
+  const isKanbanBoardsPage = location.pathname === '/kanban';
+
+  // Kanban mode states
+  const [kanbanInputText, setKanbanInputText] = useState('');
+  const [kanbanExtractedItems, setKanbanExtractedItems] = useState<ExtractedKanbanItems | null>(null);
+  const [kanbanStep, setKanbanStep] = useState<'input' | 'results'>('input');
+  const [isCreating, setIsCreating] = useState(false);
 
   // Quick actions for calendar page
   const calendarQuickActions: QuickAction[] = [
@@ -103,15 +142,200 @@ const AIAssistant = () => {
 
   // Focus input when sheet opens
   useEffect(() => {
-    if (isOpen && inputRef.current) {
+    if (isOpen && inputRef.current && !isKanbanBoardsPage) {
       setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isOpen, isKanbanBoardsPage]);
+
+  // Clear state when switching context or closing
+  useEffect(() => {
+    setMessages([]);
+    setKanbanInputText('');
+    setKanbanExtractedItems(null);
+    setKanbanStep('input');
+  }, [isCalendarPage, isKanbanBoardsPage]);
+
+  // Reset kanban state when sheet closes
+  useEffect(() => {
+    if (!isOpen) {
+      setKanbanInputText('');
+      setKanbanExtractedItems(null);
+      setKanbanStep('input');
     }
   }, [isOpen]);
 
-  // Clear messages when switching context
-  useEffect(() => {
-    setMessages([]);
-  }, [isCalendarPage]);
+  // Generate Kanban structure from text
+  const generateKanbanStructure = async () => {
+    if (!kanbanInputText.trim() || isLoading) return;
+
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-kanban-structure', {
+        body: { text: kanbanInputText }
+      });
+
+      if (error) throw new Error(error.message);
+      if (data.error) throw new Error(data.error);
+
+      // Add selected: true to all items by default
+      const extractedItems: ExtractedKanbanItems = {
+        boards: (data.boards || []).map((b: any) => ({ ...b, selected: true })),
+        lists: (data.lists || []).map((l: any) => ({ ...l, selected: true })),
+        cards: (data.cards || []).map((c: any) => ({ ...c, selected: true }))
+      };
+
+      setKanbanExtractedItems(extractedItems);
+      setKanbanStep('results');
+
+    } catch (error) {
+      console.error("Error generating kanban structure:", error);
+      toast.error("Erro ao analisar o texto");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Toggle item selection
+  const toggleItemSelection = (type: 'boards' | 'lists' | 'cards', index: number) => {
+    if (!kanbanExtractedItems) return;
+
+    setKanbanExtractedItems(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [type]: prev[type].map((item, i) => 
+          i === index ? { ...item, selected: !item.selected } : item
+        )
+      };
+    });
+  };
+
+  // Create selected items
+  const createSelectedItems = async () => {
+    if (!kanbanExtractedItems) return;
+
+    setIsCreating(true);
+
+    try {
+      const boardIdMap: Record<number, string> = {};
+      const listIdMap: Record<number, string> = {};
+
+      // 1. Create boards
+      const selectedBoards = kanbanExtractedItems.boards.filter(b => b.selected);
+      for (let i = 0; i < selectedBoards.length; i++) {
+        const board = selectedBoards[i];
+        const originalIndex = kanbanExtractedItems.boards.findIndex(b => b.title === board.title);
+        
+        const created = await KanbanService.createBoard({
+          title: board.title,
+          description: board.description,
+          color: board.color || 'blue'
+        });
+        
+        boardIdMap[originalIndex] = created.id;
+
+        // Create default lists for the board
+        await KanbanService.createList({
+          board_id: created.id,
+          title: 'A Fazer',
+          position: 0
+        });
+        await KanbanService.createList({
+          board_id: created.id,
+          title: 'Em Progresso',
+          position: 1
+        });
+        await KanbanService.createList({
+          board_id: created.id,
+          title: 'Concluído',
+          position: 2
+        });
+      }
+
+      // 2. Create lists (if they reference a created board)
+      const selectedLists = kanbanExtractedItems.lists.filter(l => l.selected);
+      for (let i = 0; i < selectedLists.length; i++) {
+        const list = selectedLists[i];
+        const originalIndex = kanbanExtractedItems.lists.findIndex(l => l.title === list.title);
+        
+        // Only create if boardRef points to a created board
+        if (list.boardRef !== undefined && boardIdMap[list.boardRef]) {
+          const created = await KanbanService.createList({
+            board_id: boardIdMap[list.boardRef],
+            title: list.title,
+            position: 10 + i // After default lists
+          });
+          listIdMap[originalIndex] = created.id;
+        }
+      }
+
+      // 3. Create cards (if they reference a created list)
+      const selectedCards = kanbanExtractedItems.cards.filter(c => c.selected);
+      let cardsCreated = 0;
+      
+      for (let i = 0; i < selectedCards.length; i++) {
+        const card = selectedCards[i];
+        
+        // Find the target list
+        let targetListId: string | undefined;
+        
+        if (card.listRef !== undefined && listIdMap[card.listRef]) {
+          targetListId = listIdMap[card.listRef];
+        }
+        
+        // If no list reference or list wasn't created, skip for now
+        // (Cards need a list to belong to)
+        if (!targetListId) {
+          // Try to find a default list from a created board
+          const firstBoardId = Object.values(boardIdMap)[0];
+          if (firstBoardId) {
+            const lists = await KanbanService.getLists(firstBoardId);
+            targetListId = lists[0]?.id;
+          }
+        }
+
+        if (targetListId) {
+          await KanbanService.createCard({
+            list_id: targetListId,
+            title: card.title,
+            description: card.description,
+            priority: card.priority,
+            position: i
+          });
+          cardsCreated++;
+        }
+      }
+
+      // Refresh boards data
+      queryClient.invalidateQueries({ queryKey: ['kanban-boards'] });
+
+      const totalCreated = selectedBoards.length + selectedLists.length + cardsCreated;
+      toast.success(`${totalCreated} itens criados com sucesso!`);
+
+      // Reset and close
+      setKanbanInputText('');
+      setKanbanExtractedItems(null);
+      setKanbanStep('input');
+      setIsOpen(false);
+
+    } catch (error) {
+      console.error("Error creating kanban items:", error);
+      toast.error("Erro ao criar itens");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  // Count selected items
+  const getSelectedCount = () => {
+    if (!kanbanExtractedItems) return 0;
+    return (
+      kanbanExtractedItems.boards.filter(b => b.selected).length +
+      kanbanExtractedItems.lists.filter(l => l.selected).length +
+      kanbanExtractedItems.cards.filter(c => c.selected).length
+    );
+  };
 
   const sendMessage = async (messageText?: string) => {
     const textToSend = messageText || input.trim();
@@ -315,6 +539,14 @@ const AIAssistant = () => {
   };
 
   const getTitle = () => {
+    if (isKanbanBoardsPage) {
+      return (
+        <>
+          <LayoutGrid className="h-5 w-5 text-indigo-600" />
+          Assistente AI - Kanban
+        </>
+      );
+    }
     if (isCalendarPage) {
       return (
         <>
@@ -374,19 +606,229 @@ const AIAssistant = () => {
     );
   };
 
+  // Render Kanban mode content
+  const renderKanbanContent = () => {
+    if (kanbanStep === 'input') {
+      return (
+        <div className="flex flex-col h-full">
+          <div className="flex-1 p-4">
+            <div className="text-center py-6 text-muted-foreground mb-4">
+              <LayoutGrid className="h-12 w-12 mx-auto mb-4 opacity-50 text-indigo-500" />
+              <p className="text-sm font-medium mb-1">
+                Gerar Estrutura Kanban
+              </p>
+              <p className="text-xs opacity-70">
+                Cola um texto (relatório, email, lista de tarefas) e a AI vai extrair boards, listas e cards.
+              </p>
+            </div>
+
+            <Textarea
+              placeholder="Cole aqui o texto para analisar...&#10;&#10;Exemplo: Relatório de projeto, email com tarefas, lista de afazeres..."
+              value={kanbanInputText}
+              onChange={(e) => setKanbanInputText(e.target.value)}
+              className="min-h-[200px] resize-none"
+            />
+          </div>
+
+          <div className="border-t p-4">
+            <Button
+              onClick={generateKanbanStructure}
+              disabled={!kanbanInputText.trim() || kanbanInputText.length < 30 || isLoading}
+              className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  A analisar...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Gerar Estrutura
+                </>
+              )}
+            </Button>
+            {kanbanInputText.length > 0 && kanbanInputText.length < 30 && (
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                Mínimo 30 caracteres ({kanbanInputText.length}/30)
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Results step
+    if (kanbanStep === 'results' && kanbanExtractedItems) {
+      const totalItems = kanbanExtractedItems.boards.length + kanbanExtractedItems.lists.length + kanbanExtractedItems.cards.length;
+      
+      return (
+        <div className="flex flex-col h-full">
+          <div className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full p-4">
+              <div className="space-y-4">
+                <div className="text-center text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">{totalItems}</span> itens encontrados
+                </div>
+
+                {/* Boards */}
+                {kanbanExtractedItems.boards.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-semibold uppercase text-muted-foreground flex items-center gap-2">
+                      <LayoutGrid className="h-3.5 w-3.5" />
+                      Boards ({kanbanExtractedItems.boards.length})
+                    </h3>
+                    {kanbanExtractedItems.boards.map((board, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-2 p-2 rounded-md bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800"
+                      >
+                        <Checkbox
+                          checked={board.selected}
+                          onCheckedChange={() => toggleItemSelection('boards', idx)}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{board.title}</p>
+                          {board.description && (
+                            <p className="text-xs text-muted-foreground truncate">{board.description}</p>
+                          )}
+                        </div>
+                        {board.color && (
+                          <span className={cn(
+                            "px-1.5 py-0.5 text-[10px] rounded uppercase font-medium",
+                            board.color === 'blue' && "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300",
+                            board.color === 'green' && "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
+                            board.color === 'purple' && "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300",
+                            board.color === 'orange' && "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300",
+                            board.color === 'red' && "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300",
+                          )}>
+                            {board.color}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Lists */}
+                {kanbanExtractedItems.lists.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-semibold uppercase text-muted-foreground">
+                      Listas ({kanbanExtractedItems.lists.length})
+                    </h3>
+                    {kanbanExtractedItems.lists.map((list, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 p-2 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800"
+                      >
+                        <Checkbox
+                          checked={list.selected}
+                          onCheckedChange={() => toggleItemSelection('lists', idx)}
+                        />
+                        <p className="text-sm flex-1 truncate">{list.title}</p>
+                        {list.boardRef !== undefined && kanbanExtractedItems.boards[list.boardRef] && (
+                          <span className="text-[10px] text-muted-foreground">
+                            → {kanbanExtractedItems.boards[list.boardRef].title}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Cards */}
+                {kanbanExtractedItems.cards.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-semibold uppercase text-muted-foreground">
+                      Cards ({kanbanExtractedItems.cards.length})
+                    </h3>
+                    {kanbanExtractedItems.cards.map((card, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-2 p-2 rounded-md bg-muted/50 border"
+                      >
+                        <Checkbox
+                          checked={card.selected}
+                          onCheckedChange={() => toggleItemSelection('cards', idx)}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm truncate">{card.title}</p>
+                          {card.description && (
+                            <p className="text-xs text-muted-foreground truncate">{card.description}</p>
+                          )}
+                        </div>
+                        <span className={cn(
+                          "px-1.5 py-0.5 text-[10px] rounded uppercase font-medium shrink-0",
+                          card.priority === 'high' && "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300",
+                          card.priority === 'medium' && "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300",
+                          card.priority === 'low' && "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
+                        )}>
+                          {card.priority}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+
+          <div className="border-t p-4 flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setKanbanStep('input');
+                setKanbanExtractedItems(null);
+              }}
+              disabled={isCreating}
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Voltar
+            </Button>
+            <Button
+              onClick={createSelectedItems}
+              disabled={getSelectedCount() === 0 || isCreating}
+              className="flex-1 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500"
+            >
+              {isCreating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  A criar...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar {getSelectedCount()} Selecionados
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         <Button
           className={cn(
             "fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50",
-            isCalendarPage 
-              ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500"
-              : "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+            isKanbanBoardsPage
+              ? "bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500"
+              : isCalendarPage 
+                ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500"
+                : "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
           )}
           size="icon"
         >
-          {isCalendarPage ? (
+          {isKanbanBoardsPage ? (
+            <LayoutGrid className="h-6 w-6" />
+          ) : isCalendarPage ? (
             <CalendarDays className="h-6 w-6" />
           ) : (
             <Sparkles className="h-6 w-6" />
@@ -396,6 +838,7 @@ const AIAssistant = () => {
       <SheetContent className="w-full sm:max-w-md flex flex-col p-0">
         <SheetHeader className={cn(
           "px-4 py-3 border-b",
+          isKanbanBoardsPage && "bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-950/30 dark:to-blue-950/30",
           isCalendarPage && "bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30"
         )}>
           <SheetTitle className="flex items-center gap-2">
@@ -403,161 +846,168 @@ const AIAssistant = () => {
           </SheetTitle>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-          <div className="space-y-4">
-            {messages.length === 0 && getEmptyState()}
+        {/* Kanban mode has its own content */}
+        {isKanbanBoardsPage ? (
+          renderKanbanContent()
+        ) : (
+          <>
+            <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+              <div className="space-y-4">
+                {messages.length === 0 && getEmptyState()}
 
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  "flex gap-3",
-                  message.role === "user" ? "justify-end" : "justify-start"
-                )}
-              >
-                {message.role === "assistant" && (
-                  <div className={cn(
-                    "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
-                    isCalendarPage ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-primary/10"
-                  )}>
-                    {isCalendarPage ? (
-                      <CalendarDays className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                    ) : (
-                      <Bot className="h-4 w-4 text-primary" />
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={cn(
+                      "flex gap-3",
+                      message.role === "user" ? "justify-end" : "justify-start"
                     )}
-                  </div>
-                )}
-                <div
-                  className={cn(
-                    "max-w-[85%] rounded-lg text-sm",
-                    message.role === "user"
-                      ? "bg-primary text-primary-foreground px-3 py-2"
-                      : "bg-transparent"
-                  )}
-                >
-                  {message.role === "assistant" ? (
-                    renderMessageContent(message)
-                  ) : (
-                    <p className="whitespace-pre-wrap">{message.content}</p>
-                  )}
-                  
-                  {/* Note reference buttons */}
-                  {message.role === "assistant" && message.noteReferences && message.noteReferences.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-border/50">
-                      <span className="text-xs text-muted-foreground mr-1">Abrir nota:</span>
-                      <TooltipProvider>
-                        {message.noteReferences.map((ref) => (
-                          <Tooltip key={ref.id}>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={() => handleOpenNote(ref.id)}
-                                className="h-6 w-6 rounded-full bg-primary/20 hover:bg-primary/40 text-primary font-medium text-xs flex items-center justify-center transition-colors"
-                              >
-                                {ref.index}
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-[200px]">
-                              <p className="text-xs truncate">{ref.title}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        ))}
-                      </TooltipProvider>
-                    </div>
-                  )}
-                  
-                  {/* Copy button for assistant messages */}
-                  {message.role === "assistant" && (
-                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
-                      <CopyButton text={message.content} />
-                      {message.notesUsed !== undefined && (
-                        <span className="text-xs opacity-70">
-                          {message.notesUsed > 0
-                            ? `Baseado em ${message.notesUsed} nota${message.notesUsed > 1 ? "s" : ""}`
-                            : "Sem notas relevantes encontradas"}
-                        </span>
+                  >
+                    {message.role === "assistant" && (
+                      <div className={cn(
+                        "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
+                        isCalendarPage ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-primary/10"
+                      )}>
+                        {isCalendarPage ? (
+                          <CalendarDays className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        ) : (
+                          <Bot className="h-4 w-4 text-primary" />
+                        )}
+                      </div>
+                    )}
+                    <div
+                      className={cn(
+                        "max-w-[85%] rounded-lg text-sm",
+                        message.role === "user"
+                          ? "bg-primary text-primary-foreground px-3 py-2"
+                          : "bg-transparent"
+                      )}
+                    >
+                      {message.role === "assistant" ? (
+                        renderMessageContent(message)
+                      ) : (
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                      )}
+                      
+                      {/* Note reference buttons */}
+                      {message.role === "assistant" && message.noteReferences && message.noteReferences.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-border/50">
+                          <span className="text-xs text-muted-foreground mr-1">Abrir nota:</span>
+                          <TooltipProvider>
+                            {message.noteReferences.map((ref) => (
+                              <Tooltip key={ref.id}>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={() => handleOpenNote(ref.id)}
+                                    className="h-6 w-6 rounded-full bg-primary/20 hover:bg-primary/40 text-primary font-medium text-xs flex items-center justify-center transition-colors"
+                                  >
+                                    {ref.index}
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-[200px]">
+                                  <p className="text-xs truncate">{ref.title}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ))}
+                          </TooltipProvider>
+                        </div>
+                      )}
+                      
+                      {/* Copy button for assistant messages */}
+                      {message.role === "assistant" && (
+                        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
+                          <CopyButton text={message.content} />
+                          {message.notesUsed !== undefined && (
+                            <span className="text-xs opacity-70">
+                              {message.notesUsed > 0
+                                ? `Baseado em ${message.notesUsed} nota${message.notesUsed > 1 ? "s" : ""}`
+                                : "Sem notas relevantes encontradas"}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-                {message.role === "user" && (
-                  <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center shrink-0">
-                    <User className="h-4 w-4 text-primary-foreground" />
+                    {message.role === "user" && (
+                      <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+                        <User className="h-4 w-4 text-primary-foreground" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {isLoading && (
+                  <div className="flex gap-3 justify-start">
+                    <div className={cn(
+                      "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
+                      isCalendarPage ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-primary/10"
+                    )}>
+                      {isCalendarPage ? (
+                        <CalendarDays className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <Bot className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                    <div className="bg-muted rounded-lg px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm text-muted-foreground">
+                          {isCalendarPage 
+                            ? "A analisar o teu calendário..." 
+                            : "A pesquisar nas tuas notas..."}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
-            ))}
+            </ScrollArea>
 
-            {isLoading && (
-              <div className="flex gap-3 justify-start">
-                <div className={cn(
-                  "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
-                  isCalendarPage ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-primary/10"
-                )}>
-                  {isCalendarPage ? (
-                    <CalendarDays className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  ) : (
-                    <Bot className="h-4 w-4 text-primary" />
-                  )}
-                </div>
-                <div className="bg-muted rounded-lg px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-sm text-muted-foreground">
-                      {isCalendarPage 
-                        ? "A analisar o teu calendário..." 
-                        : "A pesquisar nas tuas notas..."}
-                    </span>
-                  </div>
+            {/* Quick actions bar for calendar (when there are messages) */}
+            {isCalendarPage && messages.length > 0 && (
+              <div className="border-t px-4 py-2 bg-muted/30">
+                <div className="flex gap-2 overflow-x-auto">
+                  {calendarQuickActions.map((action, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleQuickAction(action.prompt)}
+                      disabled={isLoading}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-background border hover:bg-muted transition-colors whitespace-nowrap"
+                    >
+                      <span>{action.icon}</span>
+                      <span>{action.label}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
-          </div>
-        </ScrollArea>
 
-        {/* Quick actions bar for calendar (when there are messages) */}
-        {isCalendarPage && messages.length > 0 && (
-          <div className="border-t px-4 py-2 bg-muted/30">
-            <div className="flex gap-2 overflow-x-auto">
-              {calendarQuickActions.map((action, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleQuickAction(action.prompt)}
+            <div className="border-t p-4">
+              <div className="flex gap-2">
+                <Input
+                  ref={inputRef}
+                  placeholder={getPlaceholder()}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
                   disabled={isLoading}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-background border hover:bg-muted transition-colors whitespace-nowrap"
+                  className="flex-1"
+                />
+                <Button
+                  onClick={() => sendMessage()}
+                  disabled={!input.trim() || isLoading}
+                  size="icon"
+                  className={isCalendarPage ? "bg-emerald-600 hover:bg-emerald-700" : ""}
                 >
-                  <span>{action.icon}</span>
-                  <span>{action.label}</span>
-                </button>
-              ))}
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
+          </>
         )}
-
-        <div className="border-t p-4">
-          <div className="flex gap-2">
-            <Input
-              ref={inputRef}
-              placeholder={getPlaceholder()}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={isLoading}
-              className="flex-1"
-            />
-            <Button
-              onClick={() => sendMessage()}
-              disabled={!input.trim() || isLoading}
-              size="icon"
-              className={isCalendarPage ? "bg-emerald-600 hover:bg-emerald-700" : ""}
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </div>
       </SheetContent>
     </Sheet>
   );
