@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Save, Clock, Copy, Printer, Trash2, ChevronDown, FileText, Files, Brain } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Save, Clock, Copy, Printer, Trash2, ChevronDown, FileText, Files } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import {
@@ -34,7 +33,6 @@ interface EditorStatusBarProps {
   isDeleting?: boolean;
   canDelete?: boolean;
   attachments?: string[];
-  noteId?: string;
   noteContent?: {
     title: string;
     category: string;
@@ -54,53 +52,11 @@ const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
   isDeleting = false,
   canDelete = false,
   attachments = [],
-  noteId,
   noteContent
 }) => {
-  const [isSendingToSupermemory, setIsSendingToSupermemory] = useState(false);
-  
   // Check if there are PDF attachments
   const pdfAttachments = attachments.filter(url => url && isPdfUrl(url));
   const hasPdfAttachments = pdfAttachments.length > 0;
-
-  const handleSendToSupermemory = async () => {
-    if (!noteContent) {
-      toast.error("No content to send");
-      return;
-    }
-
-    setIsSendingToSupermemory(true);
-    toast.info("A enviar para Supermemory...");
-
-    try {
-      const response = await supabase.functions.invoke('send-to-supermemory', {
-        body: {
-          noteId: noteId || crypto.randomUUID(),
-          title: noteContent.title,
-          category: noteContent.category,
-          content: noteContent.content,
-          tags: noteContent.tags,
-          summary: noteContent.summary,
-          attachments
-        }
-      });
-
-      if (response.error) {
-        throw response.error;
-      }
-
-      if (response.data?.success === false) {
-        throw new Error(response.data.error || 'Failed to send to Supermemory');
-      }
-
-      toast.success("Nota enviada para Supermemory!");
-    } catch (error) {
-      console.error("Supermemory error:", error);
-      toast.error("Erro ao enviar para Supermemory");
-    } finally {
-      setIsSendingToSupermemory(false);
-    }
-  };
   const handleCopyToClipboard = async () => {
     if (!noteContent) {
       toast.error("No content to copy");
@@ -158,18 +114,6 @@ const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
         >
           <Copy size={12} />
           Copy
-        </Button>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-xs flex items-center gap-1"
-          onClick={handleSendToSupermemory}
-          disabled={isSendingToSupermemory || !noteContent}
-          title="Send note to Supermemory"
-        >
-          <Brain size={12} className={isSendingToSupermemory ? "animate-pulse" : ""} />
-          Supermemory
         </Button>
         
         {onPrint && (

@@ -163,7 +163,6 @@ const EditorMain: React.FC<EditorMainProps> = ({
         isDeleting={isDeleting}
         canDelete={canDelete}
         attachments={attachments}
-        noteId={noteId}
         noteContent={{
           title,
           category,

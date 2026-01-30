@@ -885,66 +885,6 @@ export type Database = {
           },
         ]
       }
-      economic_events: {
-        Row: {
-          actual: number | null
-          country: string | null
-          created_at: string | null
-          currency: string | null
-          estimate: number | null
-          event_id: string
-          event_name: string
-          id: string
-          impact: string | null
-          previous: number | null
-          released_at: string | null
-          scheduled_at: string
-          sentiment: string | null
-          status: string | null
-          surprise: number | null
-          surprise_pct: number | null
-          unit: string | null
-        }
-        Insert: {
-          actual?: number | null
-          country?: string | null
-          created_at?: string | null
-          currency?: string | null
-          estimate?: number | null
-          event_id: string
-          event_name: string
-          id?: string
-          impact?: string | null
-          previous?: number | null
-          released_at?: string | null
-          scheduled_at: string
-          sentiment?: string | null
-          status?: string | null
-          surprise?: number | null
-          surprise_pct?: number | null
-          unit?: string | null
-        }
-        Update: {
-          actual?: number | null
-          country?: string | null
-          created_at?: string | null
-          currency?: string | null
-          estimate?: number | null
-          event_id?: string
-          event_name?: string
-          id?: string
-          impact?: string | null
-          previous?: number | null
-          released_at?: string | null
-          scheduled_at?: string
-          sentiment?: string | null
-          status?: string | null
-          surprise?: number | null
-          surprise_pct?: number | null
-          unit?: string | null
-        }
-        Relationships: []
-      }
       expense_categories: {
         Row: {
           assigned_project_ids: string[] | null
@@ -2681,53 +2621,6 @@ export type Database = {
           news_date?: string
         }
         Relationships: []
-      }
-      news_feed: {
-        Row: {
-          category: string | null
-          created_at: string | null
-          economic_event_id: string | null
-          headline: string
-          id: string
-          is_critical: boolean | null
-          published_at: string | null
-          sentiment: string | null
-          source: string | null
-          url: string
-        }
-        Insert: {
-          category?: string | null
-          created_at?: string | null
-          economic_event_id?: string | null
-          headline: string
-          id?: string
-          is_critical?: boolean | null
-          published_at?: string | null
-          sentiment?: string | null
-          source?: string | null
-          url: string
-        }
-        Update: {
-          category?: string | null
-          created_at?: string | null
-          economic_event_id?: string | null
-          headline?: string
-          id?: string
-          is_critical?: boolean | null
-          published_at?: string | null
-          sentiment?: string | null
-          source?: string | null
-          url?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "news_feed_economic_event_id_fkey"
-            columns: ["economic_event_id"]
-            isOneToOne: false
-            referencedRelation: "economic_events"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       note_relations: {
         Row: {
