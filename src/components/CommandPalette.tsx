@@ -23,7 +23,9 @@ import {
   HelpCircle,
   ChevronRight,
   ArrowLeft,
-  FolderKanban,
+  Plus,
+  SquarePlus,
+  ListPlus,
 } from 'lucide-react';
 import { KanbanService, KanbanSpace, KanbanBoard } from '@/services/kanbanService';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
@@ -32,14 +34,22 @@ interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onOpenShortcutsHelp: () => void;
+  currentBoardId?: string;
+  onCreateBoard?: () => void;
+  onCreateList?: () => void;
+  onCreateCard?: () => void;
 }
 
-type ViewMode = 'main' | 'boards';
+type ViewMode = 'main' | 'boards' | 'create';
 
 const CommandPalette: React.FC<CommandPaletteProps> = ({
   open,
   onOpenChange,
   onOpenShortcutsHelp,
+  currentBoardId,
+  onCreateBoard,
+  onCreateList,
+  onCreateCard,
 }) => {
   const navigate = useNavigate();
   const { isAdmin, hasAccess, loading: permissionsLoading } = useFeatureAccess();
@@ -59,6 +69,12 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
       setSearchValue('');
     }
   }, [open]);
+
+  // Handle entering create view
+  const handleEnterCreateView = () => {
+    setSearchValue('');
+    setViewMode('create');
+  };
 
   // Clear search when entering boards view
   const handleEnterBoardsView = () => {
@@ -127,6 +143,13 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
 
   const actionItems = [
     { 
+      icon: Plus, 
+      label: 'Criar', 
+      keywords: ['create', 'novo', 'new', 'add', 'adicionar'],
+      hasSubmenu: true,
+      action: handleEnterCreateView 
+    },
+    { 
       icon: HelpCircle, 
       label: 'Ver atalhos de teclado', 
       shortcut: '?', 
@@ -144,6 +167,51 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
 
     return { unorganizedBoards, organizedBySpace };
   };
+
+  // Create submenu view
+  if (viewMode === 'create') {
+    return (
+      <CommandDialog open={open} onOpenChange={onOpenChange}>
+        <CommandInput 
+          placeholder="O que pretende criar?" 
+          value={searchValue}
+          onValueChange={setSearchValue}
+        />
+        <CommandList>
+          <CommandEmpty>Nenhuma opção encontrada.</CommandEmpty>
+          
+          <CommandGroup>
+            <CommandItem onSelect={() => setViewMode('main')}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              <span>Voltar</span>
+            </CommandItem>
+          </CommandGroup>
+
+          <CommandGroup heading="Criar Novo">
+            {/* Only show if inside a board */}
+            {currentBoardId && onCreateCard && (
+              <CommandItem onSelect={() => runCommand(onCreateCard)}>
+                <SquarePlus className="mr-2 h-4 w-4" />
+                <span>Criar Card</span>
+              </CommandItem>
+            )}
+            {currentBoardId && onCreateList && (
+              <CommandItem onSelect={() => runCommand(onCreateList)}>
+                <ListPlus className="mr-2 h-4 w-4" />
+                <span>Criar Lista</span>
+              </CommandItem>
+            )}
+            {onCreateBoard && (
+              <CommandItem onSelect={() => runCommand(onCreateBoard)}>
+                <Layout className="mr-2 h-4 w-4" />
+                <span>Criar Board</span>
+              </CommandItem>
+            )}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
+    );
+  }
 
   if (viewMode === 'boards') {
     const { unorganizedBoards, organizedBySpace } = getBoardsBySpace();
@@ -289,11 +357,18 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
           {actionItems.map((item, index) => (
             <CommandItem
               key={index}
-              onSelect={() => runCommand(item.action)}
+              onSelect={() => {
+                if (item.hasSubmenu) {
+                  item.action();
+                } else {
+                  runCommand(item.action);
+                }
+              }}
             >
               <item.icon className="mr-2 h-4 w-4" />
               <span>{item.label}</span>
-              {item.shortcut && (
+              {item.hasSubmenu && <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground" />}
+              {item.shortcut && !item.hasSubmenu && (
                 <CommandShortcut>{item.shortcut}</CommandShortcut>
               )}
             </CommandItem>
