@@ -140,7 +140,7 @@ export const KEYBOARD_SHORTCUTS = [
   {
     category: 'Kanban',
     shortcuts: [
-      { keys: ['⌘', 'N'], description: 'Criar nova tarefa (quando num board)' },
+      { keys: ['N'], description: 'Criar nova tarefa (quando num board)' },
     ],
   },
 ];
