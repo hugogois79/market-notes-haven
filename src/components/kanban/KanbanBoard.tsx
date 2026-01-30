@@ -137,6 +137,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           onEditList={onEditList}
                           onColorChange={onColorChange}
                           onArchiveList={onArchiveList}
+                          onDeleteCard={onDeleteCard}
                           dragHandleProps={provided.dragHandleProps}
                         />
                       </div>

@@ -28,6 +28,7 @@ interface KanbanListProps {
   onEditList: (listId: string, title: string) => void;
   onColorChange: (listId: string, color: string) => void;
   onArchiveList: (listId: string) => void;
+  onDeleteCard: (cardId: string) => void;
   dragHandleProps?: any;
 }
 
@@ -55,6 +56,7 @@ export const KanbanList: React.FC<KanbanListProps> = ({
   onEditList,
   onColorChange,
   onArchiveList,
+  onDeleteCard,
   dragHandleProps
 }) => {
   const [isAddingCard, setIsAddingCard] = useState(false);
@@ -249,6 +251,13 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                             // Show confirmation dialog
                             setCompleteDialogCard(card);
                           }
+                        }}
+                        onChangePriority={(cardId, priority) => {
+                          onUpdateCard(cardId, { priority });
+                          toast.success(`Prioridade alterada para ${priority}`);
+                        }}
+                        onDeleteCard={(cardId) => {
+                          onDeleteCard(cardId);
                         }}
                       />
                     ))}
