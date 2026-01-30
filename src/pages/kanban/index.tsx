@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useKanbanShortcuts } from '@/hooks/useKanbanShortcuts';
 import { useKanban } from '@/hooks/useKanban';
@@ -110,6 +110,33 @@ const KanbanPage = () => {
     onCreateCard: handleQuickCreateCard,
     enabled: !!boardId,
   });
+
+  // Listen for global create events from Command Palette
+  useEffect(() => {
+    const handleCreateBoard = () => {
+      setIsCreateBoardOpen(true);
+    };
+    
+    const handleCreateList = () => {
+      // Scroll to the end of the board and focus on "Add List" input
+      // For now, we'll dispatch a custom event that the KanbanBoard can listen to
+      window.dispatchEvent(new CustomEvent('kanban:focus-add-list'));
+    };
+    
+    const handleCreateCard = () => {
+      handleQuickCreateCard();
+    };
+
+    window.addEventListener('kanban:create-board', handleCreateBoard);
+    window.addEventListener('kanban:create-list', handleCreateList);
+    window.addEventListener('kanban:create-card', handleCreateCard);
+
+    return () => {
+      window.removeEventListener('kanban:create-board', handleCreateBoard);
+      window.removeEventListener('kanban:create-list', handleCreateList);
+      window.removeEventListener('kanban:create-card', handleCreateCard);
+    };
+  }, [handleQuickCreateCard]);
 
   const currentBoard = allBoards.find(b => b.id === boardId) || boards.find(b => b.id === boardId);
   const currentSpace = spaces.find(s => s.id === currentBoard?.space_id);
