@@ -22,12 +22,6 @@ export const useKanbanShortcuts = ({
       return;
     }
 
-    // N: Create new card/task (single key, Trello-style)
-    if (e.key === 'n' || e.key === 'N') {
-      e.preventDefault();
-      onCreateCard();
-      return;
-    }
   }, [enabled, onCreateCard]);
 
   useEffect(() => {
@@ -41,8 +35,6 @@ export const useKanbanShortcuts = ({
 export const KANBAN_SHORTCUTS = [
   {
     category: 'Kanban',
-    shortcuts: [
-      { keys: ['N'], description: 'Criar nova tarefa' },
-    ],
+    shortcuts: [],
   },
 ];
