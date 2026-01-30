@@ -385,13 +385,12 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
               <Label>Description</Label>
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={() => setShowAiCardDialog(true)}
-                className="h-7 px-2 text-xs"
+                className="h-7 w-7"
                 title="Gerar Cards com AI"
               >
-                <Sparkles className="h-3.5 w-3.5 mr-1" />
-                Gerar Cards
+                <Sparkles className="h-4 w-4" />
               </Button>
             </div>
             <Textarea
