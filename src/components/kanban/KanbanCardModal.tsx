@@ -346,33 +346,18 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     onClose();
   };
 
-  const handleAiTasksCreated = async (newTasks: Array<{ title: string; description: string; priority: 'low' | 'medium' | 'high' }>) => {
-    try {
-      // Get the current max position in this list
-      const existingCards = await KanbanService.getCards(card.list_id);
-      let nextPosition = existingCards.length > 0 
-        ? Math.max(...existingCards.map(c => c.position)) + 1 
-        : 0;
+  // Handle AI-generated tasks - add to card's checklist
+  const handleAiTasksCreated = (newTasks: Array<{ title: string; description: string; priority: 'low' | 'medium' | 'high' }>) => {
+    const newChecklistTasks: Task[] = newTasks.map(task => ({
+      id: crypto.randomUUID(),
+      text: task.title,
+      completed: false
+    }));
 
-      // Create all cards
-      for (const task of newTasks) {
-        await KanbanService.createCard({
-          title: task.title,
-          description: task.description,
-          priority: task.priority,
-          list_id: card.list_id,
-          position: nextPosition++
-        });
-      }
-
-      toast.success(`${newTasks.length} card${newTasks.length !== 1 ? 's' : ''} criado${newTasks.length !== 1 ? 's' : ''} com sucesso!`);
-      
-      // Close the modal - the parent will refetch when modal closes
-      onClose();
-    } catch (error) {
-      console.error('Error creating AI tasks:', error);
-      toast.error('Erro ao criar cards');
-    }
+    const updatedTasks = [...tasks, ...newChecklistTasks];
+    setTasks(updatedTasks);
+    onUpdate(card.id, { tasks: updatedTasks as any });
+    toast.success(`${newTasks.length} tarefa${newTasks.length !== 1 ? 's' : ''} adicionada${newTasks.length !== 1 ? 's' : ''}!`);
   };
 
   return (
