@@ -192,7 +192,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
             {currentBoardId && onCreateCard && (
               <CommandItem onSelect={() => runCommand(onCreateCard)}>
                 <SquarePlus className="mr-2 h-4 w-4" />
-                <span>Criar Card</span>
+                <span>Novo Card</span>
               </CommandItem>
             )}
             {currentBoardId && onCreateList && (
