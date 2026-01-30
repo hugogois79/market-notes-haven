@@ -4,16 +4,16 @@ import { KanbanCard as KanbanCardType } from '@/services/kanbanService';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, AlertCircle, CheckCircle2, RotateCcw, Paperclip, ListChecks, Tag, Euro, MoreVertical, Trash2 } from 'lucide-react';
+import { Calendar, AlertCircle, CheckCircle2, RotateCcw, Paperclip, ListChecks, Tag, Euro, Trash2 } from 'lucide-react';
 import { format, isPast, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 
 interface KanbanCardProps {
   card: KanbanCardType;
@@ -53,140 +53,129 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
   return (
     <Draggable draggableId={card.id} index={index}>
       {(provided, snapshot) => (
-        <Card
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          className={`mb-2 cursor-pointer hover:shadow-md transition-shadow relative ${
-            snapshot.isDragging ? 'shadow-lg rotate-2' : ''
-          } ${isOverdue ? 'bg-red-50 border-red-300 dark:bg-red-950/30 dark:border-red-800' : ''}`}
-          onClick={onClick}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        >
-          {isHovered && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <Card
+              ref={provided.innerRef}
+              {...provided.draggableProps}
+              {...provided.dragHandleProps}
+              className={`mb-2 cursor-pointer hover:shadow-md transition-shadow relative ${
+                snapshot.isDragging ? 'shadow-lg rotate-2' : ''
+              } ${isOverdue ? 'bg-red-50 border-red-300 dark:bg-red-950/30 dark:border-red-800' : ''}`}
+              onClick={onClick}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+            >
+              {isHovered && !card.concluded && (
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="absolute -top-2 -left-2 h-8 w-8 rounded-full bg-background border-2 border-muted-foreground/30 shadow-lg hover:bg-muted z-10 p-0"
-                  onClick={(e) => e.stopPropagation()}
+                  className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-background border-2 border-orange-500 shadow-lg hover:bg-orange-500 hover:text-white z-10 p-0"
+                  onClick={handleReopen}
                 >
-                  <MoreVertical className="h-4 w-4" />
+                  <RotateCcw className="h-4 w-4" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem 
-                  onClick={() => onChangePriority(card.id, 'high')}
-                  className="text-red-600"
-                >
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  Alta prioridade
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangePriority(card.id, 'medium')}
-                  className="text-orange-600"
-                >
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  Média prioridade
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangePriority(card.id, 'low')}
-                  className="text-green-600"
-                >
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  Baixa prioridade
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={() => onDeleteCard(card.id)}
-                  className="text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Eliminar card
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          
-          {isHovered && !card.concluded && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-background border-2 border-orange-500 shadow-lg hover:bg-orange-500 hover:text-white z-10 p-0"
-              onClick={handleReopen}
+              )}
+              
+              <CardContent className="p-3">
+                <h4 className="font-medium text-sm mb-2">{card.title}</h4>
+                
+                {card.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                    {card.description}
+                  </p>
+                )}
+                
+                <div className="flex items-center gap-2 flex-wrap">
+                  {card.priority && (
+                    <Badge 
+                      variant="secondary" 
+                      className={`text-xs ${priorityColors[card.priority]}`}
+                    >
+                      <AlertCircle className="h-3 w-3 mr-1" />
+                      {card.priority}
+                    </Badge>
+                  )}
+                  
+                  {card.due_date && (() => {
+                    const dueDate = new Date(card.due_date);
+                    const isOverdue = isPast(startOfDay(dueDate)) && startOfDay(dueDate).getTime() !== startOfDay(new Date()).getTime();
+                    return (
+                      <Badge variant="outline" className={`text-xs ${isOverdue ? 'border-red-500' : ''}`}>
+                        <Calendar className={`h-3 w-3 mr-1 ${isOverdue ? 'text-red-500' : ''}`} />
+                        {isOverdue && '! '}
+                        {format(dueDate, 'MMM dd')}
+                      </Badge>
+                    );
+                  })()}
+                  
+                  {card.tasks && Array.isArray(card.tasks) && card.tasks.length > 0 && (() => {
+                    const completed = card.tasks.filter((t: any) => t.completed).length;
+                    const total = card.tasks.length;
+                    return (
+                      <Badge variant="outline" className="text-xs">
+                        <ListChecks className="h-3 w-3 mr-1" />
+                        {completed}/{total}
+                      </Badge>
+                    );
+                  })()}
+                  
+                  {card.attachment_count && card.attachment_count > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      <Paperclip className="h-3 w-3 mr-1" />
+                      {card.attachment_count}
+                    </Badge>
+                  )}
+                  
+                  {card.value && card.value > 0 && (
+                    <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                      <Euro className="h-3 w-3 mr-1" />
+                      {card.value.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Badge>
+                  )}
+                  
+                  {card.tags && card.tags.length > 0 && card.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                      <Tag className="h-3 w-3 mr-1" />
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </ContextMenuTrigger>
+          <ContextMenuContent className="w-48">
+            <ContextMenuItem 
+              onClick={() => onChangePriority(card.id, 'high')}
+              className="text-red-600"
             >
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-          )}
-          
-          <CardContent className="p-3">
-            <h4 className="font-medium text-sm mb-2">{card.title}</h4>
-            
-            {card.description && (
-              <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                {card.description}
-              </p>
-            )}
-            
-            <div className="flex items-center gap-2 flex-wrap">
-              {card.priority && (
-                <Badge 
-                  variant="secondary" 
-                  className={`text-xs ${priorityColors[card.priority]}`}
-                >
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                  {card.priority}
-                </Badge>
-              )}
-              
-              {card.due_date && (() => {
-                const dueDate = new Date(card.due_date);
-                const isOverdue = isPast(startOfDay(dueDate)) && startOfDay(dueDate).getTime() !== startOfDay(new Date()).getTime();
-                return (
-                  <Badge variant="outline" className={`text-xs ${isOverdue ? 'border-red-500' : ''}`}>
-                    <Calendar className={`h-3 w-3 mr-1 ${isOverdue ? 'text-red-500' : ''}`} />
-                    {isOverdue && '! '}
-                    {format(dueDate, 'MMM dd')}
-                  </Badge>
-                );
-              })()}
-              
-              {card.tasks && Array.isArray(card.tasks) && card.tasks.length > 0 && (() => {
-                const completed = card.tasks.filter((t: any) => t.completed).length;
-                const total = card.tasks.length;
-                return (
-                  <Badge variant="outline" className="text-xs">
-                    <ListChecks className="h-3 w-3 mr-1" />
-                    {completed}/{total}
-                  </Badge>
-                );
-              })()}
-              
-              {card.attachment_count && card.attachment_count > 0 && (
-                <Badge variant="outline" className="text-xs">
-                  <Paperclip className="h-3 w-3 mr-1" />
-                  {card.attachment_count}
-                </Badge>
-              )}
-              
-              {card.value && card.value > 0 && (
-                <Badge variant="outline" className="text-xs text-green-600 border-green-600">
-                  <Euro className="h-3 w-3 mr-1" />
-                  {card.value.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </Badge>
-              )}
-              
-              {card.tags && card.tags.length > 0 && card.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                  <Tag className="h-3 w-3 mr-1" />
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              <AlertCircle className="h-4 w-4 mr-2" />
+              Alta prioridade
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangePriority(card.id, 'medium')}
+              className="text-orange-600"
+            >
+              <AlertCircle className="h-4 w-4 mr-2" />
+              Média prioridade
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangePriority(card.id, 'low')}
+              className="text-green-600"
+            >
+              <AlertCircle className="h-4 w-4 mr-2" />
+              Baixa prioridade
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem 
+              onClick={() => onDeleteCard(card.id)}
+              className="text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Eliminar card
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
       )}
     </Draggable>
   );
