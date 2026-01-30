@@ -7,6 +7,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
@@ -23,24 +25,22 @@ interface ExtractedCard {
 interface AiCardGeneratorDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  descriptionText: string;
   onCardsCreated: (cards: Array<{ title: string; description: string; priority: 'low' | 'medium' | 'high' }>) => void;
 }
 
 export const AiCardGeneratorDialog: React.FC<AiCardGeneratorDialogProps> = ({
   isOpen,
   onClose,
-  descriptionText,
   onCardsCreated,
 }) => {
+  const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [extractedCards, setExtractedCards] = useState<ExtractedCard[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [hasGenerated, setHasGenerated] = useState(false);
 
   const handleGenerateCards = async () => {
-    if (descriptionText.length < 20) {
-      toast.error('A descrição deve ter pelo menos 20 caracteres');
+    if (inputText.length < 50) {
+      toast.error('O texto deve ter pelo menos 50 caracteres');
       return;
     }
 
@@ -49,7 +49,7 @@ export const AiCardGeneratorDialog: React.FC<AiCardGeneratorDialogProps> = ({
 
     try {
       const { data, error: funcError } = await supabase.functions.invoke('generate-tasks-from-text', {
-        body: { text: descriptionText }
+        body: { text: inputText }
       });
 
       if (funcError) {
@@ -66,11 +66,10 @@ export const AiCardGeneratorDialog: React.FC<AiCardGeneratorDialogProps> = ({
       }));
 
       if (cards.length === 0) {
-        setError('Não foram encontradas tarefas acionáveis na descrição.');
+        setError('Não foram encontrados cards acionáveis no texto.');
       } else {
         setExtractedCards(cards);
       }
-      setHasGenerated(true);
     } catch (err) {
       console.error('Error generating cards:', err);
       const message = err instanceof Error ? err.message : 'Erro ao gerar cards';
@@ -80,13 +79,6 @@ export const AiCardGeneratorDialog: React.FC<AiCardGeneratorDialogProps> = ({
       setIsLoading(false);
     }
   };
-
-  // Auto-generate when dialog opens
-  React.useEffect(() => {
-    if (isOpen && !hasGenerated && descriptionText.length >= 20) {
-      handleGenerateCards();
-    }
-  }, [isOpen]);
 
   const toggleCardSelection = (index: number) => {
     setExtractedCards(prev => 
@@ -113,9 +105,9 @@ export const AiCardGeneratorDialog: React.FC<AiCardGeneratorDialogProps> = ({
   };
 
   const handleClose = () => {
+    setInputText('');
     setExtractedCards([]);
     setError(null);
-    setHasGenerated(false);
     onClose();
   };
 
@@ -140,33 +132,54 @@ export const AiCardGeneratorDialog: React.FC<AiCardGeneratorDialogProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">A analisar a descrição...</p>
-          </div>
-        ) : extractedCards.length === 0 ? (
+        {extractedCards.length === 0 ? (
+          // Input phase
           <div className="space-y-4">
-            {error ? (
-              <div className="flex flex-col items-center gap-4 py-8">
-                <AlertCircle className="h-12 w-12 text-muted-foreground" />
-                <p className="text-muted-foreground text-center">{error}</p>
-                <Button variant="outline" onClick={handleClose}>
-                  Fechar
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-4 py-8">
-                <p className="text-muted-foreground text-center">
-                  A descrição deve ter pelo menos 20 caracteres para extrair tarefas.
-                </p>
-                <Button variant="outline" onClick={handleClose}>
-                  Fechar
-                </Button>
+            <div>
+              <Label>Cole o texto para extrair cards</Label>
+              <Textarea
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder="Cole aqui um relatório, email ou qualquer texto do qual pretende extrair cards..."
+                rows={12}
+                className="mt-2"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Mínimo 50 caracteres ({inputText.length}/50)
+              </p>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 text-destructive text-sm">
+                <AlertCircle className="h-4 w-4" />
+                {error}
               </div>
             )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={handleClose}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleGenerateCards}
+                disabled={isLoading || inputText.length < 50}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    A processar...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Gerar Cards
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
           </div>
         ) : (
+          // Results phase
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
               {extractedCards.length} card(s) encontrado(s). Selecione os que pretende criar:
@@ -200,9 +213,16 @@ export const AiCardGeneratorDialog: React.FC<AiCardGeneratorDialogProps> = ({
               ))}
             </div>
 
+            {error && (
+              <div className="flex items-center gap-2 text-destructive text-sm">
+                <AlertCircle className="h-4 w-4" />
+                {error}
+              </div>
+            )}
+
             <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>
-                Cancelar
+              <Button variant="outline" onClick={() => setExtractedCards([])}>
+                Voltar
               </Button>
               <Button 
                 onClick={handleCreateCards}

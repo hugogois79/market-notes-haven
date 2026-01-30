@@ -383,18 +383,16 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1">
               <Label>Description</Label>
-              {description.length >= 20 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAiCardDialog(true)}
-                  className="h-7 px-2 text-xs"
-                  title="Gerar Cards a partir da descrição"
-                >
-                  <Sparkles className="h-3.5 w-3.5 mr-1" />
-                  Gerar Cards
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAiCardDialog(true)}
+                className="h-7 px-2 text-xs"
+                title="Gerar Cards com AI"
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1" />
+                Gerar Cards
+              </Button>
             </div>
             <Textarea
               value={description}
@@ -676,7 +674,6 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
       <AiCardGeneratorDialog
         isOpen={showAiCardDialog}
         onClose={() => setShowAiCardDialog(false)}
-        descriptionText={description}
         onCardsCreated={async (newCards) => {
           try {
             for (const cardData of newCards) {
