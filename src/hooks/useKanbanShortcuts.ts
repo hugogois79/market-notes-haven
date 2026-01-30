@@ -22,8 +22,8 @@ export const useKanbanShortcuts = ({
       return;
     }
 
-    // Ctrl+N / Cmd+N: Create new card/task
-    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+    // N: Create new card/task (single key, Trello-style)
+    if (e.key === 'n' || e.key === 'N') {
       e.preventDefault();
       onCreateCard();
       return;
@@ -42,7 +42,7 @@ export const KANBAN_SHORTCUTS = [
   {
     category: 'Kanban',
     shortcuts: [
-      { keys: ['⌘', 'N'], description: 'Criar nova tarefa' },
+      { keys: ['N'], description: 'Criar nova tarefa' },
     ],
   },
 ];
