@@ -24,6 +24,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Search, Kanban as KanbanIcon, Archive, ArrowLeft, MoreVertical, Pencil, Trash2, ArchiveRestore, Printer } from 'lucide-react';
+import { CreateCardModal } from '@/components/kanban/CreateCardModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -86,6 +87,7 @@ const KanbanPage = () => {
   const [showArchivedBoards, setShowArchivedBoards] = useState(false);
   const [showArchivedLists, setShowArchivedLists] = useState(false);
   const [quickAddListId, setQuickAddListId] = useState<string | null>(null);
+  const [createCardModalListId, setCreateCardModalListId] = useState<string | null>(null);
   const quickAddInputRef = useRef<HTMLInputElement>(null);
 
   // Keyboard shortcut to create new card
@@ -124,7 +126,16 @@ const KanbanPage = () => {
     };
     
     const handleCreateCard = () => {
-      handleQuickCreateCard();
+      if (!boardId || lists.length === 0) return;
+      
+      // Get the first non-archived list and open the full modal
+      const firstList = lists
+        .filter(l => !l.archived)
+        .sort((a, b) => a.position - b.position)[0];
+      
+      if (firstList) {
+        setCreateCardModalListId(firstList.id);
+      }
     };
 
     window.addEventListener('kanban:create-board', handleCreateBoard);
@@ -250,6 +261,30 @@ const KanbanPage = () => {
     const maxPosition = listCards.length > 0 ? Math.max(...listCards.map(c => c.position)) : -1;
     await createCard({
       title,
+      list_id: listId,
+      position: maxPosition + 1
+    });
+  };
+
+  const handleCreateCardWithDetails = async (listId: string, data: {
+    title: string;
+    description?: string;
+    priority?: 'low' | 'medium' | 'high';
+    value?: number;
+    due_date?: string;
+    tasks?: any[];
+    tags?: string[];
+  }) => {
+    const listCards = cards.filter(c => c.list_id === listId);
+    const maxPosition = listCards.length > 0 ? Math.max(...listCards.map(c => c.position)) : -1;
+    await createCard({
+      title: data.title,
+      description: data.description,
+      priority: data.priority,
+      value: data.value,
+      due_date: data.due_date,
+      tasks: data.tasks as any,
+      tags: data.tags as any,
       list_id: listId,
       position: maxPosition + 1
     });
@@ -780,6 +815,17 @@ const KanbanPage = () => {
         <div className="text-center py-12">
           <p className="text-muted-foreground">No cards found matching "{searchQuery}"</p>
         </div>
+      )}
+
+      {/* Create Card Modal (triggered by Command Palette) */}
+      {createCardModalListId && (
+        <CreateCardModal
+          listId={createCardModalListId}
+          listTitle={lists.find(l => l.id === createCardModalListId)?.title || ''}
+          isOpen={!!createCardModalListId}
+          onClose={() => setCreateCardModalListId(null)}
+          onCreate={(data) => handleCreateCardWithDetails(createCardModalListId, data)}
+        />
       )}
     </div>
   );
