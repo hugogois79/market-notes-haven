@@ -118,7 +118,7 @@ const AIAssistant = () => {
 
   // Context detection
   const isCalendarPage = location.pathname === '/calendar';
-  const isKanbanBoardsPage = location.pathname === '/kanban';
+  const isKanbanPage = location.pathname.startsWith('/kanban');
 
   // Kanban mode states
   const [kanbanInputText, setKanbanInputText] = useState('');
@@ -142,10 +142,10 @@ const AIAssistant = () => {
 
   // Focus input when sheet opens
   useEffect(() => {
-    if (isOpen && inputRef.current && !isKanbanBoardsPage) {
+    if (isOpen && inputRef.current && !isKanbanPage) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [isOpen, isKanbanBoardsPage]);
+  }, [isOpen, isKanbanPage]);
 
   // Clear state when switching context or closing
   useEffect(() => {
@@ -153,7 +153,7 @@ const AIAssistant = () => {
     setKanbanInputText('');
     setKanbanExtractedItems(null);
     setKanbanStep('input');
-  }, [isCalendarPage, isKanbanBoardsPage]);
+  }, [isCalendarPage, isKanbanPage]);
 
   // Reset kanban state when sheet closes
   useEffect(() => {
@@ -539,7 +539,7 @@ const AIAssistant = () => {
   };
 
   const getTitle = () => {
-    if (isKanbanBoardsPage) {
+    if (isKanbanPage) {
       return (
         <>
           <LayoutGrid className="h-5 w-5 text-indigo-600" />
@@ -818,7 +818,7 @@ const AIAssistant = () => {
         <Button
           className={cn(
             "fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50",
-            isKanbanBoardsPage
+            isKanbanPage
               ? "bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500"
               : isCalendarPage 
                 ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500"
@@ -826,7 +826,7 @@ const AIAssistant = () => {
           )}
           size="icon"
         >
-          {isKanbanBoardsPage ? (
+          {isKanbanPage ? (
             <LayoutGrid className="h-6 w-6" />
           ) : isCalendarPage ? (
             <CalendarDays className="h-6 w-6" />
@@ -838,7 +838,7 @@ const AIAssistant = () => {
       <SheetContent className="w-full sm:max-w-md flex flex-col p-0">
         <SheetHeader className={cn(
           "px-4 py-3 border-b",
-          isKanbanBoardsPage && "bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-950/30 dark:to-blue-950/30",
+          isKanbanPage && "bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-950/30 dark:to-blue-950/30",
           isCalendarPage && "bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30"
         )}>
           <SheetTitle className="flex items-center gap-2">
@@ -847,7 +847,7 @@ const AIAssistant = () => {
         </SheetHeader>
 
         {/* Kanban mode has its own content */}
-        {isKanbanBoardsPage ? (
+        {isKanbanPage ? (
           renderKanbanContent()
         ) : (
           <>
