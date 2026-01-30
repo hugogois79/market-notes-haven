@@ -1,111 +1,230 @@
 
-Objetivo: fazer com que **boards partilhados** sejam visíveis para qualquer utilizador autenticado que tenha a permissão **Projects**, mantendo a possibilidade de boards privados (apenas owner/admin). Além disso, “Tornar todos partilhados” para os boards existentes.
+# Plano: Adicionar Botão "Supermemory" ao Editor de Notas
 
-## 1) Diagnóstico do que está a acontecer agora (porque não aparece nenhum board)
-- O `KanbanService.getBoards()` faz `select('*')` a `kanban_boards`.
-- A policy atual em `kanban_boards` é:
-  - `auth.uid() = user_id OR has_role(auth.uid(), 'admin')`
-- Como os boards existentes estão atribuídos ao **admin**, qualquer utilizador **não-admin** (mesmo autenticado) recebe `[]` por RLS.
-- No Command Palette isto aparece como “Nenhum board encontrado.” (igual ao teu screenshot).
-
-Conclusão: falta implementar a parte “partilhado por permissão Projects” ao nível de **RLS** e também garantir que **Spaces/Listas/Cards** acompanham a visibilidade.
+## Objetivo
+Adicionar um botão **Supermemory** ao lado do botão "Copy" na barra de status do editor de notas. Este botão irá enviar a nota completa (título, conteúdo, resumo, tags e URLs de anexos) para a API da Supermemory.
 
 ---
 
-## 2) Alterações no Supabase (migração SQL)
-### 2.1 Adicionar flag de partilha
-- Adicionar coluna:
-  - `kanban_boards.is_shared boolean not null default false`
+## Arquitetura da Solução
 
-### 2.2 Marcar boards existentes como partilhados
-- `UPDATE kanban_boards SET is_shared = true;`  
-  (cumpre “Boards existentes: Tornar todos partilhados”)
-
-### 2.3 Atualizar policies RLS com a regra “Por permissão Projects”
-Premissas:
-- `expense_users.feature_permissions` é `jsonb` e existe policy SELECT em `expense_users` para qualquer utilizador autenticado (`auth.uid() is not null`), logo pode ser usado dentro das policies sem bloquear.
-- A tua regra escolhida: **Boards partilhados: Por permissão Projects**.
-
-#### Policy base de visibilidade de board (conceito)
-Um board é visível se:
-1) `auth.uid() = kanban_boards.user_id` (owner), ou
-2) `has_role(auth.uid(), 'admin')` (admin), ou
-3) `kanban_boards.is_shared = true` **e** o utilizador tem `feature_permissions.projects = true`.
-
-Implementação SQL (na migração):
-- Substituir policy SELECT de `kanban_boards` por uma nova com estas condições.
-- Para spaces/lists/cards/labels/attachments:
-  - Alterar policies SELECT para fazer `EXISTS` até ao board e aplicar a mesma condição de visibilidade do board (owner/admin/shared+projects).
-
-### 2.4 Spaces: garantir que aparecem no agrupamento
-Como os boards podem estar dentro de spaces, precisamos que o utilizador (com Projects) consiga ver os spaces que tenham pelo menos 1 board visível.
-Opções de policy para `kanban_spaces`:
-- Permitir SELECT se:
-  - owner/admin, ou
-  - existe um board naquele space que seja visível (shared+projects).
-
-### 2.5 Índices
-Adicionar índices para performance:
-- `create index ... on kanban_boards(is_shared) where is_shared = true;`
-- (opcional) índice em `kanban_boards(space_id)` se ainda não existir.
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                     EditorStatusBar.tsx                         │
+│  [Copy] [Supermemory] [Print] [Save] [Delete]                   │
+│         └──────────────────┬────────────────┘                   │
+│                            │ onClick                            │
+└────────────────────────────┼────────────────────────────────────┘
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              Edge Function: send-to-supermemory                 │
+│  - Recebe: noteContent + attachments                            │
+│  - Formata para Supermemory API                                 │
+│  - POST → api.supermemory.ai/v3/documents                       │
+│  - Retorna: { id, status } ou { error }                         │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 3) Alterações no frontend (para UX e evitar confusão)
-Mesmo com RLS correto, vale a pena alinhar UI com permissões:
+## Alterações Necessárias
 
-### 3.1 CommandPalette: esconder “Boards” para quem não tem permissão Projects
-Hoje o CommandPalette sempre mostra “Boards”, mas o utilizador pode não ter acesso e vai ver lista vazia.
-Mudança:
-- Importar `useFeatureAccess()` no `CommandPalette.tsx`
-- Só mostrar o item “Boards” (e/ou permitir entrar no submenu) se `isAdmin || hasAccess('projects')`.
-- Se decidirmos manter visível (por UX), então mostrar um item informativo no submenu: “Sem acesso a Projects”.
+### 1. Criar Edge Function `send-to-supermemory`
 
-### 3.2 SidebarNav: evitar fetch de boards/spaces quando não faz sentido
-Atualmente `SidebarNav` faz fetch de spaces/boards sempre que `!isWorker`, mesmo que o utilizador não tenha permissão Projects.
-Mudança:
-- No `useEffect`, só fazer fetch se `!isWorker && (isAdmin || hasAccess('projects'))` e **depois** de `roleLoading/permissionsLoading` estarem concluídos.
-Isto reduz chamadas desnecessárias e estados confusos.
+**Ficheiro:** `supabase/functions/send-to-supermemory/index.ts`
 
-### 3.3 Tipos/Interfaces
-- Atualizar `KanbanBoard` (em `src/services/kanbanService.ts`) para incluir `is_shared?: boolean` (ou obrigatório).
-- Atualizar tipos gerados do Supabase (`src/integrations/supabase/types.ts`) para refletir a nova coluna `is_shared`.
+A Edge Function vai:
+1. Receber o conteúdo da nota via POST (título, categoria, content, tags, summary, attachments)
+2. Formatar o conteúdo num formato legível para a Supermemory
+3. Enviar para `https://api.supermemory.ai/v3/documents` com:
+   - `content`: texto formatado da nota
+   - `containerTag`: categoria da nota (ex: "Legal", "Trading")
+   - `metadata`: { noteId, title, tags, hasAttachments }
+4. Usar a API key da Supermemory (armazenada como secret)
+5. Retornar sucesso/erro
+
+**Payload de exemplo para Supermemory:**
+```json
+{
+  "content": "# Relatório Jurídico - Ford Transit 28-XH-55\n\nCategory: Legal\nTags: insolvência, ford, veículo\n\n## Summary\nAnálise jurídica da viatura Ford Transit...\n\n## Content\nRELATÓRIO DE ANÁLISE JURÍDICA...\n\n## Attachments\n- https://storage.../document1.pdf\n- https://storage.../document2.pdf",
+  "containerTag": "Legal",
+  "metadata": {
+    "noteId": "5f6863e7-3b15-475c-8e63-d1d3728efee7",
+    "title": "Relatório Jurídico - Ford Transit 28-XH-55",
+    "tags": ["insolvência", "ford", "veículo"],
+    "hasAttachments": true,
+    "source": "gvvc-one"
+  }
+}
+```
+
+### 2. Adicionar Secret da API Supermemory
+
+A API key `sm_Hk8HokoXQyS4aEUSCz4Mgi_j8aYkUjrJ9fy0aacwVcUlpU3C7KEvY6` será armazenada como:
+- **Nome:** `SUPERMEMORY_API_KEY`
+- **Valor:** A chave fornecida
+
+### 3. Modificar `EditorStatusBar.tsx`
+
+Adicionar o botão Supermemory:
+- Ícone: `Brain` ou `Sparkles` (de lucide-react)
+- Posição: imediatamente após o botão "Copy"
+- Comportamento:
+  - Ao clicar, chama a Edge Function com o conteúdo da nota
+  - Mostra toast de loading ("A enviar para Supermemory...")
+  - Toast de sucesso ou erro conforme resultado
+
+**Novo handler:**
+```tsx
+const handleSendToSupermemory = async () => {
+  if (!noteContent) {
+    toast.error("No content to send");
+    return;
+  }
+
+  try {
+    toast.info("A enviar para Supermemory...");
+    
+    const response = await supabase.functions.invoke('send-to-supermemory', {
+      body: {
+        noteId,
+        title: noteContent.title,
+        category: noteContent.category,
+        content: noteContent.content,
+        tags: noteContent.tags,
+        summary: noteContent.summary,
+        attachments
+      }
+    });
+
+    if (response.error) throw response.error;
+    
+    toast.success("Nota enviada para Supermemory!");
+  } catch (error) {
+    console.error("Supermemory error:", error);
+    toast.error("Erro ao enviar para Supermemory");
+  }
+};
+```
+
+### 4. Atualizar Props do EditorStatusBar
+
+Adicionar propriedade `noteId` ao `EditorStatusBarProps`:
+```tsx
+interface EditorStatusBarProps {
+  // ... existing props
+  noteId?: string;  // Novo - para identificar a nota na Supermemory
+}
+```
+
+### 5. Passar noteId para EditorStatusBar
+
+Em `EditorMain.tsx`, passar a prop `noteId` para o `EditorStatusBar`:
+```tsx
+<EditorStatusBar 
+  // ... existing props
+  noteId={noteId}
+/>
+```
 
 ---
 
-## 4) Sequência de implementação (passo a passo)
-1) Criar nova migração Supabase:
-   - `ALTER TABLE kanban_boards ADD COLUMN is_shared boolean not null default false;`
-   - `UPDATE kanban_boards SET is_shared = true;`
-   - `DROP POLICY` / `CREATE POLICY` para:
-     - `kanban_boards` (SELECT)
-     - `kanban_spaces` (SELECT)
-     - `kanban_lists` (SELECT)
-     - `kanban_cards` (SELECT)
-     - `kanban_labels` (SELECT)
-     - `kanban_attachments` (SELECT)
-   - Criar índices necessários.
-2) Atualizar frontend:
-   - `src/components/CommandPalette.tsx` para respeitar Projects permission.
-   - `src/components/sidebar/SidebarNav.tsx` para só fazer fetch quando há permissão e quando loading terminou.
-3) Atualizar tipos:
-   - `src/integrations/supabase/types.ts` (coluna `is_shared`).
-   - `src/services/kanbanService.ts` (interface `KanbanBoard` com `is_shared`).
-4) Validação:
-   - Testar com um utilizador **admin**: vê tudo.
-   - Testar com um utilizador **não-admin com Projects=true**: vê boards partilhados (agora todos).
-   - Testar com um utilizador **sem Projects**: não vê boards e não vê “Boards” no CommandPalette/Sidebar (ou vê aviso).
+## Detalhes Técnicos
+
+### Edge Function - Estrutura Completa
+
+```typescript
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const SUPERMEMORY_API_KEY = Deno.env.get('SUPERMEMORY_API_KEY');
+const SUPERMEMORY_API_URL = 'https://api.supermemory.ai/v3/documents';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { noteId, title, category, content, tags, summary, attachments } = await req.json();
+
+    // Formatar conteúdo para Supermemory
+    let formattedContent = `# ${title}\n\n`;
+    formattedContent += `**Category:** ${category}\n`;
+    if (tags?.length) formattedContent += `**Tags:** ${tags.join(', ')}\n`;
+    if (summary) formattedContent += `\n## Summary\n${summary}\n`;
+    formattedContent += `\n## Content\n${content}\n`;
+    if (attachments?.length) {
+      formattedContent += `\n## Attachments\n`;
+      attachments.forEach(url => formattedContent += `- ${url}\n`);
+    }
+
+    // Enviar para Supermemory
+    const response = await fetch(SUPERMEMORY_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SUPERMEMORY_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        content: formattedContent,
+        containerTag: category?.replace(/\s+/g, '-').toLowerCase(),
+        metadata: {
+          noteId,
+          title,
+          tags,
+          hasAttachments: attachments?.length > 0,
+          source: 'gvvc-one'
+        }
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to send to Supermemory');
+    }
+
+    return new Response(JSON.stringify({ success: true, ...data }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});
+```
 
 ---
 
-## 5) Notas de segurança (importante)
-- Não vamos guardar roles no `expense_users`. Continuamos a usar `user_roles` + `has_role(...)` / `get_user_role(...)`.
-- A verificação de “tem permissão Projects” será feita no Supabase via `expense_users.feature_permissions->>'projects'`, mas apenas para permitir leitura de boards marcados como `is_shared = true`.
-- Como `expense_users` atualmente é legível por qualquer utilizador autenticado, isso já é uma decisão de privacidade existente no teu projeto; esta mudança não a piora, mas vale reavaliar no futuro se quiseres restringir dados pessoais nessa tabela.
+## Sequência de Implementação
+
+1. **Criar Edge Function** `supabase/functions/send-to-supermemory/index.ts`
+2. **Adicionar Secret** `SUPERMEMORY_API_KEY` via Supabase Cloud
+3. **Atualizar `EditorStatusBar.tsx`**:
+   - Adicionar import do ícone (Brain/Sparkles)
+   - Adicionar prop `noteId`
+   - Adicionar handler `handleSendToSupermemory`
+   - Adicionar botão na UI
+4. **Atualizar `EditorMain.tsx`**: passar `noteId` para EditorStatusBar
+5. **Deploy Edge Function**
+6. **Testar** end-to-end
 
 ---
 
-## Resultado esperado
-- Boards passam a aparecer para utilizadores com permissão **Projects** (mesmo não sendo admins).
-- Todos os boards existentes ficam visíveis para a equipa (porque foram marcados como `is_shared = true`).
-- Mantém-se a possibilidade de criar boards privados (`is_shared = false`) no futuro.
+## Resultado Visual Esperado
+
+```
+[Copy] [🧠 Supermemory] [Print] [Save] [Delete]
+```
+
+Ao clicar:
+- Toast: "A enviar para Supermemory..."
+- Sucesso: "Nota enviada para Supermemory! ✓"
+- Erro: "Erro ao enviar para Supermemory"
