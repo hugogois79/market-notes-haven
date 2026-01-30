@@ -25,7 +25,7 @@ interface ExtractedTask {
 interface AiTaskGeneratorDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onTasksCreated: (tasks: Array<{ title: string; description: string; priority: 'low' | 'medium' | 'high' }>) => void;
+  onTasksCreated: (tasks: Array<{ title: string; description: string; priority: 'low' | 'medium' | 'high' }>) => Promise<void>;
 }
 
 export const AiTaskGeneratorDialog: React.FC<AiTaskGeneratorDialogProps> = ({
@@ -88,24 +88,36 @@ export const AiTaskGeneratorDialog: React.FC<AiTaskGeneratorDialogProps> = ({
     );
   };
 
-  const handleCreateCards = () => {
+  const handleCreateCards = async () => {
     const selectedTasks = extractedTasks.filter(t => t.selected);
     if (selectedTasks.length === 0) {
       toast.error('Selecione pelo menos uma tarefa');
       return;
     }
 
-    onTasksCreated(selectedTasks.map(({ title, description, priority }) => ({
-      title,
-      description,
-      priority
-    })));
-
-    // Reset state
-    setInputText('');
-    setExtractedTasks([]);
+    setIsLoading(true);
     setError(null);
-    onClose();
+
+    try {
+      await onTasksCreated(selectedTasks.map(({ title, description, priority }) => ({
+        title,
+        description,
+        priority
+      })));
+
+      // Reset state only after successful creation
+      setInputText('');
+      setExtractedTasks([]);
+      setError(null);
+      onClose();
+    } catch (err) {
+      console.error('Error creating cards:', err);
+      const message = err instanceof Error ? err.message : 'Erro ao criar cards';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -225,14 +237,21 @@ export const AiTaskGeneratorDialog: React.FC<AiTaskGeneratorDialogProps> = ({
             )}
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setExtractedTasks([])}>
+              <Button variant="outline" onClick={() => setExtractedTasks([])} disabled={isLoading}>
                 Voltar
               </Button>
               <Button 
                 onClick={handleCreateCards}
-                disabled={selectedCount === 0}
+                disabled={selectedCount === 0 || isLoading}
               >
-                Criar {selectedCount} Card{selectedCount !== 1 ? 's' : ''}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    A criar...
+                  </>
+                ) : (
+                  `Criar ${selectedCount} Card${selectedCount !== 1 ? 's' : ''}`
+                )}
               </Button>
             </DialogFooter>
           </div>
