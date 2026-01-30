@@ -486,6 +486,28 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
               tasks={tasks} 
               onTasksChange={setTasks} 
               onAiGenerate={() => setShowAiDialog(true)}
+              onConvertToCard={async (task) => {
+                try {
+                  // Create a new card with the task text as title
+                  await KanbanService.createCard({
+                    title: task.text,
+                    list_id: card.list_id,
+                    position: 0, // Will be placed at top
+                    priority: 'medium',
+                    due_date: task.dueDate ? format(new Date(task.dueDate), 'yyyy-MM-dd') : undefined
+                  });
+                  
+                  // Remove task from current card's checklist
+                  const updatedTasks = tasks.filter(t => t.id !== task.id);
+                  setTasks(updatedTasks);
+                  onUpdate(card.id, { tasks: updatedTasks as any });
+                  
+                  toast.success('Tarefa convertida para novo card!');
+                } catch (error) {
+                  console.error('Error converting task to card:', error);
+                  toast.error('Falha ao converter tarefa para card');
+                }
+              }}
             />
           </div>
 
