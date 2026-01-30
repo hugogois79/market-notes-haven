@@ -367,9 +367,8 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
 
       toast.success(`${newTasks.length} card${newTasks.length !== 1 ? 's' : ''} criado${newTasks.length !== 1 ? 's' : ''} com sucesso!`);
       
-      // Trigger a refresh by calling onUpdate with no changes
-      // This will cause the parent to refetch the cards
-      onUpdate(card.id, {});
+      // Close the modal - the parent will refetch when modal closes
+      onClose();
     } catch (error) {
       console.error('Error creating AI tasks:', error);
       toast.error('Erro ao criar cards');
