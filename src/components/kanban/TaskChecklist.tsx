@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, X, Pencil, Check, Calendar as CalendarIcon, Sparkles, ArrowUpRight } from 'lucide-react';
+import { Plus, X, Pencil, Check, Calendar as CalendarIcon, Sparkles, ArrowUpRight, ChevronUp, ChevronDown } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -86,6 +86,20 @@ export const TaskChecklist: React.FC<TaskChecklistProps> = ({ tasks, onTasksChan
     );
   };
 
+  const moveTaskUp = (index: number) => {
+    if (index <= 0) return;
+    const newTasks = [...tasks];
+    [newTasks[index - 1], newTasks[index]] = [newTasks[index], newTasks[index - 1]];
+    onTasksChange(newTasks);
+  };
+
+  const moveTaskDown = (index: number) => {
+    if (index >= tasks.length - 1) return;
+    const newTasks = [...tasks];
+    [newTasks[index], newTasks[index + 1]] = [newTasks[index + 1], newTasks[index]];
+    onTasksChange(newTasks);
+  };
+
   const completedCount = tasks.filter(t => t.completed).length;
   const progress = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0;
 
@@ -110,11 +124,33 @@ export const TaskChecklist: React.FC<TaskChecklistProps> = ({ tasks, onTasksChan
       )}
 
       <div className="space-y-2">
-        {tasks.map(task => (
+        {tasks.map((task, index) => (
           <div
             key={task.id}
-            className="flex items-center gap-2 group p-2 rounded-lg hover:bg-muted/50 transition-colors"
+            className="flex items-center gap-1 group p-2 rounded-lg hover:bg-muted/50 transition-colors"
           >
+            <div className="flex flex-col opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => moveTaskUp(index)}
+                disabled={index === 0}
+                className="h-4 w-6 p-0"
+                title="Mover para cima"
+              >
+                <ChevronUp className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => moveTaskDown(index)}
+                disabled={index === tasks.length - 1}
+                className="h-4 w-6 p-0"
+                title="Mover para baixo"
+              >
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </div>
             <Checkbox
               checked={task.completed}
               onCheckedChange={() => toggleTask(task.id)}
