@@ -137,10 +137,4 @@ export const KEYBOARD_SHORTCUTS = [
       { keys: ['G', 'S'], description: 'Ir para Definições' },
     ],
   },
-  {
-    category: 'Kanban',
-    shortcuts: [
-      { keys: ['N'], description: 'Criar nova tarefa (quando num board)' },
-    ],
-  },
 ];
