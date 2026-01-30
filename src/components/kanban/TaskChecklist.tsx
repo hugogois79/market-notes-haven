@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, X, Pencil, Check, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, X, Pencil, Check, Calendar as CalendarIcon, Sparkles } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -19,9 +19,10 @@ export interface Task {
 interface TaskChecklistProps {
   tasks: Task[];
   onTasksChange: (tasks: Task[]) => void;
+  onAiGenerate?: () => void;
 }
 
-export const TaskChecklist: React.FC<TaskChecklistProps> = ({ tasks, onTasksChange }) => {
+export const TaskChecklist: React.FC<TaskChecklistProps> = ({ tasks, onTasksChange, onAiGenerate }) => {
   const [newTaskText, setNewTaskText] = useState('');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
@@ -249,6 +250,16 @@ export const TaskChecklist: React.FC<TaskChecklistProps> = ({ tasks, onTasksChan
         <Button variant="outline" size="icon" onClick={addTask}>
           <Plus className="h-4 w-4" />
         </Button>
+        {onAiGenerate && (
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={onAiGenerate}
+            title="Gerar tarefas com AI"
+          >
+            <Sparkles className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     </div>
   );

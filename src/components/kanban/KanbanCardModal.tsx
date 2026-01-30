@@ -368,24 +368,13 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <DialogTitle className="flex-1">
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="text-lg font-semibold border-none p-0 focus-visible:ring-0"
-              />
-            </DialogTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAiDialog(true)}
-              className="flex items-center gap-1.5"
-            >
-              <Sparkles className="h-4 w-4" />
-              AI
-            </Button>
-          </div>
+          <DialogTitle className="flex-1">
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="text-lg font-semibold border-none p-0 focus-visible:ring-0"
+            />
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -493,7 +482,11 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
           </div>
 
           <div>
-            <TaskChecklist tasks={tasks} onTasksChange={setTasks} />
+            <TaskChecklist 
+              tasks={tasks} 
+              onTasksChange={setTasks} 
+              onAiGenerate={() => setShowAiDialog(true)}
+            />
           </div>
 
           <div>
