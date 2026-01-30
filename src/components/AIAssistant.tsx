@@ -116,9 +116,9 @@ const AIAssistant = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Context detection
+  // Context detection - check both /kanban and /kanban/:id routes
   const isCalendarPage = location.pathname === '/calendar';
-  const isKanbanPage = location.pathname.startsWith('/kanban');
+  const isKanbanPage = location.pathname === '/kanban' || location.pathname.startsWith('/kanban/');
 
   // Kanban mode states
   const [kanbanInputText, setKanbanInputText] = useState('');
