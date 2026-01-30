@@ -4,15 +4,24 @@ import { KanbanCard as KanbanCardType } from '@/services/kanbanService';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, AlertCircle, CheckCircle2, RotateCcw, Paperclip, ListChecks, Tag, Euro } from 'lucide-react';
+import { Calendar, AlertCircle, CheckCircle2, RotateCcw, Paperclip, ListChecks, Tag, Euro, MoreVertical, Trash2 } from 'lucide-react';
 import { format, isPast, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface KanbanCardProps {
   card: KanbanCardType;
   index: number;
   onClick: () => void;
   onMarkComplete: (cardId: string) => void;
+  onChangePriority: (cardId: string, priority: 'low' | 'medium' | 'high') => void;
+  onDeleteCard: (cardId: string) => void;
 }
 
 const priorityColors = {
@@ -21,7 +30,7 @@ const priorityColors = {
   high: 'bg-red-100 text-red-800 hover:bg-red-200'
 };
 
-export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, onMarkComplete }) => {
+export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, onMarkComplete, onChangePriority, onDeleteCard }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   // Calculate if card is overdue
@@ -55,18 +64,53 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {isHovered && !card.concluded && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-background border-2 border-primary shadow-lg hover:bg-primary hover:text-primary-foreground z-10 p-0"
-              onClick={handleMarkComplete}
-            >
-              <CheckCircle2 className="h-4 w-4" />
-            </Button>
+          {isHovered && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="absolute -top-2 -left-2 h-8 w-8 rounded-full bg-background border-2 border-muted-foreground/30 shadow-lg hover:bg-muted z-10 p-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem 
+                  onClick={() => onChangePriority(card.id, 'high')}
+                  className="text-red-600"
+                >
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  Alta prioridade
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => onChangePriority(card.id, 'medium')}
+                  className="text-orange-600"
+                >
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  Média prioridade
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => onChangePriority(card.id, 'low')}
+                  className="text-green-600"
+                >
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  Baixa prioridade
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => onDeleteCard(card.id)}
+                  className="text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar card
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           
-          {isHovered && card.concluded && (
+          {isHovered && !card.concluded && (
             <Button
               size="sm"
               variant="ghost"
