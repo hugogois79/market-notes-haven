@@ -1,160 +1,193 @@
 
-# Plano: Botão AI para Gerar Tarefas Automaticamente
+
+# Plano: Assistente AI Kanban no Botao Flutuante
 
 ## Resumo
 
-Adicionar um botão "AI" ao modal de visualização/edição de cards (`KanbanCardModal`) que permite ao utilizador colar texto (como relatórios ou emails) e a IA extrai automaticamente as tarefas principais, criando novos cards no board.
+Quando o utilizador esta numa pagina de **boards Kanban** (`/kanban` sem ID de board ou na lista de boards), o botao flutuante preto no canto inferior direito muda de comportamento: em vez de fazer perguntas sobre notas, permite colar texto e gerar automaticamente **boards**, **listas** e **cards**.
 
-## Fluxo do Utilizador
+## O que muda para o utilizador
+
+1. **Botao flutuante muda de cor** quando esta na pagina de boards (gradiente azul/indigo)
+2. **Icone diferente** (Layout/Grid em vez de Sparkles)
+3. **Ao clicar**, abre um painel lateral com:
+   - Caixa de texto grande para colar conteudo (relatorios, emails, etc.)
+   - Botao "Gerar Estrutura" que envia para a AI
+   - Preview dos itens extraidos com checkboxes
+   - Botao para criar os itens selecionados
+
+## Fluxo de utilizacao
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│  KanbanCardModal                                                │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │ Surveyer Michele                            [AI] ← NOVO    │ │
-│  ├────────────────────────────────────────────────────────────┤ │
-│  │ Description                                                │ │
-│  │ **PROBLEMAS CRÍTICOS...                                    │ │
-│  └────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-                          │
-                          ▼ Click no botão AI
-┌─────────────────────────────────────────────────────────────────┐
-│  Dialog: Gerar Tarefas com AI                                   │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │ Cole aqui o texto para extrair tarefas...                  │ │
-│  │                                                            │ │
-│  │ [Textarea com relatório colado]                            │ │
-│  │                                                            │ │
-│  └────────────────────────────────────────────────────────────┘ │
-│  [ ] Adicionar à lista atual (Pipeline)                         │
-│  [Cancelar]                     [🤖 Gerar Tarefas]              │
-└─────────────────────────────────────────────────────────────────┘
-                          │
-                          ▼ AI processa e extrai tarefas
-┌─────────────────────────────────────────────────────────────────┐
-│  3 tarefas extraídas:                                           │
-│  ☑ Corrigir infiltração no Pilothouse (high)                    │
-│  ☑ Verificar leme de estibordo (high)                           │
-│  ☑ Avaliar cotovelos de escape (medium)                         │
-│  [Cancelar]                     [✓ Criar 3 Cards]               │
-└─────────────────────────────────────────────────────────────────┘
+1. Utilizador navega para /kanban (lista de boards)
+2. Clica no botao flutuante (agora azul)
+3. Cola um texto longo (ex: relatorio de projeto)
+4. Clica "Gerar Estrutura"
+5. AI extrai:
+   - Boards (projetos distintos)
+   - Listas (fases/categorias)
+   - Cards (tarefas individuais)
+6. Utilizador seleciona quais criar
+7. Clica "Criar Selecionados"
+8. Itens sao criados na base de dados
 ```
 
-## Arquitetura Técnica
+## Detalhes Tecnicos
 
-### 1. Nova Edge Function: `generate-tasks-from-text`
+### 1. Modificar AIAssistant.tsx
 
-Criar uma edge function dedicada que:
-- Recebe texto livre do utilizador
-- Usa Lovable AI (Google Gemini) com tool calling para estruturar a resposta
-- Retorna array de tarefas com: título, descrição curta, prioridade
-- Extrai apenas as tarefas principais (acionáveis)
-
-**Prompt da AI:**
-```
-Analisa o seguinte texto e extrai as tarefas principais que precisam de ser realizadas.
-Para cada tarefa, identifica:
-- Título curto e claro (máx 80 caracteres)
-- Descrição resumida do que precisa ser feito
-- Prioridade (high/medium/low) baseada na urgência mencionada
-
-Foca apenas em itens acionáveis. Ignora contexto informativo.
-```
-
-### 2. Novo Componente: `AiTaskGeneratorDialog`
-
-Dialog que contém:
-- Textarea para colar o texto
-- Estado de loading durante processamento
-- Preview das tarefas extraídas com checkboxes
-- Botão para criar os cards selecionados
-
-### 3. Integração no KanbanCardModal
-
-- Adicionar botão "AI" pequeno no header (junto ao título)
-- O botão abre o `AiTaskGeneratorDialog`
-- Após confirmação, cria múltiplos cards usando `KanbanService.createCard()`
-
-## Ficheiros a Criar/Modificar
-
-| Ficheiro | Ação | Descrição |
-|----------|------|-----------|
-| `supabase/functions/generate-tasks-from-text/index.ts` | Criar | Edge function para processar texto com AI |
-| `src/components/kanban/AiTaskGeneratorDialog.tsx` | Criar | Dialog com textarea e preview de tarefas |
-| `src/components/kanban/KanbanCardModal.tsx` | Modificar | Adicionar botão AI no header |
-
-## Detalhes de Implementação
-
-### Edge Function
+Adicionar detecao da rota Kanban boards:
 
 ```typescript
-// Usar Lovable AI com tool calling para output estruturado
-const body = {
-  model: "google/gemini-3-flash-preview",
-  messages: [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userText }
-  ],
-  tools: [{
-    type: "function",
-    function: {
-      name: "extract_tasks",
-      parameters: {
-        type: "object",
-        properties: {
-          tasks: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                title: { type: "string", maxLength: 80 },
-                description: { type: "string" },
-                priority: { type: "string", enum: ["low", "medium", "high"] }
-              }
+// Detecao de contexto
+const isCalendarPage = location.pathname === '/calendar';
+const isKanbanBoardsPage = location.pathname === '/kanban';  // NOVO
+```
+
+Adicionar estados para modo Kanban:
+
+```typescript
+// Estados para modo Kanban
+const [kanbanInputText, setKanbanInputText] = useState('');
+const [kanbanExtractedItems, setKanbanExtractedItems] = useState<ExtractedKanbanItems | null>(null);
+const [kanbanStep, setKanbanStep] = useState<'input' | 'results'>('input');
+```
+
+Renderizar UI diferente quando `isKanbanBoardsPage`:
+- Textarea para input de texto
+- Lista de resultados com checkboxes agrupados por tipo
+- Botoes de acao
+
+### 2. Criar Edge Function: generate-kanban-structure
+
+Nova funcao baseada na `generate-tasks-from-text` mas com schema expandido:
+
+**Prompt:**
+```
+Analisa o texto e extrai estruturas para um sistema Kanban:
+- Boards: projetos ou contextos distintos
+- Listas: fases, categorias ou estados
+- Cards: tarefas individuais acionaveis
+
+Cada board pode ter listas associadas.
+Cada lista pode ter cards associados.
+```
+
+**Tool Call Schema:**
+```typescript
+{
+  type: "function",
+  function: {
+    name: "extract_kanban_structure",
+    parameters: {
+      type: "object",
+      properties: {
+        boards: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              description: { type: "string" },
+              color: { type: "string", enum: ["blue", "green", "purple", "orange", "red"] }
+            }
+          }
+        },
+        lists: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              boardRef: { type: "number", description: "Index do board associado (0-based), ou null se for lista geral" }
+            }
+          }
+        },
+        cards: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              description: { type: "string" },
+              priority: { type: "string", enum: ["low", "medium", "high"] },
+              listRef: { type: "number", description: "Index da lista associada (0-based), ou null" }
             }
           }
         }
       }
     }
-  }],
-  tool_choice: { type: "function", function: { name: "extract_tasks" } }
-};
+  }
+}
 ```
 
-### Componente Dialog
+### 3. Logica de Criacao
 
-- Checkbox para cada tarefa extraída (todas selecionadas por default)
-- Dropdown para escolher a lista destino (default: lista atual do card)
-- Loading spinner durante processamento
-- Tratamento de erros (rate limit, falhas de rede)
+Quando o utilizador confirma a criacao:
 
-### Criação de Cards
+1. **Criar Boards** selecionados usando `KanbanService.createBoard()`
+2. **Criar Listas** selecionadas:
+   - Se tem `boardRef`, associar ao board recem-criado
+   - Se nao, criar num board "Inbox" ou pedir ao utilizador
+3. **Criar Cards** selecionados:
+   - Se tem `listRef`, associar a lista recem-criada
+   - Se nao, criar numa lista default
 
-Após confirmação, para cada tarefa selecionada:
-```typescript
-await KanbanService.createCard({
-  title: task.title,
-  description: task.description,
-  priority: task.priority,
-  list_id: selectedListId,
-  position: nextPosition++
-});
+### 4. Interface Visual
+
+**Estado Inicial (input):**
+```
++----------------------------------+
+|  Assistente AI - Kanban          |
++----------------------------------+
+|                                  |
+|  [Icone LayoutGrid]              |
+|  Cole texto para extrair         |
+|  boards, listas e cards          |
+|                                  |
+|  +----------------------------+  |
+|  |  [Textarea grande]         |  |
+|  +----------------------------+  |
+|                                  |
+|  [Gerar Estrutura]               |
++----------------------------------+
 ```
 
-## Considerações
+**Estado Resultados:**
+```
++----------------------------------+
+|  12 itens encontrados            |
++----------------------------------+
+|  BOARDS (2)                      |
+|  [x] Projeto Marina              |
+|  [x] Manutencao Casa             |
+|                                  |
+|  LISTAS (4)                      |
+|  [x] A Fazer -> Projeto Marina   |
+|  [x] Em Progresso -> Proj. Marina|
+|  ...                             |
+|                                  |
+|  CARDS (6)                       |
+|  [x] Reparar motor (high)        |
+|  [x] Pintura casco (medium)      |
+|  ...                             |
++----------------------------------+
+|  [Voltar]  [Criar 10 Selecionados]|
++----------------------------------+
+```
 
-- **Rate Limits**: Mostrar toast se API retornar 429
-- **Validação**: Mínimo 50 caracteres no texto input
-- **UX**: Botão desabilitado se não houver texto
-- **Posicionamento**: Novos cards adicionados no final da lista
+## Ficheiros a Modificar/Criar
 
-## Resultado Esperado
+| Ficheiro | Acao | Descricao |
+|----------|------|-----------|
+| `src/components/AIAssistant.tsx` | Modificar | Adicionar modo Kanban com UI especifica |
+| `supabase/functions/generate-kanban-structure/index.ts` | Criar | Nova edge function para extrair estruturas |
+| `supabase/config.toml` | Modificar | Adicionar configuracao da nova funcao |
 
-O utilizador pode:
-1. Abrir qualquer card no Kanban
-2. Clicar no botão "AI"
-3. Colar um relatório/email extenso
-4. A IA extrai automaticamente 3-10 tarefas principais
-5. O utilizador revê e confirma
-6. Os cards são criados instantaneamente no board
+## Notas de Implementacao
+
+- O modo Kanban so ativa na rota `/kanban` (lista de boards), nao dentro de um board especifico (`/kanban/:id`)
+- Os boards criados ficam sem space_id (aparecem em "Sem Espaco")
+- Cores dos boards sao sugeridas pela AI ou usam default
+- A criacao e feita em batch mas sequencialmente para manter referencias
+
