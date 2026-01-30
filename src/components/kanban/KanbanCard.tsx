@@ -33,7 +33,6 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
   const handleMarkComplete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onMarkComplete(card.id);
-    toast.success('Card marked as complete and archived');
   };
 
   const handleReopen = (e: React.MouseEvent) => {

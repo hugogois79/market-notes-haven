@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Droppable } from '@hello-pangea/dnd';
-import { KanbanList as KanbanListType, KanbanCard } from '@/services/kanbanService';
+import { KanbanList as KanbanListType, KanbanCard, KanbanService } from '@/services/kanbanService';
 import { KanbanCard as KanbanCardComponent } from './KanbanCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,14 +13,17 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { printKanbanList } from '@/utils/kanbanPrint';
-
+import { CompleteCardDialog } from './CompleteCardDialog';
+import { toast } from 'sonner';
 interface KanbanListProps {
   list: KanbanListType;
   index: number;
   cards: KanbanCard[];
+  boardId: string;
   onAddCard: (listId: string, title: string) => void;
   onCardClick: (card: KanbanCard) => void;
   onUpdateCard: (cardId: string, updates: Partial<KanbanCard>) => void;
+  onMoveCard: (cardId: string, targetListId: string) => void;
   onDeleteList: (listId: string) => void;
   onEditList: (listId: string, title: string) => void;
   onColorChange: (listId: string, color: string) => void;
@@ -43,9 +46,11 @@ export const KanbanList: React.FC<KanbanListProps> = ({
   list,
   index,
   cards,
+  boardId,
   onAddCard,
   onCardClick,
   onUpdateCard,
+  onMoveCard,
   onDeleteList,
   onEditList,
   onColorChange,
@@ -57,6 +62,7 @@ export const KanbanList: React.FC<KanbanListProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(list.title);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [completeDialogCard, setCompleteDialogCard] = useState<KanbanCard | null>(null);
 
   const handleAddCard = () => {
     if (newCardTitle.trim()) {
@@ -78,6 +84,7 @@ export const KanbanList: React.FC<KanbanListProps> = ({
   };
 
   return (
+    <>
     <div 
       id={`kanban-list-${list.id}`}
       className={`flex-shrink-0 ${
@@ -228,23 +235,19 @@ export const KanbanList: React.FC<KanbanListProps> = ({
                         card={card}
                         index={cardIndex}
                         onClick={() => onCardClick(card)}
-                        onMarkComplete={(cardId) => {
+                        onMarkComplete={() => {
                           if (card.concluded) {
-                            // Reopen the card
-                            onUpdateCard(cardId, {
+                            // Reopen the card directly
+                            onUpdateCard(card.id, {
                               concluded: false,
                               completed: false,
                               archived: false,
                               completed_at: undefined
                             });
+                            toast.success('Card reaberto');
                           } else {
-                            // Mark as complete
-                            onUpdateCard(cardId, {
-                              concluded: true,
-                              completed: true,
-                              archived: true,
-                              completed_at: new Date().toISOString()
-                            });
+                            // Show confirmation dialog
+                            setCompleteDialogCard(card);
                           }
                         }}
                       />
@@ -292,5 +295,31 @@ export const KanbanList: React.FC<KanbanListProps> = ({
             </div>
           )}
     </div>
+
+    <CompleteCardDialog
+      isOpen={!!completeDialogCard}
+      onClose={() => setCompleteDialogCard(null)}
+      onConfirmComplete={() => {
+        if (completeDialogCard) {
+          onUpdateCard(completeDialogCard.id, {
+            concluded: true,
+            completed: true,
+            archived: true,
+            completed_at: new Date().toISOString()
+          });
+          toast.success('Card concluído e arquivado');
+        }
+      }}
+      onMove={(targetListId) => {
+        if (completeDialogCard) {
+          onMoveCard(completeDialogCard.id, targetListId);
+          toast.success('Card movido para outra lista');
+        }
+      }}
+      cardTitle={completeDialogCard?.title || ''}
+      currentListId={list.id}
+      boardId={boardId}
+    />
+  </>
   );
 };

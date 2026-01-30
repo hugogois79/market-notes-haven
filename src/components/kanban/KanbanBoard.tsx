@@ -125,9 +125,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           list={list}
                           index={index}
                           cards={getListCards(list.id)}
+                          boardId={boardId}
                           onAddCard={onAddCard}
                           onCardClick={setSelectedCard}
                           onUpdateCard={onUpdateCard}
+                          onMoveCard={(cardId, targetListId) => {
+                            const targetListCards = cards.filter(c => c.list_id === targetListId);
+                            onMoveCard(cardId, targetListId, targetListCards.length);
+                          }}
                           onDeleteList={onDeleteList}
                           onEditList={onEditList}
                           onColorChange={onColorChange}
