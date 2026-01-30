@@ -95,10 +95,10 @@ export const CreateCardModal: React.FC<CreateCardModalProps> = ({
     onClose();
   }, [title, description, priority, value, dueDate, tasks, tags, onCreate, onClose]);
 
-  // Keyboard shortcut: Ctrl+S / Cmd+S to save
+  // Keyboard shortcut: Ctrl+S / Cmd+S or Ctrl+Enter to save
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'Enter')) {
         e.preventDefault();
         handleSave();
       }
