@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, X, Pencil, Check, Calendar as CalendarIcon, Sparkles } from 'lucide-react';
+import { Plus, X, Pencil, Check, Calendar as CalendarIcon, Sparkles, ArrowUpRight } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -20,9 +20,10 @@ interface TaskChecklistProps {
   tasks: Task[];
   onTasksChange: (tasks: Task[]) => void;
   onAiGenerate?: () => void;
+  onConvertToCard?: (task: Task) => void;
 }
 
-export const TaskChecklist: React.FC<TaskChecklistProps> = ({ tasks, onTasksChange, onAiGenerate }) => {
+export const TaskChecklist: React.FC<TaskChecklistProps> = ({ tasks, onTasksChange, onAiGenerate, onConvertToCard }) => {
   const [newTaskText, setNewTaskText] = useState('');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
@@ -213,6 +214,17 @@ export const TaskChecklist: React.FC<TaskChecklistProps> = ({ tasks, onTasksChan
                     </Popover>
                   )}
                 </div>
+                {onConvertToCard && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onConvertToCard(task)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
+                    title="Converter para Card"
+                  >
+                    <ArrowUpRight className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
