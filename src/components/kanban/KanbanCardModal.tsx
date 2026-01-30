@@ -29,6 +29,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { AiTaskGeneratorDialog } from './AiTaskGeneratorDialog';
+import { AiCardGeneratorDialog } from './AiCardGeneratorDialog';
 
 interface KanbanCardModalProps {
   card: KanbanCard;
@@ -69,6 +70,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   const [isFilePickerOpen, setIsFilePickerOpen] = useState(false);
   const [thumbnailUrls, setThumbnailUrls] = useState<Record<string, string>>({});
   const [showAiDialog, setShowAiDialog] = useState(false);
+  const [showAiCardDialog, setShowAiCardDialog] = useState(false);
 
   const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
@@ -379,7 +381,21 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
 
         <div className="space-y-4">
           <div>
-            <Label>Description</Label>
+            <div className="flex items-center justify-between mb-1">
+              <Label>Description</Label>
+              {description.length >= 20 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAiCardDialog(true)}
+                  className="h-7 px-2 text-xs"
+                  title="Gerar Cards a partir da descrição"
+                >
+                  <Sparkles className="h-3.5 w-3.5 mr-1" />
+                  Gerar Cards
+                </Button>
+              )}
+            </div>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -655,6 +671,29 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
         isOpen={showAiDialog}
         onClose={() => setShowAiDialog(false)}
         onTasksCreated={handleAiTasksCreated}
+      />
+
+      <AiCardGeneratorDialog
+        isOpen={showAiCardDialog}
+        onClose={() => setShowAiCardDialog(false)}
+        descriptionText={description}
+        onCardsCreated={async (newCards) => {
+          try {
+            for (const cardData of newCards) {
+              await KanbanService.createCard({
+                title: cardData.title,
+                description: cardData.description,
+                list_id: card.list_id,
+                position: 0,
+                priority: cardData.priority,
+              });
+            }
+            toast.success(`${newCards.length} card${newCards.length !== 1 ? 's' : ''} criado${newCards.length !== 1 ? 's' : ''}!`);
+          } catch (error) {
+            console.error('Error creating cards:', error);
+            toast.error('Falha ao criar cards');
+          }
+        }}
       />
     </Dialog>
   );
