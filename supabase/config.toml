@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.analyze-document-webhook]
 verify_jwt = false
+
+[functions.send-to-supermemory]
+verify_jwt = false
