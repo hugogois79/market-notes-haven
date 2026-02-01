@@ -5,7 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const systemPrompt = `Analisa o seguinte texto e extrai as tarefas principais que precisam de ser realizadas.
+const buildSystemPrompt = (availableLists?: string[]) => {
+  const basePrompt = `Analisa o seguinte texto e extrai as tarefas principais que precisam de ser realizadas.
 Para cada tarefa, identifica:
 - Título curto e claro (máximo 80 caracteres)
 - Descrição resumida do que precisa ser feito
@@ -14,13 +15,25 @@ Para cada tarefa, identifica:
 Foca apenas em itens acionáveis. Ignora contexto informativo.
 Extrai no máximo 10 tarefas principais.`;
 
+  if (availableLists && availableLists.length > 0) {
+    return `${basePrompt}
+
+IMPORTANTE: As listas disponíveis neste board são: ${availableLists.join(', ')}.
+Analisa o contexto do texto e determina qual das listas é mais apropriada para receber TODAS estas tarefas.
+Devolve o nome EXATO de uma das listas disponíveis no campo suggestedList.
+Se o texto não tiver contexto claro, escolhe a lista que pareça mais genérica ou a primeira.`;
+  }
+  
+  return basePrompt;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { text } = await req.json();
+    const { text, availableLists } = await req.json();
     
     if (!text || text.length < 50) {
       return new Response(
@@ -43,7 +56,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: buildSystemPrompt(availableLists) },
           { role: "user", content: text }
         ],
         tools: [{
@@ -76,9 +89,13 @@ serve(async (req) => {
                     required: ["title", "description", "priority"],
                     additionalProperties: false
                   }
+                },
+                suggestedList: {
+                  type: "string",
+                  description: "Nome exato da lista mais apropriada para todas as tarefas (apenas quando availableLists é fornecido)"
                 }
               },
-              required: ["tasks"],
+              required: availableLists?.length > 0 ? ["tasks", "suggestedList"] : ["tasks"],
               additionalProperties: false
             }
           }
@@ -116,7 +133,10 @@ serve(async (req) => {
     const tasksResult = JSON.parse(toolCall.function.arguments);
     
     return new Response(
-      JSON.stringify({ tasks: tasksResult.tasks || [] }),
+      JSON.stringify({ 
+        tasks: tasksResult.tasks || [],
+        suggestedList: tasksResult.suggestedList || null
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 

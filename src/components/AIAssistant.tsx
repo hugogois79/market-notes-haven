@@ -134,6 +134,7 @@ const AIAssistant = () => {
   // Current board context states
   const [currentBoardInfo, setCurrentBoardInfo] = useState<{ id: string; title: string; lists: Array<{ id: string; title: string }> } | null>(null);
   const [loadingBoardInfo, setLoadingBoardInfo] = useState(false);
+  const [suggestedListName, setSuggestedListName] = useState<string | null>(null);
   
   // Load current board info when on a specific board page
   useEffect(() => {
@@ -208,6 +209,7 @@ const AIAssistant = () => {
       setKanbanInputText('');
       setKanbanExtractedItems(null);
       setKanbanStep('input');
+      setSuggestedListName(null);
     }
   }, [isOpen]);
 
@@ -221,12 +223,25 @@ const AIAssistant = () => {
       // If we're on a specific board, use generate-tasks endpoint (cards only)
       // Otherwise use generate-kanban-structure (full structure)
       if (currentBoardInfo) {
+        // Send available list names for AI to choose the best one
+        const availableLists = currentBoardInfo.lists.map(l => l.title);
+        
         const { data, error } = await supabase.functions.invoke('generate-tasks-from-text', {
-          body: { text: kanbanInputText }
+          body: { 
+            text: kanbanInputText,
+            availableLists: availableLists.length > 0 ? availableLists : undefined
+          }
         });
 
         if (error) throw new Error(error.message);
         if (data.error) throw new Error(data.error);
+
+        // Store suggested list from AI
+        if (data.suggestedList) {
+          setSuggestedListName(data.suggestedList);
+        } else {
+          setSuggestedListName(null);
+        }
 
         // Only cards when on a specific board
         const extractedItems: ExtractedKanbanItems = {
@@ -298,8 +313,20 @@ const AIAssistant = () => {
       // MODE 1: Adding cards to existing board
       if (currentBoardInfo && currentBoardInfo.lists.length > 0) {
         const selectedCards = kanbanExtractedItems.cards.filter(c => c.selected);
-        const targetListId = currentBoardInfo.lists[0].id; // First list as default
         
+        // Find the target list: use AI suggestion if available, fallback to first list
+        let targetListId = currentBoardInfo.lists[0].id;
+        let targetListTitle = currentBoardInfo.lists[0].title;
+        
+        if (suggestedListName) {
+          const matchedList = currentBoardInfo.lists.find(
+            l => l.title.toLowerCase() === suggestedListName.toLowerCase()
+          );
+          if (matchedList) {
+            targetListId = matchedList.id;
+            targetListTitle = matchedList.title;
+          }
+        }
         for (let i = 0; i < selectedCards.length; i++) {
           const card = selectedCards[i];
           await KanbanService.createCard({
@@ -316,7 +343,7 @@ const AIAssistant = () => {
         queryClient.invalidateQueries({ queryKey: ['kanban-lists', currentBoardInfo.id] });
         queryClient.invalidateQueries({ queryKey: ['kanban-cards'] });
 
-        toast.success(`${selectedCards.length} cards adicionados ao board "${currentBoardInfo.title}"!`);
+        toast.success(`${selectedCards.length} cards adicionados à lista "${targetListTitle}"!`);
       } 
       // MODE 2: Creating full structure (boards, lists, cards)
       else {
@@ -420,6 +447,7 @@ const AIAssistant = () => {
       setKanbanInputText('');
       setKanbanExtractedItems(null);
       setKanbanStep('input');
+      setSuggestedListName(null);
       setIsOpen(false);
 
     } catch (error) {
@@ -728,7 +756,7 @@ const AIAssistant = () => {
                 <p className="text-xs text-muted-foreground mb-1">A adicionar cards ao board:</p>
                 <p className="font-medium text-indigo-700 dark:text-indigo-300">{currentBoardInfo.title}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Lista destino: {currentBoardInfo.lists[0]?.title || 'Primeira lista'}
+                  Listas disponíveis: {currentBoardInfo.lists.map(l => l.title).join(', ') || 'Nenhuma'}
                 </p>
               </div>
             ) : null}
@@ -916,8 +944,11 @@ const AIAssistant = () => {
               <div className="p-2 rounded bg-indigo-50 dark:bg-indigo-950/30 text-xs">
                 <span className="text-muted-foreground">Destino: </span>
                 <span className="font-medium text-indigo-700 dark:text-indigo-300">
-                  {currentBoardInfo.title} → {currentBoardInfo.lists[0]?.title}
+                  {currentBoardInfo.title} → {suggestedListName || currentBoardInfo.lists[0]?.title}
                 </span>
+                {suggestedListName && (
+                  <span className="ml-2 text-emerald-600 dark:text-emerald-400">(sugerido pela AI)</span>
+                )}
               </div>
             </div>
           )}
