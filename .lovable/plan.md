@@ -1,193 +1,76 @@
 
+## Plano: Dropdown com Pesquisa Integrada
 
-# Plano: Assistente AI Kanban no Botao Flutuante
+### Objetivo
+Criar um componente `SearchableSelect` que mantém a aparência visual do Select atual mas adiciona um campo de pesquisa no topo do menu dropdown para filtrar as opções enquanto escreve.
 
-## Resumo
+---
 
-Quando o utilizador esta numa pagina de **boards Kanban** (`/kanban` sem ID de board ou na lista de boards), o botao flutuante preto no canto inferior direito muda de comportamento: em vez de fazer perguntas sobre notas, permite colar texto e gerar automaticamente **boards**, **listas** e **cards**.
-
-## O que muda para o utilizador
-
-1. **Botao flutuante muda de cor** quando esta na pagina de boards (gradiente azul/indigo)
-2. **Icone diferente** (Layout/Grid em vez de Sparkles)
-3. **Ao clicar**, abre um painel lateral com:
-   - Caixa de texto grande para colar conteudo (relatorios, emails, etc.)
-   - Botao "Gerar Estrutura" que envia para a AI
-   - Preview dos itens extraidos com checkboxes
-   - Botao para criar os itens selecionados
-
-## Fluxo de utilizacao
+### Resultado Visual
 
 ```text
-1. Utilizador navega para /kanban (lista de boards)
-2. Clica no botao flutuante (agora azul)
-3. Cola um texto longo (ex: relatorio de projeto)
-4. Clica "Gerar Estrutura"
-5. AI extrai:
-   - Boards (projetos distintos)
-   - Listas (fases/categorias)
-   - Cards (tarefas individuais)
-6. Utilizador seleciona quais criar
-7. Clica "Criar Selecionados"
-8. Itens sao criados na base de dados
+┌────────────────────────────────┐
+│ Select folder...          ▼   │  ← Trigger (igual ao Select)
+└────────────────────────────────┘
+         │ (quando abre)
+         ▼
+┌────────────────────────────────┐
+│ 🔍 Pesquisar...               │  ← Campo de pesquisa
+├────────────────────────────────┤
+│ ✓ Pasta A                     │  ← Opções filtradas
+│   Pasta ABC                   │
+│   Pasta Alfa                  │
+└────────────────────────────────┘
 ```
 
-## Detalhes Tecnicos
+---
 
-### 1. Modificar AIAssistant.tsx
+### Implementação
 
-Adicionar detecao da rota Kanban boards:
+**Ficheiro a criar:** `src/components/ui/searchable-select.tsx`
 
-```typescript
-// Detecao de contexto
-const isCalendarPage = location.pathname === '/calendar';
-const isKanbanBoardsPage = location.pathname === '/kanban';  // NOVO
-```
+Este componente usará:
+- `Popover` + `PopoverTrigger` + `PopoverContent` (container)
+- `Command` + `CommandInput` + `CommandList` + `CommandItem` (pesquisa e lista)
+- Estilo visual idêntico ao `SelectTrigger` atual
 
-Adicionar estados para modo Kanban:
+**Alterações em:** `src/pages/companies/index.tsx`
 
-```typescript
-// Estados para modo Kanban
-const [kanbanInputText, setKanbanInputText] = useState('');
-const [kanbanExtractedItems, setKanbanExtractedItems] = useState<ExtractedKanbanItems | null>(null);
-const [kanbanStep, setKanbanStep] = useState<'input' | 'results'>('input');
-```
+1. Importar o novo `SearchableSelect`
+2. Substituir o `<Select>` do "Folder Location" pelo novo componente
+3. Passar as mesmas props: `value`, `onChange`, `options`, `placeholder`
 
-Renderizar UI diferente quando `isKanbanBoardsPage`:
-- Textarea para input de texto
-- Lista de resultados com checkboxes agrupados por tipo
-- Botoes de acao
+---
 
-### 2. Criar Edge Function: generate-kanban-structure
+### Detalhes Técnicos
 
-Nova funcao baseada na `generate-tasks-from-text` mas com schema expandido:
+O componente terá esta interface:
 
-**Prompt:**
-```
-Analisa o texto e extrai estruturas para um sistema Kanban:
-- Boards: projetos ou contextos distintos
-- Listas: fases, categorias ou estados
-- Cards: tarefas individuais acionaveis
-
-Cada board pode ter listas associadas.
-Cada lista pode ter cards associados.
-```
-
-**Tool Call Schema:**
-```typescript
-{
-  type: "function",
-  function: {
-    name: "extract_kanban_structure",
-    parameters: {
-      type: "object",
-      properties: {
-        boards: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              title: { type: "string" },
-              description: { type: "string" },
-              color: { type: "string", enum: ["blue", "green", "purple", "orange", "red"] }
-            }
-          }
-        },
-        lists: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              title: { type: "string" },
-              boardRef: { type: "number", description: "Index do board associado (0-based), ou null se for lista geral" }
-            }
-          }
-        },
-        cards: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              title: { type: "string" },
-              description: { type: "string" },
-              priority: { type: "string", enum: ["low", "medium", "high"] },
-              listRef: { type: "number", description: "Index da lista associada (0-based), ou null" }
-            }
-          }
-        }
-      }
-    }
-  }
+```tsx
+interface SearchableSelectProps {
+  value: string;
+  onValueChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  placeholder?: string;
+  searchPlaceholder?: string;
+  disabled?: boolean;
+  className?: string;
 }
 ```
 
-### 3. Logica de Criacao
+**Funcionalidades:**
+- Campo de pesquisa filtra opções em tempo real (case-insensitive)
+- Ícone de check na opção selecionada
+- Mensagem "Nenhum resultado" quando filtro não encontra nada
+- Fecha automaticamente ao selecionar
+- Suporta navegação por teclado (setas + Enter)
+- Mantém aparência idêntica ao Select (altura, bordas, ícone chevron)
 
-Quando o utilizador confirma a criacao:
+---
 
-1. **Criar Boards** selecionados usando `KanbanService.createBoard()`
-2. **Criar Listas** selecionadas:
-   - Se tem `boardRef`, associar ao board recem-criado
-   - Se nao, criar num board "Inbox" ou pedir ao utilizador
-3. **Criar Cards** selecionados:
-   - Se tem `listRef`, associar a lista recem-criada
-   - Se nao, criar numa lista default
+### Ficheiros Afetados
 
-### 4. Interface Visual
-
-**Estado Inicial (input):**
-```
-+----------------------------------+
-|  Assistente AI - Kanban          |
-+----------------------------------+
-|                                  |
-|  [Icone LayoutGrid]              |
-|  Cole texto para extrair         |
-|  boards, listas e cards          |
-|                                  |
-|  +----------------------------+  |
-|  |  [Textarea grande]         |  |
-|  +----------------------------+  |
-|                                  |
-|  [Gerar Estrutura]               |
-+----------------------------------+
-```
-
-**Estado Resultados:**
-```
-+----------------------------------+
-|  12 itens encontrados            |
-+----------------------------------+
-|  BOARDS (2)                      |
-|  [x] Projeto Marina              |
-|  [x] Manutencao Casa             |
-|                                  |
-|  LISTAS (4)                      |
-|  [x] A Fazer -> Projeto Marina   |
-|  [x] Em Progresso -> Proj. Marina|
-|  ...                             |
-|                                  |
-|  CARDS (6)                       |
-|  [x] Reparar motor (high)        |
-|  [x] Pintura casco (medium)      |
-|  ...                             |
-+----------------------------------+
-|  [Voltar]  [Criar 10 Selecionados]|
-+----------------------------------+
-```
-
-## Ficheiros a Modificar/Criar
-
-| Ficheiro | Acao | Descricao |
-|----------|------|-----------|
-| `src/components/AIAssistant.tsx` | Modificar | Adicionar modo Kanban com UI especifica |
-| `supabase/functions/generate-kanban-structure/index.ts` | Criar | Nova edge function para extrair estruturas |
-| `supabase/config.toml` | Modificar | Adicionar configuracao da nova funcao |
-
-## Notas de Implementacao
-
-- O modo Kanban so ativa na rota `/kanban` (lista de boards), nao dentro de um board especifico (`/kanban/:id`)
-- Os boards criados ficam sem space_id (aparecem em "Sem Espaco")
-- Cores dos boards sao sugeridas pela AI ou usam default
-- A criacao e feita em batch mas sequencialmente para manter referencias
-
+| Ficheiro | Ação |
+|----------|------|
+| `src/components/ui/searchable-select.tsx` | Criar novo componente |
+| `src/pages/companies/index.tsx` | Usar o novo componente no Folder Location |
