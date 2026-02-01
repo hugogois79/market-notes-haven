@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      axiom_memories: {
+        Row: {
+          id: string
+          payload: Json | null
+          vector: string | null
+        }
+        Insert: {
+          id: string
+          payload?: Json | null
+          vector?: string | null
+        }
+        Update: {
+          id?: string
+          payload?: Json | null
+          vector?: string | null
+        }
+        Relationships: []
+      }
       bank_accounts: {
         Row: {
           account_name: string
@@ -2585,6 +2603,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      mem0migrations: {
+        Row: {
+          id: string
+          payload: Json | null
+          vector: string | null
+        }
+        Insert: {
+          id: string
+          payload?: Json | null
+          vector?: string | null
+        }
+        Update: {
+          id?: string
+          payload?: Json | null
+          vector?: string | null
+        }
+        Relationships: []
       }
       memories: {
         Row: {

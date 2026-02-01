@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Building2, Search, Edit, Trash2, Eye, Settings, ChevronDown, X, ListTodo, Link2, Bookmark } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import WorkFlowTab from "./WorkFlowTab";
 import WorkFilesTab from "./WorkFilesTab";
 import { toast } from "sonner";
@@ -1272,27 +1273,18 @@ export default function CompaniesPage() {
             <div className="space-y-2">
               <Label>Folder Location</Label>
               <p className="text-xs text-slate-500">Select the folder where files will be stored.</p>
-              <Select
+              <SearchableSelect
                 value={storageLocationForm.folder_path}
                 onValueChange={(value) => {
                   const folder = folderOptions.find(f => f.path === value);
                   setStorageLocationForm(prev => ({ ...prev, folder_path: value, folder_id: folder?.id || null }));
                 }}
+                options={folderOptions.map(folder => ({ value: folder.path, label: folder.path }))}
+                placeholder={storageLocationForm.company_id ? "Select folder..." : "Select company first"}
+                searchPlaceholder="Search folders..."
+                emptyMessage="No folders found"
                 disabled={!storageLocationForm.company_id}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={storageLocationForm.company_id ? "Select folder..." : "Select company first"} />
-                </SelectTrigger>
-                <SelectContent className="bg-white max-h-60 overflow-y-auto">
-                  {folderOptions.length === 0 ? (
-                    <SelectItem value="__none__" disabled>No folders found</SelectItem>
-                  ) : (
-                    folderOptions.map(folder => (
-                      <SelectItem key={folder.id} value={folder.path}>{folder.path}</SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              />
             </div>
             
             {/* Preview */}
