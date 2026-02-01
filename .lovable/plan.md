@@ -1,76 +1,136 @@
 
-## Plano: Dropdown com Pesquisa Integrada
+## Plano: Seleção Inteligente de Lista de Destino
 
 ### Objetivo
-Criar um componente `SearchableSelect` que mantém a aparência visual do Select atual mas adiciona um campo de pesquisa no topo do menu dropdown para filtrar as opções enquanto escreve.
+Quando o utilizador está num board específico e gera cards via AI, a lista de destino deve ser **identificada automaticamente** pela AI, analisando o texto passado e os nomes das listas disponíveis. Todos os cards vão para a mesma lista.
 
 ---
 
-### Resultado Visual
+### Comportamento Atual vs. Pretendido
+
+| Atual | Pretendido |
+|-------|------------|
+| Sempre usa a primeira lista | AI escolhe a lista mais adequada |
+| Ignora nomes das listas | Considera nomes das listas no contexto |
+| Nenhuma indicação ao utilizador | Mostra qual lista foi escolhida |
+
+---
+
+### Fluxo Proposto
 
 ```text
-┌────────────────────────────────┐
-│ Select folder...          ▼   │  ← Trigger (igual ao Select)
-└────────────────────────────────┘
-         │ (quando abre)
-         ▼
-┌────────────────────────────────┐
-│ 🔍 Pesquisar...               │  ← Campo de pesquisa
-├────────────────────────────────┤
-│ ✓ Pasta A                     │  ← Opções filtradas
-│   Pasta ABC                   │
-│   Pasta Alfa                  │
-└────────────────────────────────┘
+Utilizador cola texto
+       ↓
+Frontend envia:
+  - text (texto do utilizador)
+  - availableLists: ["Maitenance", "Legal", "Finance"]
+       ↓
+┌──────────────────────────────────────────────────┐
+│  Edge Function: generate-tasks-from-text         │
+│                                                  │
+│  AI analisa texto + nomes das listas e decide:  │
+│  - Tarefas extraídas (título, descrição, etc.)  │
+│  - suggestedList: "Maitenance" (UMA para todos) │
+└──────────────────────────────────────────────────┘
+       ↓
+Frontend mostra:
+  "Cards serão adicionados à lista: Maitenance"
+       ↓
+Utilizador confirma → Todos os cards criados em "Maitenance"
 ```
 
 ---
 
-### Implementação
+### Alterações Técnicas
 
-**Ficheiro a criar:** `src/components/ui/searchable-select.tsx`
+**1. Edge Function: `supabase/functions/generate-tasks-from-text/index.ts`**
 
-Este componente usará:
-- `Popover` + `PopoverTrigger` + `PopoverContent` (container)
-- `Command` + `CommandInput` + `CommandList` + `CommandItem` (pesquisa e lista)
-- Estilo visual idêntico ao `SelectTrigger` atual
+Receber `availableLists` e adicionar ao prompt:
 
-**Alterações em:** `src/pages/companies/index.tsx`
+```typescript
+const { text, availableLists } = await req.json();
 
-1. Importar o novo `SearchableSelect`
-2. Substituir o `<Select>` do "Folder Location" pelo novo componente
-3. Passar as mesmas props: `value`, `onChange`, `options`, `placeholder`
+const systemPrompt = `Analisa o seguinte texto e extrai as tarefas principais...
+${availableLists?.length > 0 ? `
+As listas disponíveis são: ${availableLists.join(', ')}.
+Analisa o contexto do texto e indica qual das listas é mais apropriada para receber TODAS estas tarefas.
+Devolve o nome exato de uma das listas disponíveis.
+` : ''}`;
+```
 
----
+Adicionar `suggestedList` ao schema de output:
 
-### Detalhes Técnicos
-
-O componente terá esta interface:
-
-```tsx
-interface SearchableSelectProps {
-  value: string;
-  onValueChange: (value: string) => void;
-  options: { value: string; label: string }[];
-  placeholder?: string;
-  searchPlaceholder?: string;
-  disabled?: boolean;
-  className?: string;
+```typescript
+parameters: {
+  properties: {
+    tasks: { /* ... existente ... */ },
+    suggestedList: {
+      type: "string",
+      description: "Nome exato da lista mais apropriada para todas as tarefas"
+    }
+  },
+  required: ["tasks", "suggestedList"]
 }
 ```
 
-**Funcionalidades:**
-- Campo de pesquisa filtra opções em tempo real (case-insensitive)
-- Ícone de check na opção selecionada
-- Mensagem "Nenhum resultado" quando filtro não encontra nada
-- Fecha automaticamente ao selecionar
-- Suporta navegação por teclado (setas + Enter)
-- Mantém aparência idêntica ao Select (altura, bordas, ícone chevron)
+**2. Frontend: `src/components/AIAssistant.tsx`**
+
+Na função `generateKanbanStructure`:
+
+- Enviar `availableLists` (nomes das listas do board atual)
+- Guardar `suggestedList` retornada pela AI
+
+Novo estado:
+
+```typescript
+const [suggestedListName, setSuggestedListName] = useState<string | null>(null);
+```
+
+Na função `createSelectedItems`:
+
+- Usar `suggestedListName` para encontrar o `list_id` correspondente
+- Fallback para primeira lista se nome não corresponder
+
+No UI de resultados:
+
+- Mostrar: "Lista destino: [nome da lista sugerida]"
 
 ---
 
-### Ficheiros Afetados
+### Ficheiros a Modificar
 
-| Ficheiro | Ação |
-|----------|------|
-| `src/components/ui/searchable-select.tsx` | Criar novo componente |
-| `src/pages/companies/index.tsx` | Usar o novo componente no Folder Location |
+| Ficheiro | Alteração |
+|----------|-----------|
+| `supabase/functions/generate-tasks-from-text/index.ts` | Receber `availableLists`, atualizar prompt, retornar `suggestedList` |
+| `src/components/AIAssistant.tsx` | Enviar listas disponíveis, mostrar lista sugerida, usar na criação |
+
+---
+
+### Exemplo de Resultado
+
+```text
+┌─────────────────────────────────────────────────┐
+│ 🎯 A adicionar ao board: TRINIDAD               │
+│    Lista destino: Maitenance                    │
+└─────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────┐
+│ Cards (3)                                       │
+├─────────────────────────────────────────────────┤
+│ ☑ Reparar ar condicionado           [high]     │
+│ ☑ Verificar sistema de aquecimento  [medium]   │
+│ ☑ Limpar calhas do telhado          [low]      │
+└─────────────────────────────────────────────────┘
+│            [Adicionar 3 cards]                  │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+### Edge Cases
+
+| Situação | Comportamento |
+|----------|---------------|
+| Lista sugerida não existe | Usa a primeira lista como fallback |
+| Texto sem contexto claro | AI escolhe a lista mais genérica |
+| Board sem listas | Mostra erro (comportamento atual) |
