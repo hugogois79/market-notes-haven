@@ -584,7 +584,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
                         >
                           {getFileIcon(attachment.filename)}
                         </span>
-                        <span className="text-sm truncate">{attachment.filename}</span>
+                        <span className="text-sm truncate max-w-[300px]">{attachment.filename}</span>
                       </button>
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <Button
