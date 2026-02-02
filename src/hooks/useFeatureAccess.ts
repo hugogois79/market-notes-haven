@@ -27,7 +27,7 @@ export const defaultPermissions: FeaturePermissions = {
 };
 
 export function useFeatureAccess() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [permissions, setPermissions] = useState<FeaturePermissions>(defaultPermissions);
   const [isRequester, setIsRequester] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -35,6 +35,11 @@ export function useFeatureAccess() {
 
   useEffect(() => {
     const fetchPermissions = async () => {
+      // Wait for auth to finish loading before checking user
+      if (authLoading) {
+        return;
+      }
+      
       if (!user) {
         setPermissions(defaultPermissions);
         setIsRequester(false);
@@ -103,7 +108,7 @@ export function useFeatureAccess() {
     };
 
     fetchPermissions();
-  }, [user]);
+  }, [user, authLoading]);
 
   const hasAccess = (feature: keyof FeaturePermissions): boolean => {
     if (isAdmin) return true;
