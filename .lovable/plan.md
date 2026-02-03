@@ -1,136 +1,64 @@
 
-## Plano: Seleção Inteligente de Lista de Destino
+## Plano: Corrigir Race Condition dos Boards no Command Palette
 
-### Objetivo
-Quando o utilizador está num board específico e gera cards via AI, a lista de destino deve ser **identificada automaticamente** pela AI, analisando o texto passado e os nomes das listas disponíveis. Todos os cards vão para a mesma lista.
+### Problema Identificado
+Quando o utilizador entra no sistema pela primeira vez e abre o `Ctrl+K`, os boards não aparecem na pesquisa. Isto acontece porque:
 
----
+1. O `CommandPalette` usa `useFeatureAccess()` para verificar permissões
+2. Durante o carregamento inicial, `permissionsLoading = true` e `canViewBoards = false`
+3. O preload dos boards (linhas 93-100) tem uma condição que faz early return quando `boards.length > 0`
+4. Quando as permissões ficam prontas, o `useEffect` não re-executa correctamente porque a dependência `boards.length` impede o refetch
 
-### Comportamento Atual vs. Pretendido
-
-| Atual | Pretendido |
-|-------|------------|
-| Sempre usa a primeira lista | AI escolhe a lista mais adequada |
-| Ignora nomes das listas | Considera nomes das listas no contexto |
-| Nenhuma indicação ao utilizador | Mostra qual lista foi escolhida |
-
----
-
-### Fluxo Proposto
-
-```text
-Utilizador cola texto
-       ↓
-Frontend envia:
-  - text (texto do utilizador)
-  - availableLists: ["Maitenance", "Legal", "Finance"]
-       ↓
-┌──────────────────────────────────────────────────┐
-│  Edge Function: generate-tasks-from-text         │
-│                                                  │
-│  AI analisa texto + nomes das listas e decide:  │
-│  - Tarefas extraídas (título, descrição, etc.)  │
-│  - suggestedList: "Maitenance" (UMA para todos) │
-└──────────────────────────────────────────────────┘
-       ↓
-Frontend mostra:
-  "Cards serão adicionados à lista: Maitenance"
-       ↓
-Utilizador confirma → Todos os cards criados em "Maitenance"
-```
-
----
+### Solução
+Modificar a lógica de preload para:
+1. Remover a verificação prematura de `boards.length > 0` que bloqueia o refetch
+2. Garantir que o fetch é executado quando as permissões mudam de "a carregar" para "pronto"
+3. Adicionar um estado para controlar se já foi feito o fetch inicial
 
 ### Alterações Técnicas
 
-**1. Edge Function: `supabase/functions/generate-tasks-from-text/index.ts`**
-
-Receber `availableLists` e adicionar ao prompt:
+**Ficheiro: `src/components/CommandPalette.tsx`**
 
 ```typescript
-const { text, availableLists } = await req.json();
+// Adicionar estado para tracking do fetch inicial
+const [hasLoadedBoards, setHasLoadedBoards] = useState(false);
 
-const systemPrompt = `Analisa o seguinte texto e extrai as tarefas principais...
-${availableLists?.length > 0 ? `
-As listas disponíveis são: ${availableLists.join(', ')}.
-Analisa o contexto do texto e indica qual das listas é mais apropriada para receber TODAS estas tarefas.
-Devolve o nome exato de uma das listas disponíveis.
-` : ''}`;
+// Modificar o useEffect de preload (linhas 92-100)
+useEffect(() => {
+  if (!open) return;
+  if (permissionsLoading) return; // Esperar pelas permissões
+  if (!canViewBoards) return;
+  if (hasLoadedBoards) return; // Evitar refetch desnecessário
+  
+  loadBoardsData();
+  setHasLoadedBoards(true);
+}, [open, canViewBoards, permissionsLoading, hasLoadedBoards]);
+
+// Reset do estado quando o diálogo fecha
+useEffect(() => {
+  if (!open) {
+    setViewMode('main');
+    setSearchValue('');
+    // NÃO resetar hasLoadedBoards aqui para manter cache
+  }
+}, [open]);
 ```
 
-Adicionar `suggestedList` ao schema de output:
-
-```typescript
-parameters: {
-  properties: {
-    tasks: { /* ... existente ... */ },
-    suggestedList: {
-      type: "string",
-      description: "Nome exato da lista mais apropriada para todas as tarefas"
-    }
-  },
-  required: ["tasks", "suggestedList"]
-}
-```
-
-**2. Frontend: `src/components/AIAssistant.tsx`**
-
-Na função `generateKanbanStructure`:
-
-- Enviar `availableLists` (nomes das listas do board atual)
-- Guardar `suggestedList` retornada pela AI
-
-Novo estado:
-
-```typescript
-const [suggestedListName, setSuggestedListName] = useState<string | null>(null);
-```
-
-Na função `createSelectedItems`:
-
-- Usar `suggestedListName` para encontrar o `list_id` correspondente
-- Fallback para primeira lista se nome não corresponder
-
-No UI de resultados:
-
-- Mostrar: "Lista destino: [nome da lista sugerida]"
-
----
+### Lógica do Fix
+| Estado | Antes | Depois |
+|--------|-------|--------|
+| Permissões a carregar | Ignora fetch (correto) | Ignora fetch (correto) |
+| Permissões prontas, sem boards | Faz fetch | Faz fetch |
+| Permissões prontas, com boards | Ignora (problema!) | Ignora (correto, já tem dados) |
+| Abre Ctrl+K antes de permissões | Não carrega | Espera e carrega depois |
 
 ### Ficheiros a Modificar
-
 | Ficheiro | Alteração |
 |----------|-----------|
-| `supabase/functions/generate-tasks-from-text/index.ts` | Receber `availableLists`, atualizar prompt, retornar `suggestedList` |
-| `src/components/AIAssistant.tsx` | Enviar listas disponíveis, mostrar lista sugerida, usar na criação |
+| `src/components/CommandPalette.tsx` | Substituir lógica `boards.length > 0` por estado `hasLoadedBoards` |
 
----
-
-### Exemplo de Resultado
-
-```text
-┌─────────────────────────────────────────────────┐
-│ 🎯 A adicionar ao board: TRINIDAD               │
-│    Lista destino: Maitenance                    │
-└─────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────┐
-│ Cards (3)                                       │
-├─────────────────────────────────────────────────┤
-│ ☑ Reparar ar condicionado           [high]     │
-│ ☑ Verificar sistema de aquecimento  [medium]   │
-│ ☑ Limpar calhas do telhado          [low]      │
-└─────────────────────────────────────────────────┘
-│            [Adicionar 3 cards]                  │
-└─────────────────────────────────────────────────┘
-```
-
----
-
-### Edge Cases
-
-| Situação | Comportamento |
-|----------|---------------|
-| Lista sugerida não existe | Usa a primeira lista como fallback |
-| Texto sem contexto claro | AI escolhe a lista mais genérica |
-| Board sem listas | Mostra erro (comportamento atual) |
+### Resultado Esperado
+Quando o utilizador faz login e abre o `Ctrl+K`:
+1. Se as permissões ainda estão a carregar, mostra "A carregar boards..."
+2. Assim que as permissões ficam prontas, os boards são carregados automaticamente
+3. A pesquisa por boards funciona imediatamente
