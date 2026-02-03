@@ -52,15 +52,15 @@ serve(async (req) => {
     }
 
     // Get n8n webhook URL from environment
-    const n8nWebhookUrl = Deno.env.get('N8N_ANALYZE_DOCUMENT_WEBHOOK');
+    const n8nWebhookUrl = Deno.env.get('N8N_KANBAN_DOC_SUMMARY_WEBHOOK');
     
     if (!n8nWebhookUrl) {
-      console.error('N8N_ANALYZE_DOCUMENT_WEBHOOK not configured');
+      console.error('N8N_KANBAN_DOC_SUMMARY_WEBHOOK not configured');
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: 'N8N webhook not configured',
-          message: 'Configure N8N_ANALYZE_DOCUMENT_WEBHOOK secret' 
+          message: 'Configure N8N_KANBAN_DOC_SUMMARY_WEBHOOK secret' 
         }),
         { 
           status: 500, 
