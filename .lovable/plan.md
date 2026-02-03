@@ -1,47 +1,66 @@
 
 
-## Diagnóstico: Botão AI não visível junto aos Attachments
+## Plano: Actualizar Webhook do n8n para Análise de Anexos
 
-### Análise do Código
+### Problema Actual
+A Edge Function `analyze-kanban-attachment` usa o secret `N8N_ANALYZE_DOCUMENT_WEBHOOK` que aponta para:
+- **Antigo**: `https://n8n.gvvcapital.com/webhook/work-file-extract`
 
-Verifiquei o ficheiro `KanbanCardModal.tsx` e **o código está implementado correctamente**:
+Precisa apontar para:
+- **Novo**: `https://n8n.gvvcapital.com/webhook/lovable-doc-summary`
 
-- **Linha 15**: O ícone `Sparkles` está importado
-- **Linha 33**: O componente `AiAttachmentAnalyzerDialog` está importado  
-- **Linha 75**: O estado `showAiAttachmentDialog` está declarado
-- **Linhas 549-561**: O botão está renderizado com a condição `attachments.length > 0`
+---
 
-### Possível Causa
+### Solução Recomendada
 
-O botão só aparece quando `attachments.length > 0`. Como os attachments são carregados **assincronamente** (linhas 97-126), existe um momento em que:
-1. O modal abre
-2. Os attachments ainda não foram carregados (array vazio)
-3. O botão não aparece
-4. Os attachments são carregados e aparecem na lista
-5. **Mas a UI já renderizou sem o botão**
+Como a funcionalidade é específica para o Kanban, vou criar um **novo secret dedicado** para não afectar outras funcionalidades que usam o secret antigo.
 
-### Solução Proposta
-
-Adicionar uma **verificação mais robusta** e garantir que o botão apareça assim que existam attachments, independentemente do timing de carregamento.
+---
 
 ### Alterações Técnicas
 
-**Ficheiro: `src/components/kanban/KanbanCardModal.tsx`**
+**1. Novo Secret a Configurar**
 
-O botão já re-renderiza quando `attachments` muda. O problema pode ser apenas que o **código ainda não foi aplicado** ao ambiente de preview.
+| Nome do Secret | Valor |
+|----------------|-------|
+| `N8N_KANBAN_DOC_SUMMARY_WEBHOOK` | `https://n8n.gvvcapital.com/webhook/lovable-doc-summary` |
 
-**Passos para verificar:**
-1. Forçar refresh do browser (Ctrl+Shift+R)
-2. Abrir um card com anexos
-3. Verificar se o ícone ✨ aparece ao lado de "Attachments"
+**2. Actualizar Edge Function**
 
-### Nota
+**Ficheiro**: `supabase/functions/analyze-kanban-attachment/index.ts`
 
-Se após refresh continuar a não aparecer, posso adicionar um **estado de loading** para garantir que o botão aparece logo após os attachments serem carregados.
+Alterar linha 55 de:
+```typescript
+const n8nWebhookUrl = Deno.env.get('N8N_ANALYZE_DOCUMENT_WEBHOOK');
+```
 
-### Ficheiro a Verificar/Modificar
+Para:
+```typescript
+const n8nWebhookUrl = Deno.env.get('N8N_KANBAN_DOC_SUMMARY_WEBHOOK');
+```
 
-| Ficheiro | Estado |
-|----------|--------|
-| `src/components/kanban/KanbanCardModal.tsx` | Código já implementado - necessita refresh |
+E actualizar as mensagens de erro correspondentes (linhas 58-63).
+
+---
+
+### Passos de Implementação
+
+1. Actualizar o código da Edge Function para usar o novo secret
+2. Adicionar o secret `N8N_KANBAN_DOC_SUMMARY_WEBHOOK` com o valor do novo webhook
+3. Deploy da Edge Function
+4. Testar a análise de um anexo
+
+---
+
+### Ficheiros a Modificar
+
+| Ficheiro | Acção |
+|----------|-------|
+| `supabase/functions/analyze-kanban-attachment/index.ts` | Actualizar nome do secret |
+
+### Secrets a Configurar
+
+| Secret | Valor |
+|--------|-------|
+| `N8N_KANBAN_DOC_SUMMARY_WEBHOOK` | `https://n8n.gvvcapital.com/webhook/lovable-doc-summary` |
 
