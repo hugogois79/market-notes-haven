@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.generate-kanban-structure]
 verify_jwt = false
+
+[functions.analyze-kanban-attachment]
+verify_jwt = false
