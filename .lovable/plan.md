@@ -1,66 +1,140 @@
 
+## Plano: Adaptar Análise AI para Campos do Kanban Card
 
-## Plano: Actualizar Webhook do n8n para Análise de Anexos
-
-### Problema Actual
-A Edge Function `analyze-kanban-attachment` usa o secret `N8N_ANALYZE_DOCUMENT_WEBHOOK` que aponta para:
-- **Antigo**: `https://n8n.gvvcapital.com/webhook/work-file-extract`
-
-Precisa apontar para:
-- **Novo**: `https://n8n.gvvcapital.com/webhook/lovable-doc-summary`
+### Problema Identificado
+O `AiAttachmentAnalyzerDialog` está configurado para extrair dados de **faturas** (vendor_name, invoice_number, total_amount), mas os campos relevantes para um **Kanban Card** são diferentes.
 
 ---
 
-### Solução Recomendada
+### Campos do Kanban Card (da imagem)
 
-Como a funcionalidade é específica para o Kanban, vou criar um **novo secret dedicado** para não afectar outras funcionalidades que usam o secret antigo.
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| Title | texto | Título do card |
+| Description | texto | Descrição detalhada |
+| Valor (€) | número | Valor monetário |
+| Due Date | data | Data de entrega |
+| Priority | enum | low/medium/high |
+| Tags | array | Etiquetas |
+| Tasks | array | Checklist de subtarefas |
+
+---
+
+### Nova Estrutura de Dados Esperada do n8n
+
+O workflow n8n deve retornar JSON com esta estrutura:
+
+```text
+{
+  "description": "Resumo do documento...",
+  "value": 1234.56,
+  "due_date": "2026-02-15",
+  "priority": "medium",
+  "suggested_tags": ["Manutenção", "Motor"],
+  "suggested_tasks": [
+    "Verificar peças recebidas",
+    "Confirmar quantidades",
+    "Arquivar fatura"
+  ]
+}
+```
 
 ---
 
 ### Alterações Técnicas
 
-**1. Novo Secret a Configurar**
+**1. Actualizar Interface `ExtractedData`**
 
-| Nome do Secret | Valor |
-|----------------|-------|
-| `N8N_KANBAN_DOC_SUMMARY_WEBHOOK` | `https://n8n.gvvcapital.com/webhook/lovable-doc-summary` |
+Alterar de campos de fatura para campos de Kanban:
 
-**2. Actualizar Edge Function**
-
-**Ficheiro**: `supabase/functions/analyze-kanban-attachment/index.ts`
-
-Alterar linha 55 de:
-```typescript
-const n8nWebhookUrl = Deno.env.get('N8N_ANALYZE_DOCUMENT_WEBHOOK');
+```text
+interface ExtractedData {
+  description?: string;
+  value?: number;
+  due_date?: string;
+  priority?: 'low' | 'medium' | 'high';
+  suggested_tags?: string[];
+  suggested_tasks?: string[];
+  summary?: string;  // fallback do n8n
+}
 ```
 
-Para:
-```typescript
-const n8nWebhookUrl = Deno.env.get('N8N_KANBAN_DOC_SUMMARY_WEBHOOK');
+**2. Actualizar Validação de Dados**
+
+Alterar a verificação de dados válidos para os novos campos:
+
+```text
+// Antes
+if (!extracted.vendor_name && !extracted.total_amount && !extracted.invoice_date)
+
+// Depois  
+if (!extracted.description && !extracted.value && !extracted.summary)
 ```
 
-E actualizar as mensagens de erro correspondentes (linhas 58-63).
+**3. Alterar o Callback `onDescriptionGenerated`**
 
----
+O dialog actualmente só passa a descrição. Deve passar todos os campos extraídos para o modal aplicar directamente:
 
-### Passos de Implementação
+```text
+// Antes
+onDescriptionGenerated: (description: string) => void
 
-1. Actualizar o código da Edge Function para usar o novo secret
-2. Adicionar o secret `N8N_KANBAN_DOC_SUMMARY_WEBHOOK` com o valor do novo webhook
-3. Deploy da Edge Function
-4. Testar a análise de um anexo
+// Depois
+onDataExtracted: (data: ExtractedKanbanData) => void
+```
+
+**4. Actualizar KanbanCardModal para Aplicar Dados**
+
+O modal deve receber todos os campos e preencher:
+- `setDescription(data.description)`
+- `setValue(data.value)`
+- `setDueDate(data.due_date)`
+- `setTags([...tags, ...data.suggested_tags])`
+- `setTasks([...tasks, ...data.suggested_tasks.map(t => ({id, text, completed: false}))])`
+
+**5. Actualizar UI de Confirmação**
+
+Mostrar preview dos novos campos (descrição, valor, data, tags, tarefas) em vez dos campos de fatura.
 
 ---
 
 ### Ficheiros a Modificar
 
-| Ficheiro | Acção |
-|----------|-------|
-| `supabase/functions/analyze-kanban-attachment/index.ts` | Actualizar nome do secret |
+| Ficheiro | Alteração |
+|----------|-----------|
+| `src/components/kanban/AiAttachmentAnalyzerDialog.tsx` | Nova interface, nova UI de confirmação, novo callback |
+| `src/components/kanban/KanbanCardModal.tsx` | Handler para aplicar dados extraídos aos campos do card |
 
-### Secrets a Configurar
+---
 
-| Secret | Valor |
-|--------|-------|
-| `N8N_KANBAN_DOC_SUMMARY_WEBHOOK` | `https://n8n.gvvcapital.com/webhook/lovable-doc-summary` |
+### Configuração n8n Necessária
 
+O workflow `lovable-doc-summary` deve ser configurado para retornar:
+
+| Campo | Tipo | Obrigatório |
+|-------|------|-------------|
+| `description` | string | Sim |
+| `value` | number | Não |
+| `due_date` | string (YYYY-MM-DD) | Não |
+| `priority` | string (low/medium/high) | Não |
+| `suggested_tags` | array de strings | Não |
+| `suggested_tasks` | array de strings | Não |
+
+---
+
+### Fluxo de Utilização
+
+```text
+1. Utilizador clica no ícone ✨ nos Attachments
+2. Seleciona o ficheiro a analisar
+3. Sistema envia para n8n via Edge Function
+4. n8n analisa e retorna campos do Kanban
+5. Dialog mostra preview:
+   - Descrição sugerida
+   - Valor extraído (se houver)
+   - Data sugerida (se houver)
+   - Tags sugeridas
+   - Tarefas sugeridas (checklist)
+6. Utilizador confirma
+7. Campos são aplicados ao card (merge com existentes)
+```
