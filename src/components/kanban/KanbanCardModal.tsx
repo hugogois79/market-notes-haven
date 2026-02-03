@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/collapsible';
 import { AiTaskGeneratorDialog } from './AiTaskGeneratorDialog';
 import { AiCardGeneratorDialog } from './AiCardGeneratorDialog';
+import { AiAttachmentAnalyzerDialog } from './AiAttachmentAnalyzerDialog';
 
 interface KanbanCardModalProps {
   card: KanbanCard;
@@ -71,6 +72,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   const [thumbnailUrls, setThumbnailUrls] = useState<Record<string, string>>({});
   const [showAiDialog, setShowAiDialog] = useState(false);
   const [showAiCardDialog, setShowAiCardDialog] = useState(false);
+  const [showAiAttachmentDialog, setShowAiAttachmentDialog] = useState(false);
 
   const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
@@ -544,7 +546,20 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
           </div>
 
           <div>
-            <Label>Attachments</Label>
+            <div className="flex items-center justify-between mb-1">
+              <Label>Attachments</Label>
+              {attachments.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowAiAttachmentDialog(true)}
+                  className="h-7 w-7"
+                  title="Analisar anexo com AI"
+                >
+                  <Sparkles className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
             <div 
               className={`space-y-2 rounded-lg border-2 border-dashed p-3 transition-colors ${
                 isDragging 
@@ -689,6 +704,16 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
             console.error('Error creating cards:', error);
             toast.error('Falha ao criar cards');
           }
+        }}
+      />
+
+      <AiAttachmentAnalyzerDialog
+        isOpen={showAiAttachmentDialog}
+        onClose={() => setShowAiAttachmentDialog(false)}
+        attachments={attachments}
+        cardId={card.id}
+        onDescriptionGenerated={(newDescription) => {
+          setDescription(newDescription);
         }}
       />
     </Dialog>
