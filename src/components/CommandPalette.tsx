@@ -58,6 +58,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
   const [boards, setBoards] = useState<KanbanBoard[]>([]);
   const [isLoadingBoards, setIsLoadingBoards] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+  const [hasLoadedBoards, setHasLoadedBoards] = useState(false);
   
   // Check if user can see boards
   const canViewBoards = isAdmin || hasAccess('projects');
@@ -92,12 +93,13 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
   // Preload boards when opening the palette so searching "board" shows results immediately
   useEffect(() => {
     if (!open) return;
-    if (!canViewBoards || permissionsLoading) return;
-    // Avoid refetching on every open if we already have data
-    if (boards.length > 0) return;
+    if (permissionsLoading) return; // Wait for permissions to load
+    if (!canViewBoards) return;
+    if (hasLoadedBoards) return; // Avoid refetching if already loaded
+    
     loadBoardsData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, canViewBoards, permissionsLoading]);
+    setHasLoadedBoards(true);
+  }, [open, canViewBoards, permissionsLoading, hasLoadedBoards]);
 
   const loadBoardsData = async () => {
     setIsLoadingBoards(true);

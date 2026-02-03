@@ -244,17 +244,127 @@ export type Database = {
         }
         Relationships: []
       }
+      clawd_agents: {
+        Row: {
+          created_at: string | null
+          current_task_id: string | null
+          emoji: string | null
+          id: string
+          name: string
+          role: string | null
+          specialization: string
+          status: string | null
+          tasks_completed: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_task_id?: string | null
+          emoji?: string | null
+          id: string
+          name: string
+          role?: string | null
+          specialization: string
+          status?: string | null
+          tasks_completed?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_task_id?: string | null
+          emoji?: string | null
+          id?: string
+          name?: string
+          role?: string | null
+          specialization?: string
+          status?: string | null
+          tasks_completed?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clawd_agents_current_task_id_fkey"
+            columns: ["current_task_id"]
+            isOneToOne: false
+            referencedRelation: "clawd_mission_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clawd_agents_current_task_id_fkey"
+            columns: ["current_task_id"]
+            isOneToOne: false
+            referencedRelation: "clawd_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clawd_task_comments: {
+        Row: {
+          agent_id: string | null
+          comment: string
+          created_at: string | null
+          id: string
+          task_id: string
+          type: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          comment: string
+          created_at?: string | null
+          id?: string
+          task_id: string
+          type?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          comment?: string
+          created_at?: string | null
+          id?: string
+          task_id?: string
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clawd_task_comments_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "clawd_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clawd_task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "clawd_mission_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clawd_task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "clawd_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clawd_tasks: {
         Row: {
+          actual_hours: number | null
+          assigned_at: string | null
+          assigned_to: string | null
+          category: string | null
           completed_at: string | null
           created_at: string | null
           description: string | null
           due_date: string | null
           error: string | null
+          estimated_hours: number | null
           id: string
           priority: string | null
           prompt: string | null
           result: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           source: string | null
           started_at: string | null
           status: string
@@ -264,15 +374,22 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          actual_hours?: number | null
+          assigned_at?: string | null
+          assigned_to?: string | null
+          category?: string | null
           completed_at?: string | null
           created_at?: string | null
           description?: string | null
           due_date?: string | null
           error?: string | null
+          estimated_hours?: number | null
           id?: string
           priority?: string | null
           prompt?: string | null
           result?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source?: string | null
           started_at?: string | null
           status?: string
@@ -282,15 +399,22 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          actual_hours?: number | null
+          assigned_at?: string | null
+          assigned_to?: string | null
+          category?: string | null
           completed_at?: string | null
           created_at?: string | null
           description?: string | null
           due_date?: string | null
           error?: string | null
+          estimated_hours?: number | null
           id?: string
           priority?: string | null
           prompt?: string | null
           result?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source?: string | null
           started_at?: string | null
           status?: string
@@ -4523,6 +4647,78 @@ export type Database = {
         }
         Relationships: []
       }
+      seguros: {
+        Row: {
+          bem_segurado: string | null
+          coberturas: string | null
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string | null
+          data_proxima_renovacao: string | null
+          estado: string | null
+          iban_debito: string | null
+          id: string
+          mediador: string | null
+          nome: string
+          notas: string | null
+          numero_apolice: string | null
+          periodicidade: string | null
+          premio_total: number | null
+          renovacao_automatica: boolean | null
+          seguradora: string | null
+          tipo: string | null
+          tomador: string | null
+          updated_at: string | null
+          valor_fracionado: number | null
+        }
+        Insert: {
+          bem_segurado?: string | null
+          coberturas?: string | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          data_proxima_renovacao?: string | null
+          estado?: string | null
+          iban_debito?: string | null
+          id?: string
+          mediador?: string | null
+          nome: string
+          notas?: string | null
+          numero_apolice?: string | null
+          periodicidade?: string | null
+          premio_total?: number | null
+          renovacao_automatica?: boolean | null
+          seguradora?: string | null
+          tipo?: string | null
+          tomador?: string | null
+          updated_at?: string | null
+          valor_fracionado?: number | null
+        }
+        Update: {
+          bem_segurado?: string | null
+          coberturas?: string | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          data_proxima_renovacao?: string | null
+          estado?: string | null
+          iban_debito?: string | null
+          id?: string
+          mediador?: string | null
+          nome?: string
+          notas?: string | null
+          numero_apolice?: string | null
+          periodicidade?: string | null
+          premio_total?: number | null
+          renovacao_automatica?: boolean | null
+          seguradora?: string | null
+          tipo?: string | null
+          tomador?: string | null
+          updated_at?: string | null
+          valor_fracionado?: number | null
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           created_at: string | null
@@ -6589,6 +6785,63 @@ export type Database = {
         }
         Relationships: []
       }
+      clawd_live_feed: {
+        Row: {
+          agent_emoji: string | null
+          agent_id: string | null
+          agent_name: string | null
+          comment: string | null
+          created_at: string | null
+          id: string | null
+          task_id: string | null
+          task_title: string | null
+          type: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clawd_task_comments_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "clawd_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clawd_task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "clawd_mission_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clawd_task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "clawd_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clawd_mission_queue: {
+        Row: {
+          assigned_emoji: string | null
+          assigned_name: string | null
+          assigned_specialization: string | null
+          assigned_to: string | null
+          category: string | null
+          comment_count: number | null
+          created_at: string | null
+          description: string | null
+          due_date: string | null
+          estimated_hours: number | null
+          id: string | null
+          priority: string | null
+          status: string | null
+          tags: string[] | null
+          title: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
       tag_usage_counts: {
         Row: {
           category_id: string | null
@@ -6612,6 +6865,10 @@ export type Database = {
       }
     }
     Functions: {
+      assign_task: {
+        Args: { p_agent_id: string; p_task_id: string }
+        Returns: undefined
+      }
       calculate_account_balance: {
         Args: { p_account_id: string; p_company_id: string }
         Returns: number
