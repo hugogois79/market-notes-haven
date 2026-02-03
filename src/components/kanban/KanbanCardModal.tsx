@@ -712,8 +712,47 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
         onClose={() => setShowAiAttachmentDialog(false)}
         attachments={attachments}
         cardId={card.id}
-        onDescriptionGenerated={(newDescription) => {
-          setDescription(newDescription);
+        onDataExtracted={(data) => {
+          // Apply extracted data to card fields
+          if (data.description) {
+            setDescription(data.description);
+          } else if (data.summary) {
+            setDescription(data.summary);
+          }
+          
+          if (data.value !== undefined && data.value > 0) {
+            setValue(data.value);
+          }
+          
+          if (data.due_date) {
+            // Parse date in YYYY-MM-DD format
+            const parsedDate = new Date(data.due_date);
+            if (!isNaN(parsedDate.getTime())) {
+              setDueDate(parsedDate);
+            }
+          }
+          
+          if (data.priority) {
+            setPriority(data.priority);
+          }
+          
+          if (data.suggested_tags && data.suggested_tags.length > 0) {
+            // Merge with existing tags (avoid duplicates)
+            const newTags = data.suggested_tags.filter(t => !tags.includes(t));
+            if (newTags.length > 0) {
+              setTags([...tags, ...newTags]);
+            }
+          }
+          
+          if (data.suggested_tasks && data.suggested_tasks.length > 0) {
+            // Add new tasks to checklist
+            const newTasks = data.suggested_tasks.map(taskText => ({
+              id: crypto.randomUUID(),
+              text: taskText,
+              completed: false
+            }));
+            setTasks([...tasks, ...newTasks]);
+          }
         }}
       />
     </Dialog>

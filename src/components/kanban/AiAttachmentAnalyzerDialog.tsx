@@ -10,22 +10,22 @@ import {
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Loader2, Sparkles, FileText, AlertCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Sparkles, FileText, AlertCircle, Tag, CheckSquare, CalendarDays, Euro, Flag } from 'lucide-react';
 import { KanbanAttachment } from '@/services/kanbanService';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
 
-interface ExtractedData {
-  vendor_name?: string;
-  invoice_date?: string;
-  total_amount?: number;
-  tax_amount?: number;
-  subtotal?: number;
-  invoice_number?: string;
-  line_items_summary?: string;
-  category?: string;
-  payment_method?: string;
+// New interface matching Kanban card fields
+export interface ExtractedKanbanData {
+  description?: string;
+  value?: number;
+  due_date?: string;
+  priority?: 'low' | 'medium' | 'high';
+  suggested_tags?: string[];
+  suggested_tasks?: string[];
+  summary?: string; // fallback from n8n
 }
 
 interface AiAttachmentAnalyzerDialogProps {
@@ -33,63 +33,32 @@ interface AiAttachmentAnalyzerDialogProps {
   onClose: () => void;
   attachments: KanbanAttachment[];
   cardId: string;
-  onDescriptionGenerated: (description: string) => void;
+  onDataExtracted: (data: ExtractedKanbanData) => void;
 }
 
 type DialogPhase = 'select' | 'analyzing' | 'confirm' | 'error';
+
+const priorityLabels: Record<string, { label: string; color: string }> = {
+  low: { label: 'Baixa', color: 'bg-green-100 text-green-800' },
+  medium: { label: 'Média', color: 'bg-yellow-100 text-yellow-800' },
+  high: { label: 'Alta', color: 'bg-red-100 text-red-800' },
+};
 
 export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProps> = ({
   isOpen,
   onClose,
   attachments,
   cardId,
-  onDescriptionGenerated,
+  onDataExtracted,
 }) => {
   const [phase, setPhase] = useState<DialogPhase>('select');
   const [selectedAttachmentId, setSelectedAttachmentId] = useState<string>(
     attachments.length === 1 ? attachments[0].id : ''
   );
-  const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
-  const [generatedDescription, setGeneratedDescription] = useState<string>('');
+  const [extractedData, setExtractedData] = useState<ExtractedKanbanData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
 
   const selectedAttachment = attachments.find(a => a.id === selectedAttachmentId);
-
-  const formatDescriptionFromData = (data: ExtractedData): string => {
-    const lines: string[] = [];
-
-    if (data.vendor_name) {
-      lines.push(`**Fornecedor:** ${data.vendor_name}`);
-    }
-    if (data.invoice_date) {
-      lines.push(`**Data:** ${data.invoice_date}`);
-    }
-    if (data.invoice_number) {
-      lines.push(`**Nº Fatura:** ${data.invoice_number}`);
-    }
-    if (data.total_amount !== undefined) {
-      lines.push(`**Valor Total:** ${formatCurrency(data.total_amount)}`);
-    }
-    if (data.subtotal !== undefined && data.subtotal !== data.total_amount) {
-      lines.push(`**Subtotal:** ${formatCurrency(data.subtotal)}`);
-    }
-    if (data.tax_amount !== undefined) {
-      lines.push(`**IVA:** ${formatCurrency(data.tax_amount)}`);
-    }
-    if (data.payment_method) {
-      lines.push(`**Método Pagamento:** ${data.payment_method}`);
-    }
-    if (data.category) {
-      lines.push(`**Categoria:** ${data.category}`);
-    }
-    if (data.line_items_summary) {
-      lines.push('');
-      lines.push('**Detalhes:**');
-      lines.push(data.line_items_summary);
-    }
-
-    return lines.join('\n');
-  };
 
   const handleAnalyze = async () => {
     if (!selectedAttachment) {
@@ -118,18 +87,16 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
         throw new Error(data.message || data.error || 'Erro ao analisar documento');
       }
 
-      const extracted = data.data;
+      const extracted = data.data as ExtractedKanbanData;
       
-      // Check if we got any meaningful data
-      if (!extracted || (!extracted.vendor_name && !extracted.total_amount && !extracted.invoice_date)) {
+      // Check if we got any meaningful data (using new Kanban fields)
+      if (!extracted || (!extracted.description && !extracted.value && !extracted.summary)) {
         setPhase('error');
-        setErrorMessage('Não foi possível extrair informação do documento. Verifique se o ficheiro é uma fatura ou documento legível.');
+        setErrorMessage('Não foi possível extrair informação do documento. Verifique se o ficheiro é um documento legível.');
         return;
       }
 
       setExtractedData(extracted);
-      const description = formatDescriptionFromData(extracted);
-      setGeneratedDescription(description);
       setPhase('confirm');
 
     } catch (error) {
@@ -140,8 +107,10 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
   };
 
   const handleApply = () => {
-    onDescriptionGenerated(generatedDescription);
-    toast.success('Descrição actualizada com sucesso!');
+    if (extractedData) {
+      onDataExtracted(extractedData);
+      toast.success('Dados aplicados com sucesso!');
+    }
     handleClose();
   };
 
@@ -149,7 +118,6 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
     setPhase('select');
     setSelectedAttachmentId(attachments.length === 1 ? attachments[0].id : '');
     setExtractedData(null);
-    setGeneratedDescription('');
     setErrorMessage('');
     onClose();
   };
@@ -174,7 +142,7 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
           <DialogDescription>
             {phase === 'select' && 'Selecione o anexo que pretende analisar.'}
             {phase === 'analyzing' && 'A analisar documento...'}
-            {phase === 'confirm' && 'Reveja a informação extraída.'}
+            {phase === 'confirm' && 'Reveja os dados extraídos para o card.'}
             {phase === 'error' && 'Ocorreu um erro durante a análise.'}
           </DialogDescription>
         </DialogHeader>
@@ -217,55 +185,94 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
           {phase === 'confirm' && extractedData && (
             <div className="space-y-4">
               <div className="p-4 rounded-lg bg-muted/50 border">
-                <h4 className="font-medium mb-3 flex items-center gap-2">
+                <h4 className="font-medium mb-4 flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  Informação Extraída
+                  Dados Extraídos para o Card
                 </h4>
-                <div className="space-y-2 text-sm">
-                  {extractedData.vendor_name && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Fornecedor:</span>
-                      <span className="font-medium">{extractedData.vendor_name}</span>
+                
+                <div className="space-y-4">
+                  {/* Description */}
+                  {(extractedData.description || extractedData.summary) && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <FileText className="h-3.5 w-3.5" />
+                        Descrição
+                      </div>
+                      <p className="text-sm bg-background p-3 rounded border max-h-32 overflow-y-auto whitespace-pre-wrap">
+                        {extractedData.description || extractedData.summary}
+                      </p>
                     </div>
                   )}
-                  {extractedData.invoice_date && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Data:</span>
-                      <span>{extractedData.invoice_date}</span>
-                    </div>
-                  )}
-                  {extractedData.invoice_number && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Nº Fatura:</span>
-                      <span>{extractedData.invoice_number}</span>
-                    </div>
-                  )}
-                  {extractedData.total_amount !== undefined && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Valor Total:</span>
+
+                  {/* Value */}
+                  {extractedData.value !== undefined && extractedData.value > 0 && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <Euro className="h-3.5 w-3.5" />
+                        Valor
+                      </div>
                       <span className="font-semibold text-primary">
-                        {formatCurrency(extractedData.total_amount)}
+                        {formatCurrency(extractedData.value)}
                       </span>
                     </div>
                   )}
-                  {extractedData.tax_amount !== undefined && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">IVA:</span>
-                      <span>{formatCurrency(extractedData.tax_amount)}</span>
+
+                  {/* Due Date */}
+                  {extractedData.due_date && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <CalendarDays className="h-3.5 w-3.5" />
+                        Data de Entrega
+                      </div>
+                      <span className="text-sm">{extractedData.due_date}</span>
                     </div>
                   )}
-                  {extractedData.category && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Categoria:</span>
-                      <span>{extractedData.category}</span>
+
+                  {/* Priority */}
+                  {extractedData.priority && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <Flag className="h-3.5 w-3.5" />
+                        Prioridade
+                      </div>
+                      <Badge className={priorityLabels[extractedData.priority]?.color || ''}>
+                        {priorityLabels[extractedData.priority]?.label || extractedData.priority}
+                      </Badge>
                     </div>
                   )}
-                  {extractedData.line_items_summary && (
-                    <div className="pt-2 border-t mt-2">
-                      <span className="text-muted-foreground block mb-1">Detalhes:</span>
-                      <p className="text-xs whitespace-pre-wrap">
-                        {extractedData.line_items_summary}
-                      </p>
+
+                  {/* Tags */}
+                  {extractedData.suggested_tags && extractedData.suggested_tags.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <Tag className="h-3.5 w-3.5" />
+                        Tags Sugeridas
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {extractedData.suggested_tags.map((tag, index) => (
+                          <Badge key={index} variant="secondary">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tasks */}
+                  {extractedData.suggested_tasks && extractedData.suggested_tasks.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <CheckSquare className="h-3.5 w-3.5" />
+                        Tarefas Sugeridas
+                      </div>
+                      <ul className="space-y-1.5">
+                        {extractedData.suggested_tasks.map((task, index) => (
+                          <li key={index} className="flex items-start gap-2 text-sm">
+                            <span className="text-muted-foreground mt-0.5">•</span>
+                            <span>{task}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                 </div>
@@ -306,7 +313,7 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
                 Cancelar
               </Button>
               <Button onClick={handleApply}>
-                Aplicar à Descrição
+                Aplicar ao Card
               </Button>
             </>
           )}
