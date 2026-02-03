@@ -553,7 +553,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowAiAttachmentDialog(true)}
-                  className="h-7 w-7"
+                  className="h-7 w-7 text-amber-500 hover:text-amber-600 hover:bg-amber-500/10"
                   title="Analisar anexo com AI"
                 >
                   <Sparkles className="h-4 w-4" />
