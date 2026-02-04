@@ -1848,6 +1848,7 @@ export type Database = {
           file_url: string
           filename: string
           id: string
+          storage_path: string | null
           uploaded_by: string | null
         }
         Insert: {
@@ -1857,6 +1858,7 @@ export type Database = {
           file_url: string
           filename: string
           id?: string
+          storage_path?: string | null
           uploaded_by?: string | null
         }
         Update: {
@@ -1866,6 +1868,7 @@ export type Database = {
           file_url?: string
           filename?: string
           id?: string
+          storage_path?: string | null
           uploaded_by?: string | null
         }
         Relationships: [
@@ -4719,6 +4722,126 @@ export type Database = {
         }
         Relationships: []
       }
+      services_subscriptions: {
+        Row: {
+          account_email: string | null
+          account_id: string | null
+          agent_responsible: string | null
+          alert_days_before: number | null
+          api_key_reference: string | null
+          auto_renew: boolean | null
+          billing_cycle: string | null
+          cancellation_date: string | null
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          current_usage: Json | null
+          dashboard_url: string | null
+          description: string | null
+          domain: string | null
+          id: string
+          last_alert_sent: string | null
+          login_url: string | null
+          monthly_cost: number | null
+          next_billing_date: string | null
+          notes: string | null
+          owner: string | null
+          plan_name: string | null
+          plan_tier: string | null
+          priority: string | null
+          provider: string
+          renewal_date: string | null
+          resource_limit: Json | null
+          service_category: string
+          service_name: string
+          status: string | null
+          subscription_date: string
+          tags: string[] | null
+          trial_end_date: string | null
+          updated_at: string | null
+          use_case: string | null
+          yearly_cost: number | null
+        }
+        Insert: {
+          account_email?: string | null
+          account_id?: string | null
+          agent_responsible?: string | null
+          alert_days_before?: number | null
+          api_key_reference?: string | null
+          auto_renew?: boolean | null
+          billing_cycle?: string | null
+          cancellation_date?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          current_usage?: Json | null
+          dashboard_url?: string | null
+          description?: string | null
+          domain?: string | null
+          id?: string
+          last_alert_sent?: string | null
+          login_url?: string | null
+          monthly_cost?: number | null
+          next_billing_date?: string | null
+          notes?: string | null
+          owner?: string | null
+          plan_name?: string | null
+          plan_tier?: string | null
+          priority?: string | null
+          provider: string
+          renewal_date?: string | null
+          resource_limit?: Json | null
+          service_category: string
+          service_name: string
+          status?: string | null
+          subscription_date: string
+          tags?: string[] | null
+          trial_end_date?: string | null
+          updated_at?: string | null
+          use_case?: string | null
+          yearly_cost?: number | null
+        }
+        Update: {
+          account_email?: string | null
+          account_id?: string | null
+          agent_responsible?: string | null
+          alert_days_before?: number | null
+          api_key_reference?: string | null
+          auto_renew?: boolean | null
+          billing_cycle?: string | null
+          cancellation_date?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          current_usage?: Json | null
+          dashboard_url?: string | null
+          description?: string | null
+          domain?: string | null
+          id?: string
+          last_alert_sent?: string | null
+          login_url?: string | null
+          monthly_cost?: number | null
+          next_billing_date?: string | null
+          notes?: string | null
+          owner?: string | null
+          plan_name?: string | null
+          plan_tier?: string | null
+          priority?: string | null
+          provider?: string
+          renewal_date?: string | null
+          resource_limit?: Json | null
+          service_category?: string
+          service_name?: string
+          status?: string | null
+          subscription_date?: string
+          tags?: string[] | null
+          trial_end_date?: string | null
+          updated_at?: string | null
+          use_case?: string | null
+          yearly_cost?: number | null
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           created_at: string | null
@@ -6776,6 +6899,45 @@ export type Database = {
       }
     }
     Views: {
+      active_subscriptions: {
+        Row: {
+          agent_responsible: string | null
+          currency: string | null
+          domain: string | null
+          monthly_cost: number | null
+          next_billing_date: string | null
+          plan_name: string | null
+          provider: string | null
+          service_name: string | null
+          status: string | null
+          yearly_cost: number | null
+        }
+        Insert: {
+          agent_responsible?: string | null
+          currency?: string | null
+          domain?: string | null
+          monthly_cost?: number | null
+          next_billing_date?: string | null
+          plan_name?: string | null
+          provider?: string | null
+          service_name?: string | null
+          status?: string | null
+          yearly_cost?: number | null
+        }
+        Update: {
+          agent_responsible?: string | null
+          currency?: string | null
+          domain?: string | null
+          monthly_cost?: number | null
+          next_billing_date?: string | null
+          plan_name?: string | null
+          provider?: string | null
+          service_name?: string | null
+          status?: string | null
+          yearly_cost?: number | null
+        }
+        Relationships: []
+      }
       ai_board_structure: {
         Row: {
           board_id: string | null
@@ -6839,6 +7001,16 @@ export type Database = {
           tags: string[] | null
           title: string | null
           updated_at: string | null
+        }
+        Relationships: []
+      }
+      monthly_costs_summary: {
+        Row: {
+          currency: string | null
+          service_category: string | null
+          service_count: number | null
+          total_monthly: number | null
+          total_yearly: number | null
         }
         Relationships: []
       }

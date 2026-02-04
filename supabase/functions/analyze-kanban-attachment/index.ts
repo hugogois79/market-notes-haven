@@ -13,43 +13,103 @@ serve(async (req) => {
   }
 
   try {
-    const { fileUrl, fileName, mimeType, cardId } = await req.json();
+    const { fileUrl, storagePath, fileName, mimeType, cardId, attachmentId } = await req.json();
 
-    console.log('Received kanban attachment analysis request:', { fileName, mimeType, cardId, fileUrl });
+    console.log('Received kanban attachment analysis request:', { fileName, mimeType, cardId, storagePath, fileUrl });
 
-    // Initialize Supabase client with service role for signed URL generation
+    // Initialize Supabase client with service role for storage and database operations
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Extract file path from public URL
-    // URL format: .../storage/v1/object/public/kanban-attachments/cardId/filename
-    let filePath = '';
-    if (fileUrl) {
+    // Determine storage path - use new field or extract from URL
+    let filePath = storagePath;
+    if (!filePath && fileUrl) {
       const match = fileUrl.match(/\/storage\/v1\/object\/public\/kanban-attachments\/(.+)$/);
       if (match) {
         filePath = decodeURIComponent(match[1]);
       }
     }
 
-    console.log('Extracted file path:', filePath);
+    console.log('Using storage path:', filePath);
 
-    // Generate signed URL (valid for 1 hour) - this URL is accessible even for private buckets
-    let accessibleUrl = fileUrl;
-    if (filePath) {
-      const { data: signedUrlData, error: signedError } = await supabase.storage
-        .from('kanban-attachments')
-        .createSignedUrl(filePath, 3600); // 1 hour validity
-
-      if (signedError) {
-        console.error('Error creating signed URL:', signedError);
-        // Fall back to original URL if signed URL fails
-      } else if (signedUrlData?.signedUrl) {
-        accessibleUrl = signedUrlData.signedUrl;
-        console.log('Generated signed URL successfully');
-      }
+    if (!filePath) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'storage_path_missing',
+          message: 'Não foi possível determinar o caminho do ficheiro no storage.'
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
+
+    // VALIDATION: Check if file exists in storage before proceeding
+    console.log('Checking if file exists in storage...');
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('kanban-attachments')
+      .download(filePath);
+
+    if (downloadError || !fileData) {
+      console.error('File not found in storage:', downloadError);
+      
+      // AUTO-CLEANUP: Delete orphaned database record
+      if (attachmentId) {
+        console.log('Deleting orphaned attachment record:', attachmentId);
+        const { error: deleteError } = await supabase
+          .from('kanban_attachments')
+          .delete()
+          .eq('id', attachmentId);
+        
+        if (deleteError) {
+          console.error('Error deleting orphaned record:', deleteError);
+        } else {
+          console.log('Orphaned record deleted successfully');
+        }
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'file_not_found',
+          orphanCleaned: !!attachmentId,
+          message: 'O ficheiro não existe no storage. O registo órfão foi removido automaticamente.'
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.log('File exists in storage, generating signed URL...');
+
+    // Generate signed URL (valid for 1 hour) - file confirmed to exist
+    const { data: signedUrlData, error: signedError } = await supabase.storage
+      .from('kanban-attachments')
+      .createSignedUrl(filePath, 3600); // 1 hour validity
+
+    if (signedError || !signedUrlData?.signedUrl) {
+      console.error('Error creating signed URL:', signedError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'signed_url_failed',
+          message: 'Não foi possível gerar URL de acesso ao ficheiro.'
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const accessibleUrl = signedUrlData.signedUrl;
+    console.log('Generated signed URL successfully');
 
     // Get n8n webhook URL from environment
     const n8nWebhookUrl = Deno.env.get('N8N_KANBAN_DOC_SUMMARY_WEBHOOK');
