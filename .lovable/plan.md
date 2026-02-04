@@ -1,140 +1,83 @@
 
-## Plano: Adaptar Análise AI para Campos do Kanban Card
+# Plano: Correção da Análise AI de Anexos Kanban
 
-### Problema Identificado
-O `AiAttachmentAnalyzerDialog` está configurado para extrair dados de **faturas** (vendor_name, invoice_number, total_amount), mas os campos relevantes para um **Kanban Card** são diferentes.
+## Contexto
 
----
+O sistema de análise AI de documentos anexados a cards Kanban falha porque:
 
-### Campos do Kanban Card (da imagem)
+1. O bucket `kanban-attachments` é **privado**
+2. O código guarda URLs públicas (que não funcionam em buckets privados)
+3. Se o signed URL falhar, há fallback para URL pública (inútil)
+4. Ficheiros eliminados do storage deixam registos órfãos na base de dados
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| Title | texto | Título do card |
-| Description | texto | Descrição detalhada |
-| Valor (€) | número | Valor monetário |
-| Due Date | data | Data de entrega |
-| Priority | enum | low/medium/high |
-| Tags | array | Etiquetas |
-| Tasks | array | Checklist de subtarefas |
+## Alterações Planeadas
 
----
+### 1. Base de Dados - Nova coluna storage_path
 
-### Nova Estrutura de Dados Esperada do n8n
-
-O workflow n8n deve retornar JSON com esta estrutura:
+Adicionar coluna `storage_path` à tabela `kanban_attachments` para guardar o caminho relativo do ficheiro (ex: `cardId/timestamp-hash.pdf`), independente do URL.
 
 ```text
-{
-  "description": "Resumo do documento...",
-  "value": 1234.56,
-  "due_date": "2026-02-15",
-  "priority": "medium",
-  "suggested_tags": ["Manutenção", "Motor"],
-  "suggested_tasks": [
-    "Verificar peças recebidas",
-    "Confirmar quantidades",
-    "Arquivar fatura"
-  ]
-}
+kanban_attachments
+├── id (uuid)
+├── card_id (uuid)
+├── file_url (text) - mantém para compatibilidade
+├── storage_path (text) - NOVO: caminho no bucket
+├── filename (text)
+├── file_type (text)
+├── uploaded_by (uuid)
+└── created_at (timestamp)
 ```
 
----
+### 2. Frontend - kanbanService.ts
 
-### Alterações Técnicas
+**uploadAttachment():**
+- Guardar também o `storage_path` na inserção
 
-**1. Actualizar Interface `ExtractedData`**
+**getSignedDownloadUrl():**
+- Usar `storage_path` diretamente se disponível
+- Fallback para extrair do URL público apenas para registos antigos
 
-Alterar de campos de fatura para campos de Kanban:
+### 3. Edge Function - analyze-kanban-attachment
 
+**Validação prévia:**
+- Verificar se o ficheiro existe no storage ANTES de gerar signed URL
+- Se não existir: devolver erro claro + eliminar registo órfão automaticamente
+- Se existir: gerar signed URL e enviar ao n8n
+
+**Fluxo melhorado:**
 ```text
-interface ExtractedData {
-  description?: string;
-  value?: number;
-  due_date?: string;
-  priority?: 'low' | 'medium' | 'high';
-  suggested_tags?: string[];
-  suggested_tasks?: string[];
-  summary?: string;  // fallback do n8n
-}
+1. Receber pedido (fileUrl, storagePath, cardId)
+2. Determinar storage path (novo campo ou extrair do URL)
+3. Verificar existência: storage.from('kanban-attachments').download(path)
+4. Se não existe:
+   - Apagar registo da tabela kanban_attachments
+   - Retornar erro claro ao frontend
+5. Se existe:
+   - Gerar signed URL (1 hora)
+   - Enviar ao n8n webhook
+   - Retornar resultado
 ```
 
-**2. Actualizar Validação de Dados**
+### 4. Frontend - AiAttachmentAnalyzerDialog.tsx
 
-Alterar a verificação de dados válidos para os novos campos:
+**Tratamento de erro melhorado:**
+- Se receber erro "ficheiro não existe", mostrar mensagem amigável
+- Recarregar lista de anexos (o órfão já foi limpo)
+- Sugerir re-upload do documento
 
-```text
-// Antes
-if (!extracted.vendor_name && !extracted.total_amount && !extracted.invoice_date)
-
-// Depois  
-if (!extracted.description && !extracted.value && !extracted.summary)
-```
-
-**3. Alterar o Callback `onDescriptionGenerated`**
-
-O dialog actualmente só passa a descrição. Deve passar todos os campos extraídos para o modal aplicar directamente:
-
-```text
-// Antes
-onDescriptionGenerated: (description: string) => void
-
-// Depois
-onDataExtracted: (data: ExtractedKanbanData) => void
-```
-
-**4. Actualizar KanbanCardModal para Aplicar Dados**
-
-O modal deve receber todos os campos e preencher:
-- `setDescription(data.description)`
-- `setValue(data.value)`
-- `setDueDate(data.due_date)`
-- `setTags([...tags, ...data.suggested_tags])`
-- `setTasks([...tasks, ...data.suggested_tasks.map(t => ({id, text, completed: false}))])`
-
-**5. Actualizar UI de Confirmação**
-
-Mostrar preview dos novos campos (descrição, valor, data, tags, tarefas) em vez dos campos de fatura.
-
----
-
-### Ficheiros a Modificar
+## Ficheiros a Modificar
 
 | Ficheiro | Alteração |
 |----------|-----------|
-| `src/components/kanban/AiAttachmentAnalyzerDialog.tsx` | Nova interface, nova UI de confirmação, novo callback |
-| `src/components/kanban/KanbanCardModal.tsx` | Handler para aplicar dados extraídos aos campos do card |
+| `supabase/migrations/` | Nova coluna `storage_path` |
+| `src/services/kanbanService.ts` | Upload guarda storage_path; getSignedUrl usa storage_path |
+| `supabase/functions/analyze-kanban-attachment/index.ts` | Validação de existência + auto-limpeza |
+| `src/components/kanban/AiAttachmentAnalyzerDialog.tsx` | Enviar storage_path; melhor tratamento de erros |
+| `src/components/kanban/KanbanCardModal.tsx` | Recarregar anexos após erro de órfão |
 
----
+## Benefícios
 
-### Configuração n8n Necessária
-
-O workflow `lovable-doc-summary` deve ser configurado para retornar:
-
-| Campo | Tipo | Obrigatório |
-|-------|------|-------------|
-| `description` | string | Sim |
-| `value` | number | Não |
-| `due_date` | string (YYYY-MM-DD) | Não |
-| `priority` | string (low/medium/high) | Não |
-| `suggested_tags` | array de strings | Não |
-| `suggested_tasks` | array de strings | Não |
-
----
-
-### Fluxo de Utilização
-
-```text
-1. Utilizador clica no ícone ✨ nos Attachments
-2. Seleciona o ficheiro a analisar
-3. Sistema envia para n8n via Edge Function
-4. n8n analisa e retorna campos do Kanban
-5. Dialog mostra preview:
-   - Descrição sugerida
-   - Valor extraído (se houver)
-   - Data sugerida (se houver)
-   - Tags sugeridas
-   - Tarefas sugeridas (checklist)
-6. Utilizador confirma
-7. Campos são aplicados ao card (merge com existentes)
-```
+- Ficheiros privados funcionam corretamente com n8n
+- Registos órfãos são limpos automaticamente
+- Menos erros confusos para o utilizador
+- Código mais robusto e manutenível
