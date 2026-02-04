@@ -64,6 +64,7 @@ export interface KanbanAttachment {
   id: string;
   card_id: string;
   file_url: string;
+  storage_path?: string;
   filename: string;
   file_type?: string;
   uploaded_by?: string;
@@ -466,11 +467,11 @@ export class KanbanService {
     if (!user) throw new Error('User not authenticated');
 
     const fileExt = file.name.split('.').pop();
-    const fileName = `${cardId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const storagePath = `${cardId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('kanban-attachments')
-      .upload(fileName, file, {
+      .upload(storagePath, file, {
         cacheControl: '3600',
         upsert: false
       });
@@ -479,13 +480,14 @@ export class KanbanService {
 
     const { data: { publicUrl } } = supabase.storage
       .from('kanban-attachments')
-      .getPublicUrl(fileName);
+      .getPublicUrl(storagePath);
 
     const { data, error } = await supabase
       .from('kanban_attachments')
       .insert([{
         card_id: cardId,
         file_url: publicUrl,
+        storage_path: storagePath,
         filename: file.name,
         file_type: file.type,
         uploaded_by: user.id
@@ -514,15 +516,20 @@ export class KanbanService {
     if (error) throw error;
   }
 
-  static async getSignedDownloadUrl(fileUrl: string): Promise<string> {
-    // Extract the file path from the public URL
-    // URL format: .../storage/v1/object/public/kanban-attachments/{cardId}/{filename}
-    const urlParts = fileUrl.split('/kanban-attachments/');
-    if (urlParts.length < 2) {
-      throw new Error('Invalid file URL format');
-    }
+  static async getSignedDownloadUrl(fileUrl: string, storagePath?: string): Promise<string> {
+    // Use storage_path directly if available (new records)
+    // Otherwise, extract from public URL (legacy records)
+    let filePath = storagePath;
     
-    const filePath = urlParts[1];
+    if (!filePath) {
+      // Fallback: Extract the file path from the public URL
+      // URL format: .../storage/v1/object/public/kanban-attachments/{cardId}/{filename}
+      const urlParts = fileUrl.split('/kanban-attachments/');
+      if (urlParts.length < 2) {
+        throw new Error('Invalid file URL format');
+      }
+      filePath = decodeURIComponent(urlParts[1]);
+    }
     
     const { data, error } = await supabase.storage
       .from('kanban-attachments')

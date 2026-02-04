@@ -73,14 +73,27 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
       const { data, error } = await supabase.functions.invoke('analyze-kanban-attachment', {
         body: {
           fileUrl: selectedAttachment.file_url,
+          storagePath: (selectedAttachment as any).storage_path,
           fileName: selectedAttachment.filename,
           mimeType: selectedAttachment.file_type || 'application/octet-stream',
           cardId,
+          attachmentId: selectedAttachment.id,
         },
       });
 
       if (error) {
         throw new Error(error.message);
+      }
+
+      // Handle file not found (orphan cleaned)
+      if (!data.success && data.error === 'file_not_found') {
+        setPhase('error');
+        setErrorMessage('O ficheiro não existe no storage. ' + 
+          (data.orphanCleaned 
+            ? 'O registo órfão foi removido. Por favor, recarregue os anexos e faça upload novamente.' 
+            : 'Verifique se o ficheiro foi eliminado.')
+        );
+        return;
       }
 
       if (!data.success) {

@@ -105,7 +105,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
       if (imageAttachments.length > 0) {
         const urlPromises = imageAttachments.map(async (img) => {
           try {
-            const signedUrl = await KanbanService.getSignedDownloadUrl(img.file_url);
+            const signedUrl = await KanbanService.getSignedDownloadUrl(img.file_url, (img as any).storage_path);
             return { id: img.id, url: signedUrl };
           } catch (error) {
             console.error('Error getting thumbnail URL:', error);
@@ -205,7 +205,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   const handleOpenAttachment = async (attachment: KanbanAttachment) => {
     try {
       // The bucket is private, so we need to generate a signed URL
-      const signedUrl = await KanbanService.getSignedDownloadUrl(attachment.file_url);
+      const signedUrl = await KanbanService.getSignedDownloadUrl(attachment.file_url, attachment.storage_path);
       if (signedUrl) {
         window.open(signedUrl, '_blank');
       } else {
@@ -243,7 +243,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   const handleDownloadAttachment = async (attachment: KanbanAttachment) => {
     try {
       // Get signed URL for private bucket
-      const signedUrl = await KanbanService.getSignedDownloadUrl(attachment.file_url);
+      const signedUrl = await KanbanService.getSignedDownloadUrl(attachment.file_url, attachment.storage_path);
       
       const response = await fetch(signedUrl);
       if (!response.ok) {
