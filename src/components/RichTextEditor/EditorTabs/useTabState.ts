@@ -40,22 +40,6 @@ export const useTabState = (
     }
   }, [activeTab]);
 
-  // Effect to continuously check and fix editability
-  useEffect(() => {
-    const editableCheckInterval = setInterval(() => {
-      if (activeTab === "editor" && editorRef.current) {
-        if (editorRef.current.contentEditable !== 'true') {
-          editorRef.current.contentEditable = 'true';
-          editorRef.current.setAttribute('contenteditable', 'true');
-        }
-      }
-    }, 5);
-    
-    return () => {
-      clearInterval(editableCheckInterval);
-    };
-  }, [activeTab]);
-
   return {
     editorRef,
     execCommand,
