@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.analyze-kanban-attachment]
 verify_jwt = false
+
+[functions.analyze-legal-document]
+verify_jwt = false
