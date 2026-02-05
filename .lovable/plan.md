@@ -1,46 +1,56 @@
 
-# Plano: Correção da Análise AI de Anexos Kanban
+# Plano: Correção de Performance - Intervalo Agressivo
 
-## ✅ IMPLEMENTADO
+## Problema Identificado
 
-## Contexto
+O ficheiro `src/components/RichTextEditor/EditorTabs/useTabState.ts` contém um `setInterval` que executa a cada **5 milissegundos** (200x/segundo), causando:
+- Lag no movimento do rato
+- Uso excessivo de CPU
+- Aplicação lenta e pesada
 
-O sistema de análise AI de documentos anexados a cards Kanban falhava porque:
+## Código Problemático
 
-1. O bucket `kanban-attachments` é **privado**
-2. O código guardava URLs públicas (que não funcionam em buckets privados)
-3. Se o signed URL falhasse, havia fallback para URL pública (inútil)
-4. Ficheiros eliminados do storage deixavam registos órfãos na base de dados
+```typescript
+// Linha 44-57 - executa 200 vezes por segundo!
+useEffect(() => {
+  const editableCheckInterval = setInterval(() => {
+    if (activeTab === "editor" && editorRef.current) {
+      if (editorRef.current.contentEditable !== 'true') {
+        editorRef.current.contentEditable = 'true';
+        editorRef.current.setAttribute('contenteditable', 'true');
+      }
+    }
+  }, 5); // ← PROBLEMA: 5ms = 200 execuções/segundo
+  
+  return () => clearInterval(editableCheckInterval);
+}, [activeTab]);
+```
 
-## Alterações Implementadas
+## Solução
 
-### 1. Base de Dados - Nova coluna storage_path ✅
+Remover completamente este intervalo. A verificação de editabilidade já é feita:
+1. No primeiro `useEffect` quando `activeTab` muda (linha 24-41)
+2. No `handleContainerClick` quando o utilizador clica (linha 105-130)
 
-Adicionada coluna `storage_path` à tabela `kanban_attachments`.
+Não há necessidade de verificação contínua - o estado de `contentEditable` não muda sozinho.
 
-### 2. Frontend - kanbanService.ts ✅
+## Alteração
 
-- **uploadAttachment():** Guarda também o `storage_path` na inserção
-- **getSignedDownloadUrl():** Usa `storage_path` diretamente se disponível; fallback para extrair do URL público apenas para registos antigos
+| Ficheiro | Ação |
+|----------|------|
+| `src/components/RichTextEditor/EditorTabs/useTabState.ts` | Remover o `useEffect` com `setInterval` (linhas 44-57) |
 
-### 3. Edge Function - analyze-kanban-attachment ✅
+## Resultado Esperado
 
-- Valida se o ficheiro existe no storage ANTES de gerar signed URL
-- Se não existir: apaga registo órfão automaticamente + retorna erro claro
-- Se existir: gera signed URL e envia ao n8n
+- Movimento do rato fluido
+- Redução drástica de uso de CPU
+- Aplicação responsiva
 
-### 4. Frontend - AiAttachmentAnalyzerDialog.tsx ✅
+## Secção Técnica
 
-- Envia `storagePath` e `attachmentId` à Edge Function
-- Trata erro "file_not_found" com mensagem amigável
+O intervalo de 5ms viola boas práticas de performance:
+- Intervalos inferiores a 16ms (60fps) já são problemáticos
+- 5ms significa ~200 operações DOM por segundo
+- Cada verificação força o browser a re-avaliar o layout
 
-### 5. KanbanCardModal.tsx ✅
-
-- Todas as funções de download/preview usam `storage_path` quando disponível
-
-## Benefícios
-
-- Ficheiros privados funcionam corretamente com n8n
-- Registos órfãos são limpos automaticamente
-- Menos erros confusos para o utilizador
-- Código mais robusto e manutenível
+A solução mantém toda a funcionalidade (editabilidade garantida) sem o custo de performance.
