@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Upload, Trash2, X, ChevronDown, Search } from "lucide-react";
+import { Upload, Trash2, X, ChevronDown, Search, Sparkles, Loader2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Popover,
   PopoverContent,
@@ -55,6 +56,7 @@ export function DocumentDialog({
   initialTitle 
 }: DocumentDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -72,6 +74,72 @@ export function DocumentDialog({
   const [caseSearch, setCaseSearch] = useState("");
 
   const isEditMode = !!document;
+
+  // AI Analysis function
+  const handleAiAnalyze = async (file: File) => {
+    setAiAnalyzing(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      // Upload file temporarily to get a URL accessible by n8n
+      const tempFileName = `temp/${user.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from("legal-documents")
+        .upload(tempFileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Generate signed URL for n8n to access (1 hour validity)
+      const { data: signedUrlData, error: signedError } = await supabase.storage
+        .from("legal-documents")
+        .createSignedUrl(tempFileName, 3600);
+
+      if (signedError || !signedUrlData?.signedUrl) {
+        throw new Error("Não foi possível gerar URL de acesso");
+      }
+
+      const mimeType = file.type || 'application/octet-stream';
+
+      const { data, error } = await supabase.functions.invoke('analyze-legal-document', {
+        body: {
+          fileUrl: signedUrlData.signedUrl,
+          fileName: file.name,
+          mimeType,
+        },
+      });
+
+      // Cleanup: remove temporary file
+      await supabase.storage.from("legal-documents").remove([tempFileName]);
+
+      if (error) throw error;
+
+      if (!data?.success) {
+        throw new Error(data?.message || 'Erro ao analisar documento');
+      }
+
+      const extracted = data.data;
+      if (extracted) {
+        // Fill form fields with extracted data
+        setFormData(prev => ({
+          ...prev,
+          title: extracted.title || prev.title || file.name.replace(/\.[^/.]+$/, ''),
+          description: extracted.description || extracted.summary || prev.description,
+          document_type: extracted.document_type || prev.document_type,
+          created_date: extracted.date || prev.created_date,
+        }));
+        toast.success('Dados extraídos com sucesso!');
+      } else {
+        toast.info('Não foi possível extrair dados do documento');
+      }
+    } catch (error) {
+      console.error('Error analyzing document:', error);
+      toast.error('Erro ao analisar documento');
+    } finally {
+      setAiAnalyzing(false);
+    }
+  };
 
   useEffect(() => {
     const loadDocumentData = async () => {
@@ -528,6 +596,28 @@ export function DocumentDialog({
                     <div key={index} className="flex items-center gap-1 bg-primary/10 rounded px-2 py-1">
                       <Upload className="w-3 h-3 text-primary" />
                       <span className="text-sm truncate max-w-[200px]" title={f.name}>{f.name}</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => handleAiAnalyze(f)}
+                              disabled={aiAnalyzing}
+                              className="text-primary hover:text-primary/80 ml-1 disabled:opacity-50"
+                              title="Analisar com AI"
+                            >
+                              {aiAnalyzing ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Sparkles className="w-3 h-3" />
+                              )}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Extrair dados com AI</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <button
                         type="button"
                         onClick={() => setFiles(prev => prev.filter((_, i) => i !== index))}
