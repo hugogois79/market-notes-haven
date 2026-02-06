@@ -4233,6 +4233,7 @@ export default function WorkFlowTab() {
           fileName={previewFile.file_name}
           vendorName={previewFile.vendor_name}
           totalAmount={previewFile.total_amount}
+          description={previewFile.notes}
         />
       )}
 

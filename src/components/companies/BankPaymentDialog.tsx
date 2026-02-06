@@ -45,6 +45,7 @@ interface BankPaymentDialogProps {
   fileName: string;
   vendorName?: string | null;
   totalAmount?: number | null;
+  description?: string | null;
 }
 
 interface WiseRecipient {
@@ -61,6 +62,7 @@ export default function BankPaymentDialog({
   fileName,
   vendorName,
   totalAmount,
+  description,
 }: BankPaymentDialogProps) {
   const { sendPayment, isSending, result, reset } = useBankPayment();
   const hasInitialized = useRef(false);
@@ -132,7 +134,8 @@ export default function BankPaymentDialog({
     if (open && !hasInitialized.current) {
       setBeneficiaryName(vendorName || "");
       setAmount(totalAmount?.toString() || "");
-      setReference(fileName || "");
+      // Use description if available, otherwise fallback to fileName
+      setReference(description || fileName || "");
       setExecutionDate(format(new Date(), "yyyy-MM-dd"));
       setSourceAccountId("");
       setSearchTerm(vendorName || "");
@@ -145,7 +148,7 @@ export default function BankPaymentDialog({
       setSearchTerm("");
       setPopoverOpen(false);
     }
-  }, [open, vendorName, totalAmount, fileName, reset]);
+  }, [open, vendorName, totalAmount, fileName, description, reset]);
 
   // Auto-fill when initial match is found
   useEffect(() => {
