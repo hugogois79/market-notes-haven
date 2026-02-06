@@ -170,15 +170,15 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
               {attachments.map((attachment) => (
                 <div
                   key={attachment.id}
-                  className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                  className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                 >
-                  <RadioGroupItem value={attachment.id} id={attachment.id} />
+                  <RadioGroupItem value={attachment.id} id={attachment.id} className="mt-1 shrink-0" />
                   <Label
                     htmlFor={attachment.id}
-                    className="flex items-center gap-2 cursor-pointer flex-1"
+                    className="flex items-start gap-2 cursor-pointer flex-1 min-w-0"
                   >
-                    <span className="text-lg">{getFileIcon(attachment.filename)}</span>
-                    <span className="truncate">{attachment.filename}</span>
+                    <span className="text-lg shrink-0">{getFileIcon(attachment.filename)}</span>
+                    <span className="break-words text-sm">{attachment.filename}</span>
                   </Label>
                 </div>
               ))}
