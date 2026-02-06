@@ -1,323 +1,190 @@
 
-# Plano: Otimizar BankPaymentDialog com Autocomplete Wise Recipients
+# Plano: Suportar Estado de Aprovação PSD2/SCA no BankPaymentDialog
 
-## Visão Geral
-Transformar o campo "Beneficiário" num combobox inteligente que:
-- Pesquisa em tempo real na tabela `wise_recipients` do Supabase
-- Auto-preenche o IBAN quando um recipient é selecionado
-- Permite entrada manual de novos beneficiários não registados no Wise
-- Faz match fuzzy com `vendorName` ao abrir o diálogo
+## Contexto do Problema
+O workflow n8n agora retorna um payload estruturado que indica quando o pagamento requer aprovação manual no Wise (devido a PSD2/SCA). O diálogo atual trata todos os casos `success: true` da mesma forma, mostrando sempre "Pagamento Enviado!" sem distinguir entre:
+1. **Sucesso Total**: Transfer foi financiada imediatamente
+2. **Aguarda Aprovação**: Transfer criada mas funding requer aprovação manual no Wise (PSD2/SCA)
 
-## Mudanças Necessárias
-
-### 1. Atualizar `useBankPayment.ts`
-**Ficheiro**: `src/hooks/useBankPayment.ts`
-
-Adicionar campo `recipientId` à interface `BankPaymentRequest`:
-
-```typescript
-export interface BankPaymentRequest {
-  beneficiaryName: string;
-  beneficiaryIban: string;
-  amount: number;
-  currency: string;
-  sourceAccountId: string;
-  reference: string;
-  executionDate: string;
-  documentId: string;
-  documentUrl: string;
-  recipientId?: number | null; // NOVO: ID do recipient no Wise
+## Novo Formato de Resposta do n8n
+```json
+{
+  "success": true,
+  "message": "Transferencia criada no Wise - aguarda aprovacao",
+  "payment": {
+    "transferId": 1960279419,
+    "status": "incoming_payment_waiting",
+    "amount": 0.01,
+    "beneficiary": "Eva Silva Delgado Martins",
+    "reference": "Test PSD2 fix"
+  },
+  "funding": {
+    "status": "pending_user_approval",
+    "message": "Aprove o pagamento na app Wise (requisito PSD2/SCA)."
+  }
 }
 ```
 
-### 2. Recriar `BankPaymentDialog.tsx`
+## Mudanças Técnicas Necessárias
+
+### 1. Atualizar Interface `BankPaymentResponse`
+**Ficheiro**: `src/hooks/useBankPayment.ts`
+
+Expandir a interface para capturar a estrutura completa da resposta n8n:
+
+```typescript
+export interface PaymentDetails {
+  transferId?: number;
+  status?: string;
+  amount?: number;
+  beneficiary?: string;
+  reference?: string;
+}
+
+export interface FundingStatus {
+  status?: string;
+  message?: string;
+}
+
+export interface BankPaymentResponse {
+  success: boolean;
+  transferId?: string;
+  status?: string;
+  error?: string;
+  message?: string;
+  payment?: PaymentDetails;
+  funding?: FundingStatus;
+}
+```
+
+**Razão**: Permite que o frontend aceda aos detalhes completos do pagamento e estado de funding.
+
+### 2. Atualizar UI do BankPaymentDialog
 **Ficheiro**: `src/components/companies/BankPaymentDialog.tsx`
 
-**Mudanças principais**:
+Modificar a seção de sucesso (linhas 245-261) para distinguir entre 2 estados:
 
-#### 2.1 Imports adicionais
-Adicionar imports para Popover e Command (já existem no projeto):
+#### Estado A: Sucesso Total (funding não requer aprovação)
+- Mostrar ícone verde `CheckCircle2`
+- Título: "Pagamento Enviado!"
+- Mensagem: usar `result.message` ou padrão
+- Comportamento: fechar diálogo automaticamente após 2 segundos
+
+#### Estado B: Aguarda Aprovação PSD2 (funding.status === 'pending_user_approval')
+- Mostrar ícone amarelo `Clock` (novo import de lucide-react)
+- Título: "Transferência Criada"
+- Subtitle: "Aguarda Aprovação no Wise"
+- Mostrar detalhes do pagamento em card:
+  - Beneficiário (payment.beneficiary)
+  - Montante (payment.amount)
+  - Referência (payment.reference)
+  - ID da Transfer (payment.transferId)
+- Mensagem clara: usar `result.funding.message`
+- Comportamento: NÃO fechar automaticamente (utilizador deve confirmar)
+- Adicionar botão "Abrir Wise" que abre https://wise.com/user/account em nova aba
+- Adicionar botão "Fechar" para sair do diálogo
+
+#### Estado C: Erro (result.error)
+- Mantém comportamento atual
+
+### 3. Lógica de Renderização
+Substituir a lógica de renderização de sucesso por:
+
 ```typescript
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { CheckIcon } from "lucide-react";
+const needsApproval = result?.funding?.status === 'pending_user_approval';
+
+// Dentro do render:
+{result?.success ? (
+  needsApproval ? (
+    // Novo: UI para "Aguarda Aprovação"
+  ) : (
+    // Existente: UI para "Sucesso Total"
+  )
+) : result?.error ? (
+  // Existente: UI para erro
+) : (
+  // Existente: Formulário
+)}
 ```
 
-#### 2.2 Estados adicionais
-Adicionar states para o autocomplete:
+## Design da UI para "Aguarda Aprovação"
+
+A UI seguirá este layout:
+
+```text
+┌──────────────────────────────────────────┐
+│  ⏰ (ícone amarelo/amber de relógio)    │
+│                                          │
+│  Transferência Criada                    │
+│  Aguarda Aprovação no Wise               │
+│                                          │
+│  ┌────────────────────────────────────┐  │
+│  │ Beneficiário: Eva Silva Martins    │  │
+│  │ Montante: €0.01                    │  │
+│  │ Referência: Test PSD2 fix          │  │
+│  │ ID: 1960279419                     │  │
+│  └────────────────────────────────────┘  │
+│                                          │
+│  ⚠️ Aprove o pagamento na app Wise      │
+│     (requisito PSD2/SCA)                │
+│                                          │
+│  [ Abrir Wise ]  [ Fechar ]             │
+└──────────────────────────────────────────┘
+```
+
+### Estilos
+- Fundo amarelo/amber subtil para o card de informação
+- Ícone Clock em amarelo/amber
+- Card de detalhes com borda e padding adequados
+- Botão "Abrir Wise" como primary (azul/brand)
+- Botão "Fechar" como outline
+
+## Importações Necessárias
+Adicionar ao BankPaymentDialog.tsx:
 ```typescript
-const [searchTerm, setSearchTerm] = useState("");
-const [selectedRecipientId, setSelectedRecipientId] = useState<number | null>(null);
-const [popoverOpen, setPopoverOpen] = useState(false);
+import { Clock } from "lucide-react";
 ```
-
-#### 2.3 Query para Wise Recipients
-Implementar query com debounce:
-```typescript
-const { data: wiseRecipients, isLoading: isLoadingRecipients } = useQuery({
-  queryKey: ["wise-recipients", searchTerm],
-  queryFn: async () => {
-    if (!searchTerm || searchTerm.length < 2) return [];
-    const { data, error } = await supabase
-      .from("wise_recipients")
-      .select("wise_recipient_id, name, iban")
-      .eq("is_active", true)
-      .ilike("name", `%${searchTerm}%`)
-      .limit(10);
-    if (error) throw error;
-    return data;
-  },
-  enabled: !!searchTerm && searchTerm.length >= 2,
-});
-```
-
-#### 2.4 Função de Match Fuzzy para Pre-fill
-Ao abrir o diálogo com `vendorName`, fazer query inicial para encontrar match:
-```typescript
-// Query adicional para match fuzzy ao abrir
-const { data: initialMatch } = useQuery({
-  queryKey: ["wise-recipients-initial", vendorName],
-  queryFn: async () => {
-    if (!vendorName || vendorName.length < 2) return null;
-    const { data, error } = await supabase
-      .from("wise_recipients")
-      .select("wise_recipient_id, name, iban")
-      .eq("is_active", true)
-      .ilike("name", `%${vendorName}%`)
-      .limit(5);
-    if (error) throw error;
-    return data?.[0] || null; // Retorna primeiro match
-  },
-  enabled: open && !hasInitialized.current && !!vendorName,
-});
-```
-
-#### 2.5 Atualizar useEffect de Pre-fill
-```typescript
-useEffect(() => {
-  if (open && !hasInitialized.current) {
-    setBeneficiaryName(vendorName || "");
-    setAmount(totalAmount?.toString() || "");
-    setReference(fileName || "");
-    setExecutionDate(format(new Date(), "yyyy-MM-dd"));
-    setSourceAccountId("");
-    setSearchTerm(vendorName || "");
-    setSelectedRecipientId(null);
-    setBeneficiaryIban("");
-    
-    // Se encontrou match no Wise, auto-preencher
-    if (initialMatch) {
-      setSelectedRecipientId(initialMatch.wise_recipient_id);
-      setBeneficiaryIban(initialMatch.iban);
-    }
-    
-    reset();
-    hasInitialized.current = true;
-  } else if (!open) {
-    hasInitialized.current = false;
-    setSearchTerm("");
-    setPopoverOpen(false);
-  }
-}, [open, vendorName, totalAmount, fileName, reset, initialMatch]);
-```
-
-#### 2.6 Handlers para o Autocomplete
-```typescript
-const handleSelectRecipient = (recipient: {
-  wise_recipient_id: number;
-  name: string;
-  iban: string;
-}) => {
-  setBeneficiaryName(recipient.name);
-  setBeneficiaryIban(recipient.iban);
-  setSelectedRecipientId(recipient.wise_recipient_id);
-  setSearchTerm(recipient.name);
-  setPopoverOpen(false);
-};
-
-const handleBeneficiaryChange = (value: string) => {
-  setBeneficiaryName(value);
-  setSearchTerm(value);
-  setSelectedRecipientId(null); // Limpar selection ao editar manualmente
-};
-```
-
-#### 2.7 Atualizar validação e handleSubmit
-Na validação, fazer IBAN obrigatório apenas se não houver `recipientId`:
-```typescript
-const handleSubmit = async () => {
-  if (!beneficiaryName.trim() || beneficiaryName.length < 2) {
-    toast.error("Preencha o nome do beneficiário (mínimo 2 caracteres)");
-    return;
-  }
-  
-  // IBAN obrigatório apenas se não houver recipientId
-  if (!selectedRecipientId && !beneficiaryIban.trim()) {
-    toast.error("Preencha o IBAN do beneficiário");
-    return;
-  }
-  
-  // resto da validação...
-  
-  const response = await sendPayment({
-    beneficiaryName: beneficiaryName.trim(),
-    beneficiaryIban: beneficiaryIban.trim().replace(/\s/g, ""),
-    amount: amountNum,
-    currency: "EUR",
-    sourceAccountId,
-    reference: reference.trim(),
-    executionDate,
-    documentId,
-    documentUrl,
-    recipientId: selectedRecipientId, // NOVO
-  });
-};
-```
-
-#### 2.8 UI do Campo Beneficiário
-Substituir o `Input` simples por um `Popover` com `Command`:
-```tsx
-<div className="space-y-2">
-  <Label htmlFor="beneficiaryName">Beneficiário *</Label>
-  <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-    <PopoverTrigger asChild>
-      <input
-        id="beneficiaryName"
-        type="text"
-        autoComplete="off"
-        value={beneficiaryName}
-        onChange={(e) => handleBeneficiaryChange(e.target.value)}
-        onFocus={() => setPopoverOpen(true)}
-        placeholder="Nome do beneficiário"
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-      />
-    </PopoverTrigger>
-    {searchTerm.length >= 2 && (
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-        <Command>
-          <CommandInput 
-            value={searchTerm}
-            onValueChange={setSearchTerm}
-            placeholder="Pesquisar beneficiário..."
-          />
-          <CommandList>
-            {isLoadingRecipients && (
-              <CommandEmpty>A carregar...</CommandEmpty>
-            )}
-            {!isLoadingRecipients && wiseRecipients?.length === 0 && (
-              <CommandEmpty>Sem resultados</CommandEmpty>
-            )}
-            {wiseRecipients && wiseRecipients.length > 0 && (
-              <CommandGroup>
-                {wiseRecipients.map((recipient) => (
-                  <CommandItem
-                    key={recipient.wise_recipient_id}
-                    onSelect={() => handleSelectRecipient(recipient)}
-                    className="cursor-pointer"
-                  >
-                    <CheckIcon
-                      className="mr-2 h-4 w-4"
-                      style={{
-                        opacity: selectedRecipientId === recipient.wise_recipient_id ? 1 : 0,
-                      }}
-                    />
-                    <div className="flex flex-col flex-1">
-                      <span className="font-medium">{recipient.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatIban(recipient.iban)}
-                      </span>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    )}
-  </Popover>
-  {selectedRecipientId && (
-    <p className="text-xs text-green-600">
-      ✓ Recipient Wise confirmado
-    </p>
-  )}
-</div>
-```
-
-## Arquitectura de Dados
-
-```
-wise_recipients (Supabase)
-├── wise_recipient_id (BIGINT) - PK, do Wise
-├── name (TEXT) - com índice trigram
-├── iban (TEXT)
-├── currency (TEXT)
-├── account_type (TEXT)
-├── legal_type (TEXT)
-└── is_active (BOOLEAN)
-
-BankPaymentDialog
-├── searchTerm (string) - input do utilizador
-├── selectedRecipientId (number | null)
-├── beneficiaryName (string) - editável
-├── beneficiaryIban (string) - editável, auto-fill se selecionado
-└── popoverOpen (boolean)
-```
-
-## Fluxo de Utilizador
-
-1. **Diálogo abre** com `vendorName` (ex: "Eva Delgado Martins")
-2. **Match fuzzy automático**: Query procura na `wise_recipients` com o `vendorName`
-3. **Se encontrado**: Auto-preenche nome, IBAN e seta `selectedRecipientId`
-4. **Se não encontrado**: Deixa campo editável para entrada manual
-5. **Utilizador digita**: Conforme escreve, aparecem sugestões da tabela
-6. **Seleciona sugestão**: Auto-preenche nome e IBAN, seta `recipientId`
-7. **Envia com recipientId**: Edge function usa `recipientId` para evitar duplicados no Wise
-
-## Validação de IBAN
-
-- **Com recipientId selecionado**: IBAN é opcional (Wise já tem os dados do recipient)
-- **Sem recipientId**: IBAN é obrigatório (novo beneficiário)
-- **IBAN permanece editável** em ambos os casos
 
 ## Ficheiros a Modificar
 
-1. **`src/hooks/useBankPayment.ts`** - Adicionar `recipientId?` ao `BankPaymentRequest`
-2. **`src/components/companies/BankPaymentDialog.tsx`** - Recriar com lógica completa de autocomplete
+| Ficheiro | Linhas | Alteração |
+|----------|--------|-----------|
+| `src/hooks/useBankPayment.ts` | 17-23 | Expandir interfaces `BankPaymentResponse`, adicionar `PaymentDetails` e `FundingStatus` |
+| `src/components/companies/BankPaymentDialog.tsx` | 36 (imports) | Adicionar `Clock` do lucide-react |
+| `src/components/companies/BankPaymentDialog.tsx` | 245-261 | Substituir lógica de renderização de sucesso por nova lógica com 2 estados |
 
-## Secção Técnica
+## Fluxo de Utilizador Atualizado
 
-### Query Supabase com Trigram Index
-A tabela `wise_recipients` já tem index trigram no `name`:
-```sql
-CREATE INDEX idx_wise_recipients_name_trigram ON wise_recipients USING gin (name gin_trgm_ops);
-```
+1. **Utilizador preenche e submete**: Formulário é preenchido e botão "Enviar Pagamento" é clicado
+2. **Edge Function processa**: Edge Function chama n8n
+3. **n8n cria Transfer**: Wise cria a transfer mas funding requer aprovação
+4. **Resposta com pending_user_approval**: n8n retorna `success: true` com `funding.status: 'pending_user_approval'`
+5. **UI mostra estado amarelo**: Diálogo exibe card de informação com detalhes e instruções
+6. **Utilizador aprova no Wise**: Clica "Abrir Wise" para ir ao portal/app e aprova
+7. **Utilizador confirma**: Clica "Fechar" para sair do diálogo
 
-Isto permite pesquisa case-insensitive rápida com `ILIKE '%termo%'`
+## Secção Técnica: Considerações
 
-### Debounce
-Implementar debounce na pesquisa é recomendado, mas como a query já tem `enabled: !!searchTerm && searchTerm.length >= 2`, o tanstack/react-query fará debounce automático (aguarda 1000ms por padrão).
+### Responsividade
+- O card de detalhes deve ser responsivo e funcionar bem em mobile
+- O layout deve adaptar-se a ecrãs pequenos
 
-Se precisa de debounce mais agressivo, usar um `useState` separado com `useEffect` e `setTimeout`.
+### Internacionalização
+- Todas as mensagens estão em português (consistente com o resto da app)
+- `result.funding.message` é recebida do n8n e já está em português
 
-## Possíveis Edge Cases
+### Validação
+- A lógica `needsApproval` é baseada apenas em `result?.funding?.status === 'pending_user_approval'`
+- Não requer nenhuma validação adicional pois o estado vem da n8n
 
-1. **Utilizador seleciona recipient, depois edita nome manualmente**: O `recipientId` fica null (correto)
-2. **Recipient com mesmo nome pode existir múltiplas vezes**: UI mostra o IBAN para desambiguação
-3. **Wise API adiciona novo recipient**: Sync automática de 6h via n8n atualiza a tabela
-4. **IBAN inválido**: Validação fica na Edge Function / Wise API
+### Edge Cases
+- Se `payment` data estiver incompleta, mostrar valores vazios em vez de quebrar
+- Se `funding` não existir, assumir sucesso total (comportamento padrão)
 
-## Performance
+## Sequência de Implementação
 
-- Query só dispara quando `searchTerm.length >= 2`
-- Trigram index garante pesquisa O(log n)
-- Popover só renderiza quando `popoverOpen === true`
-- Initial match query desativa após primeira renderização (`!hasInitialized.current`)
+1. **Primeiro**: Atualizar interfaces em `useBankPayment.ts`
+2. **Segundo**: Adicionar import `Clock` no BankPaymentDialog
+3. **Terceiro**: Substituir renderização de sucesso com nova lógica condicional
+4. **Verificação**: Testar ambos os estados (sucesso total vs. aguarda aprovação)
 
