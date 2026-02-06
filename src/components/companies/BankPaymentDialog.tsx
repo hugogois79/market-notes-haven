@@ -219,7 +219,8 @@ export default function BankPaymentDialog({
     }
   };
 
-  const formatIban = (iban: string) => {
+  const formatIban = (iban: string | null | undefined) => {
+    if (!iban) return "";
     return iban.replace(/\s/g, "").replace(/(.{4})/g, "$1 ").trim();
   };
 
