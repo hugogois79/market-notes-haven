@@ -6570,6 +6570,54 @@ export type Database = {
           },
         ]
       }
+      wise_recipients: {
+        Row: {
+          account_type: string | null
+          created_at: string | null
+          currency: string | null
+          iban: string | null
+          id: string
+          is_active: boolean | null
+          last_synced_at: string | null
+          legal_type: string | null
+          name: string
+          raw_data: Json | null
+          updated_at: string | null
+          wise_profile_id: number | null
+          wise_recipient_id: number
+        }
+        Insert: {
+          account_type?: string | null
+          created_at?: string | null
+          currency?: string | null
+          iban?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_synced_at?: string | null
+          legal_type?: string | null
+          name: string
+          raw_data?: Json | null
+          updated_at?: string | null
+          wise_profile_id?: number | null
+          wise_recipient_id: number
+        }
+        Update: {
+          account_type?: string | null
+          created_at?: string | null
+          currency?: string | null
+          iban?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_synced_at?: string | null
+          legal_type?: string | null
+          name?: string
+          raw_data?: Json | null
+          updated_at?: string | null
+          wise_profile_id?: number | null
+          wise_recipient_id?: number
+        }
+        Relationships: []
+      }
       work_documents: {
         Row: {
           created_at: string
@@ -7152,6 +7200,7 @@ export type Database = {
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       update_claim_total: { Args: { claim_id: string }; Returns: undefined }
+      upsert_wise_recipients: { Args: { recipients: Json }; Returns: Json }
       user_can_access_company: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
