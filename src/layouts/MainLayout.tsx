@@ -59,7 +59,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           )}
           
           <div className="flex flex-1 overflow-hidden">
-            <main className="flex-1 overflow-auto w-full">
+            <main className="flex-1 overflow-auto">
               {children || <Outlet />}
             </main>
             
