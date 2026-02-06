@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.analyze-legal-document]
 verify_jwt = false
+
+[functions.bank-payment-webhook]
+verify_jwt = false
