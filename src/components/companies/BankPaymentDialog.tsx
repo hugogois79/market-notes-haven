@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/command";
 import { useBankPayment } from "@/hooks/useBankPayment";
 import { toast } from "sonner";
-import { Loader2, CheckCircle2, AlertCircle, Landmark, Check } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Landmark, Check, Clock, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -243,22 +243,79 @@ export default function BankPaymentDialog({
         </DialogHeader>
 
         {result?.success ? (
-          <div className="py-8 text-center space-y-4">
-            <CheckCircle2 className="h-16 w-16 text-primary mx-auto" />
-            <div>
-              <h3 className="text-lg font-semibold text-primary">
-                Pagamento Enviado!
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {result.message || "A transferência foi iniciada com sucesso."}
-              </p>
-              {result.transferId && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  ID: {result.transferId}
+          result?.funding?.status === 'pending_user_approval' ? (
+            // Estado: Aguarda Aprovação PSD2/SCA
+            <div className="py-6 space-y-4">
+              <div className="text-center space-y-2">
+                <Clock className="h-14 w-14 text-amber-500 mx-auto" />
+                <h3 className="text-lg font-semibold text-amber-700">
+                  Transferência Criada
+                </h3>
+                <p className="text-sm text-amber-600">
+                  Aguarda Aprovação no Wise
                 </p>
-              )}
+              </div>
+
+              {/* Detalhes do pagamento */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Beneficiário:</span>
+                  <span className="font-medium">{result.payment?.beneficiary || '-'}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Montante:</span>
+                  <span className="font-medium">€{result.payment?.amount?.toFixed(2) || '0.00'}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Referência:</span>
+                  <span className="font-medium truncate max-w-[200px]">{result.payment?.reference || '-'}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">ID Transfer:</span>
+                  <span className="font-mono text-xs">{result.payment?.transferId || '-'}</span>
+                </div>
+              </div>
+
+              {/* Mensagem de instrução */}
+              <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <p className="text-sm text-muted-foreground">
+                  {result.funding?.message || 'Aprove o pagamento na app Wise (requisito PSD2/SCA).'}
+                </p>
+              </div>
+
+              {/* Botões */}
+              <div className="flex gap-2 pt-2">
+                <Button asChild className="flex-1">
+                  <a href="https://wise.com/user/account" target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Abrir Wise
+                  </a>
+                </Button>
+                <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+                  Fechar
+                </Button>
+              </div>
             </div>
-          </div>
+          ) : (
+            // Estado: Sucesso Total
+            <div className="py-8 text-center space-y-4">
+              <CheckCircle2 className="h-16 w-16 text-primary mx-auto" />
+              <div>
+                <h3 className="text-lg font-semibold text-primary">
+                  Pagamento Enviado!
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {result.message || "A transferência foi iniciada com sucesso."}
+                </p>
+                {(result.transferId || result.payment?.transferId) && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    ID: {result.transferId || result.payment?.transferId}
+                  </p>
+                )}
+              </div>
+            </div>
+          )
         ) : result?.error ? (
           <div className="py-6 space-y-4">
             <div className="flex items-start gap-3 p-4 bg-destructive/10 rounded-lg">

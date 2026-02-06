@@ -14,12 +14,27 @@ export interface BankPaymentRequest {
   recipientId?: number | null;
 }
 
+export interface PaymentDetails {
+  transferId?: number;
+  status?: string;
+  amount?: number;
+  beneficiary?: string;
+  reference?: string;
+}
+
+export interface FundingStatus {
+  status?: string;
+  message?: string;
+}
+
 export interface BankPaymentResponse {
   success: boolean;
   transferId?: string;
   status?: string;
   error?: string;
   message?: string;
+  payment?: PaymentDetails;
+  funding?: FundingStatus;
 }
 
 export const useBankPayment = () => {
