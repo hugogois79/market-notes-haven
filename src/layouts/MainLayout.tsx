@@ -1,9 +1,11 @@
-
 import Sidebar from "@/components/Sidebar";
 import { useState, ReactNode, useEffect } from "react";
-import UserProfileButton from "@/components/UserProfileButton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Outlet } from "react-router-dom";
+import { useCalendarWidgetSettings } from "@/hooks/useCalendarWidgetSettings";
+import DailyCalendarWidget from "@/components/calendar/DailyCalendarWidget";
+import CalendarToggle from "@/components/calendar/CalendarToggle";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 interface MainLayoutProps {
   children?: ReactNode;
@@ -13,6 +15,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const { isVisible: calendarWidgetVisible, toggle: toggleCalendarWidget, hide: hideCalendarWidget } = useCalendarWidgetSettings();
 
   useEffect(() => {
     const handleSidebarResize = (e: CustomEvent) => {
@@ -26,22 +29,46 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     };
   }, []);
 
+  // Hide widget on mobile
+  const showWidget = calendarWidgetVisible && !isMobile;
+
   return (
-    <div className="flex min-h-screen bg-background overflow-hidden w-full">
-      <div className={`transition-all duration-300 ${sidebarOpen ? 'block' : 'hidden md:block'} fixed left-0 top-0 h-full z-40`}>
-        <Sidebar />
+    <TooltipProvider>
+      <div className="flex min-h-screen bg-background overflow-hidden w-full">
+        <div className={`transition-all duration-300 ${sidebarOpen ? 'block' : 'hidden md:block'} fixed left-0 top-0 h-full z-40`}>
+          <Sidebar />
+        </div>
+        
+        <div className={`flex-1 flex flex-col w-full transition-all duration-300 ${
+          sidebarOpen ? 
+            (isMobile ? 'md:ml-80' : (sidebarExpanded ? 'md:ml-80' : 'md:ml-24')) 
+            : 'ml-0'
+        }`}>
+          {/* Calendar toggle button - fixed position */}
+          {!isMobile && (
+            <div className="fixed top-4 right-4 z-50">
+              <CalendarToggle
+                isActive={calendarWidgetVisible}
+                onClick={toggleCalendarWidget}
+              />
+            </div>
+          )}
+          
+          <div className="flex flex-1 overflow-hidden">
+            <main className="flex-1 overflow-auto w-full">
+              {children || <Outlet />}
+            </main>
+            
+            {/* Calendar Widget */}
+            {showWidget && (
+              <div className="h-screen sticky top-0 shrink-0 transition-all duration-300 ease-in-out animate-in slide-in-from-right">
+                <DailyCalendarWidget onClose={hideCalendarWidget} />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-      
-      <div className={`flex-1 flex flex-col w-full transition-all duration-300 ${
-        sidebarOpen ? 
-          (isMobile ? 'md:ml-80' : (sidebarExpanded ? 'md:ml-80' : 'md:ml-24')) 
-          : 'ml-0'
-      }`}>
-        <main className="flex-1 overflow-auto w-full">
-          {children || <Outlet />}
-        </main>
-      </div>
-    </div>
+    </TooltipProvider>
   );
 };
 
