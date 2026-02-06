@@ -1,150 +1,202 @@
 
-# Plano: Widget de Calendario Diario (estilo Superhuman)
+# Plano: Funcionalidade "Pagar Banco" - Pagamento Direto via n8n
 
-## Objetivo
-Criar um widget lateral direito que mostra o calendario do dia atual com os eventos, semelhante ao Superhuman. Incluir uma opcao de toggle para ativar/desativar a visibilidade do widget.
+## Resumo
 
-## Referencia Visual
-Baseado na imagem do Superhuman:
-- Barra vertical a direita com horas (1am - 11pm)
-- Eventos coloridos por categoria
-- Mostra titulo e horario do evento
-- Data atual no topo (ex: "Fri, Feb 6")
-- Design compacto e minimalista
+Implementar um sistema que permite iniciar um pagamento bancario direto (transferencia SEPA via Wise) a partir de um documento no WorkFlow. O utilizador seleciona "Pagar Banco" no dropdown, preenche/confirma os dados do beneficiario e o sistema chama um webhook n8n que cria a instrucao de pagamento no banco.
 
 ## Arquitetura da Solucao
 
 ```text
-+-------------------+------------------+------------------+
-|                   |                  |                  |
-|    Sidebar        |   Conteudo       |   Calendar       |
-|    (esquerda)     |   Principal      |   Widget         |
-|                   |                  |   (direita)      |
-|                   |                  |                  |
-+-------------------+------------------+------------------+
++------------------+     +--------------------+     +------------------+
+|   Frontend       |     |   Edge Function    |     |     n8n          |
+|   Dialog         | --> |   bank-payment     | --> |  Webhook         |
+|   "Pagar Banco"  |     |   -webhook         |     |  --> Wise API    |
++------------------+     +--------------------+     +------------------+
 ```
 
-## Componentes a Criar
+## Ficheiros a Criar
 
-| Ficheiro | Descricao |
-|----------|-----------|
-| `src/components/calendar/DailyCalendarWidget.tsx` | Widget principal com timeline de horas |
-| `src/components/calendar/CalendarToggle.tsx` | Botao toggle para mostrar/esconder widget |
-| `src/hooks/useDailyCalendarEvents.ts` | Hook para buscar eventos do dia |
-| `src/hooks/useCalendarWidgetSettings.ts` | Hook para persistir estado do toggle |
+### 1. `src/components/companies/BankPaymentDialog.tsx`
+
+Dialogo modal com formulario para pagamento direto:
+
+**Campos do formulario:**
+- **Beneficiario** - Input texto, pre-preenchido com `vendor_name` do documento (OCR)
+- **IBAN do Beneficiario** - Input texto obrigatorio (campo novo a preencher pelo utilizador)
+- **Montante** - Input numerico, pre-preenchido com `total_amount` do documento (OCR)
+- **Conta de Origem** - Select das `bank_accounts` ativas (usa `account_number` como IBAN)
+- **Referencia** - Input texto, pre-preenchido com nome do documento
+- **Data de Execucao** - Input date, default: hoje
+
+**Props do componente:**
+```typescript
+interface BankPaymentDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  documentId: string;
+  documentUrl: string;
+  fileName: string;
+  vendorName?: string | null;
+  totalAmount?: number | null;
+}
+```
+
+**Estados visuais:**
+- Formulario normal
+- "A enviar pagamento..." enquanto processa
+- Mensagem de sucesso com detalhes
+- Mensagem de erro com opcao de tentar novamente
+
+---
+
+### 2. `src/hooks/useBankPayment.ts`
+
+Hook para gerir o estado e chamada da Edge Function:
+
+```typescript
+interface BankPaymentRequest {
+  beneficiaryName: string;
+  beneficiaryIban: string;
+  amount: number;
+  currency: string;  // Default: EUR
+  sourceAccountId: string;
+  reference: string;
+  executionDate: string;
+  documentId: string;
+  documentUrl: string;
+}
+
+interface BankPaymentResponse {
+  success: boolean;
+  transferId?: string;
+  status?: string;
+  error?: string;
+  message?: string;
+}
+```
+
+**Funcionalidades:**
+- Estado `isSending` para loading
+- Estado `result` com resposta do n8n
+- Estado `error` para mensagens de erro
+- Funcao `sendPayment(data: BankPaymentRequest)`
+- Funcao `reset()` para limpar estados
+
+---
+
+### 3. `supabase/functions/bank-payment-webhook/index.ts`
+
+Edge Function que:
+1. Recebe dados do frontend (beneficiario, IBAN, montante, conta origem, etc.)
+2. Busca detalhes da conta de origem na tabela `bank_accounts` (account_name, account_number como IBAN)
+3. Chama o webhook n8n via secret `N8N_BANK_PAYMENT_WEBHOOK`
+4. Retorna resultado ao frontend
+
+**Payload enviado ao n8n:**
+```json
+{
+  "beneficiaryName": "Eva Delgado Psicologia",
+  "beneficiaryIban": "PT50000000000000000000",
+  "amount": 1500.00,
+  "currency": "EUR",
+  "reference": "RECIBO DE PAGAMENTO No 151",
+  "documentId": "uuid-do-documento",
+  "sourceAccount": {
+    "id": "uuid",
+    "name": "Conta CGD",
+    "iban": "PT50003504290069921743060"
+  }
+}
+```
+
+---
 
 ## Ficheiros a Modificar
 
-| Ficheiro | Alteracao |
-|----------|-----------|
-| `src/layouts/MainLayout.tsx` | Adicionar area lateral direita para o widget |
-| `src/components/AppContent.tsx` | Providenciar contexto de settings do widget |
+### 1. `src/pages/companies/WorkFlowTab.tsx`
 
-## Funcionalidades
+**Alteracoes:**
+- Adicionar state: `const [showBankPaymentDialog, setShowBankPaymentDialog] = useState(false);`
+- Alterar o DropdownMenuItem "Pagar Banco" (linha ~3830) para: `onClick={() => setShowBankPaymentDialog(true)}`
+- Renderizar `<BankPaymentDialog>` junto aos outros dialogos (apos linha 4224)
 
-1. **Timeline Vertical**
-   - Mostra horas de 6am a 11pm
-   - Linha indicadora da hora atual
-   - Eventos posicionados por periodo (manha/tarde)
+---
 
-2. **Eventos do Dia**
-   - Busca da tabela `calendar_events` para a data atual
-   - Cores baseadas em categoria (usando `useCalendarCategories`)
-   - Hover card com detalhes do evento
+### 2. `supabase/config.toml`
 
-3. **Toggle de Visibilidade**
-   - Icone de calendario no header
-   - Estado guardado em localStorage
-   - Animacao suave ao abrir/fechar
+Adicionar configuracao da nova edge function:
 
-4. **Navegacao de Data**
-   - Setas para dia anterior/proximo
-   - Click na data volta ao dia atual
+```toml
+[functions.bank-payment-webhook]
+verify_jwt = false
+```
+
+---
+
+## Dependencias
+
+Nenhuma dependencia nova a instalar.
+
+---
+
+## Secrets Supabase
+
+**A adicionar pelo utilizador:**
+- `N8N_BANK_PAYMENT_WEBHOOK`: `https://n8n.gvvcapital.com/webhook/wise-payment`
+
+---
+
+## Fluxo de Utilizacao
+
+1. Utilizador visualiza documento no WorkFlow
+2. Clica no dropdown "Pagamento" > "Pagar Banco"
+3. Dialogo abre pre-preenchido com dados OCR (vendor_name, total_amount)
+4. Utilizador preenche IBAN do beneficiario
+5. Utilizador seleciona conta de origem (IBAN exibido a partir de `account_number`)
+6. Clica "Enviar Pagamento"
+7. Sistema chama Edge Function > n8n > Wise API
+8. Feedback de sucesso ou erro apresentado
+9. Dialogo fecha apos sucesso
+
+---
 
 ## Secao Tecnica
 
-### Estrutura do Widget
+### Query para Contas Bancarias
 
 ```typescript
-interface DailyCalendarWidgetProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-// Eventos vindos do Supabase (calendar_events)
-interface CalendarEvent {
-  id: string;
-  date: string;        // "2026-02-06"
-  title: string;
-  category: string;    // "legal", "work", etc.
-  period: string;      // "morning" | "afternoon"
-  notes: string | null;
-}
-```
-
-### Query de Dados
-
-Reutiliza a estrutura existente do `YearCalendar.tsx`:
-
-```typescript
-const { data: events } = useQuery({
-  queryKey: ["daily-calendar-events", selectedDate],
+const { data: bankAccounts } = useQuery({
+  queryKey: ["bank-accounts-for-payment"],
   queryFn: async () => {
-    const { data } = await supabase
-      .from("calendar_events")
-      .select("*")
-      .eq("date", selectedDate)
-      .eq("user_id", user.id);
+    const { data, error } = await supabase
+      .from("bank_accounts")
+      .select("id, account_name, account_number, company:companies(id, name)")
+      .eq("is_active", true)
+      .order("account_name");
+    if (error) throw error;
     return data;
   },
 });
 ```
 
-### Persistencia do Toggle
+### Estrutura do Select de Contas
 
-```typescript
-const WIDGET_STORAGE_KEY = "calendar-widget-visible";
+Cada opcao mostra:
+- Nome da empresa (company.name)
+- Nome da conta (account_name)
+- IBAN formatado (account_number)
 
-const [isVisible, setIsVisible] = useState(() => {
-  const saved = localStorage.getItem(WIDGET_STORAGE_KEY);
-  return saved !== null ? JSON.parse(saved) : true;
-});
-```
+### Validacao Frontend
 
-### Layout Responsivo
+- Beneficiario: obrigatorio, min 2 caracteres
+- IBAN: obrigatorio, formato valido (regex PT50...)
+- Montante: obrigatorio, maior que 0
+- Conta de origem: obrigatorio
+- Referencia: obrigatorio
 
-```typescript
-// MainLayout.tsx - Nova estrutura
-<div className="flex min-h-screen">
-  <Sidebar />
-  <main className="flex-1">
-    {children}
-  </main>
-  {calendarWidgetVisible && (
-    <DailyCalendarWidget onClose={() => setCalendarWidgetVisible(false)} />
-  )}
-</div>
-```
+### Consideracoes de Seguranca
 
-### Mapeamento de Periodos para Horas
-
-- `morning` -> 9:00 - 12:00
-- `afternoon` -> 14:00 - 18:00
-
-## Sequencia de Implementacao
-
-1. Criar hook `useDailyCalendarEvents` para fetch de eventos
-2. Criar hook `useCalendarWidgetSettings` para toggle state
-3. Criar componente `DailyCalendarWidget`
-4. Criar componente `CalendarToggle`
-5. Integrar no `MainLayout` com layout flex
-6. Adicionar toggle no header ou numa posicao fixa
-7. Testar responsividade e mobile (esconder automaticamente)
-
-## Consideracoes
-
-- **Mobile**: Widget escondido por defeito em ecras pequenos
-- **Performance**: Query apenas quando widget visivel
-- **Acessibilidade**: Suporte a keyboard navigation
-- **Tema**: Usar cores do sistema (dark/light mode)
-
+- Edge Function nao expoe o secret do webhook n8n
+- Autenticacao opcional (verify_jwt = false para simplicidade inicial)
+- Logs detalhados para debugging
