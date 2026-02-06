@@ -185,9 +185,12 @@ export default function BankPaymentDialog({
                 <Label htmlFor="beneficiaryName">Beneficiário *</Label>
                 <Input
                   id="beneficiaryName"
+                  type="text"
+                  autoComplete="off"
                   value={beneficiaryName}
                   onChange={(e) => setBeneficiaryName(e.target.value)}
                   placeholder="Nome do beneficiário"
+                  className="bg-background"
                 />
               </div>
 
