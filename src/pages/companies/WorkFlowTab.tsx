@@ -51,6 +51,7 @@ import { Progress } from "@/components/ui/progress";
 import { DocumentPreview } from "@/components/companies/DocumentPreview";
 import { WorkflowExpensePanel } from "@/components/companies/WorkflowExpensePanel";
 import DocumentPaymentDialog from "@/components/companies/DocumentPaymentDialog";
+import BankPaymentDialog from "@/components/companies/BankPaymentDialog";
 import { DocumentAIPanel } from "@/components/companies/DocumentAIPanel";
 import SendEmailModal from "@/components/email/SendEmailModal";
 import { cn } from "@/lib/utils";
@@ -346,6 +347,7 @@ export default function WorkFlowTab() {
   const [showExpensePanel, setShowExpensePanel] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showBankPaymentDialog, setShowBankPaymentDialog] = useState(false);
   const [showSendEmailModal, setShowSendEmailModal] = useState(false);
 
   // Mark as completed state
@@ -3827,10 +3829,7 @@ export default function WorkFlowTab() {
                                 <CheckCircle2 className="h-4 w-4 mr-2" />
                                 Pagamento Registado
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => {
-                                // TODO: Pagar Banco action
-                                toast.info("Funcionalidade 'Pagar Banco' em desenvolvimento");
-                              }}>
+                              <DropdownMenuItem onClick={() => setShowBankPaymentDialog(true)}>
                                 <Landmark className="h-4 w-4 mr-2" />
                                 Pagar Banco
                               </DropdownMenuItem>
@@ -4221,6 +4220,19 @@ export default function WorkFlowTab() {
           onDocumentUrlUpdated={(newUrl) => {
             setPreviewFile((prev) => (prev ? { ...prev, file_url: newUrl } : prev));
           }}
+        />
+      )}
+
+      {/* Bank Payment Dialog */}
+      {previewFile && (
+        <BankPaymentDialog
+          open={showBankPaymentDialog}
+          onOpenChange={setShowBankPaymentDialog}
+          documentId={previewFile.id}
+          documentUrl={previewFile.file_url}
+          fileName={previewFile.file_name}
+          vendorName={previewFile.vendor_name}
+          totalAmount={previewFile.total_amount}
         />
       )}
 
