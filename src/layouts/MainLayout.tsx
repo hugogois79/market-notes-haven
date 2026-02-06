@@ -1,7 +1,7 @@
 import Sidebar from "@/components/Sidebar";
 import { useState, ReactNode, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { useCalendarWidgetSettings } from "@/hooks/useCalendarWidgetSettings";
 import DailyCalendarWidget from "@/components/calendar/DailyCalendarWidget";
 import CalendarToggle from "@/components/calendar/CalendarToggle";
@@ -13,9 +13,13 @@ interface MainLayoutProps {
 
 const MainLayout = ({ children }: MainLayoutProps) => {
   const isMobile = useIsMobile();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const { isVisible: calendarWidgetVisible, toggle: toggleCalendarWidget, hide: hideCalendarWidget } = useCalendarWidgetSettings();
+
+  // Only show widget on kanban board pages
+  const isKanbanBoard = /^\/kanban\/[^/]+$/.test(location.pathname);
 
   useEffect(() => {
     const handleSidebarResize = (e: CustomEvent) => {
@@ -29,8 +33,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     };
   }, []);
 
-  // Hide widget on mobile
-  const showWidget = calendarWidgetVisible && !isMobile;
+  // Hide widget on mobile or if not on kanban board page
+  const showWidget = calendarWidgetVisible && !isMobile && isKanbanBoard;
 
   return (
     <TooltipProvider>
@@ -44,8 +48,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             (isMobile ? 'md:ml-80' : (sidebarExpanded ? 'md:ml-80' : 'md:ml-24')) 
             : 'ml-0'
         }`}>
-          {/* Calendar toggle button - fixed position */}
-          {!isMobile && (
+          {/* Calendar toggle button - fixed position, only on kanban board pages */}
+          {!isMobile && isKanbanBoard && (
             <div className="fixed top-4 right-4 z-50">
               <CalendarToggle
                 isActive={calendarWidgetVisible}
