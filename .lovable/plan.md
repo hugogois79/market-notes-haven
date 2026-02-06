@@ -1,202 +1,323 @@
 
-# Plano: Funcionalidade "Pagar Banco" - Pagamento Direto via n8n
+# Plano: Otimizar BankPaymentDialog com Autocomplete Wise Recipients
 
-## Resumo
+## Visão Geral
+Transformar o campo "Beneficiário" num combobox inteligente que:
+- Pesquisa em tempo real na tabela `wise_recipients` do Supabase
+- Auto-preenche o IBAN quando um recipient é selecionado
+- Permite entrada manual de novos beneficiários não registados no Wise
+- Faz match fuzzy com `vendorName` ao abrir o diálogo
 
-Implementar um sistema que permite iniciar um pagamento bancario direto (transferencia SEPA via Wise) a partir de um documento no WorkFlow. O utilizador seleciona "Pagar Banco" no dropdown, preenche/confirma os dados do beneficiario e o sistema chama um webhook n8n que cria a instrucao de pagamento no banco.
+## Mudanças Necessárias
 
-## Arquitetura da Solucao
+### 1. Atualizar `useBankPayment.ts`
+**Ficheiro**: `src/hooks/useBankPayment.ts`
 
-```text
-+------------------+     +--------------------+     +------------------+
-|   Frontend       |     |   Edge Function    |     |     n8n          |
-|   Dialog         | --> |   bank-payment     | --> |  Webhook         |
-|   "Pagar Banco"  |     |   -webhook         |     |  --> Wise API    |
-+------------------+     +--------------------+     +------------------+
-```
-
-## Ficheiros a Criar
-
-### 1. `src/components/companies/BankPaymentDialog.tsx`
-
-Dialogo modal com formulario para pagamento direto:
-
-**Campos do formulario:**
-- **Beneficiario** - Input texto, pre-preenchido com `vendor_name` do documento (OCR)
-- **IBAN do Beneficiario** - Input texto obrigatorio (campo novo a preencher pelo utilizador)
-- **Montante** - Input numerico, pre-preenchido com `total_amount` do documento (OCR)
-- **Conta de Origem** - Select das `bank_accounts` ativas (usa `account_number` como IBAN)
-- **Referencia** - Input texto, pre-preenchido com nome do documento
-- **Data de Execucao** - Input date, default: hoje
-
-**Props do componente:**
-```typescript
-interface BankPaymentDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  documentId: string;
-  documentUrl: string;
-  fileName: string;
-  vendorName?: string | null;
-  totalAmount?: number | null;
-}
-```
-
-**Estados visuais:**
-- Formulario normal
-- "A enviar pagamento..." enquanto processa
-- Mensagem de sucesso com detalhes
-- Mensagem de erro com opcao de tentar novamente
-
----
-
-### 2. `src/hooks/useBankPayment.ts`
-
-Hook para gerir o estado e chamada da Edge Function:
+Adicionar campo `recipientId` à interface `BankPaymentRequest`:
 
 ```typescript
-interface BankPaymentRequest {
+export interface BankPaymentRequest {
   beneficiaryName: string;
   beneficiaryIban: string;
   amount: number;
-  currency: string;  // Default: EUR
+  currency: string;
   sourceAccountId: string;
   reference: string;
   executionDate: string;
   documentId: string;
   documentUrl: string;
-}
-
-interface BankPaymentResponse {
-  success: boolean;
-  transferId?: string;
-  status?: string;
-  error?: string;
-  message?: string;
+  recipientId?: number | null; // NOVO: ID do recipient no Wise
 }
 ```
 
-**Funcionalidades:**
-- Estado `isSending` para loading
-- Estado `result` com resposta do n8n
-- Estado `error` para mensagens de erro
-- Funcao `sendPayment(data: BankPaymentRequest)`
-- Funcao `reset()` para limpar estados
+### 2. Recriar `BankPaymentDialog.tsx`
+**Ficheiro**: `src/components/companies/BankPaymentDialog.tsx`
 
----
+**Mudanças principais**:
 
-### 3. `supabase/functions/bank-payment-webhook/index.ts`
-
-Edge Function que:
-1. Recebe dados do frontend (beneficiario, IBAN, montante, conta origem, etc.)
-2. Busca detalhes da conta de origem na tabela `bank_accounts` (account_name, account_number como IBAN)
-3. Chama o webhook n8n via secret `N8N_BANK_PAYMENT_WEBHOOK`
-4. Retorna resultado ao frontend
-
-**Payload enviado ao n8n:**
-```json
-{
-  "beneficiaryName": "Eva Delgado Psicologia",
-  "beneficiaryIban": "PT50000000000000000000",
-  "amount": 1500.00,
-  "currency": "EUR",
-  "reference": "RECIBO DE PAGAMENTO No 151",
-  "documentId": "uuid-do-documento",
-  "sourceAccount": {
-    "id": "uuid",
-    "name": "Conta CGD",
-    "iban": "PT50003504290069921743060"
-  }
-}
-```
-
----
-
-## Ficheiros a Modificar
-
-### 1. `src/pages/companies/WorkFlowTab.tsx`
-
-**Alteracoes:**
-- Adicionar state: `const [showBankPaymentDialog, setShowBankPaymentDialog] = useState(false);`
-- Alterar o DropdownMenuItem "Pagar Banco" (linha ~3830) para: `onClick={() => setShowBankPaymentDialog(true)}`
-- Renderizar `<BankPaymentDialog>` junto aos outros dialogos (apos linha 4224)
-
----
-
-### 2. `supabase/config.toml`
-
-Adicionar configuracao da nova edge function:
-
-```toml
-[functions.bank-payment-webhook]
-verify_jwt = false
-```
-
----
-
-## Dependencias
-
-Nenhuma dependencia nova a instalar.
-
----
-
-## Secrets Supabase
-
-**A adicionar pelo utilizador:**
-- `N8N_BANK_PAYMENT_WEBHOOK`: `https://n8n.gvvcapital.com/webhook/wise-payment`
-
----
-
-## Fluxo de Utilizacao
-
-1. Utilizador visualiza documento no WorkFlow
-2. Clica no dropdown "Pagamento" > "Pagar Banco"
-3. Dialogo abre pre-preenchido com dados OCR (vendor_name, total_amount)
-4. Utilizador preenche IBAN do beneficiario
-5. Utilizador seleciona conta de origem (IBAN exibido a partir de `account_number`)
-6. Clica "Enviar Pagamento"
-7. Sistema chama Edge Function > n8n > Wise API
-8. Feedback de sucesso ou erro apresentado
-9. Dialogo fecha apos sucesso
-
----
-
-## Secao Tecnica
-
-### Query para Contas Bancarias
-
+#### 2.1 Imports adicionais
+Adicionar imports para Popover e Command (já existem no projeto):
 ```typescript
-const { data: bankAccounts } = useQuery({
-  queryKey: ["bank-accounts-for-payment"],
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { CheckIcon } from "lucide-react";
+```
+
+#### 2.2 Estados adicionais
+Adicionar states para o autocomplete:
+```typescript
+const [searchTerm, setSearchTerm] = useState("");
+const [selectedRecipientId, setSelectedRecipientId] = useState<number | null>(null);
+const [popoverOpen, setPopoverOpen] = useState(false);
+```
+
+#### 2.3 Query para Wise Recipients
+Implementar query com debounce:
+```typescript
+const { data: wiseRecipients, isLoading: isLoadingRecipients } = useQuery({
+  queryKey: ["wise-recipients", searchTerm],
   queryFn: async () => {
+    if (!searchTerm || searchTerm.length < 2) return [];
     const { data, error } = await supabase
-      .from("bank_accounts")
-      .select("id, account_name, account_number, company:companies(id, name)")
+      .from("wise_recipients")
+      .select("wise_recipient_id, name, iban")
       .eq("is_active", true)
-      .order("account_name");
+      .ilike("name", `%${searchTerm}%`)
+      .limit(10);
     if (error) throw error;
     return data;
   },
+  enabled: !!searchTerm && searchTerm.length >= 2,
 });
 ```
 
-### Estrutura do Select de Contas
+#### 2.4 Função de Match Fuzzy para Pre-fill
+Ao abrir o diálogo com `vendorName`, fazer query inicial para encontrar match:
+```typescript
+// Query adicional para match fuzzy ao abrir
+const { data: initialMatch } = useQuery({
+  queryKey: ["wise-recipients-initial", vendorName],
+  queryFn: async () => {
+    if (!vendorName || vendorName.length < 2) return null;
+    const { data, error } = await supabase
+      .from("wise_recipients")
+      .select("wise_recipient_id, name, iban")
+      .eq("is_active", true)
+      .ilike("name", `%${vendorName}%`)
+      .limit(5);
+    if (error) throw error;
+    return data?.[0] || null; // Retorna primeiro match
+  },
+  enabled: open && !hasInitialized.current && !!vendorName,
+});
+```
 
-Cada opcao mostra:
-- Nome da empresa (company.name)
-- Nome da conta (account_name)
-- IBAN formatado (account_number)
+#### 2.5 Atualizar useEffect de Pre-fill
+```typescript
+useEffect(() => {
+  if (open && !hasInitialized.current) {
+    setBeneficiaryName(vendorName || "");
+    setAmount(totalAmount?.toString() || "");
+    setReference(fileName || "");
+    setExecutionDate(format(new Date(), "yyyy-MM-dd"));
+    setSourceAccountId("");
+    setSearchTerm(vendorName || "");
+    setSelectedRecipientId(null);
+    setBeneficiaryIban("");
+    
+    // Se encontrou match no Wise, auto-preencher
+    if (initialMatch) {
+      setSelectedRecipientId(initialMatch.wise_recipient_id);
+      setBeneficiaryIban(initialMatch.iban);
+    }
+    
+    reset();
+    hasInitialized.current = true;
+  } else if (!open) {
+    hasInitialized.current = false;
+    setSearchTerm("");
+    setPopoverOpen(false);
+  }
+}, [open, vendorName, totalAmount, fileName, reset, initialMatch]);
+```
 
-### Validacao Frontend
+#### 2.6 Handlers para o Autocomplete
+```typescript
+const handleSelectRecipient = (recipient: {
+  wise_recipient_id: number;
+  name: string;
+  iban: string;
+}) => {
+  setBeneficiaryName(recipient.name);
+  setBeneficiaryIban(recipient.iban);
+  setSelectedRecipientId(recipient.wise_recipient_id);
+  setSearchTerm(recipient.name);
+  setPopoverOpen(false);
+};
 
-- Beneficiario: obrigatorio, min 2 caracteres
-- IBAN: obrigatorio, formato valido (regex PT50...)
-- Montante: obrigatorio, maior que 0
-- Conta de origem: obrigatorio
-- Referencia: obrigatorio
+const handleBeneficiaryChange = (value: string) => {
+  setBeneficiaryName(value);
+  setSearchTerm(value);
+  setSelectedRecipientId(null); // Limpar selection ao editar manualmente
+};
+```
 
-### Consideracoes de Seguranca
+#### 2.7 Atualizar validação e handleSubmit
+Na validação, fazer IBAN obrigatório apenas se não houver `recipientId`:
+```typescript
+const handleSubmit = async () => {
+  if (!beneficiaryName.trim() || beneficiaryName.length < 2) {
+    toast.error("Preencha o nome do beneficiário (mínimo 2 caracteres)");
+    return;
+  }
+  
+  // IBAN obrigatório apenas se não houver recipientId
+  if (!selectedRecipientId && !beneficiaryIban.trim()) {
+    toast.error("Preencha o IBAN do beneficiário");
+    return;
+  }
+  
+  // resto da validação...
+  
+  const response = await sendPayment({
+    beneficiaryName: beneficiaryName.trim(),
+    beneficiaryIban: beneficiaryIban.trim().replace(/\s/g, ""),
+    amount: amountNum,
+    currency: "EUR",
+    sourceAccountId,
+    reference: reference.trim(),
+    executionDate,
+    documentId,
+    documentUrl,
+    recipientId: selectedRecipientId, // NOVO
+  });
+};
+```
 
-- Edge Function nao expoe o secret do webhook n8n
-- Autenticacao opcional (verify_jwt = false para simplicidade inicial)
-- Logs detalhados para debugging
+#### 2.8 UI do Campo Beneficiário
+Substituir o `Input` simples por um `Popover` com `Command`:
+```tsx
+<div className="space-y-2">
+  <Label htmlFor="beneficiaryName">Beneficiário *</Label>
+  <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+    <PopoverTrigger asChild>
+      <input
+        id="beneficiaryName"
+        type="text"
+        autoComplete="off"
+        value={beneficiaryName}
+        onChange={(e) => handleBeneficiaryChange(e.target.value)}
+        onFocus={() => setPopoverOpen(true)}
+        placeholder="Nome do beneficiário"
+        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      />
+    </PopoverTrigger>
+    {searchTerm.length >= 2 && (
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+        <Command>
+          <CommandInput 
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+            placeholder="Pesquisar beneficiário..."
+          />
+          <CommandList>
+            {isLoadingRecipients && (
+              <CommandEmpty>A carregar...</CommandEmpty>
+            )}
+            {!isLoadingRecipients && wiseRecipients?.length === 0 && (
+              <CommandEmpty>Sem resultados</CommandEmpty>
+            )}
+            {wiseRecipients && wiseRecipients.length > 0 && (
+              <CommandGroup>
+                {wiseRecipients.map((recipient) => (
+                  <CommandItem
+                    key={recipient.wise_recipient_id}
+                    onSelect={() => handleSelectRecipient(recipient)}
+                    className="cursor-pointer"
+                  >
+                    <CheckIcon
+                      className="mr-2 h-4 w-4"
+                      style={{
+                        opacity: selectedRecipientId === recipient.wise_recipient_id ? 1 : 0,
+                      }}
+                    />
+                    <div className="flex flex-col flex-1">
+                      <span className="font-medium">{recipient.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatIban(recipient.iban)}
+                      </span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    )}
+  </Popover>
+  {selectedRecipientId && (
+    <p className="text-xs text-green-600">
+      ✓ Recipient Wise confirmado
+    </p>
+  )}
+</div>
+```
+
+## Arquitectura de Dados
+
+```
+wise_recipients (Supabase)
+├── wise_recipient_id (BIGINT) - PK, do Wise
+├── name (TEXT) - com índice trigram
+├── iban (TEXT)
+├── currency (TEXT)
+├── account_type (TEXT)
+├── legal_type (TEXT)
+└── is_active (BOOLEAN)
+
+BankPaymentDialog
+├── searchTerm (string) - input do utilizador
+├── selectedRecipientId (number | null)
+├── beneficiaryName (string) - editável
+├── beneficiaryIban (string) - editável, auto-fill se selecionado
+└── popoverOpen (boolean)
+```
+
+## Fluxo de Utilizador
+
+1. **Diálogo abre** com `vendorName` (ex: "Eva Delgado Martins")
+2. **Match fuzzy automático**: Query procura na `wise_recipients` com o `vendorName`
+3. **Se encontrado**: Auto-preenche nome, IBAN e seta `selectedRecipientId`
+4. **Se não encontrado**: Deixa campo editável para entrada manual
+5. **Utilizador digita**: Conforme escreve, aparecem sugestões da tabela
+6. **Seleciona sugestão**: Auto-preenche nome e IBAN, seta `recipientId`
+7. **Envia com recipientId**: Edge function usa `recipientId` para evitar duplicados no Wise
+
+## Validação de IBAN
+
+- **Com recipientId selecionado**: IBAN é opcional (Wise já tem os dados do recipient)
+- **Sem recipientId**: IBAN é obrigatório (novo beneficiário)
+- **IBAN permanece editável** em ambos os casos
+
+## Ficheiros a Modificar
+
+1. **`src/hooks/useBankPayment.ts`** - Adicionar `recipientId?` ao `BankPaymentRequest`
+2. **`src/components/companies/BankPaymentDialog.tsx`** - Recriar com lógica completa de autocomplete
+
+## Secção Técnica
+
+### Query Supabase com Trigram Index
+A tabela `wise_recipients` já tem index trigram no `name`:
+```sql
+CREATE INDEX idx_wise_recipients_name_trigram ON wise_recipients USING gin (name gin_trgm_ops);
+```
+
+Isto permite pesquisa case-insensitive rápida com `ILIKE '%termo%'`
+
+### Debounce
+Implementar debounce na pesquisa é recomendado, mas como a query já tem `enabled: !!searchTerm && searchTerm.length >= 2`, o tanstack/react-query fará debounce automático (aguarda 1000ms por padrão).
+
+Se precisa de debounce mais agressivo, usar um `useState` separado com `useEffect` e `setTimeout`.
+
+## Possíveis Edge Cases
+
+1. **Utilizador seleciona recipient, depois edita nome manualmente**: O `recipientId` fica null (correto)
+2. **Recipient com mesmo nome pode existir múltiplas vezes**: UI mostra o IBAN para desambiguação
+3. **Wise API adiciona novo recipient**: Sync automática de 6h via n8n atualiza a tabela
+4. **IBAN inválido**: Validação fica na Edge Function / Wise API
+
+## Performance
+
+- Query só dispara quando `searchTerm.length >= 2`
+- Trigram index garante pesquisa O(log n)
+- Popover só renderiza quando `popoverOpen === true`
+- Initial match query desativa após primeira renderização (`!hasInitialized.current`)
+
