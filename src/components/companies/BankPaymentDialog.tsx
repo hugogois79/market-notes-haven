@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -44,6 +44,7 @@ export default function BankPaymentDialog({
   totalAmount,
 }: BankPaymentDialogProps) {
   const { sendPayment, isSending, result, reset } = useBankPayment();
+  const hasInitialized = useRef(false);
 
   // Form state
   const [beneficiaryName, setBeneficiaryName] = useState("");
@@ -68,9 +69,9 @@ export default function BankPaymentDialog({
     enabled: open,
   });
 
-  // Pre-fill form when dialog opens
+  // Pre-fill form ONLY when dialog opens
   useEffect(() => {
-    if (open) {
+    if (open && !hasInitialized.current) {
       setBeneficiaryName(vendorName || "");
       setBeneficiaryIban("");
       setAmount(totalAmount?.toString() || "");
@@ -78,6 +79,9 @@ export default function BankPaymentDialog({
       setExecutionDate(format(new Date(), "yyyy-MM-dd"));
       setSourceAccountId("");
       reset();
+      hasInitialized.current = true;
+    } else if (!open) {
+      hasInitialized.current = false;
     }
   }, [open, vendorName, totalAmount, fileName, reset]);
 
