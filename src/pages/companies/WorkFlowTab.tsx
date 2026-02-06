@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, CreditCard, Bookmark, Save, FolderInput, Sparkles, Mail } from "lucide-react";
+import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, CreditCard, Bookmark, Save, FolderInput, Sparkles, Mail, Landmark } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -3805,20 +3805,37 @@ export default function WorkFlowTab() {
                     </>
                   )}
                 </Button>
-                          <Button
-                            variant={(existingTransaction as any)?.bank_account_id ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setShowPaymentDialog(true)}
-                            disabled={isLoadingTransaction}
-                            className={(existingTransaction as any)?.bank_account_id ? "bg-green-600 hover:bg-green-700 text-white" : ""}
-                          >
-                            {(existingTransaction as any)?.bank_account_id ? (
-                              <CheckCircle2 className="h-4 w-4 mr-2" />
-                            ) : (
-                              <CreditCard className="h-4 w-4 mr-2" />
-                            )}
-                            {isLoadingTransaction ? "..." : ((existingTransaction as any)?.bank_account_id ? "Pagamento Registado" : "Registar Pagamento")}
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant={(existingTransaction as any)?.bank_account_id ? "default" : "outline"}
+                                size="sm"
+                                disabled={isLoadingTransaction}
+                                className={(existingTransaction as any)?.bank_account_id ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+                              >
+                                {(existingTransaction as any)?.bank_account_id ? (
+                                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                                ) : (
+                                  <CreditCard className="h-4 w-4 mr-2" />
+                                )}
+                                {isLoadingTransaction ? "..." : ((existingTransaction as any)?.bank_account_id ? "Pagamento Registado" : "Registar Pagamento")}
+                                <ChevronDown className="h-4 w-4 ml-2" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-background border shadow-md z-50">
+                              <DropdownMenuItem onClick={() => setShowPaymentDialog(true)}>
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                Pagamento Registado
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                // TODO: Pagar Banco action
+                                toast.info("Funcionalidade 'Pagar Banco' em desenvolvimento");
+                              }}>
+                                <Landmark className="h-4 w-4 mr-2" />
+                                Pagar Banco
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                           <Button
                             variant="outline"
                             size="sm"
