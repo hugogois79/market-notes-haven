@@ -11,6 +11,7 @@ export interface BankPaymentRequest {
   executionDate: string;
   documentId: string;
   documentUrl: string;
+  recipientId?: number | null;
 }
 
 export interface BankPaymentResponse {

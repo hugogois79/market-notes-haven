@@ -19,10 +19,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { useBankPayment } from "@/hooks/useBankPayment";
 import { toast } from "sonner";
-import { Loader2, CheckCircle2, AlertCircle, Landmark } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Landmark, Check } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface BankPaymentDialogProps {
   open: boolean;
@@ -32,6 +45,12 @@ interface BankPaymentDialogProps {
   fileName: string;
   vendorName?: string | null;
   totalAmount?: number | null;
+}
+
+interface WiseRecipient {
+  wise_recipient_id: number;
+  name: string;
+  iban: string;
 }
 
 export default function BankPaymentDialog({
@@ -54,6 +73,11 @@ export default function BankPaymentDialog({
   const [reference, setReference] = useState("");
   const [executionDate, setExecutionDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
+  // Autocomplete state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRecipientId, setSelectedRecipientId] = useState<number | null>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
   // Fetch active bank accounts
   const { data: bankAccounts, isLoading: isLoadingAccounts } = useQuery({
     queryKey: ["bank-accounts-for-payment"],
@@ -69,21 +93,83 @@ export default function BankPaymentDialog({
     enabled: open,
   });
 
+  // Fetch Wise recipients for autocomplete
+  const { data: wiseRecipients, isLoading: isLoadingRecipients } = useQuery({
+    queryKey: ["wise-recipients", searchTerm],
+    queryFn: async () => {
+      if (!searchTerm || searchTerm.length < 2) return [];
+      const { data, error } = await supabase
+        .from("wise_recipients")
+        .select("wise_recipient_id, name, iban")
+        .eq("is_active", true)
+        .ilike("name", `%${searchTerm}%`)
+        .limit(10);
+      if (error) throw error;
+      return data as WiseRecipient[];
+    },
+    enabled: !!searchTerm && searchTerm.length >= 2,
+  });
+
+  // Fetch initial match for vendorName
+  const { data: initialMatch } = useQuery({
+    queryKey: ["wise-recipients-initial", vendorName],
+    queryFn: async () => {
+      if (!vendorName || vendorName.length < 2) return null;
+      const { data, error } = await supabase
+        .from("wise_recipients")
+        .select("wise_recipient_id, name, iban")
+        .eq("is_active", true)
+        .ilike("name", `%${vendorName}%`)
+        .limit(5);
+      if (error) throw error;
+      return (data as WiseRecipient[])?.[0] || null;
+    },
+    enabled: open && !!vendorName && vendorName.length >= 2,
+  });
+
   // Pre-fill form ONLY when dialog opens
   useEffect(() => {
     if (open && !hasInitialized.current) {
       setBeneficiaryName(vendorName || "");
-      setBeneficiaryIban("");
       setAmount(totalAmount?.toString() || "");
       setReference(fileName || "");
       setExecutionDate(format(new Date(), "yyyy-MM-dd"));
       setSourceAccountId("");
+      setSearchTerm(vendorName || "");
+      setSelectedRecipientId(null);
+      setBeneficiaryIban("");
       reset();
       hasInitialized.current = true;
     } else if (!open) {
       hasInitialized.current = false;
+      setSearchTerm("");
+      setPopoverOpen(false);
     }
   }, [open, vendorName, totalAmount, fileName, reset]);
+
+  // Auto-fill when initial match is found
+  useEffect(() => {
+    if (open && initialMatch && hasInitialized.current && !selectedRecipientId) {
+      setSelectedRecipientId(initialMatch.wise_recipient_id);
+      setBeneficiaryIban(initialMatch.iban);
+      setBeneficiaryName(initialMatch.name);
+      setSearchTerm(initialMatch.name);
+    }
+  }, [open, initialMatch, selectedRecipientId]);
+
+  const handleSelectRecipient = (recipient: WiseRecipient) => {
+    setBeneficiaryName(recipient.name);
+    setBeneficiaryIban(recipient.iban);
+    setSelectedRecipientId(recipient.wise_recipient_id);
+    setSearchTerm(recipient.name);
+    setPopoverOpen(false);
+  };
+
+  const handleBeneficiaryChange = (value: string) => {
+    setBeneficiaryName(value);
+    setSearchTerm(value);
+    setSelectedRecipientId(null);
+  };
 
   const handleSubmit = async () => {
     // Validation
@@ -91,7 +177,8 @@ export default function BankPaymentDialog({
       toast.error("Preencha o nome do beneficiário (mínimo 2 caracteres)");
       return;
     }
-    if (!beneficiaryIban.trim()) {
+    // IBAN required only if no recipientId
+    if (!selectedRecipientId && !beneficiaryIban.trim()) {
       toast.error("Preencha o IBAN do beneficiário");
       return;
     }
@@ -119,6 +206,7 @@ export default function BankPaymentDialog({
       executionDate,
       documentId,
       documentUrl,
+      recipientId: selectedRecipientId,
     });
 
     if (response.success) {
@@ -132,7 +220,6 @@ export default function BankPaymentDialog({
   };
 
   const formatIban = (iban: string) => {
-    // Format IBAN with spaces every 4 characters
     return iban.replace(/\s/g, "").replace(/(.{4})/g, "$1 ").trim();
   };
 
@@ -184,23 +271,83 @@ export default function BankPaymentDialog({
         ) : (
           <>
             <div className="space-y-4 py-4">
-              {/* Beneficiary Name */}
+              {/* Beneficiary Name with Autocomplete */}
               <div className="space-y-2">
                 <Label htmlFor="beneficiaryName">Beneficiário *</Label>
-                <Input
-                  id="beneficiaryName"
-                  type="text"
-                  autoComplete="off"
-                  value={beneficiaryName}
-                  onChange={(e) => setBeneficiaryName(e.target.value)}
-                  placeholder="Nome do beneficiário"
-                  className="bg-background"
-                />
+                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <div className="relative">
+                      <Input
+                        id="beneficiaryName"
+                        type="text"
+                        autoComplete="off"
+                        value={beneficiaryName}
+                        onChange={(e) => handleBeneficiaryChange(e.target.value)}
+                        onFocus={() => setPopoverOpen(true)}
+                        placeholder="Nome do beneficiário"
+                        className="bg-background"
+                      />
+                    </div>
+                  </PopoverTrigger>
+                  {searchTerm.length >= 2 && (
+                    <PopoverContent 
+                      className="w-[--radix-popover-trigger-width] p-0" 
+                      align="start"
+                      onOpenAutoFocus={(e) => e.preventDefault()}
+                    >
+                      <Command>
+                        <CommandList>
+                          {isLoadingRecipients && (
+                            <CommandEmpty>A carregar...</CommandEmpty>
+                          )}
+                          {!isLoadingRecipients && (!wiseRecipients || wiseRecipients.length === 0) && (
+                            <CommandEmpty>Sem resultados no Wise</CommandEmpty>
+                          )}
+                          {wiseRecipients && wiseRecipients.length > 0 && (
+                            <CommandGroup heading="Recipients Wise">
+                              {wiseRecipients.map((recipient) => (
+                                <CommandItem
+                                  key={recipient.wise_recipient_id}
+                                  value={recipient.name}
+                                  onSelect={() => handleSelectRecipient(recipient)}
+                                  className="cursor-pointer"
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      selectedRecipientId === recipient.wise_recipient_id
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  <div className="flex flex-col flex-1">
+                                    <span className="font-medium">{recipient.name}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {formatIban(recipient.iban)}
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          )}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  )}
+                </Popover>
+                {selectedRecipientId && (
+                  <p className="text-xs text-primary flex items-center gap-1">
+                    <Check className="h-3 w-3" />
+                    Recipient Wise confirmado
+                  </p>
+                )}
               </div>
 
               {/* Beneficiary IBAN */}
               <div className="space-y-2">
-                <Label htmlFor="beneficiaryIban">IBAN do Beneficiário *</Label>
+                <Label htmlFor="beneficiaryIban">
+                  IBAN do Beneficiário {selectedRecipientId ? "(opcional)" : "*"}
+                </Label>
                 <Input
                   id="beneficiaryIban"
                   value={beneficiaryIban}
