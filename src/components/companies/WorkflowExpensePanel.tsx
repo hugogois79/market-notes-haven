@@ -227,6 +227,14 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   // By tracking the last reset key, we ensure reset() only runs ONCE per transaction/file.
   const lastResetKeyRef = useRef<string | null>(null);
 
+  // LOCAL STATE for bank_account_id to bypass React Hook Form watch() timing issues.
+  // Problem: reset() updates form state internally but watch() doesn't reflect the change
+  // until the NEXT render cycle. Meanwhile Radix Select renders with the OLD value (empty),
+  // can't find a matching SelectItem, and shows the placeholder. By using local state set
+  // synchronously in the same effect as reset(), both updates are batched by React into a
+  // single re-render, and the Select always receives the correct value.
+  const [localBankAccountId, setLocalBankAccountId] = useState("");
+
   // Reset form when existingTransaction changes - wait for all dropdown data to load first
   useEffect(() => {
     if (existingTransaction && companies && expenseCategories && allBankAccounts) {
@@ -263,6 +271,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           loan_status: existingTransaction.loan_status || "active",
           target_folder_id: "",
         });
+        setLocalBankAccountId("");
       } else if (isDocumentTransaction) {
         // Handle document type - restore folder selection
         reset({
@@ -287,7 +296,9 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           loan_status: "active",
           target_folder_id: existingTransaction.target_folder_id || existingTransaction.folder_id || "",
         });
+        setLocalBankAccountId("");
       } else {
+        const bankAccountId = existingTransaction.bank_account_id || "";
         reset({
           date: existingTransaction.date || new Date().toISOString().split("T")[0],
           type: existingTransaction.type || "expense",
@@ -299,7 +310,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           total_amount: existingTransaction.total_amount?.toString() || "",
           vat_rate: existingTransaction.vat_rate?.toString() || "23",
           payment_method: normalizePaymentMethod(existingTransaction.payment_method),
-          bank_account_id: existingTransaction.bank_account_id || "",
+          bank_account_id: bankAccountId,
           invoice_number: existingTransaction.invoice_number || "",
           notes: existingTransaction.notes || "",
           lending_company_id: "",
@@ -310,6 +321,9 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           loan_status: "active",
           target_folder_id: "",
         });
+        // Set local state synchronously so React batches this with the reset() update.
+        // This ensures the Radix Select receives the correct value on the very next render.
+        setLocalBankAccountId(bankAccountId);
       }
     }
   }, [existingTransaction, reset, companies, expenseCategories, allBankAccounts]);
@@ -369,6 +383,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           loan_status: "active",
           target_folder_id: "",
         });
+        // Sync local state for the Radix Select (same batched render)
+        setLocalBankAccountId(defaultBankAccountId);
       }
     }
   }, [existingTransaction, file, reset, companies, vendorDefaults]);
@@ -515,13 +531,17 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   const filteredBankAccounts = useMemo(() => {
     if (!allBankAccounts) return [];
     return allBankAccounts.filter((ba) => {
+      // ALWAYS include the currently selected account in the list, even if payment method
+      // filter hasn't caught up yet. This prevents the Radix Select from showing placeholder
+      // during the brief render cycle between reset() and the next render.
+      if (localBankAccountId && ba.id === localBankAccountId) return true;
       // Show ALL accounts regardless of company (cross-company payment creates loan automatically)
       if (paymentMethod === "credit_card") {
         return ba.account_type === "credit_card";
       }
       return ba.account_type === "bank_account";
     });
-  }, [allBankAccounts, paymentMethod]);
+  }, [allBankAccounts, paymentMethod, localBankAccountId]);
 
   // Clear bank_account_id ONLY when the USER manually changes the payment method
   // This avoids race conditions with form resets and vendor defaults pre-fills
@@ -530,9 +550,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     userChangedPaymentMethodRef.current = false;
     
     if (allBankAccounts) {
-      const currentBankAccountId = watch("bank_account_id");
-      if (currentBankAccountId) {
-        const currentAccount = allBankAccounts.find(ba => ba.id === currentBankAccountId);
+      if (localBankAccountId) {
+        const currentAccount = allBankAccounts.find(ba => ba.id === localBankAccountId);
         const isValidForNewMethod = currentAccount && (
           (paymentMethod === "credit_card" && currentAccount.account_type === "credit_card") ||
           (paymentMethod !== "credit_card" && currentAccount.account_type === "bank_account")
@@ -541,10 +560,11 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         // If current selection is not valid for the new payment method, clear it
         if (!isValidForNewMethod) {
           setValue("bank_account_id", "");
+          setLocalBankAccountId("");
         }
       }
     }
-  }, [paymentMethod, allBankAccounts, watch, setValue]);
+  }, [paymentMethod, allBankAccounts, localBankAccountId, setValue]);
 
   // Calculate VAT
   const totalAmount = parseFloat(watch("total_amount") || "0");
@@ -1398,7 +1418,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                     </div>
                     <div>
                       <Label className="text-xs">{paymentMethod === "credit_card" ? "Cartão" : "Conta"}</Label>
-                      <Select onValueChange={(value) => setValue("bank_account_id", value)} value={watch("bank_account_id")}>
+                      <Select onValueChange={(value) => { setLocalBankAccountId(value); setValue("bank_account_id", value); }} value={localBankAccountId}>
                         <SelectTrigger className="h-9 text-sm">
                           <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
