@@ -78,21 +78,35 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   const [showAiAttachmentDialog, setShowAiAttachmentDialog] = useState(false);
   const [assignedTo, setAssignedTo] = useState<string[]>((card as any).assigned_to || []);
   const [showAssignDropdown, setShowAssignDropdown] = useState(false);
+  const assignDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch available profiles for assignment
-  const { data: availableProfiles = [] } = useQuery({
-    queryKey: ['profiles-for-assignment'],
+  // Fetch expense_users for assignment (same as Settings > Utilizadores)
+  const { data: availableUsers = [] } = useQuery({
+    queryKey: ['expense-users-for-assignment'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, avatar_url')
-        .not('full_name', 'is', null)
-        .order('full_name');
+        .from('expense_users')
+        .select('id, name, email, is_active')
+        .eq('is_active', true)
+        .order('name');
       if (error) throw error;
       return data || [];
     },
     enabled: isOpen,
   });
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (assignDropdownRef.current && !assignDropdownRef.current.contains(e.target as Node)) {
+        setShowAssignDropdown(false);
+      }
+    };
+    if (showAssignDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showAssignDropdown]);
 
   const handleAddAssignee = (userId: string) => {
     if (!assignedTo.includes(userId)) {
@@ -105,8 +119,8 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     setAssignedTo(assignedTo.filter(id => id !== userId));
   };
 
-  const getProfileById = (userId: string) => {
-    return availableProfiles.find(p => p.id === userId);
+  const getUserById = (userId: string) => {
+    return availableUsers.find(p => p.id === userId);
   };
 
   const getInitials = (name: string | null) => {
@@ -114,7 +128,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const unassignedProfiles = availableProfiles.filter(p => !assignedTo.includes(p.id));
+  const unassignedUsers = availableUsers.filter(p => !assignedTo.includes(p.id));
 
   const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
@@ -510,14 +524,13 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
               {assignedTo.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {assignedTo.map((userId) => {
-                    const profile = getProfileById(userId);
+                    const user = getUserById(userId);
                     return (
                       <Badge key={userId} variant="secondary" className="flex items-center gap-1.5 py-1 px-2">
                         <Avatar className="h-5 w-5">
-                          {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile?.full_name || ''} />}
-                          <AvatarFallback className="text-[10px]">{getInitials(profile?.full_name || null)}</AvatarFallback>
+                          <AvatarFallback className="text-[10px] bg-primary/10">{getInitials(user?.name || null)}</AvatarFallback>
                         </Avatar>
-                        <span className="text-xs">{profile?.full_name || 'Desconhecido'}</span>
+                        <span className="text-xs">{user?.name || 'Desconhecido'}</span>
                         <button
                           type="button"
                           onClick={() => handleRemoveAssignee(userId)}
@@ -530,34 +543,33 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
                   })}
                 </div>
               )}
-              <div className="relative">
+              <div className="relative" ref={assignDropdownRef}>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   className="gap-1.5 text-xs"
                   onClick={() => setShowAssignDropdown(!showAssignDropdown)}
-                  disabled={unassignedProfiles.length === 0}
+                  disabled={unassignedUsers.length === 0}
                 >
                   <UserPlus className="h-3.5 w-3.5" />
                   Adicionar Utilizador
                 </Button>
-                {showAssignDropdown && unassignedProfiles.length > 0 && (
+                {showAssignDropdown && unassignedUsers.length > 0 && (
                   <div className="absolute z-50 mt-1 w-64 bg-popover border rounded-md shadow-md py-1 max-h-48 overflow-y-auto">
-                    {unassignedProfiles.map((profile) => (
+                    {unassignedUsers.map((user) => (
                       <button
-                        key={profile.id}
+                        key={user.id}
                         type="button"
                         className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors text-left"
-                        onClick={() => handleAddAssignee(profile.id)}
+                        onClick={() => handleAddAssignee(user.id)}
                       >
                         <Avatar className="h-6 w-6">
-                          {profile.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name || ''} />}
-                          <AvatarFallback className="text-[10px]">{getInitials(profile.full_name)}</AvatarFallback>
+                          <AvatarFallback className="text-[10px] bg-primary/10">{getInitials(user.name)}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col">
-                          <span className="font-medium">{profile.full_name}</span>
-                          {profile.email && <span className="text-xs text-muted-foreground">{profile.email}</span>}
+                          <span className="font-medium">{user.name}</span>
+                          {user.email && <span className="text-xs text-muted-foreground">{user.email}</span>}
                         </div>
                       </button>
                     ))}
