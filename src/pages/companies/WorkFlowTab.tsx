@@ -3617,30 +3617,48 @@ export default function WorkFlowTab() {
           </tbody>
           <tfoot className="sticky bottom-0 z-10">
             <tr className="border-t border-slate-200 bg-slate-50 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
-              <td colSpan={2} className="px-3 py-2 text-xs text-muted-foreground">
-                {filteredFiles?.length || 0} file{(filteredFiles?.length || 0) !== 1 ? 's' : ''}
-              </td>
-              {isColumnVisible("type") && <td></td>}
-              {isColumnVisible("date") && <td></td>}
-              {isColumnVisible("category") && <td></td>}
-              {isColumnVisible("status") && <td></td>}
-              {isColumnVisible("size") && <td></td>}
-              {isColumnVisible("project") && <td></td>}
-              {isColumnVisible("value") && (
-                <td className="px-3 py-2.5 text-right">
-                  <span className="font-semibold text-sm tabular-nums">
-                    {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(
-                      filteredFiles?.reduce((sum, file) => {
-                        const value = getTxForFile(file)?.value || 0;
-                        return sum + value;
-                      }, 0) || 0
+              {(() => {
+                const hasSelection = selectedFiles.size > 0;
+                const filesToSum = hasSelection 
+                  ? (filteredFiles?.filter(f => selectedFiles.has(f.id)) || [])
+                  : (filteredFiles || []);
+                const totalValue = filesToSum.reduce((sum, file) => {
+                  const tx = getTxForFile(file);
+                  const value = tx?.value ?? file.total_amount ?? 0;
+                  return sum + value;
+                }, 0);
+
+                return (
+                  <>
+                    <td colSpan={2} className="px-3 py-2 text-xs text-muted-foreground">
+                      {hasSelection ? (
+                        <span className="font-medium text-primary">
+                          {selectedFiles.size} selecionado{selectedFiles.size !== 1 ? 's' : ''}
+                        </span>
+                      ) : (
+                        <span>{filteredFiles?.length || 0} file{(filteredFiles?.length || 0) !== 1 ? 's' : ''}</span>
+                      )}
+                    </td>
+                    {isColumnVisible("type") && <td></td>}
+                    {isColumnVisible("date") && <td></td>}
+                    {isColumnVisible("category") && <td></td>}
+                    {isColumnVisible("status") && <td></td>}
+                    {isColumnVisible("size") && <td></td>}
+                    {isColumnVisible("empresa") && <td></td>}
+                    {isColumnVisible("project") && <td></td>}
+                    {isColumnVisible("value") && (
+                      <td className="px-3 py-2.5 text-right">
+                        <span className={`font-semibold text-sm tabular-nums ${hasSelection ? 'text-primary' : ''}`}>
+                          {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(totalValue)}
+                        </span>
+                      </td>
                     )}
-                  </span>
-                </td>
-              )}
-              {customColumns.map((col) => <td key={col.id}></td>)}
-              <td></td>
-              <td></td>
+                    {customColumns.map((col) => <td key={col.id}></td>)}
+                    <td></td>
+                    <td></td>
+                  </>
+                );
+              })()}
             </tr>
           </tfoot>
         </table>
