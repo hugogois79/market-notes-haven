@@ -2382,13 +2382,15 @@ export default function WorkFlowTab() {
   const renderCellDropdown = (file: WorkflowFile, column: ColumnConfig) => {
     const value = getColumnValue(file, column);
     const options = column.options;
-    const option = options?.find(o => o.label === value);
+    // Case-insensitive match for category values (DB has lowercase, options have capitalized)
+    const option = options?.find(o => o.label.toLowerCase() === value?.toLowerCase());
+    const displayValue = option?.label || value; // Use matched option label or raw value
     
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="cursor-pointer hover:opacity-80 transition-opacity">
-            {value ? (
+            {displayValue ? (
               <span 
                 className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
                 style={{ 
@@ -2398,7 +2400,7 @@ export default function WorkFlowTab() {
                   borderWidth: '1px'
                 }}
               >
-                {value}
+                {displayValue}
               </span>
             ) : (
               <span className="text-slate-400 text-xs">—</span>
