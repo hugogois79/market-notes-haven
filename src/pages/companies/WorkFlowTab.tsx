@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, CreditCard, Bookmark, Save, FolderInput, Sparkles, Mail, Landmark } from "lucide-react";
+import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, CreditCard, Bookmark, Save, FolderInput, Sparkles, Mail, Landmark, CalendarDays } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
   ContextMenu,
@@ -514,6 +515,21 @@ export default function WorkFlowTab() {
     staleTime: 0, // Always refetch when file changes
   });
 
+  // Fetch bank account name for the payment badge display
+  const paymentBankAccountId = (existingTransaction as any)?.bank_account_id;
+  const { data: paymentBankAccount } = useQuery({
+    queryKey: ["payment-bank-account", paymentBankAccountId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("bank_accounts")
+        .select("account_name, account_type, companies(name)")
+        .eq("id", paymentBankAccountId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!paymentBankAccountId,
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Column management dialogs
   const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false);
@@ -3948,10 +3964,52 @@ export default function WorkFlowTab() {
                                 <ChevronDown className="h-4 w-4 ml-2" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-background border shadow-md z-50">
+                            <DropdownMenuContent align="end" className="bg-background border shadow-md z-50 w-64">
+                              {/* Show payment details when payment is registered */}
+                              {(existingTransaction as any)?.bank_account_id && (
+                                <>
+                                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground pb-0">
+                                    Detalhes do Pagamento
+                                  </DropdownMenuLabel>
+                                  <div className="px-2 py-1.5 space-y-1">
+                                    {paymentBankAccount && (
+                                      <div className="flex items-center gap-2 text-sm">
+                                        {paymentBankAccount.account_type === "credit_card" ? (
+                                          <CreditCard className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                        ) : (
+                                          <Landmark className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                        )}
+                                        <span className="font-medium truncate">{paymentBankAccount.account_name}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                      <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                                      <span>{(existingTransaction as any)?.date ? format(new Date((existingTransaction as any).date + "T00:00:00"), "dd/MM/yyyy") : "—"}</span>
+                                    </div>
+                                    {(existingTransaction as any)?.total_amount != null && (
+                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <span className="ml-0.5 font-mono text-xs">€</span>
+                                        <span>{Number((existingTransaction as any).total_amount).toFixed(2)} {(existingTransaction as any)?.currency || "EUR"}</span>
+                                      </div>
+                                    )}
+                                    {(existingTransaction as any)?.payment_method && (
+                                      <div className="text-[11px] text-muted-foreground/70 ml-5">
+                                        {(existingTransaction as any).payment_method === "credit_card" ? "Cartão Crédito" :
+                                         (existingTransaction as any).payment_method === "bank_transfer" ? "Transferência Bancária" :
+                                         (existingTransaction as any).payment_method === "mbway" ? "MB WAY" :
+                                         (existingTransaction as any).payment_method === "multibanco" ? "Multibanco" :
+                                         (existingTransaction as any).payment_method === "debit_card" ? "Cartão Débito" :
+                                         (existingTransaction as any).payment_method === "cash" ? "Numerário" :
+                                         (existingTransaction as any).payment_method}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
                               <DropdownMenuItem onClick={() => setShowPaymentDialog(true)}>
                                 <CheckCircle2 className="h-4 w-4 mr-2" />
-                                Pagamento Registado
+                                {(existingTransaction as any)?.bank_account_id ? "Alterar Pagamento" : "Pagamento Registado"}
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setShowBankPaymentDialog(true)}>
                                 <Landmark className="h-4 w-4 mr-2" />
