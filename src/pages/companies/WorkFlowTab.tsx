@@ -845,10 +845,12 @@ export default function WorkFlowTab() {
       for (const tx of merged) uniqueById.set(tx.id, tx);
       return Array.from(uniqueById.values());
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes cache (transactions change less frequently)
+    // IMPORTANT: this data is edited in other screens/dialogs, so avoid long caching
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     enabled: !!workflowFiles && workflowFiles.length > 0,
   });
-
   type LinkedTx = {
     transactionId: string;
     projectId: string | null;
