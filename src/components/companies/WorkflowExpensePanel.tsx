@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 import { X, Check, ChevronsUpDown, FileText, ExternalLink, Trash2, Upload, Wand2, CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import { format, parse } from "date-fns";
+import { format, parse, isValid } from "date-fns";
 import { pt } from "date-fns/locale";
 import {
   Popover,
@@ -188,15 +188,42 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
-  // Ref to skip the bank_account_id clearing effect after form reset
-  const formJustResetRef = useRef(false);
+  // Query vendor_defaults to pre-fill bank_account_id (card) for known vendors
+  const vendorName = file?.vendor_name || "";
+  const companyIdForDefaults = file?.company_id || "";
+  const { data: vendorDefaults } = useQuery({
+    queryKey: ["vendor-defaults", vendorName, companyIdForDefaults],
+    queryFn: async () => {
+      if (!vendorName) return null;
+      // Normalize vendor name to match DB normalization
+      const normalized = vendorName.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]/g, '');
+      
+      let query = supabase
+        .from("vendor_defaults")
+        .select("payment_method, bank_account_id, category_id, project_id")
+        .eq("vendor_name_normalized", normalized);
+      
+      if (companyIdForDefaults) {
+        query = query.eq("company_id", companyIdForDefaults);
+      }
+      
+      const { data, error } = await query.maybeSingle();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!vendorName,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Ref to track if payment method was changed by user interaction (vs form reset/vendor defaults)
+  // Only clears bank_account_id when the user manually changes the payment method dropdown
+  const userChangedPaymentMethodRef = useRef(false);
 
   // Reset form when existingTransaction changes - wait for all dropdown data to load first
   useEffect(() => {
     if (existingTransaction && companies && expenseCategories && allBankAccounts) {
-      // Mark that we're about to reset - this prevents the payment method change effect from clearing bank_account_id
-      formJustResetRef.current = true;
-      
       // Check if this is a loan transaction
       const isLoanTransaction = existingTransaction.type === "loan" || existingTransaction._isLoan;
       // Check if this is a document transaction
@@ -290,23 +317,33 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           vatRate = Math.round((file.tax_amount / file.subtotal) * 100).toString();
         }
         
-        // Map OCR payment_method to form values
-        const paymentMethod = normalizePaymentMethod(file.payment_method);
+        // Map OCR payment_method to form values, with vendor_defaults taking priority
+        const paymentMethod = vendorDefaults?.payment_method 
+          ? normalizePaymentMethod(vendorDefaults.payment_method)
+          : normalizePaymentMethod(file.payment_method);
         
+        // OCR data: use description if available, otherwise use notes for description
+        const ocrDescription = file.description || file.notes || "";
+        // Only keep notes separate if description already has its own content
+        const ocrNotes = file.description && file.notes && file.description !== file.notes ? file.notes : "";
+
+        // Pre-fill bank_account_id from vendor_defaults if available
+        const defaultBankAccountId = vendorDefaults?.bank_account_id || "";
+
         reset({
           date: file.invoice_date || new Date().toISOString().split("T")[0],
           type: inferredType,
           company_id: file.company_id || "",
-          project_id: "",
-          category_id: "",
-          description: file.description || "",
+          project_id: vendorDefaults?.project_id || "",
+          category_id: vendorDefaults?.category_id || "",
+          description: ocrDescription,
           entity_name: file.vendor_name || "",
           total_amount: file.total_amount?.toString() || "",
           vat_rate: vatRate,
           payment_method: paymentMethod,
-          bank_account_id: "",
+          bank_account_id: defaultBankAccountId,
           invoice_number: file.invoice_number || "",
-          notes: file.notes || "",
+          notes: ocrNotes,
           lending_company_id: "",
           borrowing_company_id: "",
           interest_rate: "0",
@@ -317,7 +354,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         });
       }
     }
-  }, [existingTransaction, file, reset, companies]);
+  }, [existingTransaction, file, reset, companies, vendorDefaults]);
 
   const [projectOpen, setProjectOpen] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
@@ -422,6 +459,36 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     });
   }, [expenseCategories, selectedProjectId, expenseProjects, transactionType]);
 
+  // Local state for date text inputs (allows intermediate typing)
+  const [dateText, setDateText] = useState("");
+  const [endDateText, setEndDateText] = useState("");
+
+  // Sync date text from form value (when form resets or calendar selects)
+  const formDate = watch("date");
+  const formEndDate = watch("end_date");
+  
+  useEffect(() => {
+    if (formDate) {
+      try {
+        const d = parse(formDate, "yyyy-MM-dd", new Date());
+        if (isValid(d)) setDateText(format(d, "dd/MM/yyyy"));
+      } catch { /* ignore */ }
+    } else {
+      setDateText("");
+    }
+  }, [formDate]);
+
+  useEffect(() => {
+    if (formEndDate) {
+      try {
+        const d = parse(formEndDate, "yyyy-MM-dd", new Date());
+        if (isValid(d)) setEndDateText(format(d, "dd/MM/yyyy"));
+      } catch { /* ignore */ }
+    } else {
+      setEndDateText("");
+    }
+  }, [formEndDate]);
+
   // Filter bank accounts by payment method and company
   const paymentMethod = watch("payment_method");
 
@@ -439,20 +506,13 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     });
   }, [allBankAccounts, paymentMethod]);
 
-  // Track previous payment method to detect USER-initiated changes only
-  const previousPaymentMethodRef = useRef(paymentMethod);
-
-  // Clear bank_account_id when payment_method changes if current value is invalid
-  // BUT skip this if the form was just reset (to preserve bank_account_id from existingTransaction)
+  // Clear bank_account_id ONLY when the USER manually changes the payment method
+  // This avoids race conditions with form resets and vendor defaults pre-fills
   useEffect(() => {
-    // Skip clearing if we just reset the form
-    if (formJustResetRef.current) {
-      formJustResetRef.current = false;
-      previousPaymentMethodRef.current = paymentMethod;
-      return;
-    }
+    if (!userChangedPaymentMethodRef.current) return;
+    userChangedPaymentMethodRef.current = false;
     
-    if (previousPaymentMethodRef.current !== paymentMethod && allBankAccounts) {
+    if (allBankAccounts) {
       const currentBankAccountId = watch("bank_account_id");
       if (currentBankAccountId) {
         const currentAccount = allBankAccounts.find(ba => ba.id === currentBankAccountId);
@@ -466,7 +526,6 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           setValue("bank_account_id", "");
         }
       }
-      previousPaymentMethodRef.current = paymentMethod;
     }
   }, [paymentMethod, allBankAccounts, watch, setValue]);
 
@@ -831,33 +890,60 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">Data *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "h-9 w-full justify-start text-left text-sm font-normal",
-                      !watch("date") && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                    {watch("date")
-                      ? format(parse(watch("date"), "yyyy-MM-dd", new Date()), "dd/MM/yyyy")
-                      : "dd/mm/aaaa"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    locale={pt}
-                    selected={watch("date") ? parse(watch("date"), "yyyy-MM-dd", new Date()) : undefined}
-                    onSelect={(day) => {
-                      if (day) setValue("date", format(day, "yyyy-MM-dd"));
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <div className="relative">
+                <Input
+                  className="h-9 text-sm pr-9"
+                  placeholder="dd/mm/aaaa"
+                  value={dateText}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    // Auto-format: add slashes as user types
+                    const digits = raw.replace(/\D/g, "").slice(0, 8);
+                    let formatted = digits;
+                    if (digits.length > 2) formatted = digits.slice(0, 2) + "/" + digits.slice(2);
+                    if (digits.length > 4) formatted = digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4);
+                    setDateText(formatted);
+                    // Parse dd/MM/yyyy to yyyy-MM-dd when complete
+                    if (digits.length === 8) {
+                      const parsed = parse(formatted, "dd/MM/yyyy", new Date());
+                      if (isValid(parsed)) {
+                        setValue("date", format(parsed, "yyyy-MM-dd"));
+                      }
+                    }
+                  }}
+                  onBlur={() => {
+                    if (dateText && dateText.length === 10) {
+                      const parsed = parse(dateText, "dd/MM/yyyy", new Date());
+                      if (isValid(parsed)) {
+                        setValue("date", format(parsed, "yyyy-MM-dd"));
+                      }
+                    }
+                  }}
+                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <CalendarIcon className="h-3.5 w-3.5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      locale={pt}
+                      selected={watch("date") ? parse(watch("date"), "yyyy-MM-dd", new Date()) : undefined}
+                      onSelect={(day) => {
+                        if (day) setValue("date", format(day, "yyyy-MM-dd"));
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
               <input type="hidden" {...register("date", { required: true })} />
             </div>
             <div>
@@ -1007,33 +1093,58 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Data de Fim</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "h-9 w-full justify-start text-left text-sm font-normal",
-                          !watch("end_date") && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                        {watch("end_date")
-                          ? format(parse(watch("end_date"), "yyyy-MM-dd", new Date()), "dd/MM/yyyy")
-                          : "dd/mm/aaaa"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        locale={pt}
-                        selected={watch("end_date") ? parse(watch("end_date"), "yyyy-MM-dd", new Date()) : undefined}
-                        onSelect={(day) => {
-                          if (day) setValue("end_date", format(day, "yyyy-MM-dd"));
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <div className="relative">
+                    <Input
+                      className="h-9 text-sm pr-9"
+                      placeholder="dd/mm/aaaa"
+                      value={endDateText}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const digits = raw.replace(/\D/g, "").slice(0, 8);
+                        let formatted = digits;
+                        if (digits.length > 2) formatted = digits.slice(0, 2) + "/" + digits.slice(2);
+                        if (digits.length > 4) formatted = digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4);
+                        setEndDateText(formatted);
+                        if (digits.length === 8) {
+                          const parsed = parse(formatted, "dd/MM/yyyy", new Date());
+                          if (isValid(parsed)) {
+                            setValue("end_date", format(parsed, "yyyy-MM-dd"));
+                          }
+                        }
+                      }}
+                      onBlur={() => {
+                        if (endDateText && endDateText.length === 10) {
+                          const parsed = parse(endDateText, "dd/MM/yyyy", new Date());
+                          if (isValid(parsed)) {
+                            setValue("end_date", format(parsed, "yyyy-MM-dd"));
+                          }
+                        }
+                      }}
+                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:text-foreground"
+                          type="button"
+                        >
+                          <CalendarIcon className="h-3.5 w-3.5" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          locale={pt}
+                          selected={watch("end_date") ? parse(watch("end_date"), "yyyy-MM-dd", new Date()) : undefined}
+                          onSelect={(day) => {
+                            if (day) setValue("end_date", format(day, "yyyy-MM-dd"));
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                   <input type="hidden" {...register("end_date")} />
                 </div>
                 <div>
@@ -1254,7 +1365,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs">Método Pagamento</Label>
-                      <Select onValueChange={(value) => setValue("payment_method", value)} value={watch("payment_method")}>
+                      <Select onValueChange={(value) => { userChangedPaymentMethodRef.current = true; setValue("payment_method", value); }} value={watch("payment_method")}>
                         <SelectTrigger className="h-9 text-sm">
                           <SelectValue />
                         </SelectTrigger>

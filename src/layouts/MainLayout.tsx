@@ -50,7 +50,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         }`}>
           {/* Calendar toggle button - fixed position, only on kanban board pages */}
           {!isMobile && isKanbanBoard && (
-            <div className="fixed top-4 right-4 z-50">
+            <div className={`fixed top-4 z-50 transition-all duration-300 ${showWidget ? 'right-[19rem]' : 'right-4'}`}>
               <CalendarToggle
                 isActive={calendarWidgetVisible}
                 onClick={toggleCalendarWidget}
@@ -58,18 +58,16 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             </div>
           )}
           
-          <div className="flex flex-1 overflow-hidden">
-            <main className="flex-1 overflow-auto min-w-0">
-              {children || <Outlet />}
-            </main>
-            
-            {/* Calendar Widget */}
-            {showWidget && (
-              <div className="h-screen sticky top-0 shrink-0 transition-all duration-300 ease-in-out animate-in slide-in-from-right">
-                <DailyCalendarWidget onClose={hideCalendarWidget} />
-              </div>
-            )}
-          </div>
+          <main className={`flex-1 overflow-auto transition-all duration-300 ${showWidget ? 'mr-72' : ''}`}>
+            {children || <Outlet />}
+          </main>
+          
+          {/* Calendar Widget - fixed position like sidebar */}
+          {showWidget && (
+            <div className="fixed right-0 top-0 h-screen z-30 transition-all duration-300 ease-in-out animate-in slide-in-from-right">
+              <DailyCalendarWidget onClose={hideCalendarWidget} />
+            </div>
+          )}
         </div>
       </div>
     </TooltipProvider>

@@ -137,6 +137,7 @@ serve(async (req) => {
           if (extractedData.subtotal !== undefined) updatePayload.subtotal = extractedData.subtotal;
           if (extractedData.payment_method) updatePayload.payment_method = extractedData.payment_method;
           if (extractedData.line_items_summary) updatePayload.line_items_summary = extractedData.line_items_summary;
+          if (extractedData.description) updatePayload.description = extractedData.description;
           if (extractedData.category) updatePayload.category = extractedData.category;
           
           // Auto-associate company via customer_vat (NIF do destinatário)

@@ -622,17 +622,6 @@ const KanbanPage = () => {
                 onCheckedChange={setShowArchived}
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Archive className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="show-archived-lists" className="text-sm cursor-pointer">
-                Show Archived Lists
-              </Label>
-              <Switch
-                id="show-archived-lists"
-                checked={showArchivedLists}
-                onCheckedChange={setShowArchivedLists}
-              />
-            </div>
             
             {/* Print Button */}
             <Button
@@ -641,8 +630,7 @@ const KanbanPage = () => {
               onClick={() => window.print()}
               className="no-print"
             >
-              <Printer className="h-4 w-4 mr-2" />
-              Print
+              <Printer className="h-4 w-4" />
             </Button>
           </div>
         </div>
