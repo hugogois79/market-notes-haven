@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { KanbanCard, KanbanService, KanbanAttachment } from '@/services/kanbanService';
 import {
   Dialog,
@@ -12,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
-import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download, Plus, Tag, Sparkles } from 'lucide-react';
+import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download, Plus, Tag, Sparkles, Users, UserPlus, UserMinus } from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -28,6 +30,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { AiTaskGeneratorDialog } from './AiTaskGeneratorDialog';
 import { AiCardGeneratorDialog } from './AiCardGeneratorDialog';
 import { AiAttachmentAnalyzerDialog } from './AiAttachmentAnalyzerDialog';
@@ -73,6 +76,45 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   const [showAiDialog, setShowAiDialog] = useState(false);
   const [showAiCardDialog, setShowAiCardDialog] = useState(false);
   const [showAiAttachmentDialog, setShowAiAttachmentDialog] = useState(false);
+  const [assignedTo, setAssignedTo] = useState<string[]>((card as any).assigned_to || []);
+  const [showAssignDropdown, setShowAssignDropdown] = useState(false);
+
+  // Fetch available profiles for assignment
+  const { data: availableProfiles = [] } = useQuery({
+    queryKey: ['profiles-for-assignment'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, avatar_url')
+        .not('full_name', 'is', null)
+        .order('full_name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: isOpen,
+  });
+
+  const handleAddAssignee = (userId: string) => {
+    if (!assignedTo.includes(userId)) {
+      setAssignedTo([...assignedTo, userId]);
+    }
+    setShowAssignDropdown(false);
+  };
+
+  const handleRemoveAssignee = (userId: string) => {
+    setAssignedTo(assignedTo.filter(id => id !== userId));
+  };
+
+  const getProfileById = (userId: string) => {
+    return availableProfiles.find(p => p.id === userId);
+  };
+
+  const getInitials = (name: string | null) => {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const unassignedProfiles = availableProfiles.filter(p => !assignedTo.includes(p.id));
 
   const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
@@ -290,7 +332,8 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
           value,
           due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
           tasks: tasks as any,
-          tags: tags as any
+          tags: tags as any,
+          assigned_to: assignedTo as any
         });
         
         // Then move it to the new list
@@ -309,11 +352,12 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
         value,
         due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
         tasks: tasks as any,
-        tags: tags as any
+        tags: tags as any,
+        assigned_to: assignedTo as any
       });
     }
     onClose();
-  }, [card.id, card.list_id, title, description, priority, value, dueDate, tasks, tags, moveToListId, moveToBoardId, onMove, onUpdate, onClose]);
+  }, [card.id, card.list_id, title, description, priority, value, dueDate, tasks, tags, assignedTo, moveToListId, moveToBoardId, onMove, onUpdate, onClose]);
 
   // Keyboard shortcut: Ctrl+S / Cmd+S to save
   useEffect(() => {
@@ -455,6 +499,72 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
                 <Label htmlFor="high" className="cursor-pointer">High</Label>
               </div>
             </RadioGroup>
+          </div>
+
+          <div>
+            <Label className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Assignado
+            </Label>
+            <div className="space-y-2 mt-1">
+              {assignedTo.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {assignedTo.map((userId) => {
+                    const profile = getProfileById(userId);
+                    return (
+                      <Badge key={userId} variant="secondary" className="flex items-center gap-1.5 py-1 px-2">
+                        <Avatar className="h-5 w-5">
+                          {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile?.full_name || ''} />}
+                          <AvatarFallback className="text-[10px]">{getInitials(profile?.full_name || null)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs">{profile?.full_name || 'Desconhecido'}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAssignee(userId)}
+                          className="ml-0.5 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="relative">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => setShowAssignDropdown(!showAssignDropdown)}
+                  disabled={unassignedProfiles.length === 0}
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Adicionar Utilizador
+                </Button>
+                {showAssignDropdown && unassignedProfiles.length > 0 && (
+                  <div className="absolute z-50 mt-1 w-64 bg-popover border rounded-md shadow-md py-1 max-h-48 overflow-y-auto">
+                    {unassignedProfiles.map((profile) => (
+                      <button
+                        key={profile.id}
+                        type="button"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors text-left"
+                        onClick={() => handleAddAssignee(profile.id)}
+                      >
+                        <Avatar className="h-6 w-6">
+                          {profile.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name || ''} />}
+                          <AvatarFallback className="text-[10px]">{getInitials(profile.full_name)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{profile.full_name}</span>
+                          {profile.email && <span className="text-xs text-muted-foreground">{profile.email}</span>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <div>

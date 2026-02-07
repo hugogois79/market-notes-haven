@@ -43,6 +43,7 @@ export interface KanbanCard {
   priority?: 'low' | 'medium' | 'high';
   tasks?: Array<{id: string; text: string; completed: boolean}>;
   tags?: string[];
+  assigned_to?: string[];
   value?: number;
   archived?: boolean;
   completed?: boolean;
