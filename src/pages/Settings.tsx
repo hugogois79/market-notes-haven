@@ -1292,7 +1292,7 @@ const Settings = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>Email</Label>
+              <Label>Email {!editingUser && '*'}</Label>
               <Input
                 type="email"
                 value={userFormData.email}
@@ -1300,7 +1300,20 @@ const Settings = () => {
                 placeholder="email@exemplo.com"
               />
             </div>
-            {editingUser && (
+            {!editingUser ? (
+              <div className="space-y-2">
+                <Label>Password *</Label>
+                <Input
+                  type="password"
+                  value={userFormData.password}
+                  onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
+                  placeholder="Mínimo 6 caracteres"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Password de acesso à aplicação
+                </p>
+              </div>
+            ) : (
               <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
                 <div>
                   <Label className="text-sm">Alterar Password</Label>

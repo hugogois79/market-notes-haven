@@ -1,12 +1,20 @@
 import React, { useState } from 'react';
 import { Draggable } from '@hello-pangea/dnd';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { KanbanCard as KanbanCardType } from '@/services/kanbanService';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Calendar, AlertCircle, CheckCircle2, RotateCcw, Paperclip, ListChecks, Tag, Euro, Trash2, ShoppingCart } from 'lucide-react';
 import { format, isPast, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -31,8 +39,47 @@ const priorityColors = {
   high: 'bg-red-100 text-red-800 hover:bg-red-200'
 };
 
+const avatarColors = [
+  'bg-blue-500 text-white',
+  'bg-emerald-500 text-white',
+  'bg-violet-500 text-white',
+  'bg-amber-500 text-white',
+  'bg-rose-500 text-white',
+  'bg-cyan-500 text-white',
+];
+
+const getAvatarColor = (userId: string) => {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return avatarColors[Math.abs(hash) % avatarColors.length];
+};
+
+const getInitials = (name: string | null) => {
+  if (!name) return '?';
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+};
+
 export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, onMarkComplete, onChangePriority, onToggleProcurement, onDeleteCard }) => {
   const [isHovered, setIsHovered] = useState(false);
+
+  // Cached query for expense users (shared across all cards)
+  const { data: expenseUsers = [] } = useQuery({
+    queryKey: ['expense-users-for-assignment'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('expense_users')
+        .select('id, name, email, is_active')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 5 * 60 * 1000, // 5 min cache
+  });
+
+  const assignedUsers = ((card as any).assigned_to || []) as string[];
 
   // Check if card is marked for procurement
   const isProcurement = card.tags?.includes('_procurement') ?? false;
@@ -145,6 +192,29 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
                     </Badge>
                   ))}
                 </div>
+
+                {assignedUsers.length > 0 && (
+                  <div className="flex items-center justify-end gap-0 mt-2 -space-x-1.5">
+                    {assignedUsers.map((userId) => {
+                      const user = expenseUsers.find(u => u.id === userId);
+                      const name = user?.name || 'Desconhecido';
+                      return (
+                        <Tooltip key={userId}>
+                          <TooltipTrigger asChild>
+                            <Avatar className={`h-6 w-6 border-2 border-background cursor-default ${getAvatarColor(userId)}`}>
+                              <AvatarFallback className={`text-[9px] font-semibold ${getAvatarColor(userId)}`}>
+                                {getInitials(name)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="text-xs">
+                            {name}
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </ContextMenuTrigger>
