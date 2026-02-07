@@ -61,7 +61,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
   const [hasLoadedBoards, setHasLoadedBoards] = useState(false);
   
   // Check if user can see boards
-  const canViewBoards = isAdmin || hasAccess('projects');
+  const canViewBoards = isAdmin || hasAccess('boards');
 
   // Reset view mode and search when dialog closes
   useEffect(() => {

@@ -55,8 +55,8 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
     // Wait for permissions to fully load before fetching
     if (roleLoading || permissionsLoading) return;
     
-    // Don't fetch boards for workers or users without projects permission
-    if (isWorker || (!isAdmin && !hasAccess('projects'))) return;
+    // Don't fetch boards for workers or users without boards permission
+    if (isWorker || (!isAdmin && !hasAccess('boards'))) return;
     
     const fetchData = async () => {
       try {
@@ -273,8 +273,8 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
     item => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
   );
 
-  // Don't show boards section for workers, and only show if user has projects permission
-  const showBoardsSection = !isWorker && (isAdmin || hasAccess('projects'));
+  // Don't show boards section for workers, and only show if user has boards permission
+  const showBoardsSection = !isWorker && (isAdmin || hasAccess('boards'));
 
   return (
     <nav className="flex-1 overflow-y-auto py-4 px-3">

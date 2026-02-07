@@ -9,6 +9,7 @@ export interface FeaturePermissions {
   projects: boolean;
   notes: boolean;
   tao: boolean;
+  boards: boolean;
 }
 
 export interface ExpenseUser {

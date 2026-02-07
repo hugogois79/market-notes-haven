@@ -115,6 +115,7 @@ const Settings = () => {
       projects: false,
       notes: false,
       tao: false,
+      boards: false,
     } as FeaturePermissions,
   });
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -211,6 +212,7 @@ const Settings = () => {
     projects: false,
     notes: false,
     tao: false,
+    boards: false,
   };
 
   const handleOpenUserDialog = (user?: ExpenseUser) => {
@@ -1379,6 +1381,7 @@ const Settings = () => {
                   { key: 'finance', label: 'Finanças' },
                   { key: 'legal', label: 'Legal' },
                   { key: 'projects', label: 'Projetos' },
+                  { key: 'boards', label: 'Boards/Kanban' },
                   { key: 'notes', label: 'Notas/Dashboard' },
                   { key: 'tao', label: 'TAO Management' },
                 ].map(({ key, label }) => (
