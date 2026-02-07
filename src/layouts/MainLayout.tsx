@@ -43,7 +43,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           <Sidebar />
         </div>
         
-        <div className={`flex-1 flex flex-col w-full transition-all duration-300 ${
+        <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
           sidebarOpen ? 
             (isMobile ? 'md:ml-80' : (sidebarExpanded ? 'md:ml-80' : 'md:ml-24')) 
             : 'ml-0'
@@ -59,7 +59,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           )}
           
           <div className="flex flex-1 overflow-hidden">
-            <main className="flex-1 overflow-auto">
+            <main className="flex-1 overflow-auto min-w-0">
               {children || <Outlet />}
             </main>
             

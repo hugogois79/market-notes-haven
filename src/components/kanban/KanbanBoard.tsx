@@ -101,13 +101,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   return (
     <>
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 hover:scrollbar-thumb-slate-400 scrollbar-track-transparent pb-2" style={{ scrollbarGutter: 'stable' }}>
           <Droppable droppableId="all-lists" direction="horizontal" type="list">
             {(provided, snapshot) => (
               <div 
                 ref={provided.innerRef}
                 {...provided.droppableProps}
-                className="flex gap-4 pb-6 min-w-min"
+                className="flex gap-4 pb-4 min-w-min"
               >
                 {lists.map((list, index) => (
                   <Draggable 

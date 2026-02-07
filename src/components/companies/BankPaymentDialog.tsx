@@ -97,7 +97,7 @@ export default function BankPaymentDialog({
       if (!documentId) return null;
       const { data, error } = await supabase
         .from("workflow_files")
-        .select("invoice_number, vendor_name, invoice_date, notes")
+        .select("invoice_number, vendor_name, invoice_date, notes, line_items_summary, category")
         .eq("id", documentId)
         .single();
       if (error) throw error;
@@ -140,13 +140,59 @@ export default function BankPaymentDialog({
     enabled: open && !!vendorName && vendorName.length >= 2,
   });
 
+  // Build a meaningful payment reference from OCR data
+  const buildPaymentReference = (
+    wf: typeof workflowFile,
+    fallbackVendor?: string | null,
+    fallbackDescription?: string | null,
+  ): string => {
+    if (!wf) {
+      // No OCR data yet - use vendor name or description, NEVER filename
+      if (fallbackVendor) return `Pagamento ${fallbackVendor}`;
+      if (fallbackDescription) return fallbackDescription;
+      return "";
+    }
+
+    const parts: string[] = [];
+
+    // Priority 1: Invoice number (most meaningful for reference)
+    if (wf.invoice_number) {
+      parts.push(`Fatura ${wf.invoice_number}`);
+    }
+
+    // Priority 2: Vendor name (beneficiary)
+    if (wf.vendor_name) {
+      parts.push(wf.vendor_name);
+    } else if (fallbackVendor) {
+      parts.push(fallbackVendor);
+    }
+
+    // Priority 3: Date
+    if (wf.invoice_date) {
+      parts.push(wf.invoice_date);
+    }
+
+    if (parts.length > 0) {
+      return parts.join(" - ");
+    }
+
+    // Fallback: use notes or line_items_summary
+    if (wf.notes) return wf.notes;
+    if (wf.line_items_summary) return wf.line_items_summary;
+    if (wf.category) return `Pagamento ${wf.category}`;
+
+    // Last resort: vendor name prop
+    if (fallbackVendor) return `Pagamento ${fallbackVendor}`;
+    return "";
+  };
+
   // Pre-fill form ONLY when dialog opens
   useEffect(() => {
     if (open && !hasInitialized.current) {
       setBeneficiaryName(vendorName || "");
       setAmount(totalAmount?.toString() || "");
-      // Use description if available, otherwise fallback to fileName
-      setReference(description || fileName || "");
+      // Set initial reference from vendor or description - NEVER from fileName
+      setReference(buildPaymentReference(null, vendorName, description));
       setExecutionDate(format(new Date(), "yyyy-MM-dd"));
       setSourceAccountId("");
       setSearchTerm(vendorName || "");
@@ -162,32 +208,14 @@ export default function BankPaymentDialog({
     }
   }, [open, vendorName, totalAmount, fileName, description, reset]);
 
-  // Update reference with OCR data when available
+  // Update reference with OCR data when available (from workflow_files table)
   useEffect(() => {
     if (open && workflowFile && hasInitialized.current && !hasSetReferenceFromOcr.current) {
-      const parts: string[] = [];
-      
-      // Priority: invoice_number > vendor_name > invoice_date
-      if (workflowFile.invoice_number) {
-        parts.push(workflowFile.invoice_number);
-      }
-      
-      if (workflowFile.vendor_name) {
-        parts.push(workflowFile.vendor_name);
-      }
-      
-      if (workflowFile.invoice_date) {
-        parts.push(workflowFile.invoice_date);
-      }
-      
-      if (parts.length > 0) {
-        setReference(parts.join(" - "));
-        hasSetReferenceFromOcr.current = true;
-      } else if (workflowFile.notes) {
-        setReference(workflowFile.notes);
+      const ocrRef = buildPaymentReference(workflowFile, vendorName, description);
+      if (ocrRef) {
+        setReference(ocrRef);
         hasSetReferenceFromOcr.current = true;
       }
-      // If no OCR data, keep current reference (fileName fallback)
     }
   }, [open, workflowFile]);
 
@@ -240,13 +268,26 @@ export default function BankPaymentDialog({
       return;
     }
 
+    // Sanitize reference for Wise API (only A-Z, a-z, 0-9, -./?:(),+ and space)
+    const sanitizeForWise = (text: string): string => {
+      return text
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove accents
+        .replace(/\u20AC/g, 'EUR')  // € -> EUR
+        .replace(/\u00A3/g, 'GBP')  // £ -> GBP
+        .replace(/\u0024/g, 'USD')  // $ -> USD
+        .replace(/[^a-zA-Z0-9\s\-\.\/\?\:\(\)\,\+]/g, ' ') // Invalid chars -> space
+        .replace(/\s+/g, ' ')       // Multiple spaces -> one
+        .trim()
+        .substring(0, 35);          // Wise limit: 35 chars
+    };
+
     const response = await sendPayment({
       beneficiaryName: beneficiaryName.trim(),
       beneficiaryIban: beneficiaryIban.trim().replace(/\s/g, ""),
       amount: amountNum,
       currency: "EUR",
       sourceAccountId,
-      reference: reference.trim(),
+      reference: sanitizeForWise(reference.trim()),
       executionDate,
       documentId,
       documentUrl,

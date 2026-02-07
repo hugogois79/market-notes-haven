@@ -14,7 +14,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { X, Check, ChevronsUpDown, FileText, ExternalLink, Trash2, Upload, Wand2 } from "lucide-react";
+import { X, Check, ChevronsUpDown, FileText, ExternalLink, Trash2, Upload, Wand2, CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { format, parse } from "date-fns";
+import { pt } from "date-fns/locale";
 import {
   Popover,
   PopoverContent,
@@ -58,6 +61,7 @@ interface WorkflowExpensePanelProps {
     // OCR data from n8n workflow
     company_id?: string | null;
     category?: string | null;
+    description?: string | null;
     notes?: string | null;
     invoice_date?: string | null;
     invoice_number?: string | null;
@@ -295,7 +299,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           company_id: file.company_id || "",
           project_id: "",
           category_id: "",
-          description: "",
+          description: file.description || "",
           entity_name: file.vendor_name || "",
           total_amount: file.total_amount?.toString() || "",
           vat_rate: vatRate,
@@ -827,7 +831,34 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">Data *</Label>
-              <Input type="date" {...register("date", { required: true })} className="h-9 text-sm" />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "h-9 w-full justify-start text-left text-sm font-normal",
+                      !watch("date") && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                    {watch("date")
+                      ? format(parse(watch("date"), "yyyy-MM-dd", new Date()), "dd/MM/yyyy")
+                      : "dd/mm/aaaa"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    locale={pt}
+                    selected={watch("date") ? parse(watch("date"), "yyyy-MM-dd", new Date()) : undefined}
+                    onSelect={(day) => {
+                      if (day) setValue("date", format(day, "yyyy-MM-dd"));
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <input type="hidden" {...register("date", { required: true })} />
             </div>
             <div>
               <Label className="text-xs">Tipo *</Label>
@@ -891,7 +922,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
               {/* Description */}
               <div>
                 <Label className="text-xs">Descrição</Label>
-                <Input {...register("description")} className="h-9 text-sm" placeholder="Descrição do documento" />
+                <Textarea {...register("description")} className="text-sm min-h-[80px]" placeholder="Descrição do documento" />
               </div>
 
               {/* Notes */}
@@ -976,7 +1007,34 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Data de Fim</Label>
-                  <Input type="date" {...register("end_date")} className="h-9 text-sm" />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "h-9 w-full justify-start text-left text-sm font-normal",
+                          !watch("end_date") && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                        {watch("end_date")
+                          ? format(parse(watch("end_date"), "yyyy-MM-dd", new Date()), "dd/MM/yyyy")
+                          : "dd/mm/aaaa"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        locale={pt}
+                        selected={watch("end_date") ? parse(watch("end_date"), "yyyy-MM-dd", new Date()) : undefined}
+                        onSelect={(day) => {
+                          if (day) setValue("end_date", format(day, "yyyy-MM-dd"));
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <input type="hidden" {...register("end_date")} />
                 </div>
                 <div>
                   <Label className="text-xs">Estado</Label>
@@ -1102,7 +1160,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
               {/* Description */}
               <div>
                 <Label className="text-xs">Descrição *</Label>
-                <Input {...register("description", { required: !isLoan })} className="h-9 text-sm" placeholder="Descrição do movimento" />
+                <Textarea {...register("description", { required: !isLoan })} className="text-sm min-h-[80px]" placeholder="Descrição do movimento" />
               </div>
 
               {/* Supplier */}

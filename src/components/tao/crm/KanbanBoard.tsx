@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { TaoValidator, TaoContactLog, updateValidatorStage } from "@/services/taoValidatorService";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

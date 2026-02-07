@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Draggable } from "react-beautiful-dnd";
+import { Draggable } from "@hello-pangea/dnd";
 import { TaoValidator, TaoContactLog } from "@/services/taoValidatorService";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

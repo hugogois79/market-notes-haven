@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Droppable } from "react-beautiful-dnd";
+import { Droppable } from "@hello-pangea/dnd";
 import { TaoValidator, TaoContactLog } from "@/services/taoValidatorService";
 import { Button } from "@/components/ui/button";
 import { Plus, Users } from "lucide-react";

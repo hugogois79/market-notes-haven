@@ -1,6 +1,6 @@
 
 import React from "react";
-import { DragDropContext } from "react-beautiful-dnd";
+import { DragDropContext } from "@hello-pangea/dnd";
 import { TaoValidator, TaoContactLog } from "@/services/taoValidatorService";
 import { crmStages } from "../crmUtils";
 import { useKanbanState } from "@/hooks/useKanbanState";

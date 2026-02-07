@@ -15,6 +15,7 @@ interface BankPaymentRequest {
   executionDate: string;
   documentId: string;
   documentUrl: string;
+  recipientId?: number | null;
 }
 
 Deno.serve(async (req) => {
@@ -65,7 +66,7 @@ Deno.serve(async (req) => {
     }
 
     // Prepare payload for n8n
-    const n8nPayload = {
+    const n8nPayload: Record<string, unknown> = {
       beneficiaryName: body.beneficiaryName,
       beneficiaryIban: body.beneficiaryIban,
       amount: body.amount,
@@ -78,6 +79,11 @@ Deno.serve(async (req) => {
         iban: sourceAccount.account_number,
       },
     };
+
+    // Include recipientId if available (avoids creating duplicate recipients in Wise)
+    if (body.recipientId) {
+      n8nPayload.recipientId = body.recipientId;
+    }
 
     console.log('Sending to n8n webhook:', JSON.stringify(n8nPayload, null, 2));
 
@@ -103,12 +109,17 @@ Deno.serve(async (req) => {
     const n8nResult = await n8nResponse.json();
     console.log('n8n response:', JSON.stringify(n8nResult, null, 2));
 
+    // Pass through the full n8n response (includes payment details and funding status)
     return new Response(
       JSON.stringify({
-        success: true,
-        transferId: n8nResult.transferId || n8nResult.id,
-        status: n8nResult.status || 'pending',
+        success: n8nResult.success ?? true,
+        transferId: n8nResult.payment?.transferId || n8nResult.transferId || n8nResult.id,
+        status: n8nResult.payment?.status || n8nResult.status || 'pending',
         message: n8nResult.message || 'Pagamento enviado com sucesso',
+        payment: n8nResult.payment || null,
+        funding: n8nResult.funding || null,
+        documentId: n8nResult.documentId || body.documentId,
+        timestamp: n8nResult.timestamp || new Date().toISOString(),
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

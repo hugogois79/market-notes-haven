@@ -789,11 +789,7 @@ export default function WorkFlowTab() {
       const fileUrls = workflowFiles?.map(f => f.file_url).filter(Boolean) || [];
       if (fileIds.length === 0 && fileUrls.length === 0) return [];
 
-       const [byIdRes, byUrlRes] = await Promise.all([
-           fileIds.length
-            ? supabase
-                .from("financial_transactions")
-                .select(`
+       const txSelect = `
                   id,
                   document_file_id,
                   invoice_file_url,
@@ -815,43 +811,57 @@ export default function WorkFlowTab() {
                     id,
                     name
                   )
-                `)
-                .in("document_file_id", fileIds)
-            : Promise.resolve({ data: [], error: null } as any),
-          fileUrls.length
-            ? supabase
-                .from("financial_transactions")
-                .select(`
-                  id,
-                  document_file_id,
-                  invoice_file_url,
-                  total_amount,
-                  project_id,
-                  company_id,
-                  category,
-                  subcategory,
-                  category_id,
-                  expense_categories:category_id (
-                    id,
-                    name
-                  ),
-                  expense_projects:project_id (
-                    id,
-                    name
-                  ),
-                  companies:company_id (
-                    id,
-                    name
-                  )
-                `)
-                .in("invoice_file_url", fileUrls)
-            : Promise.resolve({ data: [], error: null } as any),
-       ]);
+                `;
 
-      if (byIdRes.error) throw byIdRes.error;
-      if (byUrlRes.error) throw byUrlRes.error;
+       // Batch helper: split array into chunks to avoid URL length limits
+       // (~8KB max URL, each UUID is ~36 chars, so ~50 IDs per batch is safe)
+       const BATCH_SIZE = 50;
+       const chunk = <T,>(arr: T[], size: number): T[][] => {
+         const chunks: T[][] = [];
+         for (let i = 0; i < arr.length; i += size) {
+           chunks.push(arr.slice(i, i + size));
+         }
+         return chunks;
+       };
 
-      const merged = [...(byIdRes.data || []), ...(byUrlRes.data || [])];
+       // Run ID-based queries in batches (412+ files = 9 batches of 50)
+       let byIdData: any[] = [];
+       if (fileIds.length) {
+         const idBatches = chunk(fileIds, BATCH_SIZE);
+         const idResults = await Promise.all(
+           idBatches.map(batch =>
+             supabase.from("financial_transactions").select(txSelect).in("document_file_id", batch)
+           )
+         );
+         for (const res of idResults) {
+           if (res.error) {
+             console.warn("ID-batch transaction lookup failed:", res.error.message);
+           } else {
+             byIdData.push(...(res.data || []));
+           }
+         }
+       }
+
+       // URL-based query as fallback (also batched) - may fail with long URLs
+       // so we catch errors gracefully instead of killing ID-based results
+       let byUrlData: any[] = [];
+       if (fileUrls.length) {
+         const urlBatches = chunk(fileUrls, BATCH_SIZE);
+         for (const batch of urlBatches) {
+           try {
+             const byUrlRes = await supabase.from("financial_transactions").select(txSelect).in("invoice_file_url", batch);
+             if (!byUrlRes.error) {
+               byUrlData.push(...(byUrlRes.data || []));
+             } else {
+               console.warn("URL-based transaction lookup failed (non-critical):", byUrlRes.error.message);
+             }
+           } catch (e) {
+             console.warn("URL-based transaction lookup failed (CORS/network):", e);
+           }
+         }
+       }
+
+      const merged = [...byIdData, ...byUrlData];
       // De-dupe by transaction ID
       const uniqueById = new Map<string, any>();
       for (const tx of merged) uniqueById.set(tx.id, tx);
@@ -2410,9 +2420,17 @@ export default function WorkFlowTab() {
     const option = options?.find(o => o.label.toLowerCase() === value?.toLowerCase());
     const displayValue = option?.label || value; // Use matched option label or raw value
     
+    // For category column, render as plain text (like Empresa/Project columns)
+    const isPlainText = column.dbField === "category";
+
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
+          {isPlainText ? (
+            <button className="text-left text-xs text-slate-600 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer whitespace-nowrap">
+              {displayValue || <span className="text-slate-400">—</span>}
+            </button>
+          ) : (
           <button className="cursor-pointer hover:opacity-80 transition-opacity">
             {displayValue ? (
               <span 
@@ -2430,6 +2448,7 @@ export default function WorkFlowTab() {
               <span className="text-slate-400 text-xs">—</span>
             )}
           </button>
+          )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="center" className="bg-white z-50">
           {options?.map((opt) => (
