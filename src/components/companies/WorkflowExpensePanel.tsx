@@ -72,6 +72,10 @@ interface WorkflowExpensePanelProps {
     subtotal?: number | null;
     currency?: string | null;
     payment_method?: string | null;
+    // Inter-company loan detection from AI
+    document_type?: string | null;
+    lending_company_id?: string | null;
+    borrowing_company_id?: string | null;
   };
   existingTransaction?: {
     id: string;
@@ -331,7 +335,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   // Pre-fill form with OCR data from n8n when there's no existing transaction
   useEffect(() => {
     if (!existingTransaction && companies && file) {
-      const hasOcrData = file.company_id || file.notes || file.invoice_date || file.total_amount || file.vendor_name;
+      const hasOcrData = file.company_id || file.notes || file.invoice_date || file.total_amount || file.vendor_name || file.document_type;
       if (hasOcrData) {
         // Build a stable reset key: only re-reset if the file changes or vendor defaults load
         const vdKey = vendorDefaults ? `vd-${vendorDefaults.bank_account_id || ''}` : 'no-vd';
@@ -339,12 +343,18 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         if (lastResetKeyRef.current === resetKey) return;
         lastResetKeyRef.current = resetKey;
 
-        // Determine type based on category (Invoice -> expense)
-        const inferredType = file.category === "Invoice" ? "expense" : "expense";
+        // Detect inter-company loan from AI analysis
+        const isInterCompanyLoan = file.document_type === "inter_company_loan" 
+          && file.lending_company_id && file.borrowing_company_id;
+        
+        // Determine type: loan if inter-company transfer detected, otherwise expense
+        const inferredType = isInterCompanyLoan ? "loan" : "expense";
         
         // Calculate VAT rate from OCR data if available
         let vatRate = "23";
-        if (file.tax_amount && file.subtotal && file.subtotal > 0) {
+        if (isInterCompanyLoan) {
+          vatRate = "0"; // Loans have no VAT
+        } else if (file.tax_amount && file.subtotal && file.subtotal > 0) {
           vatRate = Math.round((file.tax_amount / file.subtotal) * 100).toString();
         }
         
@@ -364,19 +374,20 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         reset({
           date: file.invoice_date || new Date().toISOString().split("T")[0],
           type: inferredType,
-          company_id: file.company_id || "",
+          company_id: isInterCompanyLoan ? "" : (file.company_id || ""),
           project_id: vendorDefaults?.project_id || "",
           category_id: vendorDefaults?.category_id || "",
           description: ocrDescription,
-          entity_name: file.vendor_name || "",
+          entity_name: isInterCompanyLoan ? "" : (file.vendor_name || ""),
           total_amount: file.total_amount?.toString() || "",
           vat_rate: vatRate,
-          payment_method: paymentMethod,
+          payment_method: isInterCompanyLoan ? "bank_transfer" : paymentMethod,
           bank_account_id: defaultBankAccountId,
           invoice_number: file.invoice_number || "",
           notes: ocrNotes,
-          lending_company_id: "",
-          borrowing_company_id: "",
+          // Loan fields: pre-fill from AI detection
+          lending_company_id: isInterCompanyLoan ? (file.lending_company_id || "") : "",
+          borrowing_company_id: isInterCompanyLoan ? (file.borrowing_company_id || "") : "",
           interest_rate: "0",
           monthly_payment: "",
           end_date: "",

@@ -139,6 +139,10 @@ serve(async (req) => {
           if (extractedData.line_items_summary) updatePayload.line_items_summary = extractedData.line_items_summary;
           if (extractedData.description) updatePayload.description = extractedData.description;
           if (extractedData.category) updatePayload.category = extractedData.category;
+          // Inter-company loan fields from AI detection
+          if (extractedData.document_type) updatePayload.document_type = extractedData.document_type;
+          if (extractedData.lending_company_id) updatePayload.lending_company_id = extractedData.lending_company_id;
+          if (extractedData.borrowing_company_id) updatePayload.borrowing_company_id = extractedData.borrowing_company_id;
           
           // Auto-associate company via customer_vat (NIF do destinatário)
           if (extractedData.customer_vat) {

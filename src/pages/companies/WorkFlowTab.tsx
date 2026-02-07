@@ -83,6 +83,11 @@ interface WorkflowFile {
   subtotal?: number | null;
   currency?: string | null;
   payment_method?: string | null;
+  // Inter-company loan detection from AI
+  document_type?: string | null;
+  lending_company_id?: string | null;
+  borrowing_company_id?: string | null;
+  description?: string | null;
 }
 
 interface UploadProgress {
