@@ -790,8 +790,8 @@ export default function WorkFlowTab() {
       if (fileIds.length === 0 && fileUrls.length === 0) return [];
 
        const [byIdRes, byUrlRes] = await Promise.all([
-         fileIds.length
-           ? supabase
+           fileIds.length
+            ? supabase
                 .from("financial_transactions")
                 .select(`
                   id,
@@ -802,6 +802,11 @@ export default function WorkFlowTab() {
                   company_id,
                   category,
                   subcategory,
+                  category_id,
+                  expense_categories:category_id (
+                    id,
+                    name
+                  ),
                   expense_projects:project_id (
                     id,
                     name
@@ -811,10 +816,10 @@ export default function WorkFlowTab() {
                     name
                   )
                 `)
-               .in("document_file_id", fileIds)
-           : Promise.resolve({ data: [], error: null } as any),
-         fileUrls.length
-           ? supabase
+                .in("document_file_id", fileIds)
+            : Promise.resolve({ data: [], error: null } as any),
+          fileUrls.length
+            ? supabase
                 .from("financial_transactions")
                 .select(`
                   id,
@@ -825,6 +830,11 @@ export default function WorkFlowTab() {
                   company_id,
                   category,
                   subcategory,
+                  category_id,
+                  expense_categories:category_id (
+                    id,
+                    name
+                  ),
                   expense_projects:project_id (
                     id,
                     name
@@ -834,8 +844,8 @@ export default function WorkFlowTab() {
                     name
                   )
                 `)
-               .in("invoice_file_url", fileUrls)
-           : Promise.resolve({ data: [], error: null } as any),
+                .in("invoice_file_url", fileUrls)
+            : Promise.resolve({ data: [], error: null } as any),
        ]);
 
       if (byIdRes.error) throw byIdRes.error;
@@ -862,37 +872,43 @@ export default function WorkFlowTab() {
     value: number;
     category: string | null;
     subcategory: string | null;
+    categoryId: string | null;
+    categoryName: string | null;
   };
 
   // Lookup maps (ID preferred, URL fallback)
   const transactionsByFileId = linkedTransactions?.reduce((acc, tx) => {
     if (tx.document_file_id) {
-        acc[tx.document_file_id] = {
-          transactionId: tx.id,
-          projectId: tx.project_id,
-          projectName: (tx.expense_projects as any)?.name || null,
-          companyId: tx.company_id,
-          companyName: (tx.companies as any)?.name || null,
-          value: tx.total_amount,
-          category: tx.category || null,
-          subcategory: (tx as any).subcategory || null,
-        } satisfies LinkedTx;
+      acc[tx.document_file_id] = {
+        transactionId: tx.id,
+        projectId: tx.project_id,
+        projectName: (tx.expense_projects as any)?.name || null,
+        companyId: tx.company_id,
+        companyName: (tx.companies as any)?.name || null,
+        value: tx.total_amount,
+        category: tx.category || null,
+        subcategory: (tx as any).subcategory || null,
+        categoryId: (tx as any).category_id || null,
+        categoryName: (tx.expense_categories as any)?.name || null,
+      } satisfies LinkedTx;
     }
     return acc;
   }, {} as Record<string, LinkedTx>);
 
   const transactionsByFileUrl = linkedTransactions?.reduce((acc, tx) => {
     if (tx.invoice_file_url) {
-        acc[tx.invoice_file_url] = {
-          transactionId: tx.id,
-          projectId: tx.project_id,
-          projectName: (tx.expense_projects as any)?.name || null,
-          companyId: tx.company_id,
-          companyName: (tx.companies as any)?.name || null,
-          value: tx.total_amount,
-          category: tx.category || null,
-          subcategory: (tx as any).subcategory || null,
-        } satisfies LinkedTx;
+      acc[tx.invoice_file_url] = {
+        transactionId: tx.id,
+        projectId: tx.project_id,
+        projectName: (tx.expense_projects as any)?.name || null,
+        companyId: tx.company_id,
+        companyName: (tx.companies as any)?.name || null,
+        value: tx.total_amount,
+        category: tx.category || null,
+        subcategory: (tx as any).subcategory || null,
+        categoryId: (tx as any).category_id || null,
+        categoryName: (tx.expense_categories as any)?.name || null,
+      } satisfies LinkedTx;
     }
     return acc;
   }, {} as Record<string, LinkedTx>);
@@ -2376,11 +2392,11 @@ export default function WorkFlowTab() {
 
   const getColumnValue = (file: WorkflowFile, column: ColumnConfig) => {
     if (column.isBuiltIn && column.dbField) {
-      // For "category", show the human subcategory (e.g. "Manutenção") when present,
-      // otherwise fallback to enum category (other/services/...) and finally workflow_files.category.
+      // For "category", prefer the expense category name (e.g. "Manutenção") when present,
+      // then fallback to transaction subcategory, then enum category, and finally workflow_files.category.
       if (column.dbField === "category") {
         const tx = getTxForFile(file);
-        return tx?.subcategory || tx?.category || (file as any)[column.dbField] || null;
+        return tx?.categoryName || tx?.subcategory || tx?.category || (file as any)[column.dbField] || null;
       }
       return (file as any)[column.dbField] || null;
     }
