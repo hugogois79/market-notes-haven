@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format, addDays, subDays, isToday } from "date-fns";
 import { pt } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -26,9 +26,24 @@ const PERIOD_TIME_MAP: Record<string, { start: number; end: number }> = {
   afternoon: { start: 14, end: 18 },
 };
 
-function getEventPosition(period: string | null) {
-  const slot = PERIOD_TIME_MAP[period || "morning"] || PERIOD_TIME_MAP.morning;
-  const startOffset = (slot.start - 6) * 48; // 48px per hour
+function getEventPosition(event: DailyCalendarEvent) {
+  // If we have real start/end times from Google Calendar, use them
+  if (event.start_time && event.end_time) {
+    const startDate = new Date(event.start_time);
+    const endDate = new Date(event.end_time);
+    const startHour = startDate.getHours() + startDate.getMinutes() / 60;
+    const endHour = endDate.getHours() + endDate.getMinutes() / 60;
+    const startOffset = (startHour - 6) * 48;
+    const height = (endHour - startHour) * 48;
+    return { top: Math.max(startOffset, 0), height: Math.max(height, 24) };
+  }
+  // If all-day event, span the full day
+  if (event.all_day) {
+    return { top: (8 - 6) * 48, height: 10 * 48 }; // 8am to 6pm
+  }
+  // Fallback to period-based positioning
+  const slot = PERIOD_TIME_MAP[event.period || "morning"] || PERIOD_TIME_MAP.morning;
+  const startOffset = (slot.start - 6) * 48;
   const height = (slot.end - slot.start) * 48;
   return { top: startOffset, height };
 }
@@ -40,8 +55,20 @@ function getCategoryColor(category: string | null, categories: CalendarCategory[
   return found?.color || "#3b82f6";
 }
 
-function formatPeriodTime(period: string | null) {
-  const slot = PERIOD_TIME_MAP[period || "morning"] || PERIOD_TIME_MAP.morning;
+function formatEventTime(event: DailyCalendarEvent) {
+  // If we have real times from Google, show them
+  if (event.start_time && event.end_time) {
+    const start = new Date(event.start_time);
+    const end = new Date(event.end_time);
+    const fmtTime = (d: Date) =>
+      `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+    return `${fmtTime(start)} - ${fmtTime(end)}`;
+  }
+  if (event.all_day) {
+    return "Dia inteiro";
+  }
+  // Fallback to period
+  const slot = PERIOD_TIME_MAP[event.period || "morning"] || PERIOD_TIME_MAP.morning;
   return `${slot.start}:00 - ${slot.end}:00`;
 }
 
@@ -131,9 +158,18 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
           {/* Events */}
           <div className="absolute left-10 right-2 top-0 bottom-0">
             {events.map((event, index) => {
-              const { top, height } = getEventPosition(event.period);
+              const { top, height } = getEventPosition(event);
               const color = getCategoryColor(event.category, categories);
-              const eventsInSamePeriod = events.filter((e) => e.period === event.period);
+              const isFromGoogle = event.source === "google";
+              // Group overlapping events by similar position
+              const eventsInSamePeriod = events.filter((e) => {
+                if (e.start_time && event.start_time) {
+                  // Both have real times - check if they overlap
+                  return !(new Date(e.end_time!) <= new Date(event.start_time) || 
+                           new Date(e.start_time) >= new Date(event.end_time!));
+                }
+                return e.period === event.period;
+              });
               const eventIndex = eventsInSamePeriod.indexOf(event);
               const eventWidth = eventsInSamePeriod.length > 1 ? 100 / eventsInSamePeriod.length : 100;
               const eventLeft = eventIndex * eventWidth;
@@ -151,11 +187,16 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
                         backgroundColor: color,
                       }}
                     >
-                      <p className="text-[11px] font-medium text-white truncate">
-                        {event.title || "Sem título"}
-                      </p>
+                      <div className="flex items-center gap-1">
+                        {isFromGoogle && (
+                          <Globe className="h-3 w-3 text-white/90 shrink-0" />
+                        )}
+                        <p className="text-[11px] font-medium text-white truncate">
+                          {event.title || "Sem título"}
+                        </p>
+                      </div>
                       <p className="text-[10px] text-white/80">
-                        {formatPeriodTime(event.period)}
+                        {formatEventTime(event)}
                       </p>
                     </div>
                   </HoverCardTrigger>
@@ -167,9 +208,14 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
                           style={{ backgroundColor: color }}
                         />
                         <div>
-                          <p className="font-medium">{event.title || "Sem título"}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-medium">{event.title || "Sem título"}</p>
+                            {isFromGoogle && (
+                              <Globe className="h-3.5 w-3.5 text-muted-foreground" title="Google Calendar" />
+                            )}
+                          </div>
                           <p className="text-sm text-muted-foreground">
-                            {formatPeriodTime(event.period)}
+                            {formatEventTime(event)}
                           </p>
                         </div>
                       </div>
@@ -181,6 +227,11 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
                       {event.category && (
                         <p className="text-xs text-muted-foreground pl-5">
                           Categoria: {event.category}
+                        </p>
+                      )}
+                      {isFromGoogle && (
+                        <p className="text-[10px] text-blue-500 pl-5">
+                          Sincronizado do Google Calendar
                         </p>
                       )}
                     </div>

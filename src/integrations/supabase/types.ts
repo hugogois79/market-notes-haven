@@ -189,6 +189,12 @@ export type Database = {
           title: string | null
           updated_at: string | null
           user_id: string | null
+          google_event_id: string | null
+          source: string
+          start_time: string | null
+          end_time: string | null
+          all_day: boolean
+          synced_at: string | null
         }
         Insert: {
           category?: string | null
@@ -200,6 +206,12 @@ export type Database = {
           title?: string | null
           updated_at?: string | null
           user_id?: string | null
+          google_event_id?: string | null
+          source?: string
+          start_time?: string | null
+          end_time?: string | null
+          all_day?: boolean
+          synced_at?: string | null
         }
         Update: {
           category?: string | null
@@ -211,6 +223,12 @@ export type Database = {
           title?: string | null
           updated_at?: string | null
           user_id?: string | null
+          google_event_id?: string | null
+          source?: string
+          start_time?: string | null
+          end_time?: string | null
+          all_day?: boolean
+          synced_at?: string | null
         }
         Relationships: []
       }

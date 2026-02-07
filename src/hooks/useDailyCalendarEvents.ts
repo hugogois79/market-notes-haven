@@ -9,6 +9,11 @@ export interface DailyCalendarEvent {
   category: string | null;
   period: string | null;
   notes: string | null;
+  source: string;
+  google_event_id: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  all_day: boolean;
 }
 
 export function useDailyCalendarEvents(date: string, enabled: boolean = true) {
@@ -21,7 +26,7 @@ export function useDailyCalendarEvents(date: string, enabled: boolean = true) {
 
       const { data, error } = await supabase
         .from("calendar_events")
-        .select("id, date, title, category, period, notes")
+        .select("id, date, title, category, period, notes, source, google_event_id, start_time, end_time, all_day")
         .eq("date", date)
         .eq("user_id", user.id);
 
