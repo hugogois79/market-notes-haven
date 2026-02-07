@@ -48,12 +48,31 @@ const avatarColors = [
   'bg-cyan-500 text-white',
 ];
 
-const getAvatarColor = (userId: string) => {
+const externalAvatarStyles = [
+  { bg: 'bg-orange-100 dark:bg-orange-900/40', text: 'text-orange-700 dark:text-orange-300', border: 'border-orange-400' },
+  { bg: 'bg-teal-100 dark:bg-teal-900/40', text: 'text-teal-700 dark:text-teal-300', border: 'border-teal-400' },
+  { bg: 'bg-purple-100 dark:bg-purple-900/40', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-400' },
+  { bg: 'bg-pink-100 dark:bg-pink-900/40', text: 'text-pink-700 dark:text-pink-300', border: 'border-pink-400' },
+  { bg: 'bg-sky-100 dark:bg-sky-900/40', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-400' },
+  { bg: 'bg-lime-100 dark:bg-lime-900/40', text: 'text-lime-700 dark:text-lime-300', border: 'border-lime-400' },
+  { bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-700 dark:text-red-300', border: 'border-red-400' },
+  { bg: 'bg-indigo-100 dark:bg-indigo-900/40', text: 'text-indigo-700 dark:text-indigo-300', border: 'border-indigo-400' },
+];
+
+const stringHash = (str: string) => {
   let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return avatarColors[Math.abs(hash) % avatarColors.length];
+  return Math.abs(hash);
+};
+
+const getAvatarColor = (userId: string) => {
+  return avatarColors[stringHash(userId) % avatarColors.length];
+};
+
+const getExternalStyle = (name: string) => {
+  return externalAvatarStyles[stringHash(name) % externalAvatarStyles.length];
 };
 
 const getInitials = (name: string | null) => {
@@ -214,11 +233,13 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
                         </Tooltip>
                       );
                     })}
-                    {assignedExternal.map((name) => (
+                    {assignedExternal.map((name) => {
+                      const extStyle = getExternalStyle(name);
+                      return (
                       <Tooltip key={`ext-${name}`}>
                         <TooltipTrigger asChild>
-                          <Avatar className="h-6 w-6 border-2 border-amber-500 cursor-default bg-amber-100 dark:bg-amber-900/40">
-                            <AvatarFallback className="text-[9px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40">
+                          <Avatar className={`h-6 w-6 border-2 border-dashed cursor-default ${extStyle.border} ${extStyle.bg}`}>
+                            <AvatarFallback className={`text-[9px] font-semibold ${extStyle.text} ${extStyle.bg}`}>
                               {getInitials(name)}
                             </AvatarFallback>
                           </Avatar>
@@ -230,7 +251,8 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
                           </span>
                         </TooltipContent>
                       </Tooltip>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>

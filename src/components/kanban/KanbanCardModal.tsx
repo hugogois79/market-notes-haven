@@ -35,6 +35,25 @@ import { AiTaskGeneratorDialog } from './AiTaskGeneratorDialog';
 import { AiCardGeneratorDialog } from './AiCardGeneratorDialog';
 import { AiAttachmentAnalyzerDialog } from './AiAttachmentAnalyzerDialog';
 
+const externalBadgeColors = [
+  'border-orange-400 text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20',
+  'border-teal-400 text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/20',
+  'border-purple-400 text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20',
+  'border-pink-400 text-pink-700 dark:text-pink-300 bg-pink-50 dark:bg-pink-900/20',
+  'border-sky-400 text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-900/20',
+  'border-lime-400 text-lime-700 dark:text-lime-300 bg-lime-50 dark:bg-lime-900/20',
+  'border-red-400 text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20',
+  'border-indigo-400 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20',
+];
+
+const getExternalBadgeColor = (name: string) => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return externalBadgeColors[Math.abs(hash) % externalBadgeColors.length];
+};
+
 interface KanbanCardModalProps {
   card: KanbanCard;
   boardId: string;
@@ -604,7 +623,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
               {assignedExternal.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {assignedExternal.map((name) => (
-                    <Badge key={name} variant="outline" className="flex items-center gap-1.5 py-1 px-2 border-amber-500 text-amber-700 dark:text-amber-400">
+                    <Badge key={name} variant="outline" className={`flex items-center gap-1.5 py-1 px-2 ${getExternalBadgeColor(name)}`}>
                       <ExternalLink className="h-3.5 w-3.5" />
                       <span className="text-xs">{name}</span>
                       <button
