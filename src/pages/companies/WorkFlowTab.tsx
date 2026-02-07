@@ -70,6 +70,9 @@ interface WorkflowFile {
   category?: string | null;
   company_id?: string | null;
   companies?: { id: string; name: string } | null;
+  // Project link
+  project_id?: string | null;
+  expense_projects?: { id: string; name: string } | null;
   // OCR data from n8n
   invoice_date?: string | null;
   invoice_number?: string | null;
@@ -735,6 +738,10 @@ export default function WorkFlowTab() {
         .select(`
           *,
           companies:company_id (
+            id,
+            name
+          ),
+          expense_projects:project_id (
             id,
             name
           )
@@ -3319,118 +3326,157 @@ export default function WorkFlowTab() {
                       )}
                       {isColumnVisible("project") && (
                         <td className="px-3 py-1.5">
-                          {getTxForFile(file) ? (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button className="text-left text-xs text-slate-600 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer whitespace-nowrap">
-                                  {getTxForFile(file)?.projectName || <span className="text-slate-400">—</span>}
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-white z-50">
-                                <DropdownMenuItem
-                                  className="flex justify-center"
-                                  onClick={() =>
-                                    updateTransactionMutation.mutate({
-                                      transactionId: getTxForFile(file)!.transactionId,
-                                      updates: { project_id: null },
-                                    })
-                                  }
-                                >
-                                  <span className="text-slate-400">— None —</span>
-                                </DropdownMenuItem>
-                                {allProjects?.map(project => (
-                                  <DropdownMenuItem
-                                    key={project.id}
-                                    className="flex justify-center"
-                                    onClick={() =>
-                                      updateTransactionMutation.mutate({
-                                        transactionId: getTxForFile(file)!.transactionId,
-                                        updates: { project_id: project.id },
-                                      })
-                                    }
-                                  >
-                                    {project.name}
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          ) : (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button className="text-left text-xs text-slate-400 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer w-full truncate max-w-[120px]">
-                                  —
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-white z-50">
-                                {allProjects?.map((project) => (
-                                  <DropdownMenuItem 
-                                    key={project.id}
-                                    className="flex justify-center"
-                                    onClick={() => createTransactionForFileMutation.mutate({
-                                      fileUrl: file.file_url,
-                                      projectId: project.id
-                                    })}
-                                  >
-                                    {project.name}
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
+                          {(() => {
+                            const tx = getTxForFile(file);
+                            const projectName = tx?.projectName || file.expense_projects?.name;
+                            
+                            if (tx) {
+                              return (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button className="text-left text-xs text-slate-600 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer whitespace-nowrap">
+                                      {projectName || <span className="text-slate-400">—</span>}
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-white z-50">
+                                    <DropdownMenuItem
+                                      className="flex justify-center"
+                                      onClick={() =>
+                                        updateTransactionMutation.mutate({
+                                          transactionId: tx.transactionId,
+                                          updates: { project_id: null },
+                                        })
+                                      }
+                                    >
+                                      <span className="text-slate-400">— None —</span>
+                                    </DropdownMenuItem>
+                                    {allProjects?.map(project => (
+                                      <DropdownMenuItem
+                                        key={project.id}
+                                        className="flex justify-center"
+                                        onClick={() =>
+                                          updateTransactionMutation.mutate({
+                                            transactionId: tx.transactionId,
+                                            updates: { project_id: project.id },
+                                          })
+                                        }
+                                      >
+                                        {project.name}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              );
+                            }
+                            
+                            // No transaction but has project from workflow_files
+                            if (projectName) {
+                              return (
+                                <span className="text-xs text-slate-600 px-1 py-0.5">
+                                  {projectName}
+                                </span>
+                              );
+                            }
+                            
+                            // No project at all - show dropdown to create transaction
+                            return (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button className="text-left text-xs text-slate-400 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer w-full truncate max-w-[120px]">
+                                    —
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-white z-50">
+                                  {allProjects?.map((project) => (
+                                    <DropdownMenuItem 
+                                      key={project.id}
+                                      className="flex justify-center"
+                                      onClick={() => createTransactionForFileMutation.mutate({
+                                        fileUrl: file.file_url,
+                                        projectId: project.id
+                                      })}
+                                    >
+                                      {project.name}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            );
+                          })()}
                         </td>
                       )}
                       {isColumnVisible("value") && (
                         <td className="px-3 py-1.5 text-right">
-                          {getTxForFile(file) ? (
-                            editingCell?.fileUrl === file.id && editingCell?.field === 'value' ? (
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                onBlur={() => {
-                                  const numValue = parseFloat(editValue);
-                                  if (!isNaN(numValue)) {
-                                    updateTransactionMutation.mutate({
-                                      transactionId: getTxForFile(file)!.transactionId,
-                                      updates: { total_amount: numValue },
-                                    });
-                                  } else {
-                                    setEditingCell(null);
-                                  }
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    const numValue = parseFloat(editValue);
-                                    if (!isNaN(numValue)) {
-                                      updateTransactionMutation.mutate({
-                                        transactionId: getTxForFile(file)!.transactionId,
-                                        updates: { total_amount: numValue },
-                                      });
-                                    } else {
-                                      setEditingCell(null);
-                                    }
-                                  } else if (e.key === 'Escape') {
-                                    setEditingCell(null);
-                                  }
-                                }}
-                                className="h-6 w-20 text-xs text-right"
-                                autoFocus
-                              />
-                            ) : (
-                              <button
-                                className="text-xs font-medium hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer"
-                                onClick={() => {
-                                  setEditingCell({ fileUrl: file.id, field: 'value' });
-                                  setEditValue(getTxForFile(file)!.value?.toString() || "0");
-                                }}
-                              >
-                                {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(getTxForFile(file)!.value)}
-                              </button>
-                            )
-                          ) : (
-                            <span className="text-slate-400 text-xs">—</span>
-                          )}
+                          {(() => {
+                            const tx = getTxForFile(file);
+                            const value = tx?.value ?? file.total_amount;
+                            
+                            if (tx) {
+                              // Has transaction - editable
+                              if (editingCell?.fileUrl === file.id && editingCell?.field === 'value') {
+                                return (
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    onBlur={() => {
+                                      const numValue = parseFloat(editValue);
+                                      if (!isNaN(numValue)) {
+                                        updateTransactionMutation.mutate({
+                                          transactionId: tx.transactionId,
+                                          updates: { total_amount: numValue },
+                                        });
+                                      } else {
+                                        setEditingCell(null);
+                                      }
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        const numValue = parseFloat(editValue);
+                                        if (!isNaN(numValue)) {
+                                          updateTransactionMutation.mutate({
+                                            transactionId: tx.transactionId,
+                                            updates: { total_amount: numValue },
+                                          });
+                                        } else {
+                                          setEditingCell(null);
+                                        }
+                                      } else if (e.key === 'Escape') {
+                                        setEditingCell(null);
+                                      }
+                                    }}
+                                    className="h-6 w-20 text-xs text-right"
+                                    autoFocus
+                                  />
+                                );
+                              }
+                              
+                              return (
+                                <button
+                                  className="text-xs font-medium hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer"
+                                  onClick={() => {
+                                    setEditingCell({ fileUrl: file.id, field: 'value' });
+                                    setEditValue(tx.value?.toString() || "0");
+                                  }}
+                                >
+                                  {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(tx.value)}
+                                </button>
+                              );
+                            }
+                            
+                            // No transaction but has value from workflow_files (OCR)
+                            if (value !== null && value !== undefined) {
+                              return (
+                                <span className="text-xs text-slate-600">
+                                  {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(value)}
+                                </span>
+                              );
+                            }
+                            
+                            // No value at all
+                            return <span className="text-slate-400 text-xs">—</span>;
+                          })()}
                         </td>
                       )}
                       {/* Custom columns */}

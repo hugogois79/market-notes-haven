@@ -6793,6 +6793,8 @@ export type Database = {
           customer_vat: string | null
           document_number: string | null
           document_type: string | null
+          duplicate_matches: Json | null
+          duplicate_status: string | null
           file_name: string
           file_size: number | null
           file_url: string
@@ -6824,6 +6826,8 @@ export type Database = {
           customer_vat?: string | null
           document_number?: string | null
           document_type?: string | null
+          duplicate_matches?: Json | null
+          duplicate_status?: string | null
           file_name: string
           file_size?: number | null
           file_url: string
@@ -6855,6 +6859,8 @@ export type Database = {
           customer_vat?: string | null
           document_number?: string | null
           document_type?: string | null
+          duplicate_matches?: Json | null
+          duplicate_status?: string | null
           file_name?: string
           file_size?: number | null
           file_url?: string
@@ -7104,6 +7110,17 @@ export type Database = {
       can_view_board: {
         Args: { _board_user_id: string; _is_shared: boolean; _user_id: string }
         Returns: boolean
+      }
+      check_duplicate_payment: {
+        Args: {
+          p_company_id?: string
+          p_exclude_workflow_id?: string
+          p_invoice_date?: string
+          p_invoice_number?: string
+          p_total_amount?: number
+          p_vendor_name?: string
+        }
+        Returns: Json
       }
       check_vacation_conflicts: {
         Args: {
