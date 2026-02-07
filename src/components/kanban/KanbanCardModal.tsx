@@ -98,6 +98,45 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     enabled: isOpen,
   });
 
+  // Fetch all external names already used in this board's cards for autocomplete
+  const { data: knownExternals = [] } = useQuery({
+    queryKey: ['known-externals', boardId],
+    queryFn: async () => {
+      // Get list IDs for this board first
+      const { data: lists, error: listsError } = await supabase
+        .from('kanban_lists')
+        .select('id')
+        .eq('board_id', boardId);
+      if (listsError) throw listsError;
+      const listIds = (lists || []).map((l: any) => l.id);
+      if (listIds.length === 0) return [];
+      // Get cards from those lists that have external assignees
+      const { data, error } = await supabase
+        .from('kanban_cards')
+        .select('assigned_external')
+        .in('list_id', listIds)
+        .not('assigned_external', 'eq', '{}');
+      if (error) throw error;
+      // Collect unique names
+      const names = new Set<string>();
+      (data || []).forEach((c: any) => {
+        if (Array.isArray(c.assigned_external)) {
+          c.assigned_external.forEach((n: string) => names.add(n));
+        }
+      });
+      return Array.from(names).sort();
+    },
+    enabled: isOpen,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // Filter suggestions based on input
+  const externalSuggestions = externalName.trim().length > 0
+    ? knownExternals.filter(
+        (n) => n.toLowerCase().includes(externalName.toLowerCase()) && !assignedExternal.includes(n)
+      )
+    : [];
+
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -674,6 +713,27 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
                             <Plus className="h-3.5 w-3.5" />
                           </Button>
                         </div>
+                        {/* Sugestões de nomes já usados */}
+                        {externalSuggestions.length > 0 && (
+                          <div className="border rounded-md max-h-32 overflow-y-auto">
+                            {externalSuggestions.map((name) => (
+                              <button
+                                key={name}
+                                type="button"
+                                className="w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent transition-colors text-left"
+                                onClick={() => {
+                                  if (!assignedExternal.includes(name)) {
+                                    setAssignedExternal([...assignedExternal, name]);
+                                  }
+                                  setExternalName('');
+                                }}
+                              >
+                                <ExternalLink className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                                <span>{name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
