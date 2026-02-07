@@ -1,98 +1,104 @@
 
-## Plano: Implementar Dropdown Pesquisável para "Conta de Origem"
 
-### Contexto Atual
-O campo "Conta de Origem" no diálogo `BankPaymentDialog` utiliza um componente `Select` simples (Radix UI) que lista todas as contas bancárias. A imagem fornecida mostra que:
-- A lista pode ter muitas contas (6+ contas visíveis)
-- Cada item mostra: `[Empresa] - [Nome da Conta]` e o IBAN
-- Não existe filtro/pesquisa para encontrar contas rapidamente
+## Plano: Corrigir Visualização de Category, Project e Value na Lista WorkFlow
 
-### Solução Proposta
-Substituir o componente `Select` padrão pelo componente `SearchableSelect` já existente no projeto (`src/components/ui/searchable-select.tsx`). Este componente oferece:
-- Dropdown com campo de pesquisa integrado (`CommandInput`)
-- Filtragem em tempo real enquanto o utilizador escreve
-- Interface mais compacta e eficiente para listas longas
-- Identidade visual consistente com o resto do projeto
+### Problema Identificado
 
-### Arquitetura da Solução
+Após análise detalhada do código e dados:
 
-#### 1. Transformar Dados das Contas
-O `SearchableSelect` espera um array de `SearchableSelectOption` com:
+1. **Os dados estão guardados corretamente** - Confirmado via SQL que `workflow_files` tem `project_id`, `company_id`, e `total_amount`
+2. **Os dados de `financial_transactions` também existem** - A transação tem `project_id` e `total_amount` corretos
+3. **O problema está na forma como a UI os mostra**:
+   - A coluna "Project" e "Value" usam `getTxForFile()` que depende de `linkedTransactions`
+   - A interface `WorkflowFile` não inclui `project_id` 
+   - A query principal não faz join com `expense_projects`
+
+### Causa Raiz
+
+A UI tem duas fontes de dados:
+- `workflow_files` (dados OCR/draft)
+- `financial_transactions` (dados finalizados via `getTxForFile()`)
+
+Quando o utilizador grava via "Editar Movimento", os dados vão para **ambas** as tabelas, mas a lista só mostra dados de `financial_transactions` para Project/Value. Se a query `linkedTransactions` não estiver sincronizada (cache de 2 minutos), a UI mostra "—".
+
+### Solucao
+
+**1. Atualizar a interface `WorkflowFile`** para incluir os campos em falta:
+
 ```typescript
-interface SearchableSelectOption {
-  value: string;      // ID da conta
-  label: string;      // Texto a exibir e pesquisar
+interface WorkflowFile {
+  // ... campos existentes ...
+  project_id?: string | null;          // Adicionar
+  expense_projects?: { id: string; name: string } | null;  // Adicionar para join
+  category_id?: string | null;         // Adicionar (futuro)
 }
 ```
 
-**Estratégia de Label**:
-- Formato: `[Empresa] - [Conta] (IBAN)`
-- Exemplo: `Splendidoption Lda - BCP (PT50 0033 0000 4554 6327 2060)`
-- Permite pesquisar por: nome da empresa, nome da conta, ou IBAN
+**2. Atualizar a query principal** de `workflow_files` para incluir join com `expense_projects`:
 
-**Implementação**:
 ```typescript
-const bankAccountOptions = bankAccounts?.map((account) => ({
-  value: account.id,
-  label: `${account.company?.name} - ${account.account_name} (${formatIban(account.account_number)})`,
-})) || [];
+.select(`
+  *,
+  companies:company_id (id, name),
+  expense_projects:project_id (id, name)
+`)
 ```
 
-#### 2. Atualizar Imports
-Remover imports `Select`, `SelectContent`, `SelectItem`, `SelectTrigger`, `SelectValue` (não serão mais necessários).
+**3. Modificar as colunas "Project" e "Value"** para usar dados directos do `workflow_files` como fallback:
 
-Adicionar import do `SearchableSelect`:
+Na coluna "Project" (linha 3320-3380):
 ```typescript
-import { SearchableSelect } from "@/components/ui/searchable-select";
-```
-
-#### 3. Substituir Componente (Linhas 437-455)
-Substituir o bloco `<Select>...</Select>` pelo `<SearchableSelect>`:
-```typescript
-<SearchableSelect
-  value={sourceAccountId}
-  onValueChange={setSourceAccountId}
-  options={bankAccountOptions}
-  placeholder="Selecione uma conta"
-  searchPlaceholder="Pesquisar por empresa, conta ou IBAN..."
-  emptyMessage="Nenhuma conta encontrada"
-  disabled={isLoadingAccounts}
-/>
-```
-
-#### 4. Manter Informação Adicional (Linhas 456-460)
-Preservar a exibição do IBAN da conta selecionada abaixo do dropdown:
-```typescript
-{selectedAccount && (
-  <p className="text-xs text-muted-foreground">
-    IBAN: {formatIban(selectedAccount.account_number)}
-  </p>
+{isColumnVisible("project") && (
+  <td className="px-3 py-1.5">
+    {(() => {
+      const tx = getTxForFile(file);
+      const projectName = tx?.projectName || file.expense_projects?.name;
+      // ... resto da lógica usando projectName
+    })()}
+  </td>
 )}
 ```
 
+Na coluna "Value" (linha 3382-3434):
+```typescript
+{isColumnVisible("value") && (
+  <td className="px-3 py-1.5 text-right">
+    {(() => {
+      const tx = getTxForFile(file);
+      const value = tx?.value ?? file.total_amount;
+      // ... mostrar value se existir
+    })()}
+  </td>
+)}
+```
+
+**4. Invalidar queries após save** - Já está implementado (linha 723-725), mas adicionar `refetchInterval: false` para garantir refresh imediato.
+
 ### Ficheiros a Modificar
 
-| Ficheiro | Secção | Alteração |
-|----------|--------|-----------|
-| `src/components/companies/BankPaymentDialog.tsx` | **Imports (linhas 15-21)** | Remover imports de `Select` e relacionados |
-| `src/components/companies/BankPaymentDialog.tsx` | **Imports (linha 38)** | Adicionar `import { SearchableSelect }` |
-| `src/components/companies/BankPaymentDialog.tsx` | **Dentro do render, acima da secção de formulário** | Adicionar lógica para construir `bankAccountOptions` |
-| `src/components/companies/BankPaymentDialog.tsx` | **Linhas 437-455** | Substituir bloco `<Select>` por `<SearchableSelect>` |
+| Ficheiro | Alteracao |
+|----------|-----------|
+| `src/pages/companies/WorkFlowTab.tsx` | Interface `WorkflowFile`, query principal, colunas Project/Value |
 
-### Benefícios
-1. **Experiência de Utilizador**: Pesquisa rápida mesmo com muitas contas
-2. **Consistência**: Reutiliza padrão já implementado no projeto
-3. **Manutenibilidade**: Menos código e lógica centralizada
-4. **Responsividade**: O `SearchableSelect` funciona bem em desktop e mobile
+### Lógica de Prioridade de Dados
+
+```text
+Para Empresa: file.companies?.name > getTxForFile()?.companyName (já implementado)
+Para Project: getTxForFile()?.projectName > file.expense_projects?.name (adicionar fallback)
+Para Value:   getTxForFile()?.value > file.total_amount (adicionar fallback)
+```
 
 ### Sequência de Implementação
-1. Criar lógica para transformar `bankAccounts` em `bankAccountOptions`
-2. Adicionar import do `SearchableSelect`
-3. Remover imports do `Select` (só se não forem usados em outros componentes)
-4. Substituir o JSX do `<Select>` pelo `<SearchableSelect>`
-5. Testar a filtragem e seleção
 
-### Considerações Técnicas
-- O `SearchableSelect` usa `Popover` + `Command` internamente (mesmo padrão já usado no campo "Beneficiário")
-- O `disabled` será baseado em `isLoadingAccounts` 
-- A renderização do account selecionado abaixo permanece funcional
+1. Atualizar interface `WorkflowFile` com campos `project_id` e `expense_projects`
+2. Modificar query principal para incluir join com `expense_projects`
+3. Modificar coluna "Project" para usar fallback do `workflow_files`
+4. Modificar coluna "Value" para usar fallback do `workflow_files`
+5. Testar que dados aparecem imediatamente após guardar
+
+### Benefícios
+
+- Dados aparecem imediatamente após "Atualizar" (sem esperar refresh de 2min)
+- Consistência entre formulário e lista
+- Funciona mesmo se `financial_transactions` ainda não existir (modo draft)
+
