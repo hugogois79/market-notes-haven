@@ -60,6 +60,7 @@ export default function BankPaymentDialog({
 }: BankPaymentDialogProps) {
   const { sendPayment, isSending, result, reset } = useBankPayment();
   const hasInitialized = useRef(false);
+  const hasSetReferenceFromOcr = useRef(false);
 
   // Form state
   const [beneficiaryName, setBeneficiaryName] = useState("");
@@ -87,6 +88,22 @@ export default function BankPaymentDialog({
       return data;
     },
     enabled: open,
+  });
+
+  // Fetch workflow file OCR data for better reference
+  const { data: workflowFile } = useQuery({
+    queryKey: ["workflow-file-reference", documentId],
+    queryFn: async () => {
+      if (!documentId) return null;
+      const { data, error } = await supabase
+        .from("workflow_files")
+        .select("invoice_number, vendor_name, invoice_date, notes")
+        .eq("id", documentId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: open && !!documentId,
   });
 
   // Fetch Wise recipients for autocomplete
@@ -139,10 +156,40 @@ export default function BankPaymentDialog({
       hasInitialized.current = true;
     } else if (!open) {
       hasInitialized.current = false;
+      hasSetReferenceFromOcr.current = false;
       setSearchTerm("");
       setPopoverOpen(false);
     }
   }, [open, vendorName, totalAmount, fileName, description, reset]);
+
+  // Update reference with OCR data when available
+  useEffect(() => {
+    if (open && workflowFile && hasInitialized.current && !hasSetReferenceFromOcr.current) {
+      const parts: string[] = [];
+      
+      // Priority: invoice_number > vendor_name > invoice_date
+      if (workflowFile.invoice_number) {
+        parts.push(workflowFile.invoice_number);
+      }
+      
+      if (workflowFile.vendor_name) {
+        parts.push(workflowFile.vendor_name);
+      }
+      
+      if (workflowFile.invoice_date) {
+        parts.push(workflowFile.invoice_date);
+      }
+      
+      if (parts.length > 0) {
+        setReference(parts.join(" - "));
+        hasSetReferenceFromOcr.current = true;
+      } else if (workflowFile.notes) {
+        setReference(workflowFile.notes);
+        hasSetReferenceFromOcr.current = true;
+      }
+      // If no OCR data, keep current reference (fileName fallback)
+    }
+  }, [open, workflowFile]);
 
   // Auto-fill when initial match is found
   useEffect(() => {
