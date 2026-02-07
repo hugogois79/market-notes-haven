@@ -789,50 +789,52 @@ export default function WorkFlowTab() {
       const fileUrls = workflowFiles?.map(f => f.file_url).filter(Boolean) || [];
       if (fileIds.length === 0 && fileUrls.length === 0) return [];
 
-      const [byIdRes, byUrlRes] = await Promise.all([
-        fileIds.length
-          ? supabase
-              .from("financial_transactions")
-              .select(`
-                id,
-                document_file_id,
-                invoice_file_url,
-                total_amount,
-                project_id,
-                company_id,
-                expense_projects:project_id (
-                  id,
-                  name
-                ),
-                companies:company_id (
-                  id,
-                  name
-                )
-              `)
-              .in("document_file_id", fileIds)
-          : Promise.resolve({ data: [], error: null } as any),
-        fileUrls.length
-          ? supabase
-              .from("financial_transactions")
-              .select(`
-                id,
-                document_file_id,
-                invoice_file_url,
-                total_amount,
-                project_id,
-                company_id,
-                expense_projects:project_id (
-                  id,
-                  name
-                ),
-                companies:company_id (
-                  id,
-                  name
-                )
-              `)
-              .in("invoice_file_url", fileUrls)
-          : Promise.resolve({ data: [], error: null } as any),
-      ]);
+       const [byIdRes, byUrlRes] = await Promise.all([
+         fileIds.length
+           ? supabase
+               .from("financial_transactions")
+               .select(`
+                 id,
+                 document_file_id,
+                 invoice_file_url,
+                 total_amount,
+                 project_id,
+                 company_id,
+                 category,
+                 expense_projects:project_id (
+                   id,
+                   name
+                 ),
+                 companies:company_id (
+                   id,
+                   name
+                 )
+               `)
+               .in("document_file_id", fileIds)
+           : Promise.resolve({ data: [], error: null } as any),
+         fileUrls.length
+           ? supabase
+               .from("financial_transactions")
+               .select(`
+                 id,
+                 document_file_id,
+                 invoice_file_url,
+                 total_amount,
+                 project_id,
+                 company_id,
+                 category,
+                 expense_projects:project_id (
+                   id,
+                   name
+                 ),
+                 companies:company_id (
+                   id,
+                   name
+                 )
+               `)
+               .in("invoice_file_url", fileUrls)
+           : Promise.resolve({ data: [], error: null } as any),
+       ]);
 
       if (byIdRes.error) throw byIdRes.error;
       if (byUrlRes.error) throw byUrlRes.error;
@@ -854,6 +856,7 @@ export default function WorkFlowTab() {
     companyId: string | null;
     companyName: string | null;
     value: number;
+    category: string | null;
   };
 
   // Lookup maps (ID preferred, URL fallback)
@@ -866,6 +869,7 @@ export default function WorkFlowTab() {
         companyId: tx.company_id,
         companyName: (tx.companies as any)?.name || null,
         value: tx.total_amount,
+        category: tx.category || null,
       } satisfies LinkedTx;
     }
     return acc;
@@ -880,6 +884,7 @@ export default function WorkFlowTab() {
         companyId: tx.company_id,
         companyName: (tx.companies as any)?.name || null,
         value: tx.total_amount,
+        category: tx.category || null,
       } satisfies LinkedTx;
     }
     return acc;
@@ -2364,6 +2369,11 @@ export default function WorkFlowTab() {
 
   const getColumnValue = (file: WorkflowFile, column: ColumnConfig) => {
     if (column.isBuiltIn && column.dbField) {
+      // For "category", check financial_transactions first (via linkedTransactions)
+      if (column.dbField === "category") {
+        const tx = getTxForFile(file);
+        return tx?.category || (file as any)[column.dbField] || null;
+      }
       return (file as any)[column.dbField] || null;
     }
     return customData[file.id]?.[column.id] || null;
