@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
-import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download, Plus, Tag, Sparkles, Users, UserPlus, UserMinus } from 'lucide-react';
+import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download, Plus, Tag, Sparkles, Users, UserPlus, UserMinus, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -77,7 +77,10 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   const [showAiCardDialog, setShowAiCardDialog] = useState(false);
   const [showAiAttachmentDialog, setShowAiAttachmentDialog] = useState(false);
   const [assignedTo, setAssignedTo] = useState<string[]>((card as any).assigned_to || []);
+  const [assignedExternal, setAssignedExternal] = useState<string[]>((card as any).assigned_external || []);
   const [showAssignDropdown, setShowAssignDropdown] = useState(false);
+  const [assignTab, setAssignTab] = useState<'interno' | 'externo'>('interno');
+  const [externalName, setExternalName] = useState('');
   const assignDropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch expense_users for assignment (same as Settings > Utilizadores)
@@ -117,6 +120,18 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
 
   const handleRemoveAssignee = (userId: string) => {
     setAssignedTo(assignedTo.filter(id => id !== userId));
+  };
+
+  const handleAddExternal = () => {
+    const trimmed = externalName.trim();
+    if (trimmed && !assignedExternal.includes(trimmed)) {
+      setAssignedExternal([...assignedExternal, trimmed]);
+      setExternalName('');
+    }
+  };
+
+  const handleRemoveExternal = (name: string) => {
+    setAssignedExternal(assignedExternal.filter(n => n !== name));
   };
 
   const getUserById = (userId: string) => {
@@ -347,7 +362,8 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
           due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
           tasks: tasks as any,
           tags: tags as any,
-          assigned_to: assignedTo as any
+          assigned_to: assignedTo as any,
+          assigned_external: assignedExternal as any
         });
         
         // Then move it to the new list
@@ -367,11 +383,12 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
         due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
         tasks: tasks as any,
         tags: tags as any,
-        assigned_to: assignedTo as any
+        assigned_to: assignedTo as any,
+        assigned_external: assignedExternal as any
       });
     }
     onClose();
-  }, [card.id, card.list_id, title, description, priority, value, dueDate, tasks, tags, assignedTo, moveToListId, moveToBoardId, onMove, onUpdate, onClose]);
+  }, [card.id, card.list_id, title, description, priority, value, dueDate, tasks, tags, assignedTo, assignedExternal, moveToListId, moveToBoardId, onMove, onUpdate, onClose]);
 
   // Keyboard shortcut: Ctrl+S / Cmd+S to save
   useEffect(() => {
@@ -521,6 +538,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
               Assignado
             </Label>
             <div className="space-y-2 mt-1">
+              {/* Badges dos assignados internos */}
               {assignedTo.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {assignedTo.map((userId) => {
@@ -543,6 +561,24 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
                   })}
                 </div>
               )}
+              {/* Badges dos assignados externos */}
+              {assignedExternal.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {assignedExternal.map((name) => (
+                    <Badge key={name} variant="outline" className="flex items-center gap-1.5 py-1 px-2 border-amber-500 text-amber-700 dark:text-amber-400">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      <span className="text-xs">{name}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveExternal(name)}
+                        className="ml-0.5 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
               <div className="relative" ref={assignDropdownRef}>
                 <Button
                   type="button"
@@ -550,29 +586,96 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
                   size="sm"
                   className="gap-1.5 text-xs"
                   onClick={() => setShowAssignDropdown(!showAssignDropdown)}
-                  disabled={unassignedUsers.length === 0}
                 >
                   <UserPlus className="h-3.5 w-3.5" />
                   Adicionar Utilizador
                 </Button>
-                {showAssignDropdown && unassignedUsers.length > 0 && (
-                  <div className="absolute z-50 mt-1 w-64 bg-popover border rounded-md shadow-md py-1 max-h-48 overflow-y-auto">
-                    {unassignedUsers.map((user) => (
+                {showAssignDropdown && (
+                  <div className="absolute z-50 mt-1 w-72 bg-popover border rounded-md shadow-md overflow-hidden">
+                    {/* Tabs Interno / Externo */}
+                    <div className="flex border-b">
                       <button
-                        key={user.id}
                         type="button"
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors text-left"
-                        onClick={() => handleAddAssignee(user.id)}
+                        className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
+                          assignTab === 'interno'
+                            ? 'bg-accent text-foreground border-b-2 border-primary'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                        onClick={() => setAssignTab('interno')}
                       >
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback className="text-[10px] bg-primary/10">{getInitials(user.name)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{user.name}</span>
-                          {user.email && <span className="text-xs text-muted-foreground">{user.email}</span>}
-                        </div>
+                        <Users className="h-3.5 w-3.5 inline mr-1.5" />
+                        Interno
                       </button>
-                    ))}
+                      <button
+                        type="button"
+                        className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
+                          assignTab === 'externo'
+                            ? 'bg-accent text-foreground border-b-2 border-amber-500'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                        onClick={() => setAssignTab('externo')}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 inline mr-1.5" />
+                        Externo
+                      </button>
+                    </div>
+
+                    {/* Tab Interno */}
+                    {assignTab === 'interno' && (
+                      <div className="py-1 max-h-48 overflow-y-auto">
+                        {unassignedUsers.length === 0 ? (
+                          <p className="text-xs text-muted-foreground px-3 py-2">Todos os utilizadores já estão assignados</p>
+                        ) : (
+                          unassignedUsers.map((user) => (
+                            <button
+                              key={user.id}
+                              type="button"
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors text-left"
+                              onClick={() => handleAddAssignee(user.id)}
+                            >
+                              <Avatar className="h-6 w-6">
+                                <AvatarFallback className="text-[10px] bg-primary/10">{getInitials(user.name)}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{user.name}</span>
+                                {user.email && <span className="text-xs text-muted-foreground">{user.email}</span>}
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+
+                    {/* Tab Externo */}
+                    {assignTab === 'externo' && (
+                      <div className="p-3 space-y-2">
+                        <p className="text-xs text-muted-foreground">Pessoa ou empresa externa</p>
+                        <div className="flex gap-2">
+                          <Input
+                            value={externalName}
+                            onChange={(e) => setExternalName(e.target.value)}
+                            placeholder="Nome do externo..."
+                            className="text-sm h-8"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddExternal();
+                              }
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 px-2 shrink-0"
+                            onClick={handleAddExternal}
+                            disabled={!externalName.trim()}
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

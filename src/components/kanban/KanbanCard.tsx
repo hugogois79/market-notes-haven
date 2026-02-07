@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Calendar, AlertCircle, CheckCircle2, RotateCcw, Paperclip, ListChecks, Tag, Euro, Trash2, ShoppingCart } from 'lucide-react';
+import { Calendar, AlertCircle, CheckCircle2, RotateCcw, Paperclip, ListChecks, Tag, Euro, Trash2, ShoppingCart, ExternalLink } from 'lucide-react';
 import { format, isPast, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import {
@@ -80,6 +80,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
   });
 
   const assignedUsers = ((card as any).assigned_to || []) as string[];
+  const assignedExternal = ((card as any).assigned_external || []) as string[];
 
   // Check if card is marked for procurement
   const isProcurement = card.tags?.includes('_procurement') ?? false;
@@ -193,7 +194,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
                   ))}
                 </div>
 
-                {assignedUsers.length > 0 && (
+                {(assignedUsers.length > 0 || assignedExternal.length > 0) && (
                   <div className="flex items-center justify-end gap-0 mt-2 -space-x-1.5">
                     {assignedUsers.map((userId) => {
                       const user = expenseUsers.find(u => u.id === userId);
@@ -213,6 +214,23 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
                         </Tooltip>
                       );
                     })}
+                    {assignedExternal.map((name) => (
+                      <Tooltip key={`ext-${name}`}>
+                        <TooltipTrigger asChild>
+                          <Avatar className="h-6 w-6 border-2 border-amber-500 cursor-default bg-amber-100 dark:bg-amber-900/40">
+                            <AvatarFallback className="text-[9px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40">
+                              {getInitials(name)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">
+                          <span className="flex items-center gap-1">
+                            <ExternalLink className="h-3 w-3" />
+                            {name}
+                          </span>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
                   </div>
                 )}
               </CardContent>

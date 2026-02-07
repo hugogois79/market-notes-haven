@@ -44,6 +44,7 @@ export interface KanbanCard {
   tasks?: Array<{id: string; text: string; completed: boolean}>;
   tags?: string[];
   assigned_to?: string[];
+  assigned_external?: string[];
   value?: number;
   archived?: boolean;
   completed?: boolean;

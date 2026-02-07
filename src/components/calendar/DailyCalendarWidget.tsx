@@ -1,17 +1,31 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format, addDays, subDays, isToday, parseISO } from "date-fns";
 import { pt } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, X, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, ExternalLink, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useDailyCalendarEvents, DailyCalendarEvent } from "@/hooks/useDailyCalendarEvents";
 import { useCalendarCategories, CalendarCategory } from "@/hooks/useCalendarCategories";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import CalendarEventDialog from "./CalendarEventDialog";
 
 interface DailyCalendarWidgetProps {
   onClose: () => void;
@@ -100,6 +114,14 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
   const { data: events = [], isLoading } = useDailyCalendarEvents(dateString);
   const { categories } = useCalendarCategories();
   const [googleCalendarUrl] = useState(getGoogleCalendarUrl);
+  const queryClient = useQueryClient();
+
+  // Dialog state
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [defaultStartHour, setDefaultStartHour] = useState<number | undefined>();
+  
+  // Delete confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<DailyCalendarEvent | null>(null);
 
   // Current time indicator
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -119,6 +141,56 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
   const goToPreviousDay = () => setSelectedDate((d) => subDays(d, 1));
   const goToNextDay = () => setSelectedDate((d) => addDays(d, 1));
   const goToToday = () => setSelectedDate(new Date());
+
+  // Delete mutation
+  const deleteEvent = useMutation({
+    mutationFn: async (eventId: string) => {
+      const { error } = await supabase
+        .from("calendar_events")
+        .delete()
+        .eq("id", eventId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["daily-calendar-events"] });
+      toast.success("Evento eliminado");
+      setDeleteTarget(null);
+    },
+    onError: () => {
+      toast.error("Erro ao eliminar evento");
+      setDeleteTarget(null);
+    },
+  });
+
+  const handleConfirmDelete = () => {
+    if (deleteTarget) {
+      deleteEvent.mutate(deleteTarget.id);
+    }
+  };
+
+  // Click on timeline to create event at that hour
+  const handleTimelineClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      // Only handle clicks directly on the timeline container (not on events)
+      if ((e.target as HTMLElement).closest("[data-event]")) return;
+      
+      const rect = e.currentTarget.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const hour = Math.floor(y / PX_PER_HOUR) + 6;
+      const minutes = Math.round(((y % PX_PER_HOUR) / PX_PER_HOUR) * 2) * 30; // snap to 30min
+      const clickedHour = hour + minutes / 60;
+      
+      setDefaultStartHour(clickedHour);
+      setCreateDialogOpen(true);
+    },
+    []
+  );
+
+  // Open create dialog without preset hour
+  const handleCreateClick = () => {
+    setDefaultStartHour(undefined);
+    setCreateDialogOpen(true);
+  };
 
   // Separate all-day events from timed events
   const allDayEvents = events.filter((e) => e.all_day);
@@ -160,6 +232,15 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
           </Button>
         </div>
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={handleCreateClick}
+            title="Criar evento"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
           <a
             href={googleCalendarUrl}
             target="_blank"
@@ -182,13 +263,23 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
           {allDayEvents.map((event) => {
             const color = getCategoryColor(event.category, categories);
             return (
-              <div
-                key={event.id}
-                className="rounded px-2 py-0.5 text-[11px] font-medium truncate"
-                style={{ backgroundColor: color, color: "#fff" }}
-              >
-                {event.title || "Sem título"}
-              </div>
+              <HoverCard key={event.id} openDelay={200}>
+                <HoverCardTrigger asChild>
+                  <div
+                    className="rounded px-2 py-0.5 text-[11px] font-medium truncate cursor-pointer hover:opacity-90 transition-opacity group relative"
+                    style={{ backgroundColor: color, color: "#fff" }}
+                  >
+                    {event.title || "Sem título"}
+                  </div>
+                </HoverCardTrigger>
+                <HoverCardContent side="left" className="w-64">
+                  <EventHoverContent
+                    event={event}
+                    color={color}
+                    onDelete={() => setDeleteTarget(event)}
+                  />
+                </HoverCardContent>
+              </HoverCard>
             );
           })}
         </div>
@@ -196,7 +287,11 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
 
       {/* Timeline */}
       <ScrollArea className="flex-1">
-        <div className="relative" style={{ height: HOURS.length * PX_PER_HOUR }}>
+        <div
+          className="relative cursor-crosshair"
+          style={{ height: HOURS.length * PX_PER_HOUR }}
+          onClick={handleTimelineClick}
+        >
           {/* Hour lines */}
           {HOURS.map((hour) => (
             <div
@@ -232,6 +327,7 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
                 <HoverCard key={event.id} openDelay={200}>
                   <HoverCardTrigger asChild>
                     <div
+                      data-event="true"
                       className="absolute rounded-md px-2 py-1 cursor-pointer overflow-hidden transition-opacity hover:opacity-90"
                       style={{
                         top: pos.top,
@@ -252,33 +348,11 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
                     </div>
                   </HoverCardTrigger>
                   <HoverCardContent side="left" className="w-64">
-                    <div className="space-y-2">
-                      <div className="flex items-start gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full mt-1 shrink-0"
-                          style={{ backgroundColor: color }}
-                        />
-                        <div>
-                          <p className="font-medium">{event.title || "Sem título"}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {formatEventTime(event)}
-                          </p>
-                          {event.source === "google" && (
-                            <p className="text-[10px] text-blue-500">Google Calendar</p>
-                          )}
-                        </div>
-                      </div>
-                      {event.notes && (
-                        <p className="text-sm text-muted-foreground pl-5">
-                          {event.notes}
-                        </p>
-                      )}
-                      {event.category && (
-                        <p className="text-xs text-muted-foreground pl-5">
-                          Categoria: {event.category}
-                        </p>
-                      )}
-                    </div>
+                    <EventHoverContent
+                      event={event}
+                      color={color}
+                      onDelete={() => setDeleteTarget(event)}
+                    />
                   </HoverCardContent>
                 </HoverCard>
               );
@@ -302,6 +376,95 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
             : `${events.length} evento${events.length > 1 ? "s" : ""}`}
         </p>
       </div>
+
+      {/* Create Event Dialog */}
+      <CalendarEventDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        date={dateString}
+        categories={categories}
+        defaultStartHour={defaultStartHour}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar evento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tens a certeza que queres eliminar{" "}
+              <strong>"{deleteTarget?.title}"</strong>?
+              {deleteTarget?.source === "google" && (
+                <span className="block mt-2 text-amber-500">
+                  Este evento e do Google Calendar. Sera eliminado localmente mas
+                  permanecera no Google Calendar ate a proxima sincronizacao.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteEvent.isPending ? "A eliminar..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+// ---------- Sub-component for event hover content ----------
+
+interface EventHoverContentProps {
+  event: DailyCalendarEvent;
+  color: string;
+  onDelete: () => void;
+}
+
+function EventHoverContent({ event, color, onDelete }: EventHoverContentProps) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-start gap-2">
+        <div
+          className="w-3 h-3 rounded-full mt-1 shrink-0"
+          style={{ backgroundColor: color }}
+        />
+        <div className="flex-1 min-w-0">
+          <p className="font-medium">{event.title || "Sem título"}</p>
+          <p className="text-sm text-muted-foreground">
+            {formatEventTime(event)}
+          </p>
+          {event.source === "google" && (
+            <p className="text-[10px] text-blue-500">Google Calendar</p>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          title="Eliminar evento"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+      {event.notes && (
+        <p className="text-sm text-muted-foreground pl-5">
+          {event.notes}
+        </p>
+      )}
+      {event.category && (
+        <p className="text-xs text-muted-foreground pl-5">
+          Categoria: {event.category}
+        </p>
+      )}
     </div>
   );
 }
