@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
-import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download, Plus, Tag, Sparkles, Users, UserPlus, UserMinus, ExternalLink } from 'lucide-react';
+import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download, Plus, Tag, Sparkles, Users, UserPlus, UserMinus, ExternalLink, Shield } from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -97,10 +97,13 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   const [showAiAttachmentDialog, setShowAiAttachmentDialog] = useState(false);
   const [assignedTo, setAssignedTo] = useState<string[]>((card as any).assigned_to || []);
   const [assignedExternal, setAssignedExternal] = useState<string[]>((card as any).assigned_external || []);
+  const [supervisorId, setSupervisorId] = useState<string | null>((card as any).supervisor_id || null);
   const [showAssignDropdown, setShowAssignDropdown] = useState(false);
+  const [showSupervisorDropdown, setShowSupervisorDropdown] = useState(false);
   const [assignTab, setAssignTab] = useState<'interno' | 'externo'>('interno');
   const [externalName, setExternalName] = useState('');
   const assignDropdownRef = useRef<HTMLDivElement>(null);
+  const supervisorDropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch expense_users for assignment (same as Settings > Utilizadores)
   const { data: availableUsers = [] } = useQuery({
@@ -156,18 +159,21 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
       )
     : [];
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (assignDropdownRef.current && !assignDropdownRef.current.contains(e.target as Node)) {
         setShowAssignDropdown(false);
       }
+      if (supervisorDropdownRef.current && !supervisorDropdownRef.current.contains(e.target as Node)) {
+        setShowSupervisorDropdown(false);
+      }
     };
-    if (showAssignDropdown) {
+    if (showAssignDropdown || showSupervisorDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showAssignDropdown]);
+  }, [showAssignDropdown, showSupervisorDropdown]);
 
   const handleAddAssignee = (userId: string) => {
     if (!assignedTo.includes(userId)) {
@@ -421,7 +427,8 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
           tasks: tasks as any,
           tags: tags as any,
           assigned_to: assignedTo as any,
-          assigned_external: assignedExternal as any
+          assigned_external: assignedExternal as any,
+          supervisor_id: supervisorId as any
         });
         
         // Then move it to the new list
@@ -442,11 +449,12 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
         tasks: tasks as any,
         tags: tags as any,
         assigned_to: assignedTo as any,
-        assigned_external: assignedExternal as any
+        assigned_external: assignedExternal as any,
+        supervisor_id: supervisorId as any
       });
     }
     onClose();
-  }, [card.id, card.list_id, title, description, priority, value, dueDate, tasks, tags, assignedTo, assignedExternal, moveToListId, moveToBoardId, onMove, onUpdate, onClose]);
+  }, [card.id, card.list_id, title, description, priority, value, dueDate, tasks, tags, assignedTo, assignedExternal, supervisorId, moveToListId, moveToBoardId, onMove, onUpdate, onClose]);
 
   // Keyboard shortcut: Ctrl+S / Cmd+S to save
   useEffect(() => {
@@ -590,6 +598,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
             </RadioGroup>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label className="flex items-center gap-2">
               <Users className="h-4 w-4" />
@@ -760,6 +769,85 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Supervisor / Project Manager */}
+          <div>
+            <Label className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Supervisor
+            </Label>
+            <div className="space-y-2 mt-1">
+              {supervisorId && (() => {
+                const sv = availableUsers.find(u => u.id === supervisorId);
+                return (
+                  <Badge variant="secondary" className="flex items-center gap-1.5 py-1 px-2 w-fit border-2 border-blue-300 bg-blue-50 dark:bg-blue-900/20">
+                    <Avatar className="h-5 w-5">
+                      <AvatarFallback className="text-[10px] bg-blue-500 text-white">
+                        {sv ? sv.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-xs font-medium">{sv?.name || 'Desconhecido'}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSupervisorId(null)}
+                      className="ml-0.5 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                );
+              })()}
+              <div className="relative" ref={supervisorDropdownRef}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => setShowSupervisorDropdown(!showSupervisorDropdown)}
+                >
+                  <Shield className="h-3.5 w-3.5" />
+                  {supervisorId ? 'Alterar' : 'Definir Supervisor'}
+                </Button>
+                {showSupervisorDropdown && (
+                  <div className="absolute z-50 mt-1 w-64 bg-popover border rounded-md shadow-md overflow-hidden">
+                    <div className="py-1 max-h-48 overflow-y-auto">
+                      {availableUsers.length === 0 ? (
+                        <p className="text-xs text-muted-foreground px-3 py-2">Sem utilizadores disponíveis</p>
+                      ) : (
+                        availableUsers.map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors text-left ${
+                              supervisorId === user.id ? 'bg-accent/50' : ''
+                            }`}
+                            onClick={() => {
+                              setSupervisorId(user.id);
+                              setShowSupervisorDropdown(false);
+                            }}
+                          >
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback className="text-[10px] bg-primary/10">
+                                {user.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{user.name}</span>
+                              {user.email && <span className="text-xs text-muted-foreground">{user.email}</span>}
+                            </div>
+                            {supervisorId === user.id && (
+                              <CheckCircle2 className="h-4 w-4 ml-auto text-blue-500" />
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          </div>{/* end grid Assignado + Supervisor */}
 
           <div>
             <Label>Tags</Label>

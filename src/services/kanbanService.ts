@@ -45,6 +45,7 @@ export interface KanbanCard {
   tags?: string[];
   assigned_to?: string[];
   assigned_external?: string[];
+  supervisor_id?: string | null;
   value?: number;
   archived?: boolean;
   completed?: boolean;

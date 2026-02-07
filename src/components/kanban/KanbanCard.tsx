@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Calendar, AlertCircle, CheckCircle2, RotateCcw, Paperclip, ListChecks, Tag, Euro, Trash2, ShoppingCart, ExternalLink } from 'lucide-react';
+import { Calendar, AlertCircle, CheckCircle2, RotateCcw, Paperclip, ListChecks, Tag, Euro, Trash2, ShoppingCart, ExternalLink, Shield } from 'lucide-react';
 import { format, isPast, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import {
@@ -100,6 +100,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
 
   const assignedUsers = ((card as any).assigned_to || []) as string[];
   const assignedExternal = ((card as any).assigned_external || []) as string[];
+  const supervisorId = (card as any).supervisor_id as string | null;
 
   // Check if card is marked for procurement
   const isProcurement = card.tags?.includes('_procurement') ?? false;
@@ -213,8 +214,32 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
                   ))}
                 </div>
 
-                {(assignedUsers.length > 0 || assignedExternal.length > 0) && (
+                {(assignedUsers.length > 0 || assignedExternal.length > 0 || supervisorId) && (
                   <div className="flex items-center justify-end gap-0 mt-2 -space-x-1.5">
+                    {supervisorId && (() => {
+                      const sv = expenseUsers.find(u => u.id === supervisorId);
+                      const svName = sv?.name || 'Supervisor';
+                      return (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="relative">
+                              <Avatar className="h-6 w-6 border-2 border-blue-400 cursor-default bg-blue-500 text-white">
+                                <AvatarFallback className="text-[9px] font-semibold bg-blue-500 text-white">
+                                  {getInitials(svName)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <Shield className="absolute -bottom-0.5 -right-0.5 h-3 w-3 text-blue-600 bg-white dark:bg-gray-900 rounded-full" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="text-xs">
+                            <span className="flex items-center gap-1">
+                              <Shield className="h-3 w-3" />
+                              {svName}
+                            </span>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })()}
                     {assignedUsers.map((userId) => {
                       const user = expenseUsers.find(u => u.id === userId);
                       const name = user?.name || 'Desconhecido';
