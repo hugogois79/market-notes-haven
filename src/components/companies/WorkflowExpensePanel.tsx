@@ -221,9 +221,20 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   // Only clears bank_account_id when the user manually changes the payment method dropdown
   const userChangedPaymentMethodRef = useRef(false);
 
+  // Refs to prevent repeated form resets that cause the card selection to flicker.
+  // The effects below depend on query data (allBankAccounts, companies, etc.) that can
+  // change reference on refetch, causing the effect to re-run and reset() the form.
+  // By tracking the last reset key, we ensure reset() only runs ONCE per transaction/file.
+  const lastResetKeyRef = useRef<string | null>(null);
+
   // Reset form when existingTransaction changes - wait for all dropdown data to load first
   useEffect(() => {
     if (existingTransaction && companies && expenseCategories && allBankAccounts) {
+      // Only reset once per transaction ID to avoid flickering when queries refetch
+      const resetKey = `tx-${existingTransaction.id}`;
+      if (lastResetKeyRef.current === resetKey) return;
+      lastResetKeyRef.current = resetKey;
+
       // Check if this is a loan transaction
       const isLoanTransaction = existingTransaction.type === "loan" || existingTransaction._isLoan;
       // Check if this is a document transaction
@@ -308,6 +319,12 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     if (!existingTransaction && companies && file) {
       const hasOcrData = file.company_id || file.notes || file.invoice_date || file.total_amount || file.vendor_name;
       if (hasOcrData) {
+        // Build a stable reset key: only re-reset if the file changes or vendor defaults load
+        const vdKey = vendorDefaults ? `vd-${vendorDefaults.bank_account_id || ''}` : 'no-vd';
+        const resetKey = `ocr-${file.id}-${vdKey}`;
+        if (lastResetKeyRef.current === resetKey) return;
+        lastResetKeyRef.current = resetKey;
+
         // Determine type based on category (Invoice -> expense)
         const inferredType = file.category === "Invoice" ? "expense" : "expense";
         
