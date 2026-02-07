@@ -12,13 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Popover,
   PopoverContent,
@@ -229,6 +223,11 @@ export default function BankPaymentDialog({
 
   const selectedAccount = bankAccounts?.find((a) => a.id === sourceAccountId);
 
+  const bankAccountOptions = bankAccounts?.map((account) => ({
+    value: account.id,
+    label: `${account.company?.name} - ${account.account_name} (${formatIban(account.account_number)})`,
+  })) || [];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -434,25 +433,15 @@ export default function BankPaymentDialog({
               {/* Source Account */}
               <div className="space-y-2">
                 <Label htmlFor="sourceAccount">Conta de Origem *</Label>
-                <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
-                  <SelectTrigger id="sourceAccount">
-                    <SelectValue placeholder={isLoadingAccounts ? "A carregar..." : "Selecione uma conta"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {bankAccounts?.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {account.company?.name} - {account.account_name}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatIban(account.account_number)}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={sourceAccountId}
+                  onValueChange={setSourceAccountId}
+                  options={bankAccountOptions}
+                  placeholder={isLoadingAccounts ? "A carregar..." : "Selecione uma conta"}
+                  searchPlaceholder="Pesquisar por empresa, conta ou IBAN..."
+                  emptyMessage="Nenhuma conta encontrada"
+                  disabled={isLoadingAccounts}
+                />
                 {selectedAccount && (
                   <p className="text-xs text-muted-foreground">
                     IBAN: {formatIban(selectedAccount.account_number)}
