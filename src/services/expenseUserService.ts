@@ -20,6 +20,8 @@ export interface ExpenseUser {
   assigned_project_ids: string[] | null;
   is_active: boolean;
   is_requester: boolean;
+  is_agent: boolean;
+  agent_description: string | null;
   feature_permissions: FeaturePermissions | null;
   created_at: string;
   updated_at: string;

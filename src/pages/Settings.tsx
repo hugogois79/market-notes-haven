@@ -23,7 +23,8 @@ import {
   LogOut,
   Key,
   Shield,
-  Crown
+  Crown,
+  Bot
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { expenseUserService, ExpenseUser, FeaturePermissions } from "@/services/expenseUserService";
@@ -106,6 +107,8 @@ const Settings = () => {
     password: "",
     assigned_project_ids: [] as string[],
     is_requester: false,
+    is_agent: false,
+    agent_description: "",
     feature_permissions: {
       expenses: false,
       receipt_generator: false,
@@ -224,6 +227,8 @@ const Settings = () => {
         password: "",
         assigned_project_ids: user.assigned_project_ids || [],
         is_requester: user.is_requester || false,
+        is_agent: user.is_agent || false,
+        agent_description: user.agent_description || "",
         feature_permissions: user.feature_permissions || defaultPermissions,
       });
     } else {
@@ -234,6 +239,8 @@ const Settings = () => {
         password: "",
         assigned_project_ids: [],
         is_requester: false,
+        is_agent: false,
+        agent_description: "",
         feature_permissions: defaultPermissions,
       });
     }
@@ -252,6 +259,8 @@ const Settings = () => {
           email: userFormData.email || null,
           assigned_project_ids: userFormData.assigned_project_ids,
           is_requester: userFormData.is_requester,
+          is_agent: userFormData.is_agent,
+          agent_description: userFormData.agent_description || null,
           feature_permissions: userFormData.feature_permissions,
         });
         toast.success("Utilizador atualizado");
@@ -260,7 +269,7 @@ const Settings = () => {
           toast.error("Password é obrigatória para novos utilizadores");
           return;
         }
-        await expenseUserService.createUser({
+        const newUser = await expenseUserService.createUser({
           name: userFormData.name,
           email: userFormData.email,
           password: userFormData.password,
@@ -268,6 +277,13 @@ const Settings = () => {
           is_requester: userFormData.is_requester,
           feature_permissions: userFormData.feature_permissions,
         });
+        // Set agent fields if enabled (not part of edge function)
+        if (userFormData.is_agent && newUser?.id) {
+          await expenseUserService.updateUser(newUser.id, {
+            is_agent: true,
+            agent_description: userFormData.agent_description || null,
+          });
+        }
         toast.success("Utilizador criado");
       }
       const users = await expenseUserService.getUsers(true);
@@ -357,6 +373,20 @@ const Settings = () => {
       toast.error(error.message || "Erro ao criar conta de acesso");
     } finally {
       setIsCreatingAuth(false);
+    }
+  };
+
+  const handleToggleAgent = async (user: ExpenseUser) => {
+    try {
+      const newValue = !(user as any).is_agent;
+      await expenseUserService.updateUser(user.id, {
+        is_agent: newValue,
+      } as any);
+      const users = await expenseUserService.getUsers(true);
+      setExpenseUsers(users);
+      toast.success(newValue ? `${user.name} marcado como OpenClaw Agent` : `${user.name} já não é Agent`);
+    } catch (error) {
+      toast.error("Erro ao alterar estado de agente");
     }
   };
 
@@ -1165,6 +1195,12 @@ const Settings = () => {
                           {user.is_requester && (
                             <Badge variant="default" className="text-xs">Requisitante</Badge>
                           )}
+                          {(user as any).is_agent && (
+                            <Badge variant="outline" className="text-xs bg-violet-500/10 text-violet-600 border-violet-500/30">
+                              <Bot size={10} className="mr-1" />
+                              OpenClaw Agent
+                            </Badge>
+                          )}
                           {userAuthStatus[user.id] === false && (
                             <Badge variant="destructive" className="text-xs">Sem acesso</Badge>
                           )}
@@ -1183,6 +1219,9 @@ const Settings = () => {
                         </div>
                         {user.email && (
                           <span className="text-sm text-muted-foreground">{user.email}</span>
+                        )}
+                        {(user as any).is_agent && (user as any).agent_description && (
+                          <span className="text-xs text-violet-500 italic">{(user as any).agent_description}</span>
                         )}
                         <div className="flex flex-wrap gap-1 mt-1">
                           {user.assigned_project_ids && user.assigned_project_ids.length > 0 && 
@@ -1236,6 +1275,14 @@ const Settings = () => {
                           disabled={!userAuthStatus[user.id]}
                         >
                           <Crown size={16} className={userRoles[user.id] ? "text-amber-500" : "text-muted-foreground"} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleToggleAgent(user)}
+                          title={(user as any).is_agent ? "Remover Agent" : "Tornar OpenClaw Agent"}
+                        >
+                          <Bot size={16} className={(user as any).is_agent ? "text-violet-500" : "text-muted-foreground"} />
                         </Button>
                         <Button
                           variant="ghost"
@@ -1367,6 +1414,30 @@ const Settings = () => {
                 onCheckedChange={(checked) => setUserFormData({ ...userFormData, is_requester: checked })}
               />
             </div>
+            <div className={`flex items-center justify-between p-3 border rounded-lg ${userFormData.is_agent ? 'border-violet-300 bg-violet-50 dark:bg-violet-900/10' : ''}`}>
+              <div>
+                <Label className="text-sm font-medium flex items-center gap-1.5">
+                  <Bot size={14} className="text-violet-500" />
+                  OpenClaw Agent
+                </Label>
+                <p className="text-xs text-muted-foreground">Este utilizador é um agente AI autónomo</p>
+              </div>
+              <Switch
+                checked={userFormData.is_agent}
+                onCheckedChange={(checked) => setUserFormData({ ...userFormData, is_agent: checked })}
+              />
+            </div>
+            {userFormData.is_agent && (
+              <div className="space-y-2 p-3 border rounded-lg border-violet-200 bg-violet-50/50 dark:bg-violet-900/5">
+                <Label className="text-sm">Descrição do Agente</Label>
+                <Input
+                  value={userFormData.agent_description}
+                  onChange={(e) => setUserFormData({ ...userFormData, agent_description: e.target.value })}
+                  placeholder="Ex: Contabilista AI, detecta duplicados e gera relatórios..."
+                  className="text-sm"
+                />
+              </div>
+            )}
             <Separator />
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
