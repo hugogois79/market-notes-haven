@@ -15,7 +15,8 @@ import CardDescriptionEditor from './CardDescriptionEditor';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
-import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download, Plus, Tag, Sparkles, Users, UserPlus, UserMinus, ExternalLink, Shield } from 'lucide-react';
+import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download, Plus, Tag, Sparkles, Users, UserPlus, UserMinus, ExternalLink, Shield, Mail } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -993,47 +994,62 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
           </div>
           </div>{/* end grid Assignado + Supervisor */}
 
-          <div>
-            <Label>Tags</Label>
-            <div className="space-y-2">
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                      <Tag className="h-3 w-3" />
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTag(tag)}
-                        className="ml-1 hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-              <div className="flex gap-2">
-                <Input
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  placeholder="Add a tag..."
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddTag();
-                    }
-                  }}
-                />
-                <Button type="button" variant="outline" size="icon" onClick={handleAddTag}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
+          {/* Tags / Emails tabs */}
+          <Tabs defaultValue="tags" className="w-full">
+            <TabsList className="w-auto h-7">
+              <TabsTrigger value="tags" className="flex items-center gap-1 px-3 text-xs h-6">
+                <Tag className="h-3 w-3" />
+                Tags
+                {tags.length > 0 && <span className="text-[10px] text-muted-foreground ml-0.5">({tags.length})</span>}
+              </TabsTrigger>
+              <TabsTrigger value="emails" className="flex items-center gap-1 px-3 text-xs h-6">
+                <Mail className="h-3 w-3" />
+                Emails
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Emails */}
-          {card?.id && <CardEmailsSection cardId={card.id} />}
+            <TabsContent value="tags" className="mt-2">
+              <div className="space-y-2">
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag) => (
+                      <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                        <Tag className="h-3 w-3" />
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag(tag)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Input
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    placeholder="Add a tag..."
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddTag();
+                      }
+                    }}
+                  />
+                  <Button type="button" variant="outline" size="icon" onClick={handleAddTag}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="emails" className="mt-2">
+              {card?.id && <CardEmailsSection cardId={card.id} />}
+            </TabsContent>
+          </Tabs>
 
           <div>
             <TaskChecklist 

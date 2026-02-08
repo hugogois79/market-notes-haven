@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Mail, Plus, Download, Trash2, FileText, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Plus, Download, Trash2, FileText, ChevronUp, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -135,14 +135,7 @@ export default function CardEmailsSection({ cardId }: CardEmailsSectionProps) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <Label className="flex items-center gap-2">
-          <Mail className="h-4 w-4" />
-          Emails
-          {emails.length > 0 && (
-            <span className="text-xs text-muted-foreground">({emails.length})</span>
-          )}
-        </Label>
+      <div className="flex items-center justify-end mb-2">
         <Button
           type="button"
           variant="outline"
