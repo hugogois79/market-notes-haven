@@ -128,26 +128,15 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     enabled: isOpen,
   });
 
-  // Fetch all external names already used in this board's cards for autocomplete
+  // Fetch all external names already used across ALL cards (global contact list)
   const { data: knownExternals = [] } = useQuery({
-    queryKey: ['known-externals', boardId],
+    queryKey: ['known-externals-global'],
     queryFn: async () => {
-      // Get list IDs for this board first
-      const { data: lists, error: listsError } = await supabase
-        .from('kanban_lists')
-        .select('id')
-        .eq('board_id', boardId);
-      if (listsError) throw listsError;
-      const listIds = (lists || []).map((l: any) => l.id);
-      if (listIds.length === 0) return [];
-      // Get cards from those lists that have external assignees
       const { data, error } = await supabase
         .from('kanban_cards')
         .select('assigned_external')
-        .in('list_id', listIds)
         .not('assigned_external', 'eq', '{}');
       if (error) throw error;
-      // Collect unique names
       const names = new Set<string>();
       (data || []).forEach((c: any) => {
         if (Array.isArray(c.assigned_external)) {
@@ -160,12 +149,18 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     staleTime: 2 * 60 * 1000,
   });
 
-  // Filter suggestions based on input
-  const externalSuggestions = externalName.trim().length > 0
-    ? knownExternals.filter(
-        (n) => n.toLowerCase().includes(externalName.toLowerCase()) && !assignedExternal.includes(n)
+  // Filter known externals: show all unassigned when input is empty, or filter by input text
+  const availableExternals = knownExternals.filter(
+    (n) => !assignedExternal.includes(n)
+  );
+  const filteredExternals = externalName.trim().length > 0
+    ? availableExternals.filter(
+        (n) => n.toLowerCase().includes(externalName.toLowerCase())
       )
-    : [];
+    : availableExternals;
+  // Show "create new" option when typed name doesn't match any existing contact
+  const canCreateNew = externalName.trim().length > 0 &&
+    !knownExternals.some((n) => n.toLowerCase() === externalName.trim().toLowerCase());
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -860,53 +855,81 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
 
                     {/* Tab Externo */}
                     {assignTab === 'externo' && (
-                      <div className="p-3 space-y-2">
-                        <p className="text-xs text-muted-foreground">Pessoa ou empresa externa</p>
-                        <div className="flex gap-2">
-                          <Input
-                            value={externalName}
-                            onChange={(e) => setExternalName(e.target.value)}
-                            placeholder="Nome do externo..."
-                            className="text-sm h-8"
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleAddExternal();
-                              }
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 px-2 shrink-0"
-                            onClick={handleAddExternal}
-                            disabled={!externalName.trim()}
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                          </Button>
+                      <div className="space-y-0">
+                        {/* Search / Create input */}
+                        <div className="p-2 border-b">
+                          <div className="flex gap-1.5">
+                            <Input
+                              value={externalName}
+                              onChange={(e) => setExternalName(e.target.value)}
+                              placeholder="Pesquisar ou criar..."
+                              className="text-sm h-8"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  // If there's an exact filtered match, add it; otherwise create new
+                                  if (filteredExternals.length === 1) {
+                                    setAssignedExternal([...assignedExternal, filteredExternals[0]]);
+                                    setExternalName('');
+                                  } else if (canCreateNew) {
+                                    handleAddExternal();
+                                  }
+                                }
+                              }}
+                            />
+                            {canCreateNew && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 px-2 shrink-0"
+                                onClick={handleAddExternal}
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        {/* Sugestões de nomes já usados */}
-                        {externalSuggestions.length > 0 && (
-                          <div className="border rounded-md max-h-32 overflow-y-auto">
-                            {externalSuggestions.map((name) => (
+                        {/* List of known external contacts */}
+                        <div className="py-1 max-h-48 overflow-y-auto">
+                          {/* Create new option (when typed name doesn't exist) */}
+                          {canCreateNew && (
+                            <button
+                              type="button"
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors text-left text-amber-600 dark:text-amber-400 font-medium"
+                              onClick={handleAddExternal}
+                            >
+                              <Plus className="h-3.5 w-3.5 shrink-0" />
+                              <span>Criar &quot;{externalName.trim()}&quot;</span>
+                            </button>
+                          )}
+                          {/* Existing contacts */}
+                          {filteredExternals.length > 0 ? (
+                            filteredExternals.map((name) => (
                               <button
                                 key={name}
                                 type="button"
-                                className="w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent transition-colors text-left"
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors text-left"
                                 onClick={() => {
-                                  if (!assignedExternal.includes(name)) {
-                                    setAssignedExternal([...assignedExternal, name]);
-                                  }
+                                  setAssignedExternal([...assignedExternal, name]);
                                   setExternalName('');
                                 }}
                               >
                                 <ExternalLink className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                                 <span>{name}</span>
                               </button>
-                            ))}
-                          </div>
-                        )}
+                            ))
+                          ) : (
+                            !canCreateNew && (
+                              <p className="text-xs text-muted-foreground px-3 py-2">
+                                {knownExternals.length === 0
+                                  ? 'Sem contactos externos. Escreva um nome para criar.'
+                                  : 'Todos os contactos já estão assignados'}
+                              </p>
+                            )
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

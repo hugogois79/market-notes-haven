@@ -1,9 +1,63 @@
 
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
+import fs from "fs";
+
+// Plugin to serve folder listings from the server filesystem
+function folderBrowserPlugin(): Plugin {
+  return {
+    name: "folder-browser-api",
+    configureServer(server) {
+      server.middlewares.use("/api/browse-folders", (req, res) => {
+        const url = new URL(req.url || "/", "http://localhost");
+        const dirPath = url.searchParams.get("path") || "/root/Robsonway-Research";
+
+        // Security: only allow browsing under allowed roots
+        const allowedRoots = ["/root/Robsonway-Research", "/root"];
+        const resolved = path.resolve(dirPath);
+        const isAllowed = allowedRoots.some((root) => resolved.startsWith(root));
+
+        if (!isAllowed) {
+          res.writeHead(403, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Acesso negado a este caminho" }));
+          return;
+        }
+
+        try {
+          if (!fs.existsSync(resolved)) {
+            res.writeHead(404, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Pasta não encontrada" }));
+            return;
+          }
+
+          const entries = fs.readdirSync(resolved, { withFileTypes: true });
+          const folders = entries
+            .filter((e) => e.isDirectory() && !e.name.startsWith("."))
+            .map((e) => ({
+              name: e.name,
+              path: path.join(resolved, e.name),
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({
+              current: resolved,
+              parent: path.dirname(resolved),
+              folders,
+            })
+          );
+        } catch (err: any) {
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: err.message }));
+        }
+      });
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -12,6 +66,7 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   plugins: [
+    folderBrowserPlugin(),
     react({
       jsxImportSource: "react",
     }),
