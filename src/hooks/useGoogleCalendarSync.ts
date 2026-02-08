@@ -43,14 +43,21 @@ async function syncToGoogleCalendar(payload: CalendarEventPayload): Promise<{ su
 }
 
 export function useGoogleCalendarSync() {
-  const syncCreate = async (eventId: string, title: string | null, date: string, notes?: string | null) => {
+  const syncCreate = async (
+    eventId: string,
+    title: string | null,
+    date: string,
+    notes?: string | null,
+    startTime?: string | null,
+    endTime?: string | null
+  ) => {
     return syncToGoogleCalendar({
       action: "create",
       event_id: eventId,
       title,
       date,
-      start_time: `${date}T09:00:00`,
-      end_time: `${date}T10:00:00`,
+      start_time: startTime || `${date}T09:00:00`,
+      end_time: endTime || `${date}T10:00:00`,
       notes,
     });
   };
@@ -60,11 +67,13 @@ export function useGoogleCalendarSync() {
     googleEventId: string | null,
     title: string | null,
     date: string,
-    notes?: string | null
+    notes?: string | null,
+    startTime?: string | null,
+    endTime?: string | null
   ) => {
     if (!googleEventId) {
       // If no google_event_id, treat as create
-      return syncCreate(eventId, title, date, notes);
+      return syncCreate(eventId, title, date, notes, startTime, endTime);
     }
     return syncToGoogleCalendar({
       action: "update",
@@ -72,6 +81,8 @@ export function useGoogleCalendarSync() {
       google_event_id: googleEventId,
       title,
       date,
+      start_time: startTime,
+      end_time: endTime,
       notes,
     });
   };

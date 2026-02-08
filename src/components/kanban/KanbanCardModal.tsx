@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { KanbanCard, KanbanService, KanbanAttachment } from '@/services/kanbanService';
 import {
   Dialog,
@@ -10,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import CardDescriptionEditor from './CardDescriptionEditor';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
@@ -73,11 +74,16 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   onDelete,
   onMove
 }) => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description || '');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(card.priority || 'medium');
   const [dueDate, setDueDate] = useState<Date | undefined>(
     card.due_date ? new Date(card.due_date) : undefined
+  );
+  const [startingDate, setStartingDate] = useState<Date | undefined>(
+    (card as any).starting_date ? new Date((card as any).starting_date) : undefined
   );
   const [attachments, setAttachments] = useState<KanbanAttachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -413,6 +419,112 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     setTags(tags.filter(t => t !== tagToRemove));
   };
 
+  // Sync kanban card dates to calendar_events and Google Calendar
+  const syncDatesToCalendar = useCallback(async (cardTitle: string, cardDueDate?: Date, cardStartingDate?: Date) => {
+    if (!user) return;
+
+    const N8N_WEBHOOK_URL = 'https://n8n.gvvcapital.com/webhook/calendar-sync';
+
+    // Helper to upsert a calendar event for a kanban card date
+    const upsertCalendarEvent = async (
+      dateValue: Date,
+      suffix: string,
+      isAllDay: boolean = true
+    ) => {
+      const dateStr = format(dateValue, 'yyyy-MM-dd');
+      const eventTitle = `${cardTitle}${suffix}`;
+      const sourceRef = `kanban:${card.id}:${suffix.replace(/[^a-z]/gi, '').toLowerCase()}`;
+
+      // Check if event already exists for this card+type
+      const { data: existing } = await supabase
+        .from('calendar_events')
+        .select('id, google_event_id')
+        .eq('source', 'kanban')
+        .eq('notes', sourceRef)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing event
+        await supabase
+          .from('calendar_events')
+          .update({
+            title: eventTitle,
+            date: dateStr,
+            all_day: isAllDay,
+            start_time: isAllDay ? null : `${dateStr}T09:00:00`,
+            end_time: isAllDay ? null : `${dateStr}T10:00:00`,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id);
+
+        // Sync update to Google Calendar if we have a google_event_id
+        if (existing.google_event_id) {
+          fetch(N8N_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'update',
+              event_id: existing.id,
+              google_event_id: existing.google_event_id,
+              title: eventTitle,
+              date: dateStr,
+              start_time: `${dateStr}T09:00:00`,
+              end_time: `${dateStr}T10:00:00`,
+              notes: sourceRef,
+            }),
+          }).catch(() => {}); // Fire and forget
+        }
+      } else {
+        // Create new event
+        const { data: newEvent } = await supabase
+          .from('calendar_events')
+          .insert({
+            title: eventTitle,
+            date: dateStr,
+            all_day: isAllDay,
+            start_time: isAllDay ? null : `${dateStr}T09:00:00`,
+            end_time: isAllDay ? null : `${dateStr}T10:00:00`,
+            source: 'kanban',
+            notes: sourceRef,
+            user_id: user.id,
+          })
+          .select('id')
+          .single();
+
+        // Sync create to Google Calendar
+        if (newEvent) {
+          fetch(N8N_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'create',
+              event_id: newEvent.id,
+              title: eventTitle,
+              date: dateStr,
+              start_time: `${dateStr}T09:00:00`,
+              end_time: `${dateStr}T10:00:00`,
+              notes: sourceRef,
+            }),
+          }).catch(() => {}); // Fire and forget
+        }
+      }
+    };
+
+    try {
+      if (cardDueDate) {
+        await upsertCalendarEvent(cardDueDate, ' (Due Date)', true);
+      }
+      if (cardStartingDate) {
+        await upsertCalendarEvent(cardStartingDate, ' (Start)', true);
+      }
+      // Invalidate calendar queries so the widget updates
+      queryClient.invalidateQueries({ queryKey: ['daily-calendar-events'] });
+    } catch (error) {
+      console.error('Error syncing dates to calendar:', error);
+    }
+  }, [card.id, user, queryClient]);
+
   const handleSave = useCallback(async () => {
     // Check if card should be moved
     if (moveToListId !== card.list_id && onMove) {
@@ -423,6 +535,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
           description,
           priority,
           value,
+          starting_date: startingDate ? format(startingDate, 'yyyy-MM-dd') : (card.created_at ? format(new Date(card.created_at), 'yyyy-MM-dd') : undefined),
           due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
           tasks: tasks as any,
           tags: tags as any,
@@ -445,6 +558,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
         description,
         priority,
         value,
+        starting_date: startingDate ? format(startingDate, 'yyyy-MM-dd') : (card.created_at ? format(new Date(card.created_at), 'yyyy-MM-dd') : undefined),
         due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
         tasks: tasks as any,
         tags: tags as any,
@@ -453,8 +567,13 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
         supervisor_id: supervisorId as any
       });
     }
+
+    // Sync dates to calendar (fire and forget)
+    const effectiveStartingDate = startingDate || (card.created_at ? new Date(card.created_at) : undefined);
+    syncDatesToCalendar(title, dueDate, effectiveStartingDate);
+
     onClose();
-  }, [card.id, card.list_id, title, description, priority, value, dueDate, tasks, tags, assignedTo, assignedExternal, supervisorId, moveToListId, moveToBoardId, onMove, onUpdate, onClose]);
+  }, [card.id, card.list_id, card.created_at, title, description, priority, value, startingDate, dueDate, tasks, tags, assignedTo, assignedExternal, supervisorId, moveToListId, moveToBoardId, onMove, onUpdate, onClose, syncDatesToCalendar]);
 
   // Keyboard shortcut: Ctrl+S / Cmd+S to save
   useEffect(() => {
@@ -536,11 +655,10 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
                 <Sparkles className="h-4 w-4" />
               </Button>
             </div>
-            <Textarea
+            <CardDescriptionEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={setDescription}
               placeholder="Add a more detailed description..."
-              rows={4}
             />
           </div>
 
@@ -560,24 +678,49 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
             </div>
           </div>
 
-          <div>
-            <Label>Due Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dueDate ? format(dueDate, 'PPP') : 'Pick a date'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={dueDate}
-                  onSelect={setDueDate}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Starting Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startingDate
+                      ? format(startingDate, 'PPP')
+                      : card.created_at
+                        ? format(new Date(card.created_at), 'PPP')
+                        : 'Pick a date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={startingDate || (card.created_at ? new Date(card.created_at) : undefined)}
+                    onSelect={setStartingDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <Label>Due Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dueDate ? format(dueDate, 'PPP') : 'Pick a date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={dueDate}
+                    onSelect={setDueDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           <div>

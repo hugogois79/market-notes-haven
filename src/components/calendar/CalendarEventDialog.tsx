@@ -23,6 +23,49 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CalendarCategory } from "@/hooks/useCalendarCategories";
+import { DailyCalendarEvent } from "@/hooks/useDailyCalendarEvents";
+import { useGoogleCalendarSync } from "@/hooks/useGoogleCalendarSync";
+import { parseISO } from "date-fns";
+import { Clock } from "lucide-react";
+
+// Generate time options in 15-minute intervals (24h format)
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+const MINUTE_OPTIONS = ["00", "15", "30", "45"];
+
+function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [h, m] = value.split(":");
+  const hour = h || "09";
+  const minute = m || "00";
+  // Snap minute to nearest 15
+  const snappedMinute = MINUTE_OPTIONS.reduce((prev, curr) =>
+    Math.abs(parseInt(curr) - parseInt(minute)) < Math.abs(parseInt(prev) - parseInt(minute)) ? curr : prev
+  );
+
+  return (
+    <div className="flex items-center gap-1 border rounded-md px-2 py-1.5 bg-background">
+      <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      <select
+        value={hour}
+        onChange={(e) => onChange(`${e.target.value}:${snappedMinute}`)}
+        className="bg-transparent text-sm font-medium appearance-none cursor-pointer outline-none w-8 text-center"
+      >
+        {HOUR_OPTIONS.map((h) => (
+          <option key={h} value={h}>{h}</option>
+        ))}
+      </select>
+      <span className="text-sm font-medium">:</span>
+      <select
+        value={snappedMinute}
+        onChange={(e) => onChange(`${hour}:${e.target.value}`)}
+        className="bg-transparent text-sm font-medium appearance-none cursor-pointer outline-none w-8 text-center"
+      >
+        {MINUTE_OPTIONS.map((m) => (
+          <option key={m} value={m}>{m}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
 interface CalendarEventDialogProps {
   open: boolean;
@@ -30,6 +73,7 @@ interface CalendarEventDialogProps {
   date: string; // yyyy-MM-dd
   categories: CalendarCategory[];
   defaultStartHour?: number;
+  editEvent?: DailyCalendarEvent | null;
 }
 
 export default function CalendarEventDialog({
@@ -38,9 +82,12 @@ export default function CalendarEventDialog({
   date,
   categories,
   defaultStartHour,
+  editEvent,
 }: CalendarEventDialogProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { syncCreate, syncUpdate } = useGoogleCalendarSync();
+  const isEditing = !!editEvent;
 
   const [title, setTitle] = useState("");
   const [startTime, setStartTime] = useState("09:00");
@@ -49,9 +96,9 @@ export default function CalendarEventDialog({
   const [category, setCategory] = useState<string>("");
   const [notes, setNotes] = useState("");
 
-  // Update start/end time when defaultStartHour changes
+  // Update start/end time when defaultStartHour changes (create mode)
   useEffect(() => {
-    if (defaultStartHour !== undefined) {
+    if (!editEvent && defaultStartHour !== undefined) {
       const h = Math.floor(defaultStartHour);
       const m = Math.round((defaultStartHour - h) * 60);
       const start = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
@@ -60,23 +107,42 @@ export default function CalendarEventDialog({
       setStartTime(start);
       setEndTime(end);
     }
-  }, [defaultStartHour]);
+  }, [defaultStartHour, editEvent]);
 
-  // Reset form when dialog opens
+  // Populate form when editing or reset when creating
   useEffect(() => {
     if (open) {
-      setTitle("");
-      setNotes("");
-      setCategory("");
-      setAllDay(false);
-      if (defaultStartHour === undefined) {
-        setStartTime("09:00");
-        setEndTime("10:00");
+      if (editEvent) {
+        setTitle(editEvent.title || "");
+        setNotes(editEvent.notes || "");
+        setCategory(editEvent.category || "");
+        setAllDay(editEvent.all_day);
+        if (editEvent.start_time) {
+          const start = parseISO(editEvent.start_time);
+          setStartTime(`${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`);
+        } else {
+          setStartTime("09:00");
+        }
+        if (editEvent.end_time) {
+          const end = parseISO(editEvent.end_time);
+          setEndTime(`${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`);
+        } else {
+          setEndTime("10:00");
+        }
+      } else {
+        setTitle("");
+        setNotes("");
+        setCategory("");
+        setAllDay(false);
+        if (defaultStartHour === undefined) {
+          setStartTime("09:00");
+          setEndTime("10:00");
+        }
       }
     }
-  }, [open, defaultStartHour]);
+  }, [open, defaultStartHour, editEvent]);
 
-  const createEvent = useMutation({
+  const saveEvent = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Utilizador não autenticado");
       if (!title.trim()) throw new Error("O título é obrigatório");
@@ -84,40 +150,71 @@ export default function CalendarEventDialog({
       const startTimestamp = allDay ? null : `${date}T${startTime}:00`;
       const endTimestamp = allDay ? null : `${date}T${endTime}:00`;
 
-      const { error } = await supabase.from("calendar_events").insert({
-        title: title.trim(),
-        date,
-        start_time: startTimestamp,
-        end_time: endTimestamp,
-        all_day: allDay,
-        category: category || null,
-        notes: notes.trim() || null,
-        user_id: user.id,
-        source: "local",
-      });
+      if (isEditing) {
+        const { error } = await supabase
+          .from("calendar_events")
+          .update({
+            title: title.trim(),
+            start_time: startTimestamp,
+            end_time: endTimestamp,
+            all_day: allDay,
+            category: category || null,
+            notes: notes.trim() || null,
+          })
+          .eq("id", editEvent!.id);
+        if (error) throw error;
 
-      if (error) throw error;
+        // Sync to Google Calendar (fire-and-forget)
+        syncUpdate(
+          editEvent!.id,
+          editEvent!.google_event_id || null,
+          title.trim(),
+          date,
+          notes.trim() || null,
+          startTimestamp,
+          endTimestamp
+        );
+      } else {
+        const { data: inserted, error } = await supabase.from("calendar_events").insert({
+          title: title.trim(),
+          date,
+          start_time: startTimestamp,
+          end_time: endTimestamp,
+          all_day: allDay,
+          category: category || null,
+          notes: notes.trim() || null,
+          user_id: user.id,
+          source: "local",
+        }).select("id").single();
+        if (error) throw error;
+
+        // Sync to Google Calendar (fire-and-forget)
+        if (inserted) {
+          syncCreate(inserted.id, title.trim(), date, notes.trim() || null, startTimestamp, endTimestamp);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["daily-calendar-events"] });
-      toast.success("Evento criado");
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      toast.success(isEditing ? "Evento actualizado" : "Evento criado");
       onOpenChange(false);
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Erro ao criar evento");
+      toast.error(error.message || (isEditing ? "Erro ao actualizar evento" : "Erro ao criar evento"));
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createEvent.mutate();
+    saveEvent.mutate();
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
-          <DialogTitle>Novo Evento</DialogTitle>
+          <DialogTitle>{isEditing ? "Editar Evento" : "Novo Evento"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -150,22 +247,12 @@ export default function CalendarEventDialog({
           {!allDay && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="event-start">Início</Label>
-                <Input
-                  id="event-start"
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                />
+                <Label>Início</Label>
+                <TimeSelect value={startTime} onChange={setStartTime} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="event-end">Fim</Label>
-                <Input
-                  id="event-end"
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                />
+                <Label>Fim</Label>
+                <TimeSelect value={endTime} onChange={setEndTime} />
               </div>
             </div>
           )}
@@ -211,8 +298,10 @@ export default function CalendarEventDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={createEvent.isPending || !title.trim()}>
-              {createEvent.isPending ? "A criar..." : "Criar Evento"}
+            <Button type="submit" disabled={saveEvent.isPending || !title.trim()}>
+              {saveEvent.isPending
+                ? (isEditing ? "A guardar..." : "A criar...")
+                : (isEditing ? "Guardar" : "Criar Evento")}
             </Button>
           </DialogFooter>
         </form>

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Draggable } from '@hello-pangea/dnd';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import DOMPurify from 'dompurify';
 import { KanbanCard as KanbanCardType } from '@/services/kanbanService';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -153,9 +154,12 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ card, index, onClick, on
                 <h4 className="font-medium text-sm mb-2">{card.title}</h4>
                 
                 {card.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                    {card.description}
-                  </p>
+                  <div
+                    className="text-xs text-muted-foreground line-clamp-2 mb-2 prose prose-sm dark:prose-invert max-w-none [&>*]:m-0 [&>*]:text-xs"
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(card.description),
+                    }}
+                  />
                 )}
                 
                 <div className="flex items-center gap-2 flex-wrap">

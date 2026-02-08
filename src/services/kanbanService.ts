@@ -40,6 +40,7 @@ export interface KanbanCard {
   list_id: string;
   position: number;
   due_date?: string;
+  starting_date?: string;
   priority?: 'low' | 'medium' | 'high';
   tasks?: Array<{id: string; text: string; completed: boolean}>;
   tags?: string[];

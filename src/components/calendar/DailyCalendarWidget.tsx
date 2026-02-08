@@ -1,20 +1,16 @@
-import { useState, useEffect, useCallback } from "react";
-import { format, addDays, subDays, isToday, parseISO } from "date-fns";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { format, addDays, subDays, isToday, parseISO, setHours, setMinutes } from "date-fns";
 import { pt } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, X, ExternalLink, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, ExternalLink, Plus, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useDailyCalendarEvents, DailyCalendarEvent } from "@/hooks/useDailyCalendarEvents";
 import { useCalendarCategories, CalendarCategory } from "@/hooks/useCalendarCategories";
+import { useGoogleCalendarSync } from "@/hooks/useGoogleCalendarSync";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +21,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import CalendarEventDialog from "./CalendarEventDialog";
 
 interface DailyCalendarWidgetProps {
@@ -51,6 +53,10 @@ function getEventPosition(event: DailyCalendarEvent) {
     if (event.end_time) {
       const endDate = parseISO(event.end_time);
       endHour = endDate.getHours() + endDate.getMinutes() / 60;
+      // If end is midnight (0:00) or wraps to next day, treat as 24:00
+      if (endHour <= startHour) {
+        endHour = 24;
+      }
     }
     
     const top = (startHour - 6) * PX_PER_HOUR;
@@ -115,10 +121,14 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
   const { categories } = useCalendarCategories();
   const [googleCalendarUrl] = useState(getGoogleCalendarUrl);
   const queryClient = useQueryClient();
+  const { syncUpdate, syncDelete } = useGoogleCalendarSync();
 
-  // Dialog state
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [defaultStartHour, setDefaultStartHour] = useState<number | undefined>();
+  // Single dialog state: either creating (with optional start hour) or editing an event
+  const [dialogState, setDialogState] = useState<
+    | { mode: "create"; defaultStartHour?: number }
+    | { mode: "edit"; event: DailyCalendarEvent }
+    | null
+  >(null);
   
   // Delete confirmation state
   const [deleteTarget, setDeleteTarget] = useState<DailyCalendarEvent | null>(null);
@@ -145,11 +155,18 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
   // Delete mutation
   const deleteEvent = useMutation({
     mutationFn: async (eventId: string) => {
+      // Find the event to get google_event_id before deleting
+      const eventToDelete = events.find((e) => e.id === eventId);
       const { error } = await supabase
         .from("calendar_events")
         .delete()
         .eq("id", eventId);
       if (error) throw error;
+
+      // Sync deletion to Google Calendar (fire-and-forget)
+      if (eventToDelete) {
+        syncDelete(eventId, eventToDelete.google_event_id || null);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["daily-calendar-events"] });
@@ -168,29 +185,259 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
     }
   };
 
-  // Click on timeline to create event at that hour
-  const handleTimelineClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      // Only handle clicks directly on the timeline container (not on events)
-      if ((e.target as HTMLElement).closest("[data-event]")) return;
-      
-      const rect = e.currentTarget.getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      const hour = Math.floor(y / PX_PER_HOUR) + 6;
-      const minutes = Math.round(((y % PX_PER_HOUR) / PX_PER_HOUR) * 2) * 30; // snap to 30min
-      const clickedHour = hour + minutes / 60;
-      
-      setDefaultStartHour(clickedHour);
-      setCreateDialogOpen(true);
+  // --- Drag-and-drop to reschedule events ---
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const [dragState, setDragState] = useState<{
+    event: DailyCalendarEvent;
+    startY: number;
+    originalTop: number;
+    duration: number; // hours
+    currentTop: number;
+  } | null>(null);
+
+  // Mutable drag tracking via ref - handlers read this, not React state
+  const dragRef = useRef<{
+    event: DailyCalendarEvent;
+    startY: number;
+    originalTop: number;
+    duration: number;
+    currentTop: number;
+  } | null>(null);
+
+  // Store cleanup function so we can call it from anywhere
+  const dragCleanupRef = useRef<(() => void) | null>(null);
+
+  // Update event time mutation
+  const updateEventTime = useMutation({
+    mutationFn: async ({ eventId, newStartHour, duration }: { eventId: string; newStartHour: number; duration: number }) => {
+      const eventDate = parseISO(dateString);
+      const startH = Math.floor(newStartHour);
+      const startM = Math.round((newStartHour - startH) * 60);
+      // Cap end time at 24:00 (midnight) to avoid wrapping to next day
+      const endHour = Math.min(newStartHour + duration, 24);
+      const endH = Math.floor(endHour);
+      const endM = Math.round((endHour - endH) * 60);
+
+      const newStart = setMinutes(setHours(eventDate, startH), startM);
+      // If end is exactly 24:00, set to 23:59 to stay within same day
+      const newEnd = endH >= 24
+        ? setMinutes(setHours(eventDate, 23), 59)
+        : setMinutes(setHours(eventDate, endH), endM);
+
+      const { error } = await supabase
+        .from("calendar_events")
+        .update({
+          start_time: newStart.toISOString(),
+          end_time: newEnd.toISOString(),
+        })
+        .eq("id", eventId);
+      if (error) throw error;
+
+      // Sync time change to Google Calendar (fire-and-forget)
+      const movedEvent = events.find((e) => e.id === eventId);
+      if (movedEvent) {
+        syncUpdate(
+          eventId,
+          movedEvent.google_event_id || null,
+          movedEvent.title || null,
+          dateString,
+          movedEvent.notes || null,
+          newStart.toISOString(),
+          newEnd.toISOString()
+        );
+      }
     },
-    []
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["daily-calendar-events"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      toast.success("Evento movido");
+    },
+    onError: () => {
+      toast.error("Erro ao mover evento");
+    },
+  });
+
+  // Stable ref for mutation so handlers always have latest version
+  const updateEventTimeRef = useRef(updateEventTime);
+  updateEventTimeRef.current = updateEventTime;
+
+  // Track if we just finished a drag to suppress timeline interactions
+  const justDragged = useRef(false);
+
+  // Ends the drag: removes listeners, saves if moved, resets state
+  const endDrag = useCallback(() => {
+    // Remove global listeners first
+    if (dragCleanupRef.current) {
+      dragCleanupRef.current();
+      dragCleanupRef.current = null;
+    }
+
+    const current = dragRef.current;
+    if (current) {
+      const newStartHour = (current.currentTop / PX_PER_HOUR) + 6;
+      const originalStartHour = (current.originalTop / PX_PER_HOUR) + 6;
+      // Only save if actually moved at least 15 minutes
+      if (Math.abs(newStartHour - originalStartHour) >= 0.25) {
+        updateEventTimeRef.current.mutate({
+          eventId: current.event.id,
+          newStartHour,
+          duration: current.duration,
+        });
+      }
+    }
+
+    justDragged.current = true;
+    setTimeout(() => { justDragged.current = false; }, 300);
+    dragRef.current = null;
+    setDragState(null);
+  }, []);
+
+  const handleDragStart = useCallback((e: React.MouseEvent, event: DailyCalendarEvent) => {
+    // Only left mouse button
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    // If there's a stuck drag, clean it up first
+    if (dragCleanupRef.current) {
+      dragCleanupRef.current();
+      dragCleanupRef.current = null;
+      dragRef.current = null;
+    }
+
+    const pos = getEventPosition(event);
+    const initial = {
+      event,
+      startY: e.clientY,
+      originalTop: pos.top,
+      duration: pos.endHour - pos.startHour,
+      currentTop: pos.top,
+    };
+
+    dragRef.current = initial;
+    setDragState(initial);
+
+    // Register listeners SYNCHRONOUSLY in the same event handler tick.
+    // This guarantees they're active before any mouseup can fire.
+    const onMouseMove = (ev: MouseEvent) => {
+      const cur = dragRef.current;
+      if (!cur) return;
+      const deltaY = ev.clientY - cur.startY;
+      let newTop = cur.originalTop + deltaY;
+      // Snap to 15-minute increments
+      const snapPx = PX_PER_HOUR / 4;
+      newTop = Math.round(newTop / snapPx) * snapPx;
+      // Clamp within bounds
+      const maxTop = (HOURS.length * PX_PER_HOUR) - (cur.duration * PX_PER_HOUR);
+      newTop = Math.max(0, Math.min(newTop, maxTop));
+      cur.currentTop = newTop; // mutate ref directly for latest position
+      setDragState({ ...cur }); // trigger re-render for visual update
+    };
+
+    const onMouseUp = () => {
+      cleanup();
+      const cur = dragRef.current;
+      if (cur) {
+        const newStartHour = (cur.currentTop / PX_PER_HOUR) + 6;
+        const originalStartHour = (cur.originalTop / PX_PER_HOUR) + 6;
+        if (Math.abs(newStartHour - originalStartHour) >= 0.25) {
+          updateEventTimeRef.current.mutate({
+            eventId: cur.event.id,
+            newStartHour,
+            duration: cur.duration,
+          });
+        }
+      }
+      justDragged.current = true;
+      setTimeout(() => { justDragged.current = false; }, 300);
+      dragRef.current = null;
+      setDragState(null);
+    };
+
+    const cleanup = () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      dragCleanupRef.current = null;
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    dragCleanupRef.current = cleanup;
+  }, []);
+
+  // Safety: cleanup listeners on unmount
+  useEffect(() => {
+    return () => {
+      if (dragCleanupRef.current) {
+        dragCleanupRef.current();
+      }
+    };
+  }, []);
+
+  // --- Robust timeline click: track mousedown on empty area, confirm on mouseup ---
+  const timelineClickRef = useRef<{ y: number; time: number } | null>(null);
+
+  const handleTimelineMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      // ONLY left button clicks on empty area
+      if (e.button !== 0) return;
+      // Ignore if clicking on an event
+      if ((e.target as HTMLElement).closest("[data-event]")) return;
+      // Ignore if dialog already open
+      if (dialogState || deleteTarget) return;
+      if (justDragged.current) return;
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      timelineClickRef.current = { y: e.clientY - rect.top, time: Date.now() };
+    },
+    [dialogState, deleteTarget]
+  );
+
+  const handleTimelineMouseUp = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (e.button !== 0) return;
+      if (!timelineClickRef.current) return;
+      // Ignore if clicking on an event
+      if ((e.target as HTMLElement).closest("[data-event]")) {
+        timelineClickRef.current = null;
+        return;
+      }
+      if (justDragged.current) {
+        timelineClickRef.current = null;
+        return;
+      }
+      if (dialogState || deleteTarget) {
+        timelineClickRef.current = null;
+        return;
+      }
+
+      const { y, time } = timelineClickRef.current;
+      timelineClickRef.current = null;
+
+      // Must be a quick tap (< 500ms) and not moved much (< 10px)
+      const elapsed = Date.now() - time;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const currentY = e.clientY - rect.top;
+      if (elapsed > 500 || Math.abs(currentY - y) > 10) return;
+
+      const hour = Math.floor(y / PX_PER_HOUR) + 6;
+      const minutes = Math.round(((y % PX_PER_HOUR) / PX_PER_HOUR) * 2) * 30;
+      const clickedHour = hour + minutes / 60;
+
+      setDialogState({ mode: "create", defaultStartHour: clickedHour });
+    },
+    [dialogState, deleteTarget]
   );
 
   // Open create dialog without preset hour
   const handleCreateClick = () => {
-    setDefaultStartHour(undefined);
-    setCreateDialogOpen(true);
+    setDialogState({ mode: "create" });
   };
+
+  // Open edit dialog for an event
+  const handleEditEvent = useCallback((event: DailyCalendarEvent) => {
+    setDialogState({ mode: "edit", event });
+  }, []);
 
   // Separate all-day events from timed events
   const allDayEvents = events.filter((e) => e.all_day);
@@ -263,23 +510,32 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
           {allDayEvents.map((event) => {
             const color = getCategoryColor(event.category, categories);
             return (
-              <HoverCard key={event.id} openDelay={200}>
-                <HoverCardTrigger asChild>
+              <ContextMenu key={event.id}>
+                <ContextMenuTrigger asChild>
                   <div
                     className="rounded px-2 py-0.5 text-[11px] font-medium truncate cursor-pointer hover:opacity-90 transition-opacity group relative"
                     style={{ backgroundColor: color, color: "#fff" }}
                   >
                     {event.title || "Sem título"}
                   </div>
-                </HoverCardTrigger>
-                <HoverCardContent side="left" className="w-64">
-                  <EventHoverContent
-                    event={event}
-                    color={color}
-                    onDelete={() => setDeleteTarget(event)}
-                  />
-                </HoverCardContent>
-              </HoverCard>
+                </ContextMenuTrigger>
+                <ContextMenuContent className="w-40">
+                  <ContextMenuItem
+                    onClick={() => handleEditEvent(event)}
+                    className="gap-2"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Editar
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() => setDeleteTarget(event)}
+                    className="gap-2 text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Eliminar
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             );
           })}
         </div>
@@ -290,7 +546,8 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
         <div
           className="relative cursor-crosshair"
           style={{ height: HOURS.length * PX_PER_HOUR }}
-          onClick={handleTimelineClick}
+          onMouseDown={handleTimelineMouseDown}
+          onMouseUp={handleTimelineMouseUp}
         >
           {/* Hour lines */}
           {HOURS.map((hour) => (
@@ -317,47 +574,95 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
           )}
 
           {/* Timed events */}
-          <div className="absolute left-10 right-2 top-0 bottom-0">
+          <div className="absolute left-10 right-2 top-0 bottom-0" ref={timelineRef}>
             {positionedEvents.map(({ event, pos, index, total }) => {
               const color = getCategoryColor(event.category, categories);
               const eventWidth = total > 1 ? 100 / total : 100;
               const eventLeft = index * eventWidth;
+              const isDragging = dragState?.event.id === event.id;
+              const displayTop = isDragging ? dragState.currentTop : pos.top;
+              const displayHeight = isDragging ? dragState.duration * PX_PER_HOUR : Math.max(pos.height, 24);
+
+              // Show drag time preview
+              const dragTimeStr = isDragging ? (() => {
+                const h = (dragState.currentTop / PX_PER_HOUR) + 6;
+                const sh = Math.floor(h);
+                const sm = Math.round((h - sh) * 60);
+                const eh = h + dragState.duration;
+                const ehh = Math.floor(eh);
+                const emm = Math.round((eh - ehh) * 60);
+                return `${String(sh).padStart(2,'0')}:${String(sm).padStart(2,'0')} - ${String(ehh).padStart(2,'0')}:${String(emm).padStart(2,'0')}`;
+              })() : null;
 
               return (
-                <HoverCard key={event.id} openDelay={200}>
-                  <HoverCardTrigger asChild>
+                <ContextMenu key={event.id}>
+                  <ContextMenuTrigger asChild disabled={isDragging}>
                     <div
                       data-event="true"
-                      className="absolute rounded-md px-2 py-1 cursor-pointer overflow-hidden transition-opacity hover:opacity-90"
+                      className={cn(
+                        "absolute rounded-md px-2 py-1 overflow-hidden select-none",
+                        isDragging
+                          ? "cursor-grabbing opacity-90 shadow-lg ring-2 ring-white/50 z-30"
+                          : "cursor-grab hover:opacity-90 transition-opacity"
+                      )}
                       style={{
-                        top: pos.top,
-                        height: Math.max(pos.height, 24),
+                        top: displayTop,
+                        height: Math.max(displayHeight, 24),
                         left: `${eventLeft}%`,
                         width: `${eventWidth}%`,
                         backgroundColor: color,
+                        transition: isDragging ? 'none' : 'top 0.15s ease',
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => {
+                        e.stopPropagation(); // Prevent timeline from tracking this
+                        // Only drag on left click
+                        if (e.button === 0) handleDragStart(e, event);
+                      }}
+                      onMouseUp={(e) => {
+                        // During drag, let mouseup bubble to document so the drag handler receives it.
+                        // When not dragging, stop propagation to prevent timeline from acting on it.
+                        if (!dragState) e.stopPropagation();
                       }}
                     >
                       <p className="text-[11px] font-medium text-white truncate">
                         {event.title || "Sem título"}
                       </p>
-                      {pos.height >= 36 && (
+                      {displayHeight >= 36 && (
                         <p className="text-[10px] text-white/80">
-                          {formatEventTime(event)}
+                          {isDragging ? dragTimeStr : formatEventTime(event)}
                         </p>
                       )}
                     </div>
-                  </HoverCardTrigger>
-                  <HoverCardContent side="left" className="w-64">
-                    <EventHoverContent
-                      event={event}
-                      color={color}
-                      onDelete={() => setDeleteTarget(event)}
-                    />
-                  </HoverCardContent>
-                </HoverCard>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent className="w-40">
+                    <ContextMenuItem
+                      onClick={() => handleEditEvent(event)}
+                      className="gap-2"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Editar
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      onClick={() => setDeleteTarget(event)}
+                      className="gap-2 text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Eliminar
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
               );
             })}
           </div>
+
+          {/* Drag ghost guide line */}
+          {dragState && (
+            <div
+              className="absolute left-10 right-2 border-t-2 border-dashed border-primary/50 z-20 pointer-events-none"
+              style={{ top: dragState.currentTop }}
+            />
+          )}
 
           {/* Loading state */}
           {isLoading && (
@@ -377,13 +682,14 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
         </p>
       </div>
 
-      {/* Create Event Dialog */}
+      {/* Event Dialog (Create or Edit) — single state prevents dual-open */}
       <CalendarEventDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
+        open={!!dialogState}
+        onOpenChange={(open) => { if (!open) setDialogState(null); }}
         date={dateString}
         categories={categories}
-        defaultStartHour={defaultStartHour}
+        defaultStartHour={dialogState?.mode === "create" ? dialogState.defaultStartHour : undefined}
+        editEvent={dialogState?.mode === "edit" ? dialogState.event : null}
       />
 
       {/* Delete Confirmation Dialog */}
@@ -413,58 +719,6 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
-}
-
-// ---------- Sub-component for event hover content ----------
-
-interface EventHoverContentProps {
-  event: DailyCalendarEvent;
-  color: string;
-  onDelete: () => void;
-}
-
-function EventHoverContent({ event, color, onDelete }: EventHoverContentProps) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-start gap-2">
-        <div
-          className="w-3 h-3 rounded-full mt-1 shrink-0"
-          style={{ backgroundColor: color }}
-        />
-        <div className="flex-1 min-w-0">
-          <p className="font-medium">{event.title || "Sem título"}</p>
-          <p className="text-sm text-muted-foreground">
-            {formatEventTime(event)}
-          </p>
-          {event.source === "google" && (
-            <p className="text-[10px] text-blue-500">Google Calendar</p>
-          )}
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          title="Eliminar evento"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
-      </div>
-      {event.notes && (
-        <p className="text-sm text-muted-foreground pl-5">
-          {event.notes}
-        </p>
-      )}
-      {event.category && (
-        <p className="text-xs text-muted-foreground pl-5">
-          Categoria: {event.category}
-        </p>
-      )}
     </div>
   );
 }

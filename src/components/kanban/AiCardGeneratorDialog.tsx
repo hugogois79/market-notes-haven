@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -205,9 +206,12 @@ export const AiCardGeneratorDialog: React.FC<AiCardGeneratorDialogProps> = ({
                         {card.priority}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                      {card.description}
-                    </p>
+                    <div
+                      className="text-sm text-muted-foreground mt-1 line-clamp-2 prose prose-sm dark:prose-invert max-w-none [&>*]:m-0 [&>*]:text-sm"
+                      dangerouslySetInnerHTML={{
+                        __html: DOMPurify.sanitize(card.description || ''),
+                      }}
+                    />
                   </div>
                 </div>
               ))}
