@@ -458,7 +458,7 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
   });
 
   return (
-    <div className="w-72 bg-background border-l flex flex-col h-full">
+    <div className="w-72 bg-background border-l flex flex-col h-full daily-calendar-widget">
       {/* Header */}
       <div className="p-3 border-b flex items-center justify-between">
         <div className="flex items-center gap-1">
@@ -468,7 +468,7 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
           <button
             onClick={goToToday}
             className={cn(
-              "text-sm font-medium px-2 py-1 rounded hover:bg-accent transition-colors",
+              "text-sm font-medium px-2 py-1 rounded hover:bg-accent transition-colors print-only",
               isToday(selectedDate) && "text-primary"
             )}
           >

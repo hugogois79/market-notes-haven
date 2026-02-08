@@ -64,7 +64,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           
           {/* Calendar Widget - fixed position like sidebar */}
           {showWidget && (
-            <div className="fixed right-0 top-0 h-screen z-30 transition-all duration-300 ease-in-out animate-in slide-in-from-right">
+            <div className="fixed right-0 top-0 h-screen z-30 transition-all duration-300 ease-in-out animate-in slide-in-from-right calendar-widget-container">
               <DailyCalendarWidget onClose={hideCalendarWidget} />
             </div>
           )}

@@ -260,6 +260,90 @@
     font-weight: 600;
     margin-left: 0.15cm;
   }
+
+  /* ============================================
+     Calendar Widget - Compact on every page
+     ============================================ */
+
+  /* Container: fixed right, narrow, repeats on every printed page */
+  .calendar-widget-container {
+    position: fixed !important;
+    right: 0 !important;
+    top: 0 !important;
+    width: 4.5cm !important;
+    height: 100% !important;
+    z-index: 100 !important;
+    overflow: hidden !important;
+    display: block !important;
+    visibility: visible !important;
+    animation: none !important;
+  }
+
+  /* Widget root: scale down to fit ~4.5cm */
+  .daily-calendar-widget {
+    width: 288px !important; /* Original w-72 */
+    height: 100% !important;
+    transform: scale(0.55) !important;
+    transform-origin: top left !important;
+    background: white !important;
+    border-left: 1px solid #666 !important;
+    color: black !important;
+  }
+
+  /* Date button - show in print with compact styling */
+  .daily-calendar-widget button.print-only {
+    display: block !important;
+    visibility: visible !important;
+    font-size: 10pt !important;
+    font-weight: bold !important;
+    color: black !important;
+    padding: 0.1cm !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
+
+  /* ScrollArea: remove overflow clipping for print */
+  .daily-calendar-widget [data-radix-scroll-area-viewport] {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Hide scrollbar in print */
+  .daily-calendar-widget [data-radix-scroll-area-scrollbar] {
+    display: none !important;
+  }
+
+  /* Hide current time indicator (red line) in print */
+  .daily-calendar-widget .bg-destructive {
+    display: none !important;
+  }
+
+  /* Context menus and popovers hidden */
+  .daily-calendar-widget [data-radix-popper-content-wrapper] {
+    display: none !important;
+  }
+
+  /* Allow SVGs inside calendar widget for event color blocks */
+  .daily-calendar-widget svg {
+    display: none !important;
+  }
+
+  /* All-day events: ensure color backgrounds print */
+  .daily-calendar-widget .rounded {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Timed events: ensure color backgrounds print */
+  .daily-calendar-widget .rounded-md {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Kanban board print container: leave space for calendar only when widget is open */
+  body:has(.calendar-widget-container) .print-container {
+    width: calc(100% - 5cm) !important;
+  }
 }
 
 
