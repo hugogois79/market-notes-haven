@@ -1,9 +1,15 @@
 import { useState, useEffect, useRef } from "react";
-import { Plus, Download, Trash2, FileText, ChevronUp, Loader2 } from "lucide-react";
+import { Plus, Download, Trash2, FileText, ChevronUp, Loader2, Eye, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { KanbanService, CardEmail } from "@/services/kanbanService";
 import { toast } from "sonner";
 import {
@@ -28,6 +34,9 @@ export default function CardEmailsSection({ cardId }: CardEmailsSectionProps) {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CardEmail | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [viewerEmail, setViewerEmail] = useState<CardEmail | null>(null);
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const [viewerLoading, setViewerLoading] = useState(false);
 
   // Form state
   const [emailDate, setEmailDate] = useState(() => new Date().toISOString().split("T")[0]);
@@ -122,6 +131,27 @@ export default function CardEmailsSection({ cardId }: CardEmailsSectionProps) {
     } finally {
       setDownloadingId(null);
     }
+  }
+
+  async function handleView(email: CardEmail) {
+    try {
+      setViewerEmail(email);
+      setViewerLoading(true);
+      setViewerUrl(null);
+      const url = await KanbanService.getEmailDownloadUrl(email.file_url, email.storage_path);
+      setViewerUrl(url);
+    } catch (err) {
+      console.error("Error loading PDF for viewer:", err);
+      toast.error("Erro ao carregar PDF");
+      setViewerEmail(null);
+    } finally {
+      setViewerLoading(false);
+    }
+  }
+
+  function closeViewer() {
+    setViewerEmail(null);
+    setViewerUrl(null);
   }
 
   function formatDate(dateStr: string) {
@@ -244,7 +274,9 @@ export default function CardEmailsSection({ cardId }: CardEmailsSectionProps) {
           {emails.map((email) => (
             <div
               key={email.id}
-              className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50 group text-sm"
+              className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50 group text-sm cursor-pointer"
+              onClick={() => handleView(email)}
+              title="Clica para ver o PDF"
             >
               <FileText className="h-4 w-4 text-red-500 flex-shrink-0" />
               <div className="flex-1 min-w-0">
@@ -269,7 +301,17 @@ export default function CardEmailsSection({ cardId }: CardEmailsSectionProps) {
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={() => handleDownload(email)}
+                  onClick={(e) => { e.stopPropagation(); handleView(email); }}
+                  title="Ver PDF"
+                >
+                  <Eye className="h-3 w-3" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => { e.stopPropagation(); handleDownload(email); }}
                   disabled={downloadingId === email.id}
                   title="Download PDF"
                 >
@@ -284,7 +326,7 @@ export default function CardEmailsSection({ cardId }: CardEmailsSectionProps) {
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 hover:text-destructive"
-                  onClick={() => setDeleteTarget(email)}
+                  onClick={(e) => { e.stopPropagation(); setDeleteTarget(email); }}
                   title="Eliminar"
                 >
                   <Trash2 className="h-3 w-3" />
@@ -294,6 +336,63 @@ export default function CardEmailsSection({ cardId }: CardEmailsSectionProps) {
           ))}
         </div>
       )}
+
+      {/* PDF Viewer Modal */}
+      <Dialog open={!!viewerEmail} onOpenChange={(open) => !open && closeViewer()}>
+        <DialogContent className="max-w-5xl w-[95vw] h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-4 py-3 border-b flex-shrink-0">
+            <div className="flex items-center justify-between pr-8">
+              <div className="min-w-0">
+                <DialogTitle className="text-base truncate">
+                  {viewerEmail?.subject}
+                </DialogTitle>
+                <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  {viewerEmail && (
+                    <>
+                      <span>{formatDate(viewerEmail.email_date)}</span>
+                      <Separator orientation="vertical" className="h-3" />
+                      <span>De: {viewerEmail.author}</span>
+                      {viewerEmail.recipient && (
+                        <>
+                          <Separator orientation="vertical" className="h-3" />
+                          <span>Para: {viewerEmail.recipient}</span>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs flex-shrink-0"
+                onClick={() => viewerEmail && handleDownload(viewerEmail)}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                Download
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 bg-muted/30">
+            {viewerLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : viewerUrl ? (
+              <iframe
+                src={viewerUrl}
+                className="w-full h-full border-0"
+                title={viewerEmail?.subject || "PDF Viewer"}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                Erro ao carregar PDF
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
