@@ -75,6 +75,18 @@ export interface KanbanAttachment {
   created_at: string;
 }
 
+export interface CardEmail {
+  id: string;
+  card_id: string;
+  email_date: string;
+  subject: string;
+  author: string;
+  file_url: string;
+  storage_path: string | null;
+  filename: string;
+  created_at: string | null;
+}
+
 export class KanbanService {
   // Space operations
   static async getSpaces() {
@@ -538,6 +550,98 @@ export class KanbanService {
     const { data, error } = await supabase.storage
       .from('kanban-attachments')
       .createSignedUrl(filePath, 3600); // 1 hour expiry
+    
+    if (error) throw error;
+    if (!data?.signedUrl) throw new Error('Failed to generate signed URL');
+    
+    return data.signedUrl;
+  }
+
+  // Card Email operations
+  static async getCardEmails(cardId: string) {
+    const { data, error } = await supabase
+      .from('kanban_card_emails')
+      .select('*')
+      .eq('card_id', cardId)
+      .order('email_date', { ascending: false });
+    
+    if (error) throw error;
+    return data as CardEmail[];
+  }
+
+  static async uploadCardEmail(
+    cardId: string,
+    file: File,
+    metadata: { email_date: string; subject: string; author: string }
+  ) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const fileExt = file.name.split('.').pop();
+    const storagePath = `emails/${cardId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('kanban-attachments')
+      .upload(storagePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('kanban-attachments')
+      .getPublicUrl(storagePath);
+
+    const { data, error } = await supabase
+      .from('kanban_card_emails')
+      .insert([{
+        card_id: cardId,
+        email_date: metadata.email_date,
+        subject: metadata.subject,
+        author: metadata.author,
+        file_url: publicUrl,
+        storage_path: storagePath,
+        filename: file.name
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as CardEmail;
+  }
+
+  static async deleteCardEmail(id: string, storagePath: string | null) {
+    if (storagePath) {
+      const { error: storageError } = await supabase.storage
+        .from('kanban-attachments')
+        .remove([storagePath]);
+
+      if (storageError) console.error('Error deleting email file from storage:', storageError);
+    }
+
+    const { error } = await supabase
+      .from('kanban_card_emails')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+
+  static async getEmailDownloadUrl(fileUrl: string, storagePath?: string | null): Promise<string> {
+    let filePath = storagePath;
+    
+    if (!filePath) {
+      const urlParts = fileUrl.split('/kanban-attachments/');
+      if (urlParts.length < 2) {
+        throw new Error('Invalid file URL format');
+      }
+      filePath = decodeURIComponent(urlParts[1]);
+    }
+    
+    const { data, error } = await supabase.storage
+      .from('kanban-attachments')
+      .createSignedUrl(filePath, 3600);
     
     if (error) throw error;
     if (!data?.signedUrl) throw new Error('Failed to generate signed URL');

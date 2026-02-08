@@ -1858,6 +1858,50 @@ export type Database = {
           },
         ]
       }
+      kanban_card_emails: {
+        Row: {
+          id: string
+          card_id: string
+          email_date: string
+          subject: string
+          author: string
+          file_url: string
+          storage_path: string | null
+          filename: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          card_id: string
+          email_date: string
+          subject: string
+          author: string
+          file_url: string
+          storage_path?: string | null
+          filename: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          card_id?: string
+          email_date?: string
+          subject?: string
+          author?: string
+          file_url?: string
+          storage_path?: string | null
+          filename?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_card_emails_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kanban_attachments: {
         Row: {
           card_id: string | null

@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/popover';
 import { toast } from 'sonner';
 import { TaskChecklist, Task } from './TaskChecklist';
+import CardEmailsSection from './CardEmailsSection';
 import { BoardListSelector } from './BoardListSelector';
 import {
   Collapsible,
@@ -1030,6 +1031,9 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Emails */}
+          {card?.id && <CardEmailsSection cardId={card.id} />}
 
           <div>
             <TaskChecklist 
