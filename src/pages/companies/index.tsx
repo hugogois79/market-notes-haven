@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Building2, Search, Edit, Trash2, Eye, Settings, ChevronDown, X, ListTodo, Link2, Bookmark } from "lucide-react";
+import { Plus, Building2, Search, Edit, Trash2, Eye, Settings, ChevronDown, X, ListTodo, Link2, Bookmark, FolderKanban } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import WorkFlowTab from "./WorkFlowTab";
@@ -113,6 +113,15 @@ interface StorageLocation {
   folder_path: string | null;
 }
 
+interface ProjectStorageLocation {
+  id: string;
+  project_id: string;
+  folder_path: string;
+  description: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 interface TableRelationsConfig {
   defaultCompanyId: string | null;
   autoCreateTransaction: boolean;
@@ -214,6 +223,18 @@ export default function CompaniesPage() {
     year: new Date().getFullYear(),
     month: new Date().getMonth() + 1,
     folder_path: ""
+  });
+
+  // Project storage location dialog
+  const [projectStorageDialog, setProjectStorageDialog] = useState<{ open: boolean; editingId: string | null }>({ open: false, editingId: null });
+  const [projectStorageForm, setProjectStorageForm] = useState<{
+    project_id: string;
+    folder_path: string;
+    description: string;
+  }>({
+    project_id: "",
+    folder_path: "",
+    description: ""
   });
 
   // Generate year options (current year - 2 to current year + 5)
@@ -331,6 +352,110 @@ export default function CompaniesPage() {
     },
     onError: () => {
       toast.error("Failed to delete location");
+    }
+  });
+
+  // Fetch expense projects for project storage location dialog
+  const { data: expenseProjects = [] } = useQuery({
+    queryKey: ["expense-projects-for-storage"],
+    enabled: !authLoading && !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expense_projects")
+        .select("id, name, color, is_active")
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch project storage locations from Supabase
+  const {
+    data: projectStorageLocations = [],
+    refetch: refetchProjectStorageLocations,
+    isLoading: projectStorageLoading,
+    error: projectStorageError,
+  } = useQuery({
+    queryKey: ["project-storage-locations", user?.id ?? "anon"],
+    enabled: !authLoading && !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_storage_locations")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data as ProjectStorageLocation[];
+    },
+  });
+
+  // Mutation to create project storage location
+  const createProjectStorageMutation = useMutation({
+    mutationFn: async (location: Omit<ProjectStorageLocation, 'id' | 'created_at' | 'updated_at'>) => {
+      const { data, error } = await supabase
+        .from('project_storage_locations')
+        .insert(location)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      refetchProjectStorageLocations();
+      toast.success("Project location added");
+    },
+    onError: (error: any) => {
+      if (error.code === '23505') {
+        toast.error("This project already has a storage location");
+      } else {
+        toast.error("Failed to add project location");
+      }
+    }
+  });
+
+  // Mutation to update project storage location
+  const updateProjectStorageMutation = useMutation({
+    mutationFn: async ({ id, ...location }: ProjectStorageLocation) => {
+      const { data, error } = await supabase
+        .from('project_storage_locations')
+        .update(location)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      refetchProjectStorageLocations();
+      toast.success("Project location updated");
+    },
+    onError: (error: any) => {
+      if (error.code === '23505') {
+        toast.error("This project already has a storage location");
+      } else {
+        toast.error("Failed to update project location");
+      }
+    }
+  });
+
+  // Mutation to delete project storage location
+  const deleteProjectStorageMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('project_storage_locations')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchProjectStorageLocations();
+      toast.success("Project location deleted");
+    },
+    onError: () => {
+      toast.error("Failed to delete project location");
     }
   });
   
@@ -1074,6 +1199,111 @@ export default function CompaniesPage() {
                   </>
                   )}
                 </div>
+
+                {/* Project File Storage Section */}
+                <div className="mt-8 pt-6 border-t border-slate-200">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <FolderKanban className="h-5 w-5 text-slate-600" />
+                      <h3 className="text-lg font-semibold text-slate-800">Project File Storage Locations</h3>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      onClick={() => {
+                        setProjectStorageForm({ project_id: "", folder_path: "", description: "" });
+                        setProjectStorageDialog({ open: true, editingId: null });
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Location
+                    </Button>
+                  </div>
+                  <p className="text-sm text-slate-500 mb-4">Associate each project with a folder path on the server.</p>
+                  
+                  <div className="border border-slate-200 rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50">
+                          <TableHead className="text-xs font-medium text-slate-600">Project</TableHead>
+                          <TableHead className="text-xs font-medium text-slate-600">Folder Path</TableHead>
+                          <TableHead className="text-xs font-medium text-slate-600">Description</TableHead>
+                          <TableHead className="text-xs font-medium text-slate-600 w-20">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {projectStorageLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-sm text-slate-500 py-8">
+                              Loading project locations...
+                            </TableCell>
+                          </TableRow>
+                        ) : projectStorageError ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-sm text-destructive py-8">
+                              Could not load project locations. Please refresh.
+                            </TableCell>
+                          </TableRow>
+                        ) : projectStorageLocations.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-sm text-slate-500 py-8">
+                              No project locations configured. Click "Add Location" to create one.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          projectStorageLocations.map((location) => {
+                            const project = expenseProjects.find((p) => p.id === location.project_id);
+                            return (
+                              <TableRow key={location.id}>
+                                <TableCell className="text-sm font-medium text-slate-800">
+                                  <div className="flex items-center gap-2">
+                                    {project?.color && (
+                                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: project.color }} />
+                                    )}
+                                    {project?.name || "Unknown"}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-sm text-slate-600 font-mono">{location.folder_path}</TableCell>
+                                <TableCell className="text-sm text-slate-500">{location.description || "-"}</TableCell>
+                                <TableCell>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7 p-0"
+                                      onClick={() => {
+                                        setProjectStorageForm({
+                                          project_id: location.project_id,
+                                          folder_path: location.folder_path,
+                                          description: location.description || "",
+                                        });
+                                        setProjectStorageDialog({ open: true, editingId: location.id });
+                                      }}
+                                    >
+                                      <Edit className="h-3.5 w-3.5 text-slate-500" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                      onClick={() => {
+                                        if (confirm("Delete this project storage location?")) {
+                                          deleteProjectStorageMutation.mutate(location.id);
+                                        }
+                                      }}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
               </div>
             </TabsContent>
           </Tabs>
@@ -1329,6 +1559,99 @@ export default function CompaniesPage() {
               disabled={createStorageLocationMutation.isPending || updateStorageLocationMutation.isPending}
             >
               {storageLocationDialog.editingId ? "Save" : "Add"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Project Storage Location Dialog */}
+      <Dialog open={projectStorageDialog.open} onOpenChange={(open) => setProjectStorageDialog({ open, editingId: open ? projectStorageDialog.editingId : null })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{projectStorageDialog.editingId ? "Edit Project Location" : "Add Project Location"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Project</Label>
+              <Select
+                value={projectStorageForm.project_id}
+                onValueChange={(value) => setProjectStorageForm(prev => ({ ...prev, project_id: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select project..." />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  {expenseProjects.map(project => (
+                    <SelectItem key={project.id} value={project.id}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: project.color }} />
+                        {project.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Folder Path</Label>
+              <p className="text-xs text-slate-500">Full path to the project folder on the server (e.g. Tresorit Drive/Company/Project).</p>
+              <Input
+                value={projectStorageForm.folder_path}
+                onChange={(e) => setProjectStorageForm(prev => ({ ...prev, folder_path: e.target.value }))}
+                placeholder="e.g. Swissintegral WM (MT)/Boats/DABMAR - Azimut 27M"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description <span className="text-xs text-slate-400">(optional)</span></Label>
+              <Input
+                value={projectStorageForm.description}
+                onChange={(e) => setProjectStorageForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="e.g. Main documents for this project"
+              />
+            </div>
+            
+            {/* Preview */}
+            {projectStorageForm.project_id && projectStorageForm.folder_path && (
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <Label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Path Preview</Label>
+                <p className="text-xs text-slate-700 mt-1 font-mono">
+                  <span className="text-blue-600">{projectStorageForm.folder_path}</span>
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProjectStorageDialog({ open: false, editingId: null })}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                if (!projectStorageForm.project_id || !projectStorageForm.folder_path.trim()) {
+                  toast.error("Please select a project and enter a folder path");
+                  return;
+                }
+                
+                const locationData = {
+                  project_id: projectStorageForm.project_id,
+                  folder_path: projectStorageForm.folder_path.trim(),
+                  description: projectStorageForm.description.trim() || null,
+                };
+                
+                if (projectStorageDialog.editingId) {
+                  updateProjectStorageMutation.mutate({
+                    id: projectStorageDialog.editingId,
+                    ...locationData
+                  } as ProjectStorageLocation);
+                } else {
+                  createProjectStorageMutation.mutate(locationData);
+                }
+                
+                setProjectStorageDialog({ open: false, editingId: null });
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={createProjectStorageMutation.isPending || updateProjectStorageMutation.isPending}
+            >
+              {projectStorageDialog.editingId ? "Save" : "Add"}
             </Button>
           </DialogFooter>
         </DialogContent>

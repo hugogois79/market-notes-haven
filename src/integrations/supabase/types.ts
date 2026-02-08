@@ -6965,6 +6965,41 @@ export type Database = {
           },
         ]
       }
+      project_storage_locations: {
+        Row: {
+          id: string
+          project_id: string
+          folder_path: string
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          folder_path: string
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          folder_path?: string
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_storage_locations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "expense_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_storage_locations: {
         Row: {
           company_id: string
