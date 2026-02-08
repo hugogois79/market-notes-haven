@@ -1865,6 +1865,7 @@ export type Database = {
           email_date: string
           subject: string
           author: string
+          recipient: string | null
           file_url: string
           storage_path: string | null
           filename: string
@@ -1876,6 +1877,7 @@ export type Database = {
           email_date: string
           subject: string
           author: string
+          recipient?: string | null
           file_url: string
           storage_path?: string | null
           filename: string
@@ -1887,6 +1889,7 @@ export type Database = {
           email_date?: string
           subject?: string
           author?: string
+          recipient?: string | null
           file_url?: string
           storage_path?: string | null
           filename?: string

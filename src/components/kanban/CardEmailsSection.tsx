@@ -33,6 +33,7 @@ export default function CardEmailsSection({ cardId }: CardEmailsSectionProps) {
   const [emailDate, setEmailDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [subject, setSubject] = useState("");
   const [author, setAuthor] = useState("");
+  const [recipient, setRecipient] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -57,6 +58,7 @@ export default function CardEmailsSection({ cardId }: CardEmailsSectionProps) {
     setEmailDate(new Date().toISOString().split("T")[0]);
     setSubject("");
     setAuthor("");
+    setRecipient("");
     setFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
@@ -81,6 +83,7 @@ export default function CardEmailsSection({ cardId }: CardEmailsSectionProps) {
         email_date: emailDate,
         subject: subject.trim(),
         author: author.trim(),
+        recipient: recipient.trim() || undefined,
       });
       setEmails((prev) => [newEmail, ...prev]);
       resetForm();
@@ -160,7 +163,7 @@ export default function CardEmailsSection({ cardId }: CardEmailsSectionProps) {
       {/* Add form */}
       {showForm && (
         <div className="border rounded-lg p-3 mb-3 space-y-3 bg-muted/30">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <Label className="text-xs">Data</Label>
               <Input
@@ -171,11 +174,20 @@ export default function CardEmailsSection({ cardId }: CardEmailsSectionProps) {
               />
             </div>
             <div>
-              <Label className="text-xs">Autor</Label>
+              <Label className="text-xs">De (Autor)</Label>
               <Input
                 value={author}
                 onChange={(e) => setAuthor(e.target.value)}
                 placeholder="Remetente..."
+                className="h-8 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Para (Receptor)</Label>
+              <Input
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value)}
+                placeholder="Destinatário..."
                 className="h-8 text-sm"
               />
             </div>
@@ -239,10 +251,16 @@ export default function CardEmailsSection({ cardId }: CardEmailsSectionProps) {
                 <div className="font-medium truncate text-sm leading-tight">
                   {email.subject}
                 </div>
-                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                <div className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
                   <span>{formatDate(email.email_date)}</span>
                   <Separator orientation="vertical" className="h-3" />
-                  <span className="truncate">{email.author}</span>
+                  <span className="truncate">De: {email.author}</span>
+                  {email.recipient && (
+                    <>
+                      <Separator orientation="vertical" className="h-3" />
+                      <span className="truncate">Para: {email.recipient}</span>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">

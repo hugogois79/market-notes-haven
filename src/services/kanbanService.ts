@@ -81,6 +81,7 @@ export interface CardEmail {
   email_date: string;
   subject: string;
   author: string;
+  recipient: string | null;
   file_url: string;
   storage_path: string | null;
   filename: string;
@@ -572,7 +573,7 @@ export class KanbanService {
   static async uploadCardEmail(
     cardId: string,
     file: File,
-    metadata: { email_date: string; subject: string; author: string }
+    metadata: { email_date: string; subject: string; author: string; recipient?: string }
   ) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
@@ -600,6 +601,7 @@ export class KanbanService {
         email_date: metadata.email_date,
         subject: metadata.subject,
         author: metadata.author,
+        recipient: metadata.recipient || null,
         file_url: publicUrl,
         storage_path: storagePath,
         filename: file.name
