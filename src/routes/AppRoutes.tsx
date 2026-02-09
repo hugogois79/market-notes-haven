@@ -28,7 +28,7 @@ import TAOLayout from "@/pages/tao/layout";
 import TAODashboard from "@/pages/tao/index";
 import TAOPerformance from "@/pages/tao/performance";
 import TAOManagement from "@/pages/tao/management";
-import TAOValidatorManagement from "@/pages/tao/validators"; // Add import for the validators page
+import TAOValidatorManagement from "@/pages/tao/validators";
 import TAOValidatorRelationshipManagement from "@/pages/tao/validator-relationship-management";
 import InvestorOpportunitiesPage from "@/pages/tao/investor-opportunities";
 import FollowUpSequencesPage from "@/pages/tao/follow-up-sequences";
@@ -61,303 +61,60 @@ const AppRoutes = () => {
   return (
     <>
       <Routes>
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={
-            <ProtectedRoute>
-              <Index />
-            </ProtectedRoute>
-          } />
-          <Route path="auth" element={<Auth />} />
-          <Route path="auth/mfa-verify" element={<MFAVerify />} />
-          <Route
-            path="notes"
-            element={
-              <ProtectedRoute>
-                <Notes />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="categories"
-            element={
-              <ProtectedRoute>
-                <Categories />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="tags"
-            element={
-              <ProtectedRoute>
-                <Tags />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="settings"
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="editor/new"
-            element={
-              <ProtectedRoute>
-                <Editor />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="editor/:id"
-            element={
-              <ProtectedRoute>
-                <Editor />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="tokens"
-            element={
-              <ProtectedRoute>
-                <TokensDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="tokens/:id"
-            element={
-              <ProtectedRoute>
-                <TokenDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="crypto/dashboard"
-            element={
-              <ProtectedRoute>
-                <CryptoDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="markets"
-            element={
-              <ProtectedRoute>
-                <MarketsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="securities"
-            element={
-              <ProtectedRoute>
-                <SecuritiesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="receipt-generator"
-            element={
-              <ProtectedRoute>
-                <ReceiptGenerator />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="kanban"
-            element={
-              <ProtectedRoute>
-                <KanbanPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="kanban/:boardId"
-            element={
-              <ProtectedRoute>
-                <KanbanPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="financeiro"
-            element={
-              <ProtectedRoute>
-                <FinancialPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="calendar"
-            element={
-              <ProtectedRoute>
-                <CalendarPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="expenses"
-            element={
-              <ProtectedRoute>
-                <ExpensesIndex />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="expenses/new"
-            element={
-              <ProtectedRoute>
-                <ExpensesNew />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="expenses/:id/edit"
-            element={
-              <ProtectedRoute>
-                <ExpensesEdit />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="expenses/:id"
-            element={
-              <ProtectedRoute>
-                <ExpenseDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="legal"
-            element={
-              <ProtectedRoute>
-                <LegalPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="legal/cases"
-            element={
-              <ProtectedRoute>
-                <LegalCasesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="legal/contacts"
-            element={
-              <ProtectedRoute>
-                <LegalContactsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="legal/billable-items"
-            element={
-              <ProtectedRoute>
-                <LegalBillableItemsPage />
-              </ProtectedRoute>
-            }
-          />
-          
-          {/* Projects Route */}
-          <Route
-            path="projects"
-            element={
-              <ProtectedRoute>
-                <ProjectsPage />
-              </ProtectedRoute>
-            }
-          />
-          
-          {/* Real Estate Routes */}
-          <Route
-            path="real-estate"
-            element={
-              <ProtectedRoute>
-                <RealEstatePage />
-              </ProtectedRoute>
-            }
-          />
-          
-          {/* Operations Routes */}
-          <Route
-            path="operations"
-            element={
-              <ProtectedRoute>
-                <OperationsPage />
-              </ProtectedRoute>
-            }
-          />
-          
-          {/* Companies Routes */}
-          <Route
-            path="companies"
-            element={
-              <ProtectedRoute>
-                <CompaniesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="companies/:id"
-            element={
-              <ProtectedRoute>
-                <CompanyDetailPage />
-              </ProtectedRoute>
-            }
-          />
-          
+        {/* Public routes - no layout, no auth required */}
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/auth/mfa-verify" element={<MFAVerify />} />
+
+        {/* Protected routes - auth required, with MainLayout (sidebar) */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
+        }>
+          <Route index element={<Index />} />
+          <Route path="notes" element={<Notes />} />
+          <Route path="categories" element={<Categories />} />
+          <Route path="tags" element={<Tags />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="editor/new" element={<Editor />} />
+          <Route path="editor/:id" element={<Editor />} />
+          <Route path="tokens" element={<TokensDashboard />} />
+          <Route path="tokens/:id" element={<TokenDetail />} />
+          <Route path="crypto/dashboard" element={<CryptoDashboard />} />
+          <Route path="markets" element={<MarketsPage />} />
+          <Route path="securities" element={<SecuritiesPage />} />
+          <Route path="receipt-generator" element={<ReceiptGenerator />} />
+          <Route path="kanban" element={<KanbanPage />} />
+          <Route path="kanban/:boardId" element={<KanbanPage />} />
+          <Route path="financeiro" element={<FinancialPage />} />
+          <Route path="calendar" element={<CalendarPage />} />
+          <Route path="expenses" element={<ExpensesIndex />} />
+          <Route path="expenses/new" element={<ExpensesNew />} />
+          <Route path="expenses/:id/edit" element={<ExpensesEdit />} />
+          <Route path="expenses/:id" element={<ExpenseDetail />} />
+          <Route path="legal" element={<LegalPage />} />
+          <Route path="legal/cases" element={<LegalCasesPage />} />
+          <Route path="legal/contacts" element={<LegalContactsPage />} />
+          <Route path="legal/billable-items" element={<LegalBillableItemsPage />} />
+          <Route path="projects" element={<ProjectsPage />} />
+          <Route path="real-estate" element={<RealEstatePage />} />
+          <Route path="operations" element={<OperationsPage />} />
+          <Route path="companies" element={<CompaniesPage />} />
+          <Route path="companies/:id" element={<CompanyDetailPage />} />
+
           {/* Procurement Routes */}
-          <Route
-            path="procurement"
-            element={
-              <ProtectedRoute>
-                <ProcurementDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="procurement/suppliers"
-            element={
-              <ProtectedRoute>
-                <ProcurementSuppliers />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="procurement/projects"
-            element={
-              <ProtectedRoute>
-                <ProcurementProjects />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="procurement/projects/:id"
-            element={
-              <ProtectedRoute>
-                <ProcurementProjectDetail />
-              </ProtectedRoute>
-            }
-          />
-          
-          {/* TAO Routes */}
+          <Route path="procurement" element={<ProcurementDashboard />} />
+          <Route path="procurement/suppliers" element={<ProcurementSuppliers />} />
+          <Route path="procurement/projects" element={<ProcurementProjects />} />
+          <Route path="procurement/projects/:id" element={<ProcurementProjectDetail />} />
+
+          {/* TAO Routes - now protected by parent ProtectedRoute */}
           <Route path="tao" element={<TAOLayout />}>
             <Route index element={<TAODashboard />} />
             <Route path="performance" element={<TAOPerformance />} />
             <Route path="management" element={<TAOManagement />} />
-            <Route path="validators" element={<TAOValidatorManagement />} /> {/* Add route for validators page */}
+            <Route path="validators" element={<TAOValidatorManagement />} />
             <Route
               path="validator-relationship-management"
               element={<TAOValidatorRelationshipManagement />}
@@ -372,7 +129,7 @@ const AppRoutes = () => {
             />
             <Route path="projects" element={<TAOProjects />} />
           </Route>
-          
+
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
