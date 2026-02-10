@@ -25,8 +25,12 @@ interface NotesProviderProps {
 export const NotesProvider = ({ children }: NotesProviderProps) => {
   const { user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
+  const notesQueryKey = ['notes', user?.id];
+  // #region agent log
+  console.debug('[DEBUG] NotesProvider queryKey:', JSON.stringify(['notes', user?.id]));
+  // #endregion
   const { data: notesData, isLoading, refetch } = useQuery({
-    queryKey: ['notes', user?.id],
+    queryKey: notesQueryKey,
     queryFn: fetchNotes,
     staleTime: 30 * 1000,
     enabled: !authLoading && !!user,
@@ -38,8 +42,6 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
 
   const handleSaveNote = async (note: Note): Promise<Note | null> => {
     try {
-      console.log("Saving note:", note);
-      
       // Find the existing note in state for merging if it's an update
       const existingNote = note.id.toString().startsWith('temp-') 
         ? null 
@@ -72,7 +74,6 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
       };
       
       if (note.id.toString().startsWith('temp-')) {
-        console.log("Creating new note with content:", noteWithValidFields.content);
         const result = await createNote({
           title: noteWithValidFields.title,
           content: noteWithValidFields.content,
@@ -87,9 +88,8 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
         }
         
         if (result.note) {
-          console.log("New note created:", result.note.id);
           // Immediately update cache with new note to prevent "Note Not Found"
-          queryClient.setQueryData(['notes'], (oldNotes: Note[] | undefined) => {
+          queryClient.setQueryData(notesQueryKey, (oldNotes: Note[] | undefined) => {
             if (!oldNotes) return [result.note];
             return [...oldNotes, result.note];
           });
@@ -97,8 +97,6 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
           return result.note;
         }
       } else {
-        console.log("Updating note:", noteWithValidFields.id, "with title:", noteWithValidFields.title);
-        console.log("Tags being saved:", noteWithValidFields.tags);
         const result = await updateNote(noteWithValidFields);
         
         if (result.embeddingFailed) {
@@ -106,9 +104,8 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
         }
         
         if (result.note) {
-          console.log("Note updated:", result.note.id);
           // Optimistic update - update cache locally instead of refetching
-          queryClient.setQueryData(['notes'], (oldNotes: Note[] | undefined) => {
+          queryClient.setQueryData(notesQueryKey, (oldNotes: Note[] | undefined) => {
             if (!oldNotes) return [result.note];
             return oldNotes.map(n => n.id === result.note.id ? result.note : n);
           });
@@ -124,11 +121,9 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
 
   const handleDeleteNote = async (noteId: string) => {
     try {
-      console.log("Deleting note:", noteId);
       const success = await deleteNote(noteId);
       
       if (success) {
-        console.log("Note deleted successfully");
         await refetch();
         return true;
       }

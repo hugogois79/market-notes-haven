@@ -1,5 +1,5 @@
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Note } from "@/types";
 import { toast } from "sonner";
 
@@ -12,6 +12,15 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
   const [pendingChanges, setPendingChanges] = useState<Partial<Note>>({});
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingChangesRef = useRef<Partial<Note>>({});
+
+  // Cleanup timeout on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSaveWithChanges = useCallback(async (changes: Partial<Note>, isAutoSave = false) => {
     // Merge with any pending changes

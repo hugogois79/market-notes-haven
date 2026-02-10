@@ -232,6 +232,57 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_events: {
+        Row: {
+          all_day: boolean | null
+          category: string | null
+          created_at: string | null
+          date: string
+          end_time: string
+          google_event_id: string | null
+          id: string
+          notes: string | null
+          source: string | null
+          start_time: string
+          synced_at: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          all_day?: boolean | null
+          category?: string | null
+          created_at?: string | null
+          date: string
+          end_time: string
+          google_event_id?: string | null
+          id?: string
+          notes?: string | null
+          source?: string | null
+          start_time: string
+          synced_at?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          all_day?: boolean | null
+          category?: string | null
+          created_at?: string | null
+          date?: string
+          end_time?: string
+          google_event_id?: string | null
+          id?: string
+          notes?: string | null
+          source?: string | null
+          start_time?: string
+          synced_at?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string

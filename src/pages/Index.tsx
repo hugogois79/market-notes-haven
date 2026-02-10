@@ -69,26 +69,13 @@ const Index = () => {
   }, [notes]);
   
   useEffect(() => {
-    const fetchTokensForNotes = async () => {
-      if (recentNotes.length > 0) {
-        const tokensMap: Record<string, Token[]> = {};
-        
-        for (const note of recentNotes) {
-          try {
-            const tokens = await getTokensForNote(note.id);
-            if (tokens.length > 0) {
-              tokensMap[note.id] = tokens;
-            }
-          } catch (error) {
-            console.error(`Error fetching tokens for note ${note.id}:`, error);
-          }
-        }
-        
-        setNoteTokens(tokensMap);
-      }
-    };
-    
-    const filteredNotes = notes.filter(note => {
+    let cancelled = false;
+
+    // #region agent log
+    fetch('http://localhost:7243/ingest/a60ec3ea-2549-4171-9fdd-1952a5c86b20',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Index.tsx:useEffect-tokens',message:'Token fetch effect triggered',data:{notesCount:notes.length,searchQuery,selectedCategory,selectedTag},timestamp:Date.now(),hypothesisId:'BUG1',runId:'post-fix'})}).catch(()=>{});
+    // #endregion
+
+    const filteredList = notes.filter(note => {
       const matchesSearch = searchQuery === "" || 
         note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
         note.content.toLowerCase().includes(searchQuery.toLowerCase());
@@ -104,13 +91,37 @@ const Index = () => {
       return matchesSearch && matchesCategory && matchesTag;
     });
     
-    const recentOnes = [...filteredNotes]
+    const recentOnes = [...filteredList]
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       .slice(0, 10);
+
+    const fetchTokensForNotes = async () => {
+      const tokensMap: Record<string, Token[]> = {};
+      
+      for (const note of recentOnes) {
+        try {
+          const tokens = await getTokensForNote(note.id);
+          if (tokens.length > 0) {
+            tokensMap[note.id] = tokens;
+          }
+        } catch (error) {
+          console.error(`Error fetching tokens for note ${note.id}:`, error);
+        }
+      }
+      
+      if (!cancelled) {
+        setNoteTokens(tokensMap);
+      }
+    };
     
     if (recentOnes.length > 0) {
+      // #region agent log
+      fetch('http://localhost:7243/ingest/a60ec3ea-2549-4171-9fdd-1952a5c86b20',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Index.tsx:fetchTokens',message:'Fetching tokens for recentOnes (not stale recentNotes)',data:{recentOnesCount:recentOnes.length,firstNoteId:recentOnes[0]?.id},timestamp:Date.now(),hypothesisId:'BUG1',runId:'post-fix'})}).catch(()=>{});
+      // #endregion
       fetchTokensForNotes();
     }
+
+    return () => { cancelled = true; };
   }, [notes, searchQuery, selectedCategory, selectedTag, tagNameMap]);
   
   // Debounced semantic search
@@ -169,17 +180,14 @@ const Index = () => {
   };
 
   const handleNewNote = () => {
-    console.log("Creating new note");
     navigate("/editor/new");
   };
   
   const handleViewAllNotes = () => {
-    console.log("Viewing all notes");
     navigate("/notes");
   };
   
   const handleCategoryClick = (category: string) => {
-    console.log("Selected category:", category);
     if (selectedCategory === category) {
       setSelectedCategory(null);
       toast.info("Showing all notes");
@@ -192,7 +200,6 @@ const Index = () => {
   const handleTagClick = (tagId: string, tagName: string, event: React.MouseEvent) => {
     event.stopPropagation();
     
-    console.log("Selected tag:", tagName);
     if (selectedTag === tagId || selectedTag === tagName) {
       setSelectedTag(null);
       toast.info("Cleared tag filter");

@@ -152,7 +152,7 @@ export default function CalendarEventDialog({
 
       if (isEditing) {
         const { error } = await supabase
-          .from("calendar_events")
+          .from("daily_events")
           .update({
             title: title.trim(),
             start_time: startTimestamp,
@@ -175,7 +175,7 @@ export default function CalendarEventDialog({
           endTimestamp
         );
       } else {
-        const { data: inserted, error } = await supabase.from("calendar_events").insert({
+        const { data: inserted, error } = await supabase.from("daily_events").insert({
           title: title.trim(),
           date,
           start_time: startTimestamp,

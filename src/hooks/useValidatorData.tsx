@@ -64,6 +64,8 @@ export function useValidatorData() {
 
   // Create mappings for subnet-validator relationships
   useEffect(() => {
+    let cancelled = false;
+
     const fetchSubnetValidators = async () => {
       const subnetValidatorMap: Record<number, string[]> = {};
       
@@ -75,12 +77,16 @@ export function useValidatorData() {
         })
       );
       
-      setValidatorsBySubnet(subnetValidatorMap);
+      if (!cancelled) {
+        setValidatorsBySubnet(subnetValidatorMap);
+      }
     };
 
     if (subnets.length > 0) {
       fetchSubnetValidators();
     }
+
+    return () => { cancelled = true; };
   }, [subnets]);
 
   // Create a mapping of validator IDs to names for easier reference

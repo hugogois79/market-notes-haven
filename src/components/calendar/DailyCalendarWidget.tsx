@@ -37,14 +37,7 @@ interface DailyCalendarWidgetProps {
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6);
 const PX_PER_HOUR = 48;
 
-// Map period to time slots (fallback when start_time/end_time not available)
-const PERIOD_TIME_MAP: Record<string, { start: number; end: number }> = {
-  morning: { start: 9, end: 12 },
-  afternoon: { start: 14, end: 18 },
-};
-
 function getEventPosition(event: DailyCalendarEvent) {
-  // Use start_time/end_time if available (Google Calendar events)
   if (event.start_time) {
     const startDate = parseISO(event.start_time);
     const startHour = startDate.getHours() + startDate.getMinutes() / 60;
@@ -64,11 +57,10 @@ function getEventPosition(event: DailyCalendarEvent) {
     return { top, height, startHour, endHour };
   }
   
-  // Fallback to period-based positioning
-  const slot = PERIOD_TIME_MAP[event.period || "morning"] || PERIOD_TIME_MAP.morning;
-  const top = (slot.start - 6) * PX_PER_HOUR;
-  const height = (slot.end - slot.start) * PX_PER_HOUR;
-  return { top, height, startHour: slot.start, endHour: slot.end };
+  // Fallback for all-day events without time
+  const top = (9 - 6) * PX_PER_HOUR;
+  const height = 3 * PX_PER_HOUR;
+  return { top, height, startHour: 9, endHour: 12 };
 }
 
 function getCategoryColor(category: string | null, categories: CalendarCategory[]) {
@@ -92,9 +84,7 @@ function formatEventTime(event: DailyCalendarEvent) {
     return startStr;
   }
   
-  // Fallback to period
-  const slot = PERIOD_TIME_MAP[event.period || "morning"] || PERIOD_TIME_MAP.morning;
-  return `${slot.start}:00 - ${slot.end}:00`;
+  return "Sem hora";
 }
 
 function getGoogleCalendarUrl(): string {
@@ -158,7 +148,7 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
       // Find the event to get google_event_id before deleting
       const eventToDelete = events.find((e) => e.id === eventId);
       const { error } = await supabase
-        .from("calendar_events")
+        .from("daily_events")
         .delete()
         .eq("id", eventId);
       if (error) throw error;
@@ -225,7 +215,7 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
         : setMinutes(setHours(eventDate, endH), endM);
 
       const { error } = await supabase
-        .from("calendar_events")
+        .from("daily_events")
         .update({
           start_time: newStart.toISOString(),
           end_time: newEnd.toISOString(),

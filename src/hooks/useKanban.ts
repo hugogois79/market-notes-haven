@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { KanbanService, KanbanBoard, KanbanList, KanbanCard, KanbanSpace } from '@/services/kanbanService';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -12,6 +12,12 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
 
+  // Refs to avoid stale closures in subscriptions
+  const boardIdRef = useRef(boardId);
+  const showArchivedRef = useRef(showArchived);
+  boardIdRef.current = boardId;
+  showArchivedRef.current = showArchived;
+
   useEffect(() => {
     fetchSpaces();
     fetchBoards(spaceId);
@@ -21,7 +27,43 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
   useEffect(() => {
     if (boardId) {
       fetchBoardData(boardId, showArchived);
-      subscribeToChanges(boardId);
+
+      // Subscribe and capture cleanup
+      const channel = supabase
+        .channel(`board:${boardId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'kanban_cards' },
+          () => {
+            const currentBoardId = boardIdRef.current;
+            if (currentBoardId) fetchBoardData(currentBoardId, showArchivedRef.current);
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'kanban_lists' },
+          () => {
+            const currentBoardId = boardIdRef.current;
+            if (currentBoardId) fetchBoardData(currentBoardId, showArchivedRef.current);
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'kanban_lists' },
+          () => {
+            const currentBoardId = boardIdRef.current;
+            if (currentBoardId) fetchBoardData(currentBoardId, showArchivedRef.current);
+          }
+        )
+        .subscribe();
+
+      // Cleanup: remove channel when boardId/showArchived changes or component unmounts
+      return () => {
+        // #region agent log
+        fetch('http://localhost:7243/ingest/a60ec3ea-2549-4171-9fdd-1952a5c86b20',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useKanban.ts:cleanup',message:'Cleaning up subscription channel',data:{boardId},timestamp:Date.now(),hypothesisId:'BUG3',runId:'post-fix'})}).catch(()=>{});
+        // #endregion
+        supabase.removeChannel(channel);
+      };
     }
   }, [boardId, showArchived]);
 
@@ -69,37 +111,6 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const subscribeToChanges = (id: string) => {
-    const channel = supabase
-      .channel(`board:${id}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'kanban_cards' },
-        () => {
-          if (boardId) fetchBoardData(boardId, showArchived);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'kanban_lists' },
-        () => {
-          if (boardId) fetchBoardData(boardId, showArchived);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'kanban_lists' },
-        () => {
-          if (boardId) fetchBoardData(boardId, showArchived);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   };
 
   const createBoard = async (board: Partial<KanbanBoard>) => {
@@ -192,8 +203,9 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
       else if (updates.concluded === false) {
         const cardExists = cards.some(c => c.id === id);
         if (!cardExists) {
-          // Refetch to get the updated card
-          if (boardId) fetchBoardData(boardId, showArchived);
+        // Refetch to get the updated card
+        const currentBoardId = boardIdRef.current;
+        if (currentBoardId) fetchBoardData(currentBoardId, showArchivedRef.current);
         } else {
           setCards(prev => prev.map(c => c.id === id ? { ...c, ...updated } : c));
         }
@@ -220,7 +232,8 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
   const moveCard = async (cardId: string, targetListId: string, newPosition: number) => {
     try {
       await KanbanService.moveCard(cardId, targetListId, newPosition);
-      if (boardId) fetchBoardData(boardId, showArchived);
+      const currentBoardId = boardIdRef.current;
+      if (currentBoardId) fetchBoardData(currentBoardId, showArchivedRef.current);
     } catch (error: any) {
       toast.error('Failed to move card: ' + error.message);
     }
@@ -250,7 +263,8 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
     } catch (error: any) {
       toast.error('Failed to move list: ' + error.message);
       // Revert on error
-      if (boardId) fetchBoardData(boardId, showArchived);
+      const currentBoardId = boardIdRef.current;
+      if (currentBoardId) fetchBoardData(currentBoardId, showArchivedRef.current);
     }
   };
 
@@ -345,7 +359,7 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
     deleteCard,
     moveCard,
     moveList,
-    refetch: () => boardId && fetchBoardData(boardId, showArchived),
+    refetch: () => boardIdRef.current && fetchBoardData(boardIdRef.current, showArchivedRef.current),
     refetchBoards: () => fetchBoards(spaceId)
   };
 };

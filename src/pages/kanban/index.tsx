@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useKanbanShortcuts } from '@/hooks/useKanbanShortcuts';
 import { useKanban } from '@/hooks/useKanban';
@@ -23,8 +24,9 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Search, Kanban as KanbanIcon, Archive, ArrowLeft, MoreVertical, Pencil, Trash2, ArchiveRestore, Printer } from 'lucide-react';
+import { Plus, Search, Kanban as KanbanIcon, Archive, ArrowLeft, MoreVertical, Pencil, Trash2, ArchiveRestore, Printer, GanttChart } from 'lucide-react';
 import { CreateCardModal } from '@/components/kanban/CreateCardModal';
+import KanbanTimeline from '@/components/kanban/KanbanTimeline';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -77,6 +79,7 @@ const KanbanPage = () => {
     refetchBoards
   } = useKanban(boardId, spaceIdParam);
 
+  const [viewMode, setViewMode] = useState<'board' | 'timeline'>('board');
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
   const [newBoardTitle, setNewBoardTitle] = useState('');
   const [newBoardDescription, setNewBoardDescription] = useState('');
@@ -577,6 +580,34 @@ const KanbanPage = () => {
               {currentBoard.title}
             </h1>
           )}
+
+          {/* View Mode Toggle: Board / Timeline */}
+          <div className="flex items-center border rounded-md overflow-hidden">
+            <button
+              onClick={() => setViewMode('board')}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors",
+                viewMode === 'board'
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-muted-foreground hover:bg-muted"
+              )}
+            >
+              <KanbanIcon className="h-3.5 w-3.5" />
+              Board
+            </button>
+            <button
+              onClick={() => setViewMode('timeline')}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors border-l",
+                viewMode === 'timeline'
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-muted-foreground hover:bg-muted"
+              )}
+            >
+              <GanttChart className="h-3.5 w-3.5" />
+              Timeline
+            </button>
+          </div>
           
           <div className="flex items-center gap-2">
             <KanbanIcon className="h-5 w-5 text-muted-foreground" />
@@ -780,21 +811,31 @@ const KanbanPage = () => {
 
           {/* Screen View - Hidden when printing */}
           <div className="print:hidden">
-            <KanbanBoard
-              boardId={boardId}
-              lists={[...filteredLists].sort((a, b) => a.position - b.position)}
-              cards={filteredCards}
-              onAddList={handleAddList}
-              onAddCard={handleAddCard}
-              onUpdateCard={updateCard}
-              onDeleteCard={deleteCard}
-              onDeleteList={deleteList}
-              onEditList={handleEditList}
-              onColorChange={handleColorChange}
-              onArchiveList={handleArchiveList}
-              onMoveCard={moveCard}
-              onMoveList={moveList}
-            />
+            {viewMode === 'board' ? (
+              <KanbanBoard
+                boardId={boardId}
+                lists={[...filteredLists].sort((a, b) => a.position - b.position)}
+                cards={filteredCards}
+                onAddList={handleAddList}
+                onAddCard={handleAddCard}
+                onUpdateCard={updateCard}
+                onDeleteCard={deleteCard}
+                onDeleteList={deleteList}
+                onEditList={handleEditList}
+                onColorChange={handleColorChange}
+                onArchiveList={handleArchiveList}
+                onMoveCard={moveCard}
+                onMoveList={moveList}
+              />
+            ) : (
+              <KanbanTimeline
+                lists={[...filteredLists].sort((a, b) => a.position - b.position)}
+                cards={filteredCards}
+                boardId={boardId!}
+                onUpdateCard={updateCard}
+                onDeleteCard={deleteCard}
+              />
+            )}
           </div>
         </>
       )}
