@@ -622,6 +622,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
   };
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={(open) => {
       // Prevent closing during file picker or upload
       if (!open && (isFilePickerOpen || isUploading)) return;
@@ -1256,6 +1257,7 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
           </div>
         </div>
       </DialogContent>
+    </Dialog>
 
       <AiTaskGeneratorDialog
         isOpen={showAiDialog}
@@ -1346,6 +1348,6 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
           });
         }}
       />
-    </Dialog>
+    </>
   );
 };
