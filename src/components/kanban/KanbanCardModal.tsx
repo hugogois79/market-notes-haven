@@ -1291,46 +1291,59 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
         attachments={attachments}
         cardId={card.id}
         onDataExtracted={(data) => {
-          // Apply extracted data to card fields
-          if (data.description) {
-            setDescription(data.description);
-          } else if (data.summary) {
-            setDescription(data.summary);
-          }
-          
-          if (data.value !== undefined && data.value > 0) {
-            setValue(data.value);
-          }
-          
+          // Merge extracted data with current state
+          const newDescription = data.description || data.summary || description;
+          const newValue = (data.value !== undefined && data.value > 0) ? data.value : value;
+          const newPriority = data.priority || priority;
+
+          let newDueDate = dueDate;
           if (data.due_date) {
-            // Parse date in YYYY-MM-DD format
             const parsedDate = new Date(data.due_date);
             if (!isNaN(parsedDate.getTime())) {
-              setDueDate(parsedDate);
+              newDueDate = parsedDate;
             }
           }
-          
-          if (data.priority) {
-            setPriority(data.priority);
-          }
-          
+
+          let newTags = [...tags];
           if (data.suggested_tags && data.suggested_tags.length > 0) {
-            // Merge with existing tags (avoid duplicates)
-            const newTags = data.suggested_tags.filter(t => !tags.includes(t));
-            if (newTags.length > 0) {
-              setTags([...tags, ...newTags]);
+            const additionalTags = data.suggested_tags.filter(t => !tags.includes(t));
+            if (additionalTags.length > 0) {
+              newTags = [...tags, ...additionalTags];
             }
           }
-          
+
+          let newTasks = [...tasks];
           if (data.suggested_tasks && data.suggested_tasks.length > 0) {
-            // Add new tasks to checklist
-            const newTasks = data.suggested_tasks.map(taskText => ({
+            const additionalTasks = data.suggested_tasks.map(taskText => ({
               id: crypto.randomUUID(),
               text: taskText,
               completed: false
             }));
-            setTasks([...tasks, ...newTasks]);
+            newTasks = [...tasks, ...additionalTasks];
           }
+
+          // Update local state (for UI)
+          setDescription(newDescription);
+          setValue(newValue);
+          setPriority(newPriority);
+          if (newDueDate) setDueDate(newDueDate);
+          setTags(newTags);
+          setTasks(newTasks);
+
+          // Immediately persist to database (prevents data loss from cascading dialog close)
+          onUpdate(card.id, {
+            title,
+            description: newDescription,
+            priority: newPriority,
+            value: newValue,
+            starting_date: startingDate ? format(startingDate, 'yyyy-MM-dd') : (card.created_at ? format(new Date(card.created_at), 'yyyy-MM-dd') : undefined),
+            due_date: newDueDate ? format(newDueDate, 'yyyy-MM-dd') : undefined,
+            tasks: newTasks as any,
+            tags: newTags as any,
+            assigned_to: assignedTo as any,
+            assigned_external: assignedExternal as any,
+            supervisor_id: supervisorId as any,
+          });
         }}
       />
     </Dialog>

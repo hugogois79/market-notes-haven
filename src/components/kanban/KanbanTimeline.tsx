@@ -1,7 +1,7 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { format, addDays, subDays, startOfWeek, differenceInDays, isToday, isWeekend, addWeeks } from "date-fns";
 import { pt } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Calendar, Pencil, Trash2, AlertCircle, ShoppingCart, CheckCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Calendar, Pencil, Trash2, AlertCircle, ShoppingCart, CheckCircle, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { KanbanCard, KanbanList } from "@/services/kanbanService";
@@ -24,11 +24,21 @@ interface KanbanTimelineProps {
   onDeleteCard?: (id: string) => void;
 }
 
+// Zoom levels: label, dayWidth, rowHeight, daysToShow
+const ZOOM_LEVELS = [
+  { label: "XXS", dayWidth: 18, rowHeight: 26, totalDays: 90 },
+  { label: "XS",  dayWidth: 30, rowHeight: 30, totalDays: 70 },
+  { label: "S",   dayWidth: 50, rowHeight: 34, totalDays: 56 },
+  { label: "M",   dayWidth: 80, rowHeight: 38, totalDays: 42 },
+  { label: "L",   dayWidth: 120, rowHeight: 40, totalDays: 35 },
+] as const;
+const DEFAULT_ZOOM = 4; // "L" = original size
+
 // Constants
-const DAY_WIDTH = 120;
-const ROW_HEIGHT = 40;
 const HEADER_HEIGHT = 60;
-const LIST_LABEL_WIDTH = 180;
+const LIST_LABEL_WIDTH = 220;
+const GROUP_HEADER_HEIGHT = 28;
+const COLLAPSED_ROW_HEIGHT = GROUP_HEADER_HEIGHT;
 
 // Priority colors
 const PRIORITY_COLORS: Record<string, string> = {
@@ -69,9 +79,28 @@ interface DragState {
 
 export default function KanbanTimeline({ lists, cards, boardId, onCardClick, onUpdateCard, onDeleteCard }: KanbanTimelineProps) {
   const [weekOffset, setWeekOffset] = useState(0);
+  const [zoomIdx, setZoomIdx] = useState(DEFAULT_ZOOM);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
   const todayRef = useRef<HTMLDivElement>(null);
   const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
+
+  const toggleGroup = useCallback((listId: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(listId)) next.delete(listId);
+      else next.add(listId);
+      return next;
+    });
+  }, []);
+
+  // Zoom-derived values
+  const zoom = ZOOM_LEVELS[zoomIdx];
+  const DAY_WIDTH = zoom.dayWidth;
+  const ROW_HEIGHT = zoom.rowHeight;
+
+  const zoomIn = () => setZoomIdx((z) => Math.min(z + 1, ZOOM_LEVELS.length - 1));
+  const zoomOut = () => setZoomIdx((z) => Math.max(z - 1, 0));
 
   // Drag state
   const [dragState, setDragState] = useState<DragState | null>(null);
@@ -87,8 +116,8 @@ export default function KanbanTimeline({ lists, cards, boardId, onCardClick, onU
 
   const days = useMemo(() => {
     const start = subDays(baseDate, 7);
-    return Array.from({ length: 35 }, (_, i) => addDays(start, i));
-  }, [baseDate]);
+    return Array.from({ length: zoom.totalDays }, (_, i) => addDays(start, i));
+  }, [baseDate, zoom.totalDays]);
 
   const startDate = days[0];
   const endDate = days[days.length - 1];
@@ -114,13 +143,13 @@ export default function KanbanTimeline({ lists, cards, boardId, onCardClick, onU
     }).filter(() => true);
   }, [lists, cards, startDate, endDate]);
 
-  // Scroll to today on mount
+  // Scroll to today on mount or zoom change
   useEffect(() => {
     if (todayRef.current && scrollRef.current) {
       const todayLeft = todayRef.current.offsetLeft;
       scrollRef.current.scrollLeft = todayLeft - LIST_LABEL_WIDTH - DAY_WIDTH * 2;
     }
-  }, [weekOffset]);
+  }, [weekOffset, DAY_WIDTH]);
 
   const goToPreviousWeek = () => setWeekOffset((w) => w - 1);
   const goToNextWeek = () => setWeekOffset((w) => w + 1);
@@ -257,7 +286,7 @@ export default function KanbanTimeline({ lists, cards, boardId, onCardClick, onU
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseup", onMouseUp);
     dragCleanupRef.current = cleanup;
-  }, [startDate, days.length, onUpdateCard]);
+  }, [startDate, days.length, onUpdateCard, DAY_WIDTH]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -295,7 +324,7 @@ export default function KanbanTimeline({ lists, cards, boardId, onCardClick, onU
     const previewEnd = addDays(previewStart, duration - 1);
 
     return { left, width, dayOffset, duration, previewStart, previewEnd };
-  }, [startDate, days.length, dragState]);
+  }, [startDate, days.length, dragState, DAY_WIDTH]);
 
   return (
     <>
@@ -318,7 +347,33 @@ export default function KanbanTimeline({ lists, cards, boardId, onCardClick, onU
           </span>
         </div>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="text-[10px]">Arraste para mover | Ponta direita para redimensionar | Botão direito para opções</span>
+          <span className="text-[10px] hidden lg:inline">Arraste para mover | Ponta direita para redimensionar | Botão direito para opções</span>
+          <div className="w-px h-3 bg-border" />
+          {/* Zoom controls */}
+          <div className="flex items-center gap-0.5 bg-muted/60 rounded-md border px-1 py-0.5">
+            <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-background" onClick={zoomOut} disabled={zoomIdx === 0} title="Reduzir zoom (ver mais)">
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+            <div className="flex gap-0.5 px-1">
+              {ZOOM_LEVELS.map((level, idx) => (
+                <button
+                  key={level.label}
+                  onClick={() => setZoomIdx(idx)}
+                  className={cn(
+                    "w-6 h-5 rounded text-[10px] font-semibold transition-colors",
+                    idx === zoomIdx
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted-foreground/10 text-muted-foreground"
+                  )}
+                >
+                  {level.label}
+                </button>
+              ))}
+            </div>
+            <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-background" onClick={zoomIn} disabled={zoomIdx === ZOOM_LEVELS.length - 1} title="Aumentar zoom (ver menos)">
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+          </div>
           <div className="w-px h-3 bg-border" />
           <div className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
@@ -342,14 +397,43 @@ export default function KanbanTimeline({ lists, cards, boardId, onCardClick, onU
           <div className="border-b" style={{ height: 28 }} />
           <div className="border-b" style={{ height: HEADER_HEIGHT - 28 }} />
           {listGroups.map(({ list, cards: listCards }) => {
-            const rowCount = Math.max(listCards.length, 1);
+            const isCollapsed = collapsedGroups.has(list.id);
+            const rowCount = isCollapsed ? 0 : Math.max(listCards.length, 1);
+            const sectionHeight = GROUP_HEADER_HEIGHT + (isCollapsed ? 0 : rowCount * ROW_HEIGHT);
             return (
-              <div key={list.id} className="border-b flex items-start px-3 py-2" style={{ minHeight: rowCount * ROW_HEIGHT + 8 }}>
-                <div className="flex items-center gap-2">
+              <div key={list.id} className="border-b" style={{ height: sectionHeight }}>
+                {/* Group header - clickable to toggle */}
+                <button
+                  onClick={() => toggleGroup(list.id)}
+                  className="w-full flex items-center gap-1.5 px-2 hover:bg-muted/40 transition-colors text-left"
+                  style={{ height: GROUP_HEADER_HEIGHT }}
+                >
+                  <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground flex-shrink-0 transition-transform", isCollapsed && "-rotate-90")} />
                   {list.color && <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: list.color }} />}
-                  <span className="text-sm font-medium truncate" style={{ maxWidth: LIST_LABEL_WIDTH - 40 }}>{list.title}</span>
-                  <span className="text-xs text-muted-foreground">({listCards.length})</span>
-                </div>
+                  <span className="text-xs font-semibold truncate flex-1">{list.title}</span>
+                  <span className="text-[10px] text-muted-foreground flex-shrink-0">({listCards.length})</span>
+                </button>
+                {/* Card names list */}
+                {!isCollapsed && listCards.map((card) => {
+                  const bgColor = getCardColor(card, list.color);
+                  return (
+                    <div
+                      key={card.id}
+                      className="flex items-center gap-1.5 px-2 cursor-pointer hover:bg-muted/30 transition-colors"
+                      style={{ height: ROW_HEIGHT }}
+                      onClick={() => { if (onCardClick) onCardClick(card); else setSelectedCard(card); }}
+                      title={card.title}
+                    >
+                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: bgColor }} />
+                      <span className="text-[11px] truncate text-foreground/80" style={{ maxWidth: LIST_LABEL_WIDTH - 36 }}>{card.title}</span>
+                    </div>
+                  );
+                })}
+                {!isCollapsed && listCards.length === 0 && (
+                  <div className="flex items-center px-2 text-[10px] text-muted-foreground italic" style={{ height: ROW_HEIGHT }}>
+                    Sem tarefas
+                  </div>
+                )}
               </div>
             );
           })}
@@ -373,9 +457,9 @@ export default function KanbanTimeline({ lists, cards, boardId, onCardClick, onU
                 const today = isToday(day);
                 const weekend = isWeekend(day);
                 return (
-                  <div key={idx} ref={today ? todayRef : undefined} className={cn("flex flex-col items-center justify-center border-r text-xs", today && "bg-primary/10", weekend && !today && "bg-muted/40")} style={{ width: DAY_WIDTH }}>
-                    <span className={cn("text-[10px] uppercase", today ? "text-primary font-bold" : "text-muted-foreground")}>{format(day, "EEE", { locale: pt })}</span>
-                    <span className={cn("text-sm", today ? "text-primary font-bold" : weekend ? "text-muted-foreground" : "text-foreground")}>{format(day, "d")}</span>
+                  <div key={idx} ref={today ? todayRef : undefined} className={cn("flex flex-col items-center justify-center border-r", today && "bg-primary/10", weekend && !today && "bg-muted/40")} style={{ width: DAY_WIDTH }}>
+                    {DAY_WIDTH > 25 && <span className={cn("text-[10px] uppercase leading-none", today ? "text-primary font-bold" : "text-muted-foreground")}>{format(day, DAY_WIDTH >= 50 ? "EEE" : "EEEEE", { locale: pt })}</span>}
+                    <span className={cn(DAY_WIDTH <= 25 ? "text-[9px]" : "text-sm", "leading-tight", today ? "text-primary font-bold" : weekend ? "text-muted-foreground" : "text-foreground")}>{format(day, "d")}</span>
                   </div>
                 );
               })}
@@ -383,9 +467,11 @@ export default function KanbanTimeline({ lists, cards, boardId, onCardClick, onU
 
             {/* Data rows */}
             {listGroups.map(({ list, cards: listCards }) => {
-              const rowCount = Math.max(listCards.length, 1);
+              const isCollapsed = collapsedGroups.has(list.id);
+              const rowCount = isCollapsed ? 0 : Math.max(listCards.length, 1);
+              const sectionHeight = GROUP_HEADER_HEIGHT + (isCollapsed ? 0 : rowCount * ROW_HEIGHT);
               return (
-                <div key={list.id} className="relative border-b" style={{ height: rowCount * ROW_HEIGHT + 8 }}>
+                <div key={list.id} className={cn("relative border-b", isCollapsed && "overflow-hidden")} style={{ height: sectionHeight }}>
                   {/* Day column backgrounds */}
                   <div className="absolute inset-0 flex">
                     {days.map((day, idx) => {
@@ -428,7 +514,7 @@ export default function KanbanTimeline({ lists, cards, boardId, onCardClick, onU
                             className={cn("absolute group", isDragging && "z-20")}
                             style={{
                               left: left + 4,
-                              top: cardIdx * ROW_HEIGHT + 4,
+                              top: GROUP_HEADER_HEIGHT + cardIdx * ROW_HEIGHT + 4,
                               width,
                               height: ROW_HEIGHT - 8,
                               transition: isDragging ? "none" : "left 0.15s ease, width 0.15s ease",
@@ -468,8 +554,8 @@ export default function KanbanTimeline({ lists, cards, boardId, onCardClick, onU
                               {total > 0 && (
                                 <div className="absolute inset-0 opacity-20" style={{ background: `linear-gradient(to right, rgba(255,255,255,0.3) ${progress}%, transparent ${progress}%)` }} />
                               )}
-                              <span className="text-[11px] font-medium truncate relative z-[1]">{card.title}</span>
-                              {total > 0 && <span className="text-[9px] opacity-75 whitespace-nowrap relative z-[1]">{completed}/{total}</span>}
+                              <span className={cn("font-medium truncate relative z-[1]", DAY_WIDTH <= 25 ? "text-[7px]" : DAY_WIDTH <= 50 ? "text-[9px]" : "text-[11px]")}>{card.title}</span>
+                              {total > 0 && DAY_WIDTH > 25 && <span className={cn("opacity-75 whitespace-nowrap relative z-[1]", DAY_WIDTH <= 50 ? "text-[8px]" : "text-[9px]")}>{completed}/{total}</span>}
 
                               {/* Resize grip indicator on right edge */}
                               <div className={cn(
