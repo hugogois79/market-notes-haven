@@ -180,106 +180,55 @@ export type Database = {
       }
       calendar_events: {
         Row: {
+          all_day: boolean
           category: string | null
           created_at: string | null
           date: string
+          end_time: string | null
+          google_event_id: string | null
           id: string
           notes: string | null
           period: string | null
+          source: string
+          start_time: string | null
+          synced_at: string | null
           title: string | null
           updated_at: string | null
           user_id: string | null
-          google_event_id: string | null
-          source: string
-          start_time: string | null
-          end_time: string | null
-          all_day: boolean
-          synced_at: string | null
         }
         Insert: {
+          all_day?: boolean
           category?: string | null
           created_at?: string | null
           date: string
+          end_time?: string | null
+          google_event_id?: string | null
           id?: string
           notes?: string | null
           period?: string | null
+          source?: string
+          start_time?: string | null
+          synced_at?: string | null
           title?: string | null
           updated_at?: string | null
           user_id?: string | null
-          google_event_id?: string | null
-          source?: string
-          start_time?: string | null
-          end_time?: string | null
-          all_day?: boolean
-          synced_at?: string | null
         }
         Update: {
+          all_day?: boolean
           category?: string | null
           created_at?: string | null
           date?: string
+          end_time?: string | null
+          google_event_id?: string | null
           id?: string
           notes?: string | null
           period?: string | null
+          source?: string
+          start_time?: string | null
+          synced_at?: string | null
           title?: string | null
           updated_at?: string | null
           user_id?: string | null
-          google_event_id?: string | null
-          source?: string
-          start_time?: string | null
-          end_time?: string | null
-          all_day?: boolean
-          synced_at?: string | null
-        }
-        Relationships: []
-      }
-      daily_events: {
-        Row: {
-          all_day: boolean | null
-          category: string | null
-          created_at: string | null
-          date: string
-          end_time: string
-          google_event_id: string | null
-          id: string
-          notes: string | null
-          source: string | null
-          start_time: string
-          synced_at: string | null
-          title: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          all_day?: boolean | null
-          category?: string | null
-          created_at?: string | null
-          date: string
-          end_time: string
-          google_event_id?: string | null
-          id?: string
-          notes?: string | null
-          source?: string | null
-          start_time: string
-          synced_at?: string | null
-          title: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          all_day?: boolean | null
-          category?: string | null
-          created_at?: string | null
-          date?: string
-          end_time?: string
-          google_event_id?: string | null
-          id?: string
-          notes?: string | null
-          source?: string | null
-          start_time?: string
-          synced_at?: string | null
-          title?: string
-          updated_at?: string | null
-          user_id?: string
         }
         Relationships: []
       }
@@ -963,6 +912,57 @@ export type Database = {
           },
         ]
       }
+      daily_events: {
+        Row: {
+          all_day: boolean | null
+          category: string | null
+          created_at: string | null
+          date: string
+          end_time: string
+          google_event_id: string | null
+          id: string
+          notes: string | null
+          source: string | null
+          start_time: string
+          synced_at: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          all_day?: boolean | null
+          category?: string | null
+          created_at?: string | null
+          date: string
+          end_time: string
+          google_event_id?: string | null
+          id?: string
+          notes?: string | null
+          source?: string | null
+          start_time: string
+          synced_at?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          all_day?: boolean | null
+          category?: string | null
+          created_at?: string | null
+          date?: string
+          end_time?: string
+          google_event_id?: string | null
+          id?: string
+          notes?: string | null
+          source?: string | null
+          start_time?: string
+          synced_at?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       diana: {
         Row: {
           content: string | null
@@ -1258,6 +1258,7 @@ export type Database = {
           created_at: string
           description: string | null
           end_date: string | null
+          folder_path: string | null
           has_investment: boolean | null
           has_revenue: boolean | null
           id: string
@@ -1274,6 +1275,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           end_date?: string | null
+          folder_path?: string | null
           has_investment?: boolean | null
           has_revenue?: boolean | null
           id?: string
@@ -1290,6 +1292,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           end_date?: string | null
+          folder_path?: string | null
           has_investment?: boolean | null
           has_revenue?: boolean | null
           id?: string
@@ -1403,12 +1406,14 @@ export type Database = {
       }
       expense_users: {
         Row: {
+          agent_description: string | null
           assigned_project_ids: string[] | null
           created_at: string
           email: string | null
           feature_permissions: Json | null
           id: string
           is_active: boolean
+          is_agent: boolean
           is_requester: boolean | null
           name: string
           telegram_user_id: number | null
@@ -1417,12 +1422,14 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          agent_description?: string | null
           assigned_project_ids?: string[] | null
           created_at?: string
           email?: string | null
           feature_permissions?: Json | null
           id?: string
           is_active?: boolean
+          is_agent?: boolean
           is_requester?: boolean | null
           name: string
           telegram_user_id?: number | null
@@ -1431,12 +1438,14 @@ export type Database = {
           user_id: string
         }
         Update: {
+          agent_description?: string | null
           assigned_project_ids?: string[] | null
           created_at?: string
           email?: string | null
           feature_permissions?: Json | null
           id?: string
           is_active?: boolean
+          is_agent?: boolean
           is_requester?: boolean | null
           name?: string
           telegram_user_id?: number | null
@@ -1909,53 +1918,6 @@ export type Database = {
           },
         ]
       }
-      kanban_card_emails: {
-        Row: {
-          id: string
-          card_id: string
-          email_date: string
-          subject: string
-          author: string
-          recipient: string | null
-          file_url: string
-          storage_path: string | null
-          filename: string
-          created_at: string | null
-        }
-        Insert: {
-          id?: string
-          card_id: string
-          email_date: string
-          subject: string
-          author: string
-          recipient?: string | null
-          file_url: string
-          storage_path?: string | null
-          filename: string
-          created_at?: string | null
-        }
-        Update: {
-          id?: string
-          card_id?: string
-          email_date?: string
-          subject?: string
-          author?: string
-          recipient?: string | null
-          file_url?: string
-          storage_path?: string | null
-          filename?: string
-          created_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "kanban_card_emails_card_id_fkey"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "kanban_cards"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       kanban_attachments: {
         Row: {
           card_id: string | null
@@ -2044,6 +2006,53 @@ export type Database = {
           },
         ]
       }
+      kanban_card_emails: {
+        Row: {
+          author: string
+          card_id: string
+          created_at: string | null
+          email_date: string
+          file_url: string
+          filename: string
+          id: string
+          recipient: string | null
+          storage_path: string | null
+          subject: string
+        }
+        Insert: {
+          author: string
+          card_id: string
+          created_at?: string | null
+          email_date: string
+          file_url: string
+          filename: string
+          id?: string
+          recipient?: string | null
+          storage_path?: string | null
+          subject: string
+        }
+        Update: {
+          author?: string
+          card_id?: string
+          created_at?: string | null
+          email_date?: string
+          file_url?: string
+          filename?: string
+          id?: string
+          recipient?: string | null
+          storage_path?: string | null
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_card_emails_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kanban_card_labels: {
         Row: {
           card_id: string
@@ -2077,6 +2086,8 @@ export type Database = {
       kanban_cards: {
         Row: {
           archived: boolean | null
+          assigned_external: string[] | null
+          assigned_to: string[] | null
           attachment_count: number | null
           completed: boolean | null
           completed_at: string | null
@@ -2088,6 +2099,8 @@ export type Database = {
           list_id: string | null
           position: number
           priority: string | null
+          starting_date: string | null
+          supervisor_id: string | null
           tags: string[] | null
           tasks: Json | null
           title: string
@@ -2096,6 +2109,8 @@ export type Database = {
         }
         Insert: {
           archived?: boolean | null
+          assigned_external?: string[] | null
+          assigned_to?: string[] | null
           attachment_count?: number | null
           completed?: boolean | null
           completed_at?: string | null
@@ -2107,6 +2122,8 @@ export type Database = {
           list_id?: string | null
           position: number
           priority?: string | null
+          starting_date?: string | null
+          supervisor_id?: string | null
           tags?: string[] | null
           tasks?: Json | null
           title: string
@@ -2115,6 +2132,8 @@ export type Database = {
         }
         Update: {
           archived?: boolean | null
+          assigned_external?: string[] | null
+          assigned_to?: string[] | null
           attachment_count?: number | null
           completed?: boolean | null
           completed_at?: string | null
@@ -2126,6 +2145,8 @@ export type Database = {
           list_id?: string | null
           position?: number
           priority?: string | null
+          starting_date?: string | null
+          supervisor_id?: string | null
           tags?: string[] | null
           tasks?: Json | null
           title?: string
@@ -2145,6 +2166,13 @@ export type Database = {
             columns: ["list_id"]
             isOneToOne: false
             referencedRelation: "kanban_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_cards_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "expense_users"
             referencedColumns: ["id"]
           },
         ]
@@ -2353,6 +2381,54 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      knowledge_base_web: {
+        Row: {
+          categoria: string | null
+          conteudo: string
+          data_extracao: string | null
+          data_publicacao: string | null
+          dominio: string
+          embedding: string | null
+          fts: unknown
+          id: number
+          metadata: Json | null
+          resumo: string | null
+          subcategoria: string | null
+          titulo: string | null
+          url: string
+        }
+        Insert: {
+          categoria?: string | null
+          conteudo: string
+          data_extracao?: string | null
+          data_publicacao?: string | null
+          dominio: string
+          embedding?: string | null
+          fts?: unknown
+          id?: number
+          metadata?: Json | null
+          resumo?: string | null
+          subcategoria?: string | null
+          titulo?: string | null
+          url: string
+        }
+        Update: {
+          categoria?: string | null
+          conteudo?: string
+          data_extracao?: string | null
+          data_publicacao?: string | null
+          dominio?: string
+          embedding?: string | null
+          fts?: unknown
+          id?: number
+          metadata?: Json | null
+          resumo?: string | null
+          subcategoria?: string | null
+          titulo?: string | null
+          url?: string
         }
         Relationships: []
       }
@@ -2663,6 +2739,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      legislacao_fiscal: {
+        Row: {
+          artigo_numero: string
+          artigo_titulo: string | null
+          capitulo: string | null
+          codigo: string
+          conteudo: string
+          data_extracao: string | null
+          id: number
+          notas: string | null
+          seccao: string | null
+          subseccao: string | null
+          tema: string[] | null
+          url_fonte: string | null
+          versao: string | null
+        }
+        Insert: {
+          artigo_numero: string
+          artigo_titulo?: string | null
+          capitulo?: string | null
+          codigo: string
+          conteudo: string
+          data_extracao?: string | null
+          id?: number
+          notas?: string | null
+          seccao?: string | null
+          subseccao?: string | null
+          tema?: string[] | null
+          url_fonte?: string | null
+          versao?: string | null
+        }
+        Update: {
+          artigo_numero?: string
+          artigo_titulo?: string | null
+          capitulo?: string | null
+          codigo?: string
+          conteudo?: string
+          data_extracao?: string | null
+          id?: number
+          notas?: string | null
+          seccao?: string | null
+          subseccao?: string | null
+          tema?: string[] | null
+          url_fonte?: string | null
+          versao?: string | null
+        }
+        Relationships: []
       }
       loan_payments: {
         Row: {
@@ -3768,6 +3892,41 @@ export type Database = {
             foreignKeyName: "project_monthly_revenues_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "expense_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_storage_locations: {
+        Row: {
+          created_at: string
+          description: string | null
+          folder_path: string
+          id: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          folder_path: string
+          id?: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          folder_path?: string
+          id?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_storage_locations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
             referencedRelation: "expense_projects"
             referencedColumns: ["id"]
           },
@@ -6253,6 +6412,86 @@ export type Database = {
           },
         ]
       }
+      vendor_defaults: {
+        Row: {
+          bank_account_id: string | null
+          category_id: string | null
+          company_id: string | null
+          created_at: string | null
+          id: string
+          last_used_at: string | null
+          payment_method: string | null
+          project_id: string | null
+          times_used: number | null
+          transaction_type: string | null
+          updated_at: string | null
+          vendor_name: string
+          vendor_name_normalized: string
+          vendor_vat: string | null
+        }
+        Insert: {
+          bank_account_id?: string | null
+          category_id?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          payment_method?: string | null
+          project_id?: string | null
+          times_used?: number | null
+          transaction_type?: string | null
+          updated_at?: string | null
+          vendor_name: string
+          vendor_name_normalized: string
+          vendor_vat?: string | null
+        }
+        Update: {
+          bank_account_id?: string | null
+          category_id?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          payment_method?: string | null
+          project_id?: string | null
+          times_used?: number | null
+          transaction_type?: string | null
+          updated_at?: string | null
+          vendor_name?: string
+          vendor_name_normalized?: string
+          vendor_vat?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_defaults_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_defaults_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_defaults_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_defaults_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "expense_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wealth_asset_note_links: {
         Row: {
           asset_id: string
@@ -6901,12 +7140,14 @@ export type Database = {
       }
       workflow_files: {
         Row: {
+          borrowing_company_id: string | null
           category: string | null
           company_id: string | null
           completed_at: string | null
           created_at: string
           currency: string | null
           customer_vat: string | null
+          description: string | null
           document_number: string | null
           document_type: string | null
           duplicate_matches: Json | null
@@ -6917,12 +7158,14 @@ export type Database = {
           id: string
           invoice_date: string | null
           invoice_number: string | null
+          lending_company_id: string | null
           line_items_summary: string | null
           mime_type: string | null
           notes: string | null
           payment_method: string | null
           priority: string | null
           project_id: string | null
+          receipt_url: string | null
           status: string | null
           subtotal: number | null
           supplier_id: string | null
@@ -6932,14 +7175,17 @@ export type Database = {
           user_id: string
           vendor_name: string | null
           vendor_vat: string | null
+          wise_transfer_id: number | null
         }
         Insert: {
+          borrowing_company_id?: string | null
           category?: string | null
           company_id?: string | null
           completed_at?: string | null
           created_at?: string
           currency?: string | null
           customer_vat?: string | null
+          description?: string | null
           document_number?: string | null
           document_type?: string | null
           duplicate_matches?: Json | null
@@ -6950,12 +7196,14 @@ export type Database = {
           id?: string
           invoice_date?: string | null
           invoice_number?: string | null
+          lending_company_id?: string | null
           line_items_summary?: string | null
           mime_type?: string | null
           notes?: string | null
           payment_method?: string | null
           priority?: string | null
           project_id?: string | null
+          receipt_url?: string | null
           status?: string | null
           subtotal?: number | null
           supplier_id?: string | null
@@ -6965,14 +7213,17 @@ export type Database = {
           user_id: string
           vendor_name?: string | null
           vendor_vat?: string | null
+          wise_transfer_id?: number | null
         }
         Update: {
+          borrowing_company_id?: string | null
           category?: string | null
           company_id?: string | null
           completed_at?: string | null
           created_at?: string
           currency?: string | null
           customer_vat?: string | null
+          description?: string | null
           document_number?: string | null
           document_type?: string | null
           duplicate_matches?: Json | null
@@ -6983,12 +7234,14 @@ export type Database = {
           id?: string
           invoice_date?: string | null
           invoice_number?: string | null
+          lending_company_id?: string | null
           line_items_summary?: string | null
           mime_type?: string | null
           notes?: string | null
           payment_method?: string | null
           priority?: string | null
           project_id?: string | null
+          receipt_url?: string | null
           status?: string | null
           subtotal?: number | null
           supplier_id?: string | null
@@ -6998,8 +7251,16 @@ export type Database = {
           user_id?: string
           vendor_name?: string | null
           vendor_vat?: string | null
+          wise_transfer_id?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "workflow_files_borrowing_company_id_fkey"
+            columns: ["borrowing_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "workflow_files_company_id_fkey"
             columns: ["company_id"]
@@ -7008,44 +7269,16 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "workflow_files_lending_company_id_fkey"
+            columns: ["lending_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "workflow_files_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
-            referencedRelation: "expense_projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      project_storage_locations: {
-        Row: {
-          id: string
-          project_id: string
-          folder_path: string
-          description: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          project_id: string
-          folder_path: string
-          description?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          project_id?: string
-          folder_path?: string
-          description?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "project_storage_locations_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: true
             referencedRelation: "expense_projects"
             referencedColumns: ["id"]
           },
@@ -7288,6 +7521,10 @@ export type Database = {
           staff_name: string
         }[]
       }
+      delete_google_calendar_event: {
+        Args: { p_google_event_id: string }
+        Returns: Json
+      }
       exec_sql: { Args: { sql_query: string }; Returns: Json }
       get_expiring_documents: {
         Args: { days_threshold?: number; p_user_id: string }
@@ -7357,6 +7594,7 @@ export type Database = {
               updated_at: string
             }[]
           }
+      normalize_vendor_name: { Args: { name: string }; Returns: string }
       recalculate_note_clusters: {
         Args: { p_user_id: string }
         Returns: undefined
@@ -7365,8 +7603,95 @@ export type Database = {
         Args: { card_id: string; new_list_id: string; new_position: number }
         Returns: undefined
       }
+      search_knowledge_base: {
+        Args: {
+          p_categoria?: string
+          p_dominio?: string
+          p_limit?: number
+          p_match_threshold?: number
+          p_query_embedding: string
+          p_query_text?: string
+        }
+        Returns: {
+          categoria: string
+          conteudo: string
+          fts_rank: number
+          id: number
+          resumo: string
+          similarity: number
+          titulo: string
+          url: string
+        }[]
+      }
+      search_knowledge_multi: {
+        Args: {
+          p_categoria?: string
+          p_dominio?: string
+          p_limit?: number
+          p_query: string
+        }
+        Returns: {
+          categoria: string
+          id: number
+          relevancia: number
+          resumo: string
+          titulo: string
+          url: string
+        }[]
+      }
+      search_knowledge_text: {
+        Args: {
+          p_categoria?: string
+          p_dominio?: string
+          p_limit?: number
+          p_query: string
+        }
+        Returns: {
+          categoria: string
+          id: number
+          relevancia: number
+          resumo: string
+          titulo: string
+          url: string
+        }[]
+      }
+      search_legislacao: {
+        Args: { p_codigo?: string; p_limit?: number; p_query: string }
+        Returns: {
+          artigo_numero: string
+          artigo_titulo: string
+          capitulo: string
+          conteudo: string
+          relevancia: number
+          seccao: string
+          url_fonte: string
+        }[]
+      }
+      set_google_event_id: {
+        Args: { p_event_id: string; p_google_event_id: string }
+        Returns: Json
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      sync_google_calendar_event: {
+        Args: {
+          p_all_day?: boolean
+          p_category?: string
+          p_date: string
+          p_end_time?: string
+          p_google_event_id: string
+          p_notes?: string
+          p_period?: string
+          p_start_time?: string
+          p_title: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
+      sync_google_calendar_events: {
+        Args: { p_events: Json; p_user_id: string }
+        Returns: Json
+      }
       update_claim_total: { Args: { claim_id: string }; Returns: undefined }
       upsert_wise_recipients: { Args: { recipients: Json }; Returns: Json }
       user_can_access_company: {

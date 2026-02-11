@@ -109,6 +109,21 @@ Deno.serve(async (req) => {
     const n8nResult = await n8nResponse.json();
     console.log('n8n response:', JSON.stringify(n8nResult, null, 2));
 
+    // Save wise_transfer_id to workflow_files for receipt tracking
+    const transferId = n8nResult.payment?.transferId || n8nResult.transferId || n8nResult.id;
+    if (transferId && body.documentId) {
+      const { error: updateError } = await supabase
+        .from('workflow_files')
+        .update({ wise_transfer_id: Number(transferId) })
+        .eq('id', body.documentId);
+
+      if (updateError) {
+        console.error('Error saving wise_transfer_id:', updateError);
+      } else {
+        console.log(`Saved wise_transfer_id ${transferId} for document ${body.documentId}`);
+      }
+    }
+
     // Pass through the full n8n response (includes payment details and funding status)
     return new Response(
       JSON.stringify({

@@ -59,9 +59,6 @@ export const useKanban = (boardId?: string, spaceId?: string | null) => {
 
       // Cleanup: remove channel when boardId/showArchived changes or component unmounts
       return () => {
-        // #region agent log
-        fetch('http://localhost:7243/ingest/a60ec3ea-2549-4171-9fdd-1952a5c86b20',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useKanban.ts:cleanup',message:'Cleaning up subscription channel',data:{boardId},timestamp:Date.now(),hypothesisId:'BUG3',runId:'post-fix'})}).catch(()=>{});
-        // #endregion
         supabase.removeChannel(channel);
       };
     }

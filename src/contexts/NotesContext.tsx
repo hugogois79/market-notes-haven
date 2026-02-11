@@ -26,9 +26,6 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
   const { user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const notesQueryKey = ['notes', user?.id];
-  // #region agent log
-  console.debug('[DEBUG] NotesProvider queryKey:', JSON.stringify(['notes', user?.id]));
-  // #endregion
   const { data: notesData, isLoading, refetch } = useQuery({
     queryKey: notesQueryKey,
     queryFn: fetchNotes,

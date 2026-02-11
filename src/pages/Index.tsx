@@ -71,10 +71,6 @@ const Index = () => {
   useEffect(() => {
     let cancelled = false;
 
-    // #region agent log
-    fetch('http://localhost:7243/ingest/a60ec3ea-2549-4171-9fdd-1952a5c86b20',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Index.tsx:useEffect-tokens',message:'Token fetch effect triggered',data:{notesCount:notes.length,searchQuery,selectedCategory,selectedTag},timestamp:Date.now(),hypothesisId:'BUG1',runId:'post-fix'})}).catch(()=>{});
-    // #endregion
-
     const filteredList = notes.filter(note => {
       const matchesSearch = searchQuery === "" || 
         note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -115,9 +111,6 @@ const Index = () => {
     };
     
     if (recentOnes.length > 0) {
-      // #region agent log
-      fetch('http://localhost:7243/ingest/a60ec3ea-2549-4171-9fdd-1952a5c86b20',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Index.tsx:fetchTokens',message:'Fetching tokens for recentOnes (not stale recentNotes)',data:{recentOnesCount:recentOnes.length,firstNoteId:recentOnes[0]?.id},timestamp:Date.now(),hypothesisId:'BUG1',runId:'post-fix'})}).catch(()=>{});
-      // #endregion
       fetchTokensForNotes();
     }
 
