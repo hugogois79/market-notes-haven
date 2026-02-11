@@ -1,18 +1,11 @@
-import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Sparkles, FileText, AlertCircle, Tag, CheckSquare, CalendarDays, Euro, Flag } from 'lucide-react';
-import { KanbanAttachment } from '@/services/kanbanService';
+import { Loader2, Sparkles, FileText, AlertCircle, Tag, CheckSquare, CalendarDays, Euro, Flag, X } from 'lucide-react';
+import { KanbanAttachment, KanbanService } from '@/services/kanbanService';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
@@ -34,6 +27,22 @@ interface AiAttachmentAnalyzerDialogProps {
   attachments: KanbanAttachment[];
   cardId: string;
   onDataExtracted: (data: ExtractedKanbanData) => void;
+  /** Direct save: pass current card data so we can persist immediately */
+  currentCard?: {
+    title: string;
+    description: string;
+    priority: string;
+    value: number;
+    starting_date?: string;
+    due_date?: string;
+    tasks: any[];
+    tags: string[];
+    assigned_to: string[];
+    assigned_external: string[];
+    supervisor_id: string | null;
+  };
+  /** Called after direct DB save succeeds to refresh parent state */
+  onSaved?: () => void;
 }
 
 type DialogPhase = 'select' | 'analyzing' | 'confirm' | 'error';
@@ -50,6 +59,8 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
   attachments,
   cardId,
   onDataExtracted,
+  currentCard,
+  onSaved,
 }) => {
   const [phase, setPhase] = useState<DialogPhase>('select');
   const [selectedAttachmentId, setSelectedAttachmentId] = useState<string>(
@@ -119,12 +130,68 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
     }
   };
 
-  const handleApply = () => {
-    if (extractedData) {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleApply = async () => {
+    if (!extractedData) return;
+
+    setIsSaving(true);
+    try {
+      // Build merged update from extracted data
+      const newDescription = extractedData.description || extractedData.summary || currentCard?.description || '';
+      const newValue = (extractedData.value !== undefined && extractedData.value > 0) ? extractedData.value : (currentCard?.value || 0);
+      const newPriority = extractedData.priority || currentCard?.priority || 'medium';
+
+      let newDueDate = currentCard?.due_date;
+      if (extractedData.due_date) {
+        const parsedDate = new Date(extractedData.due_date);
+        if (!isNaN(parsedDate.getTime())) {
+          newDueDate = extractedData.due_date;
+        }
+      }
+
+      const existingTags = currentCard?.tags || [];
+      let newTags = [...existingTags];
+      if (extractedData.suggested_tags && extractedData.suggested_tags.length > 0) {
+        const additionalTags = extractedData.suggested_tags.filter(t => !existingTags.includes(t));
+        if (additionalTags.length > 0) {
+          newTags = [...existingTags, ...additionalTags];
+        }
+      }
+
+      const existingTasks = currentCard?.tasks || [];
+      let newTasks = [...existingTasks];
+      if (extractedData.suggested_tasks && extractedData.suggested_tasks.length > 0) {
+        const additionalTasks = extractedData.suggested_tasks.map(taskText => ({
+          id: crypto.randomUUID(),
+          text: taskText,
+          completed: false
+        }));
+        newTasks = [...existingTasks, ...additionalTasks];
+      }
+
+      // Save directly to database - bypasses any dialog/state issues
+      await KanbanService.updateCard(cardId, {
+        description: newDescription,
+        priority: newPriority as any,
+        value: newValue,
+        due_date: newDueDate || undefined,
+        tasks: newTasks as any,
+        tags: newTags as any,
+      });
+
+      // Also notify parent to update local state
       onDataExtracted(extractedData);
-      toast.success('Dados aplicados com sucesso!');
+      onSaved?.();
+
+      toast.success('Dados aplicados e gravados com sucesso!');
+      handleClose();
+    } catch (error) {
+      console.error('Error saving card data:', error);
+      toast.error('Erro ao gravar dados no card. Tente novamente.');
+    } finally {
+      setIsSaving(false);
     }
-    handleClose();
   };
 
   const handleClose = () => {
@@ -144,23 +211,60 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
     return '📎';
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Analisar Anexo com AI
-          </DialogTitle>
-          <DialogDescription>
-            {phase === 'select' && 'Selecione o anexo que pretende analisar.'}
-            {phase === 'analyzing' && 'A analisar documento...'}
-            {phase === 'confirm' && 'Reveja os dados extraídos para o card.'}
-            {phase === 'error' && 'Ocorreu um erro durante a análise.'}
-          </DialogDescription>
-        </DialogHeader>
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isOpen]);
 
-        <div className="py-4">
+  if (!isOpen) return null;
+
+  // Render via portal to avoid Radix Dialog focus trap conflicts
+  return createPortal(
+    <div
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: 99999 }}
+      onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+    >
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black/50" />
+
+      {/* Modal content */}
+      <div
+        className="relative bg-background border rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between p-6 pb-2">
+          <div>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Analisar Anexo com AI
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {phase === 'select' && 'Selecione o anexo que pretende analisar.'}
+              {phase === 'analyzing' && 'A analisar documento...'}
+              {phase === 'confirm' && 'Reveja os dados extraídos para o card.'}
+              {phase === 'error' && 'Ocorreu um erro durante a análise.'}
+            </p>
+          </div>
+          <button
+            onClick={handleClose}
+            className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 p-1"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
           {phase === 'select' && (
             <RadioGroup
               value={selectedAttachmentId}
@@ -172,9 +276,9 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
                   key={attachment.id}
                   className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                 >
-                  <RadioGroupItem value={attachment.id} id={attachment.id} className="mt-1 shrink-0" />
+                  <RadioGroupItem value={attachment.id} id={`ai-att-${attachment.id}`} className="mt-1 shrink-0" />
                   <Label
-                    htmlFor={attachment.id}
+                    htmlFor={`ai-att-${attachment.id}`}
                     className="flex items-start gap-2 cursor-pointer flex-1 min-w-0"
                   >
                     <span className="text-lg shrink-0">{getFileIcon(attachment.filename)}</span>
@@ -204,7 +308,6 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
                 </h4>
                 
                 <div className="space-y-4">
-                  {/* Description */}
                   {(extractedData.description || extractedData.summary) && (
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -217,7 +320,6 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
                     </div>
                   )}
 
-                  {/* Value */}
                   {extractedData.value !== undefined && extractedData.value > 0 && (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -230,7 +332,6 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
                     </div>
                   )}
 
-                  {/* Due Date */}
                   {extractedData.due_date && (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -241,7 +342,6 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
                     </div>
                   )}
 
-                  {/* Priority */}
                   {extractedData.priority && (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -254,7 +354,6 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
                     </div>
                   )}
 
-                  {/* Tags */}
                   {extractedData.suggested_tags && extractedData.suggested_tags.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -271,7 +370,6 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
                     </div>
                   )}
 
-                  {/* Tasks */}
                   {extractedData.suggested_tasks && extractedData.suggested_tasks.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -301,7 +399,8 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
           )}
         </div>
 
-        <DialogFooter>
+        {/* Footer */}
+        <div className="flex justify-end gap-2 p-6 pt-4 border-t">
           {phase === 'select' && (
             <>
               <Button variant="outline" onClick={handleClose}>
@@ -322,11 +421,18 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
 
           {phase === 'confirm' && (
             <>
-              <Button variant="outline" onClick={handleClose}>
+              <Button variant="outline" onClick={handleClose} disabled={isSaving}>
                 Cancelar
               </Button>
-              <Button onClick={handleApply}>
-                Aplicar ao Card
+              <Button onClick={handleApply} disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    A gravar...
+                  </>
+                ) : (
+                  'Aplicar ao Card'
+                )}
               </Button>
             </>
           )}
@@ -341,8 +447,9 @@ export const AiAttachmentAnalyzerDialog: React.FC<AiAttachmentAnalyzerDialogProp
               </Button>
             </>
           )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 };

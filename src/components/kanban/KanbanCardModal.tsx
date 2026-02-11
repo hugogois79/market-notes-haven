@@ -1292,60 +1292,41 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
         onClose={() => setShowAiAttachmentDialog(false)}
         attachments={attachments}
         cardId={card.id}
+        currentCard={{
+          title,
+          description,
+          priority,
+          value,
+          starting_date: startingDate ? format(startingDate, 'yyyy-MM-dd') : undefined,
+          due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
+          tasks,
+          tags,
+          assigned_to: assignedTo,
+          assigned_external: assignedExternal,
+          supervisor_id: supervisorId,
+        }}
         onDataExtracted={(data) => {
-          // Merge extracted data with current state
-          const newDescription = data.description || data.summary || description;
-          const newValue = (data.value !== undefined && data.value > 0) ? data.value : value;
-          const newPriority = data.priority || priority;
-
-          let newDueDate = dueDate;
+          // Update local state for UI consistency
+          if (data.description) setDescription(data.description);
+          else if (data.summary) setDescription(data.summary);
+          if (data.value !== undefined && data.value > 0) setValue(data.value);
           if (data.due_date) {
             const parsedDate = new Date(data.due_date);
-            if (!isNaN(parsedDate.getTime())) {
-              newDueDate = parsedDate;
-            }
+            if (!isNaN(parsedDate.getTime())) setDueDate(parsedDate);
           }
-
-          let newTags = [...tags];
-          if (data.suggested_tags && data.suggested_tags.length > 0) {
-            const additionalTags = data.suggested_tags.filter(t => !tags.includes(t));
-            if (additionalTags.length > 0) {
-              newTags = [...tags, ...additionalTags];
-            }
+          if (data.priority) setPriority(data.priority);
+          if (data.suggested_tags?.length) {
+            const newTags = data.suggested_tags.filter(t => !tags.includes(t));
+            if (newTags.length > 0) setTags([...tags, ...newTags]);
           }
-
-          let newTasks = [...tasks];
-          if (data.suggested_tasks && data.suggested_tasks.length > 0) {
-            const additionalTasks = data.suggested_tasks.map(taskText => ({
-              id: crypto.randomUUID(),
-              text: taskText,
-              completed: false
-            }));
-            newTasks = [...tasks, ...additionalTasks];
+          if (data.suggested_tasks?.length) {
+            const newTasks = data.suggested_tasks.map(t => ({ id: crypto.randomUUID(), text: t, completed: false }));
+            setTasks([...tasks, ...newTasks]);
           }
-
-          // Update local state (for UI)
-          setDescription(newDescription);
-          setValue(newValue);
-          setPriority(newPriority);
-          if (newDueDate) setDueDate(newDueDate);
-          setTags(newTags);
-          setTasks(newTasks);
-
-          // Immediately persist to database (prevents data loss from cascading dialog close)
-          onUpdate(card.id, {
-            title,
-            description: newDescription,
-            priority: newPriority,
-            value: newValue,
-            starting_date: startingDate ? format(startingDate, 'yyyy-MM-dd') : (card.created_at ? format(new Date(card.created_at), 'yyyy-MM-dd') : undefined),
-            due_date: newDueDate ? format(newDueDate, 'yyyy-MM-dd') : undefined,
-            tasks: newTasks as any,
-            tags: newTags as any,
-            assigned_to: assignedTo as any,
-            assigned_external: assignedExternal as any,
-            supervisor_id: supervisorId as any,
-          });
+        }}
+        onSaved={() => {
+          // Refresh card data in parent after direct DB save
+          queryClient.invalidateQueries({ queryKey: ['kanban'] });
         }}
       />
     </>
