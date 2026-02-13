@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, CreditCard, Bookmark, Save, FolderInput, Sparkles, Mail, Landmark, CalendarDays, Receipt } from "lucide-react";
+import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, CreditCard, Bookmark, Save, FolderInput, Sparkles, Mail, Landmark, CalendarDays, Receipt, Send, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +55,7 @@ import DocumentPaymentDialog from "@/components/companies/DocumentPaymentDialog"
 import BankPaymentDialog from "@/components/companies/BankPaymentDialog";
 import { DocumentAIPanel } from "@/components/companies/DocumentAIPanel";
 import SendEmailModal from "@/components/email/SendEmailModal";
+import { useSendPaymentConfirmation } from "@/hooks/useSendPaymentConfirmation";
 import { cn } from "@/lib/utils";
 
 interface WorkflowFile {
@@ -89,6 +90,8 @@ interface WorkflowFile {
   lending_company_id?: string | null;
   borrowing_company_id?: string | null;
   description?: string | null;
+  // Payment confirmation tracking
+  confirmation_sent_at?: string | null;
 }
 
 interface UploadProgress {
@@ -139,8 +142,7 @@ const DEFAULT_STATUS_OPTIONS: ColumnOption[] = [
   { label: "processing", color: "#3b82f6" },
   { label: "Payment", color: "#22c55e" },
   { label: "Claim", color: "#ec4899" },
-  { label: "Completed", color: "#6b7280" },
-  { label: "Archived", color: "#64748b" },
+  { label: "Paid", color: "#6b7280" },
 ];
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
@@ -358,6 +360,9 @@ export default function WorkFlowTab() {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showBankPaymentDialog, setShowBankPaymentDialog] = useState(false);
   const [showSendEmailModal, setShowSendEmailModal] = useState(false);
+  const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
+  const [confirmationEmail, setConfirmationEmail] = useState('');
+  const { sendConfirmation, isSending: isSendingConfirmation } = useSendPaymentConfirmation();
 
   // Mark as completed state
   const [markCompleteWarningOpen, setMarkCompleteWarningOpen] = useState(false);
@@ -565,8 +570,18 @@ export default function WorkFlowTab() {
           if (savedConfig && savedConfig.options) {
             let mergedOptions = savedConfig.options as unknown as ColumnOption[];
             
-            // For status column, merge with defaults to ensure all options are available
+            // For status column, clean up deprecated options and merge with defaults
             if (col.id === 'status') {
+              // Remove deprecated options
+              const deprecatedLabels = ['archived'];
+              mergedOptions = mergedOptions.filter(
+                o => !deprecatedLabels.includes(o.label.toLowerCase())
+              );
+              // Rename "Completed" -> "Paid"
+              mergedOptions = mergedOptions.map(o => 
+                o.label.toLowerCase() === 'completed' ? { ...o, label: 'Paid' } : o
+              );
+              // Add any missing default options
               const savedLabels = new Set(mergedOptions.map(o => o.label.toLowerCase()));
               const missingOptions = DEFAULT_STATUS_OPTIONS.filter(
                 opt => !savedLabels.has(opt.label.toLowerCase())
@@ -1326,7 +1341,7 @@ export default function WorkFlowTab() {
     },
   });
 
-  // Mark file as completed handler
+  // Mark file as paid handler
   const handleMarkAsComplete = async (file: WorkflowFile) => {
     // First, check if there's an existing transaction for this file to get actual expense date, company AND bank_account_id
     const { data: existingTransaction } = await supabase
@@ -3602,7 +3617,7 @@ export default function WorkFlowTab() {
                           <DropdownMenuContent align="end" className="bg-white z-50 shadow-md border">
                             <DropdownMenuItem onClick={() => handleMarkAsComplete(file)}>
                               <CheckCircle2 className="h-4 w-4 mr-2" />
-                              Mark as Completed
+                              Mark as Paid
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => {
                               setFileToRename(file);
@@ -3636,7 +3651,7 @@ export default function WorkFlowTab() {
                   <ContextMenuContent>
                     <ContextMenuItem onClick={() => handleMarkAsComplete(file)}>
                       <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Mark as Completed
+                      Mark as Paid
                     </ContextMenuItem>
                     <ContextMenuItem onClick={() => {
                       setFileToRename(file);
@@ -4039,12 +4054,40 @@ export default function WorkFlowTab() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                           <Button
-                            variant="outline"
+                            variant={previewFile?.status === "Payment"
+                              ? (previewFile?.confirmation_sent_at ? "outline" : "default")
+                              : "outline"}
                             size="sm"
-                            onClick={() => setShowSendEmailModal(true)}
+                            className={previewFile?.status === "Payment"
+                              ? (previewFile?.confirmation_sent_at ? "text-green-600 border-green-600" : "bg-blue-600 hover:bg-blue-700")
+                              : ""}
+                            onClick={() => {
+                              if (previewFile?.status === "Payment") {
+                                setConfirmationEmail('');
+                                setShowConfirmationDialog(true);
+                              } else {
+                                setShowSendEmailModal(true);
+                              }
+                            }}
                           >
-                            <Mail className="h-4 w-4 mr-2" />
-                            Enviar Email
+                            {previewFile?.status === "Payment" ? (
+                              previewFile?.confirmation_sent_at ? (
+                                <>
+                                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                                  Comprovativo Enviado
+                                </>
+                              ) : (
+                                <>
+                                  <Send className="h-4 w-4 mr-2" />
+                                  Enviar Comprovativo
+                                </>
+                              )
+                            ) : (
+                              <>
+                                <Mail className="h-4 w-4 mr-2" />
+                                Enviar Email
+                              </>
+                            )}
                           </Button>
               </div>
             </div>
@@ -4157,7 +4200,7 @@ export default function WorkFlowTab() {
       </Dialog>
 
 
-      {/* Mark as Completed Warning Dialog */}
+      {/* Mark as Paid Warning Dialog */}
       <AlertDialog open={markCompleteWarningOpen} onOpenChange={setMarkCompleteWarningOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -4174,7 +4217,7 @@ export default function WorkFlowTab() {
                 </strong>.
               </p>
               <p>
-                Please go to <strong>Settings → Table Relations → File Storage Locations</strong> and add a storage location for this company and month/year before marking the file as completed.
+                Please go to <strong>Settings → Table Relations → File Storage Locations</strong> and add a storage location for this company and month/year before marking the file as paid.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -4683,6 +4726,98 @@ export default function WorkFlowTab() {
           }}
         />
       )}
+
+      {/* Send Payment Confirmation Dialog */}
+      <AlertDialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5" />
+              Enviar Comprovativo de Pagamento
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 pt-2">
+                <p className="text-sm text-muted-foreground">
+                  Enviar comprovativo de pagamento por email ao fornecedor. O documento será anexado automaticamente.
+                </p>
+                {previewFile && (
+                  <div className="rounded-md bg-muted/50 p-3 space-y-1 text-sm">
+                    {previewFile.vendor_name && (
+                      <div><span className="font-medium">Fornecedor:</span> {previewFile.vendor_name}</div>
+                    )}
+                    {previewFile.invoice_number && (
+                      <div><span className="font-medium">Fatura:</span> {previewFile.invoice_number}</div>
+                    )}
+                    {previewFile.total_amount != null && (
+                      <div><span className="font-medium">Valor:</span> {Number(previewFile.total_amount).toFixed(2)} {previewFile.currency || 'EUR'}</div>
+                    )}
+                    <div><span className="font-medium">Anexo:</span> {previewFile.file_name}</div>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="confirmation-email">Email do fornecedor</Label>
+                  <Input
+                    id="confirmation-email"
+                    type="email"
+                    value={confirmationEmail}
+                    onChange={(e) => setConfirmationEmail(e.target.value)}
+                    placeholder="email@fornecedor.com"
+                    autoComplete="off"
+                  />
+                </div>
+                {previewFile?.confirmation_sent_at && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Comprovativo já enviado a {format(new Date(previewFile.confirmation_sent_at), "dd/MM/yyyy HH:mm")}. Enviar novamente?
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSendingConfirmation}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!confirmationEmail.trim() || isSendingConfirmation}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!previewFile || !confirmationEmail.trim()) return;
+                
+                const result = await sendConfirmation({
+                  vendor_email: confirmationEmail.trim(),
+                  file_url: previewFile.file_url,
+                  file_name: previewFile.file_name,
+                  vendor_name: previewFile.vendor_name || undefined,
+                  invoice_number: previewFile.invoice_number || undefined,
+                  total_amount: previewFile.total_amount || undefined,
+                  file_id: previewFile.id,
+                });
+
+                if (result.success) {
+                  toast.success(`Comprovativo enviado para ${confirmationEmail}`);
+                  setShowConfirmationDialog(false);
+                  // Refresh the data to update confirmation_sent_at
+                  queryClient.invalidateQueries({ queryKey: ['workflow-files'] });
+                } else {
+                  toast.error(result.error || 'Erro ao enviar comprovativo');
+                }
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isSendingConfirmation ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  A enviar...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Enviar Comprovativo
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

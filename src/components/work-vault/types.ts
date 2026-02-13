@@ -50,7 +50,7 @@ export const DEFAULT_STATUS_OPTIONS: ColumnOption[] = [
   { label: "In Progress", color: "#3b82f6" },
   { label: "Review", color: "#8b5cf6" },
   { label: "Final", color: "#22c55e" },
-  { label: "Archived", color: "#6b7280" },
+  { label: "Paid", color: "#6b7280" },
 ];
 
 export const DEFAULT_TAG_OPTIONS: ColumnOption[] = [
