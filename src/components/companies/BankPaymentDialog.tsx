@@ -40,6 +40,7 @@ interface BankPaymentDialogProps {
   vendorName?: string | null;
   totalAmount?: number | null;
   description?: string | null;
+  onPaymentSuccess?: () => void;
 }
 
 interface WiseRecipient {
@@ -57,6 +58,7 @@ export default function BankPaymentDialog({
   vendorName,
   totalAmount,
   description,
+  onPaymentSuccess,
 }: BankPaymentDialogProps) {
   const { sendPayment, isSending, result, reset } = useBankPayment();
   const hasInitialized = useRef(false);
@@ -296,6 +298,7 @@ export default function BankPaymentDialog({
 
     if (response.success) {
       toast.success("Pagamento enviado com sucesso!");
+      onPaymentSuccess?.();
       setTimeout(() => {
         onOpenChange(false);
       }, 2000);

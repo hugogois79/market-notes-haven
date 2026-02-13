@@ -4503,6 +4503,9 @@ export default function WorkFlowTab() {
           vendorName={previewFile.vendor_name}
           totalAmount={previewFile.total_amount}
           description={previewFile.notes}
+          onPaymentSuccess={() => {
+            updateFieldMutation.mutate({ id: previewFile.id, field: 'status', value: 'Paid' });
+          }}
         />
       )}
 
