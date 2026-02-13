@@ -2137,9 +2137,10 @@ export default function WorkFlowTab() {
       }
       
       const [bucket, ...fileParts] = pathParts[1].split('/');
-      const filePath = fileParts.join('/');
+      // Decode URI-encoded path (e.g. %20 -> space) for Supabase Storage API
+      const filePath = decodeURIComponent(fileParts.join('/'));
       
-      console.log(`Uploading modified PDF to bucket: ${bucket}, path: ${filePath}`);
+      console.log(`Uploading modified PDF to bucket: ${bucket}, path: ${filePath}, size: ${modifiedPdf.size}`);
       
       // Upload the modified file (upsert to replace existing)
       const { error: uploadError } = await supabase.storage
@@ -2151,7 +2152,8 @@ export default function WorkFlowTab() {
         });
       
       if (uploadError) {
-        throw uploadError;
+        console.error('Storage upload error:', uploadError.message, { bucket, filePath, size: modifiedPdf.size });
+        throw new Error(`Erro no upload: ${uploadError.message}`);
       }
       
       // Update the file size in the database
