@@ -564,6 +564,7 @@ export default function WorkFlowTab() {
   // Apply column config from Supabase when loaded
   useEffect(() => {
     if (columnConfig && !columnsInitialized) {
+      const statusOptionsMigrated: ColumnOption[] | null = null;
       setColumns(prevColumns => {
         return prevColumns.map(col => {
           const savedConfig = columnConfig.find(c => c.column_id === col.id);
@@ -572,6 +573,7 @@ export default function WorkFlowTab() {
             
             // For status column, clean up deprecated options and merge with defaults
             if (col.id === 'status') {
+              const originalJson = JSON.stringify(mergedOptions);
               // Remove deprecated options
               const deprecatedLabels = ['archived'];
               mergedOptions = mergedOptions.filter(
@@ -588,6 +590,27 @@ export default function WorkFlowTab() {
               );
               if (missingOptions.length > 0) {
                 mergedOptions = [...mergedOptions, ...missingOptions];
+              }
+              // If options changed, persist the migration to Supabase
+              if (JSON.stringify(mergedOptions) !== originalJson) {
+                // Fire-and-forget save to persist migration
+                (async () => {
+                  try {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                      await supabase
+                        .from("workflow_column_config")
+                        .update({
+                          options: mergedOptions as unknown as any,
+                          updated_at: new Date().toISOString(),
+                        })
+                        .eq("user_id", user.id)
+                        .eq("column_id", "status");
+                    }
+                  } catch (e) {
+                    console.error("Failed to persist status migration:", e);
+                  }
+                })();
               }
             }
             
