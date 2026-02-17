@@ -4152,6 +4152,11 @@ export default function WorkFlowTab() {
                     subtotal: previewFile.subtotal,
                     currency: previewFile.currency,
                     payment_method: previewFile.payment_method,
+                    // Inter-company loan fields from n8n workflow
+                    document_type: previewFile.document_type,
+                    lending_company_id: previewFile.lending_company_id,
+                    borrowing_company_id: previewFile.borrowing_company_id,
+                    description: previewFile.description,
                   }}
                   existingTransaction={
                     // If there's pending loan data, convert it to existingTransaction format
