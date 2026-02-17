@@ -3,8 +3,14 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface VendorEmailResult {
   email: string;
-  source: string;
+  source: 'agentmail' | 'gmail' | 'supabase';
   name: string;
+  subject?: string;
+  date?: string;
+  message_id?: string;
+  thread_id?: string;
+  gmail_id?: string;
+  snippet?: string;
 }
 
 export interface SearchVendorEmailResponse {
@@ -21,13 +27,18 @@ export interface SendPaymentConfirmationRequest {
   vendor_email?: string;
   invoice_number?: string;
   total_amount?: number;
+  source?: 'agentmail' | 'gmail' | 'manual';
+  message_id?: string;
+  thread_id?: string;
+  gmail_id?: string;
 }
 
 export interface SendPaymentConfirmationResponse {
   success: boolean;
   message?: string;
   vendor_email?: string;
-  gmail_message_id?: string;
+  agentmail_message_id?: string;
+  source?: string;
   error?: string;
 }
 
@@ -38,7 +49,7 @@ export const useSendPaymentConfirmation = () => {
   const [result, setResult] = useState<SendPaymentConfirmationResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const searchVendorEmail = async (vendorName: string): Promise<VendorEmailResult[]> => {
+  const searchVendorEmail = async (vendorName: string, totalAmount?: number, invoiceDate?: string): Promise<VendorEmailResult[]> => {
     setIsSearching(true);
     setError(null);
     setFoundEmails([]);
@@ -47,7 +58,11 @@ export const useSendPaymentConfirmation = () => {
       const response = await fetch('https://n8n.gvvcapital.com/webhook/search-vendor-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vendor_name: vendorName })
+        body: JSON.stringify({ 
+          vendor_name: vendorName,
+          total_amount: totalAmount || undefined,
+          invoice_date: invoiceDate || undefined
+        })
       });
 
       if (!response.ok) {
@@ -84,7 +99,11 @@ export const useSendPaymentConfirmation = () => {
           invoice_number: data.invoice_number,
           total_amount: data.total_amount,
           file_url: data.file_url,
-          file_name: data.file_name
+          file_name: data.file_name,
+          source: data.source || 'manual',
+          message_id: data.message_id || '',
+          thread_id: data.thread_id || '',
+          gmail_id: data.gmail_id || '',
         })
       });
 

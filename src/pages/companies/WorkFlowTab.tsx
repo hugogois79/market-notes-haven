@@ -362,6 +362,12 @@ export default function WorkFlowTab() {
   const [showSendEmailModal, setShowSendEmailModal] = useState(false);
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState('');
+  const [selectedEmailContext, setSelectedEmailContext] = useState<{
+    source: 'agentmail' | 'gmail' | 'manual';
+    message_id?: string;
+    thread_id?: string;
+    gmail_id?: string;
+  }>({ source: 'manual' });
   const { searchVendorEmail, sendConfirmation, isSending: isSendingConfirmation, isSearching, foundEmails } = useSendPaymentConfirmation();
 
   // Mark as completed state
@@ -4745,14 +4751,25 @@ export default function WorkFlowTab() {
         />
       )}
 
-      {/* Send Payment Confirmation Dialog (direct Gmail) */}
+      {/* Send Payment Confirmation Dialog (AgentMail - johnccount@robsonway.com) */}
       <AlertDialog open={showConfirmationDialog} onOpenChange={(open) => {
         setShowConfirmationDialog(open);
-        if (open && previewFile?.vendor_name) {
-          searchVendorEmail(previewFile.vendor_name);
+        if (open && previewFile) {
+          // Smart vendor name: transaction data > filename extraction > OCR
+          const txVendorName = (existingTransaction as any)?.vendor_name;
+          const fileNameParts = previewFile.file_name?.split('(');
+          const fileNameVendor = fileNameParts && fileNameParts.length > 1 
+            ? fileNameParts[0].replace(/\.\w+$/, '').trim() 
+            : undefined;
+          const bestVendorName = txVendorName || fileNameVendor || previewFile.vendor_name || '';
+          
+          if (bestVendorName) {
+            searchVendorEmail(bestVendorName, previewFile.total_amount ?? undefined, previewFile.invoice_date ?? undefined);
+          }
+          setSelectedEmailContext({ source: 'manual' });
         }
       }}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <Send className="h-5 w-5" />
@@ -4761,51 +4778,89 @@ export default function WorkFlowTab() {
             <AlertDialogDescription asChild>
               <div className="space-y-4 pt-2">
                 <p className="text-sm text-muted-foreground">
-                  Seleccione o email do fornecedor e o comprovativo será enviado directamente via Gmail.
+                  Enviado de <span className="font-medium">johnccount@robsonway.com</span> (John Ccount).
                 </p>
-                {previewFile && (
-                  <div className="rounded-md bg-muted/50 p-3 space-y-1 text-sm">
-                    {previewFile.vendor_name && (
-                      <div><span className="font-medium">Fornecedor:</span> {previewFile.vendor_name}</div>
-                    )}
-                    {previewFile.invoice_number && (
-                      <div><span className="font-medium">Fatura:</span> {previewFile.invoice_number}</div>
-                    )}
-                    {previewFile.total_amount != null && (
-                      <div><span className="font-medium">Valor:</span> {Number(previewFile.total_amount).toFixed(2)} {previewFile.currency || 'EUR'}</div>
-                    )}
-                    <div><span className="font-medium">Anexo:</span> {previewFile.file_name}</div>
-                  </div>
-                )}
+                {previewFile && (() => {
+                  const txVendor = (existingTransaction as any)?.vendor_name;
+                  const fnParts = previewFile.file_name?.split('(');
+                  const fnVendor = fnParts && fnParts.length > 1 ? fnParts[0].replace(/\.\w+$/, '').trim() : undefined;
+                  const displayVendor = txVendor || fnVendor || previewFile.vendor_name;
+                  return (
+                    <div className="rounded-md bg-muted/50 p-3 space-y-1 text-sm">
+                      {displayVendor && (
+                        <div><span className="font-medium">Fornecedor:</span> {displayVendor}</div>
+                      )}
+                      {previewFile.invoice_number && (
+                        <div><span className="font-medium">Fatura:</span> {previewFile.invoice_number}</div>
+                      )}
+                      {previewFile.total_amount != null && (
+                        <div><span className="font-medium">Valor:</span> {Number(previewFile.total_amount).toFixed(2)} {previewFile.currency || 'EUR'}</div>
+                      )}
+                      <div><span className="font-medium">Anexo:</span> {previewFile.file_name}</div>
+                    </div>
+                  );
+                })()}
                 <div className="space-y-2">
                   <Label htmlFor="confirmation-email">Email do fornecedor</Label>
                   {isSearching ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      A procurar emails no Gmail e histórico...
+                      A procurar emails no John, Gmail e historico...
                     </div>
                   ) : foundEmails.length > 0 ? (
                     <div className="space-y-2">
-                      <div className="space-y-1 max-h-32 overflow-y-auto">
-                        {foundEmails.map((item, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            className={cn(
-                              "w-full text-left px-3 py-2 rounded-md text-sm border transition-colors",
-                              confirmationEmail === item.email
-                                ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
-                                : "border-border hover:bg-muted/50"
-                            )}
-                            onClick={() => setConfirmationEmail(item.email)}
-                          >
-                            <div className="font-medium">{item.email}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {item.name && <span>{item.name} · </span>}
-                              <span className="capitalize">{item.source === 'gmail' ? 'Gmail' : 'Transacções'}</span>
-                            </div>
-                          </button>
-                        ))}
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                        {foundEmails.map((item, idx) => {
+                          const isSelected = confirmationEmail === item.email 
+                            && selectedEmailContext.source === item.source
+                            && (item.source !== 'agentmail' || selectedEmailContext.message_id === item.message_id)
+                            && (item.source !== 'gmail' || selectedEmailContext.gmail_id === item.gmail_id);
+                          return (
+                            <button
+                              key={`${item.source}-${idx}`}
+                              type="button"
+                              className={cn(
+                                "w-full text-left px-3 py-2 rounded-md text-sm border transition-colors",
+                                isSelected
+                                  ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
+                                  : "border-border hover:bg-muted/50"
+                              )}
+                              onClick={() => {
+                                setConfirmationEmail(item.email);
+                                setSelectedEmailContext({
+                                  source: item.source === 'supabase' ? 'manual' : item.source,
+                                  message_id: item.message_id,
+                                  thread_id: item.thread_id,
+                                  gmail_id: item.gmail_id,
+                                });
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium">{item.email}</span>
+                                <span className={cn(
+                                  "text-[10px] px-1.5 py-0.5 rounded font-medium",
+                                  item.source === 'agentmail' ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400" :
+                                  item.source === 'gmail' ? "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400" :
+                                  "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                                )}>
+                                  {item.source === 'agentmail' ? 'Reply' : item.source === 'gmail' ? 'Quote' : 'Novo'}
+                                </span>
+                              </div>
+                              {item.subject && (
+                                <div className="text-xs text-muted-foreground truncate mt-0.5">
+                                  {item.subject}
+                                </div>
+                              )}
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                {item.name && <span>{item.name}</span>}
+                                {item.date && <span> · {new Date(item.date).toLocaleDateString('pt-PT')}</span>}
+                                {!item.subject && !item.date && (
+                                  <span>{item.source === 'agentmail' ? 'Responder nesta thread' : item.source === 'gmail' ? 'Citar email e enviar do John' : 'Email novo do John'}</span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                       <p className="text-xs text-muted-foreground">Ou digite manualmente:</p>
                     </div>
@@ -4816,15 +4871,27 @@ export default function WorkFlowTab() {
                     id="confirmation-email"
                     type="email"
                     value={confirmationEmail}
-                    onChange={(e) => setConfirmationEmail(e.target.value)}
+                    onChange={(e) => {
+                      setConfirmationEmail(e.target.value);
+                      setSelectedEmailContext({ source: 'manual' });
+                    }}
                     placeholder="email@fornecedor.com"
                     autoComplete="off"
                   />
                 </div>
+                {selectedEmailContext.source !== 'manual' && (
+                  <p className="text-xs text-blue-600 flex items-center gap-1">
+                    {selectedEmailContext.source === 'agentmail' ? (
+                      <><Mail className="h-3 w-3" /> Responder na thread existente do John</>
+                    ) : (
+                      <><Mail className="h-3 w-3" /> Citar email do Gmail e enviar do John</>
+                    )}
+                  </p>
+                )}
                 {previewFile?.confirmation_sent_at && (
                   <p className="text-xs text-amber-600 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
-                    Comprovativo já enviado a {format(new Date(previewFile.confirmation_sent_at), "dd/MM/yyyy HH:mm")}. Enviar novamente?
+                    Comprovativo ja enviado a {format(new Date(previewFile.confirmation_sent_at), "dd/MM/yyyy HH:mm")}. Enviar novamente?
                   </p>
                 )}
               </div>
@@ -4838,18 +4905,28 @@ export default function WorkFlowTab() {
                 e.preventDefault();
                 if (!previewFile || !confirmationEmail.trim()) return;
 
+                // Use best vendor name for email
+                const sendTxVendor = (existingTransaction as any)?.vendor_name;
+                const sendFnParts = previewFile.file_name?.split('(');
+                const sendFnVendor = sendFnParts && sendFnParts.length > 1 ? sendFnParts[0].replace(/\.\w+$/, '').trim() : undefined;
+                const sendVendorName = sendTxVendor || sendFnVendor || previewFile.vendor_name;
+                
                 const result = await sendConfirmation({
                   file_url: previewFile.file_url,
                   file_name: previewFile.file_name,
                   file_id: previewFile.id,
-                  vendor_name: previewFile.vendor_name || undefined,
+                  vendor_name: sendVendorName || undefined,
                   vendor_email: confirmationEmail.trim(),
                   invoice_number: previewFile.invoice_number || undefined,
                   total_amount: previewFile.total_amount || undefined,
+                  source: selectedEmailContext.source,
+                  message_id: selectedEmailContext.message_id,
+                  thread_id: selectedEmailContext.thread_id,
+                  gmail_id: selectedEmailContext.gmail_id,
                 });
 
                 if (result.success) {
-                  toast.success(`Comprovativo enviado para ${confirmationEmail.trim()}`);
+                  toast.success(`Comprovativo enviado para ${confirmationEmail.trim()} (via John)`);
                   setShowConfirmationDialog(false);
                   queryClient.invalidateQueries({ queryKey: ['workflow-files'] });
                 } else {
@@ -4866,7 +4943,7 @@ export default function WorkFlowTab() {
               ) : (
                 <>
                   <Send className="h-4 w-4 mr-2" />
-                  Enviar Email
+                  Enviar do John
                 </>
               )}
             </AlertDialogAction>
