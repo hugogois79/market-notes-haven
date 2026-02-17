@@ -362,7 +362,7 @@ export default function WorkFlowTab() {
   const [showSendEmailModal, setShowSendEmailModal] = useState(false);
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState('');
-  const { sendConfirmation, isSending: isSendingConfirmation } = useSendPaymentConfirmation();
+  const { searchVendorEmail, sendConfirmation, isSending: isSendingConfirmation, isSearching, foundEmails } = useSendPaymentConfirmation();
 
   // Mark as completed state
   const [markCompleteWarningOpen, setMarkCompleteWarningOpen] = useState(false);
@@ -4745,18 +4745,23 @@ export default function WorkFlowTab() {
         />
       )}
 
-      {/* Send Payment Confirmation Dialog (via John Ccount Agent) */}
-      <AlertDialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
+      {/* Send Payment Confirmation Dialog (direct Gmail) */}
+      <AlertDialog open={showConfirmationDialog} onOpenChange={(open) => {
+        setShowConfirmationDialog(open);
+        if (open && previewFile?.vendor_name) {
+          searchVendorEmail(previewFile.vendor_name);
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <Send className="h-5 w-5" />
-              Enviar ao John para Processamento
+              Enviar Comprovativo por Email
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-4 pt-2">
                 <p className="text-sm text-muted-foreground">
-                  O John vai procurar o email do fornecedor e enviar o comprovativo de pagamento automaticamente.
+                  Seleccione o email do fornecedor e o comprovativo será enviado directamente via Gmail.
                 </p>
                 {previewFile && (
                   <div className="rounded-md bg-muted/50 p-3 space-y-1 text-sm">
@@ -4773,18 +4778,48 @@ export default function WorkFlowTab() {
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="confirmation-email">Email do fornecedor (opcional)</Label>
+                  <Label htmlFor="confirmation-email">Email do fornecedor</Label>
+                  {isSearching ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      A procurar emails no Gmail e histórico...
+                    </div>
+                  ) : foundEmails.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {foundEmails.map((item, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            className={cn(
+                              "w-full text-left px-3 py-2 rounded-md text-sm border transition-colors",
+                              confirmationEmail === item.email
+                                ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
+                                : "border-border hover:bg-muted/50"
+                            )}
+                            onClick={() => setConfirmationEmail(item.email)}
+                          >
+                            <div className="font-medium">{item.email}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {item.name && <span>{item.name} · </span>}
+                              <span className="capitalize">{item.source === 'gmail' ? 'Gmail' : 'Transacções'}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">Ou digite manualmente:</p>
+                    </div>
+                  ) : !isSearching && (
+                    <p className="text-xs text-amber-600">Nenhum email encontrado. Insira manualmente.</p>
+                  )}
                   <Input
                     id="confirmation-email"
                     type="email"
                     value={confirmationEmail}
                     onChange={(e) => setConfirmationEmail(e.target.value)}
-                    placeholder="Deixar vazio — o John procura automaticamente"
+                    placeholder="email@fornecedor.com"
                     autoComplete="off"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Se indicar o email, o John usa directamente. Caso contrário, procura nos contactos.
-                  </p>
                 </div>
                 {previewFile?.confirmation_sent_at && (
                   <p className="text-xs text-amber-600 flex items-center gap-1">
@@ -4798,23 +4833,23 @@ export default function WorkFlowTab() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isSendingConfirmation}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              disabled={isSendingConfirmation}
+              disabled={isSendingConfirmation || !confirmationEmail.trim()}
               onClick={async (e) => {
                 e.preventDefault();
-                if (!previewFile) return;
+                if (!previewFile || !confirmationEmail.trim()) return;
 
                 const result = await sendConfirmation({
                   file_url: previewFile.file_url,
                   file_name: previewFile.file_name,
                   file_id: previewFile.id,
                   vendor_name: previewFile.vendor_name || undefined,
-                  vendor_email: confirmationEmail.trim() || undefined,
+                  vendor_email: confirmationEmail.trim(),
                   invoice_number: previewFile.invoice_number || undefined,
                   total_amount: previewFile.total_amount || undefined,
                 });
 
                 if (result.success) {
-                  toast.success("Comprovativo enviado ao John para processamento");
+                  toast.success(`Comprovativo enviado para ${confirmationEmail.trim()}`);
                   setShowConfirmationDialog(false);
                   queryClient.invalidateQueries({ queryKey: ['workflow-files'] });
                 } else {
@@ -4826,12 +4861,12 @@ export default function WorkFlowTab() {
               {isSendingConfirmation ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  A enviar ao John...
+                  A enviar email...
                 </>
               ) : (
                 <>
                   <Send className="h-4 w-4 mr-2" />
-                  Enviar ao John
+                  Enviar Email
                 </>
               )}
             </AlertDialogAction>
