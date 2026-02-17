@@ -441,8 +441,8 @@ export default function BankPaymentDialog({
                     </div>
                   </PopoverTrigger>
                   {searchTerm.length >= 2 && (
-                    <PopoverContent 
-                      className="w-[--radix-popover-trigger-width] p-0" 
+                    <PopoverContent
+                      className="w-[--radix-popover-trigger-width] p-0"
                       align="start"
                       onOpenAutoFocus={(e) => e.preventDefault()}
                     >

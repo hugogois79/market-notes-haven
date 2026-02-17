@@ -237,14 +237,14 @@ const sanitizeFileName = (fileName: string): string => {
   const lastDot = fileName.lastIndexOf('.');
   const ext = lastDot !== -1 ? fileName.substring(lastDot) : '';
   const nameWithoutExt = lastDot !== -1 ? fileName.substring(0, lastDot) : fileName;
-  
+
   const sanitized = nameWithoutExt
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-zA-Z0-9-_]/g, '_')
     .replace(/_+/g, '_')
     .replace(/^_|_$/g, '');
-  
+
   return sanitized + ext;
 };
 
@@ -255,15 +255,15 @@ export default function WorkFlowTab() {
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [activeFilters, setActiveFilters] = useState<FilterCondition[]>([]);
-  
+
   // Keyboard navigation - focused file row
   const [focusedFileId, setFocusedFileId] = useState<string | null>(null);
   const [openMenuFileId, setOpenMenuFileId] = useState<string | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
-  
+
   // Refs for action buttons (to scroll into view when pressing E)
   const actionBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  
+
   // Resizable column widths
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
     const saved = localStorage.getItem("workflow-column-widths");
@@ -281,7 +281,7 @@ export default function WorkFlowTab() {
   const resizeStartWidth = useRef<number>(400);
   // Current filter being edited
   const [currentFilterColumn, setCurrentFilterColumn] = useState<string>("");
-  
+
   // Saved filters state - now loaded from Supabase
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
 
@@ -291,19 +291,19 @@ export default function WorkFlowTab() {
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
-      
+
       const { data, error } = await supabase
         .from("user_saved_filters")
         .select("*")
         .eq("user_id", user.id)
         .eq("filter_type", "workflow")
         .order("created_at", { ascending: false });
-      
+
       if (error) {
         console.error("[WorkFlowTab] Error loading saved filters:", error);
         return [];
       }
-      
+
       // Map to SavedFilter format
       return data.map((f: any) => ({
         id: f.id,
@@ -320,16 +320,16 @@ export default function WorkFlowTab() {
       setSavedFilters(supabaseSavedFilters);
     }
   }, [supabaseSavedFilters]);
-  
+
   // Track deleted preset filter IDs
   const [deletedPresetIds, setDeletedPresetIds] = useState<string[]>(() => {
     const saved = localStorage.getItem("workflow-deleted-preset-filters");
     return saved ? JSON.parse(saved) : [];
   });
-  
+
   const [saveFilterDialogOpen, setSaveFilterDialogOpen] = useState(false);
   const [newFilterName, setNewFilterName] = useState("");
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -409,9 +409,9 @@ export default function WorkFlowTab() {
     settings: any;
     paymentAccountStorageLocation: any | null;
     destinationCompanies: { id: string; name: string; role: string; folderPath?: string }[];
-    loanInfo: { 
-      lendingCompany: string; 
-      borrowingCompany: string; 
+    loanInfo: {
+      lendingCompany: string;
+      borrowingCompany: string;
       amount: number;
     } | null;
   } | null>(null);
@@ -422,7 +422,7 @@ export default function WorkFlowTab() {
     queryKey: ["file-transaction", previewFile?.id, previewFile?.file_url],
     queryFn: async () => {
       if (!previewFile?.id && !previewFile?.file_url) return null;
-      
+
       // First try to find a financial_transaction by document_file_id
       if (previewFile?.id) {
         const { data: transactionData, error: transactionError } = await supabase
@@ -430,11 +430,11 @@ export default function WorkFlowTab() {
           .select("*")
           .eq("document_file_id", previewFile.id)
           .maybeSingle();
-        
+
         if (transactionError) throw transactionError;
         if (transactionData) return transactionData;
       }
-      
+
       // Fallback: try to find by invoice_file_url
       if (previewFile?.file_url) {
         const { data: transactionByUrl, error: urlError } = await supabase
@@ -444,7 +444,7 @@ export default function WorkFlowTab() {
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
-        
+
         if (urlError) throw urlError;
         if (transactionByUrl) {
           // Auto-relink: if found by URL but missing document_file_id, update it
@@ -457,7 +457,7 @@ export default function WorkFlowTab() {
           return transactionByUrl;
         }
       }
-      
+
       // If no financial_transaction, check for loan via source_file_id
       if (previewFile?.id) {
         const { data: loanData, error: loanError } = await supabase
@@ -465,7 +465,7 @@ export default function WorkFlowTab() {
           .select("*")
           .eq("source_file_id", previewFile.id)
           .maybeSingle();
-        
+
         if (loanError) throw loanError;
         if (loanData) {
           // Return loan data in a format compatible with WorkflowExpensePanel
@@ -487,7 +487,7 @@ export default function WorkFlowTab() {
           };
         }
       }
-      
+
       // Check for document in company_documents by file_url
       if (previewFile?.file_url) {
         const { data: docData, error: docError } = await supabase
@@ -497,7 +497,7 @@ export default function WorkFlowTab() {
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
-        
+
         if (docError) throw docError;
         if (docData) {
           // Return document data in a format compatible with WorkflowExpensePanel
@@ -513,7 +513,7 @@ export default function WorkFlowTab() {
           };
         }
       }
-      
+
       return null;
     },
     enabled: !!(previewFile?.id || previewFile?.file_url),
@@ -549,12 +549,12 @@ export default function WorkFlowTab() {
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
-      
+
       const { data, error } = await supabase
         .from("workflow_column_config")
         .select("*")
         .eq("user_id", user.id);
-      
+
       if (error) throw error;
       return data;
     },
@@ -570,7 +570,7 @@ export default function WorkFlowTab() {
           const savedConfig = columnConfig.find(c => c.column_id === col.id);
           if (savedConfig && savedConfig.options) {
             let mergedOptions = savedConfig.options as unknown as ColumnOption[];
-            
+
             // For status column, clean up deprecated options and merge with defaults
             if (col.id === 'status') {
               const originalJson = JSON.stringify(mergedOptions);
@@ -580,7 +580,7 @@ export default function WorkFlowTab() {
                 o => !deprecatedLabels.includes(o.label.toLowerCase())
               );
               // Rename "Completed" -> "Paid"
-              mergedOptions = mergedOptions.map(o => 
+              mergedOptions = mergedOptions.map(o =>
                 o.label.toLowerCase() === 'completed' ? { ...o, label: 'Paid' } : o
               );
               // Add any missing default options
@@ -613,7 +613,7 @@ export default function WorkFlowTab() {
                 })();
               }
             }
-            
+
             return { ...col, options: mergedOptions };
           }
           return col;
@@ -628,7 +628,7 @@ export default function WorkFlowTab() {
     mutationFn: async ({ columnId, options }: { columnId: string; options: ColumnOption[] }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-      
+
       // Check if config exists
       const { data: existing } = await supabase
         .from("workflow_column_config")
@@ -636,7 +636,7 @@ export default function WorkFlowTab() {
         .eq("user_id", user.id)
         .eq("column_id", columnId)
         .maybeSingle();
-      
+
       if (existing) {
         const { error } = await supabase
           .from("workflow_column_config")
@@ -682,7 +682,7 @@ export default function WorkFlowTab() {
     mutationFn: async (newFilter: { name: string; conditions: FilterCondition[] }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-      
+
       const { error } = await supabase
         .from("user_saved_filters")
         .insert([{
@@ -691,7 +691,7 @@ export default function WorkFlowTab() {
           name: newFilter.name,
           conditions: newFilter.conditions as unknown as import("@/integrations/supabase/types").Json
         }]);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -712,7 +712,7 @@ export default function WorkFlowTab() {
         .from("user_saved_filters")
         .delete()
         .eq("id", filterId);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -730,12 +730,12 @@ export default function WorkFlowTab() {
       toast.error("Por favor selecione um filtro antes de guardar");
       return;
     }
-    
+
     if (savedFilters.length >= 5) {
       toast.error("Máximo de 5 filtros guardados. Elimine um para adicionar outro.");
       return;
     }
-    
+
     saveFilterMutation.mutate({
       name: newFilterName.trim(),
       conditions: [...activeFilters],
@@ -791,7 +791,7 @@ export default function WorkFlowTab() {
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-      
+
       const { data, error } = await supabase
         .from("workflow_files")
         .select(`
@@ -807,7 +807,7 @@ export default function WorkFlowTab() {
         `)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
-      
+
       if (error) throw error;
       return data as WorkflowFile[];
     },
@@ -820,12 +820,12 @@ export default function WorkFlowTab() {
       const updatedFile = workflowFiles.find((f: WorkflowFile) => f.id === previewFile.id);
       if (updatedFile) {
         // Check if new OCR data has arrived that wasn't in previewFile
-        const hasNewOcrData = 
+        const hasNewOcrData =
           (updatedFile.vendor_name && !previewFile.vendor_name) ||
           (updatedFile.total_amount !== null && previewFile.total_amount === null) ||
           (updatedFile.invoice_date && !previewFile.invoice_date) ||
           (updatedFile.company_id && !previewFile.company_id);
-        
+
         if (hasNewOcrData) {
           setPreviewFile(updatedFile);
           toast.info('Dados OCR carregados automaticamente');
@@ -1087,7 +1087,7 @@ export default function WorkFlowTab() {
         .from("financial_transactions")
         .update(updates)
         .eq("id", transactionId);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -1105,21 +1105,21 @@ export default function WorkFlowTab() {
     mutationFn: async ({ fileUrl, projectId }: { fileUrl: string; projectId: string }) => {
       // Read table relations settings
       const settingsStr = localStorage.getItem(TABLE_RELATIONS_KEY);
-      const settings: TableRelationsConfig = settingsStr 
-        ? JSON.parse(settingsStr) 
+      const settings: TableRelationsConfig = settingsStr
+        ? JSON.parse(settingsStr)
         : { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
-      
+
       // If auto-create transaction is disabled, just skip silently
       if (!settings.autoCreateTransaction) {
         return;
       }
-      
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       // Use default company from settings, or fall back to first available
       let companyId = settings.defaultCompanyId;
-      
+
       if (!companyId) {
         const { data: companies } = await supabase
           .from("companies")
@@ -1144,7 +1144,7 @@ export default function WorkFlowTab() {
           .from("financial_transactions")
           .update({ project_id: projectId })
           .eq("id", existingTx.id);
-        
+
         if (error) throw error;
       }
       // If no transaction exists yet, project will be assigned when payment is created
@@ -1164,33 +1164,33 @@ export default function WorkFlowTab() {
       // 1. Download the file from attachments bucket
       const url = new URL(file.file_url);
       const match = url.pathname.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
-      
+
       if (!match) {
         throw new Error("Invalid file URL format");
       }
-      
+
       const [, bucket, encodedPath] = match;
       const filePath = decodeURIComponent(encodedPath);
-      
+
       const { data: fileData, error: downloadError } = await supabase.storage
         .from(bucket)
         .download(filePath);
-      
+
       if (downloadError) throw downloadError;
-      
+
       // 2. Upload to company-documents bucket
       const newPath = `${companyId}/${folderId || 'root'}/${Date.now()}-${sanitizeFileName(file.file_name)}`;
       const { error: uploadError } = await supabase.storage
         .from("company-documents")
         .upload(newPath, fileData);
-      
+
       if (uploadError) throw uploadError;
-      
+
       // 3. Get the public URL of the new file
       const { data: { publicUrl } } = supabase.storage
         .from("company-documents")
         .getPublicUrl(newPath);
-      
+
       // 4. Create document record in company_documents
       const { error: insertError } = await supabase
         .from("company_documents")
@@ -1203,17 +1203,17 @@ export default function WorkFlowTab() {
           mime_type: file.mime_type,
           status: "Final",
         });
-      
+
       if (insertError) throw insertError;
-      
+
       // 5. Delete the workflow file record
       const { error: deleteError } = await supabase
         .from("workflow_files")
         .delete()
         .eq("id", file.id);
-      
+
       if (deleteError) throw deleteError;
-      
+
       // 6. Optionally delete the old file from storage
       await supabase.storage.from(bucket).remove([filePath]);
     },
@@ -1242,10 +1242,10 @@ export default function WorkFlowTab() {
       toast.error("Selecione uma empresa");
       return;
     }
-    
+
     // If user selected __root__, pass null as folder_id
     const folderId = moveForm.folder_path === "__root__" ? null : moveForm.folder_id;
-    
+
     moveFileMutation.mutate({
       file: fileToMove,
       companyId: moveForm.company_id,
@@ -1264,32 +1264,32 @@ export default function WorkFlowTab() {
       progress: 0,
       status: 'uploading' as const
     }));
-    
+
     setUploadProgress(initialProgress);
     setIsUploading(true);
 
     const uploadedFiles: string[] = [];
-    
+
     for (let i = 0; i < fileArray.length; i++) {
       const file = fileArray[i];
       const sanitizedName = sanitizeFileName(file.name);
       const storagePath = `${user.id}/${Date.now()}-${sanitizedName}`;
-      
+
       try {
-        setUploadProgress(prev => prev.map((p, idx) => 
+        setUploadProgress(prev => prev.map((p, idx) =>
           idx === i ? { ...p, progress: 30 } : p
         ));
 
         const { error: uploadError } = await supabase.storage
           .from("attachments")
           .upload(storagePath, file);
-        
+
         if (uploadError) throw uploadError;
 
-        setUploadProgress(prev => prev.map((p, idx) => 
+        setUploadProgress(prev => prev.map((p, idx) =>
           idx === i ? { ...p, progress: 70 } : p
         ));
-        
+
         const { data: { publicUrl } } = supabase.storage
           .from("attachments")
           .getPublicUrl(storagePath);
@@ -1305,28 +1305,28 @@ export default function WorkFlowTab() {
             status: "Pending",
             priority: "normal",
           });
-        
+
         if (insertError) throw insertError;
-        
-        setUploadProgress(prev => prev.map((p, idx) => 
+
+        setUploadProgress(prev => prev.map((p, idx) =>
           idx === i ? { ...p, progress: 100, status: 'completed' } : p
         ));
-        
+
         uploadedFiles.push(file.name);
       } catch (error) {
         console.error(`Error uploading ${file.name}:`, error);
-        setUploadProgress(prev => prev.map((p, idx) => 
+        setUploadProgress(prev => prev.map((p, idx) =>
           idx === i ? { ...p, status: 'error' } : p
         ));
       }
     }
 
     queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
-    
+
     if (uploadedFiles.length > 0) {
       toast.success(`Uploaded ${uploadedFiles.length} file(s)`);
     }
-    
+
     setTimeout(() => {
       setUploadProgress([]);
       setIsUploading(false);
@@ -1340,7 +1340,7 @@ export default function WorkFlowTab() {
         .from("workflow_files")
         .update({ [field]: value })
         .eq("id", id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -1355,7 +1355,7 @@ export default function WorkFlowTab() {
         .from("workflow_files")
         .delete()
         .eq("id", id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -1379,18 +1379,18 @@ export default function WorkFlowTab() {
       const dateToUse = new Date(file.created_at);
       const fileMonth = dateToUse.getMonth() + 1;
       const fileYear = dateToUse.getFullYear();
-      
+
       // Priority: file's company_id > default company from settings
       const settingsStr = localStorage.getItem(TABLE_RELATIONS_KEY);
       const settings: TableRelationsConfig = settingsStr
         ? JSON.parse(settingsStr)
         : { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
-      
+
       const targetCompanyId = file.company_id || settings.defaultCompanyId;
-      
+
       let companyName = "Empresa não definida";
       let folderPath = "";
-      
+
       if (targetCompanyId) {
         // Get company name
         const { data: companyData } = await supabase
@@ -1401,7 +1401,7 @@ export default function WorkFlowTab() {
         if (companyData?.name) {
           companyName = companyData.name;
         }
-        
+
         // Get storage location for folder path
         const { data: locationData } = await supabase
           .from("workflow_storage_locations")
@@ -1414,27 +1414,27 @@ export default function WorkFlowTab() {
           folderPath = locationData.folder_path;
         }
       }
-      
+
       // Check if there's a pending loan for this file
       const pendingLoanStr = customData[file.id]?._pendingLoan;
-      let loanInfo: { 
-        lendingCompanyName: string; 
+      let loanInfo: {
+        lendingCompanyName: string;
         lendingFolderPath: string;
-        borrowingCompanyName: string; 
+        borrowingCompanyName: string;
         borrowingFolderPath: string;
         amount: number;
         loanDate: string;
       } | undefined;
-      
+
       if (pendingLoanStr) {
         try {
           const loanData = JSON.parse(pendingLoanStr);
-          
+
           // Use loan date to determine month/year for folder paths
           const loanDate = new Date(loanData.start_date);
           const loanMonth = loanDate.getMonth() + 1;
           const loanYear = loanDate.getFullYear();
-          
+
           // Fetch folder path for LENDER
           let lendingFolderPath = "";
           if (loanData.lending_company_id) {
@@ -1449,7 +1449,7 @@ export default function WorkFlowTab() {
               lendingFolderPath = lendingLocation.folder_path;
             }
           }
-          
+
           // Fetch folder path for BORROWER
           let borrowingFolderPath = "";
           if (loanData.borrowing_company_id) {
@@ -1464,7 +1464,7 @@ export default function WorkFlowTab() {
               borrowingFolderPath = borrowingLocation.folder_path;
             }
           }
-          
+
           loanInfo = {
             lendingCompanyName: loanData.lending_company_name || "Empresa credora",
             lendingFolderPath,
@@ -1477,12 +1477,12 @@ export default function WorkFlowTab() {
           console.error('Error parsing pending loan data:', e);
         }
       }
-      
-      setSkipPaymentDestination({ 
-        companyName, 
-        folderPath, 
+
+      setSkipPaymentDestination({
+        companyName,
+        folderPath,
         isLoan: !!pendingLoanStr,
-        loanInfo 
+        loanInfo
       });
       setFileToSkipPayment(file);
       setShowSkipPaymentConfirmation(true);
@@ -1490,10 +1490,10 @@ export default function WorkFlowTab() {
     }
 
     // Use transaction date if available, otherwise fall back to file upload date
-    const dateToUse = existingTransaction?.date 
-      ? new Date(existingTransaction.date) 
+    const dateToUse = existingTransaction?.date
+      ? new Date(existingTransaction.date)
       : new Date(file.created_at);
-    
+
     const fileMonth = dateToUse.getMonth() + 1; // 1-indexed
     const fileYear = dateToUse.getFullYear();
 
@@ -1512,7 +1512,7 @@ export default function WorkFlowTab() {
       .select("*")
       .eq("year", fileYear)
       .eq("month", fileMonth);
-    
+
     // If we have a target company, filter by it
     if (targetCompanyId) {
       query = query.eq("company_id", targetCompanyId);
@@ -1523,8 +1523,8 @@ export default function WorkFlowTab() {
     if (error) throw error;
 
     // Get the first matching location (should be unique per company+month+year)
-    const matchingLocation = matchingLocations && matchingLocations.length > 0 
-      ? matchingLocations[0] 
+    const matchingLocation = matchingLocations && matchingLocations.length > 0
+      ? matchingLocations[0]
       : null;
 
     if (!matchingLocation) {
@@ -1556,7 +1556,7 @@ export default function WorkFlowTab() {
         .select("company_id")
         .eq("id", existingTransaction.bank_account_id)
         .maybeSingle();
-      
+
       // If the bank account owner is different from the invoice company
       if (bankAccount?.company_id && bankAccount.company_id !== targetCompanyId) {
         // Get payer company name
@@ -1565,11 +1565,11 @@ export default function WorkFlowTab() {
           .select("name")
           .eq("id", bankAccount.company_id)
           .maybeSingle();
-        
+
         if (payerCompany) {
           payerCompanyName = payerCompany.name;
         }
-        
+
         // Find storage location for the bank account owner's company
         const { data: bankAccountOwnerLocation } = await supabase
           .from("workflow_storage_locations")
@@ -1578,7 +1578,7 @@ export default function WorkFlowTab() {
           .eq("year", fileYear)
           .eq("month", fileMonth)
           .maybeSingle();
-        
+
         if (bankAccountOwnerLocation) {
           paymentAccountStorageLocation = bankAccountOwnerLocation;
         }
@@ -1600,7 +1600,7 @@ export default function WorkFlowTab() {
 
     // Build destination companies list for confirmation
     const destinationCompanies: { id: string; name: string; role: string; folderPath?: string }[] = [];
-    
+
     // 1. Main company (invoice recipient)
     if (targetCompanyId) {
       destinationCompanies.push({
@@ -1646,26 +1646,26 @@ export default function WorkFlowTab() {
   // Handler for confirming the complete action
   const handleConfirmComplete = async () => {
     if (!completeConfirmationData) return;
-    
+
     await completeFile(
       completeConfirmationData.file,
       completeConfirmationData.storageLocation,
       completeConfirmationData.settings,
       completeConfirmationData.paymentAccountStorageLocation
     );
-    
+
     setShowCompleteConfirmation(false);
     setCompleteConfirmationData(null);
   };
 
   const completeFile = async (
-    file: WorkflowFile, 
-    storageLocation: any, 
+    file: WorkflowFile,
+    storageLocation: any,
     settings: TableRelationsConfig,
     supplierStorageLocation?: any
   ) => {
     setIsCompleting(true);
-    
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -1679,13 +1679,13 @@ export default function WorkFlowTab() {
       // If there's a pending loan, create it now
       if (pendingLoanStr) {
         const loanData = JSON.parse(pendingLoanStr);
-        
+
         // First, copy file to loans folder
         try {
           const response = await fetch(file.file_url);
           if (response.ok) {
             const blob = await response.blob();
-            
+
             // Generate clean filename for loans folder
             const lendingName = (loanData.lending_company_name || 'Empresa').replace(/[^\w]/g, '_');
             const borrowingName = (loanData.borrowing_company_name || 'Empresa').replace(/[^\w]/g, '_');
@@ -1695,7 +1695,7 @@ export default function WorkFlowTab() {
             const fileExt = file.file_name?.split('.').pop() || 'pdf';
             const safeId = crypto.randomUUID().substring(0, 8);
             const newFileName = `${safeId}_${borrowingName}_${formattedDate}_${amount}_${lendingName}.${fileExt}`;
-            
+
             // Upload to loans folder with user-scoped path
             const loansFilePath = `${user.id}/loans/${newFileName}`;
             const { error: uploadError } = await supabase.storage
@@ -1704,7 +1704,7 @@ export default function WorkFlowTab() {
                 contentType: file.mime_type || 'application/pdf',
                 upsert: true
               });
-            
+
             if (!uploadError) {
               const { data: urlData } = supabase.storage
                 .from('attachments')
@@ -1804,56 +1804,56 @@ export default function WorkFlowTab() {
 
         // Invalidate loan queries
         queryClient.invalidateQueries({ queryKey: ["company-loans"] });
-        
+
         toast.success("Empréstimo registado com sucesso!");
       }
 
       // Helper function to copy file to a company's folder
       const copyToCompanyFolder = async (targetStorageLocation: any) => {
         if (!targetStorageLocation?.folder_id) return false;
-        
+
         const targetCompanyId = targetStorageLocation.company_id;
-        
+
         // Fetch the file blob from storage
         const url = new URL(file.file_url);
         const pathParts = url.pathname.split('/storage/v1/object/public/');
-        
+
         if (pathParts.length > 1) {
           const [bucket, ...fileParts] = pathParts[1].split('/');
           const filePath = fileParts.join('/');
-          
+
           // Download the file
           const { data: fileData, error: downloadError } = await supabase.storage
             .from(bucket)
             .download(filePath);
-          
+
           if (downloadError) {
             console.error("Download error:", downloadError);
             return false;
           }
-          
+
           if (fileData) {
             // Upload to company-documents bucket
             const sanitizedName = sanitizeFileName(file.file_name);
             const newPath = `${targetCompanyId}/${targetStorageLocation.folder_id}/${Date.now()}-${sanitizedName}`;
-            
+
             const { error: uploadError } = await supabase.storage
               .from("company-documents")
               .upload(newPath, fileData);
-            
+
             if (uploadError) {
               console.error("Upload to company docs error:", uploadError);
               return false;
             }
-            
+
             // Get public URL and insert company document record
             const { data: { publicUrl } } = supabase.storage
               .from("company-documents")
               .getPublicUrl(newPath);
-            
+
             // Get category from customData (workflow column values)
             const workflowCategory = customData[file.id]?.category;
-            
+
             const { error: docError } = await supabase
               .from("company_documents")
               .insert({
@@ -1867,12 +1867,12 @@ export default function WorkFlowTab() {
                 status: 'Final',
                 document_type: workflowCategory || 'Other',
               });
-            
+
             if (docError) {
               console.error("Company document insert error:", docError);
               return false;
             }
-            
+
             return true;
           }
         }
@@ -1895,11 +1895,11 @@ export default function WorkFlowTab() {
       // 4. Delete workflow file from storage and database
       const url = new URL(file.file_url);
       const pathParts = url.pathname.split('/storage/v1/object/public/');
-      
+
       if (pathParts.length > 1) {
         const [bucket, ...fileParts] = pathParts[1].split('/');
         const filePath = fileParts.join('/');
-        
+
         // Delete from storage
         await supabase.storage
           .from(bucket)
@@ -1911,7 +1911,7 @@ export default function WorkFlowTab() {
         .from("workflow_files")
         .delete()
         .eq("id", file.id);
-      
+
       if (deleteError) throw deleteError;
 
       // Invalidate queries
@@ -1938,11 +1938,11 @@ export default function WorkFlowTab() {
   // Handle completing file without payment registration
   const handleCompleteWithoutPayment = async () => {
     if (!fileToSkipPayment) return;
-    
+
     const file = fileToSkipPayment;
     setShowSkipPaymentConfirmation(false);
     setFileToSkipPayment(null);
-    
+
     // Use file date for storage location lookup
     const dateToUse = new Date(file.created_at);
     const fileMonth = dateToUse.getMonth() + 1;
@@ -1962,7 +1962,7 @@ export default function WorkFlowTab() {
       .select("*")
       .eq("year", fileYear)
       .eq("month", fileMonth);
-    
+
     if (targetCompanyId) {
       query = query.eq("company_id", targetCompanyId);
     }
@@ -1974,8 +1974,8 @@ export default function WorkFlowTab() {
       return;
     }
 
-    const matchingLocation = matchingLocations && matchingLocations.length > 0 
-      ? matchingLocations[0] 
+    const matchingLocation = matchingLocations && matchingLocations.length > 0
+      ? matchingLocations[0]
       : null;
 
     if (!matchingLocation) {
@@ -2004,9 +2004,9 @@ export default function WorkFlowTab() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    
+
     await uploadFiles(files);
-    
+
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -2062,15 +2062,15 @@ export default function WorkFlowTab() {
 
   useEffect(() => {
     if (!resizingColumn) return;
-    
+
     const limits = COLUMN_LIMITS[resizingColumn] || { min: 80, max: 800 };
-    
+
     const handleMouseMove = (e: MouseEvent) => {
       const delta = e.clientX - resizeStartX.current;
       const newWidth = Math.max(limits.min, Math.min(limits.max, resizeStartWidth.current + delta));
       setColumnWidths(prev => ({ ...prev, [resizingColumn]: newWidth }));
     };
-    
+
     const handleMouseUp = () => {
       setColumnWidths(prev => {
         localStorage.setItem("workflow-column-widths", JSON.stringify(prev));
@@ -2081,10 +2081,10 @@ export default function WorkFlowTab() {
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-    
+
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
-    
+
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
@@ -2092,7 +2092,7 @@ export default function WorkFlowTab() {
       document.body.style.userSelect = '';
     };
   }, [resizingColumn]);
-  
+
   // Helper to get column width
   const getColumnWidth = (columnId: string, defaultWidth: number) => columnWidths[columnId] ?? defaultWidth;
 
@@ -2103,13 +2103,13 @@ export default function WorkFlowTab() {
       if (pathParts.length > 1) {
         const [bucket, ...fileParts] = pathParts[1].split('/');
         const filePath = fileParts.join('/');
-        
+
         const { data, error } = await supabase.storage
           .from(bucket)
           .download(filePath);
-        
+
         if (error) throw error;
-        
+
         const blobUrl = URL.createObjectURL(data);
         const a = document.createElement('a');
         a.href = blobUrl;
@@ -2131,17 +2131,17 @@ export default function WorkFlowTab() {
       // Parse the file URL to get bucket and path
       const url = new URL(file.file_url);
       const pathParts = url.pathname.split('/storage/v1/object/public/');
-      
+
       if (pathParts.length <= 1) {
         throw new Error('URL de ficheiro inválida');
       }
-      
+
       const [bucket, ...fileParts] = pathParts[1].split('/');
       // Decode URI-encoded path (e.g. %20 -> space) for Supabase Storage API
       const filePath = decodeURIComponent(fileParts.join('/'));
-      
+
       console.log(`Uploading modified PDF to bucket: ${bucket}, path: ${filePath}, size: ${modifiedPdf.size}`);
-      
+
       // Upload the modified file (upsert to replace existing)
       const { error: uploadError } = await supabase.storage
         .from(bucket)
@@ -2150,29 +2150,29 @@ export default function WorkFlowTab() {
           upsert: true, // Replace existing file
           contentType: 'application/pdf',
         });
-      
+
       if (uploadError) {
         console.error('Storage upload error:', uploadError.message, { bucket, filePath, size: modifiedPdf.size });
         throw new Error(`Erro no upload: ${uploadError.message}`);
       }
-      
+
       // Update the file size in the database
       const { error: updateError } = await supabase
         .from('workflow_files')
-        .update({ 
+        .update({
           file_size: modifiedPdf.size,
           updated_at: new Date().toISOString()
         })
         .eq('id', file.id);
-      
+
       if (updateError) {
         console.error('Error updating file record:', updateError);
         // Don't throw - file was saved successfully
       }
-      
+
       // Invalidate queries to refresh the file list
       queryClient.invalidateQueries({ queryKey: ['workflow-files'] });
-      
+
     } catch (error) {
       console.error('Error saving modified PDF:', error);
       throw error;
@@ -2182,41 +2182,41 @@ export default function WorkFlowTab() {
   const filteredFiles = useMemo(() => workflowFiles?.filter(file => {
     // Search filter
     const matchesSearch = file.file_name.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     // Multiple filter conditions (AND logic)
     let matchesAllFilters = true;
     for (const filter of activeFilters) {
       let fileValue: string | undefined;
-      
+
       // Special handling for empresa filter (prefer direct company_id, fallback to transaction)
       if (filter.column === 'empresa') {
         fileValue = file.companies?.name || getTxForFile(file)?.companyName || '';
       } else {
         const col = columns.find(c => c.id === filter.column);
         if (col) {
-          fileValue = col.isBuiltIn && col.dbField 
-            ? (file as any)[col.dbField] 
+          fileValue = col.isBuiltIn && col.dbField
+            ? (file as any)[col.dbField]
             : customData[file.id]?.[filter.column];
         }
       }
-      
+
       const isMatch = filter.values.includes(fileValue || '');
       const passesFilter = filter.mode === 'include' ? isMatch : !isMatch;
-      
+
       if (!passesFilter) {
         matchesAllFilters = false;
         break;
       }
     }
-    
+
     return matchesSearch && matchesAllFilters;
   })?.sort((a, b) => {
     const { column, direction } = sortConfig;
     const multiplier = direction === 'asc' ? 1 : -1;
-    
+
     let aValue: any;
     let bValue: any;
-    
+
     switch (column) {
       case 'name':
         aValue = a.file_name.toLowerCase();
@@ -2259,7 +2259,7 @@ export default function WorkFlowTab() {
         aValue = customData[a.id]?.[column] || '';
         bValue = customData[b.id]?.[column] || '';
     }
-    
+
     if (aValue < bValue) return -1 * multiplier;
     if (aValue > bValue) return 1 * multiplier;
     return 0;
@@ -2280,9 +2280,9 @@ export default function WorkFlowTab() {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
-      
+
       const target = e.target as HTMLElement;
-      
+
       // Ignore if inside a dialog, combobox, select, menu or any Radix popover
       if (target.closest('[role="dialog"]') ||
           target.closest('[role="combobox"]') ||
@@ -2292,24 +2292,24 @@ export default function WorkFlowTab() {
           target.isContentEditable) {
         return;
       }
-      
+
       // If expense panel is open, only allow Escape to work (ignore file navigation shortcuts)
       if (showExpensePanel && e.key !== 'Escape') {
         return;
       }
-      
+
       // If dropdown menu is open, don't handle arrow navigation
       // (let the menu handle its own keyboard navigation)
       if (openMenuFileId && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
         return;
       }
-      
+
       if (!filteredFiles || filteredFiles.length === 0) return;
-      
-      const currentIndex = focusedFileId 
+
+      const currentIndex = focusedFileId
         ? filteredFiles.findIndex(f => f.id === focusedFileId)
         : -1;
-      
+
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
@@ -2396,7 +2396,7 @@ export default function WorkFlowTab() {
           break;
       }
     };
-    
+
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [filteredFiles, focusedFileId, previewFile, openMenuFileId, selectedFiles]);
@@ -2412,7 +2412,7 @@ export default function WorkFlowTab() {
 
   const handleBulkDelete = async () => {
     if (!confirm(`Delete ${selectedFiles.size} files?`)) return;
-    
+
     for (const id of selectedFiles) {
       await deleteMutation.mutateAsync(id);
     }
@@ -2456,7 +2456,7 @@ export default function WorkFlowTab() {
   const isColumnVisible = (id: string) => columns.find(c => c.id === id)?.visible ?? true;
 
   const toggleColumnVisibility = (id: string) => {
-    setColumns(columns.map(col => 
+    setColumns(columns.map(col =>
       col.id === id ? { ...col, visible: !col.visible } : col
     ));
   };
@@ -2480,7 +2480,7 @@ export default function WorkFlowTab() {
     // Case-insensitive match for category values (DB has lowercase, options have capitalized)
     const option = options?.find(o => o.label.toLowerCase() === value?.toLowerCase());
     const displayValue = option?.label || value; // Use matched option label or raw value
-    
+
     // For category column, render as plain text (like Empresa/Project columns)
     const isPlainText = column.dbField === "category";
 
@@ -2494,9 +2494,9 @@ export default function WorkFlowTab() {
           ) : (
           <button className="cursor-pointer hover:opacity-80 transition-opacity">
             {displayValue ? (
-              <span 
+              <span
                 className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
-                style={{ 
+                style={{
                   backgroundColor: option?.color ? `${option.color}20` : '#e5e7eb',
                   color: option?.color || '#374151',
                   borderColor: option?.color ? `${option.color}40` : '#d1d5db',
@@ -2520,7 +2520,7 @@ export default function WorkFlowTab() {
                 const filesToUpdate = selectedFiles.has(file.id) && selectedFiles.size > 1
                   ? Array.from(selectedFiles)
                   : [file.id];
-                
+
                 if (column.isBuiltIn && column.dbField) {
                   filesToUpdate.forEach(fileId => {
                     updateFieldMutation.mutate({ id: fileId, field: column.dbField!, value: opt.label });
@@ -2536,9 +2536,9 @@ export default function WorkFlowTab() {
                 }
               }}
             >
-              <span 
+              <span
                 className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
-                style={{ 
+                style={{
                   backgroundColor: `${opt.color}20`,
                   color: opt.color,
                 }}
@@ -2570,7 +2570,7 @@ export default function WorkFlowTab() {
             </DropdownMenuItem>
           )}
           {isCustom && (
-            <DropdownMenuItem 
+            <DropdownMenuItem
               className="text-destructive"
               onClick={() => deleteColumn(column.id)}
             >
@@ -2586,14 +2586,14 @@ export default function WorkFlowTab() {
   // Column management functions
   const addNewColumn = () => {
     if (!newColumnName.trim()) return;
-    
+
     const newCol: ColumnConfig = {
       id: `custom-${Date.now()}`,
       label: newColumnName.trim(),
       visible: true,
       options: newColumnOptions.length > 0 ? newColumnOptions : [{ label: "Option 1", color: COLOR_PALETTE[0] }],
     };
-    
+
     setCustomColumns([...customColumns, newCol]);
     setNewColumnName("");
     setNewColumnOptions([]);
@@ -2615,7 +2615,7 @@ export default function WorkFlowTab() {
 
   const saveColumnEdits = () => {
     if (!editingColumn) return;
-    
+
     if (editingColumn.isBuiltIn) {
       setColumns(columns.map(c => c.id === editingColumn.id ? editingColumn : c));
       // Save to Supabase for built-in columns (category, status)
@@ -2628,7 +2628,7 @@ export default function WorkFlowTab() {
     } else {
       setCustomColumns(customColumns.map(c => c.id === editingColumn.id ? editingColumn : c));
     }
-    
+
     setEditColumnDialogOpen(false);
     setEditingColumn(null);
     toast.success("Column updated");
@@ -2636,9 +2636,9 @@ export default function WorkFlowTab() {
 
   const addOption = () => {
     if (editingColumn) {
-      const newOptions = [...(editingColumn.options || []), { 
-        label: `Option ${(editingColumn.options?.length || 0) + 1}`, 
-        color: COLOR_PALETTE[(editingColumn.options?.length || 0) % COLOR_PALETTE.length] 
+      const newOptions = [...(editingColumn.options || []), {
+        label: `Option ${(editingColumn.options?.length || 0) + 1}`,
+        color: COLOR_PALETTE[(editingColumn.options?.length || 0) % COLOR_PALETTE.length]
       }];
       setEditingColumn({ ...editingColumn, options: newOptions });
     }
@@ -2696,7 +2696,7 @@ export default function WorkFlowTab() {
           className="hidden"
           multiple
         />
-        <Button 
+        <Button
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
           className="bg-blue-600 hover:bg-blue-700 flex-shrink-0"
@@ -2704,7 +2704,7 @@ export default function WorkFlowTab() {
           <Upload className="h-4 w-4 mr-2" />
           {isUploading ? "Uploading..." : "Upload"}
         </Button>
-        
+
         {/* Columns Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -2724,7 +2724,7 @@ export default function WorkFlowTab() {
                 }}
                 className="flex items-center gap-2"
               >
-                <Checkbox 
+                <Checkbox
                   checked={col.visible}
                   onCheckedChange={() => toggleColumnVisibility(col.id)}
                 />
@@ -2756,9 +2756,9 @@ export default function WorkFlowTab() {
           .map(filter => {
             const conditions = filter.conditions || [];
             const isActive = conditions.length > 0 && conditions.length === activeFilters.length &&
-              conditions.every(fc => 
-                activeFilters.some(af => 
-                  af.column === fc.column && 
+              conditions.every(fc =>
+                activeFilters.some(af =>
+                  af.column === fc.column &&
                   af.values.length === fc.values.length &&
                   af.values.every(v => fc.values.includes(v))
                 )
@@ -2780,7 +2780,7 @@ export default function WorkFlowTab() {
                   </Button>
                 </ContextMenuTrigger>
                 <ContextMenuContent>
-                  <ContextMenuItem 
+                  <ContextMenuItem
                     className="text-destructive focus:text-destructive"
                     onClick={() => {
                       const newDeletedIds = [...deletedPresetIds, filter.id];
@@ -2802,9 +2802,9 @@ export default function WorkFlowTab() {
             // Check if this saved filter matches current active filters
             const conditions = filter.conditions || [];
             const isActive = conditions.length > 0 && conditions.length === activeFilters.length &&
-              conditions.every(fc => 
-                activeFilters.some(af => 
-                  af.column === fc.column && 
+              conditions.every(fc =>
+                activeFilters.some(af =>
+                  af.column === fc.column &&
                   af.values.length === fc.values.length &&
                   af.values.every(v => fc.values.includes(v))
                 )
@@ -2826,7 +2826,7 @@ export default function WorkFlowTab() {
                   </Button>
                 </ContextMenuTrigger>
                 <ContextMenuContent>
-                  <ContextMenuItem 
+                  <ContextMenuItem
                     className="text-destructive focus:text-destructive"
                     onClick={() => deleteSavedFilter(filter.id)}
                   >
@@ -2841,16 +2841,16 @@ export default function WorkFlowTab() {
         {/* Bulk Actions - shown when files selected */}
         {selectedFiles.size > 0 && (
           <>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="gap-2"
               onClick={handleBulkDownload}
             >
               <Download className="h-4 w-4" />
               Download ({selectedFiles.size})
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="gap-2 text-destructive hover:text-destructive"
               onClick={handleBulkDelete}
             >
@@ -2859,9 +2859,9 @@ export default function WorkFlowTab() {
             </Button>
           </>
         )}
-        
+
         <div className="flex-1" />
-        
+
         {/* Horizontal Filter Controls */}
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* Show active filters as badges */}
@@ -2874,7 +2874,7 @@ export default function WorkFlowTab() {
                   {filter.mode === 'exclude' && '!'}
                   {filter.values.join(', ')}
                 </span>
-                <button 
+                <button
                   className="ml-1 text-blue-400 hover:text-blue-600"
                   onClick={() => removeFilter(filter.column)}
                 >
@@ -2883,7 +2883,7 @@ export default function WorkFlowTab() {
               </div>
             );
           })}
-          
+
           {/* Add filter dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -2905,8 +2905,8 @@ export default function WorkFlowTab() {
               {getFilterableColumns()
                 .filter(col => !activeFilters.some(f => f.column === col.id))
                 .map(col => (
-                  <DropdownMenuItem 
-                    key={col.id} 
+                  <DropdownMenuItem
+                    key={col.id}
                     onClick={() => setCurrentFilterColumn(col.id)}
                   >
                     {col.label}
@@ -2914,7 +2914,7 @@ export default function WorkFlowTab() {
                 ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          
+
           {/* Filter mode toggle */}
           {currentFilterColumn && (
             <Button
@@ -2932,7 +2932,7 @@ export default function WorkFlowTab() {
               {(getFilterForColumn(currentFilterColumn)?.mode || 'include') === 'include' ? 'Incluir' : 'Excluir'}
             </Button>
           )}
-          
+
           {/* Value selection dropdown */}
           {currentFilterColumn && (
             <DropdownMenu>
@@ -2954,8 +2954,8 @@ export default function WorkFlowTab() {
                   const currentFilter = getFilterForColumn(currentFilterColumn);
                   const isSelected = currentFilter?.values.includes(opt.label) || false;
                   return (
-                    <DropdownMenuItem 
-                      key={opt.label} 
+                    <DropdownMenuItem
+                      key={opt.label}
                       onClick={(e) => {
                         e.preventDefault();
                         const current = currentFilter?.values || [];
@@ -2974,7 +2974,7 @@ export default function WorkFlowTab() {
                       className="flex items-center gap-2"
                     >
                       <Checkbox checked={isSelected} className="h-4 w-4" />
-                      <span 
+                      <span
                         className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
                         style={{ backgroundColor: `${opt.color}20`, color: opt.color }}
                       >
@@ -2995,12 +2995,12 @@ export default function WorkFlowTab() {
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          
+
           {/* Clear current filter column selection */}
           {currentFilterColumn && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="h-9 w-9"
               onClick={() => setCurrentFilterColumn("")}
             >
@@ -3021,7 +3021,7 @@ export default function WorkFlowTab() {
       </div>
 
       {/* Files Table with Drag & Drop */}
-      <div 
+      <div
         data-workflow-table-container
         ref={tableContainerRef}
         tabIndex={0}
@@ -3048,12 +3048,12 @@ export default function WorkFlowTab() {
           <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
             <tr>
               <th className="w-10 px-3 py-2.5">
-                <Checkbox 
+                <Checkbox
                   checked={selectedFiles.size > 0 && selectedFiles.size === filteredFiles?.length}
                   onCheckedChange={toggleSelectAll}
                 />
               </th>
-              <th 
+              <th
                 className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
                 style={{ width: getColumnWidth('name', 400), minWidth: 80, maxWidth: 800 }}
                 onClick={() => handleSort('name')}
@@ -3065,14 +3065,14 @@ export default function WorkFlowTab() {
                   )}
                 </div>
                 {/* Resize handle */}
-                <div 
+                <div
                   className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                   onMouseDown={(e) => handleColumnResizeStart(e, 'name', 400)}
                   onClick={(e) => e.stopPropagation()}
                 />
               </th>
               {isColumnVisible("type") && (
-                <th 
+                <th
                   className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
                   style={{ width: getColumnWidth('type', 64), minWidth: 50 }}
                   onClick={() => handleSort('type')}
@@ -3083,7 +3083,7 @@ export default function WorkFlowTab() {
                       sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                     )}
                   </div>
-                  <div 
+                  <div
                     className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                     onMouseDown={(e) => handleColumnResizeStart(e, 'type', 64)}
                     onClick={(e) => e.stopPropagation()}
@@ -3091,7 +3091,7 @@ export default function WorkFlowTab() {
                 </th>
               )}
               {isColumnVisible("date") && (
-                <th 
+                <th
                   className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
                   style={{ width: getColumnWidth('date', 112), minWidth: 80 }}
                   onClick={() => handleSort('date')}
@@ -3102,7 +3102,7 @@ export default function WorkFlowTab() {
                       sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                     )}
                   </div>
-                  <div 
+                  <div
                     className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                     onMouseDown={(e) => handleColumnResizeStart(e, 'date', 112)}
                     onClick={(e) => e.stopPropagation()}
@@ -3110,13 +3110,13 @@ export default function WorkFlowTab() {
                 </th>
               )}
               {isColumnVisible("category") && (
-                <th 
+                <th
                   className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs relative select-none"
                   style={{ width: getColumnWidth('category', 112), minWidth: 80 }}
                 >
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button 
+                      <button
                         className="flex items-center justify-center gap-1 w-full hover:text-foreground transition-colors"
                       >
                         Category
@@ -3136,7 +3136,7 @@ export default function WorkFlowTab() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <div 
+                  <div
                     className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                     onMouseDown={(e) => handleColumnResizeStart(e, 'category', 112)}
                     onClick={(e) => e.stopPropagation()}
@@ -3144,13 +3144,13 @@ export default function WorkFlowTab() {
                 </th>
               )}
               {isColumnVisible("status") && (
-                <th 
+                <th
                   className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs relative select-none"
                   style={{ width: getColumnWidth('status', 112), minWidth: 80 }}
                 >
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button 
+                      <button
                         className="flex items-center justify-center gap-1 w-full hover:text-foreground transition-colors"
                       >
                         Status
@@ -3170,7 +3170,7 @@ export default function WorkFlowTab() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <div 
+                  <div
                     className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                     onMouseDown={(e) => handleColumnResizeStart(e, 'status', 112)}
                     onClick={(e) => e.stopPropagation()}
@@ -3178,7 +3178,7 @@ export default function WorkFlowTab() {
                 </th>
               )}
               {isColumnVisible("size") && (
-                <th 
+                <th
                   className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
                   style={{ width: getColumnWidth('size', 80), minWidth: 60 }}
                   onClick={() => handleSort('size')}
@@ -3189,7 +3189,7 @@ export default function WorkFlowTab() {
                       sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                     )}
                   </div>
-                  <div 
+                  <div
                     className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                     onMouseDown={(e) => handleColumnResizeStart(e, 'size', 80)}
                     onClick={(e) => e.stopPropagation()}
@@ -3197,7 +3197,7 @@ export default function WorkFlowTab() {
                 </th>
               )}
               {isColumnVisible("empresa") && (
-                <th 
+                <th
                   className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
                   style={{ width: getColumnWidth('empresa', 128), minWidth: 80 }}
                   onClick={() => handleSort('empresa')}
@@ -3208,7 +3208,7 @@ export default function WorkFlowTab() {
                       sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                     )}
                   </div>
-                  <div 
+                  <div
                     className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                     onMouseDown={(e) => handleColumnResizeStart(e, 'empresa', 128)}
                     onClick={(e) => e.stopPropagation()}
@@ -3216,7 +3216,7 @@ export default function WorkFlowTab() {
                 </th>
               )}
               {isColumnVisible("project") && (
-                <th 
+                <th
                   className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
                   style={{ width: getColumnWidth('project', 128), minWidth: 80 }}
                   onClick={() => handleSort('project')}
@@ -3227,7 +3227,7 @@ export default function WorkFlowTab() {
                       sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                     )}
                   </div>
-                  <div 
+                  <div
                     className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                     onMouseDown={(e) => handleColumnResizeStart(e, 'project', 128)}
                     onClick={(e) => e.stopPropagation()}
@@ -3235,7 +3235,7 @@ export default function WorkFlowTab() {
                 </th>
               )}
               {isColumnVisible("value") && (
-                <th 
+                <th
                   className="text-right px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
                   style={{ width: getColumnWidth('value', 96), minWidth: 70 }}
                   onClick={() => handleSort('value')}
@@ -3246,7 +3246,7 @@ export default function WorkFlowTab() {
                       sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                     )}
                   </div>
-                  <div 
+                  <div
                     className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
                     onMouseDown={(e) => handleColumnResizeStart(e, 'value', 96)}
                     onClick={(e) => e.stopPropagation()}
@@ -3261,9 +3261,9 @@ export default function WorkFlowTab() {
               ))}
               {/* Add column button */}
               <th className="w-10 px-3 py-2.5">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="h-6 w-6"
                   onClick={() => setAddColumnDialogOpen(true)}
                 >
@@ -3293,7 +3293,7 @@ export default function WorkFlowTab() {
               filteredFiles?.map((file) => (
                 <ContextMenu key={file.id}>
                   <ContextMenuTrigger asChild>
-                    <tr 
+                    <tr
                       data-file-id={file.id}
                       tabIndex={0}
                       className={cn(
@@ -3311,19 +3311,19 @@ export default function WorkFlowTab() {
                       }}
                     >
                       <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox 
+                        <Checkbox
                           checked={selectedFiles.has(file.id)}
                           onCheckedChange={() => toggleSelect(file.id)}
                         />
                       </td>
-                      <td 
-                        className="px-3 py-1.5" 
+                      <td
+                        className="px-3 py-1.5"
                         style={{ width: getColumnWidth('name', 400), minWidth: 80, maxWidth: 800 }}
                       >
                         <div className="flex items-center gap-2 overflow-hidden min-w-0">
                           <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                          <span 
-                            className="text-xs font-medium text-blue-600 text-left truncate min-w-0 block" 
+                          <span
+                            className="text-xs font-medium text-blue-600 text-left truncate min-w-0 block"
                             title={file.file_name}
                           >
                             {getFileNameWithoutExtension(file.file_name)}
@@ -3357,8 +3357,8 @@ export default function WorkFlowTab() {
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <Badge 
-                                        variant="outline" 
+                                      <Badge
+                                        variant="outline"
                                         className="text-[9px] px-1 py-0 bg-amber-50 text-amber-700 border-amber-300 flex-shrink-0 cursor-help"
                                       >
                                         Empréstimo
@@ -3382,7 +3382,7 @@ export default function WorkFlowTab() {
                                             <span className="text-muted-foreground font-medium">Valor:</span>
                                             <span className="font-semibold text-foreground">
                                               {loanData.amount?.toLocaleString('pt-PT', {
-                                                style: 'currency', 
+                                                style: 'currency',
                                                 currency: 'EUR'
                                               })}
                                             </span>
@@ -3403,8 +3403,8 @@ export default function WorkFlowTab() {
                               );
                             } catch {
                               return (
-                                <Badge 
-                                  variant="outline" 
+                                <Badge
+                                  variant="outline"
                                   className="text-[9px] px-1 py-0 bg-amber-50 text-amber-700 border-amber-300 flex-shrink-0"
                                   title="Empréstimo pendente"
                                 >
@@ -3421,7 +3421,7 @@ export default function WorkFlowTab() {
                             const ext = getFileExtension(file.file_name);
                             const style = getFileTypeBadgeStyle(ext);
                             return ext ? (
-                              <Badge 
+                              <Badge
                                 className="text-[10px] px-1.5 py-0 uppercase font-medium"
                                 style={{ backgroundColor: style.bg, color: style.text }}
                               >
@@ -3466,7 +3466,7 @@ export default function WorkFlowTab() {
                           {(() => {
                             const tx = getTxForFile(file);
                             const projectName = tx?.projectName || file.expense_projects?.name;
-                            
+
                             if (tx) {
                               return (
                                 <DropdownMenu>
@@ -3505,7 +3505,7 @@ export default function WorkFlowTab() {
                                 </DropdownMenu>
                               );
                             }
-                            
+
                             // No transaction but has project from workflow_files
                             if (projectName) {
                               return (
@@ -3514,7 +3514,7 @@ export default function WorkFlowTab() {
                                 </span>
                               );
                             }
-                            
+
                             // No project at all - show dropdown to create transaction
                             return (
                               <DropdownMenu>
@@ -3525,7 +3525,7 @@ export default function WorkFlowTab() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-white z-50">
                                   {allProjects?.map((project) => (
-                                    <DropdownMenuItem 
+                                    <DropdownMenuItem
                                       key={project.id}
                                       className="flex justify-center"
                                       onClick={() => createTransactionForFileMutation.mutate({
@@ -3547,7 +3547,7 @@ export default function WorkFlowTab() {
                           {(() => {
                             const tx = getTxForFile(file);
                             const value = tx?.value ?? file.total_amount;
-                            
+
                             if (tx) {
                               // Has transaction - editable
                               if (editingCell?.fileUrl === file.id && editingCell?.field === 'value') {
@@ -3588,7 +3588,7 @@ export default function WorkFlowTab() {
                                   />
                                 );
                               }
-                              
+
                               return (
                                 <button
                                   className="text-xs font-medium hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer"
@@ -3601,7 +3601,7 @@ export default function WorkFlowTab() {
                                 </button>
                               );
                             }
-                            
+
                             // No transaction but has value from workflow_files (OCR)
                             if (value !== null && value !== undefined) {
                               return (
@@ -3610,7 +3610,7 @@ export default function WorkFlowTab() {
                                 </span>
                               );
                             }
-                            
+
                             // No value at all
                             return <span className="text-slate-400 text-xs">—</span>;
                           })()}
@@ -3625,15 +3625,15 @@ export default function WorkFlowTab() {
                       {/* Empty cell for add column button */}
                       <td className="px-3 py-1.5"></td>
                       <td className="px-3 py-1.5">
-                        <DropdownMenu 
+                        <DropdownMenu
                           open={openMenuFileId === file.id}
                           onOpenChange={(open) => setOpenMenuFileId(open ? file.id : null)}
                         >
                           <DropdownMenuTrigger asChild>
-                            <Button 
+                            <Button
                               ref={(el) => { actionBtnRefs.current[file.id] = el; }}
-                              variant="ghost" 
-                              size="icon" 
+                              variant="ghost"
+                              size="icon"
                               className="h-7 w-7"
                             >
                               <MoreHorizontal className="h-4 w-4" />
@@ -3661,7 +3661,7 @@ export default function WorkFlowTab() {
                               Download
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               className="text-destructive"
                               onClick={() => deleteMutation.mutate(file.id)}
                             >
@@ -3704,7 +3704,7 @@ export default function WorkFlowTab() {
                       <FileText className="h-4 w-4 mr-2" />
                       Preview
                     </ContextMenuItem>
-                    <ContextMenuItem 
+                    <ContextMenuItem
                       className="text-destructive"
                       onClick={() => deleteMutation.mutate(file.id)}
                     >
@@ -3720,7 +3720,7 @@ export default function WorkFlowTab() {
             <tr className="border-t border-slate-200 bg-slate-50 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
               {(() => {
                 const hasSelection = selectedFiles.size > 0;
-                const filesToSum = hasSelection 
+                const filesToSum = hasSelection
                   ? (filteredFiles?.filter(f => selectedFiles.has(f.id)) || [])
                   : (filteredFiles || []);
                 const totalValue = filesToSum.reduce((sum, file) => {
@@ -3785,19 +3785,19 @@ export default function WorkFlowTab() {
                 <div className="flex items-center justify-between text-xs">
                   <span className="truncate max-w-[180px]">{item.fileName}</span>
                   <span className={
-                    item.status === 'completed' ? 'text-green-600' : 
-                    item.status === 'error' ? 'text-red-600' : 
+                    item.status === 'completed' ? 'text-green-600' :
+                    item.status === 'error' ? 'text-red-600' :
                     'text-blue-600'
                   }>
-                    {item.status === 'completed' ? '✓' : 
-                     item.status === 'error' ? '✗' : 
+                    {item.status === 'completed' ? '✓' :
+                     item.status === 'error' ? '✗' :
                      `${item.progress}%`}
                   </span>
                 </div>
-                <Progress 
-                  value={item.progress} 
+                <Progress
+                  value={item.progress}
                   className={`h-1 ${
-                    item.status === 'completed' ? '[&>div]:bg-green-500' : 
+                    item.status === 'completed' ? '[&>div]:bg-green-500' :
                     item.status === 'error' ? '[&>div]:bg-red-500' : ''
                   }`}
                 />
@@ -4079,37 +4079,22 @@ export default function WorkFlowTab() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                           <Button
-                            variant={previewFile?.status === "Payment"
-                              ? (previewFile?.confirmation_sent_at ? "outline" : "default")
-                              : "outline"}
+                            variant={previewFile?.confirmation_sent_at ? "outline" : "default"}
                             size="sm"
-                            className={previewFile?.status === "Payment"
-                              ? (previewFile?.confirmation_sent_at ? "text-green-600 border-green-600" : "bg-blue-600 hover:bg-blue-700")
-                              : ""}
+                            className={previewFile?.confirmation_sent_at ? "text-green-600 border-green-600" : "bg-blue-600 hover:bg-blue-700"}
                             onClick={() => {
-                              if (previewFile?.status === "Payment") {
-                                setConfirmationEmail('');
-                                setShowConfirmationDialog(true);
-                              } else {
-                                setShowSendEmailModal(true);
-                              }
+                              setConfirmationEmail('');
+                              setShowConfirmationDialog(true);
                             }}
                           >
-                            {previewFile?.status === "Payment" ? (
-                              previewFile?.confirmation_sent_at ? (
-                                <>
-                                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                                  Comprovativo Enviado
-                                </>
-                              ) : (
-                                <>
-                                  <Send className="h-4 w-4 mr-2" />
-                                  Enviar Comprovativo
-                                </>
-                              )
+                            {previewFile?.confirmation_sent_at ? (
+                              <>
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                Email Enviado
+                              </>
                             ) : (
                               <>
-                                <Mail className="h-4 w-4 mr-2" />
+                                <Send className="h-4 w-4 mr-2" />
                                 Enviar Email
                               </>
                             )}
@@ -4269,12 +4254,12 @@ export default function WorkFlowTab() {
             <AlertDialogDescription asChild>
               <div className="space-y-4 pt-2">
                 <p className="text-muted-foreground">
-                  {skipPaymentDestination?.isLoan 
+                  {skipPaymentDestination?.isLoan
                     ? "Este documento será processado como um empréstimo inter-empresas e arquivado nas pastas de ambas as empresas."
                     : "Este documento não tem registo financeiro associado. Deseja mover para a pasta destino sem criar registo financeiro?"
                   }
                 </p>
-                
+
                 {/* Loan-specific destination info with both companies */}
                 {skipPaymentDestination?.isLoan && skipPaymentDestination.loanInfo && (
                   <>
@@ -4301,7 +4286,7 @@ export default function WorkFlowTab() {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Lender destination */}
                     <div className="bg-green-50 dark:bg-green-950/30 border-2 border-green-200 dark:border-green-800 rounded-xl p-4">
                       <p className="font-semibold text-green-800 dark:text-green-200 text-sm mb-2 flex items-center gap-2">
@@ -4322,7 +4307,7 @@ export default function WorkFlowTab() {
                         )}
                       </div>
                     </div>
-                    
+
                     {/* Borrower destination */}
                     <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-4">
                       <p className="font-semibold text-blue-800 dark:text-blue-200 text-sm mb-2 flex items-center gap-2">
@@ -4345,7 +4330,7 @@ export default function WorkFlowTab() {
                     </div>
                   </>
                 )}
-                
+
                 {/* Non-loan destination info */}
                 {skipPaymentDestination && !skipPaymentDestination.isLoan && (
                   <div className="bg-muted/50 border-2 border-muted rounded-xl p-4">
@@ -4440,7 +4425,7 @@ export default function WorkFlowTab() {
                     ))}
                   </ul>
                 </div>
-                
+
                 {/* Automatic loan info */}
                 {completeConfirmationData?.loanInfo && (
                   <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
@@ -4635,7 +4620,7 @@ export default function WorkFlowTab() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             {/* Preview */}
             {moveForm.company_id && (
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
@@ -4650,7 +4635,7 @@ export default function WorkFlowTab() {
             <Button variant="outline" onClick={() => setMoveFileDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleMoveFile}
               disabled={!moveForm.company_id || moveFileMutation.isPending}
               className="bg-blue-600 hover:bg-blue-700"
@@ -4710,7 +4695,7 @@ export default function WorkFlowTab() {
             <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={() => {
                 if (fileToRename && newFileName.trim()) {
                   const ext = fileToRename.file_name.match(/\.[^/.]+$/)?.[0] || '';
@@ -4755,18 +4740,18 @@ export default function WorkFlowTab() {
         />
       )}
 
-      {/* Send Payment Confirmation Dialog */}
+      {/* Send Payment Confirmation Dialog (via John Ccount Agent) */}
       <AlertDialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <Send className="h-5 w-5" />
-              Enviar Comprovativo de Pagamento
+              Enviar ao John para Processamento
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-4 pt-2">
                 <p className="text-sm text-muted-foreground">
-                  Enviar comprovativo de pagamento por email ao fornecedor. O documento será anexado automaticamente.
+                  O John vai procurar o email do fornecedor e enviar o comprovativo de pagamento automaticamente.
                 </p>
                 {previewFile && (
                   <div className="rounded-md bg-muted/50 p-3 space-y-1 text-sm">
@@ -4783,15 +4768,18 @@ export default function WorkFlowTab() {
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="confirmation-email">Email do fornecedor</Label>
+                  <Label htmlFor="confirmation-email">Email do fornecedor (opcional)</Label>
                   <Input
                     id="confirmation-email"
                     type="email"
                     value={confirmationEmail}
                     onChange={(e) => setConfirmationEmail(e.target.value)}
-                    placeholder="email@fornecedor.com"
+                    placeholder="Deixar vazio — o John procura automaticamente"
                     autoComplete="off"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Se indicar o email, o John usa directamente. Caso contrário, procura nos contactos.
+                  </p>
                 </div>
                 {previewFile?.confirmation_sent_at && (
                   <p className="text-xs text-amber-600 flex items-center gap-1">
@@ -4805,25 +4793,24 @@ export default function WorkFlowTab() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isSendingConfirmation}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              disabled={!confirmationEmail.trim() || isSendingConfirmation}
+              disabled={isSendingConfirmation}
               onClick={async (e) => {
                 e.preventDefault();
-                if (!previewFile || !confirmationEmail.trim()) return;
-                
+                if (!previewFile) return;
+
                 const result = await sendConfirmation({
-                  vendor_email: confirmationEmail.trim(),
                   file_url: previewFile.file_url,
                   file_name: previewFile.file_name,
+                  file_id: previewFile.id,
                   vendor_name: previewFile.vendor_name || undefined,
+                  vendor_email: confirmationEmail.trim() || undefined,
                   invoice_number: previewFile.invoice_number || undefined,
                   total_amount: previewFile.total_amount || undefined,
-                  file_id: previewFile.id,
                 });
 
                 if (result.success) {
-                  toast.success(`Comprovativo enviado para ${confirmationEmail}`);
+                  toast.success("Comprovativo enviado ao John para processamento");
                   setShowConfirmationDialog(false);
-                  // Refresh the data to update confirmation_sent_at
                   queryClient.invalidateQueries({ queryKey: ['workflow-files'] });
                 } else {
                   toast.error(result.error || 'Erro ao enviar comprovativo');
@@ -4834,12 +4821,12 @@ export default function WorkFlowTab() {
               {isSendingConfirmation ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  A enviar...
+                  A enviar ao John...
                 </>
               ) : (
                 <>
                   <Send className="h-4 w-4 mr-2" />
-                  Enviar Comprovativo
+                  Enviar ao John
                 </>
               )}
             </AlertDialogAction>
