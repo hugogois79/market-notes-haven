@@ -24,6 +24,7 @@ interface LegalDocument {
   document_type: string;
   attachment_url: string | null;
   attachments: string[] | null;
+  server_path: string | null;
   created_date: string;
   case_id: string;
   contact_id: string | null;
@@ -227,24 +228,10 @@ export function DocumentDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Calculate final attachments list
+      // Calculate final attachments list (legacy Supabase paths)
       let finalAttachments = existingAttachments.filter(a => !attachmentsToRemove.includes(a));
 
-      // Upload new files
-      for (const file of files) {
-        // Keep original filename but add UUID prefix to avoid collisions
-        const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const fileName = `${user.id}/${crypto.randomUUID()}_${sanitizedName}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from("legal-documents")
-          .upload(fileName, file);
-
-        if (uploadError) throw uploadError;
-        finalAttachments.push(fileName);
-      }
-
-      // Delete removed attachments from storage
+      // Delete removed attachments from Supabase storage
       for (const attachmentPath of attachmentsToRemove) {
         const filePath = attachmentPath.includes('legal-documents/')
           ? attachmentPath.split('legal-documents/')[1]
@@ -252,27 +239,71 @@ export function DocumentDialog({
         await supabase.storage.from("legal-documents").remove([filePath]);
       }
 
-      // Use first attachment for backward compatibility with attachment_url
+      // Upload new files to server (via API) if case has a folder mapping
+      let serverPath: string | null = null;
+      if (files.length > 0) {
+        const { data: folderMappings } = await supabase
+          .from("legal_case_folders")
+          .select("folder_path")
+          .eq("case_id", formData.case_id)
+          .limit(1);
+
+        const targetFolder = folderMappings?.[0]?.folder_path;
+
+        if (targetFolder) {
+          for (const file of files) {
+            const params = new URLSearchParams({
+              folder: targetFolder,
+              title: formData.title,
+              date: formData.created_date,
+              filename: file.name,
+            });
+            const arrayBuf = await file.arrayBuffer();
+            const resp = await fetch(`/api/legal-files/upload?${params}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/octet-stream" },
+              body: arrayBuf,
+            });
+            if (!resp.ok) throw new Error("Erro no upload para o servidor");
+            const result = await resp.json();
+            if (!serverPath) serverPath = result.server_path;
+          }
+        } else {
+          // Fallback: upload to Supabase if no folder mapping
+          for (const file of files) {
+            const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const fileName = `${user.id}/${crypto.randomUUID()}_${sanitizedName}`;
+            const { error: uploadError } = await supabase.storage
+              .from("legal-documents")
+              .upload(fileName, file);
+            if (uploadError) throw uploadError;
+            finalAttachments.push(fileName);
+          }
+        }
+      }
+
       const attachmentUrl = finalAttachments.length > 0 ? finalAttachments[0] : null;
 
       if (isEditMode) {
+        const updateData: Record<string, any> = {
+          title: formData.title,
+          description: formData.description || null,
+          document_type: formData.document_type,
+          case_id: formData.case_id,
+          contact_id: selectedContactIds[0] || null,
+          created_date: formData.created_date,
+          attachment_url: attachmentUrl,
+          attachments: finalAttachments,
+        };
+        if (serverPath) updateData.server_path = serverPath;
+
         const { error } = await supabase
           .from("legal_documents")
-          .update({
-            title: formData.title,
-            description: formData.description || null,
-            document_type: formData.document_type,
-            case_id: formData.case_id,
-            contact_id: selectedContactIds[0] || null,
-            created_date: formData.created_date,
-            attachment_url: attachmentUrl,
-            attachments: finalAttachments,
-          })
+          .update(updateData)
           .eq("id", document.id);
 
         if (error) throw error;
 
-        // Update junction table
         await supabase
           .from("legal_document_contacts")
           .delete()
@@ -288,17 +319,23 @@ export function DocumentDialog({
 
         toast.success("Documento atualizado com sucesso");
       } else {
-        const { data: newDoc, error } = await supabase.from("legal_documents").insert({
+        const insertData: Record<string, any> = {
           ...formData,
           contact_id: selectedContactIds[0] || null,
           attachment_url: attachmentUrl,
           attachments: finalAttachments,
           user_id: user.id,
-        }).select().single();
+        };
+        if (serverPath) insertData.server_path = serverPath;
+
+        const { data: newDoc, error } = await supabase
+          .from("legal_documents")
+          .insert(insertData)
+          .select()
+          .single();
 
         if (error) throw error;
 
-        // Insert into junction table
         if (selectedContactIds.length > 0 && newDoc) {
           const contactRelations = selectedContactIds.map(contactId => ({
             document_id: newDoc.id,
@@ -526,7 +563,25 @@ export function DocumentDialog({
           <div className="space-y-2">
             <Label htmlFor="file">Anexos</Label>
             
-            {/* Existing attachments */}
+            {/* Server file (from migration) */}
+            {isEditMode && document?.server_path && (
+              <div className="space-y-1">
+                <span className="text-sm text-muted-foreground">Ficheiro no servidor:</span>
+                <div className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-900/20 rounded px-2 py-1">
+                  <a
+                    href={`https://drive.robsonway.com/${document.server_path.split("/").map(encodeURIComponent).join("/")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-700 dark:text-emerald-400 underline hover:opacity-80 text-sm truncate max-w-[300px]"
+                    title={document.server_path}
+                  >
+                    {document.server_path.split("/").pop()}
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* Existing attachments (Supabase legacy) */}
             {existingAttachments.filter(a => !attachmentsToRemove.includes(a)).length > 0 && (
               <div className="space-y-1">
                 <span className="text-sm text-muted-foreground">Anexos existentes:</span>

@@ -15,13 +15,11 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import * as pdfjs from "pdfjs-dist";
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { DeletePageDialog } from "@/components/pdf/DeletePageDialog";
 import { AddPageDialog } from "@/components/pdf/AddPageDialog";
 import { deletePageFromPdf, addPagesToDocument } from "@/utils/pdfPageManipulation";
 
-// pdf.js worker setup
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface PdfViewerProps {
   url: string;

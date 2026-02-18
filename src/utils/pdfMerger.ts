@@ -75,10 +75,8 @@ async function convertProtectedPdfToClean(pdfBytes: ArrayBuffer, onProgress?: (m
   
   // Dynamic import to avoid TypeScript issues with pdfjs-dist types
   const pdfjsLib = await import('pdfjs-dist');
-  const workerModule = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
-  // Load PDF with pdfjs (handles encryption)
   const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
   console.log(`Protected PDF has ${pdf.numPages} pages`);
   

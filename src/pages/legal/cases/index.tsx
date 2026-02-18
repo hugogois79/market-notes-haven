@@ -4,14 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search, FileText, Filter, StickyNote } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Search, FileText, Filter, StickyNote, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useNavigate } from "react-router-dom";
 import { CaseDialog } from "../components/CaseDialog";
 import LegalCaseNotesDialog from "../components/LegalCaseNotesDialog";
+import { FolderMappingSettings } from "../components/FolderMappingSettings";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -287,6 +289,16 @@ export default function LegalCasesPage() {
         </Button>
       </div>
 
+      <Tabs defaultValue="cases" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="cases">Casos</TabsTrigger>
+          <TabsTrigger value="settings" className="gap-1.5">
+            <Settings className="h-3.5 w-3.5" />
+            Settings
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="cases">
       <div className="mb-4 flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-muted-foreground" />
@@ -554,6 +566,13 @@ export default function LegalCasesPage() {
           </Table>
         </div>
       )}
+
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <FolderMappingSettings />
+        </TabsContent>
+      </Tabs>
 
       <CaseDialog
         open={dialogOpen}

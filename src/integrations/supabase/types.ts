@@ -2527,6 +2527,38 @@ export type Database = {
           },
         ]
       }
+      legal_case_folders: {
+        Row: {
+          id: string
+          case_id: string
+          folder_path: string
+          label: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          case_id: string
+          folder_path: string
+          label?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          case_id?: string
+          folder_path?: string
+          label?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_case_folders_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "legal_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_cases: {
         Row: {
           case_number: string | null
@@ -2691,6 +2723,7 @@ export type Database = {
           description: string | null
           document_type: string
           id: string
+          server_path: string | null
           title: string
           updated_at: string | null
           user_id: string | null
@@ -2705,6 +2738,7 @@ export type Database = {
           description?: string | null
           document_type: string
           id?: string
+          server_path?: string | null
           title: string
           updated_at?: string | null
           user_id?: string | null
@@ -2719,6 +2753,7 @@ export type Database = {
           description?: string | null
           document_type?: string
           id?: string
+          server_path?: string | null
           title?: string
           updated_at?: string | null
           user_id?: string | null

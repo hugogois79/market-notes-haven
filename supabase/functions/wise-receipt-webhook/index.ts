@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
     // --- Look up the workflow_files record by wise_transfer_id ---
     const { data: doc, error: lookupError } = await supabase
       .from('workflow_files')
-      .select('id, file_name, wise_transfer_id, receipt_url, user_id')
+      .select('id, file_name, wise_transfer_id, receipt_url, user_id, company_id, vendor_name, total_amount, tax_amount, subtotal, file_url, invoice_date, currency, category, project_id')
       .eq('wise_transfer_id', transferId)
       .maybeSingle();
 
@@ -189,6 +189,62 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Successfully attached receipt for document ${doc.id}`);
+
+    // --- Auto-create financial_transaction if none exists (fallback) ---
+    const { data: existingTx } = await supabase
+      .from('financial_transactions')
+      .select('id')
+      .or(`document_file_id.eq.${doc.id},invoice_file_url.eq.${doc.file_url}`)
+      .maybeSingle();
+
+    if (!existingTx && doc.company_id && doc.total_amount) {
+      // Find a Wise bank account
+      const { data: wiseAccount } = await supabase
+        .from('bank_accounts')
+        .select('id')
+        .ilike('account_name', '%wise%')
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+
+      const catMap: Record<string, string> = {
+        'Handling': 'services', 'Combustível': 'materials', 'Manutenção': 'services',
+        'Electricidade': 'utilities', 'Electricidade-Agua': 'utilities',
+        'Software': 'services', 'Impostos': 'taxes', 'Salários': 'salaries',
+      };
+      const removeExt = (n: string) => { const d = n.lastIndexOf('.'); return d > 0 ? n.substring(0, d) : n; };
+
+      const { error: txError } = await supabase
+        .from('financial_transactions')
+        .insert({
+          company_id: doc.company_id,
+          type: 'expense',
+          category: catMap[doc.category || ''] || 'services',
+          date: doc.invoice_date || new Date().toISOString().split('T')[0],
+          description: `Pagamento Wise: ${removeExt(doc.file_name)}`,
+          entity_name: doc.vendor_name || 'Fornecedor',
+          total_amount: doc.total_amount,
+          amount_net: doc.subtotal || doc.total_amount,
+          vat_amount: doc.tax_amount || 0,
+          vat_rate: doc.tax_amount && doc.subtotal
+            ? Math.round((doc.tax_amount / doc.subtotal) * 100)
+            : 0,
+          payment_method: 'bank_transfer',
+          bank_account_id: wiseAccount?.id || null,
+          invoice_file_url: doc.file_url,
+          document_file_id: doc.id,
+          created_by: doc.user_id,
+          project_id: doc.project_id || null,
+        });
+
+      if (txError) {
+        console.error('Error creating financial_transaction via receipt webhook:', txError);
+      } else {
+        console.log(`Auto-created financial_transaction for document ${doc.id} via receipt webhook`);
+      }
+    } else if (existingTx) {
+      console.log(`Financial transaction already exists for document ${doc.id}`);
+    }
 
     return new Response(
       JSON.stringify({

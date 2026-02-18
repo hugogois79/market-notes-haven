@@ -124,6 +124,66 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Auto-create financial_transaction so "Pagamento Registado" badge appears
+    if (body.documentId) {
+      const { data: existingTx } = await supabase
+        .from('financial_transactions')
+        .select('id')
+        .eq('document_file_id', body.documentId)
+        .maybeSingle();
+
+      if (!existingTx) {
+        const { data: docData } = await supabase
+          .from('workflow_files')
+          .select('company_id, vendor_name, total_amount, tax_amount, subtotal, file_url, file_name, invoice_date, currency, category, project_id, user_id')
+          .eq('id', body.documentId)
+          .single();
+
+        if (docData) {
+          const companyId = docData.company_id || (sourceAccount.company as any)?.id;
+          if (companyId) {
+            const catMap: Record<string, string> = {
+              'Handling': 'services', 'Combustível': 'materials', 'Manutenção': 'services',
+              'Electricidade': 'utilities', 'Electricidade-Agua': 'utilities',
+              'Software': 'services', 'Impostos': 'taxes', 'Salários': 'salaries',
+            };
+            const removeExt = (n: string) => { const d = n.lastIndexOf('.'); return d > 0 ? n.substring(0, d) : n; };
+
+            const { error: txError } = await supabase
+              .from('financial_transactions')
+              .insert({
+                company_id: companyId,
+                type: 'expense',
+                category: catMap[docData.category || ''] || 'services',
+                date: docData.invoice_date || body.executionDate || new Date().toISOString().split('T')[0],
+                description: `Pagamento: ${removeExt(docData.file_name)}`,
+                entity_name: body.beneficiaryName || docData.vendor_name || 'Fornecedor',
+                total_amount: body.amount,
+                amount_net: docData.subtotal || body.amount,
+                vat_amount: docData.tax_amount || 0,
+                vat_rate: docData.tax_amount && docData.subtotal
+                  ? Math.round((docData.tax_amount / docData.subtotal) * 100)
+                  : 0,
+                payment_method: 'bank_transfer',
+                bank_account_id: body.sourceAccountId,
+                invoice_file_url: docData.file_url,
+                document_file_id: body.documentId,
+                created_by: docData.user_id,
+                project_id: docData.project_id || null,
+              });
+
+            if (txError) {
+              console.error('Error creating financial_transaction:', txError);
+            } else {
+              console.log(`Auto-created financial_transaction for document ${body.documentId}`);
+            }
+          }
+        }
+      } else {
+        console.log(`Financial transaction already exists for document ${body.documentId}`);
+      }
+    }
+
     // Pass through the full n8n response (includes payment details and funding status)
     return new Response(
       JSON.stringify({

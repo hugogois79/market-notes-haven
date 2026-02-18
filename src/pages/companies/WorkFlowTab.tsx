@@ -1373,11 +1373,27 @@ export default function WorkFlowTab() {
   // Mark file as paid handler
   const handleMarkAsComplete = async (file: WorkflowFile) => {
     // First, check if there's an existing transaction for this file to get actual expense date, company AND bank_account_id
-    const { data: existingTransaction } = await supabase
-      .from("financial_transactions")
-      .select("date, company_id, bank_account_id, total_amount")
-      .eq("invoice_file_url", file.file_url)
-      .maybeSingle();
+    let existingTransaction: { date: string; company_id: string; bank_account_id: string | null; total_amount: number } | null = null;
+
+    // Try by document_file_id first (most reliable link)
+    if (file.id) {
+      const { data: txById } = await supabase
+        .from("financial_transactions")
+        .select("date, company_id, bank_account_id, total_amount")
+        .eq("document_file_id", file.id)
+        .maybeSingle();
+      if (txById) existingTransaction = txById;
+    }
+
+    // Fallback: try by invoice_file_url
+    if (!existingTransaction && file.file_url) {
+      const { data: txByUrl } = await supabase
+        .from("financial_transactions")
+        .select("date, company_id, bank_account_id, total_amount")
+        .eq("invoice_file_url", file.file_url)
+        .maybeSingle();
+      if (txByUrl) existingTransaction = txByUrl;
+    }
 
     // If no transaction or transaction has zero value, show confirmation dialog
     if (!existingTransaction || existingTransaction.total_amount === 0) {
@@ -4091,6 +4107,19 @@ export default function WorkFlowTab() {
                             onClick={() => {
                               setConfirmationEmail('');
                               setShowConfirmationDialog(true);
+                              // Trigger vendor email search when opening dialog
+                              if (previewFile) {
+                                const txVendorName = (existingTransaction as any)?.vendor_name;
+                                const fnParts = previewFile.file_name?.split('(');
+                                const fnVendor = fnParts && fnParts.length > 1 
+                                  ? fnParts[0].replace(/\.\w+$/, '').trim() 
+                                  : undefined;
+                                const bestVendorName = txVendorName || fnVendor || previewFile.vendor_name || '';
+                                if (bestVendorName) {
+                                  searchVendorEmail(bestVendorName, previewFile.total_amount ?? undefined, previewFile.invoice_date ?? undefined);
+                                }
+                                setSelectedEmailContext({ source: 'manual' });
+                              }
                             }}
                           >
                             {previewFile?.confirmation_sent_at ? (
@@ -4754,22 +4783,8 @@ export default function WorkFlowTab() {
       {/* Send Payment Confirmation Dialog (AgentMail - johnccount@robsonway.com) */}
       <AlertDialog open={showConfirmationDialog} onOpenChange={(open) => {
         setShowConfirmationDialog(open);
-        if (open && previewFile) {
-          // Smart vendor name: transaction data > filename extraction > OCR
-          const txVendorName = (existingTransaction as any)?.vendor_name;
-          const fileNameParts = previewFile.file_name?.split('(');
-          const fileNameVendor = fileNameParts && fileNameParts.length > 1 
-            ? fileNameParts[0].replace(/\.\w+$/, '').trim() 
-            : undefined;
-          const bestVendorName = txVendorName || fileNameVendor || previewFile.vendor_name || '';
-          
-          if (bestVendorName) {
-            searchVendorEmail(bestVendorName, previewFile.total_amount ?? undefined, previewFile.invoice_date ?? undefined);
-          }
-          setSelectedEmailContext({ source: 'manual' });
-        }
       }}>
-        <AlertDialogContent className="max-w-lg">
+        <AlertDialogContent className="max-w-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <Send className="h-5 w-5" />
@@ -4853,7 +4868,10 @@ export default function WorkFlowTab() {
                               )}
                               <div className="text-xs text-muted-foreground mt-0.5">
                                 {item.name && <span>{item.name}</span>}
-                                {item.date && <span> · {new Date(item.date).toLocaleDateString('pt-PT')}</span>}
+                                {item.date && <span> · {(() => {
+                                  const d = /^\d+$/.test(item.date) ? new Date(Number(item.date)) : new Date(item.date);
+                                  return isNaN(d.getTime()) ? '' : d.toLocaleDateString('pt-PT');
+                                })()}</span>}
                                 {!item.subject && !item.date && (
                                   <span>{item.source === 'agentmail' ? 'Responder nesta thread' : item.source === 'gmail' ? 'Citar email e enviar do John' : 'Email novo do John'}</span>
                                 )}

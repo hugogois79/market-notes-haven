@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Upload, Paperclip, ChevronDown, ChevronRight, Users, Briefcase, Pencil, Banknote, FileUp } from "lucide-react";
+import { Upload, Paperclip, ChevronDown, ChevronRight, Users, Briefcase, Pencil, Banknote, FileUp, HardDrive } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Fragment } from "react";
 import { DocumentDialog } from "./components/DocumentDialog";
 import { FilterBar } from "./components/FilterBar";
+import { ServerFileBrowser } from "./components/ServerFileBrowser";
 import { cn } from "@/lib/utils";
 
 interface LegalCase {
@@ -35,6 +37,7 @@ interface LegalDocument {
   document_type: string;
   attachment_url: string | null;
   attachments: string[] | null;
+  server_path: string | null;
   created_date: string;
   case_id: string;
   contact_id: string | null;
@@ -67,6 +70,20 @@ export default function LegalPage() {
     contactId: contactIdFromUrl,
     searchTerm: "",
   });
+
+  const { data: caseFolderMappings = [] } = useQuery({
+    queryKey: ["legal-case-folders"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("legal_case_folders")
+        .select("*");
+      if (error) throw error;
+      return data as { id: string; case_id: string; folder_path: string; label: string | null }[];
+    },
+  });
+
+  const getFoldersForCase = (caseId: string) =>
+    caseFolderMappings.filter((m) => m.case_id === caseId);
 
   useEffect(() => {
     fetchData();
@@ -419,14 +436,19 @@ export default function LegalPage() {
                         </TableCell>
                         <TableCell className="text-center py-1.5 px-2" onClick={(e) => e.stopPropagation()}>
                           {(() => {
+                            const hasServerPath = !!doc.server_path;
                             const attachments = doc.attachments || (doc.attachment_url ? [doc.attachment_url] : []);
-                            if (attachments.length === 0) return null;
+                            if (!hasServerPath && attachments.length === 0) return null;
                             return (
                               <button
                                 onClick={async (e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  // Download first attachment
+                                  if (hasServerPath) {
+                                    const encodedPath = doc.server_path!.split("/").map(encodeURIComponent).join("/");
+                                    window.open(`https://drive.robsonway.com/${encodedPath}`, "_blank");
+                                    return;
+                                  }
                                   try {
                                     const filePath = attachments[0].includes('legal-documents/')
                                       ? attachments[0].split('legal-documents/')[1]
@@ -454,10 +476,10 @@ export default function LegalPage() {
                                   }
                                 }}
                                 className="text-primary hover:text-primary/80 inline-flex items-center gap-1"
-                                title={attachments.length > 1 ? `${attachments.length} anexos` : "Descarregar anexo"}
+                                title={hasServerPath ? "Abrir ficheiro no servidor" : (attachments.length > 1 ? `${attachments.length} anexos` : "Descarregar anexo")}
                               >
-                                <Paperclip className="w-3 h-3" />
-                                {attachments.length > 1 && (
+                                {hasServerPath ? <HardDrive className="w-3 h-3" /> : <Paperclip className="w-3 h-3" />}
+                                {!hasServerPath && attachments.length > 1 && (
                                   <span className="text-[10px] font-medium">{attachments.length}</span>
                                 )}
                               </button>
@@ -511,6 +533,25 @@ export default function LegalPage() {
                         </TableCell>
                       </TableRow>
                     ))}
+                    {isCaseOpen && (() => {
+                      const caseObj = cases.find(c => c.title === caseTitle);
+                      if (!caseObj) return null;
+                      const folders = getFoldersForCase(caseObj.id);
+                      if (folders.length === 0) return null;
+                      return (
+                        <TableRow key={`files-${caseTitle}`}>
+                          <TableCell colSpan={8} className="p-3 bg-slate-50/50 dark:bg-slate-900/30">
+                            <div className="flex items-center gap-2 mb-2">
+                              <HardDrive className="h-3.5 w-3.5 text-slate-500" />
+                              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                                Ficheiros no Servidor
+                              </span>
+                            </div>
+                            <ServerFileBrowser folderPaths={folders.map(f => ({ folder_path: f.folder_path, label: f.label }))} />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })()}
                   </Fragment>
                 );
               })}

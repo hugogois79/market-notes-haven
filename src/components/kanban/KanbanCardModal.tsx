@@ -416,35 +416,32 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     setTags(tags.filter(t => t !== tagToRemove));
   };
 
-  // Sync kanban card dates to calendar_events and Google Calendar
+  // Sync kanban card dates to kanban_card_events and Google Calendar
   const syncDatesToCalendar = useCallback(async (cardTitle: string, cardDueDate?: Date, cardStartingDate?: Date) => {
     if (!user) return;
 
     const N8N_WEBHOOK_URL = 'https://n8n.gvvcapital.com/webhook/calendar-sync';
 
-    // Helper to upsert a calendar event for a kanban card date
-    const upsertCalendarEvent = async (
+    const upsertKanbanEvent = async (
       dateValue: Date,
       suffix: string,
+      eventType: 'start' | 'due',
       isAllDay: boolean = true
     ) => {
       const dateStr = format(dateValue, 'yyyy-MM-dd');
       const eventTitle = `${cardTitle}${suffix}`;
-      const sourceRef = `kanban:${card.id}:${suffix.replace(/[^a-z]/gi, '').toLowerCase()}`;
 
-      // Check if event already exists for this card+type
       const { data: existing } = await supabase
-        .from('calendar_events')
+        .from('kanban_card_events')
         .select('id, google_event_id')
-        .eq('source', 'kanban')
-        .eq('notes', sourceRef)
+        .eq('card_id', card.id)
+        .eq('event_type', eventType)
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (existing) {
-        // Update existing event
         await supabase
-          .from('calendar_events')
+          .from('kanban_card_events')
           .update({
             title: eventTitle,
             date: dateStr,
@@ -455,7 +452,6 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
           })
           .eq('id', existing.id);
 
-        // Sync update to Google Calendar if we have a google_event_id
         if (existing.google_event_id) {
           fetch(N8N_WEBHOOK_URL, {
             method: 'POST',
@@ -468,28 +464,27 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
               date: dateStr,
               start_time: `${dateStr}T09:00:00`,
               end_time: `${dateStr}T10:00:00`,
-              notes: sourceRef,
+              notes: `kanban:${card.id}:${eventType}`,
             }),
-          }).catch(() => {}); // Fire and forget
+          }).catch(() => {});
         }
       } else {
-        // Create new event
         const { data: newEvent } = await supabase
-          .from('calendar_events')
+          .from('kanban_card_events')
           .insert({
+            card_id: card.id,
             title: eventTitle,
             date: dateStr,
+            event_type: eventType,
             all_day: isAllDay,
             start_time: isAllDay ? null : `${dateStr}T09:00:00`,
             end_time: isAllDay ? null : `${dateStr}T10:00:00`,
-            source: 'kanban',
-            notes: sourceRef,
+            notes: `kanban:${card.id}:${eventType}`,
             user_id: user.id,
           })
           .select('id')
           .single();
 
-        // Sync create to Google Calendar
         if (newEvent) {
           fetch(N8N_WEBHOOK_URL, {
             method: 'POST',
@@ -501,26 +496,24 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
               date: dateStr,
               start_time: `${dateStr}T09:00:00`,
               end_time: `${dateStr}T10:00:00`,
-              notes: sourceRef,
+              notes: `kanban:${card.id}:${eventType}`,
             }),
-          }).catch(() => {}); // Fire and forget
+          }).catch(() => {});
         }
       }
     };
 
     try {
       if (cardDueDate) {
-        await upsertCalendarEvent(cardDueDate, ' (Due Date)', true);
+        await upsertKanbanEvent(cardDueDate, ' (Due Date)', 'due', true);
       }
       if (cardStartingDate) {
-        await upsertCalendarEvent(cardStartingDate, ' (Start)', true);
+        await upsertKanbanEvent(cardStartingDate, ' (Start)', 'start', true);
       }
-      // Invalidate calendar queries so the widget updates
-      queryClient.invalidateQueries({ queryKey: ['daily-calendar-events'] });
     } catch (error) {
-      console.error('Error syncing dates to calendar:', error);
+      console.error('Error syncing dates to kanban_card_events:', error);
     }
-  }, [card.id, user, queryClient]);
+  }, [card.id, user]);
 
   const handleSave = useCallback(async () => {
     // Check if card should be moved

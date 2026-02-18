@@ -20,10 +20,8 @@ export async function convertProtectedPdfToClean(
   
   // Dynamic import to avoid TypeScript issues with pdfjs-dist types
   const pdfjsLib = await import('pdfjs-dist');
-  const workerModule = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
-  // Load PDF with pdfjs (handles encryption)
   const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
   console.log(`Protected PDF has ${pdf.numPages} pages`);
   
@@ -169,8 +167,7 @@ export async function addPagesToDocument(
 export async function getPdfPageCount(pdfBytes: ArrayBuffer): Promise<number> {
   // Use pdfjs-dist for counting pages as it handles encrypted PDFs
   const pdfjsLib = await import('pdfjs-dist');
-  const workerModule = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
   
   const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
   return pdf.numPages;
