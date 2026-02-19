@@ -509,6 +509,7 @@ export type Database = {
           name: string
           notes: string | null
           property_id: string | null
+          server_path: string | null
           status: string | null
           tags: string[] | null
           updated_at: string
@@ -528,6 +529,7 @@ export type Database = {
           name: string
           notes?: string | null
           property_id?: string | null
+          server_path?: string | null
           status?: string | null
           tags?: string[] | null
           updated_at?: string
@@ -547,6 +549,7 @@ export type Database = {
           name?: string
           notes?: string | null
           property_id?: string | null
+          server_path?: string | null
           status?: string | null
           tags?: string[] | null
           updated_at?: string
@@ -7020,6 +7023,7 @@ export type Database = {
           mime_type: string | null
           name: string
           notes: string | null
+          server_path: string | null
           status: string | null
           tags: string[] | null
           updated_at: string
@@ -7036,6 +7040,7 @@ export type Database = {
           mime_type?: string | null
           name: string
           notes?: string | null
+          server_path?: string | null
           status?: string | null
           tags?: string[] | null
           updated_at?: string
@@ -7052,6 +7057,7 @@ export type Database = {
           mime_type?: string | null
           name?: string
           notes?: string | null
+          server_path?: string | null
           status?: string | null
           tags?: string[] | null
           updated_at?: string
@@ -7201,6 +7207,7 @@ export type Database = {
           priority: string | null
           project_id: string | null
           receipt_url: string | null
+          server_path: string | null
           status: string | null
           subtotal: number | null
           supplier_id: string | null
@@ -7239,6 +7246,7 @@ export type Database = {
           priority?: string | null
           project_id?: string | null
           receipt_url?: string | null
+          server_path?: string | null
           status?: string | null
           subtotal?: number | null
           supplier_id?: string | null
@@ -7277,6 +7285,7 @@ export type Database = {
           priority?: string | null
           project_id?: string | null
           receipt_url?: string | null
+          server_path?: string | null
           status?: string | null
           subtotal?: number | null
           supplier_id?: string | null
@@ -7327,6 +7336,7 @@ export type Database = {
           folder_path: string | null
           id: string
           month: number
+          server_root: string | null
           updated_at: string
           user_id: string | null
           year: number
@@ -7338,6 +7348,7 @@ export type Database = {
           folder_path?: string | null
           id?: string
           month: number
+          server_root?: string | null
           updated_at?: string
           user_id?: string | null
           year: number
@@ -7349,6 +7360,7 @@ export type Database = {
           folder_path?: string | null
           id?: string
           month?: number
+          server_root?: string | null
           updated_at?: string
           user_id?: string | null
           year?: number

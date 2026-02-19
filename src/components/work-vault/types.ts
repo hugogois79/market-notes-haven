@@ -18,6 +18,7 @@ export interface WorkDocumentRow {
   user_id: string;
   created_at: string;
   updated_at: string;
+  server_path: string | null;
 }
 
 export interface WorkFolderRow {

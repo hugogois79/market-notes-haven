@@ -1,9 +1,60 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { PDFDocument } from 'https://esm.sh/pdf-lib@1.17.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+/**
+ * Merges two PDFs (original document + Wise receipt) into one.
+ * Returns the merged PDF as Uint8Array, or null if merge fails.
+ */
+async function mergePdfs(
+  supabase: ReturnType<typeof createClient>,
+  originalUrl: string,
+  receiptBytes: Uint8Array
+): Promise<Uint8Array | null> {
+  try {
+    // Download original PDF from Supabase storage
+    const storageMatch = originalUrl.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/);
+    let originalBytes: ArrayBuffer;
+
+    if (storageMatch) {
+      const [, bucket, encodedPath] = storageMatch;
+      const filePath = decodeURIComponent(encodedPath.split('?')[0]);
+      const { data, error } = await supabase.storage.from(bucket).download(filePath);
+      if (error || !data) {
+        console.error('Failed to download original PDF:', error);
+        return null;
+      }
+      originalBytes = await data.arrayBuffer();
+    } else {
+      const resp = await fetch(originalUrl);
+      if (!resp.ok) return null;
+      originalBytes = await resp.arrayBuffer();
+    }
+
+    const mergedPdf = await PDFDocument.create();
+
+    // Add original document pages
+    const originalPdf = await PDFDocument.load(originalBytes, { ignoreEncryption: true });
+    const origPages = await mergedPdf.copyPages(originalPdf, originalPdf.getPageIndices());
+    origPages.forEach(p => mergedPdf.addPage(p));
+
+    // Add receipt pages
+    const receiptPdf = await PDFDocument.load(receiptBytes, { ignoreEncryption: true });
+    const receiptPages = await mergedPdf.copyPages(receiptPdf, receiptPdf.getPageIndices());
+    receiptPages.forEach(p => mergedPdf.addPage(p));
+
+    const merged = await mergedPdf.save();
+    console.log(`Merged PDF: ${origPages.length} + ${receiptPages.length} = ${mergedPdf.getPageCount()} pages`);
+    return new Uint8Array(merged);
+  } catch (err) {
+    console.error('PDF merge failed:', err);
+    return null;
+  }
+}
 
 /**
  * Wise Receipt Webhook
@@ -170,14 +221,44 @@ Deno.serve(async (req) => {
 
     console.log(`Uploaded receipt to: ${publicUrl}`);
 
-    // --- Update workflow_files with receipt URL ---
+    // --- Auto-merge: combine original document + receipt into single PDF ---
+    let mergedFileUrl: string | null = null;
+    if (doc.file_url && !doc.file_url.includes('payment-attachments/merged-')) {
+      console.log('Auto-merging original document with Wise receipt...');
+      const mergedBytes = await mergePdfs(supabase, doc.file_url, pdfBytes);
+      if (mergedBytes) {
+        const mergedPath = `payment-attachments/merged-${transferId}.pdf`;
+        const { error: mergeUploadError } = await supabase.storage
+          .from('company-documents')
+          .upload(mergedPath, mergedBytes, { contentType: 'application/pdf', upsert: true });
+
+        if (!mergeUploadError) {
+          const { data: mergedUrlData } = supabase.storage
+            .from('company-documents')
+            .getPublicUrl(mergedPath);
+          mergedFileUrl = mergedUrlData.publicUrl;
+          console.log(`Merged PDF uploaded: ${mergedFileUrl}`);
+        } else {
+          console.error('Failed to upload merged PDF:', mergeUploadError);
+        }
+      }
+    } else {
+      console.log('Document already merged or no original URL, skipping auto-merge');
+    }
+
+    // --- Update workflow_files with receipt URL (and merged file_url if available) ---
+    const updateData: Record<string, unknown> = {
+      receipt_url: publicUrl,
+      status: 'Payment',
+      updated_at: new Date().toISOString(),
+    };
+    if (mergedFileUrl) {
+      updateData.file_url = mergedFileUrl;
+    }
+
     const { error: updateError } = await supabase
       .from('workflow_files')
-      .update({ 
-        receipt_url: publicUrl,
-        status: 'Payment',
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', doc.id);
 
     if (updateError) {
@@ -231,7 +312,7 @@ Deno.serve(async (req) => {
             : 0,
           payment_method: 'bank_transfer',
           bank_account_id: wiseAccount?.id || null,
-          invoice_file_url: doc.file_url,
+          invoice_file_url: mergedFileUrl || doc.file_url,
           document_file_id: doc.id,
           created_by: doc.user_id,
           project_id: doc.project_id || null,
@@ -242,6 +323,13 @@ Deno.serve(async (req) => {
       } else {
         console.log(`Auto-created financial_transaction for document ${doc.id} via receipt webhook`);
       }
+    } else if (existingTx && mergedFileUrl) {
+      // Update existing transaction with merged URL
+      await supabase
+        .from('financial_transactions')
+        .update({ invoice_file_url: mergedFileUrl })
+        .eq('id', existingTx.id);
+      console.log(`Updated financial_transaction ${existingTx.id} with merged URL`);
     } else if (existingTx) {
       console.log(`Financial transaction already exists for document ${doc.id}`);
     }

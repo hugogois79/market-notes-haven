@@ -1497,6 +1497,10 @@ export default function CompanyDetailPage() {
   }, [id, currentFolderId, queryClient]);
 
   const handleDownload = async (doc: any) => {
+    if (doc.server_path) {
+      window.open(`/api/work-files/download?file=${encodeURIComponent(doc.server_path)}`, '_blank');
+      return;
+    }
     try {
       const fileUrl = String(doc.file_url || "");
       if (!fileUrl) throw new Error("URL do ficheiro em falta");

@@ -96,6 +96,7 @@ interface WorkflowFile {
   // Wise payment tracking
   receipt_url?: string | null;
   wise_transfer_id?: number | null;
+  server_path?: string | null;
 }
 
 interface UploadProgress {
@@ -372,6 +373,7 @@ export default function WorkFlowTab() {
     message_id?: string;
     thread_id?: string;
     gmail_id?: string;
+    contact_name?: string;
   }>({ source: 'manual' });
   const { searchVendorEmail, sendConfirmation, isSending: isSendingConfirmation, isSearching, foundEmails } = useSendPaymentConfirmation();
 
@@ -1324,43 +1326,85 @@ export default function WorkFlowTab() {
     setUploadProgress(initialProgress);
     setIsUploading(true);
 
+    const settings: TableRelationsConfig = (() => {
+      try { return JSON.parse(localStorage.getItem(TABLE_RELATIONS_KEY) || "{}"); }
+      catch { return { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true }; }
+    })();
+    const companyId = settings.defaultCompanyId;
+
+    let serverLocation: { server_root: string; folder_path: string } | null = null;
+    if (companyId) {
+      const now = new Date();
+      const { data: locations } = await supabase
+        .from("workflow_storage_locations")
+        .select("server_root, folder_path")
+        .eq("company_id", companyId)
+        .eq("year", now.getFullYear())
+        .eq("month", now.getMonth() + 1)
+        .not("server_root", "is", null)
+        .limit(1);
+      if (locations?.[0]?.server_root && locations[0].folder_path) {
+        serverLocation = { server_root: locations[0].server_root, folder_path: locations[0].folder_path };
+      }
+    }
+
     const uploadedFiles: string[] = [];
 
     for (let i = 0; i < fileArray.length; i++) {
       const file = fileArray[i];
-      const sanitizedName = sanitizeFileName(file.name);
-      const storagePath = `${user.id}/${Date.now()}-${sanitizedName}`;
 
       try {
         setUploadProgress(prev => prev.map((p, idx) =>
           idx === i ? { ...p, progress: 30 } : p
         ));
 
-        const { error: uploadError } = await supabase.storage
-          .from("attachments")
-          .upload(storagePath, file);
+        let fileUrl = "";
+        let serverPath: string | null = null;
 
-        if (uploadError) throw uploadError;
+        if (serverLocation) {
+          const targetFolder = `${serverLocation.server_root}/${serverLocation.folder_path}`;
+          const params = new URLSearchParams({ folder: targetFolder, filename: file.name });
+          const arrayBuf = await file.arrayBuffer();
+          const resp = await fetch(`/api/work-files/upload?${params}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/octet-stream" },
+            body: arrayBuf,
+          });
+          if (!resp.ok) throw new Error("Server upload failed");
+          const result = await resp.json();
+          serverPath = result.server_path;
+          fileUrl = `/api/work-files/download?file=${encodeURIComponent(result.server_path)}`;
+        } else {
+          const sanitizedName = sanitizeFileName(file.name);
+          const storagePath = `${user.id}/${Date.now()}-${sanitizedName}`;
+          const { error: uploadError } = await supabase.storage
+            .from("attachments")
+            .upload(storagePath, file);
+          if (uploadError) throw uploadError;
+          const { data: { publicUrl } } = supabase.storage
+            .from("attachments")
+            .getPublicUrl(storagePath);
+          fileUrl = publicUrl;
+        }
 
         setUploadProgress(prev => prev.map((p, idx) =>
           idx === i ? { ...p, progress: 70 } : p
         ));
 
-        const { data: { publicUrl } } = supabase.storage
-          .from("attachments")
-          .getPublicUrl(storagePath);
+        const insertData: any = {
+          user_id: user.id,
+          file_name: file.name,
+          file_url: fileUrl,
+          file_size: file.size,
+          mime_type: file.type,
+          status: "Pending",
+          priority: "normal",
+        };
+        if (serverPath) insertData.server_path = serverPath;
 
         const { error: insertError } = await supabase
           .from("workflow_files")
-          .insert({
-            user_id: user.id,
-            file_name: file.name,
-            file_url: publicUrl,
-            file_size: file.size,
-            mime_type: file.type,
-            status: "Pending",
-            priority: "normal",
-          });
+          .insert(insertData);
 
         if (insertError) throw insertError;
 
@@ -1380,7 +1424,7 @@ export default function WorkFlowTab() {
     queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
 
     if (uploadedFiles.length > 0) {
-      toast.success(`Uploaded ${uploadedFiles.length} file(s)`);
+      toast.success(`Uploaded ${uploadedFiles.length} file(s)${serverLocation ? ' to server' : ''}`);
     }
 
     setTimeout(() => {
@@ -2169,6 +2213,10 @@ export default function WorkFlowTab() {
   const getColumnWidth = (columnId: string, defaultWidth: number) => columnWidths[columnId] ?? defaultWidth;
 
   const handleDownload = async (file: WorkflowFile) => {
+    if (file.server_path) {
+      window.open(`/api/work-files/download?file=${encodeURIComponent(file.server_path)}`, '_blank');
+      return;
+    }
     try {
       const url = new URL(file.file_url);
       const pathParts = url.pathname.split('/storage/v1/object/public/');
@@ -4913,6 +4961,7 @@ export default function WorkFlowTab() {
                                   message_id: item.message_id,
                                   thread_id: item.thread_id,
                                   gmail_id: item.gmail_id,
+                                  contact_name: item.name || '',
                                 });
                               }}
                             >
@@ -5001,6 +5050,7 @@ export default function WorkFlowTab() {
                   file_id: previewFile.id,
                   vendor_name: sendVendorName || undefined,
                   vendor_email: confirmationEmail.trim(),
+                  contact_name: selectedEmailContext.contact_name || undefined,
                   invoice_number: previewFile.invoice_number || undefined,
                   total_amount: previewFile.total_amount || undefined,
                   source: selectedEmailContext.source,

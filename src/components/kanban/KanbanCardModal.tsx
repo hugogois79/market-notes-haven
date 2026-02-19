@@ -15,7 +15,7 @@ import CardDescriptionEditor from './CardDescriptionEditor';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
-import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download, Plus, Tag, Sparkles, Users, UserPlus, UserMinus, ExternalLink, Shield, Mail } from 'lucide-react';
+import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download, Plus, Tag, Sparkles, Users, UserPlus, UserMinus, ExternalLink, Shield, Mail, ArchiveRestore, Archive } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -597,6 +597,25 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
       archived: true,
       completed_at: new Date().toISOString()
     });
+    onClose();
+  };
+
+  const handleArchive = () => {
+    onUpdate(card.id, {
+      archived: true
+    });
+    toast.success('Cartão arquivado');
+    onClose();
+  };
+
+  const handleUnarchive = () => {
+    onUpdate(card.id, {
+      archived: false,
+      concluded: false,
+      completed: false,
+      completed_at: null
+    });
+    toast.success('Cartão desarquivado');
     onClose();
   };
 
@@ -1237,10 +1256,21 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
               <Save className="h-4 w-4 mr-2" />
               Save
             </Button>
-            {!card.completed && (
+            {!card.completed && !card.archived && !card.concluded && (
               <Button onClick={handleMarkComplete} className="bg-green-600 hover:bg-green-700">
                 <CheckCircle2 className="h-4 w-4 mr-2" />
                 Complete
+              </Button>
+            )}
+            {(card.archived || card.concluded) ? (
+              <Button onClick={handleUnarchive} className="bg-amber-600 hover:bg-amber-700">
+                <ArchiveRestore className="h-4 w-4 mr-2" />
+                Desarquivar
+              </Button>
+            ) : (
+              <Button onClick={handleArchive} variant="outline">
+                <Archive className="h-4 w-4 mr-2" />
+                Arquivar
               </Button>
             )}
             <Button onClick={handleDelete} variant="destructive">

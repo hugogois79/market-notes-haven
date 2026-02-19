@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Building2, Search, Edit, Trash2, Eye, Settings, ChevronDown, X, ListTodo, Link2, Bookmark, FolderKanban } from "lucide-react";
+import { Plus, Building2, Search, Edit, Trash2, Eye, Settings, ChevronDown, X, ListTodo, Link2, Bookmark, FolderKanban, HardDrive, ArrowUpFromLine, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import WorkFlowTab from "./WorkFlowTab";
@@ -109,8 +109,9 @@ interface StorageLocation {
   company_id: string;
   folder_id: string | null;
   year: number;
-  month: number; // 1-12 for months
+  month: number;
   folder_path: string | null;
+  server_root: string | null;
 }
 
 interface ProjectStorageLocation {
@@ -217,13 +218,16 @@ export default function CompaniesPage() {
     year: number;
     month: number;
     folder_path: string;
+    server_root: string;
   }>({
     company_id: "",
     folder_id: null,
     year: new Date().getFullYear(),
     month: new Date().getMonth() + 1,
-    folder_path: ""
+    folder_path: "",
+    server_root: ""
   });
+  const [migratingLocationId, setMigratingLocationId] = useState<string | null>(null);
 
   // Project storage location dialog
   const [projectStorageDialog, setProjectStorageDialog] = useState<{ open: boolean; editingId: string | null }>({ open: false, editingId: null });
@@ -599,6 +603,92 @@ export default function CompaniesPage() {
     name: folder.name,
     path: getFolderPath(folder.id, companyFolders || [])
   })).sort((a, b) => a.path.localeCompare(b.path)) || [];
+
+  const { data: serverFolders = [] } = useQuery({
+    queryKey: ["work-server-folders"],
+    queryFn: async () => {
+      const res = await fetch("/api/work-files/list?folder=");
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.items || [])
+        .filter((i: any) => i.type === "dir")
+        .map((i: any) => i.name);
+    },
+  });
+
+  const updateServerRootMutation = useMutation({
+    mutationFn: async ({ id, server_root }: { id: string; server_root: string | null }) => {
+      const { error } = await supabase
+        .from("workflow_storage_locations")
+        .update({ server_root })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchStorageLocations();
+      toast.success("Server folder updated");
+    },
+    onError: () => {
+      toast.error("Failed to update server folder");
+    },
+  });
+
+  const handleMigrateFiles = async (location: StorageLocation) => {
+    if (!location.server_root || !location.folder_path) {
+      toast.error("Server folder and folder path must be set");
+      return;
+    }
+    setMigratingLocationId(location.id);
+    try {
+      const { data: files, error } = await supabase
+        .from("workflow_files")
+        .select("id, file_name, file_url, server_path")
+        .eq("company_id", location.company_id)
+        .is("server_path", null);
+
+      if (error) throw error;
+      if (!files || files.length === 0) {
+        toast.info("No files to migrate for this location");
+        setMigratingLocationId(null);
+        return;
+      }
+
+      const targetFolder = `${location.server_root}/${location.folder_path}`;
+      const res = await fetch("/api/work-files/migrate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          files: files.map((f) => ({ id: f.id, file_name: f.file_name, file_url: f.file_url })),
+          target_folder: targetFolder,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Migration request failed");
+      const { results } = await res.json();
+
+      let successCount = 0;
+      for (const result of results) {
+        if (result.server_path) {
+          await supabase
+            .from("workflow_files")
+            .update({ server_path: result.server_path })
+            .eq("id", result.id);
+          successCount++;
+        }
+      }
+
+      const errorCount = results.filter((r: any) => r.error).length;
+      if (errorCount > 0) {
+        toast.warning(`${successCount} migrated, ${errorCount} failed`);
+      } else {
+        toast.success(`${successCount} files migrated to server`);
+      }
+    } catch (err: any) {
+      toast.error(`Migration error: ${err.message}`);
+    } finally {
+      setMigratingLocationId(null);
+    }
+  };
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -1069,7 +1159,7 @@ export default function CompaniesPage() {
                     <Button 
                       size="sm" 
                       onClick={() => {
-                        setStorageLocationForm({ company_id: "", folder_id: null, year: new Date().getFullYear(), month: new Date().getMonth() + 1, folder_path: "" });
+                        setStorageLocationForm({ company_id: "", folder_id: null, year: new Date().getFullYear(), month: new Date().getMonth() + 1, folder_path: "", server_root: "" });
                         setStorageLocationDialog({ open: true, editingId: null });
                       }}
                       className="bg-blue-600 hover:bg-blue-700"
@@ -1121,25 +1211,26 @@ export default function CompaniesPage() {
                             <TableHead className="text-xs font-medium text-slate-600">Year</TableHead>
                             <TableHead className="text-xs font-medium text-slate-600">Month</TableHead>
                             <TableHead className="text-xs font-medium text-slate-600">Folder Location</TableHead>
-                            <TableHead className="text-xs font-medium text-slate-600 w-20">Actions</TableHead>
+                            <TableHead className="text-xs font-medium text-slate-600">Server Folder</TableHead>
+                            <TableHead className="text-xs font-medium text-slate-600 w-28">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {storageLocationsLoading ? (
                             <TableRow>
-                              <TableCell colSpan={5} className="text-center text-sm text-slate-500 py-8">
+                              <TableCell colSpan={6} className="text-center text-sm text-slate-500 py-8">
                                 Loading storage locations...
                               </TableCell>
                             </TableRow>
                           ) : storageLocationsError ? (
                             <TableRow>
-                              <TableCell colSpan={5} className="text-center text-sm text-destructive py-8">
+                              <TableCell colSpan={6} className="text-center text-sm text-destructive py-8">
                                 Could not load storage locations. Please refresh.
                               </TableCell>
                             </TableRow>
                           ) : storageLocations.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={5} className="text-center text-sm text-slate-500 py-8">
+                              <TableCell colSpan={6} className="text-center text-sm text-slate-500 py-8">
                                 No storage locations configured. Click "Add Location" to create one.
                               </TableCell>
                             </TableRow>
@@ -1157,7 +1248,38 @@ export default function CompaniesPage() {
                                   <TableCell className="text-sm text-slate-600">{monthLabel}</TableCell>
                                   <TableCell className="text-sm text-slate-600 font-mono">{location.folder_path || "-"}</TableCell>
                                   <TableCell>
+                                    <SearchableSelect
+                                      value={location.server_root || ""}
+                                      onValueChange={(value) => {
+                                        updateServerRootMutation.mutate({
+                                          id: location.id,
+                                          server_root: value || null,
+                                        });
+                                      }}
+                                      options={serverFolders.map((f: string) => ({ value: f, label: f }))}
+                                      placeholder="Select..."
+                                      searchPlaceholder="Search folders..."
+                                      emptyMessage="No server folders"
+                                    />
+                                  </TableCell>
+                                  <TableCell>
                                     <div className="flex gap-1">
+                                      {location.server_root && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                          title="Migrate files to server"
+                                          disabled={migratingLocationId === location.id}
+                                          onClick={() => handleMigrateFiles(location)}
+                                        >
+                                          {migratingLocationId === location.id ? (
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                          ) : (
+                                            <ArrowUpFromLine className="h-3.5 w-3.5" />
+                                          )}
+                                        </Button>
+                                      )}
                                       <Button
                                         variant="ghost"
                                         size="sm"
@@ -1169,6 +1291,7 @@ export default function CompaniesPage() {
                                             year: location.year || new Date().getFullYear(),
                                             month: location.month,
                                             folder_path: location.folder_path || "",
+                                            server_root: location.server_root || "",
                                           });
                                           setStorageLocationDialog({ open: true, editingId: location.id });
                                         }}
@@ -1517,11 +1640,33 @@ export default function CompaniesPage() {
               />
             </div>
             
+            <div className="space-y-2">
+              <Label>Server Folder <span className="text-xs text-slate-400">(optional)</span></Label>
+              <p className="text-xs text-slate-500">Root folder on the server for this company.</p>
+              <SearchableSelect
+                value={storageLocationForm.server_root}
+                onValueChange={(value) => setStorageLocationForm(prev => ({ ...prev, server_root: value }))}
+                options={serverFolders.map((f: string) => ({ value: f, label: f }))}
+                placeholder="None (Supabase only)"
+                searchPlaceholder="Search server folders..."
+                emptyMessage="No server folders found"
+              />
+            </div>
+            
             {/* Preview */}
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
               <Label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Path Preview</Label>
               <p className="text-xs text-slate-700 mt-1 font-mono">
-                {companies?.find(c => c.id === storageLocationForm.company_id)?.name || "[Company]"} → Documents → <span className="text-blue-600">{storageLocationForm.folder_path || "..."}</span>
+                {storageLocationForm.server_root ? (
+                  <>
+                    <HardDrive className="inline h-3 w-3 mr-1 text-emerald-600" />
+                    <span className="text-emerald-600">{storageLocationForm.server_root}</span>/{storageLocationForm.folder_path || "..."}
+                  </>
+                ) : (
+                  <>
+                    {companies?.find(c => c.id === storageLocationForm.company_id)?.name || "[Company]"} → Documents → <span className="text-blue-600">{storageLocationForm.folder_path || "..."}</span>
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -1541,7 +1686,8 @@ export default function CompaniesPage() {
                   folder_id: storageLocationForm.folder_id,
                   year: storageLocationForm.year,
                   month: storageLocationForm.month,
-                  folder_path: storageLocationForm.folder_path
+                  folder_path: storageLocationForm.folder_path,
+                  server_root: storageLocationForm.server_root || null,
                 };
                 
                 if (storageLocationDialog.editingId) {

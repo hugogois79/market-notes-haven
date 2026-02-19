@@ -242,8 +242,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   // Reset form when existingTransaction changes - wait for all dropdown data to load first
   useEffect(() => {
     if (existingTransaction && companies && expenseCategories && allBankAccounts) {
-      // Only reset once per transaction ID to avoid flickering when queries refetch
-      const resetKey = `tx-${existingTransaction.id}`;
+      // Reset when transaction ID or key fields change (e.g. after save updates bank_account_id)
+      const resetKey = `tx-${existingTransaction.id}-${existingTransaction.bank_account_id || ''}-${(existingTransaction as any).updated_at || ''}`;
       if (lastResetKeyRef.current === resetKey) return;
       lastResetKeyRef.current = resetKey;
 
@@ -1429,6 +1429,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                     </div>
                     <div>
                       <Label className="text-xs">{paymentMethod === "credit_card" ? "Cartão" : "Conta"}</Label>
+                      <input type="hidden" {...register("bank_account_id")} />
                       <Select onValueChange={(value) => { setLocalBankAccountId(value); setValue("bank_account_id", value); }} value={localBankAccountId}>
                         <SelectTrigger className="h-9 text-sm">
                           <SelectValue placeholder="Selecione..." />

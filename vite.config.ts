@@ -69,6 +69,10 @@ export default defineConfig(({ mode }) => ({
         target: "http://127.0.0.1:3001",
         changeOrigin: true,
       },
+      "/api/work-files": {
+        target: "http://127.0.0.1:3001",
+        changeOrigin: true,
+      },
     },
   },
   plugins: [

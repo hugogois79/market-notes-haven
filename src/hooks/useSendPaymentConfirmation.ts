@@ -25,6 +25,7 @@ export interface SendPaymentConfirmationRequest {
   file_id: string;
   vendor_name?: string;
   vendor_email?: string;
+  contact_name?: string;
   invoice_number?: string;
   total_amount?: number;
   source?: 'agentmail' | 'gmail' | 'manual';
@@ -96,6 +97,7 @@ export const useSendPaymentConfirmation = () => {
         body: JSON.stringify({
           to_email: data.vendor_email,
           vendor_name: data.vendor_name,
+          contact_name: data.contact_name || '',
           invoice_number: data.invoice_number,
           total_amount: data.total_amount,
           file_url: data.file_url,

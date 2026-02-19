@@ -480,6 +480,10 @@ export function WorkVault() {
   }, []);
 
   const handleDownload = useCallback((doc: WorkDocumentRow) => {
+    if (doc.server_path) {
+      window.open(`/api/work-files/download?file=${encodeURIComponent(doc.server_path)}`, "_blank");
+      return;
+    }
     window.open(doc.file_url, "_blank");
   }, []);
 
