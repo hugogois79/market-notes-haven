@@ -56,6 +56,7 @@ import BankPaymentDialog from "@/components/companies/BankPaymentDialog";
 import { DocumentAIPanel } from "@/components/companies/DocumentAIPanel";
 import SendEmailModal from "@/components/email/SendEmailModal";
 import { useSendPaymentConfirmation } from "@/hooks/useSendPaymentConfirmation";
+import { mergeMultiplePdfs } from "@/utils/pdfMerger";
 import { cn } from "@/lib/utils";
 
 interface WorkflowFile {
@@ -92,6 +93,9 @@ interface WorkflowFile {
   description?: string | null;
   // Payment confirmation tracking
   confirmation_sent_at?: string | null;
+  // Wise payment tracking
+  receipt_url?: string | null;
+  wise_transfer_id?: number | null;
 }
 
 interface UploadProgress {
@@ -359,6 +363,7 @@ export default function WorkFlowTab() {
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showBankPaymentDialog, setShowBankPaymentDialog] = useState(false);
+  const [isMergingReceipt, setIsMergingReceipt] = useState(false);
   const [showSendEmailModal, setShowSendEmailModal] = useState(false);
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState('');
@@ -1163,6 +1168,51 @@ export default function WorkFlowTab() {
       toast.error("Failed to assign project: " + error.message);
     },
   });
+
+  // Merge Wise receipt with original document
+  const handleMergeWiseReceipt = async () => {
+    if (!previewFile?.receipt_url || !previewFile?.file_url) return;
+    setIsMergingReceipt(true);
+    try {
+      toast.info("A juntar comprovativo Wise ao documento...");
+      const mergedBlob = await mergeMultiplePdfs([
+        { url: previewFile.file_url, name: "Documento original" },
+        { url: previewFile.receipt_url, name: "Comprovativo Wise" },
+      ]);
+
+      const filePath = `payment-attachments/merged-${previewFile.wise_transfer_id || Date.now()}.pdf`;
+      const { error: uploadError } = await supabase.storage
+        .from('company-documents')
+        .upload(filePath, mergedBlob, { upsert: true });
+      if (uploadError) throw new Error("Erro ao carregar: " + uploadError.message);
+
+      const { data: urlData } = supabase.storage
+        .from('company-documents')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('workflow_files')
+        .update({ file_url: urlData.publicUrl })
+        .eq('id', previewFile.id);
+      if (updateError) throw updateError;
+
+      // Also update financial_transaction invoice_file_url
+      await supabase
+        .from('financial_transactions')
+        .update({ invoice_file_url: urlData.publicUrl })
+        .eq('document_file_id', previewFile.id);
+
+      queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+      queryClient.invalidateQueries({ queryKey: ["file-transaction"] });
+      setPreviewFile({ ...previewFile, file_url: urlData.publicUrl });
+      toast.success("Comprovativo Wise anexado ao documento!");
+    } catch (error: any) {
+      console.error("Error merging Wise receipt:", error);
+      toast.error("Erro ao juntar comprovativo: " + (error.message || "Erro desconhecido"));
+    } finally {
+      setIsMergingReceipt(false);
+    }
+  };
 
   // Move file to company folder mutation
   const moveFileMutation = useMutation({
@@ -4098,6 +4148,22 @@ export default function WorkFlowTab() {
                                 <Landmark className="h-4 w-4 mr-2" />
                                 Pagar Banco
                               </DropdownMenuItem>
+                              {previewFile?.receipt_url && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={handleMergeWiseReceipt}
+                                    disabled={isMergingReceipt}
+                                  >
+                                    {isMergingReceipt ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <Receipt className="h-4 w-4 mr-2" />
+                                    )}
+                                    {isMergingReceipt ? "A juntar..." : "Juntar Comprovativo Wise"}
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                           <Button
