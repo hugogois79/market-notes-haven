@@ -500,6 +500,12 @@ const AIAssistant = () => {
       if (error) throw new Error(error.message);
       if (data.error) throw new Error(data.error);
 
+      // If an event was created, refresh the calendar data
+      if (data.eventCreated) {
+        queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+        toast.success("Evento criado no calendário!");
+      }
+
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
