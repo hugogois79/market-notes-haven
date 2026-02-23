@@ -416,105 +416,6 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
     setTags(tags.filter(t => t !== tagToRemove));
   };
 
-  // Sync kanban card dates to kanban_card_events and Google Calendar
-  const syncDatesToCalendar = useCallback(async (cardTitle: string, cardDueDate?: Date, cardStartingDate?: Date) => {
-    if (!user) return;
-
-    const N8N_WEBHOOK_URL = 'https://n8n.gvvcapital.com/webhook/calendar-sync';
-
-    const upsertKanbanEvent = async (
-      dateValue: Date,
-      suffix: string,
-      eventType: 'start' | 'due',
-      isAllDay: boolean = true
-    ) => {
-      const dateStr = format(dateValue, 'yyyy-MM-dd');
-      const eventTitle = `${cardTitle}${suffix}`;
-
-      const { data: existing } = await supabase
-        .from('kanban_card_events')
-        .select('id, google_event_id')
-        .eq('card_id', card.id)
-        .eq('event_type', eventType)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (existing) {
-        await supabase
-          .from('kanban_card_events')
-          .update({
-            title: eventTitle,
-            date: dateStr,
-            all_day: isAllDay,
-            start_time: isAllDay ? null : `${dateStr}T09:00:00`,
-            end_time: isAllDay ? null : `${dateStr}T10:00:00`,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', existing.id);
-
-        if (existing.google_event_id) {
-          fetch(N8N_WEBHOOK_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'update',
-              event_id: existing.id,
-              google_event_id: existing.google_event_id,
-              title: eventTitle,
-              date: dateStr,
-              start_time: `${dateStr}T09:00:00`,
-              end_time: `${dateStr}T10:00:00`,
-              notes: `kanban:${card.id}:${eventType}`,
-            }),
-          }).catch(() => {});
-        }
-      } else {
-        const { data: newEvent } = await supabase
-          .from('kanban_card_events')
-          .insert({
-            card_id: card.id,
-            title: eventTitle,
-            date: dateStr,
-            event_type: eventType,
-            all_day: isAllDay,
-            start_time: isAllDay ? null : `${dateStr}T09:00:00`,
-            end_time: isAllDay ? null : `${dateStr}T10:00:00`,
-            notes: `kanban:${card.id}:${eventType}`,
-            user_id: user.id,
-          })
-          .select('id')
-          .single();
-
-        if (newEvent) {
-          fetch(N8N_WEBHOOK_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'create',
-              event_id: newEvent.id,
-              title: eventTitle,
-              date: dateStr,
-              start_time: `${dateStr}T09:00:00`,
-              end_time: `${dateStr}T10:00:00`,
-              notes: `kanban:${card.id}:${eventType}`,
-            }),
-          }).catch(() => {});
-        }
-      }
-    };
-
-    try {
-      if (cardDueDate) {
-        await upsertKanbanEvent(cardDueDate, ' (Due Date)', 'due', true);
-      }
-      if (cardStartingDate) {
-        await upsertKanbanEvent(cardStartingDate, ' (Start)', 'start', true);
-      }
-    } catch (error) {
-      console.error('Error syncing dates to kanban_card_events:', error);
-    }
-  }, [card.id, user]);
-
   const handleSave = useCallback(async () => {
     // Check if card should be moved
     if (moveToListId !== card.list_id && onMove) {
@@ -558,12 +459,8 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
       });
     }
 
-    // Sync dates to calendar (fire and forget)
-    const effectiveStartingDate = startingDate || (card.created_at ? new Date(card.created_at) : undefined);
-    syncDatesToCalendar(title, dueDate, effectiveStartingDate);
-
     onClose();
-  }, [card.id, card.list_id, card.created_at, title, description, priority, value, startingDate, dueDate, tasks, tags, assignedTo, assignedExternal, supervisorId, moveToListId, moveToBoardId, onMove, onUpdate, onClose, syncDatesToCalendar]);
+  }, [card.id, card.list_id, card.created_at, title, description, priority, value, startingDate, dueDate, tasks, tags, assignedTo, assignedExternal, supervisorId, moveToListId, moveToBoardId, onMove, onUpdate, onClose]);
 
   // Keyboard shortcut: Ctrl+S / Cmd+S to save
   useEffect(() => {

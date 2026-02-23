@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/hover-card";
 import { useCalendarDayStatus } from "@/hooks/useCalendarDayStatus";
 import { useCalendarCategories } from "@/hooks/useCalendarCategories";
-import { useGoogleCalendarSync } from "@/hooks/useGoogleCalendarSync";
 
 const MONTHS = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
@@ -111,8 +110,6 @@ export default function YearCalendar() {
   // Use categories from Supabase
   const { categories, saveCategories, isSaving: isSavingCategories } = useCalendarCategories();
   
-  // Google Calendar sync via n8n webhook
-  const { syncCreate, syncUpdate, syncDelete } = useGoogleCalendarSync();
 
   // Focus input when editing cell changes
   useEffect(() => {
@@ -274,16 +271,6 @@ export default function YearCalendar() {
           })
           .eq("id", event.id);
         if (error) throw error;
-
-        // Sync update to Google Calendar (fire-and-forget)
-        const existingEvent = events?.find(e => e.id === event.id);
-        syncUpdate(
-          event.id,
-          existingEvent?.google_event_id || null,
-          event.title || null,
-          event.date || existingEvent?.date || '',
-          event.notes
-        );
       } else {
         const { data: inserted, error } = await supabase
           .from("calendar_events")
@@ -298,11 +285,6 @@ export default function YearCalendar() {
           .select('id')
           .single();
         if (error) throw error;
-
-        // Sync new event to Google Calendar (fire-and-forget)
-        if (inserted?.id && event.date) {
-          syncCreate(inserted.id, event.title || null, event.date, event.notes);
-        }
       }
       
       // Update template with title and category
@@ -328,19 +310,11 @@ export default function YearCalendar() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Get the event before deleting to retrieve google_event_id
-      const eventToDelete = events?.find(e => e.id === id);
-      
       const { error } = await supabase
         .from("calendar_events")
         .delete()
         .eq("id", id);
       if (error) throw error;
-
-      // Sync deletion to Google Calendar (fire-and-forget)
-      if (eventToDelete) {
-        syncDelete(id, eventToDelete.google_event_id || null);
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });

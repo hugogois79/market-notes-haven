@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/select";
 import { CalendarCategory } from "@/hooks/useCalendarCategories";
 import { DailyCalendarEvent } from "@/hooks/useDailyCalendarEvents";
-import { useGoogleCalendarSync } from "@/hooks/useGoogleCalendarSync";
 import { parseISO } from "date-fns";
 import { Clock } from "lucide-react";
 
@@ -86,7 +85,6 @@ export default function CalendarEventDialog({
 }: CalendarEventDialogProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { syncCreate, syncUpdate } = useGoogleCalendarSync();
   const isEditing = !!editEvent;
 
   const [title, setTitle] = useState("");
@@ -163,17 +161,6 @@ export default function CalendarEventDialog({
           })
           .eq("id", editEvent!.id);
         if (error) throw error;
-
-        // Sync to Google Calendar (fire-and-forget)
-        syncUpdate(
-          editEvent!.id,
-          editEvent!.google_event_id || null,
-          title.trim(),
-          date,
-          notes.trim() || null,
-          startTimestamp,
-          endTimestamp
-        );
       } else {
         const { data: inserted, error } = await supabase.from("daily_events").insert({
           title: title.trim(),
@@ -187,11 +174,6 @@ export default function CalendarEventDialog({
           source: "local",
         }).select("id").single();
         if (error) throw error;
-
-        // Sync to Google Calendar (fire-and-forget)
-        if (inserted) {
-          syncCreate(inserted.id, title.trim(), date, notes.trim() || null, startTimestamp, endTimestamp);
-        }
       }
     },
     onSuccess: () => {

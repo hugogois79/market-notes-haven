@@ -7,7 +7,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useDailyCalendarEvents, DailyCalendarEvent } from "@/hooks/useDailyCalendarEvents";
 import { useCalendarCategories, CalendarCategory } from "@/hooks/useCalendarCategories";
-import { useGoogleCalendarSync } from "@/hooks/useGoogleCalendarSync";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -111,7 +110,6 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
   const { categories } = useCalendarCategories();
   const [googleCalendarUrl] = useState(getGoogleCalendarUrl);
   const queryClient = useQueryClient();
-  const { syncUpdate, syncDelete } = useGoogleCalendarSync();
 
   // Single dialog state: either creating (with optional start hour) or editing an event
   const [dialogState, setDialogState] = useState<
@@ -145,18 +143,11 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
   // Delete mutation
   const deleteEvent = useMutation({
     mutationFn: async (eventId: string) => {
-      // Find the event to get google_event_id before deleting
-      const eventToDelete = events.find((e) => e.id === eventId);
       const { error } = await supabase
         .from("daily_events")
         .delete()
         .eq("id", eventId);
       if (error) throw error;
-
-      // Sync deletion to Google Calendar (fire-and-forget)
-      if (eventToDelete) {
-        syncDelete(eventId, eventToDelete.google_event_id || null);
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["daily-calendar-events"] });
@@ -222,20 +213,6 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
         })
         .eq("id", eventId);
       if (error) throw error;
-
-      // Sync time change to Google Calendar (fire-and-forget)
-      const movedEvent = events.find((e) => e.id === eventId);
-      if (movedEvent) {
-        syncUpdate(
-          eventId,
-          movedEvent.google_event_id || null,
-          movedEvent.title || null,
-          dateString,
-          movedEvent.notes || null,
-          newStart.toISOString(),
-          newEnd.toISOString()
-        );
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["daily-calendar-events"] });

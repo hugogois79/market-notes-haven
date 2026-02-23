@@ -7,47 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Tool definitions for function calling
-const tools = [
-  {
-    type: "function",
-    function: {
-      name: "create_calendar_events",
-      description: "Cria um ou mais eventos no calendário. Usa esta função quando o utilizador pedir para adicionar, criar ou agendar eventos. Quando o utilizador pedir para criar eventos em múltiplos dias (ex: 'todos os dias de julho', 'de dia 10 a dia 15', 'dia 1, 2, 3 e 4'), DEVES fornecer TODAS as datas no array 'dates'.",
-      parameters: {
-        type: "object",
-        properties: {
-          title: {
-            type: "string",
-            description: "O título/nome do evento (será aplicado a todos os dias)"
-          },
-          dates: {
-            type: "array",
-            items: {
-              type: "string"
-            },
-            description: "Array de datas no formato YYYY-MM-DD. Para múltiplos dias, inclui TODAS as datas. Exemplo: para 'todos os dias de julho 2026', inclui ['2026-07-01', '2026-07-02', ..., '2026-07-31']"
-          },
-          period: {
-            type: "string",
-            enum: ["morning", "afternoon"],
-            description: "O período do dia: 'morning' para manhã, 'afternoon' para tarde"
-          },
-          category: {
-            type: "string",
-            enum: ["legal", "família", "pessoal", "corporate", "work_financeiro", "forecast", "voos", "viagem", "real_estate", "férias"],
-            description: "A categoria do evento"
-          },
-          notes: {
-            type: "string",
-            description: "Notas adicionais sobre o evento (opcional)"
-          }
-        },
-        required: ["title", "dates", "period"]
-      }
-    }
-  }
-];
+// No tools - calendar assistant is read-only (events are only created manually by the user)
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -217,16 +177,11 @@ A tua agenda está cheia na véspera.
 ### ✅ VERIFICAÇÃO DE CONFLITOS
 Antes de sugerir um slot, verifica se está VAZIO nos dados. Não sugiras preparação durante 'Tempo Família' ou dias de custódia salvo urgência absoluta (e avisa se o fizeres).
 
-### 📝 CAPACIDADE DE CRIAR EVENTOS:
-⚠️ **PODES E DEVES CRIAR EVENTOS quando o utilizador pedir!**
-- Se o utilizador disser "adiciona", "cria", "agenda", "marca", "põe", "mete", "sim" (após sugestão) - USA IMEDIATAMENTE a função create_calendar_events.
-- NÃO recuses criar eventos - isso é uma das tuas funções principais!
-- **MÚLTIPLOS DIAS:** Se o utilizador pedir para criar eventos em vários dias, inclui TODAS as datas no array 'dates'.
-- Interpreta datas relativas: "amanhã", "próxima segunda", "dia 25", etc.
-- Se não especificar período, assume "morning" (manhã).
-- DATA ATUAL: ${today}
+### 📝 MODO SOMENTE LEITURA:
+⚠️ **NÃO podes criar, editar ou apagar eventos.** O calendário é gerido exclusivamente pelo utilizador na interface.
+Se o utilizador pedir para criar eventos, responde: "Os eventos só podem ser criados directamente no calendário. Posso ajudar-te a planear ou consultar a tua agenda."
 
-### 📊 REGRAS PARA CONSULTAS (NÃO para criar eventos):
+### 📊 REGRAS PARA CONSULTAS:
 ⚠️ **Ao CONSULTAR eventos:**
 - Só podes falar sobre eventos que estão EXPLICITAMENTE listados abaixo.
 - NUNCA digas que um dia está "livre" ou "sem eventos".
@@ -275,8 +230,6 @@ ${custodyContext}
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages,
-        tools,
-        tool_choice: 'auto',
         temperature: 0.7,
         max_tokens: 2000,
       }),
@@ -291,98 +244,6 @@ ${custodyContext}
     const chatData = await chatResponse.json();
     const message = chatData.choices[0].message;
 
-    // Check if the model wants to call a function
-    if (message.tool_calls && message.tool_calls.length > 0) {
-      const toolCall = message.tool_calls[0];
-      const functionName = toolCall.function.name;
-      const functionArgs = JSON.parse(toolCall.function.arguments);
-
-      console.log('Function call:', functionName, functionArgs);
-
-      if (functionName === 'create_calendar_events') {
-        // Create multiple events
-        const { title, dates, period, category, notes } = functionArgs;
-        
-        // Ensure dates is an array
-        const datesArray = Array.isArray(dates) ? dates : [dates];
-        
-        console.log(`Creating ${datesArray.length} events...`);
-        
-        const eventsToInsert = datesArray.map((date: string) => ({
-          user_id: userId,
-          title,
-          date,
-          period: period || 'morning',
-          category: category || null,
-          notes: notes || null
-        }));
-
-        const { data: newEvents, error: insertError } = await supabase
-          .from('calendar_events')
-          .insert(eventsToInsert)
-          .select();
-
-        if (insertError) {
-          console.error('Error creating events:', insertError);
-          return new Response(
-            JSON.stringify({ 
-              response: `❌ Erro ao criar os eventos: ${insertError.message}`,
-              eventCreated: false
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        console.log(`${newEvents?.length || 0} events created`);
-
-        // Format confirmation message
-        const periodLabel = period === 'afternoon' ? 'Tarde' : 'Manhã';
-        const categoryLabel = getCategoryLabel(category);
-        const eventCount = datesArray.length;
-
-        let confirmationMessage: string;
-        
-        if (eventCount === 1) {
-          const dateFormatted = formatDatePT(datesArray[0]);
-          confirmationMessage = `✅ **Evento criado com sucesso!**
-
-📅 **${title}**
-- 📆 Data: ${dateFormatted}
-- ⏰ Período: ${periodLabel}
-${category ? `- 🏷️ Categoria: ${categoryLabel}` : ''}
-${notes ? `- 📝 Notas: ${notes}` : ''}
-
-O evento foi adicionado ao teu calendário.`;
-        } else {
-          // Multiple events
-          const firstDate = formatDatePT(datesArray[0]);
-          const lastDate = formatDatePT(datesArray[datesArray.length - 1]);
-          
-          confirmationMessage = `✅ **${eventCount} eventos criados com sucesso!**
-
-📅 **${title}**
-- 📆 Datas: De ${firstDate} até ${lastDate}
-- 📊 Total: ${eventCount} dias
-- ⏰ Período: ${periodLabel}
-${category ? `- 🏷️ Categoria: ${categoryLabel}` : ''}
-${notes ? `- 📝 Notas: ${notes}` : ''}
-
-Todos os eventos foram adicionados ao teu calendário.`;
-        }
-
-        return new Response(
-          JSON.stringify({ 
-            response: confirmationMessage,
-            eventCreated: true,
-            eventsCount: eventCount,
-            events: newEvents
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
-    // Regular response (no function call)
     const aiResponse = message.content;
     console.log('Calendar assistant response generated');
 
