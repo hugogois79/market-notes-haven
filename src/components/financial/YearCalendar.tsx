@@ -433,8 +433,19 @@ export default function YearCalendar() {
     return { bgColor: cat.color, textColor };
   };
 
-  // Background color for past dates - neutral light gray
+  // Background color for past dates without events - neutral light gray
   const PAST_DATE_BG = "#f1f5f9";
+
+  // Lighten a hex color by mixing with white (0-1 where 1 = white)
+  const lightenColor = (hex: string, amount: number): string => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const nr = Math.round(r + (255 - r) * amount);
+    const ng = Math.round(g + (255 - g) * amount);
+    const nb = Math.round(b + (255 - b) * amount);
+    return `#${nr.toString(16).padStart(2, '0')}${ng.toString(16).padStart(2, '0')}${nb.toString(16).padStart(2, '0')}`;
+  };
 
   // Check if date is a holiday
   const isHolidayDate = (day: number, month: number, year: number): boolean => {
@@ -1116,9 +1127,9 @@ export default function YearCalendar() {
             ${isValid && morningEvent && !editingMorning ? 'cursor-grab active:cursor-grabbing' : ''}
           `}
           style={{
-            backgroundColor: isPast && isValid 
-              ? PAST_DATE_BG 
-              : (isValid && morningEvent && !editingMorning && morningStyle.bgColor ? morningStyle.bgColor : undefined)
+            backgroundColor: isValid && morningEvent && !editingMorning && morningStyle.bgColor
+              ? (isPast ? lightenColor(morningStyle.bgColor, 0.4) : morningStyle.bgColor)
+              : (isPast && isValid ? PAST_DATE_BG : undefined)
           }}
           draggable={isValid && !!morningEvent && !editingMorning}
           onDragStart={(e) => isValid && handleDragStart(e, day, monthInfo, 'morning')}
@@ -1163,9 +1174,9 @@ export default function YearCalendar() {
             ${isValid && afternoonEvent && !editingAfternoon ? 'cursor-grab active:cursor-grabbing' : ''}
           `}
           style={{
-            backgroundColor: isPast && isValid 
-              ? PAST_DATE_BG 
-              : (isValid && afternoonEvent && !editingAfternoon && afternoonStyle.bgColor ? afternoonStyle.bgColor : undefined)
+            backgroundColor: isValid && afternoonEvent && !editingAfternoon && afternoonStyle.bgColor
+              ? (isPast ? lightenColor(afternoonStyle.bgColor, 0.4) : afternoonStyle.bgColor)
+              : (isPast && isValid ? PAST_DATE_BG : undefined)
           }}
           draggable={isValid && !!afternoonEvent && !editingAfternoon}
           onDragStart={(e) => isValid && handleDragStart(e, day, monthInfo, 'afternoon')}
