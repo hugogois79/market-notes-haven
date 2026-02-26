@@ -74,9 +74,18 @@ export default function LegalPage() {
   const { data: caseFolderMappings = [] } = useQuery({
     queryKey: ["legal-case-folders"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data: userCases } = await supabase
+        .from("legal_cases")
+        .select("id")
+        .eq("user_id", user.id);
+      if (!userCases || userCases.length === 0) return [];
+      const caseIds = userCases.map(c => c.id);
       const { data, error } = await supabase
         .from("legal_case_folders")
-        .select("*");
+        .select("*")
+        .in("case_id", caseIds);
       if (error) throw error;
       return data as { id: string; case_id: string; folder_path: string; label: string | null }[];
     },

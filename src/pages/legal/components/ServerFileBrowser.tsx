@@ -142,7 +142,10 @@ function SingleFolderBrowser({ basePath, label }: { basePath: string; label: str
       {isLoading ? (
         <div className="text-center py-6 text-sm text-muted-foreground">Carregando ficheiros...</div>
       ) : error ? (
-        <div className="text-center py-6 text-sm text-destructive">Erro ao carregar ficheiros</div>
+        <div className="text-center py-4 text-sm text-muted-foreground">
+          <p>Pasta não acessível no servidor.</p>
+          <p className="text-xs mt-1">Verifique se o caminho <code className="bg-muted px-1 rounded">{currentPath}</code> existe no servidor de ficheiros.</p>
+        </div>
       ) : items.length === 0 ? (
         <div className="text-center py-6 text-sm text-muted-foreground">Pasta vazia</div>
       ) : (

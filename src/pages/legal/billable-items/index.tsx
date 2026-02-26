@@ -143,13 +143,16 @@ export default function LegalBillableItemsPage() {
     return urlData.publicUrl;
   };
 
-  // Fetch legal cases
+  // Fetch legal cases (filtered by current user)
   const { data: cases = [] } = useQuery({
     queryKey: ["legal-cases"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
       const { data, error } = await supabase
         .from("legal_cases")
         .select("id, title")
+        .eq("user_id", user.id)
         .order("title");
       if (error) throw error;
       return data as LegalCase[];
