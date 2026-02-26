@@ -12,6 +12,7 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
   const [pendingChanges, setPendingChanges] = useState<Partial<Note>>({});
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingChangesRef = useRef<Partial<Note>>({});
+  const isSavingRef = useRef(false);
 
   // Cleanup timeout on unmount to prevent memory leaks
   useEffect(() => {
@@ -35,7 +36,8 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
     const delay = isAutoSave ? 500 : 100;
     
     saveTimeoutRef.current = setTimeout(async () => {
-      if (isSaving) return;
+      // Use ref to avoid stale closure over isSaving state
+      if (isSavingRef.current) return;
       
       const changesToSave = { ...pendingChangesRef.current };
       pendingChangesRef.current = {};
@@ -44,21 +46,24 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
         return;
       }
       
+      isSavingRef.current = true;
       setIsSaving(true);
       
       try {
+        // Pass through all fields that are explicitly in changesToSave
         const validatedChanges: Partial<Note> = {};
         
-        // Only include fields that are explicitly passed in changes
-        if ('title' in changesToSave) {
-          validatedChanges.title = changesToSave.title;
+        const fieldKeys: (keyof Note)[] = [
+          'title', 'category', 'content', 'summary',
+          'attachment_url', 'project_id', 'tradeInfo', 'hasConclusion'
+        ];
+        
+        for (const key of fieldKeys) {
+          if (key in changesToSave) {
+            (validatedChanges as any)[key] = changesToSave[key];
+          }
         }
-        if ('category' in changesToSave) {
-          validatedChanges.category = changesToSave.category;
-        }
-        if ('content' in changesToSave) {
-          validatedChanges.content = changesToSave.content;
-        }
+        
         if ('tags' in changesToSave) {
           validatedChanges.tags = Array.isArray(changesToSave.tags) ? changesToSave.tags : 
             (changesToSave.tags ? [changesToSave.tags] : []);
@@ -66,21 +71,6 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
         if ('attachments' in changesToSave) {
           validatedChanges.attachments = Array.isArray(changesToSave.attachments) ? changesToSave.attachments : 
             (changesToSave.attachments ? [changesToSave.attachments] : []);
-        }
-        if ('attachment_url' in changesToSave) {
-          validatedChanges.attachment_url = changesToSave.attachment_url;
-        }
-        if ('project_id' in changesToSave) {
-          validatedChanges.project_id = changesToSave.project_id;
-        }
-        if ('summary' in changesToSave) {
-          validatedChanges.summary = changesToSave.summary;
-        }
-        if ('tradeInfo' in changesToSave) {
-          validatedChanges.tradeInfo = changesToSave.tradeInfo;
-        }
-        if ('hasConclusion' in changesToSave) {
-          validatedChanges.hasConclusion = changesToSave.hasConclusion;
         }
         
         await onSave(validatedChanges);
@@ -101,10 +91,11 @@ export const useSaveNote = ({ onSave }: UseSaveNoteProps) => {
         console.error("Error saving note:", error);
         toast.error("Failed to save note");
       } finally {
+        isSavingRef.current = false;
         setIsSaving(false);
       }
     }, delay);
-  }, [onSave, isSaving]);
+  }, [onSave]);
 
   const handleManualSave = async () => {
     if (Object.keys(pendingChanges).length === 0) return;

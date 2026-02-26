@@ -56,13 +56,18 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     pendingChanges,
     handleSaveWithChanges,
     handleManualSave,
-    handleContentChange
+    handleContentChange: rawContentChange
   } = useSaveNote({ 
     onSave: async (updatedFields) => {
       console.log("useNoteMutations: Saving fields to database:", updatedFields);
       return onSave(updatedFields);
     }
   });
+
+  // Wrap content change to always include title and category for safety
+  const handleContentChangeWithContext = (content: string) => {
+    rawContentChange(content);
+  };
 
   // Handler that saves summary immediately along with current local state
   const handleSummaryGeneratedAndSave = (summary: string, conclusion?: boolean) => {
@@ -79,39 +84,28 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
     }, false);
   };
 
-  // Simple title change handler - no auto-save
+  // Title change handler - no auto-save, included in manual save
   const handleTitleChangeOnly = (title: string) => {
-    console.log("useNoteMutations: Title change (no auto-save):", title);
+    console.log("useNoteMutations: Title change (local):", title);
     handleTitleChange(title);
   };
 
-  // Simple category change handler - no auto-save
+  // Category change handler - no auto-save, included in manual save
   const handleCategoryChangeOnly = (category: string) => {
-    console.log("useNoteMutations: Category change (no auto-save):", category);
+    console.log("useNoteMutations: Category change (local):", category);
     handleCategoryChange(category);
   };
 
-  // Enhanced manual save that includes all current state
+  // Enhanced manual save that ALWAYS includes title, category and content
   const handleManualSaveWithCurrentState = async () => {
-    const fieldsToSave: Partial<Note> = {};
+    const fieldsToSave: Partial<Note> = {
+      title: localTitle || currentNote.title || "Untitled Note",
+      category: localCategory || currentNote.category || "General",
+      ...pendingChanges,
+    };
     
-    // Include title if it has changed
-    if (localTitle !== currentNote.title) {
-      fieldsToSave.title = localTitle;
-    }
-    
-    // Include category if it has changed
-    if (localCategory !== currentNote.category) {
-      fieldsToSave.category = localCategory;
-    }
-    
-    // Include any other pending changes
-    Object.assign(fieldsToSave, pendingChanges);
-    
-    if (Object.keys(fieldsToSave).length > 0) {
-      console.log("Manual save with current state:", fieldsToSave);
-      await handleSaveWithChanges(fieldsToSave, false);
-    }
+    console.log("Manual save with current state:", fieldsToSave);
+    await handleSaveWithChanges(fieldsToSave, false);
   };
 
   // Override tags change to save immediately (since tags are usually intentional actions)
@@ -183,7 +177,7 @@ export const useNoteMutations = ({ currentNote, onSave }: UseNoteMutationsProps)
 
     // Handlers - no auto-save for title/category
     handleTitleChange: handleTitleChangeOnly,
-    handleContentChange,
+    handleContentChange: handleContentChangeWithContext,
     handleCategoryChange: handleCategoryChangeOnly,
     handleSummaryGenerated: handleSummaryGeneratedAndSave,
     handleTradeInfoChange,
