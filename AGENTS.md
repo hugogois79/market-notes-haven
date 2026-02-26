@@ -21,6 +21,25 @@ See `package.json` scripts:
 - **Lint**: `npm run lint` (ESLint; pre-existing warnings/errors exist in the codebase)
 - **Preview**: `npm run preview`
 
+### Authentication (2FA/TOTP)
+
+The test account has MFA enabled. To log in programmatically:
+
+1. Secrets needed: `TEST_LOGIN_EMAIL`, `TEST_LOGIN_PASSWORD`, `TEST_LOGIN_OTP_SEED`
+2. Generate a TOTP code (requires `pyotp`: `pip install pyotp`):
+   ```bash
+   python3 << 'PYEOF'
+   import os, pyotp, re
+   seed = os.environ.get('TEST_LOGIN_OTP_SEED', '')
+   cleaned = re.sub(r'[\s\-=]', '', seed).upper()
+   padding = (8 - len(cleaned) % 8) % 8
+   cleaned += '=' * padding
+   totp = pyotp.TOTP(cleaned)
+   print(totp.now())
+   PYEOF
+   ```
+3. Enter email + password at `/auth`, then the 6-digit TOTP code at `/auth/mfa-verify`. Codes expire every 30 seconds — generate right before use.
+
 ### Non-obvious caveats
 
 - The API server (`api-server.mjs`) expects `/root/Robsonway-Research/Legal` to exist. Create it with `sudo mkdir -p /root/Robsonway-Research/Legal && sudo chmod -R 777 /root/Robsonway-Research` before starting.
@@ -29,3 +48,4 @@ See `package.json` scripts:
 - The `.env` file contains Supabase project credentials (anon key) that are committed to the repo.
 - Both `package-lock.json` (npm) and `bun.lockb` (bun) exist; use **npm** as the primary package manager.
 - The Vite dev server listens on `::` (all interfaces) on port 8080.
+- All note queries MUST filter by `user_id` — do not rely solely on Supabase RLS. See commit `35f5ba0e` for the pattern.
