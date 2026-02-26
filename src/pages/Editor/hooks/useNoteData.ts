@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { Note, Tag, Token } from "@/types";
 import { getTokensForNote } from "@/services/tokenService";
@@ -127,34 +127,38 @@ export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
     [allTags]
   );
 
-  // Save note changes
+  // Save note changes - uses ref to always have latest currentNote
+  const currentNoteRef = useRef(currentNote);
+  useEffect(() => {
+    currentNoteRef.current = currentNote;
+  }, [currentNote]);
+
   const handleSave = useCallback(
     async (updatedFields: Partial<Note>) => {
-      if (!currentNote) return;
+      const noteToUpdate = currentNoteRef.current;
+      if (!noteToUpdate) return;
 
       console.log("==== useNoteData handleSave ====");
-      console.log("Current note category:", currentNote.category);
+      console.log("Current note title:", noteToUpdate.title);
       console.log("Updated fields:", updatedFields);
 
       const updatedNote = {
-        ...currentNote,
+        ...noteToUpdate,
         ...updatedFields,
         updatedAt: new Date()
       };
-      
-      console.log("Final note to save category:", updatedNote.category);
 
       try {
         const savedNote = await onSaveNote(updatedNote);
-        console.log("Saved note returned from DB, category:", savedNote?.category);
         if (savedNote) {
           setCurrentNote(savedNote);
+          currentNoteRef.current = savedNote;
         }
       } catch (error) {
         console.error("Error saving note:", error);
       }
     },
-    [currentNote, onSaveNote]
+    [onSaveNote]
   );
 
   return {

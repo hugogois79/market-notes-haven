@@ -56,15 +56,18 @@ export const NotesProvider = ({ children }: NotesProviderProps) => {
           })
         : existingNote?.tags || [];
       
-      // Ensure we preserve title if not explicitly changed
-      const title = note.title || existingNote?.title || "Untitled Note";
+      // Preserve title: use note.title if explicitly provided (even empty string), else keep existing
+      const title = note.title !== undefined && note.title !== null
+        ? (note.title || existingNote?.title || "Untitled Note")
+        : (existingNote?.title || "Untitled Note");
       
       // Ensure attachments is always an array
       const noteWithValidFields = {
         ...existingNote, // Keep existing values
         ...note, // Apply updates
-        title: title, // Ensure title is preserved
+        title, // Ensure title is preserved
         content: note.content !== undefined ? note.content : existingNote?.content || "",
+        category: note.category || existingNote?.category || "General",
         tags: processedTags, // Ensure tags are preserved and processed
         attachments: Array.isArray(note.attachments) ? note.attachments : existingNote?.attachments || [],
         project_id: note.project_id !== undefined ? note.project_id : existingNote?.project_id // Preserve project_id
