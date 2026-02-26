@@ -80,16 +80,22 @@ export const noteToDbNote = (note: Note): Omit<DbNote, 'created_at' | 'updated_a
   project_id: note.project_id || null, // Add project_id field
 });
 
-// Fetch all notes from Supabase
+// Fetch all notes from Supabase (filtered by current user)
 export const fetchNotes = async (): Promise<Note[]> => {
   try {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
 
+    if (!userId) {
+      console.error('User not authenticated');
+      return [];
+    }
+
     // Select specific columns instead of * to avoid fetching the large embedding column
     const { data, error } = await supabase
       .from('notes')
       .select('id, title, content, summary, tags, category, created_at, updated_at, user_id, attachment_url, attachments, trade_info, has_conclusion, project_id, cluster_index')
+      .eq('user_id', userId)
       .order('updated_at', { ascending: false });
 
     if (error) {

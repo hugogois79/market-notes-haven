@@ -69,15 +69,24 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
     "Legal",
   ]);
 
-  // Fetch all unique categories from Supabase
+  // Fetch all unique categories from current user's notes
   const { data: fetchedCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData?.user?.id;
+
+        let query = supabase
           .from('notes')
           .select('category')
           .not('category', 'is', null);
+
+        if (userId) {
+          query = query.eq('user_id', userId);
+        }
+
+        const { data, error } = await query;
         
         if (error) {
           console.error('Error fetching categories:', error);

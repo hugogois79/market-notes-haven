@@ -134,14 +134,23 @@ export const fetchTagsByCategory = async (category: string): Promise<Tag[]> => {
   }
 };
 
-// Get all available categories
+// Get all available categories (filtered by current user)
 export const fetchCategories = async (): Promise<string[]> => {
   try {
-    // Get categories from notes table
-    const { data: noteCategories, error: noteError } = await supabase
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
+    // Get categories from notes table (only from user's own notes)
+    let notesQuery = supabase
       .from('notes')
       .select('category')
       .not('category', 'is', null);
+
+    if (userId) {
+      notesQuery = notesQuery.eq('user_id', userId);
+    }
+
+    const { data: noteCategories, error: noteError } = await notesQuery;
 
     if (noteError) {
       console.error('Error fetching note categories:', noteError);
