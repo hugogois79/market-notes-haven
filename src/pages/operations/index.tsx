@@ -14,7 +14,10 @@ import {
   Search,
   Filter,
   UserPlus,
-  Shield
+  Shield,
+  UserSearch,
+  TrendingUp,
+  Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +29,7 @@ import { toast } from "sonner";
 import StaffDirectory from "@/components/operations/StaffDirectory";
 import DocumentVault from "@/components/operations/DocumentVault";
 import VacationCalendar from "@/components/operations/VacationCalendar";
+import RecruitmentBoard from "@/components/operations/RecruitmentBoard";
 
 type StaffProfile = {
   id: string;
@@ -145,15 +149,15 @@ const OperationsPage = () => {
         <div>
           <h1 className="text-4xl font-bold text-foreground flex items-center gap-3">
             <Shield className="w-10 h-10 text-cyan-500" />
-            Operations Command Center
+            Centro de Operações
           </h1>
           <p className="text-muted-foreground mt-2">
-            Human Capital & Fleet Crew Management
+            Gestão de Recursos Humanos e Recrutamento
           </p>
         </div>
         <Button onClick={() => setActiveTab("staff")}>
           <UserPlus className="w-4 h-4 mr-2" />
-          Add Staff
+          Novo Funcionário
         </Button>
       </div>
 
@@ -199,26 +203,30 @@ const OperationsPage = () => {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-muted/50">
-          <TabsTrigger value="overview">Command Overview</TabsTrigger>
-          <TabsTrigger value="staff">Staff Directory</TabsTrigger>
-          <TabsTrigger value="documents">Document Vault</TabsTrigger>
-          <TabsTrigger value="calendar">Vacation Calendar</TabsTrigger>
+          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+          <TabsTrigger value="staff">Directório</TabsTrigger>
+          <TabsTrigger value="documents">Documentos</TabsTrigger>
+          <TabsTrigger value="calendar">Férias</TabsTrigger>
+          <TabsTrigger value="recruitment" className="flex items-center gap-1.5">
+            <UserSearch className="h-3.5 w-3.5" />
+            Recrutamento
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <Card className="bg-card border-border">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Total Staff
+                  Total Funcionários
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-foreground">{staff.length}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Across all categories
+                  Todas as categorias
                 </p>
               </CardContent>
             </Card>
@@ -226,13 +234,27 @@ const OperationsPage = () => {
             <Card className="bg-card border-border">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-emerald-400">
-                  Active
+                  Activos
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-emerald-400">{activeStaff}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Currently on duty
+                  Em serviço
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-red-400">
+                  Cessados
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-red-400">{statsByStatus["Terminated"] || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Contratos terminados
                 </p>
               </CardContent>
             </Card>
@@ -240,13 +262,13 @@ const OperationsPage = () => {
             <Card className="bg-card border-border">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-amber-400">
-                  On Leave
+                  Em Férias
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-amber-400">{onLeave}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Vacation / Sick leave
+                  Férias / Baixa
                 </p>
               </CardContent>
             </Card>
@@ -254,39 +276,50 @@ const OperationsPage = () => {
             <Card className="bg-card border-border">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-cyan-400">
-                  On Mission
+                  Em Missão
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-cyan-400">{onMission}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Active deployments
+                  Destacamentos activos
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Role Distribution */}
+          {/* Role Distribution + Stats */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-lg">Staff by Category</CardTitle>
+                <CardTitle className="text-lg">Funcionários por Departamento</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {Object.entries(roleIcons).map(([role, icon]) => (
-                    <div key={role} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${roleColors[role]}`}>
-                          {icon}
+                  {Object.entries(roleIcons).map(([role, icon]) => {
+                    const count = statsByRole[role] || 0;
+                    const activeInRole = staff.filter(s => s.role_category === role && s.status === "Active").length;
+                    return (
+                      <div key={role} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${roleColors[role]}`}>
+                            {icon}
+                          </div>
+                          <div>
+                            <span className="font-medium text-foreground">{role}</span>
+                            {count > 0 && (
+                              <span className="text-xs text-muted-foreground ml-2">
+                                ({activeInRole} activos)
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <span className="font-medium text-foreground">{role}</span>
+                        <Badge variant="secondary" className="bg-muted">
+                          {count}
+                        </Badge>
                       </div>
-                      <Badge variant="secondary" className="bg-muted">
-                        {statsByRole[role] || 0}
-                      </Badge>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -296,13 +329,13 @@ const OperationsPage = () => {
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-amber-500" />
-                  Expiring Documents
+                  Documentos a Expirar
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {expiringDocs.length === 0 ? (
                   <p className="text-muted-foreground text-sm">
-                    No documents expiring in the next 30 days
+                    Sem documentos a expirar nos próximos 30 dias
                   </p>
                 ) : (
                   <div className="space-y-3">
@@ -337,7 +370,7 @@ const OperationsPage = () => {
                         className="w-full text-sm"
                         onClick={() => setActiveTab("documents")}
                       >
-                        View all {expiringDocs.length} expiring documents
+                        Ver todos os {expiringDocs.length} documentos a expirar
                       </Button>
                     )}
                   </div>
@@ -345,6 +378,31 @@ const OperationsPage = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Recent Staff by Title */}
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-blue-500" />
+                Distribuição por Função
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(
+                  staff.reduce((acc, s) => {
+                    const title = s.specific_title || "Sem título";
+                    acc[title] = (acc[title] || 0) + 1;
+                    return acc;
+                  }, {} as Record<string, number>)
+                ).sort((a, b) => b[1] - a[1]).map(([title, count]) => (
+                  <Badge key={title} variant="outline" className="text-sm py-1 px-3">
+                    {title} <span className="ml-1 text-muted-foreground">({count})</span>
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Staff Directory Tab */}
@@ -360,6 +418,11 @@ const OperationsPage = () => {
         {/* Vacation Calendar Tab */}
         <TabsContent value="calendar">
           <VacationCalendar />
+        </TabsContent>
+
+        {/* Recruitment Tab */}
+        <TabsContent value="recruitment">
+          <RecruitmentBoard />
         </TabsContent>
       </Tabs>
     </div>
