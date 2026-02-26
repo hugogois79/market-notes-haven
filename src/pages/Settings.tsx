@@ -521,10 +521,19 @@ const Settings = () => {
     setEmbeddingProgress({ current: 0, total: 0 });
     
     try {
-      // Fetch all notes without embeddings
+      // Fetch current user's notes without embeddings
+      const { data: userData } = await supabase.auth.getUser();
+      const currentUserId = userData?.user?.id;
+      if (!currentUserId) {
+        toast.error("Utilizador não autenticado");
+        setIsGeneratingEmbeddings(false);
+        return;
+      }
+
       const { data: notesWithoutEmbeddings, error: fetchError } = await supabase
         .from('notes')
         .select('id, title, content')
+        .eq('user_id', currentUserId)
         .is('embedding', null);
       
       if (fetchError) {

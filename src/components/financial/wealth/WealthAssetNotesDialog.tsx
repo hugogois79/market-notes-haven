@@ -78,15 +78,20 @@ export default function WealthAssetNotesDialog({
     enabled: open,
   });
 
-  // Search notes
+  // Search notes (filtered by current user)
   const { data: searchResults = [], isLoading: loadingSearch } = useQuery({
     queryKey: ["notes-search", searchQuery],
     queryFn: async () => {
       if (!searchQuery.trim()) return [];
       
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      if (!userId) return [];
+
       const { data, error } = await supabase
         .from("notes")
         .select("id, title, content, category, summary, created_at, tags")
+        .eq("user_id", userId)
         .or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%,summary.ilike.%${searchQuery}%`)
         .order("created_at", { ascending: false })
         .limit(20);

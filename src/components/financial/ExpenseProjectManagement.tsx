@@ -109,14 +109,23 @@ export default function ExpenseProjectManagement() {
     },
   });
 
-  // Fetch notes count per project
+  // Fetch notes count per project (filtered by current user)
   const { data: notesCounts } = useQuery({
     queryKey: ["notes-count-by-project"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+
+      let query = supabase
         .from("notes")
         .select("project_id")
         .not("project_id", "is", null);
+
+      if (userId) {
+        query = query.eq("user_id", userId);
+      }
+
+      const { data, error } = await query;
       
       if (error) throw error;
       
