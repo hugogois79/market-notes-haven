@@ -15,7 +15,7 @@ import CardDescriptionEditor from './CardDescriptionEditor';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
-import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download, Plus, Tag, Sparkles, Users, UserPlus, UserMinus, ExternalLink, Shield, Mail, ArchiveRestore, Archive } from 'lucide-react';
+import { Calendar as CalendarIcon, Save, Trash2, Upload, File, X, Loader2, Paperclip, CheckCircle2, MoveRight, Download, Plus, Tag, Sparkles, Users, UserPlus, UserMinus, ExternalLink, Shield, Mail, ArchiveRestore, Archive, MessageSquare } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -27,6 +27,7 @@ import {
 import { toast } from 'sonner';
 import { TaskChecklist, Task } from './TaskChecklist';
 import CardEmailsSection from './CardEmailsSection';
+import CardCommentsSection from './CardCommentsSection';
 import { BoardListSelector } from './BoardListSelector';
 import {
   Collapsible,
@@ -927,13 +928,17 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
           </div>
           </div>{/* end grid Assignado + Supervisor */}
 
-          {/* Tags / Emails tabs */}
+          {/* Tags / Emails / Comments tabs */}
           <Tabs defaultValue="tags" className="w-full">
             <TabsList className="w-auto h-7">
               <TabsTrigger value="tags" className="flex items-center gap-1 px-3 text-xs h-6">
                 <Tag className="h-3 w-3" />
                 Tags
                 {tags.length > 0 && <span className="text-[10px] text-muted-foreground ml-0.5">({tags.length})</span>}
+              </TabsTrigger>
+              <TabsTrigger value="comments" className="flex items-center gap-1 px-3 text-xs h-6">
+                <MessageSquare className="h-3 w-3" />
+                Comentários
               </TabsTrigger>
               <TabsTrigger value="emails" className="flex items-center gap-1 px-3 text-xs h-6">
                 <Mail className="h-3 w-3" />
@@ -977,6 +982,10 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
                   </Button>
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="comments" className="mt-2">
+              {card?.id && <CardCommentsSection cardId={card.id} />}
             </TabsContent>
 
             <TabsContent value="emails" className="mt-2">

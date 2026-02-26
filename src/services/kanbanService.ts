@@ -75,6 +75,14 @@ export interface KanbanAttachment {
   created_at: string;
 }
 
+export interface KanbanComment {
+  id: string;
+  card_id: string;
+  content: string;
+  user_id: string | null;
+  created_at: string | null;
+}
+
 export interface CardEmail {
   id: string;
   card_id: string;
@@ -649,5 +657,56 @@ export class KanbanService {
     if (!data?.signedUrl) throw new Error('Failed to generate signed URL');
     
     return data.signedUrl;
+  }
+
+  // Comment operations
+  static async getComments(cardId: string) {
+    const { data, error } = await supabase
+      .from('kanban_comments')
+      .select('*')
+      .eq('card_id', cardId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data as KanbanComment[];
+  }
+
+  static async addComment(cardId: string, content: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('kanban_comments')
+      .insert([{
+        card_id: cardId,
+        content,
+        user_id: user.id
+      }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as KanbanComment;
+  }
+
+  static async updateComment(id: string, content: string) {
+    const { data, error } = await supabase
+      .from('kanban_comments')
+      .update({ content })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as KanbanComment;
+  }
+
+  static async deleteComment(id: string) {
+    const { error } = await supabase
+      .from('kanban_comments')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
   }
 }
