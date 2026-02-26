@@ -277,9 +277,18 @@ export default function CompaniesPage() {
     queryKey: ["workflow-storage-locations", user?.id ?? "anon"],
     enabled: !authLoading && !!user,
     queryFn: async () => {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) return [];
+      const { data: userCompanies } = await supabase
+        .from("companies")
+        .select("id")
+        .eq("user_id", currentUser.id);
+      const companyIds = (userCompanies || []).map(c => c.id);
+      if (companyIds.length === 0) return [];
       const { data, error } = await supabase
         .from("workflow_storage_locations")
         .select("*")
+        .in("company_id", companyIds)
         .order("company_id", { ascending: true })
         .order("year", { ascending: false })
         .order("month", { ascending: false });
@@ -383,9 +392,14 @@ export default function CompaniesPage() {
     queryKey: ["project-storage-locations", user?.id ?? "anon"],
     enabled: !authLoading && !!user,
     queryFn: async () => {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) return [];
+      const userProjectIds = expenseProjects.map(p => p.id);
+      if (userProjectIds.length === 0) return [];
       const { data, error } = await supabase
         .from("project_storage_locations")
         .select("*")
+        .in("project_id", userProjectIds)
         .order("created_at", { ascending: false });
 
       if (error) throw error;

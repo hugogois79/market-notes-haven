@@ -2300,8 +2300,16 @@ export default function WorkFlowTab() {
   }, [queryClient]);
 
   const filteredFiles = useMemo(() => workflowFiles?.filter(file => {
-    // Search filter
-    const matchesSearch = file.file_name.toLowerCase().includes(searchQuery.toLowerCase());
+    // Search filter — matches file name, vendor, invoice number, notes, category, description
+    const sq = searchQuery.toLowerCase();
+    const matchesSearch = !sq || 
+      file.file_name.toLowerCase().includes(sq) ||
+      (file.vendor_name && file.vendor_name.toLowerCase().includes(sq)) ||
+      (file.invoice_number && file.invoice_number.toLowerCase().includes(sq)) ||
+      (file.notes && file.notes.toLowerCase().includes(sq)) ||
+      (file.category && file.category.toLowerCase().includes(sq)) ||
+      (file.description && file.description.toLowerCase().includes(sq)) ||
+      (file.companies?.name && file.companies.name.toLowerCase().includes(sq));
 
     // Multiple filter conditions (AND logic)
     let matchesAllFilters = true;
@@ -2538,6 +2546,26 @@ export default function WorkFlowTab() {
     }
     setSelectedFiles(new Set());
     toast.success(`Deleted ${selectedFiles.size} files`);
+  };
+
+  const handleBulkStatusChange = async (newStatus: string) => {
+    const ids = Array.from(selectedFiles);
+    for (const id of ids) {
+      await supabase.from("workflow_files").update({ status: newStatus }).eq("id", id);
+    }
+    queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+    setSelectedFiles(new Set());
+    toast.success(`${ids.length} ficheiro(s) atualizados para "${newStatus}"`);
+  };
+
+  const handleBulkCategoryChange = async (newCategory: string) => {
+    const ids = Array.from(selectedFiles);
+    for (const id of ids) {
+      await supabase.from("workflow_files").update({ category: newCategory }).eq("id", id);
+    }
+    queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+    setSelectedFiles(new Set());
+    toast.success(`${ids.length} ficheiro(s) atualizados para categoria "${newCategory}"`);
   };
 
   // Get unique company names from workflow files and transactions for empresa filter
@@ -2961,6 +2989,40 @@ export default function WorkFlowTab() {
         {/* Bulk Actions - shown when files selected */}
         {selectedFiles.size > 0 && (
           <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Status ({selectedFiles.size})
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>Alterar status</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {["draft", "processing", "payment", "claim", "paid"].map(s => (
+                  <DropdownMenuItem key={s} onClick={() => handleBulkStatusChange(s)}>
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <FolderInput className="h-4 w-4" />
+                  Categoria ({selectedFiles.size})
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>Alterar categoria</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {["Compras", "Impostos", "Legal", "Software", "Seguros", "Transportes", "Utilidades", "Refeições", "Consultoria", "Electricidade-Agua", "Serviços"].map(c => (
+                  <DropdownMenuItem key={c} onClick={() => handleBulkCategoryChange(c)}>
+                    {c}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="outline"
               className="gap-2"
@@ -3139,6 +3201,39 @@ export default function WorkFlowTab() {
           />
         </div>
       </div>
+
+      {/* KPI Summary Bar */}
+      {filteredFiles && filteredFiles.length > 0 && (() => {
+        const byStatus: Record<string, { count: number; value: number }> = {};
+        filteredFiles.forEach(f => {
+          const s = f.status || "draft";
+          if (!byStatus[s]) byStatus[s] = { count: 0, value: 0 };
+          byStatus[s].count++;
+          byStatus[s].value += f.total_amount || 0;
+        });
+        const statusColors: Record<string, string> = {
+          draft: "bg-slate-100 text-slate-700",
+          processing: "bg-blue-100 text-blue-700",
+          payment: "bg-amber-100 text-amber-700",
+          claim: "bg-orange-100 text-orange-700",
+          paid: "bg-green-100 text-green-700",
+        };
+        const fmtVal = (v: number) => v > 0 ? new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(v) : "";
+        return (
+          <div className="flex gap-2 flex-wrap">
+            {Object.entries(byStatus).sort((a, b) => {
+              const order = ["draft", "processing", "payment", "claim", "paid"];
+              return order.indexOf(a[0]) - order.indexOf(b[0]);
+            }).map(([status, data]) => (
+              <div key={status} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium ${statusColors[status] || "bg-muted text-muted-foreground"}`}>
+                <span className="capitalize">{status}</span>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-white/60">{data.count}</Badge>
+                {data.value > 0 && <span className="text-[10px] opacity-75">{fmtVal(data.value)}</span>}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Files Table with Drag & Drop */}
       <div
