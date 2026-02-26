@@ -3308,35 +3308,83 @@ export default function WorkFlowTab() {
         </div>
       </div>
 
-      {/* KPI Summary Bar */}
-      {filteredFiles && filteredFiles.length > 0 && (() => {
+      {/* KPI Summary Bar — clickable to filter by status */}
+      {(() => {
+        const allFiles = workflowFiles || [];
+        if (allFiles.length === 0) return null;
         const byStatus: Record<string, { count: number; value: number }> = {};
-        filteredFiles.forEach(f => {
+        allFiles.forEach(f => {
           const s = f.status || "draft";
           if (!byStatus[s]) byStatus[s] = { count: 0, value: 0 };
           byStatus[s].count++;
           byStatus[s].value += f.total_amount || 0;
         });
         const statusColors: Record<string, string> = {
-          draft: "bg-slate-100 text-slate-700",
-          processing: "bg-blue-100 text-blue-700",
-          payment: "bg-amber-100 text-amber-700",
-          claim: "bg-orange-100 text-orange-700",
-          paid: "bg-green-100 text-green-700",
+          draft: "bg-slate-100 text-slate-700 hover:bg-slate-200",
+          processing: "bg-blue-100 text-blue-700 hover:bg-blue-200",
+          payment: "bg-amber-100 text-amber-700 hover:bg-amber-200",
+          claim: "bg-orange-100 text-orange-700 hover:bg-orange-200",
+          paid: "bg-green-100 text-green-700 hover:bg-green-200",
         };
+        const activeStatusColors: Record<string, string> = {
+          draft: "bg-slate-300 text-slate-900 ring-2 ring-slate-400",
+          processing: "bg-blue-300 text-blue-900 ring-2 ring-blue-400",
+          payment: "bg-amber-300 text-amber-900 ring-2 ring-amber-400",
+          claim: "bg-orange-300 text-orange-900 ring-2 ring-orange-400",
+          paid: "bg-green-300 text-green-900 ring-2 ring-green-400",
+        };
+        const currentStatusFilter = activeFilters.find(f => f.column === "status");
+        const isStatusActive = (s: string) => currentStatusFilter?.values.includes(s) ?? false;
         const fmtVal = (v: number) => v > 0 ? new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(v) : "";
+        const toggleStatusFilter = (status: string) => {
+          const existing = activeFilters.find(f => f.column === "status");
+          if (existing) {
+            if (existing.values.includes(status)) {
+              const newValues = existing.values.filter(v => v !== status);
+              if (newValues.length === 0) {
+                removeFilter("status");
+              } else {
+                addOrUpdateFilter("status", newValues, "include");
+              }
+            } else {
+              addOrUpdateFilter("status", [...existing.values, status], "include");
+            }
+          } else {
+            addOrUpdateFilter("status", [status], "include");
+          }
+        };
         return (
           <div className="flex gap-2 flex-wrap">
             {Object.entries(byStatus).sort((a, b) => {
               const order = ["draft", "processing", "payment", "claim", "paid"];
               return order.indexOf(a[0]) - order.indexOf(b[0]);
-            }).map(([status, data]) => (
-              <div key={status} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium ${statusColors[status] || "bg-muted text-muted-foreground"}`}>
-                <span className="capitalize">{status}</span>
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-white/60">{data.count}</Badge>
-                {data.value > 0 && <span className="text-[10px] opacity-75">{fmtVal(data.value)}</span>}
-              </div>
-            ))}
+            }).map(([status, data]) => {
+              const active = isStatusActive(status);
+              return (
+                <button
+                  key={status}
+                  onClick={() => toggleStatusFilter(status)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-all ${
+                    active
+                      ? (activeStatusColors[status] || "bg-muted ring-2 ring-primary")
+                      : (statusColors[status] || "bg-muted text-muted-foreground")
+                  }`}
+                >
+                  <span className="capitalize">{status}</span>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-white/60">{data.count}</Badge>
+                  {data.value > 0 && <span className="text-[10px] opacity-75">{fmtVal(data.value)}</span>}
+                </button>
+              );
+            })}
+            {currentStatusFilter && (
+              <button
+                onClick={() => removeFilter("status")}
+                className="flex items-center gap-1 px-2 py-1.5 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <X className="h-3 w-3" />
+                Limpar
+              </button>
+            )}
           </div>
         );
       })()}
