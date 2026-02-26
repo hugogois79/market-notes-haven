@@ -921,14 +921,14 @@ export type Database = {
           category: string | null
           created_at: string | null
           date: string
-          end_time: string
+          end_time: string | null
           google_event_id: string | null
           id: string
           notes: string | null
           source: string | null
-          start_time: string
+          start_time: string | null
           synced_at: string | null
-          title: string
+          title: string | null
           updated_at: string | null
           user_id: string
         }
@@ -937,14 +937,14 @@ export type Database = {
           category?: string | null
           created_at?: string | null
           date: string
-          end_time: string
+          end_time?: string | null
           google_event_id?: string | null
           id?: string
           notes?: string | null
           source?: string | null
-          start_time: string
+          start_time?: string | null
           synced_at?: string | null
-          title: string
+          title?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -953,14 +953,14 @@ export type Database = {
           category?: string | null
           created_at?: string | null
           date?: string
-          end_time?: string
+          end_time?: string | null
           google_event_id?: string | null
           id?: string
           notes?: string | null
           source?: string | null
-          start_time?: string
+          start_time?: string | null
           synced_at?: string | null
-          title?: string
+          title?: string | null
           updated_at?: string | null
           user_id?: string
         }

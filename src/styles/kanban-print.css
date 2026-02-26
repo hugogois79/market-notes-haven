@@ -29,9 +29,30 @@
     print-color-adjust: exact !important;
   }
 
-  /* Reset backgrounds */
+  /* Reset backgrounds and overflow for print */
   * {
     box-shadow: none !important;
+  }
+
+  /* Force all ancestors of print content to not clip overflow */
+  html, body, #root, #root > div, main, [role="main"],
+  .print-container, .kanban-board-print,
+  .kanban-list-print,
+  .flex.min-h-screen,
+  .flex-1.overflow-auto {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /* Remove fixed positioning that breaks print flow */
+  .fixed {
+    position: static !important;
+  }
+
+  /* Remove margin-right from main when calendar widget is open */
+  main.mr-72 {
+    margin-right: 0 !important;
   }
 
   /* Force print container to start at top */
@@ -41,6 +62,9 @@
     left: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
   }
 
   /* Ensure screen view is completely removed from print flow */
@@ -60,6 +84,7 @@
     align-items: flex-start;
     margin-top: 0 !important;
     padding-top: 0 !important;
+    overflow: visible !important;
   }
 
   /* Print header - Space > Board + Date */
@@ -121,8 +146,8 @@
     border: 1px solid #333;
     border-radius: 3px;
     padding: 0.2cm;
-    /* Allow lists to break across pages when they have many cards */
     background: #f8f8f8 !important;
+    overflow: visible !important;
   }
 
   .kanban-list-title {
@@ -158,6 +183,11 @@
     color: #333 !important;
     margin-bottom: 0.1cm;
     line-height: 1.2;
+    max-height: 1cm;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
   }
 
   .kanban-card-meta {

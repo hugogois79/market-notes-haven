@@ -36,20 +36,38 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 const normalizePaymentMethod = (pm?: string | null): "bank_transfer" | "credit_card" => {
   const v = (pm || "").toLowerCase().trim();
-  if (!v) return "bank_transfer";
+  if (!v) return "credit_card";
 
-  // Handle legacy/ocr values
   if (
     v === "credit_card" ||
     v === "credit card" ||
     v === "card" ||
     v.includes("cartão") ||
-    v.includes("cartao")
+    v.includes("cartao") ||
+    v.includes("mastercard") ||
+    v.includes("visa") ||
+    v.includes("paypal") ||
+    v.includes("revolut") ||
+    v.includes("curve")
   ) {
     return "credit_card";
   }
 
-  return "bank_transfer";
+  if (
+    v === "bank_transfer" ||
+    v === "multibanco" ||
+    v === "mbway" ||
+    v === "mb way" ||
+    v === "debit_card" ||
+    v.includes("transferência") ||
+    v.includes("transferencia") ||
+    v.includes("sepa") ||
+    v.includes("débito")
+  ) {
+    return "bank_transfer";
+  }
+
+  return "credit_card";
 };
 
 interface WorkflowExpensePanelProps {
@@ -72,6 +90,7 @@ interface WorkflowExpensePanelProps {
     subtotal?: number | null;
     currency?: string | null;
     payment_method?: string | null;
+    project_id?: string | null;
     // Inter-company loan detection from AI
     document_type?: string | null;
     lending_company_id?: string | null;
@@ -371,12 +390,21 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         // Pre-fill bank_account_id from vendor_defaults if available
         const defaultBankAccountId = vendorDefaults?.bank_account_id || "";
 
+        // Resolve category: vendor_defaults > file.category (fuzzy match to UUID)
+        let resolvedCategoryId = vendorDefaults?.category_id || "";
+        if (!resolvedCategoryId && file.category && expenseCategories) {
+          const fileCatLower = file.category.toLowerCase();
+          const catMatch = expenseCategories.find(c => c.name.toLowerCase() === fileCatLower)
+            || expenseCategories.find(c => fileCatLower.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(fileCatLower));
+          if (catMatch) resolvedCategoryId = catMatch.id;
+        }
+
         reset({
           date: file.invoice_date || new Date().toISOString().split("T")[0],
           type: inferredType,
           company_id: isInterCompanyLoan ? "" : (file.company_id || ""),
-          project_id: vendorDefaults?.project_id || "",
-          category_id: vendorDefaults?.category_id || "",
+          project_id: vendorDefaults?.project_id || file.project_id || "",
+          category_id: resolvedCategoryId,
           description: ocrDescription,
           entity_name: isInterCompanyLoan ? "" : (file.vendor_name || ""),
           total_amount: file.total_amount?.toString() || "",
@@ -398,7 +426,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         setLocalBankAccountId(defaultBankAccountId);
       }
     }
-  }, [existingTransaction, file, reset, companies, vendorDefaults]);
+  }, [existingTransaction, file, reset, companies, vendorDefaults, expenseCategories]);
 
   const [projectOpen, setProjectOpen] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);

@@ -144,7 +144,7 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
   const deleteEvent = useMutation({
     mutationFn: async (eventId: string) => {
       const { error } = await supabase
-        .from("calendar_events")
+        .from("daily_events")
         .delete()
         .eq("id", eventId);
       if (error) throw error;
@@ -206,7 +206,7 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
         : setMinutes(setHours(eventDate, endH), endM);
 
       const { error } = await supabase
-        .from("calendar_events")
+        .from("daily_events")
         .update({
           start_time: newStart.toISOString(),
           end_time: newEnd.toISOString(),
@@ -216,7 +216,6 @@ export default function DailyCalendarWidget({ onClose }: DailyCalendarWidgetProp
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["daily-calendar-events"] });
-      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
       toast.success("Evento movido");
     },
     onError: () => {

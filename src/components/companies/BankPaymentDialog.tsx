@@ -40,6 +40,7 @@ interface BankPaymentDialogProps {
   vendorName?: string | null;
   totalAmount?: number | null;
   description?: string | null;
+  bankAccountId?: string | null;
   onPaymentSuccess?: () => void;
 }
 
@@ -58,6 +59,7 @@ export default function BankPaymentDialog({
   vendorName,
   totalAmount,
   description,
+  bankAccountId,
   onPaymentSuccess,
 }: BankPaymentDialogProps) {
   const { sendPayment, isSending, result, reset } = useBankPayment();
@@ -196,7 +198,7 @@ export default function BankPaymentDialog({
       // Set initial reference from vendor or description - NEVER from fileName
       setReference(buildPaymentReference(null, vendorName, description));
       setExecutionDate(format(new Date(), "yyyy-MM-dd"));
-      setSourceAccountId("");
+      setSourceAccountId(bankAccountId || "");
       setSearchTerm(vendorName || "");
       setSelectedRecipientId(null);
       setBeneficiaryIban("");
@@ -208,7 +210,7 @@ export default function BankPaymentDialog({
       setSearchTerm("");
       setPopoverOpen(false);
     }
-  }, [open, vendorName, totalAmount, fileName, description, reset]);
+  }, [open, vendorName, totalAmount, fileName, description, bankAccountId, reset]);
 
   // Update reference with OCR data when available (from workflow_files table)
   useEffect(() => {

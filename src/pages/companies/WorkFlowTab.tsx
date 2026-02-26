@@ -162,18 +162,62 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "value", label: "Value", visible: true, isBuiltIn: true },
 ];
 
-// Helper to extract file extension
-const getFileExtension = (fileName: string): string => {
-  const lastDot = fileName.lastIndexOf('.');
-  if (lastDot === -1) return '';
-  return fileName.substring(lastDot + 1).toLowerCase();
+// Valid file extensions (1-5 alphanumeric chars)
+const VALID_EXT_RE = /^[a-z0-9]{1,5}$/;
+
+// Mime-type → extension fallback map
+const MIME_TO_EXT: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'text/plain': 'txt',
+  'text/csv': 'csv',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/zip': 'zip',
 };
 
-// Helper to display file name without extension
+// Helper to extract file extension (validates it's a real extension, not a price like "60.00€")
+const getFileExtension = (fileName: string, mimeType?: string | null, fileUrl?: string | null): string => {
+  // Try extracting from file name
+  const lastDot = fileName.lastIndexOf('.');
+  if (lastDot !== -1) {
+    const ext = fileName.substring(lastDot + 1).toLowerCase().trim();
+    if (VALID_EXT_RE.test(ext)) return ext;
+  }
+  // Fallback: derive from mime_type
+  if (mimeType) {
+    const fromMime = MIME_TO_EXT[mimeType];
+    if (fromMime) return fromMime;
+  }
+  // Fallback: derive from file_url (storage URL always has the real extension)
+  if (fileUrl) {
+    try {
+      const urlPath = new URL(fileUrl).pathname;
+      const urlDot = urlPath.lastIndexOf('.');
+      if (urlDot !== -1) {
+        const urlExt = urlPath.substring(urlDot + 1).toLowerCase().trim();
+        if (VALID_EXT_RE.test(urlExt)) return urlExt;
+      }
+    } catch { /* invalid URL, skip */ }
+  }
+  return '';
+};
+
+// Helper to display file name without extension (also strips description suffixes after dot)
 const getFileNameWithoutExtension = (fileName: string): string => {
   const lastDot = fileName.lastIndexOf('.');
   if (lastDot === -1) return fileName;
-  return fileName.substring(0, lastDot);
+  const ext = fileName.substring(lastDot + 1).toLowerCase().trim();
+  if (VALID_EXT_RE.test(ext)) return fileName.substring(0, lastDot);
+  // Strip malformed suffixes: if name has pattern like "[TAG].description", remove from last dot
+  const beforeDot = fileName.substring(0, lastDot);
+  if (beforeDot.match(/\]\s*$/)) return beforeDot;
+  return fileName;
 };
 
 // Helper to get file type badge color
@@ -376,6 +420,67 @@ export default function WorkFlowTab() {
     contact_name?: string;
   }>({ source: 'manual' });
   const { searchVendorEmail, sendConfirmation, isSending: isSendingConfirmation, isSearching, foundEmails } = useSendPaymentConfirmation();
+
+  // Google Contacts autocomplete for confirmation email
+  const [emailSuggestions, setEmailSuggestions] = useState<Array<{ name: string; email: string; organization?: string; matchedOn: string }>>([]);
+  const [showEmailSuggestions, setShowEmailSuggestions] = useState(false);
+  const [isSearchingAutocomplete, setIsSearchingAutocomplete] = useState(false);
+  const emailDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const emailSuggestionsRef = useRef<HTMLDivElement>(null);
+
+  const searchEmailAutocomplete = useCallback(async (query: string) => {
+    if (query.length < 2) {
+      setEmailSuggestions([]);
+      setShowEmailSuggestions(false);
+      return;
+    }
+    setIsSearchingAutocomplete(true);
+    try {
+      const response = await fetch('https://n8n.gvvcapital.com/webhook/email-autocomplete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, limit: 5 })
+      });
+      if (!response.ok) throw new Error('Erro na comunicação');
+      const data = await response.json();
+      if (data.success && Array.isArray(data.suggestions)) {
+        setEmailSuggestions(data.suggestions);
+        setShowEmailSuggestions(data.suggestions.length > 0);
+      } else {
+        setEmailSuggestions([]);
+        setShowEmailSuggestions(false);
+      }
+    } catch {
+      setEmailSuggestions([]);
+      setShowEmailSuggestions(false);
+    } finally {
+      setIsSearchingAutocomplete(false);
+    }
+  }, []);
+
+  const handleConfirmationEmailChange = useCallback((value: string) => {
+    setConfirmationEmail(value);
+    setSelectedEmailContext({ source: 'manual' });
+    if (emailDebounceRef.current) clearTimeout(emailDebounceRef.current);
+    emailDebounceRef.current = setTimeout(() => searchEmailAutocomplete(value), 300);
+  }, [searchEmailAutocomplete]);
+
+  const handleSelectEmailSuggestion = useCallback((suggestion: { name: string; email: string }) => {
+    setConfirmationEmail(suggestion.email);
+    setSelectedEmailContext({ source: 'manual', contact_name: suggestion.name });
+    setShowEmailSuggestions(false);
+    setEmailSuggestions([]);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (emailSuggestionsRef.current && !emailSuggestionsRef.current.contains(e.target as Node)) {
+        setShowEmailSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Mark as completed state
   const [markCompleteWarningOpen, setMarkCompleteWarningOpen] = useState(false);
@@ -2351,8 +2456,8 @@ export default function WorkFlowTab() {
         bValue = b.file_size || 0;
         break;
       case 'type':
-        aValue = getFileExtension(a.file_name);
-        bValue = getFileExtension(b.file_name);
+        aValue = getFileExtension(a.file_name, a.mime_type, a.file_url);
+        bValue = getFileExtension(b.file_name, b.mime_type, b.file_url);
         break;
       case 'category':
         aValue = a.category || '';
@@ -2870,9 +2975,10 @@ export default function WorkFlowTab() {
           </Button>
         )}
 
-        {/* Preset Filters - Only show if not deleted */}
+        {/* Preset Filters - Only show if not deleted AND no user-saved filter overrides this preset name */}
         {DEFAULT_PRESET_FILTERS
           .filter(filter => !deletedPresetIds.includes(filter.id))
+          .filter(preset => !savedFilters.some(sf => sf.name.toLowerCase() === preset.name.toLowerCase()))
           .map(filter => {
             const conditions = filter.conditions || [];
             const isActive = conditions.length > 0 && conditions.length === activeFilters.length &&
@@ -2917,7 +3023,7 @@ export default function WorkFlowTab() {
             );
           })}
 
-        {/* User Saved Filters - Quick Access Buttons (show all user-saved filters) */}
+        {/* User Saved Filters - Quick Access Buttons (always shown; override preset with same name) */}
         {savedFilters.map(filter => {
             // Check if this saved filter matches current active filters
             const conditions = filter.conditions || [];
@@ -3538,7 +3644,7 @@ export default function WorkFlowTab() {
                       {isColumnVisible("type") && (
                         <td className="px-3 py-1.5 text-center">
                           {(() => {
-                            const ext = getFileExtension(file.file_name);
+                            const ext = getFileExtension(file.file_name, file.mime_type, file.file_url);
                             const style = getFileTypeBadgeStyle(ext);
                             return ext ? (
                               <Badge
@@ -4190,7 +4296,7 @@ export default function WorkFlowTab() {
                               )}
                               <DropdownMenuItem onClick={() => setShowPaymentDialog(true)}>
                                 <CheckCircle2 className="h-4 w-4 mr-2" />
-                                {(existingTransaction as any)?.bank_account_id ? "Alterar Pagamento" : "Pagamento Registado"}
+                                {(existingTransaction as any)?.bank_account_id ? "Registar Pagamento" : "Pagamento Registado"}
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setShowBankPaymentDialog(true)}>
                                 <Landmark className="h-4 w-4 mr-2" />
@@ -4221,7 +4327,6 @@ export default function WorkFlowTab() {
                             onClick={() => {
                               setConfirmationEmail('');
                               setShowConfirmationDialog(true);
-                              // Trigger vendor email search when opening dialog
                               if (previewFile) {
                                 const txVendorName = (existingTransaction as any)?.vendor_name;
                                 const fnParts = previewFile.file_name?.split('(');
@@ -4232,7 +4337,21 @@ export default function WorkFlowTab() {
                                 if (bestVendorName) {
                                   searchVendorEmail(bestVendorName, previewFile.total_amount ?? undefined, previewFile.invoice_date ?? undefined);
                                 }
-                                setSelectedEmailContext({ source: 'manual' });
+                                setSelectedEmailContext({ source: 'manual', contact_name: '' });
+                                // Lookup contact_person from suppliers table
+                                if (bestVendorName) {
+                                  supabase
+                                    .from('suppliers')
+                                    .select('contact_person, email')
+                                    .ilike('name', `%${bestVendorName.split(' ')[0]}%`)
+                                    .not('contact_person', 'is', null)
+                                    .limit(1)
+                                    .then(({ data }) => {
+                                      if (data?.[0]?.contact_person) {
+                                        setSelectedEmailContext(prev => prev.contact_name ? prev : { ...prev, contact_name: data[0].contact_person });
+                                      }
+                                    });
+                                }
                               }
                             }}
                           >
@@ -4263,7 +4382,7 @@ export default function WorkFlowTab() {
                     mime_type: previewFile.mime_type,
                   }}
                   onDownload={() => handleDownload(previewFile)}
-                  editable={previewFile.mime_type === 'application/pdf' || previewFile.file_name?.toLowerCase().endsWith('.pdf')}
+                  editable
                   onSave={(modifiedPdf) => handleSaveModifiedPdf(modifiedPdf, previewFile)}
                 />
               )}
@@ -4301,6 +4420,7 @@ export default function WorkFlowTab() {
                     subtotal: previewFile.subtotal,
                     currency: previewFile.currency,
                     payment_method: previewFile.payment_method,
+                    project_id: previewFile.project_id,
                     // Inter-company loan fields from n8n workflow
                     document_type: previewFile.document_type,
                     lending_company_id: previewFile.lending_company_id,
@@ -4644,6 +4764,7 @@ export default function WorkFlowTab() {
           vendorName={previewFile.vendor_name}
           totalAmount={previewFile.total_amount}
           description={previewFile.notes}
+          bankAccountId={(existingTransaction as any)?.bank_account_id}
           onPaymentSuccess={() => {
             updateFieldMutation.mutate({ id: previewFile.id, field: 'status', value: 'Paid' });
           }}
@@ -4956,13 +5077,24 @@ export default function WorkFlowTab() {
                               )}
                               onClick={() => {
                                 setConfirmationEmail(item.email);
-                                setSelectedEmailContext({
+                                let derivedName = item.name || '';
+                                if (!derivedName || derivedName.includes('@')) {
+                                  const prefix = item.email.split('@')[0] || '';
+                                  derivedName = prefix
+                                    .replace(/[._-]/g, ' ')
+                                    .replace(/\d+/g, '')
+                                    .trim()
+                                    .split(/\s+/)
+                                    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                                    .join(' ');
+                                }
+                                setSelectedEmailContext(prev => ({
                                   source: item.source === 'supabase' ? 'manual' : item.source,
                                   message_id: item.message_id,
                                   thread_id: item.thread_id,
                                   gmail_id: item.gmail_id,
-                                  contact_name: item.name || '',
-                                });
+                                  contact_name: prev.contact_name || derivedName,
+                                }));
                               }}
                             >
                               <div className="flex items-center justify-between">
@@ -5000,17 +5132,58 @@ export default function WorkFlowTab() {
                   ) : !isSearching && (
                     <p className="text-xs text-amber-600">Nenhum email encontrado. Insira manualmente.</p>
                   )}
+                  <div className="relative" ref={emailSuggestionsRef}>
+                    <div className="relative">
+                      <Input
+                        id="confirmation-email"
+                        type="email"
+                        value={confirmationEmail}
+                        onChange={(e) => handleConfirmationEmailChange(e.target.value)}
+                        onFocus={() => { if (emailSuggestions.length > 0) setShowEmailSuggestions(true); }}
+                        placeholder="email@fornecedor.com"
+                        autoComplete="off"
+                      />
+                      {isSearchingAutocomplete && (
+                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                    </div>
+                    {showEmailSuggestions && emailSuggestions.length > 0 && (
+                      <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        {emailSuggestions.map((suggestion, idx) => (
+                          <button
+                            key={`${suggestion.email}-${idx}`}
+                            type="button"
+                            className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b last:border-b-0"
+                            onClick={() => handleSelectEmailSuggestion(suggestion)}
+                          >
+                            <div className="font-medium text-sm">{suggestion.name || suggestion.email}</div>
+                            <div className="text-xs text-muted-foreground">{suggestion.email}</div>
+                            {(suggestion.organization || suggestion.matchedOn) && (
+                              <div className="text-xs text-muted-foreground/70">
+                                {suggestion.organization && <span>{suggestion.organization}</span>}
+                                {suggestion.organization && suggestion.matchedOn && <span> · </span>}
+                                {suggestion.matchedOn && <span>via {suggestion.matchedOn}</span>}
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmation-contact-name">Nome do destinatário</Label>
                   <Input
-                    id="confirmation-email"
-                    type="email"
-                    value={confirmationEmail}
+                    id="confirmation-contact-name"
+                    type="text"
+                    value={selectedEmailContext.contact_name || ''}
                     onChange={(e) => {
-                      setConfirmationEmail(e.target.value);
-                      setSelectedEmailContext({ source: 'manual' });
+                      setSelectedEmailContext(prev => ({ ...prev, contact_name: e.target.value }));
                     }}
-                    placeholder="email@fornecedor.com"
+                    placeholder="Ex: Miguel Ruão"
                     autoComplete="off"
                   />
+                  <p className="text-xs text-muted-foreground">O email será dirigido a este nome (ex: &quot;Exmo(a) Sr(a) Miguel Ruão,&quot;)</p>
                 </div>
                 {selectedEmailContext.source !== 'manual' && (
                   <p className="text-xs text-blue-600 flex items-center gap-1">

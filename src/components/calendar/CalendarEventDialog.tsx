@@ -150,7 +150,7 @@ export default function CalendarEventDialog({
 
       if (isEditing) {
         const { error } = await supabase
-          .from("calendar_events")
+          .from("daily_events")
           .update({
             title: title.trim(),
             start_time: startTimestamp,
@@ -162,7 +162,7 @@ export default function CalendarEventDialog({
           .eq("id", editEvent!.id);
         if (error) throw error;
       } else {
-        const { data: inserted, error } = await supabase.from("calendar_events").insert({
+        const { data: inserted, error } = await supabase.from("daily_events").insert({
           title: title.trim(),
           date,
           start_time: startTimestamp,
@@ -178,7 +178,6 @@ export default function CalendarEventDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["daily-calendar-events"] });
-      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
       toast.success(isEditing ? "Evento actualizado" : "Evento criado");
       onOpenChange(false);
     },
