@@ -128,15 +128,21 @@ export default function LegalContactsPage() {
 
       if (contactsError) throw contactsError;
 
-      // Fetch contact-case relationships from junction table
-      const { data: contactCasesData, error: contactCasesError } = await supabase
-        .from("legal_contact_cases")
-        .select(`
-          contact_id,
-          legal_cases!inner(id, title)
-        `);
+      // Fetch contact-case relationships filtered by user's contacts
+      const contactIds = (contactsData || []).map(c => c.id);
+      let contactCasesData: any[] = [];
+      if (contactIds.length > 0) {
+        const { data, error: contactCasesError } = await supabase
+          .from("legal_contact_cases")
+          .select(`
+            contact_id,
+            legal_cases!inner(id, title)
+          `)
+          .in("contact_id", contactIds);
 
-      if (contactCasesError) throw contactCasesError;
+        if (contactCasesError) throw contactCasesError;
+        contactCasesData = data || [];
+      }
 
       // Build a map of contact_id -> cases
       const contactCasesMap: Record<string, LegalCase[]> = {};
@@ -222,24 +228,30 @@ export default function LegalContactsPage() {
       if (error) throw error;
 
       // Update contact-case relationships
-      // First, delete all existing relationships for this contact
-      await supabase
-        .from("legal_contact_cases")
-        .delete()
-        .eq("contact_id", editingId);
-
-      // Then, insert new relationships
-      if (editValues.caseIds.length > 0) {
-        const relationships = editValues.caseIds.map(caseId => ({
-          contact_id: editingId,
-          case_id: caseId
-        }));
-        
-        const { error: insertError } = await supabase
+      try {
+        await supabase
           .from("legal_contact_cases")
-          .insert(relationships);
-        
-        if (insertError) throw insertError;
+          .delete()
+          .eq("contact_id", editingId);
+
+        if (editValues.caseIds.length > 0) {
+          const relationships = editValues.caseIds.map(caseId => ({
+            contact_id: editingId,
+            case_id: caseId
+          }));
+          
+          const { error: insertError } = await supabase
+            .from("legal_contact_cases")
+            .insert(relationships);
+          
+          if (insertError) {
+            console.error("Error updating contact-case relationships:", insertError);
+            toast.warning("Contacto guardado, mas houve erro ao atualizar processos associados");
+          }
+        }
+      } catch (relError) {
+        console.error("Error in contact-case update:", relError);
+        toast.warning("Contacto guardado, mas houve erro ao atualizar processos associados");
       }
 
       toast.success("Contacto atualizado");

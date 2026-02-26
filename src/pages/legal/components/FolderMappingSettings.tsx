@@ -93,13 +93,19 @@ export function FolderMappingSettings() {
   const { data: mappings = [], isLoading } = useQuery({
     queryKey: ["legal-case-folders"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const userCaseIds = cases.map(c => c.id);
+      if (userCaseIds.length === 0) return [];
       const { data, error } = await supabase
         .from("legal_case_folders")
         .select("*")
+        .in("case_id", userCaseIds)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as CaseFolder[];
     },
+    enabled: cases.length > 0,
   });
 
   const { data: serverFolders = [] } = useQuery({

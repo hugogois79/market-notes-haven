@@ -304,17 +304,27 @@ export function DocumentDialog({
 
         if (error) throw error;
 
-        await supabase
-          .from("legal_document_contacts")
-          .delete()
-          .eq("document_id", document.id);
+        // Update contact relationships atomically
+        try {
+          await supabase
+            .from("legal_document_contacts")
+            .delete()
+            .eq("document_id", document.id);
 
-        if (selectedContactIds.length > 0) {
-          const contactRelations = selectedContactIds.map(contactId => ({
-            document_id: document.id,
-            contact_id: contactId,
-          }));
-          await supabase.from("legal_document_contacts").insert(contactRelations);
+          if (selectedContactIds.length > 0) {
+            const contactRelations = selectedContactIds.map(contactId => ({
+              document_id: document.id,
+              contact_id: contactId,
+            }));
+            const { error: contactError } = await supabase.from("legal_document_contacts").insert(contactRelations);
+            if (contactError) {
+              console.error("Error updating contacts:", contactError);
+              toast.warning("Documento guardado, mas houve erro ao atualizar contactos");
+            }
+          }
+        } catch (contactErr) {
+          console.error("Error in contact update:", contactErr);
+          toast.warning("Documento guardado, mas houve erro ao atualizar contactos");
         }
 
         toast.success("Documento atualizado com sucesso");
