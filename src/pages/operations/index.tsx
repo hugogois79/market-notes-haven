@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+// no router imports needed — all navigation is tab-based
 import { 
   Users, 
   Plane, 
@@ -161,43 +161,43 @@ const OperationsPage = () => {
         </Button>
       </div>
 
-      {/* Quick Links */}
+      {/* Quick Links — switch tabs instead of navigating to non-existent routes */}
       <div className="flex gap-4 mb-6 flex-wrap">
-        <Link to="/operations/staff" className="flex-1 min-w-[200px]">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-cyan-950/30 border border-cyan-800 hover:bg-cyan-950/50 transition-colors cursor-pointer">
-            <Users className="w-5 h-5 text-cyan-500" />
-            <span className="uppercase text-[10px] font-medium text-cyan-500 tracking-wider">
+        <button onClick={() => setActiveTab("staff")} className="flex-1 min-w-[200px] text-left">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-cyan-50 dark:bg-cyan-950/30 border border-cyan-200 dark:border-cyan-800 hover:bg-cyan-100 dark:hover:bg-cyan-950/50 transition-colors cursor-pointer">
+            <Users className="w-5 h-5 text-cyan-600" />
+            <span className="uppercase text-[10px] font-medium text-cyan-600 dark:text-cyan-500 tracking-wider">
               STAFF
             </span>
-            <span className="font-semibold text-foreground">Directory</span>
+            <span className="font-semibold text-foreground">Directório</span>
             <Badge variant="secondary" className="ml-auto bg-muted text-muted-foreground text-xs">
               {staff.length}
             </Badge>
           </div>
-        </Link>
-        <Link to="/operations/documents" className="flex-1 min-w-[200px]">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-purple-950/30 border border-purple-800 hover:bg-purple-950/50 transition-colors cursor-pointer">
-            <FileText className="w-5 h-5 text-purple-500" />
-            <span className="uppercase text-[10px] font-medium text-purple-500 tracking-wider">
+        </button>
+        <button onClick={() => setActiveTab("documents")} className="flex-1 min-w-[200px] text-left">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-950/50 transition-colors cursor-pointer">
+            <FileText className="w-5 h-5 text-purple-600" />
+            <span className="uppercase text-[10px] font-medium text-purple-600 dark:text-purple-500 tracking-wider">
               VAULT
             </span>
-            <span className="font-semibold text-foreground">Documents</span>
+            <span className="font-semibold text-foreground">Documentos</span>
             {expiringDocs.length > 0 && (
               <Badge variant="destructive" className="ml-auto animate-pulse">
                 {expiringDocs.length}
               </Badge>
             )}
           </div>
-        </Link>
-        <Link to="/operations/calendar" className="flex-1 min-w-[200px]">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-950/30 border border-amber-800 hover:bg-amber-950/50 transition-colors cursor-pointer">
-            <Calendar className="w-5 h-5 text-amber-500" />
-            <span className="uppercase text-[10px] font-medium text-amber-500 tracking-wider">
-              SCHEDULE
+        </button>
+        <button onClick={() => setActiveTab("calendar")} className="flex-1 min-w-[200px] text-left">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors cursor-pointer">
+            <Calendar className="w-5 h-5 text-amber-600" />
+            <span className="uppercase text-[10px] font-medium text-amber-600 dark:text-amber-500 tracking-wider">
+              AGENDA
             </span>
-            <span className="font-semibold text-foreground">Vacations</span>
+            <span className="font-semibold text-foreground">Férias</span>
           </div>
-        </Link>
+        </button>
       </div>
 
       {/* Tabs */}
