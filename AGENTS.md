@@ -40,6 +40,21 @@ The test account has MFA enabled. To log in programmatically:
    ```
 3. Enter email + password at `/auth`, then the 6-digit TOTP code at `/auth/mfa-verify`. Codes expire every 30 seconds — generate right before use.
 
+### Production deployment
+
+The app is deployed on a **DigitalOcean droplet** (159.65.68.118), not Lovable. Nginx serves the `dist/` folder directly:
+- Deploy: SSH into server → `cd /mnt/volume_sfo2_01/Robsonway-Research/Workspaces/Code/market-notes-haven-app && git pull origin main && npm run build`
+- Domain: `notes.gvcapital.com`
+- The Lovable preview is separate from production.
+
+### Security — defense-in-depth pattern
+
+All Supabase queries that access user-scoped data MUST filter by `user_id` explicitly, even with RLS enabled. This applies to:
+- Notes (`supabaseService.ts`, `fetchService.ts`, `EditorHeader.tsx`, etc.)
+- Legal module (`legal_case_folders`, `legal_contact_cases`, `legal_document_contacts`)
+- Work module (`workflow_storage_locations`, `project_storage_locations`)
+- Do NOT rely solely on Supabase RLS policies.
+
 ### Non-obvious caveats
 
 - The API server (`api-server.mjs`) expects `/root/Robsonway-Research/Legal` to exist. Create it with `sudo mkdir -p /root/Robsonway-Research/Legal && sudo chmod -R 777 /root/Robsonway-Research` before starting.
@@ -48,4 +63,6 @@ The test account has MFA enabled. To log in programmatically:
 - The `.env` file contains Supabase project credentials (anon key) that are committed to the repo.
 - Both `package-lock.json` (npm) and `bun.lockb` (bun) exist; use **npm** as the primary package manager.
 - The Vite dev server listens on `::` (all interfaces) on port 8080.
-- All note queries MUST filter by `user_id` — do not rely solely on Supabase RLS. See commit `35f5ba0e` for the pattern.
+- The note editor has a complex save flow across multiple hooks (`useNoteMutations`, `useSaveNote`, `useBasicNoteFields`, `useNoteData`). Manual saves MUST always include `title` and `category` in the payload to prevent data loss.
+- The Operations module uses DB enums (`staff_role_category`: Aviation/Maritime/Ground/Office/Household). Map real departments to these via `specific_title`.
+- The Recruitment module uses a standalone `recruitment_candidates` table with its own RLS policy.
