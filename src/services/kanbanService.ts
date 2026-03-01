@@ -542,23 +542,29 @@ export class KanbanService {
   }
 
   static async getSignedDownloadUrl(fileUrl: string, storagePath?: string): Promise<string> {
-    // Use storage_path directly if available (new records)
-    // Otherwise, extract from public URL (legacy records)
+    if (fileUrl && fileUrl.includes('/object/public/')) {
+      return fileUrl;
+    }
+
     let filePath = storagePath;
     
     if (!filePath) {
-      // Fallback: Extract the file path from the public URL
-      // URL format: .../storage/v1/object/public/kanban-attachments/{cardId}/{filename}
       const urlParts = fileUrl.split('/kanban-attachments/');
       if (urlParts.length < 2) {
         throw new Error('Invalid file URL format');
       }
       filePath = decodeURIComponent(urlParts[1]);
     }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('kanban-attachments')
+      .getPublicUrl(filePath);
+
+    if (publicUrl) return publicUrl;
     
     const { data, error } = await supabase.storage
       .from('kanban-attachments')
-      .createSignedUrl(filePath, 3600); // 1 hour expiry
+      .createSignedUrl(filePath, 3600);
     
     if (error) throw error;
     if (!data?.signedUrl) throw new Error('Failed to generate signed URL');

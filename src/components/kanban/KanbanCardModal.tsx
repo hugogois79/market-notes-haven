@@ -244,11 +244,14 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
       if (imageAttachments.length > 0) {
         const urlPromises = imageAttachments.map(async (img) => {
           try {
-            const signedUrl = await KanbanService.getSignedDownloadUrl(img.file_url, (img as any).storage_path);
-            return { id: img.id, url: signedUrl };
+            if (img.file_url && img.file_url.includes('/object/public/')) {
+              return { id: img.id, url: img.file_url };
+            }
+            const url = await KanbanService.getSignedDownloadUrl(img.file_url, (img as any).storage_path);
+            return { id: img.id, url };
           } catch (error) {
             console.error('Error getting thumbnail URL:', error);
-            return { id: img.id, url: '' };
+            return { id: img.id, url: img.file_url || '' };
           }
         });
         
@@ -343,16 +346,23 @@ export const KanbanCardModal: React.FC<KanbanCardModalProps> = ({
 
   const handleOpenAttachment = async (attachment: KanbanAttachment) => {
     try {
-      // The bucket is private, so we need to generate a signed URL
-      const signedUrl = await KanbanService.getSignedDownloadUrl(attachment.file_url, attachment.storage_path);
-      if (signedUrl) {
-        window.open(signedUrl, '_blank');
+      if (attachment.file_url && attachment.file_url.includes('/object/public/')) {
+        window.open(attachment.file_url, '_blank');
+        return;
+      }
+      const url = await KanbanService.getSignedDownloadUrl(attachment.file_url, attachment.storage_path);
+      if (url) {
+        window.open(url, '_blank');
       } else {
         toast.error('Could not open attachment');
       }
     } catch (error) {
       console.error('Error opening attachment:', error);
-      toast.error('Failed to open attachment');
+      if (attachment.file_url) {
+        window.open(attachment.file_url, '_blank');
+      } else {
+        toast.error('Failed to open attachment');
+      }
     }
   };
 
