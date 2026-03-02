@@ -19,6 +19,7 @@ export interface KanbanBoard {
   user_id: string;
   archived: boolean;
   is_shared: boolean;
+  allowed_user_ids?: string[];
   created_at: string;
   updated_at: string;
 }
@@ -142,8 +143,11 @@ export class KanbanService {
     if (error) throw error;
   }
 
-  // Board operations
+  // Board operations — filtered by access (owner, shared, or explicitly allowed)
   static async getBoards(spaceId?: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+
     let query = supabase
       .from('kanban_boards')
       .select('*')
@@ -160,7 +164,15 @@ export class KanbanService {
     const { data, error } = await query;
     
     if (error) throw error;
-    return data as KanbanBoard[];
+
+    // Client-side access filtering
+    if (!userId) return [];
+    return (data as KanbanBoard[]).filter(board => {
+      if (board.user_id === userId) return true;
+      if (board.is_shared) return true;
+      if (board.allowed_user_ids && board.allowed_user_ids.includes(userId)) return true;
+      return false;
+    });
   }
 
   static async createBoard(board: Partial<KanbanBoard>) {
@@ -663,6 +675,19 @@ export class KanbanService {
     if (!data?.signedUrl) throw new Error('Failed to generate signed URL');
     
     return data.signedUrl;
+  }
+
+  // Board sharing operations
+  static async updateBoardAccess(boardId: string, allowedUserIds: string[], isShared: boolean) {
+    const { data, error } = await supabase
+      .from('kanban_boards')
+      .update({ allowed_user_ids: allowedUserIds, is_shared: isShared })
+      .eq('id', boardId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as KanbanBoard;
   }
 
   // Comment operations

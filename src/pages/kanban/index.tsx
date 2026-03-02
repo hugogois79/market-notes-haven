@@ -24,9 +24,10 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Search, Kanban as KanbanIcon, Archive, ArrowLeft, MoreVertical, Pencil, Trash2, ArchiveRestore, Printer, GanttChart } from 'lucide-react';
+import { Plus, Search, Kanban as KanbanIcon, Archive, ArrowLeft, MoreVertical, Pencil, Trash2, ArchiveRestore, Printer, GanttChart, Share2 } from 'lucide-react';
 import { CreateCardModal } from '@/components/kanban/CreateCardModal';
 import KanbanTimeline from '@/components/kanban/KanbanTimeline';
+import BoardShareDialog from '@/components/kanban/BoardShareDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -89,6 +90,7 @@ const KanbanPage = () => {
   const [deletingBoardId, setDeletingBoardId] = useState<string | null>(null);
   const [showArchivedBoards, setShowArchivedBoards] = useState(false);
   const [showArchivedLists, setShowArchivedLists] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [quickAddListId, setQuickAddListId] = useState<string | null>(null);
   const [createCardModalListId, setCreateCardModalListId] = useState<string | null>(null);
   const quickAddInputRef = useRef<HTMLInputElement>(null);
@@ -574,11 +576,22 @@ const KanbanPage = () => {
             Back to Boards
           </Button>
           
-          {/* Board title prominently displayed */}
+          {/* Board title and share */}
           {currentBoard && (
-            <h1 className="text-2xl font-bold text-foreground">
-              {currentBoard.title}
-            </h1>
+            <>
+              <h1 className="text-2xl font-bold text-foreground">
+                {currentBoard.title}
+              </h1>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setShareDialogOpen(true)}
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Partilhar
+              </Button>
+            </>
           )}
 
           {/* View Mode Toggle: Board / Timeline */}
@@ -854,6 +867,16 @@ const KanbanPage = () => {
           isOpen={!!createCardModalListId}
           onClose={() => setCreateCardModalListId(null)}
           onCreate={(data) => handleCreateCardWithDetails(createCardModalListId, data)}
+        />
+      )}
+
+      {/* Board Share Dialog */}
+      {currentBoard && (
+        <BoardShareDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          board={currentBoard}
+          onUpdated={loadData}
         />
       )}
     </div>
