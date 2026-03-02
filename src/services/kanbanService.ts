@@ -145,8 +145,13 @@ export class KanbanService {
 
   // Board operations — filtered by access (owner, shared, or explicitly allowed)
   static async getBoards(spaceId?: string) {
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id;
+    let userId: string | undefined;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id;
+    } catch {
+      userId = undefined;
+    }
 
     let query = supabase
       .from('kanban_boards')
@@ -165,12 +170,14 @@ export class KanbanService {
     
     if (error) throw error;
 
-    // Client-side access filtering
-    if (!userId) return [];
+    if (!userId || !data) return (data || []) as KanbanBoard[];
+
+    // Client-side access filtering — safe null checks
     return (data as KanbanBoard[]).filter(board => {
       if (board.user_id === userId) return true;
       if (board.is_shared) return true;
-      if (board.allowed_user_ids && board.allowed_user_ids.includes(userId)) return true;
+      const allowed = board.allowed_user_ids;
+      if (Array.isArray(allowed) && allowed.includes(userId)) return true;
       return false;
     });
   }

@@ -876,7 +876,7 @@ const KanbanPage = () => {
           open={shareDialogOpen}
           onOpenChange={setShareDialogOpen}
           board={currentBoard}
-          onUpdated={loadData}
+          onUpdated={refetchBoards}
         />
       )}
     </div>
