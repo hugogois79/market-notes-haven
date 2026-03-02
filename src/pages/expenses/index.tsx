@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Plus, Eye, Edit, FileText, ChevronRight, ChevronDown } from "lucide-react";
+import { Plus, Eye, Edit, FileText, ChevronRight, ChevronDown, Search, Download, TrendingUp, Clock, CheckCircle2, Ban, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -24,18 +25,20 @@ import {
 } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ExpenseCard from "@/components/expenses/ExpenseCard";
+import { toast } from "sonner";
 
 const ExpensesPage = () => {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
 
-  // Fetch expense claims with requester info
-  const { data: claims, isLoading } = useQuery({
-    queryKey: ["expense-claims-with-requester", statusFilter],
+  // Fetch ALL claims (filter client-side for search support)
+  const { data: allClaims, isLoading } = useQuery({
+    queryKey: ["expense-claims-with-requester"],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from('expense_claims')
         .select(`
           *,
@@ -45,16 +48,52 @@ const ExpensesPage = () => {
           )
         `)
         .order('claim_date', { ascending: false });
-
-      if (statusFilter !== "all") {
-        query = query.eq('status', statusFilter);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
   });
+
+  // Client-side filtering for status + search
+  const claims = useMemo(() => {
+    if (!allClaims) return [];
+    return allClaims.filter(c => {
+      if (statusFilter !== "all" && c.status !== statusFilter) return false;
+      if (searchQuery) {
+        const sq = searchQuery.toLowerCase();
+        return (
+          c.description?.toLowerCase().includes(sq) ||
+          c.expense_users?.name?.toLowerCase().includes(sq) ||
+          String(c.claim_number).includes(sq) ||
+          String(c.total_amount).includes(sq)
+        );
+      }
+      return true;
+    });
+  }, [allClaims, statusFilter, searchQuery]);
+
+  // Export to CSV
+  const handleExportCSV = () => {
+    if (!claims || claims.length === 0) { toast.error("Sem dados para exportar"); return; }
+    const headers = ["Nº", "Data", "Requisitante", "Tipo", "Descrição", "Total", "Status"];
+    const rows = claims.map(c => [
+      c.claim_number,
+      new Date(c.claim_date).toLocaleDateString("pt-PT"),
+      c.expense_users?.name || "",
+      c.claim_type,
+      (c.description || "").replace(/,/g, ";"),
+      Number(c.total_amount).toFixed(2),
+      c.status,
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `despesas_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV exportado");
+  };
 
   const toggleMonth = (monthKey: string) => {
     setExpandedMonths((prev) => {
@@ -164,36 +203,80 @@ const ExpensesPage = () => {
         )}
       </div>
 
-      {/* Total Pending Card */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base md:text-lg">Total Pendente</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl md:text-3xl font-bold text-primary">
-            {formatCurrency(totalPending)}
-          </p>
-        </CardContent>
-      </Card>
+      {/* KPI Dashboard */}
+      {(() => {
+        const all = allClaims || [];
+        const byStatus = (s: string) => all.filter(c => c.status === s);
+        const sumOf = (arr: any[]) => arr.reduce((s, c) => s + Number(c.total_amount), 0);
+        const kpis = [
+          { label: "Rascunho", status: "rascunho", value: sumOf(byStatus("rascunho")), count: byStatus("rascunho").length, color: "text-gray-500", icon: <FileText className="h-4 w-4" /> },
+          { label: "Submetido", status: "submetido", value: sumOf(byStatus("submetido")), count: byStatus("submetido").length, color: "text-blue-500", icon: <Clock className="h-4 w-4" /> },
+          { label: "Aprovado", status: "aprovado", value: sumOf(byStatus("aprovado")), count: byStatus("aprovado").length, color: "text-green-500", icon: <CheckCircle2 className="h-4 w-4" /> },
+          { label: "Pago", status: "pago", value: sumOf(byStatus("pago")), count: byStatus("pago").length, color: "text-emerald-600", icon: <Wallet className="h-4 w-4" /> },
+          { label: "Rejeitado", status: "rejeitado", value: sumOf(byStatus("rejeitado")), count: byStatus("rejeitado").length, color: "text-red-500", icon: <Ban className="h-4 w-4" /> },
+        ];
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {kpis.map(k => (
+              <Card
+                key={k.status}
+                className={`cursor-pointer transition-all ${statusFilter === k.status ? 'ring-2 ring-primary' : 'hover:shadow-md'}`}
+                onClick={() => setStatusFilter(statusFilter === k.status ? "all" : k.status)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-xs font-medium ${k.color}`}>{k.label}</span>
+                    <span className={k.color}>{k.icon}</span>
+                  </div>
+                  <p className="text-xl font-bold">{formatCurrency(k.value)}</p>
+                  <p className="text-[10px] text-muted-foreground">{k.count} requisição{k.count !== 1 ? 'ões' : ''}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        );
+      })()}
 
-      {/* Filter */}
+      {/* Filters & Search */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <CardTitle className="text-base md:text-lg">Requisições</CardTitle>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filtrar por status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="rascunho">Rascunho</SelectItem>
-                <SelectItem value="submetido">Submetido</SelectItem>
-                <SelectItem value="aprovado">Aprovado</SelectItem>
-                <SelectItem value="pago">Pago</SelectItem>
-                <SelectItem value="rejeitado">Rejeitado</SelectItem>
-              </SelectContent>
-            </Select>
+            <CardTitle className="text-base md:text-lg">
+              Requisições
+              {claims && claims.length > 0 && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  ({claims.length} resultado{claims.length !== 1 ? 's' : ''})
+                </span>
+              )}
+            </CardTitle>
+            <div className="flex gap-2 flex-wrap">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Pesquisar..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 w-[180px] h-9 text-sm"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[140px] h-9">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="rascunho">Rascunho</SelectItem>
+                  <SelectItem value="submetido">Submetido</SelectItem>
+                  <SelectItem value="aprovado">Aprovado</SelectItem>
+                  <SelectItem value="pago">Pago</SelectItem>
+                  <SelectItem value="rejeitado">Rejeitado</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={handleExportCSV}>
+                <Download className="h-3.5 w-3.5" />
+                CSV
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
