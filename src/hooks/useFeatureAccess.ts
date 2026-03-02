@@ -13,6 +13,7 @@ export interface FeaturePermissions {
   tao: boolean;
   operations: boolean;
   boards: boolean;
+  work: boolean;
 }
 
 export const defaultPermissions: FeaturePermissions = {
@@ -26,6 +27,7 @@ export const defaultPermissions: FeaturePermissions = {
   tao: false,
   operations: false,
   boards: false,
+  work: false,
 };
 
 export function useFeatureAccess() {
@@ -72,6 +74,7 @@ export function useFeatureAccess() {
             tao: true,
             operations: true,
             boards: true,
+            work: true,
           });
           setIsRequester(true);
           setLoading(false);

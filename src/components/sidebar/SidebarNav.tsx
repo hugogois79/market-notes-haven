@@ -158,7 +158,7 @@ export const SidebarNav = ({ isExpanded, isMobile, onMobileClose }: SidebarNavPr
       icon: <Building2 size={20} />,
       path: "/companies",
       workerAllowed: false,
-      featureKey: "finance",
+      featureKey: "work",
     },
     {
       title: "Operations",

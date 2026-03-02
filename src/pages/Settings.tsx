@@ -216,7 +216,9 @@ const Settings = () => {
     notes: false,
     tao: false,
     boards: false,
-  };
+    operations: false,
+    work: false,
+  } as FeaturePermissions;
 
   const handleOpenUserDialog = (user?: ExpenseUser) => {
     if (user) {
@@ -1453,37 +1455,80 @@ const Settings = () => {
                 <Shield size={16} />
                 Permissões de Acesso
               </Label>
-              <div className="grid grid-cols-2 gap-2 border rounded-md p-3">
+              <div className="border rounded-md p-3 space-y-3">
                 {[
-                  { key: 'expenses', label: 'Despesas' },
-                  { key: 'receipt_generator', label: 'Gerador Recibos' },
-                  { key: 'calendar', label: 'Calendário' },
-                  { key: 'finance', label: 'Finanças' },
-                  { key: 'legal', label: 'Legal' },
-                  { key: 'projects', label: 'Projetos' },
-                  { key: 'boards', label: 'Boards/Kanban' },
-                  { key: 'notes', label: 'Notas/Dashboard' },
-                  { key: 'tao', label: 'TAO Management' },
-                ].map(({ key, label }) => (
-                  <div key={key} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`perm-${key}`}
-                      checked={userFormData.feature_permissions[key as keyof FeaturePermissions]}
-                      onCheckedChange={(checked) => {
-                        setUserFormData({
-                          ...userFormData,
-                          feature_permissions: {
-                            ...userFormData.feature_permissions,
-                            [key]: !!checked,
-                          },
-                        });
-                      }}
-                    />
-                    <label htmlFor={`perm-${key}`} className="text-sm cursor-pointer">
-                      {label}
-                    </label>
+                  { group: "Conteúdo", items: [
+                    { key: 'notes', label: 'Notas / Dashboard' },
+                    { key: 'boards', label: 'Boards / Kanban' },
+                    { key: 'calendar', label: 'Calendário' },
+                    { key: 'projects', label: 'Projetos' },
+                  ]},
+                  { group: "Financeiro", items: [
+                    { key: 'expenses', label: 'Despesas' },
+                    { key: 'receipt_generator', label: 'Gerador Recibos' },
+                    { key: 'finance', label: 'Finanças / Mercados' },
+                  ]},
+                  { group: "Operações", items: [
+                    { key: 'work', label: 'Work (Ficheiros)' },
+                    { key: 'legal', label: 'Legal' },
+                    { key: 'operations', label: 'Operações / RH' },
+                    { key: 'tao', label: 'TAO Management' },
+                  ]},
+                ].map(({ group, items }) => (
+                  <div key={group}>
+                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5">{group}</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {items.map(({ key, label }) => (
+                        <div key={key} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`perm-${key}`}
+                            checked={(userFormData.feature_permissions as any)[key] || false}
+                            onCheckedChange={(checked) => {
+                              setUserFormData({
+                                ...userFormData,
+                                feature_permissions: {
+                                  ...userFormData.feature_permissions,
+                                  [key]: !!checked,
+                                } as FeaturePermissions,
+                              });
+                            }}
+                          />
+                          <label htmlFor={`perm-${key}`} className="text-sm cursor-pointer">
+                            {label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
+                <div className="pt-2 border-t flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => {
+                      const allTrue: any = {};
+                      ['notes','boards','calendar','projects','expenses','receipt_generator','finance','work','legal','operations','tao'].forEach(k => allTrue[k] = true);
+                      setUserFormData({ ...userFormData, feature_permissions: allTrue as FeaturePermissions });
+                    }}
+                  >
+                    Selecionar Todos
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => {
+                      const allFalse: any = {};
+                      ['notes','boards','calendar','projects','expenses','receipt_generator','finance','work','legal','operations','tao'].forEach(k => allFalse[k] = false);
+                      setUserFormData({ ...userFormData, feature_permissions: allFalse as FeaturePermissions });
+                    }}
+                  >
+                    Desmarcar Todos
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

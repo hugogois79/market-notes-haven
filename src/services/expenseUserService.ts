@@ -10,6 +10,8 @@ export interface FeaturePermissions {
   notes: boolean;
   tao: boolean;
   boards: boolean;
+  operations: boolean;
+  work: boolean;
 }
 
 export interface ExpenseUser {
