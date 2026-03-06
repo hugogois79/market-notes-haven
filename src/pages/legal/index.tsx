@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Upload, Paperclip, ChevronDown, ChevronRight, Users, Briefcase, Pencil, Banknote, FileUp, HardDrive } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Upload, Paperclip, ChevronDown, ChevronRight, Users, Briefcase, Pencil, Banknote, FileUp, HardDrive, Scale, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -320,6 +321,58 @@ export default function LegalPage() {
           </Button>
         </div>
       </div>
+
+      {/* Legal Dashboard KPIs */}
+      {!loading && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-muted-foreground">Casos Ativos</span>
+                <Scale className="h-4 w-4 text-blue-500" />
+              </div>
+              <p className="text-2xl font-bold">{cases.filter(c => c.status === 'Active').length}</p>
+              <p className="text-[10px] text-muted-foreground">{cases.length} total</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-muted-foreground">Documentos</span>
+                <Paperclip className="h-4 w-4 text-purple-500" />
+              </div>
+              <p className="text-2xl font-bold">{documents.length}</p>
+              <p className="text-[10px] text-muted-foreground">em {Object.keys(documents.reduce((a, d) => { a[d.case_id] = true; return a; }, {} as Record<string, boolean>)).length} casos</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-muted-foreground">Contactos</span>
+                <Users className="h-4 w-4 text-cyan-500" />
+              </div>
+              <p className="text-2xl font-bold">{contacts.length}</p>
+              <p className="text-[10px] text-muted-foreground">advogados, testemunhas, partes</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-muted-foreground">Este Mês</span>
+                <Clock className="h-4 w-4 text-amber-500" />
+              </div>
+              <p className="text-2xl font-bold">
+                {documents.filter(d => {
+                  const now = new Date();
+                  const docDate = new Date(d.created_date);
+                  return docDate.getMonth() === now.getMonth() && docDate.getFullYear() === now.getFullYear();
+                }).length}
+              </p>
+              <p className="text-[10px] text-muted-foreground">documentos adicionados</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Separator links for Cases, Contacts and Financeiro */}
       <div className="flex gap-4 mb-4 flex-wrap">

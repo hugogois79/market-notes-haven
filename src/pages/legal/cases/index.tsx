@@ -34,6 +34,12 @@ interface LegalCase {
   priority: string | null;
   description: string | null;
   date_opened: string | null;
+  court_name: string | null;
+  court_case_number: string | null;
+  judge_name: string | null;
+  opposing_counsel: string | null;
+  date_closed: string | null;
+  outcome: string | null;
   created_at: string;
 }
 
@@ -108,6 +114,12 @@ export default function LegalCasesPage() {
     priority: "",
     description: "",
     date_opened: "",
+    court_name: "",
+    court_case_number: "",
+    judge_name: "",
+    opposing_counsel: "",
+    date_closed: "",
+    outcome: "",
   });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -175,6 +187,12 @@ export default function LegalCasesPage() {
       priority: caseItem.priority || "medium",
       description: caseItem.description || "",
       date_opened: formatDateToEU(caseItem.date_opened),
+      court_name: caseItem.court_name || "",
+      court_case_number: caseItem.court_case_number || "",
+      judge_name: caseItem.judge_name || "",
+      opposing_counsel: caseItem.opposing_counsel || "",
+      date_closed: caseItem.date_closed || "",
+      outcome: caseItem.outcome || "",
     });
   };
 
@@ -219,6 +237,12 @@ export default function LegalCasesPage() {
           priority: editValues.priority || null,
           description: editValues.description || null,
           date_opened: parseDate(editValues.date_opened),
+          court_name: editValues.court_name || null,
+          court_case_number: editValues.court_case_number || null,
+          judge_name: editValues.judge_name || null,
+          opposing_counsel: editValues.opposing_counsel || null,
+          date_closed: editValues.date_closed || null,
+          outcome: editValues.outcome || null,
         })
         .eq("id", editingId);
 
