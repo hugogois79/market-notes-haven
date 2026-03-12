@@ -56,6 +56,7 @@ import BankPaymentDialog from "@/components/companies/BankPaymentDialog";
 import { DocumentAIPanel } from "@/components/companies/DocumentAIPanel";
 import SendEmailModal from "@/components/email/SendEmailModal";
 import { useSendPaymentConfirmation } from "@/hooks/useSendPaymentConfirmation";
+import { useFileServerBaseUrl, getWorkFileDownloadUrl } from "@/hooks/useFileServerBaseUrl";
 import { mergeMultiplePdfs } from "@/utils/pdfMerger";
 import { cn } from "@/lib/utils";
 
@@ -381,6 +382,7 @@ export default function WorkFlowTab() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const fileServerBaseUrl = useFileServerBaseUrl();
 
   // Column state - initialize with defaults, will be updated from Supabase
   const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
@@ -913,7 +915,36 @@ export default function WorkFlowTab() {
       const { data, error } = await supabase
         .from("workflow_files")
         .select(`
-          *,
+          id,
+          file_name,
+          file_url,
+          file_size,
+          mime_type,
+          status,
+          notes,
+          priority,
+          created_at,
+          completed_at,
+          category,
+          company_id,
+          project_id,
+          invoice_date,
+          invoice_number,
+          vendor_name,
+          vendor_vat,
+          total_amount,
+          tax_amount,
+          subtotal,
+          currency,
+          payment_method,
+          document_type,
+          lending_company_id,
+          borrowing_company_id,
+          description,
+          confirmation_sent_at,
+          receipt_url,
+          wise_transfer_id,
+          server_path,
           companies:company_id (
             id,
             name
@@ -923,8 +954,8 @@ export default function WorkFlowTab() {
             name
           )
         `)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(500);
 
       if (error) throw error;
       return data as WorkflowFile[];
@@ -952,15 +983,16 @@ export default function WorkFlowTab() {
     }
   }, [workflowFiles, previewFile]);
 
+  // Stable key so same file list doesn't trigger refetch (was causing constant re-runs with new array refs)
+  const workflowFileIdsKey = useMemo(
+    () => (workflowFiles ? [...workflowFiles.map(f => f.id).filter(Boolean)].sort().join(",") : ""),
+    [workflowFiles]
+  );
+
   // Fetch transactions linked to workflow files.
   // Prefer stable ID-based linking (document_file_id), with legacy fallback to invoice_file_url
-  // to support older movements created before we stored document_file_id.
   const { data: linkedTransactions } = useQuery({
-    queryKey: [
-      "workflow-linked-transactions",
-      workflowFiles?.map(f => f.id),
-      workflowFiles?.map(f => f.file_url),
-    ],
+    queryKey: ["workflow-linked-transactions", workflowFileIdsKey],
     queryFn: async () => {
       const fileIds = workflowFiles?.map(f => f.id).filter(Boolean) || [];
       const fileUrls = workflowFiles?.map(f => f.file_url).filter(Boolean) || [];
@@ -1044,10 +1076,8 @@ export default function WorkFlowTab() {
       for (const tx of merged) uniqueById.set(tx.id, tx);
       return Array.from(uniqueById.values());
     },
-    // IMPORTANT: this data is edited in other screens/dialogs, so avoid long caching
-    staleTime: 0,
-    refetchOnMount: "always",
-    refetchOnWindowFocus: true,
+    staleTime: 2 * 60 * 1000, // 2 min cache — reduces repeated batch queries (was 0 + refetchOnMount always)
+    refetchOnWindowFocus: false, // avoid heavy refetch when switching tabs
     enabled: !!workflowFiles && workflowFiles.length > 0,
   });
   type LinkedTx = {
@@ -1548,12 +1578,18 @@ export default function WorkFlowTab() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, { id, field, value }) => {
+      // Optimistic update: when marking as paid, update cache so the file leaves the Processing list immediately
+      if (field === "status" && (value === "paid" || value === "Paid")) {
+        queryClient.setQueryData(["workflow-files"], (old: WorkflowFile[] | undefined) =>
+          old?.map((f) => (f.id === id ? { ...f, status: value } : f)) ?? old
+        );
+      }
       queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
     },
   });
 
-  // Delete mutation
+  // Delete mutation: remove row from DB and refresh list; show error if delete fails (e.g. RLS)
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -1562,10 +1598,18 @@ export default function WorkFlowTab() {
         .eq("id", id);
 
       if (error) throw error;
+      return id;
     },
-    onSuccess: () => {
+    onSuccess: (id) => {
+      // Remove from cache immediately so the list updates without waiting for refetch
+      queryClient.setQueryData(["workflow-files"], (old: WorkflowFile[] | undefined) =>
+        old ? old.filter((f) => f.id !== id) : old
+      );
       queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
-      toast.success("File removed");
+      toast.success("Ficheiro eliminado.");
+    },
+    onError: (error: Error) => {
+      toast.error("Não foi possível eliminar o ficheiro: " + (error.message || "erro desconhecido"));
     },
   });
 
@@ -2135,7 +2179,10 @@ export default function WorkFlowTab() {
 
       if (deleteError) throw deleteError;
 
-      // Invalidate queries
+      // Remove from cache immediately so the list updates without waiting for refetch (fix: "arquivado mas fica na lista")
+      queryClient.setQueryData(["workflow-files"], (old: WorkflowFile[] | undefined) =>
+        old ? old.filter((f) => f.id !== file.id) : old
+      );
       queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
       queryClient.invalidateQueries({ queryKey: ["workflow-linked-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["company-documents"] });
@@ -2319,7 +2366,7 @@ export default function WorkFlowTab() {
 
   const handleDownload = async (file: WorkflowFile) => {
     if (file.server_path) {
-      window.open(`/api/work-files/download?file=${encodeURIComponent(file.server_path)}`, '_blank');
+      window.open(getWorkFileDownloadUrl(file.server_path, fileServerBaseUrl), '_blank');
       return;
     }
     try {
@@ -2349,6 +2396,37 @@ export default function WorkFlowTab() {
       window.open(file.file_url, '_blank');
     }
   };
+
+  // Same logic as handleDownload: get blob for preview (file server or Supabase SDK). Used when fetch fails.
+  const getBlobForPreview = useCallback(async (): Promise<Blob | null> => {
+    if (!previewFile) return null;
+    if (previewFile.server_path) {
+      const url = getWorkFileDownloadUrl(previewFile.server_path, fileServerBaseUrl);
+      const fullUrl = url.startsWith("http") ? url : (typeof window !== "undefined" ? window.location.origin + url : url);
+      try {
+        const res = await fetch(fullUrl);
+        if (!res.ok) return null;
+        return await res.blob();
+      } catch {
+        return null;
+      }
+    }
+    if (!previewFile.file_url?.trim()) return null;
+    try {
+      const url = new URL(previewFile.file_url);
+      const pathParts = url.pathname.split("/storage/v1/object/public/");
+      if (pathParts.length > 1) {
+        const [bucket, ...fileParts] = pathParts[1].split("/");
+        const filePath = fileParts.join("/");
+        const { data, error } = await supabase.storage.from(bucket).download(filePath);
+        if (error || !data) return null;
+        return data;
+      }
+    } catch {
+      /* ignore */
+    }
+    return null;
+  }, [previewFile, fileServerBaseUrl]);
 
   // Handle saving modified PDF (for page manipulation)
   const handleSaveModifiedPdf = useCallback(async (modifiedPdf: Blob, file: WorkflowFile) => {
@@ -2433,7 +2511,11 @@ export default function WorkFlowTab() {
         }
       }
 
-      const isMatch = filter.values.includes(fileValue || '');
+      // Normalize status to lowercase so "Paid"/"paid" etc. are consistent and documents leave Processing view
+      const fileVal = fileValue ?? '';
+      const compareVal = filter.column === 'status' ? fileVal.toLowerCase() : fileVal;
+      const filterVals = filter.column === 'status' ? (filter.values || []).map((v: string) => v.toLowerCase()) : (filter.values || []);
+      const isMatch = filterVals.includes(compareVal);
       const passesFilter = filter.mode === 'include' ? isMatch : !isMatch;
 
       if (!passesFilter) {
@@ -4014,6 +4096,12 @@ export default function WorkFlowTab() {
                               Mark as Paid
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => {
+                              updateFieldMutation.mutate({ id: file.id, field: 'status', value: 'paid' });
+                            }}>
+                              <CheckCircle2 className="h-4 w-4 mr-2 opacity-70" />
+                              Só marcar como pago
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
                               setFileToRename(file);
                               setNewFileName(file.file_name.replace(/\.[^/.]+$/, ''));
                               setRenameDialogOpen(true);
@@ -4046,6 +4134,12 @@ export default function WorkFlowTab() {
                     <ContextMenuItem onClick={() => handleMarkAsComplete(file)}>
                       <CheckCircle2 className="h-4 w-4 mr-2" />
                       Mark as Paid
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => {
+                      updateFieldMutation.mutate({ id: file.id, field: 'status', value: 'paid' });
+                    }}>
+                      <CheckCircle2 className="h-4 w-4 mr-2 opacity-70" />
+                      Só marcar como pago
                     </ContextMenuItem>
                     <ContextMenuItem onClick={() => {
                       setFileToRename(file);
@@ -4106,7 +4200,7 @@ export default function WorkFlowTab() {
                           {selectedFiles.size} selecionado{selectedFiles.size !== 1 ? 's' : ''}
                         </span>
                       ) : (
-                        <span>{filteredFiles?.length || 0} file{(filteredFiles?.length || 0) !== 1 ? 's' : ''}</span>
+                        <span>{filteredFiles?.length || 0} file{(filteredFiles?.length || 0) !== 1 ? 's' : ''}{workflowFiles?.length === 500 ? ' (últimos 500)' : ''}</span>
                       )}
                     </td>
                     {isColumnVisible("type") && <td></td>}
@@ -4518,15 +4612,20 @@ export default function WorkFlowTab() {
             <div className={cn("flex-1 overflow-hidden p-4", (showExpensePanel || showAIPanel) && "border-r")}>
               {previewFile && (
                 <DocumentPreview
-                  key={previewFile.file_url}
+                  key={previewFile.server_path || previewFile.file_url || previewFile.id}
                   document={{
-                    file_url: previewFile.file_url,
+                    file_url: (previewFile.file_url && previewFile.file_url.trim())
+                      ? previewFile.file_url
+                      : previewFile.server_path
+                        ? getWorkFileDownloadUrl(previewFile.server_path, fileServerBaseUrl)
+                        : previewFile.file_url || "",
                     name: previewFile.file_name,
                     mime_type: previewFile.mime_type,
                   }}
                   onDownload={() => handleDownload(previewFile)}
-                  editable
+                  editable={!previewFile.server_path}
                   onSave={(modifiedPdf) => handleSaveModifiedPdf(modifiedPdf, previewFile)}
+                  getBlob={getBlobForPreview}
                 />
               )}
             </div>
@@ -4896,7 +4995,7 @@ export default function WorkFlowTab() {
         />
       )}
 
-      {/* Bank Payment Dialog */}
+      {/* Bank Payment Dialog — use movement's supplier (entity_name) when set, so receipt shows correct supplier */}
       {previewFile && (
         <BankPaymentDialog
           open={showBankPaymentDialog}
@@ -4904,7 +5003,7 @@ export default function WorkFlowTab() {
           documentId={previewFile.id}
           documentUrl={previewFile.file_url}
           fileName={previewFile.file_name}
-          vendorName={previewFile.vendor_name}
+          vendorName={(existingTransaction as any)?.entity_name ?? previewFile.vendor_name}
           totalAmount={previewFile.total_amount}
           description={previewFile.notes}
           bankAccountId={(existingTransaction as any)?.bank_account_id}

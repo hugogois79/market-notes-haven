@@ -1,14 +1,16 @@
 {
   "name": "vite_react_shadcn_ts",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "production": "vite build && vite preview --port 4173 --host",
+    "migrate-files-to-server": "node scripts/migrate-workflow-files-to-server.mjs"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^17.0.0",
