@@ -1,0 +1,8 @@
+-- Insert expense users based on requesters data
+INSERT INTO expense_users (user_id, name, email, assigned_project_ids, is_active) VALUES
+(gen_random_uuid(), 'Carol Curry', 'carolinecurrymail@gmail.com', ARRAY['72b57079-8253-4e1c-88d5-1397b9d772db', 'cc062a82-c57d-44c0-888b-ab16cba9f1cf']::uuid[], true),
+(gen_random_uuid(), 'Hugo Góis', 'sales@robsonway.com', ARRAY['acf9075c-ef5e-45f1-b6f2-fe00bcbd0279', '166a4aeb-f0b6-440b-8fd9-a5dbda84c119', '6bd7f7a4-b88f-4400-9893-089e507b52b2', '72b57079-8253-4e1c-88d5-1397b9d772db', 'cc062a82-c57d-44c0-888b-ab16cba9f1cf', 'c349c731-429c-4468-8ea2-f51fe8d13616', 'f069cbb2-7544-4433-af5d-01408871c4a5', '013c1ee4-1624-49d7-96f9-f7fa9b72b189', 'f19ea8ed-4dcb-47c6-b87b-fa4c0787739b', '64802a50-a700-4c11-bd37-dff5ed96b8ca', '375ebe90-cfff-4fef-b3cf-e321909fad40', '878ebb2b-f63f-412a-b47c-032eb44cb67e', 'ed1c889b-11d0-4029-8c82-41d93a6b1277']::uuid[], true),
+(gen_random_uuid(), 'John Amorim', 'johnamorin@hotmail.com', ARRAY['f069cbb2-7544-4433-af5d-01408871c4a5', '166a4aeb-f0b6-440b-8fd9-a5dbda84c119']::uuid[], true),
+(gen_random_uuid(), 'Magali Algibaia', 'magalialgibaia@gvvcapital.com', ARRAY['6bd7f7a4-b88f-4400-9893-089e507b52b2', '72b57079-8253-4e1c-88d5-1397b9d772db', 'cc062a82-c57d-44c0-888b-ab16cba9f1cf', 'c349c731-429c-4468-8ea2-f51fe8d13616']::uuid[], true),
+(gen_random_uuid(), 'Manuel Zepeda', 'mzmarine90@gmail.com', ARRAY['166a4aeb-f0b6-440b-8fd9-a5dbda84c119']::uuid[], true),
+(gen_random_uuid(), 'Vasco Vieira', 'vascovieira@gvvcapital.com', ARRAY['acf9075c-ef5e-45f1-b6f2-fe00bcbd0279', 'cc062a82-c57d-44c0-888b-ab16cba9f1cf']::uuid[], true);

@@ -1,0 +1,5690 @@
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Upload, Search, Trash2, Download, FileText, X, Plus, ChevronDown, ChevronUp, MoreHorizontal, Edit3, Columns, Filter, Printer, CheckCircle2, AlertTriangle, CreditCard, Bookmark, Save, FolderInput, Sparkles, Mail, Landmark, CalendarDays, Receipt, Send, Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { format } from "date-fns";
+import { Progress } from "@/components/ui/progress";
+import { DocumentPreview } from "@/components/companies/DocumentPreview";
+import { WorkflowExpensePanel } from "@/components/companies/WorkflowExpensePanel";
+import DocumentPaymentDialog from "@/components/companies/DocumentPaymentDialog";
+import BankPaymentDialog from "@/components/companies/BankPaymentDialog";
+import { DocumentAIPanel } from "@/components/companies/DocumentAIPanel";
+import SendEmailModal from "@/components/email/SendEmailModal";
+import { useSendPaymentConfirmation } from "@/hooks/useSendPaymentConfirmation";
+import { useFileServerBaseUrl, getWorkFileDownloadUrl, getWorkFilesUploadUrl, parseSupabaseStorageLooseRef, resolvePublicFileFetchUrl, shouldPreferWorkflowFileUrlOverServer } from "@/hooks/useFileServerBaseUrl";
+import { mergeMultiplePdfs } from "@/utils/pdfMerger";
+import { filterPdfBlob } from "@/utils/pdfBlob";
+import { cn } from "@/lib/utils";
+
+interface WorkflowFile {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_size: number | null;
+  mime_type: string | null;
+  status: string;
+  notes: string | null;
+  priority: string;
+  created_at: string;
+  completed_at: string | null;
+  category?: string | null;
+  company_id?: string | null;
+  companies?: { id: string; name: string } | null;
+  // Project link
+  project_id?: string | null;
+  expense_projects?: { id: string; name: string } | null;
+  // OCR data from n8n
+  invoice_date?: string | null;
+  invoice_number?: string | null;
+  vendor_name?: string | null;
+  vendor_vat?: string | null;
+  total_amount?: number | null;
+  tax_amount?: number | null;
+  subtotal?: number | null;
+  currency?: string | null;
+  payment_method?: string | null;
+  // Inter-company loan detection from AI
+  document_type?: string | null;
+  lending_company_id?: string | null;
+  borrowing_company_id?: string | null;
+  description?: string | null;
+  // Payment confirmation tracking
+  confirmation_sent_at?: string | null;
+  // Wise payment tracking
+  receipt_url?: string | null;
+  wise_transfer_id?: number | null;
+  server_path?: string | null;
+}
+
+interface UploadProgress {
+  fileName: string;
+  progress: number;
+  status: 'uploading' | 'completed' | 'error';
+}
+
+interface ColumnOption {
+  label: string;
+  color: string;
+}
+
+interface ColumnConfig {
+  id: string;
+  label: string;
+  visible: boolean;
+  required?: boolean;
+  dbField?: string;
+  options?: ColumnOption[];
+  isBuiltIn?: boolean;
+}
+
+// Fixed color palette (10 colors)
+const COLOR_PALETTE = [
+  "#22c55e", // green
+  "#3b82f6", // blue
+  "#8b5cf6", // purple
+  "#f59e0b", // amber
+  "#ef4444", // red
+  "#06b6d4", // cyan
+  "#ec4899", // pink
+  "#f97316", // orange
+  "#14b8a6", // teal
+  "#6b7280", // gray
+];
+
+const DEFAULT_CATEGORY_OPTIONS: ColumnOption[] = [
+  { label: "Invoice", color: "#22c55e" },
+  { label: "Contract", color: "#3b82f6" },
+  { label: "Report", color: "#8b5cf6" },
+  { label: "Legal", color: "#ef4444" },
+  { label: "Other", color: "#6b7280" },
+];
+
+const DEFAULT_STATUS_OPTIONS: ColumnOption[] = [
+  { label: "Pending", color: "#f59e0b" },
+  { label: "processing", color: "#3b82f6" },
+  { label: "Payment", color: "#22c55e" },
+  { label: "Claim", color: "#ec4899" },
+  { label: "Paid", color: "#6b7280" },
+];
+
+const DEFAULT_COLUMNS: ColumnConfig[] = [
+  { id: "name", label: "File", visible: true, required: true },
+  { id: "type", label: "Type", visible: true },
+  { id: "date", label: "Date", visible: true },
+  { id: "category", label: "Category", visible: true, dbField: "category", isBuiltIn: true, options: DEFAULT_CATEGORY_OPTIONS },
+  { id: "status", label: "Status", visible: true, dbField: "status", isBuiltIn: true, options: DEFAULT_STATUS_OPTIONS },
+  { id: "size", label: "Size", visible: true },
+  { id: "empresa", label: "Empresa", visible: true, isBuiltIn: true },
+  { id: "project", label: "Project", visible: true, isBuiltIn: true },
+  { id: "value", label: "Value", visible: true, isBuiltIn: true },
+];
+
+// Valid file extensions (1-5 alphanumeric chars)
+const VALID_EXT_RE = /^[a-z0-9]{1,5}$/;
+
+// Mime-type → extension fallback map
+const MIME_TO_EXT: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'text/plain': 'txt',
+  'text/csv': 'csv',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/zip': 'zip',
+};
+
+// Helper to extract file extension (validates it's a real extension, not a price like "60.00€")
+const getFileExtension = (fileName: string, mimeType?: string | null, fileUrl?: string | null): string => {
+  // Try extracting from file name
+  const lastDot = fileName.lastIndexOf('.');
+  if (lastDot !== -1) {
+    const ext = fileName.substring(lastDot + 1).toLowerCase().trim();
+    if (VALID_EXT_RE.test(ext)) return ext;
+  }
+  // Fallback: derive from mime_type
+  if (mimeType) {
+    const fromMime = MIME_TO_EXT[mimeType];
+    if (fromMime) return fromMime;
+  }
+  // Fallback: derive from file_url (storage URL always has the real extension)
+  if (fileUrl) {
+    try {
+      const urlPath = new URL(fileUrl).pathname;
+      const urlDot = urlPath.lastIndexOf('.');
+      if (urlDot !== -1) {
+        const urlExt = urlPath.substring(urlDot + 1).toLowerCase().trim();
+        if (VALID_EXT_RE.test(urlExt)) return urlExt;
+      }
+    } catch { /* invalid URL, skip */ }
+  }
+  return '';
+};
+
+// Helper to display file name without extension (also strips description suffixes after dot)
+const getFileNameWithoutExtension = (fileName: string): string => {
+  const lastDot = fileName.lastIndexOf('.');
+  if (lastDot === -1) return fileName;
+  const ext = fileName.substring(lastDot + 1).toLowerCase().trim();
+  if (VALID_EXT_RE.test(ext)) return fileName.substring(0, lastDot);
+  // Strip malformed suffixes: if name has pattern like "[TAG].description", remove from last dot
+  const beforeDot = fileName.substring(0, lastDot);
+  if (beforeDot.match(/\]\s*$/)) return beforeDot;
+  return fileName;
+};
+
+// Helper to get file type badge color
+const getFileTypeBadgeStyle = (ext: string): { bg: string; text: string } => {
+  const styles: Record<string, { bg: string; text: string }> = {
+    pdf: { bg: "#ef4444", text: "white" },
+    doc: { bg: "#3b82f6", text: "white" },
+    docx: { bg: "#3b82f6", text: "white" },
+    xls: { bg: "#22c55e", text: "white" },
+    xlsx: { bg: "#22c55e", text: "white" },
+    ppt: { bg: "#f97316", text: "white" },
+    pptx: { bg: "#f97316", text: "white" },
+    jpg: { bg: "#8b5cf6", text: "white" },
+    jpeg: { bg: "#8b5cf6", text: "white" },
+    png: { bg: "#8b5cf6", text: "white" },
+    gif: { bg: "#8b5cf6", text: "white" },
+    txt: { bg: "#6b7280", text: "white" },
+    csv: { bg: "#14b8a6", text: "white" },
+    zip: { bg: "#f59e0b", text: "white" },
+    rar: { bg: "#f59e0b", text: "white" },
+  };
+  return styles[ext] || { bg: "#6b7280", text: "white" };
+};
+
+const WORKFLOW_COLUMNS_KEY = "workflow-columns";
+const WORKFLOW_CUSTOM_COLUMNS_KEY = "workflow-custom-columns";
+const WORKFLOW_CUSTOM_DATA_KEY = "workflow-custom-data";
+const WORKFLOW_SORT_KEY = "workflow-sort";
+const TABLE_RELATIONS_KEY = "work-table-relations";
+const WORKFLOW_SAVED_FILTERS_KEY = "workflow-saved-filters";
+
+interface TableRelationsConfig {
+  defaultCompanyId: string | null;
+  autoCreateTransaction: boolean;
+  linkWorkflowToFinance: boolean;
+}
+
+interface SortConfig {
+  column: string;
+  direction: 'asc' | 'desc';
+}
+
+interface FilterCondition {
+  column: string;
+  values: string[];
+  mode: 'include' | 'exclude';
+}
+
+interface SavedFilter {
+  id: string;
+  name: string;
+  conditions: FilterCondition[];
+  isPreset?: boolean; // Preset filters cannot be deleted
+}
+
+// Default preset filters that are always available
+const DEFAULT_PRESET_FILTERS: SavedFilter[] = [
+  { id: "preset-pa", name: "PA", conditions: [{ column: "category", values: ["PA"], mode: "include" }], isPreset: true },
+  { id: "preset-payment", name: "Payment", conditions: [{ column: "status", values: ["Payment"], mode: "include" }], isPreset: true },
+  { id: "preset-claim", name: "Claim", conditions: [{ column: "status", values: ["Claim"], mode: "include" }], isPreset: true },
+  { id: "preset-work", name: "Work", conditions: [{ column: "category", values: ["Work"], mode: "include" }], isPreset: true },
+];
+
+// Sanitize filename to remove special characters
+const sanitizeFileName = (fileName: string): string => {
+  const lastDot = fileName.lastIndexOf('.');
+  const ext = lastDot !== -1 ? fileName.substring(lastDot) : '';
+  const nameWithoutExt = lastDot !== -1 ? fileName.substring(0, lastDot) : fileName;
+
+  const sanitized = nameWithoutExt
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9-_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+
+  return sanitized + ext;
+};
+
+export default function WorkFlowTab() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [activeFilters, setActiveFilters] = useState<FilterCondition[]>([]);
+
+  // Keyboard navigation - focused file row
+  const [focusedFileId, setFocusedFileId] = useState<string | null>(null);
+  const [openMenuFileId, setOpenMenuFileId] = useState<string | null>(null);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  // Refs for action buttons (to scroll into view when pressing E)
+  const actionBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  // Resizable column widths
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem("workflow-column-widths");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return { name: 400 };
+      }
+    }
+    return { name: 400 };
+  });
+  const [resizingColumn, setResizingColumn] = useState<string | null>(null);
+  const resizeStartX = useRef<number>(0);
+  const resizeStartWidth = useRef<number>(400);
+  // Current filter being edited
+  const [currentFilterColumn, setCurrentFilterColumn] = useState<string>("");
+
+  // Saved filters state - now loaded from Supabase
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
+
+  // Query to fetch saved filters from Supabase
+  const { data: supabaseSavedFilters, refetch: refetchSavedFilters } = useQuery({
+    queryKey: ["user-saved-filters", "workflow"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from("user_saved_filters")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("filter_type", "workflow")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("[WorkFlowTab] Error loading saved filters:", error);
+        return [];
+      }
+
+      // Map to SavedFilter format
+      return data.map((f: any) => ({
+        id: f.id,
+        name: f.name,
+        conditions: f.conditions || []
+      })) as SavedFilter[];
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+  });
+
+  // Sync Supabase filters to local state
+  useEffect(() => {
+    if (supabaseSavedFilters) {
+      setSavedFilters(supabaseSavedFilters);
+    }
+  }, [supabaseSavedFilters]);
+
+  // Track deleted preset filter IDs
+  const [deletedPresetIds, setDeletedPresetIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem("workflow-deleted-preset-filters");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [saveFilterDialogOpen, setSaveFilterDialogOpen] = useState(false);
+  const [newFilterName, setNewFilterName] = useState("");
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
+  const fileServerBaseUrl = useFileServerBaseUrl();
+
+  /**
+   * URL mostrada / fallback no DocumentPreview: disco primeiro (mais fiável),
+   * depois Supabase (`file_url`, `receipt_url`), por último URLs brutas (ex. links externos).
+   */
+  const resolveWorkflowFileUrlForPreview = useCallback(
+    (file: WorkflowFile | null | undefined): string => {
+      if (!file) return "";
+      if (file.server_path) {
+        return getWorkFileDownloadUrl(file.server_path, fileServerBaseUrl);
+      }
+      const fu = file.file_url?.trim() || "";
+      if (shouldPreferWorkflowFileUrlOverServer(fu)) return fu;
+      const ru = file.receipt_url?.trim() || "";
+      if (shouldPreferWorkflowFileUrlOverServer(ru)) return ru;
+      if (fu) return fu;
+      if (ru) return ru;
+      return "";
+    },
+    [fileServerBaseUrl]
+  );
+
+  // Column state - initialize with defaults, will be updated from Supabase
+  const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
+  const [columnsInitialized, setColumnsInitialized] = useState(false);
+
+  const [customColumns, setCustomColumns] = useState<ColumnConfig[]>(() => {
+    const saved = localStorage.getItem(WORKFLOW_CUSTOM_COLUMNS_KEY);
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [customData, setCustomData] = useState<Record<string, Record<string, string>>>(() => {
+    const saved = localStorage.getItem(WORKFLOW_CUSTOM_DATA_KEY);
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
+    const saved = localStorage.getItem(WORKFLOW_SORT_KEY);
+    return saved ? JSON.parse(saved) : { column: 'date', direction: 'desc' };
+  });
+
+  // Document preview state
+  const [previewFile, setPreviewFile] = useState<WorkflowFile | null>(null);
+  const [showExpensePanel, setShowExpensePanel] = useState(false);
+  const openFilePreview = useCallback((file: WorkflowFile) => {
+    if (showExpensePanel) {
+      toast.warning("Feche o painel 'Novo Movimento' antes de abrir outro ficheiro");
+      return;
+    }
+    setFocusedFileId(file.id);
+    setPreviewFile(file);
+  }, [showExpensePanel]);
+  const [showAIPanel, setShowAIPanel] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showBankPaymentDialog, setShowBankPaymentDialog] = useState(false);
+  const [isMergingReceipt, setIsMergingReceipt] = useState(false);
+  const [showSendEmailModal, setShowSendEmailModal] = useState(false);
+  const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
+  const [confirmationEmail, setConfirmationEmail] = useState('');
+  const [selectedEmailContext, setSelectedEmailContext] = useState<{
+    source: 'agentmail' | 'gmail' | 'manual';
+    message_id?: string;
+    thread_id?: string;
+    gmail_id?: string;
+    contact_name?: string;
+  }>({ source: 'manual' });
+  const { searchVendorEmail, sendConfirmation, isSending: isSendingConfirmation, isSearching, foundEmails } = useSendPaymentConfirmation();
+
+  // Google Contacts autocomplete for confirmation email
+  const [emailSuggestions, setEmailSuggestions] = useState<Array<{ name: string; email: string; organization?: string; matchedOn: string }>>([]);
+  const [showEmailSuggestions, setShowEmailSuggestions] = useState(false);
+  const [isSearchingAutocomplete, setIsSearchingAutocomplete] = useState(false);
+  const emailDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const emailSuggestionsRef = useRef<HTMLDivElement>(null);
+
+  const searchEmailAutocomplete = useCallback(async (query: string) => {
+    if (query.length < 2) {
+      setEmailSuggestions([]);
+      setShowEmailSuggestions(false);
+      return;
+    }
+    setIsSearchingAutocomplete(true);
+    try {
+      const response = await fetch('https://n8n.gvvcapital.com/webhook/email-autocomplete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, limit: 5 })
+      });
+      if (!response.ok) throw new Error('Erro na comunicação');
+      const data = await response.json();
+      if (data.success && Array.isArray(data.suggestions)) {
+        setEmailSuggestions(data.suggestions);
+        setShowEmailSuggestions(data.suggestions.length > 0);
+      } else {
+        setEmailSuggestions([]);
+        setShowEmailSuggestions(false);
+      }
+    } catch {
+      setEmailSuggestions([]);
+      setShowEmailSuggestions(false);
+    } finally {
+      setIsSearchingAutocomplete(false);
+    }
+  }, []);
+
+  const handleConfirmationEmailChange = useCallback((value: string) => {
+    setConfirmationEmail(value);
+    setSelectedEmailContext({ source: 'manual' });
+    if (emailDebounceRef.current) clearTimeout(emailDebounceRef.current);
+    emailDebounceRef.current = setTimeout(() => searchEmailAutocomplete(value), 300);
+  }, [searchEmailAutocomplete]);
+
+  const handleSelectEmailSuggestion = useCallback((suggestion: { name: string; email: string }) => {
+    setConfirmationEmail(suggestion.email);
+    setSelectedEmailContext({ source: 'manual', contact_name: suggestion.name });
+    setShowEmailSuggestions(false);
+    setEmailSuggestions([]);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (emailSuggestionsRef.current && !emailSuggestionsRef.current.contains(e.target as Node)) {
+        setShowEmailSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Mark as completed state
+  const [markCompleteWarningOpen, setMarkCompleteWarningOpen] = useState(false);
+  const [fileToComplete, setFileToComplete] = useState<WorkflowFile | null>(null);
+  const [missingStorageCompanyName, setMissingStorageCompanyName] = useState<string | null>(null);
+  const [isCompleting, setIsCompleting] = useState(false);
+
+  // Move file to folder state
+  const [moveFileDialogOpen, setMoveFileDialogOpen] = useState(false);
+  const [fileToMove, setFileToMove] = useState<WorkflowFile | null>(null);
+  const [moveForm, setMoveForm] = useState<{
+    company_id: string;
+    folder_id: string | null;
+    folder_path: string;
+  }>({ company_id: "", folder_id: null, folder_path: "" });
+
+  // Rename file state
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [fileToRename, setFileToRename] = useState<WorkflowFile | null>(null);
+  const [newFileName, setNewFileName] = useState("");
+
+  // Skip payment confirmation state
+  const [showSkipPaymentConfirmation, setShowSkipPaymentConfirmation] = useState(false);
+  const [fileToSkipPayment, setFileToSkipPayment] = useState<WorkflowFile | null>(null);
+  const [skipPaymentDestination, setSkipPaymentDestination] = useState<{
+    companyName: string;
+    folderPath: string;
+    isLoan: boolean;
+    loanInfo?: {
+      lendingCompanyName: string;
+      lendingFolderPath: string;
+      borrowingCompanyName: string;
+      borrowingFolderPath: string;
+      amount: number;
+      loanDate: string;
+    };
+  } | null>(null);
+
+  // Complete confirmation dialog state (shows where document will be saved and what loan will be created)
+  const [showCompleteConfirmation, setShowCompleteConfirmation] = useState(false);
+  const [completeConfirmationData, setCompleteConfirmationData] = useState<{
+    file: WorkflowFile;
+    storageLocation: any;
+    settings: any;
+    paymentAccountStorageLocation: any | null;
+    destinationCompanies: { id: string; name: string; role: string; folderPath?: string }[];
+    loanInfo: {
+      lendingCompany: string;
+      borrowingCompany: string;
+      amount: number;
+    } | null;
+  } | null>(null);
+
+  // Query existing transaction for current file using document_file_id
+  // Also check for loans linked via file_url in company_documents
+  const { data: existingTransaction, isLoading: isLoadingTransaction } = useQuery({
+    queryKey: ["file-transaction", previewFile?.id, previewFile?.file_url],
+    queryFn: async () => {
+      if (!previewFile?.id && !previewFile?.file_url) return null;
+
+      // First try to find a financial_transaction by document_file_id
+      if (previewFile?.id) {
+        const { data: transactionData, error: transactionError } = await supabase
+          .from("financial_transactions")
+          .select("*")
+          .eq("document_file_id", previewFile.id)
+          .maybeSingle();
+
+        if (transactionError) throw transactionError;
+        if (transactionData) return transactionData;
+      }
+
+      // Fallback: try to find by invoice_file_url
+      if (previewFile?.file_url) {
+        const { data: transactionByUrl, error: urlError } = await supabase
+          .from("financial_transactions")
+          .select("*")
+          .eq("invoice_file_url", previewFile.file_url)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (urlError) throw urlError;
+        if (transactionByUrl) {
+          // Auto-relink: if found by URL but missing document_file_id, update it
+          if (previewFile?.id && !transactionByUrl.document_file_id) {
+            await supabase
+              .from("financial_transactions")
+              .update({ document_file_id: previewFile.id })
+              .eq("id", transactionByUrl.id);
+          }
+          return transactionByUrl;
+        }
+      }
+
+      // If no financial_transaction, check for loan via source_file_id
+      if (previewFile?.id) {
+        const { data: loanData, error: loanError } = await supabase
+          .from("company_loans")
+          .select("*")
+          .eq("source_file_id", previewFile.id)
+          .maybeSingle();
+
+        if (loanError) throw loanError;
+        if (loanData) {
+          // Return loan data in a format compatible with WorkflowExpensePanel
+          return {
+            id: loanData.id,
+            type: "loan",
+            date: loanData.start_date,
+            lending_company_id: loanData.lending_company_id,
+            borrowing_company_id: loanData.borrowing_company_id,
+            total_amount: loanData.amount,
+            interest_rate: loanData.interest_rate,
+            monthly_payment: loanData.monthly_payment,
+            end_date: loanData.end_date,
+            loan_status: loanData.status,
+            description: loanData.description,
+            notes: loanData.description,
+            // Mark as loan type for proper form handling
+            _isLoan: true,
+          };
+        }
+      }
+
+      // Check for document in company_documents by file_url
+      if (previewFile?.file_url) {
+        const { data: docData, error: docError } = await supabase
+          .from("company_documents")
+          .select("*")
+          .eq("file_url", previewFile.file_url)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (docError) throw docError;
+        if (docData) {
+          // Return document data in a format compatible with WorkflowExpensePanel
+          return {
+            id: docData.id,
+            date: docData.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
+            type: "document",
+            company_id: docData.company_id,
+            target_folder_id: docData.folder_id,
+            notes: docData.notes,
+            description: docData.name,
+            _isDocument: true,
+          };
+        }
+      }
+
+      return null;
+    },
+    enabled: !!(previewFile?.id || previewFile?.file_url),
+    staleTime: 0, // Always refetch when file changes
+  });
+
+  // Fetch bank account name for the payment badge display
+  const paymentBankAccountId = (existingTransaction as any)?.bank_account_id;
+  const { data: paymentBankAccount } = useQuery({
+    queryKey: ["payment-bank-account", paymentBankAccountId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("bank_accounts")
+        .select("account_name, account_type, companies(name)")
+        .eq("id", paymentBankAccountId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!paymentBankAccountId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Column management dialogs
+  const [addColumnDialogOpen, setAddColumnDialogOpen] = useState(false);
+  const [newColumnName, setNewColumnName] = useState("");
+  const [newColumnOptions, setNewColumnOptions] = useState<ColumnOption[]>([]);
+  const [editColumnDialogOpen, setEditColumnDialogOpen] = useState(false);
+  const [editingColumn, setEditingColumn] = useState<ColumnConfig | null>(null);
+
+  // Fetch column config from Supabase
+  const { data: columnConfig } = useQuery({
+    queryKey: ["workflow-column-config"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from("workflow_column_config")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+  });
+
+  // Apply column config from Supabase when loaded
+  useEffect(() => {
+    if (columnConfig && !columnsInitialized) {
+      const statusOptionsMigrated: ColumnOption[] | null = null;
+      setColumns(prevColumns => {
+        return prevColumns.map(col => {
+          const savedConfig = columnConfig.find(c => c.column_id === col.id);
+          if (savedConfig && savedConfig.options) {
+            let mergedOptions = savedConfig.options as unknown as ColumnOption[];
+
+            // For status column, clean up deprecated options and merge with defaults
+            if (col.id === 'status') {
+              const originalJson = JSON.stringify(mergedOptions);
+              // Remove deprecated options
+              const deprecatedLabels = ['archived'];
+              mergedOptions = mergedOptions.filter(
+                o => !deprecatedLabels.includes(o.label.toLowerCase())
+              );
+              // Rename "Completed" -> "Paid"
+              mergedOptions = mergedOptions.map(o =>
+                o.label.toLowerCase() === 'completed' ? { ...o, label: 'Paid' } : o
+              );
+              // Add any missing default options
+              const savedLabels = new Set(mergedOptions.map(o => o.label.toLowerCase()));
+              const missingOptions = DEFAULT_STATUS_OPTIONS.filter(
+                opt => !savedLabels.has(opt.label.toLowerCase())
+              );
+              if (missingOptions.length > 0) {
+                mergedOptions = [...mergedOptions, ...missingOptions];
+              }
+              // If options changed, persist the migration to Supabase
+              if (JSON.stringify(mergedOptions) !== originalJson) {
+                // Fire-and-forget save to persist migration
+                (async () => {
+                  try {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                      await supabase
+                        .from("workflow_column_config")
+                        .update({
+                          options: mergedOptions as unknown as any,
+                          updated_at: new Date().toISOString(),
+                        })
+                        .eq("user_id", user.id)
+                        .eq("column_id", "status");
+                    }
+                  } catch (e) {
+                    console.error("Failed to persist status migration:", e);
+                  }
+                })();
+              }
+            }
+
+            return { ...col, options: mergedOptions };
+          }
+          return col;
+        });
+      });
+      setColumnsInitialized(true);
+    }
+  }, [columnConfig, columnsInitialized]);
+
+  // Mutation to save column config to Supabase
+  const saveColumnConfigMutation = useMutation({
+    mutationFn: async ({ columnId, options }: { columnId: string; options: ColumnOption[] }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Check if config exists
+      const { data: existing } = await supabase
+        .from("workflow_column_config")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("column_id", columnId)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from("workflow_column_config")
+          .update({
+            options: options as unknown as any,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("workflow_column_config")
+          .insert({
+            user_id: user.id,
+            column_id: columnId,
+            options: options as unknown as any,
+          });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workflow-column-config"] });
+    },
+    onError: (error) => {
+      toast.error("Failed to save column config: " + error.message);
+    },
+  });
+
+  useEffect(() => {
+    localStorage.setItem(WORKFLOW_CUSTOM_COLUMNS_KEY, JSON.stringify(customColumns));
+  }, [customColumns]);
+
+  useEffect(() => {
+    localStorage.setItem(WORKFLOW_CUSTOM_DATA_KEY, JSON.stringify(customData));
+  }, [customData]);
+
+  useEffect(() => {
+    localStorage.setItem(WORKFLOW_SORT_KEY, JSON.stringify(sortConfig));
+  }, [sortConfig]);
+
+  // Mutation to save a new filter to Supabase
+  const saveFilterMutation = useMutation({
+    mutationFn: async (newFilter: { name: string; conditions: FilterCondition[] }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("user_saved_filters")
+        .insert([{
+          user_id: user.id,
+          filter_type: "workflow",
+          name: newFilter.name,
+          conditions: newFilter.conditions as unknown as import("@/integrations/supabase/types").Json
+        }]);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchSavedFilters();
+      setNewFilterName("");
+      setSaveFilterDialogOpen(false);
+      toast.success("Filtro guardado");
+    },
+    onError: (error) => {
+      toast.error("Erro ao guardar filtro: " + error.message);
+    },
+  });
+
+  // Mutation to delete a filter from Supabase
+  const deleteFilterMutation = useMutation({
+    mutationFn: async (filterId: string) => {
+      const { error } = await supabase
+        .from("user_saved_filters")
+        .delete()
+        .eq("id", filterId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchSavedFilters();
+      toast.success("Filtro eliminado");
+    },
+    onError: (error) => {
+      toast.error("Erro ao eliminar filtro: " + error.message);
+    },
+  });
+
+  // Save filter functions
+  const handleSaveFilter = () => {
+    if (!newFilterName.trim() || activeFilters.length === 0) {
+      toast.error("Por favor selecione um filtro antes de guardar");
+      return;
+    }
+
+    if (savedFilters.length >= 5) {
+      toast.error("Máximo de 5 filtros guardados. Elimine um para adicionar outro.");
+      return;
+    }
+
+    saveFilterMutation.mutate({
+      name: newFilterName.trim(),
+      conditions: [...activeFilters],
+    });
+  };
+
+  const loadSavedFilter = (filter: SavedFilter) => {
+    const conditions = filter.conditions || [];
+    setActiveFilters([...conditions]);
+    setCurrentFilterColumn("");
+    toast.success(`Filtro "${filter.name}" aplicado`);
+  };
+
+  const deleteSavedFilter = (filterId: string) => {
+    deleteFilterMutation.mutate(filterId);
+  };
+
+  // Add or update a filter condition
+  const addOrUpdateFilter = (column: string, values: string[], mode: 'include' | 'exclude') => {
+    setActiveFilters(prev => {
+      const existing = prev.findIndex(f => f.column === column);
+      if (existing >= 0) {
+        const updated = [...prev];
+        updated[existing] = { column, values, mode };
+        return updated;
+      }
+      return [...prev, { column, values, mode }];
+    });
+  };
+
+  // Remove a filter condition
+  const removeFilter = (column: string) => {
+    setActiveFilters(prev => prev.filter(f => f.column !== column));
+  };
+
+  // Get current filter for a column
+  const getFilterForColumn = (column: string) => {
+    return activeFilters.find(f => f.column === column);
+  };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setActiveFilters([]);
+    setCurrentFilterColumn("");
+  };
+
+  // Fetch workflow files with company info
+  // Enable polling when a file is being processed to get OCR updates
+  const isProcessing = previewFile?.status === 'processing';
+  const { data: workflowFiles, isLoading, refetch: refetchWorkflowFiles } = useQuery({
+    queryKey: ["workflow-files"],
+    refetchInterval: isProcessing ? 5000 : false, // Poll every 5s when processing
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase
+        .from("workflow_files")
+        .select(`
+          id,
+          file_name,
+          file_url,
+          file_size,
+          mime_type,
+          status,
+          notes,
+          priority,
+          created_at,
+          completed_at,
+          category,
+          company_id,
+          project_id,
+          invoice_date,
+          invoice_number,
+          vendor_name,
+          vendor_vat,
+          total_amount,
+          tax_amount,
+          subtotal,
+          currency,
+          payment_method,
+          document_type,
+          lending_company_id,
+          borrowing_company_id,
+          description,
+          confirmation_sent_at,
+          receipt_url,
+          wise_transfer_id,
+          server_path,
+          companies:company_id (
+            id,
+            name
+          ),
+          expense_projects:project_id (
+            id,
+            name
+          )
+        `)
+        .order("created_at", { ascending: false })
+        .limit(500);
+
+      if (error) throw error;
+      return data as WorkflowFile[];
+    },
+    staleTime: 60 * 1000, // 1 minute cache
+  });
+
+  // Sync previewFile with latest data from query when OCR data arrives
+  useEffect(() => {
+    if (previewFile && workflowFiles) {
+      const updatedFile = workflowFiles.find((f: WorkflowFile) => f.id === previewFile.id);
+      if (updatedFile) {
+        // Check if new OCR data has arrived that wasn't in previewFile
+        const hasNewOcrData =
+          (updatedFile.vendor_name && !previewFile.vendor_name) ||
+          (updatedFile.total_amount !== null && previewFile.total_amount === null) ||
+          (updatedFile.invoice_date && !previewFile.invoice_date) ||
+          (updatedFile.company_id && !previewFile.company_id);
+
+        if (hasNewOcrData) {
+          setPreviewFile(updatedFile);
+          toast.info('Dados OCR carregados automaticamente');
+        }
+      }
+    }
+  }, [workflowFiles, previewFile]);
+
+  // Stable key so same file list doesn't trigger refetch (was causing constant re-runs with new array refs)
+  const workflowFileIdsKey = useMemo(
+    () => (workflowFiles ? [...workflowFiles.map(f => f.id).filter(Boolean)].sort().join(",") : ""),
+    [workflowFiles]
+  );
+
+  // Fetch transactions linked to workflow files.
+  // Prefer stable ID-based linking (document_file_id), with legacy fallback to invoice_file_url
+  const { data: linkedTransactions } = useQuery({
+    queryKey: ["workflow-linked-transactions", workflowFileIdsKey],
+    queryFn: async () => {
+      const fileIds = workflowFiles?.map(f => f.id).filter(Boolean) || [];
+      const fileUrls = workflowFiles?.map(f => f.file_url).filter(Boolean) || [];
+      if (fileIds.length === 0 && fileUrls.length === 0) return [];
+
+       const txSelect = `
+                  id,
+                  document_file_id,
+                  invoice_file_url,
+                  total_amount,
+                  project_id,
+                  company_id,
+                  category,
+                  subcategory,
+                  category_id,
+                  expense_categories:category_id (
+                    id,
+                    name
+                  ),
+                  expense_projects:project_id (
+                    id,
+                    name
+                  ),
+                  companies:company_id (
+                    id,
+                    name
+                  )
+                `;
+
+       // Batch helper: split array into chunks to avoid URL length limits
+       // (~8KB max URL, each UUID is ~36 chars, so ~50 IDs per batch is safe)
+       const BATCH_SIZE = 50;
+       const chunk = <T,>(arr: T[], size: number): T[][] => {
+         const chunks: T[][] = [];
+         for (let i = 0; i < arr.length; i += size) {
+           chunks.push(arr.slice(i, i + size));
+         }
+         return chunks;
+       };
+
+       // Run ID-based queries in batches (412+ files = 9 batches of 50)
+       let byIdData: any[] = [];
+       if (fileIds.length) {
+         const idBatches = chunk(fileIds, BATCH_SIZE);
+         const idResults = await Promise.all(
+           idBatches.map(batch =>
+             supabase.from("financial_transactions").select(txSelect).in("document_file_id", batch)
+           )
+         );
+         for (const res of idResults) {
+           if (res.error) {
+             console.warn("ID-batch transaction lookup failed:", res.error.message);
+           } else {
+             byIdData.push(...(res.data || []));
+           }
+         }
+       }
+
+       // URL-based query as fallback (also batched) - may fail with long URLs
+       // so we catch errors gracefully instead of killing ID-based results
+       let byUrlData: any[] = [];
+       if (fileUrls.length) {
+         const urlBatches = chunk(fileUrls, BATCH_SIZE);
+         for (const batch of urlBatches) {
+           try {
+             const byUrlRes = await supabase.from("financial_transactions").select(txSelect).in("invoice_file_url", batch);
+             if (!byUrlRes.error) {
+               byUrlData.push(...(byUrlRes.data || []));
+             } else {
+               console.warn("URL-based transaction lookup failed (non-critical):", byUrlRes.error.message);
+             }
+           } catch (e) {
+             console.warn("URL-based transaction lookup failed (CORS/network):", e);
+           }
+         }
+       }
+
+      const merged = [...byIdData, ...byUrlData];
+      // De-dupe by transaction ID
+      const uniqueById = new Map<string, any>();
+      for (const tx of merged) uniqueById.set(tx.id, tx);
+      return Array.from(uniqueById.values());
+    },
+    staleTime: 2 * 60 * 1000, // 2 min cache — reduces repeated batch queries (was 0 + refetchOnMount always)
+    refetchOnWindowFocus: false, // avoid heavy refetch when switching tabs
+    enabled: !!workflowFiles && workflowFiles.length > 0,
+  });
+  type LinkedTx = {
+    transactionId: string;
+    projectId: string | null;
+    projectName: string | null;
+    companyId: string | null;
+    companyName: string | null;
+    value: number;
+    category: string | null;
+    subcategory: string | null;
+    categoryId: string | null;
+    categoryName: string | null;
+  };
+
+  // Lookup maps (ID preferred, URL fallback)
+  const transactionsByFileId = linkedTransactions?.reduce((acc, tx) => {
+    if (tx.document_file_id) {
+      acc[tx.document_file_id] = {
+        transactionId: tx.id,
+        projectId: tx.project_id,
+        projectName: (tx.expense_projects as any)?.name || null,
+        companyId: tx.company_id,
+        companyName: (tx.companies as any)?.name || null,
+        value: tx.total_amount,
+        category: tx.category || null,
+        subcategory: (tx as any).subcategory || null,
+        categoryId: (tx as any).category_id || null,
+        categoryName: (tx.expense_categories as any)?.name || null,
+      } satisfies LinkedTx;
+    }
+    return acc;
+  }, {} as Record<string, LinkedTx>);
+
+  const transactionsByFileUrl = linkedTransactions?.reduce((acc, tx) => {
+    if (tx.invoice_file_url) {
+      acc[tx.invoice_file_url] = {
+        transactionId: tx.id,
+        projectId: tx.project_id,
+        projectName: (tx.expense_projects as any)?.name || null,
+        companyId: tx.company_id,
+        companyName: (tx.companies as any)?.name || null,
+        value: tx.total_amount,
+        category: tx.category || null,
+        subcategory: (tx as any).subcategory || null,
+        categoryId: (tx as any).category_id || null,
+        categoryName: (tx.expense_categories as any)?.name || null,
+      } satisfies LinkedTx;
+    }
+    return acc;
+  }, {} as Record<string, LinkedTx>);
+
+  // Helper to get transaction for a file (ID-based preferred, URL fallback for legacy)
+  const getTxForFile = (file: WorkflowFile): LinkedTx | undefined => {
+    return transactionsByFileId?.[file.id] || transactionsByFileUrl?.[file.file_url];
+  };
+
+  // Fetch all projects for dropdown
+  const { data: allProjects } = useQuery({
+    queryKey: ["expense-projects-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expense_projects")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+  });
+
+  // Fetch storage locations for mark as complete - lazy load when dialog opens
+  const { data: storageLocations } = useQuery({
+    queryKey: ["workflow-storage-locations"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("workflow_storage_locations")
+        .select(`
+          *,
+          companies:company_id (
+            id,
+            name
+          )
+        `);
+
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: markCompleteWarningOpen || !!fileToComplete,
+  });
+
+  // Fetch companies for mark as complete and move dialog - lazy load when dialog opens
+  const { data: allCompanies } = useQuery({
+    queryKey: ["all-companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, name")
+        .order("name");
+
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: moveFileDialogOpen || markCompleteWarningOpen || !!fileToComplete,
+  });
+
+  // Fetch folders for selected company in move file dialog - lazy load
+  const { data: moveFolders } = useQuery({
+    queryKey: ["company-folders-for-move", moveForm.company_id],
+    queryFn: async () => {
+      if (!moveForm.company_id) return [];
+      const { data, error } = await supabase
+        .from("company_folders")
+        .select("*")
+        .eq("company_id", moveForm.company_id)
+        .order("name");
+
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: moveFileDialogOpen && !!moveForm.company_id,
+  });
+
+  // Build folder paths recursively for move dialog
+  const getMoveFolderPath = (folderId: string, folders: any[]): string => {
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return "";
+    if (!folder.parent_folder_id) return folder.name;
+    const parentPath = getMoveFolderPath(folder.parent_folder_id, folders);
+    return parentPath ? `${parentPath}/${folder.name}` : folder.name;
+  };
+
+  const moveFolderOptions =
+    moveFolders
+      ?.map(folder => ({
+        id: folder.id,
+        name: folder.name,
+        path: getMoveFolderPath(folder.id, moveFolders || []),
+      }))
+      .sort((a, b) => a.path.localeCompare(b.path)) || [];
+
+  // State for inline editing
+  const [editingCell, setEditingCell] = useState<{ fileUrl: string; field: 'project' | 'value' } | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
+
+  // Mutation to update transaction
+  const updateTransactionMutation = useMutation({
+    mutationFn: async ({ transactionId, updates }: { transactionId: string; updates: { project_id?: string | null; total_amount?: number } }) => {
+      const { error } = await supabase
+        .from("financial_transactions")
+        .update(updates)
+        .eq("id", transactionId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workflow-linked-transactions"] });
+      setEditingCell(null);
+      toast.success("Updated successfully");
+    },
+    onError: (error) => {
+      toast.error("Failed to update: " + error.message);
+    },
+  });
+
+  // Mutation to create transaction with project for unlinked files
+  const createTransactionForFileMutation = useMutation({
+    mutationFn: async ({ fileUrl, projectId }: { fileUrl: string; projectId: string }) => {
+      // Read table relations settings
+      const settingsStr = localStorage.getItem(TABLE_RELATIONS_KEY);
+      const settings: TableRelationsConfig = settingsStr
+        ? JSON.parse(settingsStr)
+        : { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
+
+      // If auto-create transaction is disabled, just skip silently
+      if (!settings.autoCreateTransaction) {
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Use default company from settings, or fall back to first available
+      let companyId = settings.defaultCompanyId;
+
+      if (!companyId) {
+        const { data: companies } = await supabase
+          .from("companies")
+          .select("id")
+          .limit(1);
+
+        if (!companies || companies.length === 0) {
+          throw new Error("No company found. Please configure a default company in Settings.");
+        }
+        companyId = companies[0].id;
+      }
+
+      // Update existing transaction with project_id if it exists
+      const { data: existingTx } = await supabase
+        .from("financial_transactions")
+        .select("id")
+        .eq("invoice_file_url", fileUrl)
+        .maybeSingle();
+
+      if (existingTx) {
+        const { error } = await supabase
+          .from("financial_transactions")
+          .update({ project_id: projectId })
+          .eq("id", existingTx.id);
+
+        if (error) throw error;
+      }
+      // If no transaction exists yet, project will be assigned when payment is created
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workflow-linked-transactions"] });
+      toast.success("Project assigned");
+    },
+    onError: (error) => {
+      toast.error("Failed to assign project: " + error.message);
+    },
+  });
+
+  // Merge Wise receipt with original document
+  const handleMergeWiseReceipt = async () => {
+    if (!previewFile?.receipt_url) return;
+    const originalUrl = resolveWorkflowFileUrlForPreview(previewFile);
+    if (!originalUrl) return;
+    setIsMergingReceipt(true);
+    try {
+      toast.info("A juntar comprovativo Wise ao documento...");
+      const mergedBlob = await mergeMultiplePdfs([
+        { url: originalUrl, name: "Documento original" },
+        { url: previewFile.receipt_url, name: "Comprovativo Wise" },
+      ]);
+
+      const filePath = `payment-attachments/merged-${previewFile.wise_transfer_id || Date.now()}.pdf`;
+      const { error: uploadError } = await supabase.storage
+        .from('company-documents')
+        .upload(filePath, mergedBlob, { upsert: true });
+      if (uploadError) throw new Error("Erro ao carregar: " + uploadError.message);
+
+      const { data: urlData } = supabase.storage
+        .from('company-documents')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('workflow_files')
+        .update({ file_url: urlData.publicUrl })
+        .eq('id', previewFile.id);
+      if (updateError) throw updateError;
+
+      // Also update financial_transaction invoice_file_url
+      await supabase
+        .from('financial_transactions')
+        .update({ invoice_file_url: urlData.publicUrl })
+        .eq('document_file_id', previewFile.id);
+
+      queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+      queryClient.invalidateQueries({ queryKey: ["file-transaction"] });
+      setPreviewFile({ ...previewFile, file_url: urlData.publicUrl });
+      toast.success("Comprovativo Wise anexado ao documento!");
+    } catch (error: any) {
+      console.error("Error merging Wise receipt:", error);
+      toast.error("Erro ao juntar comprovativo: " + (error.message || "Erro desconhecido"));
+    } finally {
+      setIsMergingReceipt(false);
+    }
+  };
+
+  // Move file to company folder mutation
+  const moveFileMutation = useMutation({
+    mutationFn: async ({ file, companyId, folderId }: { file: WorkflowFile; companyId: string; folderId: string | null }) => {
+      if (file.server_path) {
+        throw new Error("Ficheiros apenas no servidor Work: use «Concluir» ou transferir antes de mover para documentos.");
+      }
+      const parsed = parseSupabaseStorageLooseRef(file.file_url);
+      if (!parsed) {
+        throw new Error("URL do ficheiro inválida ou em falta (esperado armazenamento Supabase público).");
+      }
+      const { bucket, filePath } = parsed;
+
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from(bucket)
+        .download(filePath);
+
+      if (downloadError) throw downloadError;
+
+      // 2. Upload to company-documents bucket
+      const newPath = `${companyId}/${folderId || 'root'}/${Date.now()}-${sanitizeFileName(file.file_name)}`;
+      const { error: uploadError } = await supabase.storage
+        .from("company-documents")
+        .upload(newPath, fileData);
+
+      if (uploadError) throw uploadError;
+
+      // 3. Get the public URL of the new file
+      const { data: { publicUrl } } = supabase.storage
+        .from("company-documents")
+        .getPublicUrl(newPath);
+
+      // 4. Create document record in company_documents
+      const { error: insertError } = await supabase
+        .from("company_documents")
+        .insert({
+          company_id: companyId,
+          folder_id: folderId,
+          name: file.file_name,
+          file_url: publicUrl,
+          file_size: file.file_size,
+          mime_type: file.mime_type,
+          status: "Final",
+        });
+
+      if (insertError) throw insertError;
+
+      // 5. Delete the workflow file record
+      const { error: deleteError } = await supabase
+        .from("workflow_files")
+        .delete()
+        .eq("id", file.id);
+
+      if (deleteError) throw deleteError;
+
+      // 6. Optionally delete the old file from storage
+      await supabase.storage.from(bucket).remove([filePath]);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+      setMoveFileDialogOpen(false);
+      setFileToMove(null);
+      setMoveForm({ company_id: "", folder_id: null, folder_path: "" });
+      toast.success("Ficheiro movido com sucesso!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao mover ficheiro: " + error.message);
+    },
+  });
+
+  // Handler to open move dialog
+  const handleOpenMoveDialog = (file: WorkflowFile) => {
+    setFileToMove(file);
+    setMoveForm({ company_id: "", folder_id: null, folder_path: "" });
+    setMoveFileDialogOpen(true);
+  };
+
+  // Handler to execute move
+  const handleMoveFile = () => {
+    if (!fileToMove || !moveForm.company_id) {
+      toast.error("Selecione uma empresa");
+      return;
+    }
+
+    // If user selected __root__, pass null as folder_id
+    const folderId = moveForm.folder_path === "__root__" ? null : moveForm.folder_id;
+
+    moveFileMutation.mutate({
+      file: fileToMove,
+      companyId: moveForm.company_id,
+      folderId: folderId,
+    });
+  };
+
+
+  const uploadFiles = async (files: FileList | File[]) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+
+    const fileArray = Array.from(files);
+    const initialProgress: UploadProgress[] = fileArray.map(f => ({
+      fileName: f.name,
+      progress: 0,
+      status: 'uploading' as const
+    }));
+
+    setUploadProgress(initialProgress);
+    setIsUploading(true);
+
+    const settings: TableRelationsConfig = (() => {
+      try { return JSON.parse(localStorage.getItem(TABLE_RELATIONS_KEY) || "{}"); }
+      catch { return { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true }; }
+    })();
+    const companyId = settings.defaultCompanyId;
+
+    let serverLocation: { server_root: string; folder_path: string } | null = null;
+    if (companyId) {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth() + 1;
+
+      const { data: locExact } = await supabase
+        .from("workflow_storage_locations")
+        .select("server_root, folder_path")
+        .eq("company_id", companyId)
+        .eq("year", y)
+        .eq("month", m)
+        .not("server_root", "is", null)
+        .not("folder_path", "is", null)
+        .maybeSingle();
+
+      if (locExact?.server_root && locExact.folder_path) {
+        serverLocation = { server_root: locExact.server_root, folder_path: locExact.folder_path };
+      } else {
+        const { data: locFallback } = await supabase
+          .from("workflow_storage_locations")
+          .select("server_root, folder_path")
+          .eq("company_id", companyId)
+          .not("server_root", "is", null)
+          .not("folder_path", "is", null)
+          .order("year", { ascending: false })
+          .order("month", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (locFallback?.server_root && locFallback.folder_path) {
+          serverLocation = {
+            server_root: locFallback.server_root,
+            folder_path: locFallback.folder_path,
+          };
+        }
+      }
+    }
+
+    const uploadedFiles: string[] = [];
+
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+
+      try {
+        setUploadProgress(prev => prev.map((p, idx) =>
+          idx === i ? { ...p, progress: 30 } : p
+        ));
+
+        let fileUrl = "";
+        let serverPath: string | null = null;
+
+        if (serverLocation) {
+          const targetFolder = `${serverLocation.server_root}/${serverLocation.folder_path}`;
+          const params = new URLSearchParams({ folder: targetFolder, filename: file.name });
+          const arrayBuf = await file.arrayBuffer();
+          const uploadUrl = getWorkFilesUploadUrl(fileServerBaseUrl, params);
+          const resp = await fetch(uploadUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/octet-stream" },
+            body: arrayBuf,
+            credentials: fileServerBaseUrl ? "include" : "same-origin",
+          });
+          if (!resp.ok) throw new Error("Server upload failed");
+          const result = await resp.json();
+          serverPath = result.server_path;
+          fileUrl = getWorkFileDownloadUrl(result.server_path, fileServerBaseUrl);
+        } else {
+          const sanitizedName = sanitizeFileName(file.name);
+          const storagePath = `${user.id}/${Date.now()}-${sanitizedName}`;
+          const { error: uploadError } = await supabase.storage
+            .from("attachments")
+            .upload(storagePath, file);
+          if (uploadError) throw uploadError;
+          const { data: { publicUrl } } = supabase.storage
+            .from("attachments")
+            .getPublicUrl(storagePath);
+          fileUrl = publicUrl;
+        }
+
+        setUploadProgress(prev => prev.map((p, idx) =>
+          idx === i ? { ...p, progress: 70 } : p
+        ));
+
+        const insertData: any = {
+          user_id: user.id,
+          file_name: file.name,
+          file_url: fileUrl,
+          file_size: file.size,
+          mime_type: file.type,
+          status: "Pending",
+          priority: "normal",
+        };
+        if (serverPath) insertData.server_path = serverPath;
+
+        const { error: insertError } = await supabase
+          .from("workflow_files")
+          .insert(insertData);
+
+        if (insertError) throw insertError;
+
+        setUploadProgress(prev => prev.map((p, idx) =>
+          idx === i ? { ...p, progress: 100, status: 'completed' } : p
+        ));
+
+        uploadedFiles.push(file.name);
+      } catch (error) {
+        console.error(`Error uploading ${file.name}:`, error);
+        setUploadProgress(prev => prev.map((p, idx) =>
+          idx === i ? { ...p, status: 'error' } : p
+        ));
+      }
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+
+    if (uploadedFiles.length > 0) {
+      toast.success(`Uploaded ${uploadedFiles.length} file(s)${serverLocation ? ' to server' : ''}`);
+    }
+
+    setTimeout(() => {
+      setUploadProgress([]);
+      setIsUploading(false);
+    }, 3000);
+  };
+
+  // Update field mutation
+  const updateFieldMutation = useMutation({
+    mutationFn: async ({ id, field, value }: { id: string; field: string; value: string }) => {
+      const { error } = await supabase
+        .from("workflow_files")
+        .update({ [field]: value })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: (_data, { id, field, value }) => {
+      // Optimistic update: when marking as paid, update cache so the file leaves the Processing list immediately
+      if (field === "status" && (value === "paid" || value === "Paid")) {
+        queryClient.setQueryData(["workflow-files"], (old: WorkflowFile[] | undefined) =>
+          old?.map((f) => (f.id === id ? { ...f, status: value } : f)) ?? old
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+    },
+  });
+
+  // Delete mutation: remove row from DB and refresh list; show error if delete fails (e.g. RLS)
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("workflow_files")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: (id) => {
+      // Remove from cache immediately so the list updates without waiting for refetch
+      queryClient.setQueryData(["workflow-files"], (old: WorkflowFile[] | undefined) =>
+        old ? old.filter((f) => f.id !== id) : old
+      );
+      queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+      toast.success("Ficheiro eliminado.");
+    },
+    onError: (error: Error) => {
+      toast.error("Não foi possível eliminar o ficheiro: " + (error.message || "erro desconhecido"));
+    },
+  });
+
+  // Mark file as paid handler
+  const handleMarkAsComplete = async (file: WorkflowFile) => {
+    // First, check if there's an existing transaction for this file to get actual expense date, company AND bank_account_id
+    let existingTransaction: { date: string; company_id: string; bank_account_id: string | null; total_amount: number } | null = null;
+
+    // Try by document_file_id first (most reliable link)
+    if (file.id) {
+      const { data: txById } = await supabase
+        .from("financial_transactions")
+        .select("date, company_id, bank_account_id, total_amount")
+        .eq("document_file_id", file.id)
+        .maybeSingle();
+      if (txById) existingTransaction = txById;
+    }
+
+    // Fallback: try by invoice_file_url
+    if (!existingTransaction && file.file_url) {
+      const { data: txByUrl } = await supabase
+        .from("financial_transactions")
+        .select("date, company_id, bank_account_id, total_amount")
+        .eq("invoice_file_url", file.file_url)
+        .maybeSingle();
+      if (txByUrl) existingTransaction = txByUrl;
+    }
+
+    // If no transaction or transaction has zero value, show confirmation dialog
+    if (!existingTransaction || existingTransaction.total_amount === 0) {
+      // Pre-calculate destination info for the skip payment dialog
+      const dateToUse = new Date(file.created_at);
+      const fileMonth = dateToUse.getMonth() + 1;
+      const fileYear = dateToUse.getFullYear();
+
+      // Priority: file's company_id > default company from settings
+      const settingsStr = localStorage.getItem(TABLE_RELATIONS_KEY);
+      const settings: TableRelationsConfig = settingsStr
+        ? JSON.parse(settingsStr)
+        : { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
+
+      const targetCompanyId = file.company_id || settings.defaultCompanyId;
+
+      let companyName = "Empresa não definida";
+      let folderPath = "";
+
+      if (targetCompanyId) {
+        // Get company name
+        const { data: companyData } = await supabase
+          .from("companies")
+          .select("name")
+          .eq("id", targetCompanyId)
+          .maybeSingle();
+        if (companyData?.name) {
+          companyName = companyData.name;
+        }
+
+        // Get storage location for folder path
+        const { data: locationData } = await supabase
+          .from("workflow_storage_locations")
+          .select("folder_path")
+          .eq("company_id", targetCompanyId)
+          .eq("year", fileYear)
+          .eq("month", fileMonth)
+          .maybeSingle();
+        if (locationData?.folder_path) {
+          folderPath = locationData.folder_path;
+        }
+      }
+
+      // Check if there's a pending loan for this file
+      const pendingLoanStr = customData[file.id]?._pendingLoan;
+      let loanInfo: {
+        lendingCompanyName: string;
+        lendingFolderPath: string;
+        borrowingCompanyName: string;
+        borrowingFolderPath: string;
+        amount: number;
+        loanDate: string;
+      } | undefined;
+
+      if (pendingLoanStr) {
+        try {
+          const loanData = JSON.parse(pendingLoanStr);
+
+          // Use loan date to determine month/year for folder paths
+          const loanDate = new Date(loanData.start_date);
+          const loanMonth = loanDate.getMonth() + 1;
+          const loanYear = loanDate.getFullYear();
+
+          // Fetch folder path for LENDER
+          let lendingFolderPath = "";
+          if (loanData.lending_company_id) {
+            const { data: lendingLocation } = await supabase
+              .from("workflow_storage_locations")
+              .select("folder_path")
+              .eq("company_id", loanData.lending_company_id)
+              .eq("year", loanYear)
+              .eq("month", loanMonth)
+              .maybeSingle();
+            if (lendingLocation?.folder_path) {
+              lendingFolderPath = lendingLocation.folder_path;
+            }
+          }
+
+          // Fetch folder path for BORROWER
+          let borrowingFolderPath = "";
+          if (loanData.borrowing_company_id) {
+            const { data: borrowingLocation } = await supabase
+              .from("workflow_storage_locations")
+              .select("folder_path")
+              .eq("company_id", loanData.borrowing_company_id)
+              .eq("year", loanYear)
+              .eq("month", loanMonth)
+              .maybeSingle();
+            if (borrowingLocation?.folder_path) {
+              borrowingFolderPath = borrowingLocation.folder_path;
+            }
+          }
+
+          loanInfo = {
+            lendingCompanyName: loanData.lending_company_name || "Empresa credora",
+            lendingFolderPath,
+            borrowingCompanyName: loanData.borrowing_company_name || "Empresa devedora",
+            borrowingFolderPath,
+            amount: loanData.amount || 0,
+            loanDate: loanData.start_date,
+          };
+        } catch (e) {
+          console.error('Error parsing pending loan data:', e);
+        }
+      }
+
+      setSkipPaymentDestination({
+        companyName,
+        folderPath,
+        isLoan: !!pendingLoanStr,
+        loanInfo
+      });
+      setFileToSkipPayment(file);
+      setShowSkipPaymentConfirmation(true);
+      return;
+    }
+
+    // Use transaction date if available, otherwise fall back to file upload date
+    const dateToUse = existingTransaction?.date
+      ? new Date(existingTransaction.date)
+      : new Date(file.created_at);
+
+    const fileMonth = dateToUse.getMonth() + 1; // 1-indexed
+    const fileYear = dateToUse.getFullYear();
+
+    // Read table relations settings
+    const settingsStr = localStorage.getItem(TABLE_RELATIONS_KEY);
+    const settings: TableRelationsConfig = settingsStr
+      ? JSON.parse(settingsStr)
+      : { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
+
+    // Determine the company to use: transaction company > settings default company
+    const targetCompanyId = existingTransaction?.company_id || settings.defaultCompanyId;
+
+    // Query storage locations filtering by company if available
+    let query = supabase
+      .from("workflow_storage_locations")
+      .select("*")
+      .eq("year", fileYear)
+      .eq("month", fileMonth);
+
+    // If we have a target company, filter by it
+    if (targetCompanyId) {
+      query = query.eq("company_id", targetCompanyId);
+    }
+
+    const { data: matchingLocations, error } = await query;
+
+    if (error) throw error;
+
+    // Get the first matching location (should be unique per company+month+year)
+    const matchingLocation = matchingLocations && matchingLocations.length > 0
+      ? matchingLocations[0]
+      : null;
+
+    if (!matchingLocation) {
+      // Fetch company name for the warning message
+      let companyName = "Unknown Company";
+      if (targetCompanyId) {
+        const { data: companyData } = await supabase
+          .from("companies")
+          .select("name")
+          .eq("id", targetCompanyId)
+          .maybeSingle();
+        if (companyData?.name) {
+          companyName = companyData.name;
+        }
+      }
+      setMissingStorageCompanyName(companyName);
+      setFileToComplete(file);
+      setMarkCompleteWarningOpen(true);
+      return;
+    }
+
+    // Find the company that owns the bank account used for payment (for dual-company copy)
+    let paymentAccountStorageLocation = null;
+    let payerCompanyName = "";
+    if (existingTransaction?.bank_account_id) {
+      // Get the company_id from the bank account
+      const { data: bankAccount } = await supabase
+        .from("bank_accounts")
+        .select("company_id")
+        .eq("id", existingTransaction.bank_account_id)
+        .maybeSingle();
+
+      // If the bank account owner is different from the invoice company
+      if (bankAccount?.company_id && bankAccount.company_id !== targetCompanyId) {
+        // Get payer company name
+        const { data: payerCompany } = await supabase
+          .from("companies")
+          .select("name")
+          .eq("id", bankAccount.company_id)
+          .maybeSingle();
+
+        if (payerCompany) {
+          payerCompanyName = payerCompany.name;
+        }
+
+        // Find storage location for the bank account owner's company
+        const { data: bankAccountOwnerLocation } = await supabase
+          .from("workflow_storage_locations")
+          .select("*")
+          .eq("company_id", bankAccount.company_id)
+          .eq("year", fileYear)
+          .eq("month", fileMonth)
+          .maybeSingle();
+
+        if (bankAccountOwnerLocation) {
+          paymentAccountStorageLocation = bankAccountOwnerLocation;
+        }
+      }
+    }
+
+    // Get main company name for confirmation dialog
+    let mainCompanyName = "Empresa";
+    if (targetCompanyId) {
+      const { data: mainCompanyData } = await supabase
+        .from("companies")
+        .select("name")
+        .eq("id", targetCompanyId)
+        .maybeSingle();
+      if (mainCompanyData) {
+        mainCompanyName = mainCompanyData.name;
+      }
+    }
+
+    // Build destination companies list for confirmation
+    const destinationCompanies: { id: string; name: string; role: string; folderPath?: string }[] = [];
+
+    // 1. Main company (invoice recipient)
+    if (targetCompanyId) {
+      destinationCompanies.push({
+        id: targetCompanyId,
+        name: mainCompanyName,
+        role: "Empresa da fatura",
+        folderPath: matchingLocation?.folder_path || undefined
+      });
+    }
+
+    // 2. Payer company (if different)
+    if (paymentAccountStorageLocation && payerCompanyName) {
+      destinationCompanies.push({
+        id: paymentAccountStorageLocation.company_id,
+        name: payerCompanyName,
+        role: "Pagou a fatura",
+        folderPath: paymentAccountStorageLocation?.folder_path || undefined
+      });
+    }
+
+    // Determine if a loan will be created
+    let loanInfo = null;
+    if (paymentAccountStorageLocation && payerCompanyName && targetCompanyId) {
+      loanInfo = {
+        lendingCompany: payerCompanyName,
+        borrowingCompany: mainCompanyName,
+        amount: existingTransaction?.total_amount || 0
+      };
+    }
+
+    // Show confirmation dialog instead of proceeding directly
+    setCompleteConfirmationData({
+      file,
+      storageLocation: matchingLocation,
+      settings,
+      paymentAccountStorageLocation,
+      destinationCompanies,
+      loanInfo
+    });
+    setShowCompleteConfirmation(true);
+  };
+
+  // Handler for confirming the complete action
+  const handleConfirmComplete = async () => {
+    if (!completeConfirmationData) return;
+
+    await completeFile(
+      completeConfirmationData.file,
+      completeConfirmationData.storageLocation,
+      completeConfirmationData.settings,
+      completeConfirmationData.paymentAccountStorageLocation
+    );
+
+    setShowCompleteConfirmation(false);
+    setCompleteConfirmationData(null);
+  };
+
+  const completeFile = async (
+    file: WorkflowFile,
+    storageLocation: any,
+    settings: TableRelationsConfig,
+    supplierStorageLocation?: any
+  ) => {
+    setIsCompleting(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const companyId = storageLocation.company_id;
+
+      /** URL absoluta para fetch (ficheiros no servidor ou URLs relativas). */
+      const resolveWorkflowFileFetchUrl = (wf: WorkflowFile): string => {
+        if (wf.server_path) {
+          const u = getWorkFileDownloadUrl(wf.server_path, fileServerBaseUrl);
+          return u.startsWith("http") ? u : `${window.location.origin}${u}`;
+        }
+        const fu = wf.file_url?.trim() || "";
+        if (fu.startsWith("http")) return fu;
+        return `${window.location.origin}${fu.startsWith("/") ? fu : `/${fu}`}`;
+      };
+
+      // Check if there's a pending loan for this file
+      const pendingLoanStr = customData[file.id]?._pendingLoan;
+      let loanAttachmentUrl: string | null = null;
+
+      // If there's a pending loan, create it now
+      if (pendingLoanStr) {
+        const loanData = JSON.parse(pendingLoanStr);
+
+        // First, copy file to loans folder
+        try {
+          const response = await fetch(resolveWorkflowFileFetchUrl(file));
+          if (response.ok) {
+            const blob = await response.blob();
+
+            // Generate clean filename for loans folder
+            const lendingName = (loanData.lending_company_name || 'Empresa').replace(/[^\w]/g, '_');
+            const borrowingName = (loanData.borrowing_company_name || 'Empresa').replace(/[^\w]/g, '_');
+            const loanDate = new Date(loanData.start_date);
+            const formattedDate = `${String(loanDate.getDate()).padStart(2, '0')}-${String(loanDate.getMonth() + 1).padStart(2, '0')}-${loanDate.getFullYear()}`;
+            const amount = Math.round(loanData.amount || 0);
+            const fileExt = file.file_name?.split('.').pop() || 'pdf';
+            const safeId = crypto.randomUUID().substring(0, 8);
+            const newFileName = `${safeId}_${borrowingName}_${formattedDate}_${amount}_${lendingName}.${fileExt}`;
+
+            // Upload to loans folder with user-scoped path
+            const loansFilePath = `${user.id}/loans/${newFileName}`;
+            const { error: uploadError } = await supabase.storage
+              .from('attachments')
+              .upload(loansFilePath, blob, {
+                contentType: file.mime_type || 'application/pdf',
+                upsert: true
+              });
+
+            if (!uploadError) {
+              const { data: urlData } = supabase.storage
+                .from('attachments')
+                .getPublicUrl(loansFilePath);
+              loanAttachmentUrl = urlData.publicUrl;
+            }
+          }
+        } catch (copyError) {
+          console.error('Error copying file to loans folder:', copyError);
+        }
+
+        // Create the loan record
+        const { data: newLoan, error: loanError } = await supabase
+          .from("company_loans")
+          .insert({
+            lending_company_id: loanData.lending_company_id,
+            borrowing_company_id: loanData.borrowing_company_id,
+            amount: loanData.amount,
+            interest_rate: loanData.interest_rate || 0,
+            monthly_payment: loanData.monthly_payment || null,
+            start_date: loanData.start_date,
+            end_date: loanData.end_date || null,
+            status: loanData.status || "active",
+            description: loanData.description,
+            attachment_url: loanAttachmentUrl || file.file_url,
+            source_file_id: file.id,
+          })
+          .select()
+          .single();
+
+        if (loanError) {
+          console.error('Error creating loan:', loanError);
+          throw loanError;
+        }
+
+        // Get storage locations for both companies based on loan date
+        const loanDate = new Date(loanData.start_date);
+        const loanMonth = loanDate.getMonth() + 1;
+        const loanYear = loanDate.getFullYear();
+
+        // Fetch folder_id for lending company
+        const { data: lendingStorageLocation } = await supabase
+          .from("workflow_storage_locations")
+          .select("folder_id")
+          .eq("company_id", loanData.lending_company_id)
+          .eq("year", loanYear)
+          .eq("month", loanMonth)
+          .maybeSingle();
+
+        // Fetch folder_id for borrowing company
+        const { data: borrowingStorageLocation } = await supabase
+          .from("workflow_storage_locations")
+          .select("folder_id")
+          .eq("company_id", loanData.borrowing_company_id)
+          .eq("year", loanYear)
+          .eq("month", loanMonth)
+          .maybeSingle();
+
+        // Create document record for LENDING company
+        await supabase.from("company_documents").insert({
+          company_id: loanData.lending_company_id,
+          folder_id: lendingStorageLocation?.folder_id || null,
+          name: file.file_name,
+          file_url: loanAttachmentUrl || file.file_url,
+          document_type: "Loan",
+          status: "Final",
+          uploaded_by: user.id,
+          notes: `Empréstimo para ${loanData.borrowing_company_name || "empresa"}`,
+          mime_type: file.mime_type || "application/pdf",
+        });
+
+        // Create document record for BORROWING company
+        await supabase.from("company_documents").insert({
+          company_id: loanData.borrowing_company_id,
+          folder_id: borrowingStorageLocation?.folder_id || null,
+          name: file.file_name,
+          file_url: loanAttachmentUrl || file.file_url,
+          document_type: "Loan",
+          status: "Final",
+          uploaded_by: user.id,
+          notes: `Empréstimo de ${loanData.lending_company_name || "empresa"}`,
+          mime_type: file.mime_type || "application/pdf",
+        });
+
+        // Clear pending loan from customData
+        setCustomData(prev => {
+          const updated = { ...prev };
+          if (updated[file.id]) {
+            delete updated[file.id]._pendingLoan;
+            // If no other data, remove the file entry entirely
+            if (Object.keys(updated[file.id]).length === 0) {
+              delete updated[file.id];
+            }
+          }
+          return updated;
+        });
+
+        // Invalidate loan queries
+        queryClient.invalidateQueries({ queryKey: ["company-loans"] });
+
+        toast.success("Empréstimo registado com sucesso!");
+      }
+
+      // Helper: copia para company-documents (Supabase) a partir de Supabase Storage ou de ficheiro no servidor
+      const copyToCompanyFolder = async (targetStorageLocation: any) => {
+        if (!targetStorageLocation?.folder_id) return false;
+
+        const targetCompanyId = targetStorageLocation.company_id;
+
+        let fileData: Blob | null = null;
+
+        try {
+          const parsed = parseSupabaseStorageLooseRef(file.file_url);
+          if (parsed) {
+            const { data, error: downloadError } = await supabase.storage
+              .from(parsed.bucket)
+              .download(parsed.filePath);
+            if (downloadError || !data) {
+              console.error("Download error:", downloadError);
+              return false;
+            }
+            fileData = data;
+          }
+        } catch (e) {
+          console.warn("copyToCompanyFolder: parse Supabase storage", e);
+        }
+
+        if (!fileData) {
+          try {
+            const resp = await fetch(resolveWorkflowFileFetchUrl(file), { credentials: "include" });
+            if (!resp.ok) {
+              console.error("Download error (fetch):", resp.status);
+              return false;
+            }
+            fileData = await resp.blob();
+          } catch (e) {
+            console.error("copyToCompanyFolder fetch error:", e);
+            return false;
+          }
+        }
+
+        if (!fileData) return false;
+
+        const sanitizedName = sanitizeFileName(file.file_name);
+        const newPath = `${targetCompanyId}/${targetStorageLocation.folder_id}/${Date.now()}-${sanitizedName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("company-documents")
+          .upload(newPath, fileData);
+
+        if (uploadError) {
+          console.error("Upload to company docs error:", uploadError);
+          return false;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from("company-documents")
+          .getPublicUrl(newPath);
+
+        const workflowCategory = customData[file.id]?.category;
+
+        const { error: docError } = await supabase
+          .from("company_documents")
+          .insert({
+            company_id: targetCompanyId,
+            folder_id: targetStorageLocation.folder_id,
+            name: file.file_name,
+            file_url: publicUrl,
+            file_size: file.file_size,
+            mime_type: file.mime_type,
+            uploaded_by: user.id,
+            status: 'Final',
+            document_type: workflowCategory || 'Other',
+          });
+
+        if (docError) {
+          console.error("Company document insert error:", docError);
+          return false;
+        }
+
+        return true;
+      };
+
+      // 2. Copy file to primary company documents
+      let copiedCount = 0;
+      if (storageLocation.folder_id) {
+        const copied = await copyToCompanyFolder(storageLocation);
+        if (copied) copiedCount++;
+      }
+
+      // 3. Copy file to supplier company documents (if available and different)
+      if (supplierStorageLocation && supplierStorageLocation.company_id !== storageLocation.company_id) {
+        const copied = await copyToCompanyFolder(supplierStorageLocation);
+        if (copied) copiedCount++;
+      }
+
+      // 4. Delete workflow file from storage (servidor ou Supabase) and database
+      if (file.server_path) {
+        const base = fileServerBaseUrl?.trim()
+          ? fileServerBaseUrl.replace(/\/$/, "")
+          : window.location.origin;
+        const delUrl = `${base}/api/work-files/delete?file=${encodeURIComponent(file.server_path)}`;
+        const delRes = await fetch(delUrl, { method: "DELETE", credentials: "include" });
+        if (!delRes.ok) {
+          console.warn("Não foi possível remover o ficheiro do servidor:", delRes.status);
+        }
+      } else {
+        try {
+          const parsed = parseSupabaseStorageLooseRef(file.file_url);
+          if (parsed) {
+            await supabase.storage.from(parsed.bucket).remove([parsed.filePath]);
+          }
+        } catch (e) {
+          console.warn("Remover anexo Supabase:", e);
+        }
+      }
+
+      // Delete workflow file record
+      const { error: deleteError } = await supabase
+        .from("workflow_files")
+        .delete()
+        .eq("id", file.id);
+
+      if (deleteError) throw deleteError;
+
+      // Remove from cache immediately so the list updates without waiting for refetch (fix: "arquivado mas fica na lista")
+      queryClient.setQueryData(["workflow-files"], (old: WorkflowFile[] | undefined) =>
+        old ? old.filter((f) => f.id !== file.id) : old
+      );
+      queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+      queryClient.invalidateQueries({ queryKey: ["workflow-linked-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["company-documents"] });
+
+      if (copiedCount > 1) {
+        toast.success(`Ficheiro copiado para ${copiedCount} empresas!`);
+      } else {
+        toast.success("Ficheiro movido para documentos da empresa!");
+      }
+    } catch (error: any) {
+      console.error("Error completing file:", error);
+      toast.error("Failed to complete file: " + error.message);
+    } finally {
+      setIsCompleting(false);
+      setFileToComplete(null);
+      setMissingStorageCompanyName(null);
+      setMarkCompleteWarningOpen(false);
+    }
+  };
+
+  // Handle completing file without payment registration
+  const handleCompleteWithoutPayment = async () => {
+    if (!fileToSkipPayment) return;
+
+    const file = fileToSkipPayment;
+    setShowSkipPaymentConfirmation(false);
+    setFileToSkipPayment(null);
+
+    // Use file date for storage location lookup
+    const dateToUse = new Date(file.created_at);
+    const fileMonth = dateToUse.getMonth() + 1;
+    const fileYear = dateToUse.getFullYear();
+
+    // Read table relations settings
+    const settingsStr = localStorage.getItem(TABLE_RELATIONS_KEY);
+    const settings: TableRelationsConfig = settingsStr
+      ? JSON.parse(settingsStr)
+      : { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true };
+
+    const targetCompanyId = settings.defaultCompanyId;
+
+    // Query storage locations
+    let query = supabase
+      .from("workflow_storage_locations")
+      .select("*")
+      .eq("year", fileYear)
+      .eq("month", fileMonth);
+
+    if (targetCompanyId) {
+      query = query.eq("company_id", targetCompanyId);
+    }
+
+    const { data: matchingLocations, error } = await query;
+
+    if (error) {
+      toast.error("Erro ao procurar localização de armazenamento");
+      return;
+    }
+
+    const matchingLocation = matchingLocations && matchingLocations.length > 0
+      ? matchingLocations[0]
+      : null;
+
+    if (!matchingLocation) {
+      let companyName = "Unknown Company";
+      if (targetCompanyId) {
+        const { data: companyData } = await supabase
+          .from("companies")
+          .select("name")
+          .eq("id", targetCompanyId)
+          .maybeSingle();
+        if (companyData?.name) {
+          companyName = companyData.name;
+        }
+      }
+      setMissingStorageCompanyName(companyName);
+      setFileToComplete(file);
+      setMarkCompleteWarningOpen(true);
+      return;
+    }
+
+    // Complete without looking for payment account storage
+    await completeFile(file, matchingLocation, settings);
+    toast.success("Ficheiro movido sem registo financeiro");
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    await uploadFiles(files);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+
+    await uploadFiles(Array.from(files));
+  }, []);
+
+  // Column resize limits
+  const COLUMN_LIMITS: Record<string, { min: number; max: number }> = {
+    name: { min: 80, max: 800 },
+    type: { min: 50, max: 120 },
+    date: { min: 80, max: 200 },
+    category: { min: 80, max: 200 },
+    status: { min: 80, max: 200 },
+    size: { min: 60, max: 120 },
+    empresa: { min: 80, max: 300 },
+    project: { min: 80, max: 300 },
+    value: { min: 70, max: 150 },
+  };
+
+  // Resize handlers for columns
+  const handleColumnResizeStart = useCallback((e: React.MouseEvent, columnId: string, defaultWidth: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizingColumn(columnId);
+    resizeStartX.current = e.clientX;
+    resizeStartWidth.current = columnWidths[columnId] ?? defaultWidth;
+    // Global cursor lock during resize
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [columnWidths]);
+
+  useEffect(() => {
+    if (!resizingColumn) return;
+
+    const limits = COLUMN_LIMITS[resizingColumn] || { min: 80, max: 800 };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const delta = e.clientX - resizeStartX.current;
+      const newWidth = Math.max(limits.min, Math.min(limits.max, resizeStartWidth.current + delta));
+      setColumnWidths(prev => ({ ...prev, [resizingColumn]: newWidth }));
+    };
+
+    const handleMouseUp = () => {
+      setColumnWidths(prev => {
+        localStorage.setItem("workflow-column-widths", JSON.stringify(prev));
+        return prev;
+      });
+      setResizingColumn(null);
+      // Clear global cursor lock
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [resizingColumn]);
+
+  // Helper to get column width
+  const getColumnWidth = (columnId: string, defaultWidth: number) => columnWidths[columnId] ?? defaultWidth;
+
+  const handleDownload = async (file: WorkflowFile) => {
+    const trySupabaseDownloadFrom = async (urlStr: string | null | undefined): Promise<boolean> => {
+      const parsed = parseSupabaseStorageLooseRef(urlStr);
+      if (!parsed) return false;
+      try {
+        const { data, error } = await supabase.storage
+          .from(parsed.bucket)
+          .download(parsed.filePath);
+        if (error) throw error;
+        const blobUrl = URL.createObjectURL(data);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = file.file_name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+        return true;
+      } catch (error) {
+        console.error("Download error:", error);
+        return false;
+      }
+    };
+
+    if (file.server_path) {
+      window.open(getWorkFileDownloadUrl(file.server_path, fileServerBaseUrl), "_blank");
+      return;
+    }
+
+    if (await trySupabaseDownloadFrom(file.file_url)) return;
+    if (await trySupabaseDownloadFrom(file.receipt_url)) return;
+
+    const fu = resolvePublicFileFetchUrl(file.file_url);
+    if (fu) {
+      window.open(fu, "_blank");
+      return;
+    }
+    const ru = resolvePublicFileFetchUrl(file.receipt_url);
+    if (ru) window.open(ru, "_blank");
+  };
+
+  // Ordem: disco → Supabase file_url → paths relativos → receipt_url (comprovativo Wise, etc.).
+  const getBlobForPreview = useCallback(async (): Promise<Blob | null> => {
+    if (!previewFile) return null;
+
+    const fromWorkServer = async (): Promise<Blob | null> => {
+      if (!previewFile.server_path) return null;
+      const url = getWorkFileDownloadUrl(previewFile.server_path, fileServerBaseUrl);
+      const fullUrl = url.startsWith("http")
+        ? url
+        : typeof window !== "undefined"
+          ? window.location.origin + url
+          : url;
+      try {
+        const res = await fetch(fullUrl, { credentials: "include" });
+        if (!res.ok) return null;
+        const ct = (res.headers.get("content-type") || "").toLowerCase();
+        if (ct.includes("text/html") || ct.includes("application/json")) return null;
+        const blob = await res.blob();
+        return filterPdfBlob(blob);
+      } catch {
+        return null;
+      }
+    };
+
+    const trySupabasePdfFromFileUrl = async (raw: string): Promise<Blob | null> => {
+      const parsed = parseSupabaseStorageLooseRef(raw);
+      if (!parsed) return null;
+      const pathsToTry = [parsed.filePath];
+      if (parsed.filePath.includes("%")) {
+        try {
+          pathsToTry.push(decodeURIComponent(parsed.filePath));
+          const d2 = decodeURIComponent(decodeURIComponent(parsed.filePath));
+          if (!pathsToTry.includes(d2)) pathsToTry.push(d2);
+        } catch {
+          /* ignore */
+        }
+      }
+      for (const pathToTry of pathsToTry) {
+        const { data, error } = await supabase.storage.from(parsed.bucket).download(pathToTry);
+        if (!error && data) {
+          const pdf = await filterPdfBlob(data);
+          if (pdf) return pdf;
+        }
+      }
+      for (const pathToTry of pathsToTry) {
+        const { data: signed, error: signErr } = await supabase.storage
+          .from(parsed.bucket)
+          .createSignedUrl(pathToTry, 3600);
+        if (signErr || !signed) continue;
+        try {
+          const r = await fetch(signed.signedUrl);
+          if (r.ok) {
+            const pdf = await filterPdfBlob(await r.blob());
+            if (pdf) return pdf;
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+      return null;
+    };
+
+    /** Supabase quando a string é storage; fetch directo só nesse caso. */
+    const blobFromSupabaseOrResolved = async (rawIn: string | null | undefined): Promise<Blob | null> => {
+      const raw = rawIn?.trim();
+      if (!raw || !parseSupabaseStorageLooseRef(raw)) return null;
+
+      const fromSdk = await trySupabasePdfFromFileUrl(raw);
+      if (fromSdk) return fromSdk;
+
+      const resolved = resolvePublicFileFetchUrl(raw);
+      if (resolved) {
+        try {
+          const res = await fetch(resolved, {
+            credentials: resolved.includes("/api/") ? "include" : "same-origin",
+          });
+          if (res.ok) {
+            const ct = (res.headers.get("content-type") || "").toLowerCase();
+            if (!ct.includes("text/html") && !ct.includes("application/json")) {
+              const blob = await res.blob();
+              const pdf = await filterPdfBlob(blob);
+              if (pdf) return pdf;
+            }
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+      return null;
+    };
+
+    /** Paths relativos (/api/work-files, /storage/...) sem ser URL absoluta externa. */
+    const blobFromRelative = async (rawIn: string | null | undefined): Promise<Blob | null> => {
+      const raw = rawIn?.trim();
+      if (!raw || /^https?:\/\//i.test(raw)) return null;
+
+      const resolved = resolvePublicFileFetchUrl(raw);
+      if (!resolved) return null;
+      try {
+        const res = await fetch(resolved, {
+          credentials: resolved.includes("/api/") ? "include" : "same-origin",
+        });
+        if (!res.ok) return null;
+        const ct = (res.headers.get("content-type") || "").toLowerCase();
+        if (ct.includes("text/html") || ct.includes("application/json")) return null;
+        const blob = await res.blob();
+        return filterPdfBlob(blob);
+      } catch {
+        return null;
+      }
+    };
+
+    const ws = await fromWorkServer();
+    if (ws) return ws;
+
+    let b = await blobFromSupabaseOrResolved(previewFile.file_url);
+    if (b) return b;
+    b = await blobFromRelative(previewFile.file_url);
+    if (b) return b;
+
+    b = await blobFromSupabaseOrResolved(previewFile.receipt_url);
+    if (b) return b;
+    b = await blobFromRelative(previewFile.receipt_url);
+    if (b) return b;
+
+    /** Último recurso: URL https externa (ex. Wise) — só funciona se o host permitir CORS. */
+    const tryExternalHttpsPdf = async (rawIn: string | null | undefined): Promise<Blob | null> => {
+      const raw = rawIn?.trim();
+      if (!raw || !/^https:\/\//i.test(raw)) return null;
+      if (parseSupabaseStorageLooseRef(raw)) return null;
+      try {
+        const res = await fetch(raw, { mode: "cors", credentials: "omit" });
+        if (!res.ok) return null;
+        const ct = (res.headers.get("content-type") || "").toLowerCase();
+        if (ct.includes("text/html")) return null;
+        return filterPdfBlob(await res.blob());
+      } catch {
+        return null;
+      }
+    };
+    b = await tryExternalHttpsPdf(previewFile.file_url);
+    if (b) return b;
+    return tryExternalHttpsPdf(previewFile.receipt_url);
+  }, [previewFile, fileServerBaseUrl]);
+
+  // Handle saving modified PDF (for page manipulation)
+  const handleSaveModifiedPdf = useCallback(async (modifiedPdf: Blob, file: WorkflowFile) => {
+    try {
+      if (file.server_path) {
+        throw new Error(
+          "Este PDF está apenas no servidor Work. Guarde uma cópia local ou conclua o fluxo para o Supabase antes de editar."
+        );
+      }
+      const parsed = parseSupabaseStorageLooseRef(file.file_url);
+      if (!parsed) {
+        throw new Error("URL de ficheiro inválida ou em falta (esperado armazenamento Supabase).");
+      }
+      const { bucket, filePath } = parsed;
+
+      console.log(`Uploading modified PDF to bucket: ${bucket}, path: ${filePath}, size: ${modifiedPdf.size}`);
+
+      // Upload the modified file (upsert to replace existing)
+      const { error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, modifiedPdf, {
+          cacheControl: '3600',
+          upsert: true, // Replace existing file
+          contentType: 'application/pdf',
+        });
+
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError.message, { bucket, filePath, size: modifiedPdf.size });
+        throw new Error(`Erro no upload: ${uploadError.message}`);
+      }
+
+      // Update the file size in the database
+      const { error: updateError } = await supabase
+        .from('workflow_files')
+        .update({
+          file_size: modifiedPdf.size,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', file.id);
+
+      if (updateError) {
+        console.error('Error updating file record:', updateError);
+        // Don't throw - file was saved successfully
+      }
+
+      // Invalidate queries to refresh the file list
+      queryClient.invalidateQueries({ queryKey: ['workflow-files'] });
+
+    } catch (error) {
+      console.error('Error saving modified PDF:', error);
+      throw error;
+    }
+  }, [queryClient]);
+
+  const filteredFiles = useMemo(() => workflowFiles?.filter(file => {
+    // Search filter — matches file name, vendor, invoice number, notes, category, description
+    const sq = searchQuery.toLowerCase();
+    const matchesSearch = !sq || 
+      file.file_name.toLowerCase().includes(sq) ||
+      (file.vendor_name && file.vendor_name.toLowerCase().includes(sq)) ||
+      (file.invoice_number && file.invoice_number.toLowerCase().includes(sq)) ||
+      (file.notes && file.notes.toLowerCase().includes(sq)) ||
+      (file.category && file.category.toLowerCase().includes(sq)) ||
+      (file.description && file.description.toLowerCase().includes(sq)) ||
+      (file.companies?.name && file.companies.name.toLowerCase().includes(sq));
+
+    // Multiple filter conditions (AND logic)
+    let matchesAllFilters = true;
+    for (const filter of activeFilters) {
+      let fileValue: string | undefined;
+
+      // Special handling for empresa filter (prefer direct company_id, fallback to transaction)
+      if (filter.column === 'empresa') {
+        fileValue = file.companies?.name || getTxForFile(file)?.companyName || '';
+      } else {
+        const col = columns.find(c => c.id === filter.column);
+        if (col) {
+          fileValue = col.isBuiltIn && col.dbField
+            ? (file as any)[col.dbField]
+            : customData[file.id]?.[filter.column];
+        }
+      }
+
+      // Normalize status to lowercase so "Paid"/"paid" etc. are consistent and documents leave Processing view
+      const fileVal = fileValue ?? '';
+      const compareVal = filter.column === 'status' ? fileVal.toLowerCase() : fileVal;
+      const filterVals = filter.column === 'status' ? (filter.values || []).map((v: string) => v.toLowerCase()) : (filter.values || []);
+      const isMatch = filterVals.includes(compareVal);
+      const passesFilter = filter.mode === 'include' ? isMatch : !isMatch;
+
+      if (!passesFilter) {
+        matchesAllFilters = false;
+        break;
+      }
+    }
+
+    return matchesSearch && matchesAllFilters;
+  })?.sort((a, b) => {
+    const { column, direction } = sortConfig;
+    const multiplier = direction === 'asc' ? 1 : -1;
+
+    let aValue: any;
+    let bValue: any;
+
+    switch (column) {
+      case 'name':
+        aValue = a.file_name.toLowerCase();
+        bValue = b.file_name.toLowerCase();
+        break;
+      case 'date':
+        aValue = new Date(a.created_at).getTime();
+        bValue = new Date(b.created_at).getTime();
+        break;
+      case 'size':
+        aValue = a.file_size || 0;
+        bValue = b.file_size || 0;
+        break;
+      case 'type':
+        aValue = getFileExtension(a.file_name, a.mime_type, a.file_url);
+        bValue = getFileExtension(b.file_name, b.mime_type, b.file_url);
+        break;
+      case 'category':
+        aValue = a.category || '';
+        bValue = b.category || '';
+        break;
+      case 'status':
+        aValue = a.status || '';
+        bValue = b.status || '';
+        break;
+      case 'project':
+        aValue = getTxForFile(a)?.projectName || '';
+        bValue = getTxForFile(b)?.projectName || '';
+        break;
+      case 'empresa':
+        aValue = a.companies?.name || getTxForFile(a)?.companyName || '';
+        bValue = b.companies?.name || getTxForFile(b)?.companyName || '';
+        break;
+      case 'value':
+        aValue = getTxForFile(a)?.value || 0;
+        bValue = getTxForFile(b)?.value || 0;
+        break;
+      default:
+        // For custom columns
+        aValue = customData[a.id]?.[column] || '';
+        bValue = customData[b.id]?.[column] || '';
+    }
+
+    if (aValue < bValue) return -1 * multiplier;
+    if (aValue > bValue) return 1 * multiplier;
+    return 0;
+  }), [workflowFiles, searchQuery, activeFilters, transactionsByFileId, columns, customData, sortConfig]);
+
+  // Sort handler
+  const handleSort = (columnId: string) => {
+    setSortConfig(prev => ({
+      column: columnId,
+      direction: prev.column === columnId && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  // Keyboard navigation for file list
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle if not typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      const target = e.target as HTMLElement;
+
+      // Ignore if inside a dialog, combobox, select, menu or any Radix popover
+      if (target.closest('[role="dialog"]') ||
+          target.closest('[role="combobox"]') ||
+          target.closest('[role="listbox"]') ||
+          target.closest('[role="menu"]') ||
+          target.closest('[data-radix-popper-content-wrapper]') ||
+          target.isContentEditable) {
+        return;
+      }
+
+      // If expense panel is open, only allow Escape to work (ignore file navigation shortcuts)
+      if (showExpensePanel && e.key !== 'Escape') {
+        return;
+      }
+
+      // If dropdown menu is open, don't handle arrow navigation
+      // (let the menu handle its own keyboard navigation)
+      if (openMenuFileId && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        return;
+      }
+
+      if (!filteredFiles || filteredFiles.length === 0) return;
+
+      const currentIndex = focusedFileId
+        ? filteredFiles.findIndex(f => f.id === focusedFileId)
+        : -1;
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          if (currentIndex < filteredFiles.length - 1) {
+            const nextFile = filteredFiles[currentIndex + 1];
+            setFocusedFileId(nextFile.id);
+            // Scroll row into view - preserve horizontal scroll position
+            const container = document.querySelector('[data-workflow-table-container]') as HTMLElement;
+            const prevScrollLeft = container?.scrollLeft ?? 0;
+            const row = document.querySelector(`[data-file-id="${nextFile.id}"]`);
+            row?.scrollIntoView({ block: 'nearest' });
+            if (container) {
+              requestAnimationFrame(() => { container.scrollLeft = prevScrollLeft; });
+            }
+          } else if (currentIndex === -1 && filteredFiles.length > 0) {
+            const firstFile = filteredFiles[0];
+            setFocusedFileId(firstFile.id);
+            const container = document.querySelector('[data-workflow-table-container]') as HTMLElement;
+            const prevScrollLeft = container?.scrollLeft ?? 0;
+            const row = document.querySelector(`[data-file-id="${firstFile.id}"]`);
+            row?.scrollIntoView({ block: 'nearest' });
+            if (container) {
+              requestAnimationFrame(() => { container.scrollLeft = prevScrollLeft; });
+            }
+          }
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          if (currentIndex > 0) {
+            const prevFile = filteredFiles[currentIndex - 1];
+            setFocusedFileId(prevFile.id);
+            // Scroll row into view - preserve horizontal scroll position
+            const container = document.querySelector('[data-workflow-table-container]') as HTMLElement;
+            const prevScrollLeft = container?.scrollLeft ?? 0;
+            const row = document.querySelector(`[data-file-id="${prevFile.id}"]`);
+            row?.scrollIntoView({ block: 'nearest' });
+            if (container) {
+              requestAnimationFrame(() => { container.scrollLeft = prevScrollLeft; });
+            }
+          }
+          break;
+        case 'Enter':
+          if (focusedFileId) {
+            const file = filteredFiles.find(f => f.id === focusedFileId);
+            if (file) openFilePreview(file);
+          }
+          break;
+        case 'Escape':
+          setFocusedFileId(null);
+          break;
+        case 'n':
+        case 'N':
+          // Open new movement panel when viewing a document
+          if (previewFile) {
+            e.preventDefault();
+            setShowExpensePanel(true);
+          }
+          break;
+        case 'e':
+        case 'E':
+          // Open action menu for focused file - always prevent default to avoid scrolling
+          e.preventDefault();
+          {
+            // Determine target file: focused > single selected > first visible
+            let targetId = focusedFileId;
+            if (!targetId && selectedFiles.size === 1) {
+              targetId = Array.from(selectedFiles)[0];
+            }
+            if (!targetId && filteredFiles.length > 0) {
+              targetId = filteredFiles[0].id;
+            }
+            if (targetId) {
+              setFocusedFileId(targetId);
+              // Open menu directly - Radix portal handles positioning
+              setOpenMenuFileId(targetId);
+            }
+          }
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [filteredFiles, focusedFileId, previewFile, openMenuFileId, selectedFiles, showExpensePanel, openFilePreview]);
+
+  // Bulk actions
+  const handleBulkDownload = async () => {
+    const filesToDownload = workflowFiles?.filter(f => selectedFiles.has(f.id)) || [];
+    for (const file of filesToDownload) {
+      await handleDownload(file);
+    }
+    toast.success(`Downloaded ${filesToDownload.length} files`);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${selectedFiles.size} files?`)) return;
+
+    for (const id of selectedFiles) {
+      await deleteMutation.mutateAsync(id);
+    }
+    setSelectedFiles(new Set());
+    toast.success(`Deleted ${selectedFiles.size} files`);
+  };
+
+  const handleBulkStatusChange = async (newStatus: string) => {
+    const ids = Array.from(selectedFiles);
+    for (const id of ids) {
+      await supabase.from("workflow_files").update({ status: newStatus }).eq("id", id);
+    }
+    queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+    setSelectedFiles(new Set());
+    toast.success(`${ids.length} ficheiro(s) atualizados para "${newStatus}"`);
+  };
+
+  const handleBulkCategoryChange = async (newCategory: string) => {
+    const ids = Array.from(selectedFiles);
+    for (const id of ids) {
+      await supabase.from("workflow_files").update({ category: newCategory }).eq("id", id);
+    }
+    queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+    setSelectedFiles(new Set());
+    toast.success(`${ids.length} ficheiro(s) atualizados para categoria "${newCategory}"`);
+  };
+
+  // Get unique company names from workflow files and transactions for empresa filter
+  const uniqueCompanyOptions = (): ColumnOption[] => {
+    const companyNames = new Set<string>();
+    // Add company names from direct company_id relationship
+    workflowFiles?.forEach(file => {
+      if (file.companies?.name) companyNames.add(file.companies.name);
+    });
+    // Also add from transactions for backwards compatibility
+    if (transactionsByFileId) {
+      Object.values(transactionsByFileId).forEach((tx: any) => {
+        if (tx.companyName) companyNames.add(tx.companyName);
+      });
+    }
+    return Array.from(companyNames).map(name => ({ label: name, color: "#3b82f6" }));
+  };
+
+  const getFilterableColumns = () => {
+    const filterableCols = columns.filter(c => c.options && c.options.length > 0);
+    // Add empresa as a special filterable column with dynamic options
+    const empresaOptions = uniqueCompanyOptions();
+    if (empresaOptions.length > 0) {
+      filterableCols.push({ id: 'empresa', label: 'Empresa', visible: true, options: empresaOptions });
+    }
+    return filterableCols;
+  };
+
+  const formatFileSize = (bytes: number | null) => {
+    if (!bytes) return "—";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const isColumnVisible = (id: string) => columns.find(c => c.id === id)?.visible ?? true;
+
+  const toggleColumnVisibility = (id: string) => {
+    setColumns(columns.map(col =>
+      col.id === id ? { ...col, visible: !col.visible } : col
+    ));
+  };
+
+  const getColumnValue = (file: WorkflowFile, column: ColumnConfig) => {
+    if (column.isBuiltIn && column.dbField) {
+      // For "category", prefer the expense category name (e.g. "Manutenção") when present,
+      // then fallback to transaction subcategory, then enum category, and finally workflow_files.category.
+      if (column.dbField === "category") {
+        const tx = getTxForFile(file);
+        return tx?.categoryName || tx?.subcategory || tx?.category || (file as any)[column.dbField] || null;
+      }
+      return (file as any)[column.dbField] || null;
+    }
+    return customData[file.id]?.[column.id] || null;
+  };
+
+  const renderCellDropdown = (file: WorkflowFile, column: ColumnConfig) => {
+    const value = getColumnValue(file, column);
+    const options = column.options;
+    // Case-insensitive match for category values (DB has lowercase, options have capitalized)
+    const option = options?.find(o => o.label.toLowerCase() === value?.toLowerCase());
+    const displayValue = option?.label || value; // Use matched option label or raw value
+
+    // For category column, render as plain text (like Empresa/Project columns)
+    const isPlainText = column.dbField === "category";
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          {isPlainText ? (
+            <button className="text-left text-xs text-slate-600 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer whitespace-nowrap">
+              {displayValue || <span className="text-slate-400">—</span>}
+            </button>
+          ) : (
+          <button className="cursor-pointer hover:opacity-80 transition-opacity">
+            {displayValue ? (
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style={{
+                  backgroundColor: option?.color ? `${option.color}20` : '#e5e7eb',
+                  color: option?.color || '#374151',
+                  borderColor: option?.color ? `${option.color}40` : '#d1d5db',
+                  borderWidth: '1px'
+                }}
+              >
+                {displayValue}
+              </span>
+            ) : (
+              <span className="text-slate-400 text-xs">—</span>
+            )}
+          </button>
+          )}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="center" className="bg-white z-50">
+          {options?.map((opt) => (
+            <DropdownMenuItem
+              key={opt.label}
+              className="flex justify-center"
+              onClick={() => {
+                const filesToUpdate = selectedFiles.has(file.id) && selectedFiles.size > 1
+                  ? Array.from(selectedFiles)
+                  : [file.id];
+
+                if (column.isBuiltIn && column.dbField) {
+                  filesToUpdate.forEach(fileId => {
+                    updateFieldMutation.mutate({ id: fileId, field: column.dbField!, value: opt.label });
+                  });
+                } else {
+                  setCustomData(prev => {
+                    const updated = { ...prev };
+                    filesToUpdate.forEach(fileId => {
+                      updated[fileId] = { ...updated[fileId], [column.id]: opt.label };
+                    });
+                    return updated;
+                  });
+                }
+              }}
+            >
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style={{
+                  backgroundColor: `${opt.color}20`,
+                  color: opt.color,
+                }}
+              >
+                {opt.label}
+              </span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
+  const renderColumnHeader = (column: ColumnConfig, isCustom = false) => {
+    const canEdit = column.options && column.options.length > 0;
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center gap-1 hover:text-foreground transition-colors text-left w-full">
+            {column.label}
+            <ChevronDown className="h-3 w-3" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {canEdit && (
+            <DropdownMenuItem onClick={() => openEditColumnDialog(column)}>
+              <Edit3 className="h-4 w-4 mr-2" />
+              Edit Column
+            </DropdownMenuItem>
+          )}
+          {isCustom && (
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={() => deleteColumn(column.id)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Column
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
+  // Column management functions
+  const addNewColumn = () => {
+    if (!newColumnName.trim()) return;
+
+    const newCol: ColumnConfig = {
+      id: `custom-${Date.now()}`,
+      label: newColumnName.trim(),
+      visible: true,
+      options: newColumnOptions.length > 0 ? newColumnOptions : [{ label: "Option 1", color: COLOR_PALETTE[0] }],
+    };
+
+    setCustomColumns([...customColumns, newCol]);
+    setNewColumnName("");
+    setNewColumnOptions([]);
+    setAddColumnDialogOpen(false);
+    toast.success("Column added");
+  };
+
+  const deleteColumn = (columnId: string) => {
+    if (confirm("Delete this column?")) {
+      setCustomColumns(customColumns.filter(c => c.id !== columnId));
+      toast.success("Column deleted");
+    }
+  };
+
+  const openEditColumnDialog = (column: ColumnConfig) => {
+    setEditingColumn({ ...column, options: column.options ? [...column.options] : [] });
+    setEditColumnDialogOpen(true);
+  };
+
+  const saveColumnEdits = () => {
+    if (!editingColumn) return;
+
+    if (editingColumn.isBuiltIn) {
+      setColumns(columns.map(c => c.id === editingColumn.id ? editingColumn : c));
+      // Save to Supabase for built-in columns (category, status)
+      if (editingColumn.options && editingColumn.options.length > 0) {
+        saveColumnConfigMutation.mutate({
+          columnId: editingColumn.id,
+          options: editingColumn.options,
+        });
+      }
+    } else {
+      setCustomColumns(customColumns.map(c => c.id === editingColumn.id ? editingColumn : c));
+    }
+
+    setEditColumnDialogOpen(false);
+    setEditingColumn(null);
+    toast.success("Column updated");
+  };
+
+  const addOption = () => {
+    if (editingColumn) {
+      const newOptions = [...(editingColumn.options || []), {
+        label: `Option ${(editingColumn.options?.length || 0) + 1}`,
+        color: COLOR_PALETTE[(editingColumn.options?.length || 0) % COLOR_PALETTE.length]
+      }];
+      setEditingColumn({ ...editingColumn, options: newOptions });
+    }
+  };
+
+  const removeOption = (index: number) => {
+    if (editingColumn?.options) {
+      const newOptions = editingColumn.options.filter((_, i) => i !== index);
+      setEditingColumn({ ...editingColumn, options: newOptions });
+    }
+  };
+
+  const updateOptionColor = (index: number, color: string) => {
+    if (editingColumn?.options) {
+      const newOptions = [...editingColumn.options];
+      newOptions[index] = { ...newOptions[index], color };
+      setEditingColumn({ ...editingColumn, options: newOptions });
+    }
+  };
+
+  const updateOptionLabel = (index: number, label: string) => {
+    if (editingColumn?.options) {
+      const newOptions = [...editingColumn.options];
+      newOptions[index] = { ...newOptions[index], label };
+      setEditingColumn({ ...editingColumn, options: newOptions });
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedFiles.size === filteredFiles?.length) {
+      setSelectedFiles(new Set());
+    } else {
+      setSelectedFiles(new Set(filteredFiles?.map(f => f.id) || []));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedFiles);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedFiles(newSelected);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Top Toolbar */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileUpload}
+          className="hidden"
+          multiple
+        />
+        <Button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          className="bg-blue-600 hover:bg-blue-700 flex-shrink-0"
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          {isUploading ? "Uploading..." : "Upload"}
+        </Button>
+
+        {/* Columns Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1 h-7 text-xs px-2 flex-shrink-0">
+              <Columns className="h-3 w-3" />
+              Columns
+              <ChevronDown className="h-2.5 w-2.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            {columns.filter(col => !col.required).map((col) => (
+              <DropdownMenuItem
+                key={col.id}
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleColumnVisibility(col.id);
+                }}
+                className="flex items-center gap-2"
+              >
+                <Checkbox
+                  checked={col.visible}
+                  onCheckedChange={() => toggleColumnVisibility(col.id)}
+                />
+                <span>{col.label}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Clear Active Filters Button - only show when filters are active */}
+        {activeFilters.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-2 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+            onClick={() => {
+              setActiveFilters([]);
+              setCurrentFilterColumn("");
+              toast.success("Filtros limpos");
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+
+        {/* Preset Filters - Only show if not deleted AND no user-saved filter overrides this preset name */}
+        {DEFAULT_PRESET_FILTERS
+          .filter(filter => !deletedPresetIds.includes(filter.id))
+          .filter(preset => !savedFilters.some(sf => sf.name.toLowerCase() === preset.name.toLowerCase()))
+          .map(filter => {
+            const conditions = filter.conditions || [];
+            const isActive = conditions.length > 0 && conditions.length === activeFilters.length &&
+              conditions.every(fc =>
+                activeFilters.some(af =>
+                  af.column === fc.column &&
+                  af.values.length === fc.values.length &&
+                  af.values.every(v => fc.values.includes(v))
+                )
+              );
+            return (
+              <ContextMenu key={filter.id}>
+                <ContextMenuTrigger>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "gap-1 h-7 text-xs px-2",
+                      isActive && "bg-blue-50 border-blue-200 text-blue-700"
+                    )}
+                    onClick={() => loadSavedFilter(filter)}
+                  >
+                    <Bookmark className="h-3 w-3" />
+                    {filter.name}
+                  </Button>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => {
+                      const newDeletedIds = [...deletedPresetIds, filter.id];
+                      setDeletedPresetIds(newDeletedIds);
+                      localStorage.setItem("workflow-deleted-preset-filters", JSON.stringify(newDeletedIds));
+                      toast.success(`Filtro "${filter.name}" eliminado`);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar filtro
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
+            );
+          })}
+
+        {/* User Saved Filters - Quick Access Buttons (always shown; override preset with same name) */}
+        {savedFilters.map(filter => {
+            // Check if this saved filter matches current active filters
+            const conditions = filter.conditions || [];
+            const isActive = conditions.length > 0 && conditions.length === activeFilters.length &&
+              conditions.every(fc =>
+                activeFilters.some(af =>
+                  af.column === fc.column &&
+                  af.values.length === fc.values.length &&
+                  af.values.every(v => fc.values.includes(v))
+                )
+              );
+            return (
+              <ContextMenu key={filter.id}>
+                <ContextMenuTrigger>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "gap-1 h-7 text-xs px-2",
+                      isActive && "bg-blue-50 border-blue-200 text-blue-700"
+                    )}
+                    onClick={() => loadSavedFilter(filter)}
+                  >
+                    <Bookmark className="h-3 w-3" />
+                    {filter.name}
+                  </Button>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => deleteSavedFilter(filter.id)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar filtro
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
+            );
+          })}
+
+        {/* Bulk Actions - shown when files selected */}
+        {selectedFiles.size > 0 && (
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Status ({selectedFiles.size})
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>Alterar status</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {["draft", "processing", "payment", "claim", "paid"].map(s => (
+                  <DropdownMenuItem key={s} onClick={() => handleBulkStatusChange(s)}>
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <FolderInput className="h-4 w-4" />
+                  Categoria ({selectedFiles.size})
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>Alterar categoria</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {["Compras", "Impostos", "Legal", "Software", "Seguros", "Transportes", "Utilidades", "Refeições", "Consultoria", "Electricidade-Agua", "Serviços"].map(c => (
+                  <DropdownMenuItem key={c} onClick={() => handleBulkCategoryChange(c)}>
+                    {c}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={handleBulkDownload}
+            >
+              <Download className="h-4 w-4" />
+              Download ({selectedFiles.size})
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2 text-destructive hover:text-destructive"
+              onClick={handleBulkDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete ({selectedFiles.size})
+            </Button>
+          </>
+        )}
+
+        <div className="flex-1" />
+
+        {/* Horizontal Filter Controls */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Show active filters as badges */}
+          {activeFilters.map(filter => {
+            const col = getFilterableColumns().find(c => c.id === filter.column);
+            return (
+              <div key={filter.column} className="flex items-center gap-1 bg-blue-50 border border-blue-200 rounded-md px-2 py-1">
+                <span className="text-xs text-blue-700 font-medium">{col?.label}:</span>
+                <span className="text-xs text-blue-600">
+                  {filter.mode === 'exclude' && '!'}
+                  {filter.values.join(', ')}
+                </span>
+                <button
+                  className="ml-1 text-blue-400 hover:text-blue-600"
+                  onClick={() => removeFilter(filter.column)}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            );
+          })}
+
+          {/* Add filter dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2 h-9">
+                <Filter className="h-4 w-4" />
+                {currentFilterColumn ? getFilterableColumns().find(c => c.id === currentFilterColumn)?.label : "Adicionar Filtro"}
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="bg-popover">
+              {activeFilters.length > 0 && (
+                <>
+                  <DropdownMenuItem onClick={clearAllFilters}>
+                    Limpar todos filtros
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              {getFilterableColumns()
+                .filter(col => !activeFilters.some(f => f.column === col.id))
+                .map(col => (
+                  <DropdownMenuItem
+                    key={col.id}
+                    onClick={() => setCurrentFilterColumn(col.id)}
+                  >
+                    {col.label}
+                  </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Filter mode toggle */}
+          {currentFilterColumn && (
+            <Button
+              variant={(getFilterForColumn(currentFilterColumn)?.mode || 'include') === 'exclude' ? "destructive" : "outline"}
+              size="sm"
+              className="h-9 text-xs"
+              onClick={() => {
+                const existing = getFilterForColumn(currentFilterColumn);
+                const newMode = (existing?.mode || 'include') === 'include' ? 'exclude' : 'include';
+                if (existing) {
+                  addOrUpdateFilter(currentFilterColumn, existing.values, newMode);
+                }
+              }}
+            >
+              {(getFilterForColumn(currentFilterColumn)?.mode || 'include') === 'include' ? 'Incluir' : 'Excluir'}
+            </Button>
+          )}
+
+          {/* Value selection dropdown */}
+          {currentFilterColumn && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 h-9">
+                  {(() => {
+                    const vals = getFilterForColumn(currentFilterColumn)?.values || [];
+                    return vals.length === 0 ? "Selecionar" : vals.length === 1 ? vals[0] : `${vals.length} selecionados`;
+                  })()}
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="bg-popover min-w-[180px]">
+                <DropdownMenuItem onClick={() => removeFilter(currentFilterColumn)}>
+                  Limpar seleção
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {getFilterableColumns().find(c => c.id === currentFilterColumn)?.options?.map(opt => {
+                  const currentFilter = getFilterForColumn(currentFilterColumn);
+                  const isSelected = currentFilter?.values.includes(opt.label) || false;
+                  return (
+                    <DropdownMenuItem
+                      key={opt.label}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const current = currentFilter?.values || [];
+                        const mode = currentFilter?.mode || 'include';
+                        if (isSelected) {
+                          const newValues = current.filter(v => v !== opt.label);
+                          if (newValues.length === 0) {
+                            removeFilter(currentFilterColumn);
+                          } else {
+                            addOrUpdateFilter(currentFilterColumn, newValues, mode);
+                          }
+                        } else {
+                          addOrUpdateFilter(currentFilterColumn, [...current, opt.label], mode);
+                        }
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <Checkbox checked={isSelected} className="h-4 w-4" />
+                      <span
+                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                        style={{ backgroundColor: `${opt.color}20`, color: opt.color }}
+                      >
+                        {opt.label}
+                      </span>
+                    </DropdownMenuItem>
+                  );
+                })}
+                {activeFilters.length > 0 && savedFilters.length < 5 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setSaveFilterDialogOpen(true)}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Guardar filtro atual
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* Clear current filter column selection */}
+          {currentFilterColumn && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => setCurrentFilterColumn("")}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 w-64 h-9"
+          />
+        </div>
+      </div>
+
+      {/* KPI Summary Bar — clickable to filter by status */}
+      {(() => {
+        const allFiles = workflowFiles || [];
+        if (allFiles.length === 0) return null;
+        const byStatus: Record<string, { count: number; value: number }> = {};
+        allFiles.forEach(f => {
+          const s = f.status || "draft";
+          if (!byStatus[s]) byStatus[s] = { count: 0, value: 0 };
+          byStatus[s].count++;
+          byStatus[s].value += f.total_amount || 0;
+        });
+        const statusColors: Record<string, string> = {
+          draft: "bg-slate-100 text-slate-700 hover:bg-slate-200",
+          processing: "bg-blue-100 text-blue-700 hover:bg-blue-200",
+          payment: "bg-amber-100 text-amber-700 hover:bg-amber-200",
+          claim: "bg-orange-100 text-orange-700 hover:bg-orange-200",
+          paid: "bg-green-100 text-green-700 hover:bg-green-200",
+        };
+        const activeStatusColors: Record<string, string> = {
+          draft: "bg-slate-300 text-slate-900 ring-2 ring-slate-400",
+          processing: "bg-blue-300 text-blue-900 ring-2 ring-blue-400",
+          payment: "bg-amber-300 text-amber-900 ring-2 ring-amber-400",
+          claim: "bg-orange-300 text-orange-900 ring-2 ring-orange-400",
+          paid: "bg-green-300 text-green-900 ring-2 ring-green-400",
+        };
+        const currentStatusFilter = activeFilters.find(f => f.column === "status");
+        const isStatusActive = (s: string) => currentStatusFilter?.values.includes(s) ?? false;
+        const fmtVal = (v: number) => v > 0 ? new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(v) : "";
+        const toggleStatusFilter = (status: string) => {
+          const existing = activeFilters.find(f => f.column === "status");
+          if (existing) {
+            if (existing.values.includes(status)) {
+              const newValues = existing.values.filter(v => v !== status);
+              if (newValues.length === 0) {
+                removeFilter("status");
+              } else {
+                addOrUpdateFilter("status", newValues, "include");
+              }
+            } else {
+              addOrUpdateFilter("status", [...existing.values, status], "include");
+            }
+          } else {
+            addOrUpdateFilter("status", [status], "include");
+          }
+        };
+        return (
+          <div className="flex gap-2 flex-wrap">
+            {Object.entries(byStatus).sort((a, b) => {
+              const order = ["draft", "processing", "payment", "claim", "paid"];
+              return order.indexOf(a[0]) - order.indexOf(b[0]);
+            }).map(([status, data]) => {
+              const active = isStatusActive(status);
+              return (
+                <button
+                  key={status}
+                  onClick={() => toggleStatusFilter(status)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-all ${
+                    active
+                      ? (activeStatusColors[status] || "bg-muted ring-2 ring-primary")
+                      : (statusColors[status] || "bg-muted text-muted-foreground")
+                  }`}
+                >
+                  <span className="capitalize">{status}</span>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-white/60">{data.count}</Badge>
+                  {data.value > 0 && <span className="text-[10px] opacity-75">{fmtVal(data.value)}</span>}
+                </button>
+              );
+            })}
+            {currentStatusFilter && (
+              <button
+                onClick={() => removeFilter("status")}
+                className="flex items-center gap-1 px-2 py-1.5 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <X className="h-3 w-3" />
+                Limpar
+              </button>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Files Table with Drag & Drop */}
+      <div
+        data-workflow-table-container
+        ref={tableContainerRef}
+        tabIndex={0}
+        className={`border rounded-lg bg-white shadow-sm overflow-auto max-h-[calc(100vh-280px)] transition-colors relative focus:outline-none focus:ring-2 focus:ring-blue-400/50 ${
+          isDragging ? "border-blue-500 border-2 bg-blue-50" : "border-slate-200"
+        }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => {
+          // Focus the table container when clicking anywhere on it
+          tableContainerRef.current?.focus();
+        }}
+      >
+        {isDragging && (
+          <div className="absolute inset-0 flex items-center justify-center bg-blue-50/80 z-10 pointer-events-none">
+            <div className="text-blue-600 font-medium flex items-center gap-2">
+              <Upload className="h-6 w-6" />
+              Drop files here to upload
+            </div>
+          </div>
+        )}
+        <table className="w-full min-w-[1400px] table-fixed">
+          <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+            <tr>
+              <th className="w-10 px-3 py-2.5">
+                <Checkbox
+                  checked={selectedFiles.size > 0 && selectedFiles.size === filteredFiles?.length}
+                  onCheckedChange={toggleSelectAll}
+                />
+              </th>
+              <th
+                className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
+                style={{ width: getColumnWidth('name', 400), minWidth: 80, maxWidth: 800 }}
+                onClick={() => handleSort('name')}
+              >
+                <div className="flex items-center gap-1">
+                  File
+                  {sortConfig.column === 'name' && (
+                    sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                  )}
+                </div>
+                {/* Resize handle */}
+                <div
+                  className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                  onMouseDown={(e) => handleColumnResizeStart(e, 'name', 400)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </th>
+              {isColumnVisible("type") && (
+                <th
+                  className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
+                  style={{ width: getColumnWidth('type', 64), minWidth: 50 }}
+                  onClick={() => handleSort('type')}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Type
+                    {sortConfig.column === 'type' && (
+                      sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                    )}
+                  </div>
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                    onMouseDown={(e) => handleColumnResizeStart(e, 'type', 64)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </th>
+              )}
+              {isColumnVisible("date") && (
+                <th
+                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
+                  style={{ width: getColumnWidth('date', 112), minWidth: 80 }}
+                  onClick={() => handleSort('date')}
+                >
+                  <div className="flex items-center gap-1">
+                    Date
+                    {sortConfig.column === 'date' && (
+                      sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                    )}
+                  </div>
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                    onMouseDown={(e) => handleColumnResizeStart(e, 'date', 112)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </th>
+              )}
+              {isColumnVisible("category") && (
+                <th
+                  className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs relative select-none"
+                  style={{ width: getColumnWidth('category', 112), minWidth: 80 }}
+                >
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className="flex items-center justify-center gap-1 w-full hover:text-foreground transition-colors"
+                      >
+                        Category
+                        {sortConfig.column === 'category' && (
+                          sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                        <ChevronDown className="h-3 w-3 opacity-50" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem onClick={() => handleSort('category')}>
+                        {sortConfig.column === 'category' && sortConfig.direction === 'asc' ? 'Sort Z-A' : 'Sort A-Z'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openEditColumnDialog(columns.find(c => c.id === 'category')!)}>
+                        <Edit3 className="h-4 w-4 mr-2" />
+                        Edit Column
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                    onMouseDown={(e) => handleColumnResizeStart(e, 'category', 112)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </th>
+              )}
+              {isColumnVisible("status") && (
+                <th
+                  className="text-center px-3 py-2.5 font-semibold text-slate-700 text-xs relative select-none"
+                  style={{ width: getColumnWidth('status', 112), minWidth: 80 }}
+                >
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className="flex items-center justify-center gap-1 w-full hover:text-foreground transition-colors"
+                      >
+                        Status
+                        {sortConfig.column === 'status' && (
+                          sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                        <ChevronDown className="h-3 w-3 opacity-50" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem onClick={() => handleSort('status')}>
+                        {sortConfig.column === 'status' && sortConfig.direction === 'asc' ? 'Sort Z-A' : 'Sort A-Z'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openEditColumnDialog(columns.find(c => c.id === 'status')!)}>
+                        <Edit3 className="h-4 w-4 mr-2" />
+                        Edit Column
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                    onMouseDown={(e) => handleColumnResizeStart(e, 'status', 112)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </th>
+              )}
+              {isColumnVisible("size") && (
+                <th
+                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
+                  style={{ width: getColumnWidth('size', 80), minWidth: 60 }}
+                  onClick={() => handleSort('size')}
+                >
+                  <div className="flex items-center gap-1">
+                    Size
+                    {sortConfig.column === 'size' && (
+                      sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                    )}
+                  </div>
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                    onMouseDown={(e) => handleColumnResizeStart(e, 'size', 80)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </th>
+              )}
+              {isColumnVisible("empresa") && (
+                <th
+                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
+                  style={{ width: getColumnWidth('empresa', 128), minWidth: 80 }}
+                  onClick={() => handleSort('empresa')}
+                >
+                  <div className="flex items-center gap-1">
+                    Empresa
+                    {sortConfig.column === 'empresa' && (
+                      sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                    )}
+                  </div>
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                    onMouseDown={(e) => handleColumnResizeStart(e, 'empresa', 128)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </th>
+              )}
+              {isColumnVisible("project") && (
+                <th
+                  className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
+                  style={{ width: getColumnWidth('project', 128), minWidth: 80 }}
+                  onClick={() => handleSort('project')}
+                >
+                  <div className="flex items-center gap-1">
+                    Project
+                    {sortConfig.column === 'project' && (
+                      sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                    )}
+                  </div>
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                    onMouseDown={(e) => handleColumnResizeStart(e, 'project', 128)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </th>
+              )}
+              {isColumnVisible("value") && (
+                <th
+                  className="text-right px-3 py-2.5 font-semibold text-slate-700 text-xs cursor-pointer hover:bg-slate-100 relative select-none"
+                  style={{ width: getColumnWidth('value', 96), minWidth: 70 }}
+                  onClick={() => handleSort('value')}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    Value
+                    {sortConfig.column === 'value' && (
+                      sortConfig.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                    )}
+                  </div>
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 transition-colors z-10"
+                    onMouseDown={(e) => handleColumnResizeStart(e, 'value', 96)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </th>
+              )}
+              {/* Custom columns headers */}
+              {customColumns.map((col) => (
+                <th key={col.id} className="text-left px-3 py-2.5 font-semibold text-slate-700 text-xs w-28">
+                  {renderColumnHeader(col, true)}
+                </th>
+              ))}
+              {/* Add column button */}
+              <th className="w-10 px-3 py-2.5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => setAddColumnDialogOpen(true)}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </th>
+              <th className="w-20 px-3 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr>
+                <td colSpan={10} className="text-center py-8 text-muted-foreground">
+                  Loading files...
+                </td>
+              </tr>
+            ) : filteredFiles?.length === 0 ? (
+              <tr>
+                <td colSpan={10} className="text-center py-12 text-muted-foreground">
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="h-8 w-8 text-slate-300" />
+                    <span>No files found. Drag & drop files here or click Upload.</span>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              filteredFiles?.map((file) => (
+                <ContextMenu key={file.id}>
+                  <ContextMenuTrigger asChild>
+                    <tr
+                      data-file-id={file.id}
+                      tabIndex={0}
+                      className={cn(
+                        "border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer",
+                        focusedFileId === file.id && "bg-blue-50 ring-1 ring-blue-200"
+                      )}
+                      onMouseDown={() => setFocusedFileId(file.id)}
+                      onFocus={() => setFocusedFileId(file.id)}
+                      onDoubleClick={() => openFilePreview(file)}
+                    >
+                      <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedFiles.has(file.id)}
+                          onCheckedChange={() => toggleSelect(file.id)}
+                        />
+                      </td>
+                      <td
+                        className="px-3 py-1.5 cursor-pointer"
+                        style={{ width: getColumnWidth('name', 400), minWidth: 80, maxWidth: 800 }}
+                        title={`Clique para abrir: ${file.file_name}`}
+                        onClick={(e) => {
+                          if ((e.target as HTMLElement).closest("a[href]")) return;
+                          e.stopPropagation();
+                          openFilePreview(file);
+                        }}
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden min-w-0">
+                          <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                          <span className="text-xs font-medium text-blue-600 text-left truncate min-w-0 block hover:underline">
+                            {getFileNameWithoutExtension(file.file_name)}
+                          </span>
+                          {/* Wise payment receipt indicator */}
+                          {(file as any).receipt_url && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <a
+                                    href={(file as any).receipt_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex-shrink-0 p-0.5 rounded hover:bg-green-50 text-green-600 hover:text-green-700 transition-colors"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Receipt className="h-3.5 w-3.5" />
+                                  </a>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom">
+                                  <p className="text-xs">Comprovativo de pagamento Wise</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          {/* Pending loan indicator with rich tooltip */}
+                          {customData[file.id]?._pendingLoan && (() => {
+                            try {
+                              const loanData = JSON.parse(customData[file.id]._pendingLoan);
+                              return (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge
+                                        variant="outline"
+                                        className="text-[9px] px-1 py-0 bg-amber-50 text-amber-700 border-amber-300 flex-shrink-0 cursor-help"
+                                      >
+                                        Empréstimo
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="p-0 max-w-xs">
+                                      <div className="p-3 space-y-2">
+                                        <p className="font-semibold text-amber-700 flex items-center gap-1.5 text-sm">
+                                          💰 Detalhes do Empréstimo
+                                        </p>
+                                        <div className="space-y-1.5 text-xs">
+                                          <div className="flex items-start gap-2">
+                                            <span className="text-green-600 font-medium whitespace-nowrap">Credor:</span>
+                                            <span className="text-foreground">{loanData.lending_company_name}</span>
+                                          </div>
+                                          <div className="flex items-start gap-2">
+                                            <span className="text-orange-600 font-medium whitespace-nowrap">Devedor:</span>
+                                            <span className="text-foreground">{loanData.borrowing_company_name}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-muted-foreground font-medium">Valor:</span>
+                                            <span className="font-semibold text-foreground">
+                                              {loanData.amount?.toLocaleString('pt-PT', {
+                                                style: 'currency',
+                                                currency: 'EUR'
+                                              })}
+                                            </span>
+                                          </div>
+                                          {loanData.start_date && (
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-muted-foreground font-medium">Data:</span>
+                                              <span className="text-foreground">
+                                                {format(new Date(loanData.start_date), 'dd/MM/yyyy')}
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              );
+                            } catch {
+                              return (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[9px] px-1 py-0 bg-amber-50 text-amber-700 border-amber-300 flex-shrink-0"
+                                  title="Empréstimo pendente"
+                                >
+                                  Empréstimo
+                                </Badge>
+                              );
+                            }
+                          })()}
+                        </div>
+                      </td>
+                      {isColumnVisible("type") && (
+                        <td className="px-3 py-1.5 text-center">
+                          {(() => {
+                            const ext = getFileExtension(file.file_name, file.mime_type, file.file_url);
+                            const style = getFileTypeBadgeStyle(ext);
+                            return ext ? (
+                              <Badge
+                                className="text-[10px] px-1.5 py-0 uppercase font-medium"
+                                style={{ backgroundColor: style.bg, color: style.text }}
+                              >
+                                {ext}
+                              </Badge>
+                            ) : <span className="text-slate-400">—</span>;
+                          })()}
+                        </td>
+                      )}
+                      {isColumnVisible("date") && (
+                        <td className="px-3 py-1.5 text-slate-600 text-sm whitespace-nowrap">
+                          {format(new Date(file.created_at), "dd/MM/yyyy HH:mm")}
+                        </td>
+                      )}
+                      {isColumnVisible("category") && (
+                        <td className="px-3 py-1.5 text-center">
+                          {renderCellDropdown(file, columns.find(c => c.id === "category")!)}
+                        </td>
+                      )}
+                      {isColumnVisible("status") && (
+                        <td className="px-3 py-1.5 text-center">
+                          {renderCellDropdown(file, columns.find(c => c.id === "status")!)}
+                        </td>
+                      )}
+                      {isColumnVisible("size") && (
+                        <td className="px-3 py-1.5 text-slate-600 text-xs">
+                          {formatFileSize(file.file_size)}
+                        </td>
+                      )}
+                      {isColumnVisible("empresa") && (
+                        <td className="px-3 py-1.5 max-w-[150px]">
+                          <span
+                            className="text-xs text-slate-600 block truncate"
+                            title={file.companies?.name || getTxForFile(file)?.companyName || undefined}
+                          >
+                            {file.companies?.name || getTxForFile(file)?.companyName || <span className="text-slate-400">—</span>}
+                          </span>
+                        </td>
+                      )}
+                      {isColumnVisible("project") && (
+                        <td className="px-3 py-1.5">
+                          {(() => {
+                            const tx = getTxForFile(file);
+                            const projectName = tx?.projectName || file.expense_projects?.name;
+
+                            if (tx) {
+                              return (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button className="text-left text-xs text-slate-600 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer whitespace-nowrap">
+                                      {projectName || <span className="text-slate-400">—</span>}
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-white z-50">
+                                    <DropdownMenuItem
+                                      className="flex justify-center"
+                                      onClick={() =>
+                                        updateTransactionMutation.mutate({
+                                          transactionId: tx.transactionId,
+                                          updates: { project_id: null },
+                                        })
+                                      }
+                                    >
+                                      <span className="text-slate-400">— None —</span>
+                                    </DropdownMenuItem>
+                                    {allProjects?.map(project => (
+                                      <DropdownMenuItem
+                                        key={project.id}
+                                        className="flex justify-center"
+                                        onClick={() =>
+                                          updateTransactionMutation.mutate({
+                                            transactionId: tx.transactionId,
+                                            updates: { project_id: project.id },
+                                          })
+                                        }
+                                      >
+                                        {project.name}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              );
+                            }
+
+                            // No transaction but has project from workflow_files
+                            if (projectName) {
+                              return (
+                                <span className="text-xs text-slate-600 px-1 py-0.5">
+                                  {projectName}
+                                </span>
+                              );
+                            }
+
+                            // No project at all - show dropdown to create transaction
+                            return (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button className="text-left text-xs text-slate-400 hover:text-foreground hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer w-full truncate max-w-[120px]">
+                                    —
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-white z-50">
+                                  {allProjects?.map((project) => (
+                                    <DropdownMenuItem
+                                      key={project.id}
+                                      className="flex justify-center"
+                                      onClick={() => createTransactionForFileMutation.mutate({
+                                        fileUrl: file.file_url,
+                                        projectId: project.id
+                                      })}
+                                    >
+                                      {project.name}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            );
+                          })()}
+                        </td>
+                      )}
+                      {isColumnVisible("value") && (
+                        <td className="px-3 py-1.5 text-right">
+                          {(() => {
+                            const tx = getTxForFile(file);
+                            const value = tx?.value ?? file.total_amount;
+
+                            if (tx) {
+                              // Has transaction - editable
+                              if (editingCell?.fileUrl === file.id && editingCell?.field === 'value') {
+                                return (
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    onBlur={() => {
+                                      const numValue = parseFloat(editValue);
+                                      if (!isNaN(numValue)) {
+                                        updateTransactionMutation.mutate({
+                                          transactionId: tx.transactionId,
+                                          updates: { total_amount: numValue },
+                                        });
+                                      } else {
+                                        setEditingCell(null);
+                                      }
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        const numValue = parseFloat(editValue);
+                                        if (!isNaN(numValue)) {
+                                          updateTransactionMutation.mutate({
+                                            transactionId: tx.transactionId,
+                                            updates: { total_amount: numValue },
+                                          });
+                                        } else {
+                                          setEditingCell(null);
+                                        }
+                                      } else if (e.key === 'Escape') {
+                                        setEditingCell(null);
+                                      }
+                                    }}
+                                    className="h-6 w-20 text-xs text-right"
+                                    autoFocus
+                                  />
+                                );
+                              }
+
+                              return (
+                                <button
+                                  className="text-xs font-medium hover:bg-slate-100 px-1 py-0.5 rounded cursor-pointer"
+                                  onClick={() => {
+                                    setEditingCell({ fileUrl: file.id, field: 'value' });
+                                    setEditValue(tx.value?.toString() || "0");
+                                  }}
+                                >
+                                  {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(tx.value)}
+                                </button>
+                              );
+                            }
+
+                            // No transaction but has value from workflow_files (OCR)
+                            if (value !== null && value !== undefined) {
+                              return (
+                                <span className="text-xs text-slate-600">
+                                  {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(value)}
+                                </span>
+                              );
+                            }
+
+                            // No value at all
+                            return <span className="text-slate-400 text-xs">—</span>;
+                          })()}
+                        </td>
+                      )}
+                      {/* Custom columns */}
+                      {customColumns.map((col) => (
+                        <td key={col.id} className="px-3 py-1.5 text-center">
+                          {renderCellDropdown(file, col)}
+                        </td>
+                      ))}
+                      {/* Empty cell for add column button */}
+                      <td className="px-3 py-1.5"></td>
+                      <td className="px-3 py-1.5">
+                        <DropdownMenu
+                          open={openMenuFileId === file.id}
+                          onOpenChange={(open) => setOpenMenuFileId(open ? file.id : null)}
+                        >
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              ref={(el) => { actionBtnRefs.current[file.id] = el; }}
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-white z-50 shadow-md border">
+                            <DropdownMenuItem onClick={() => handleMarkAsComplete(file)}>
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              Mark as Paid
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              updateFieldMutation.mutate({ id: file.id, field: 'status', value: 'paid' });
+                            }}>
+                              <CheckCircle2 className="h-4 w-4 mr-2 opacity-70" />
+                              Só marcar como pago
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setFileToRename(file);
+                              setNewFileName(file.file_name.replace(/\.[^/.]+$/, ''));
+                              setRenameDialogOpen(true);
+                            }}>
+                              <Edit3 className="h-4 w-4 mr-2" />
+                              Renomear
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleOpenMoveDialog(file)}>
+                              <FolderInput className="h-4 w-4 mr-2" />
+                              Mover para Pasta
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDownload(file)}>
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => deleteMutation.mutate(file.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuItem onClick={() => handleMarkAsComplete(file)}>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Mark as Paid
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => {
+                      updateFieldMutation.mutate({ id: file.id, field: 'status', value: 'paid' });
+                    }}>
+                      <CheckCircle2 className="h-4 w-4 mr-2 opacity-70" />
+                      Só marcar como pago
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => {
+                      setFileToRename(file);
+                      setNewFileName(file.file_name.replace(/\.[^/.]+$/, ''));
+                      setRenameDialogOpen(true);
+                    }}>
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      Renomear
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => handleOpenMoveDialog(file)}>
+                      <FolderInput className="h-4 w-4 mr-2" />
+                      Mover para Pasta
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => handleDownload(file)}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => openFilePreview(file)}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Preview
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      className="text-destructive"
+                      onClick={() => deleteMutation.mutate(file.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
+              ))
+            )}
+          </tbody>
+          <tfoot className="sticky bottom-0 z-10">
+            <tr className="border-t border-slate-200 bg-slate-50 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
+              {(() => {
+                const hasSelection = selectedFiles.size > 0;
+                const filesToSum = hasSelection
+                  ? (filteredFiles?.filter(f => selectedFiles.has(f.id)) || [])
+                  : (filteredFiles || []);
+                const totalValue = filesToSum.reduce((sum, file) => {
+                  const tx = getTxForFile(file);
+                  const value = tx?.value ?? file.total_amount ?? 0;
+                  return sum + value;
+                }, 0);
+
+                return (
+                  <>
+                    <td colSpan={2} className="px-3 py-2 text-xs text-muted-foreground">
+                      {hasSelection ? (
+                        <span className="font-medium text-primary">
+                          {selectedFiles.size} selecionado{selectedFiles.size !== 1 ? 's' : ''}
+                        </span>
+                      ) : (
+                        <span>{filteredFiles?.length || 0} file{(filteredFiles?.length || 0) !== 1 ? 's' : ''}{workflowFiles?.length === 500 ? ' (últimos 500)' : ''}</span>
+                      )}
+                    </td>
+                    {isColumnVisible("type") && <td></td>}
+                    {isColumnVisible("date") && <td></td>}
+                    {isColumnVisible("category") && <td></td>}
+                    {isColumnVisible("status") && <td></td>}
+                    {isColumnVisible("size") && <td></td>}
+                    {isColumnVisible("empresa") && <td></td>}
+                    {isColumnVisible("project") && <td></td>}
+                    {isColumnVisible("value") && (
+                      <td className="px-3 py-2.5 text-right">
+                        <span className={`font-semibold text-sm tabular-nums ${hasSelection ? 'text-primary' : ''}`}>
+                          {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(totalValue)}
+                        </span>
+                      </td>
+                    )}
+                    {customColumns.map((col) => <td key={col.id}></td>)}
+                    <td></td>
+                    <td></td>
+                  </>
+                );
+              })()}
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {/* Upload Progress Panel */}
+      {uploadProgress.length > 0 && (
+        <div className="fixed bottom-4 right-4 w-80 bg-white rounded-lg shadow-lg border p-4 z-50">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-medium text-sm">Uploading Files</h4>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => setUploadProgress([])}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="space-y-3 max-h-48 overflow-y-auto">
+            {uploadProgress.map((item, i) => (
+              <div key={i} className="space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="truncate max-w-[180px]">{item.fileName}</span>
+                  <span className={
+                    item.status === 'completed' ? 'text-green-600' :
+                    item.status === 'error' ? 'text-red-600' :
+                    'text-blue-600'
+                  }>
+                    {item.status === 'completed' ? '✓' :
+                     item.status === 'error' ? '✗' :
+                     `${item.progress}%`}
+                  </span>
+                </div>
+                <Progress
+                  value={item.progress}
+                  className={`h-1 ${
+                    item.status === 'completed' ? '[&>div]:bg-green-500' :
+                    item.status === 'error' ? '[&>div]:bg-red-500' : ''
+                  }`}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Add Column Dialog */}
+      <Dialog open={addColumnDialogOpen} onOpenChange={setAddColumnDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Custom Column</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div>
+              <Label htmlFor="columnName">Column Name</Label>
+              <Input
+                id="columnName"
+                value={newColumnName}
+                onChange={(e) => setNewColumnName(e.target.value)}
+                placeholder="Enter column name..."
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label>Options</Label>
+              <div className="space-y-2 mt-2">
+                {newColumnOptions.map((opt, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="h-8 w-8 rounded border cursor-pointer flex-shrink-0"
+                          style={{ backgroundColor: opt.color }}
+                        />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="p-2">
+                        <div className="grid grid-cols-5 gap-1">
+                          {COLOR_PALETTE.map((color) => (
+                            <button
+                              key={color}
+                              className={`h-6 w-6 rounded border-2 ${opt.color === color ? 'border-foreground' : 'border-transparent'}`}
+                              style={{ backgroundColor: color }}
+                              onClick={() => {
+                                const updated = [...newColumnOptions];
+                                updated[i] = { ...updated[i], color };
+                                setNewColumnOptions(updated);
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Input
+                      value={opt.label}
+                      onChange={(e) => {
+                        const updated = [...newColumnOptions];
+                        updated[i] = { ...updated[i], label: e.target.value };
+                        setNewColumnOptions(updated);
+                      }}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setNewColumnOptions(newColumnOptions.filter((_, idx) => idx !== i))}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setNewColumnOptions([...newColumnOptions, { label: `Option ${newColumnOptions.length + 1}`, color: COLOR_PALETTE[newColumnOptions.length % COLOR_PALETTE.length] }])}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Option
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddColumnDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={addNewColumn} disabled={!newColumnName.trim()}>
+              Add Column
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Column Dialog */}
+      <Dialog open={editColumnDialogOpen} onOpenChange={setEditColumnDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Column: {editingColumn?.label}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            {!editingColumn?.isBuiltIn && (
+              <div>
+                <Label htmlFor="editColumnName">Column Name</Label>
+                <Input
+                  id="editColumnName"
+                  value={editingColumn?.label || ""}
+                  onChange={(e) => setEditingColumn(prev => prev ? { ...prev, label: e.target.value } : null)}
+                  className="mt-2"
+                />
+              </div>
+            )}
+            <div>
+              <Label>Options</Label>
+              <div className="space-y-2 mt-2 max-h-[300px] overflow-y-auto">
+                {editingColumn?.options?.map((opt, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="h-8 w-8 rounded border cursor-pointer flex-shrink-0"
+                          style={{ backgroundColor: opt.color }}
+                        />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="p-2">
+                        <div className="grid grid-cols-5 gap-1">
+                          {COLOR_PALETTE.map((color) => (
+                            <button
+                              key={color}
+                              className={`h-6 w-6 rounded border-2 ${opt.color === color ? 'border-foreground' : 'border-transparent'}`}
+                              style={{ backgroundColor: color }}
+                              onClick={() => updateOptionColor(i, color)}
+                            />
+                          ))}
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Input
+                      value={opt.label}
+                      onChange={(e) => updateOptionLabel(i, e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => removeOption(i)}
+                      disabled={(editingColumn?.options?.length || 0) <= 1}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={addOption}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Option
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditColumnDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveColumnEdits}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Document Preview Dialog */}
+      <Dialog open={!!previewFile} onOpenChange={(open) => { if (!open) { setPreviewFile(null); setShowExpensePanel(false); } }}>
+        <DialogContent className={cn("h-[90vh] flex flex-col p-0", (showExpensePanel || showAIPanel) ? "max-w-[90vw]" : "max-w-5xl")}>
+          <DialogHeader className="p-4 pb-0 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg">Visualizar Documento</DialogTitle>
+              <div className="flex items-center gap-2 mr-12">
+                <Button
+                  variant={showAIPanel ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowAIPanel(!showAIPanel)}
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Análise AI
+                </Button>
+                <Button
+                  variant={showExpensePanel ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowExpensePanel(!showExpensePanel)}
+                >
+                {existingTransaction || (previewFile && customData[previewFile.id]?._pendingLoan) ? (
+                    <>
+                      <FileText className="h-4 w-4 mr-2" />
+                      {customData[previewFile?.id]?._pendingLoan ? "Editar Empréstimo" : "Editar Movimento"}
+                    </>
+                  ) : previewFile && (previewFile.company_id || previewFile.invoice_date || previewFile.total_amount || previewFile.vendor_name) ? (
+                    <>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Movimento Draft
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Novo Movimento
+                    </>
+                  )}
+                </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant={(existingTransaction as any)?.bank_account_id ? "default" : "outline"}
+                                size="sm"
+                                disabled={isLoadingTransaction}
+                                className={(existingTransaction as any)?.bank_account_id ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+                              >
+                                {(existingTransaction as any)?.bank_account_id ? (
+                                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                                ) : (
+                                  <CreditCard className="h-4 w-4 mr-2" />
+                                )}
+                                {isLoadingTransaction ? "..." : ((existingTransaction as any)?.bank_account_id ? "Pagamento Registado" : "Registar Pagamento")}
+                                <ChevronDown className="h-4 w-4 ml-2" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-background border shadow-md z-50 w-64">
+                              {/* Show payment details when payment is registered */}
+                              {(existingTransaction as any)?.bank_account_id && (
+                                <>
+                                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground pb-0">
+                                    Detalhes do Pagamento
+                                  </DropdownMenuLabel>
+                                  <div className="px-2 py-1.5 space-y-1">
+                                    {paymentBankAccount && (
+                                      <div className="flex items-center gap-2 text-sm">
+                                        {paymentBankAccount.account_type === "credit_card" ? (
+                                          <CreditCard className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                        ) : (
+                                          <Landmark className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                        )}
+                                        <span className="font-medium truncate">{paymentBankAccount.account_name}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                      <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                                      <span>{(existingTransaction as any)?.date ? format(new Date((existingTransaction as any).date + "T00:00:00"), "dd/MM/yyyy") : "—"}</span>
+                                    </div>
+                                    {(existingTransaction as any)?.total_amount != null && (
+                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <span className="ml-0.5 font-mono text-xs">€</span>
+                                        <span>{Number((existingTransaction as any).total_amount).toFixed(2)} {(existingTransaction as any)?.currency || "EUR"}</span>
+                                      </div>
+                                    )}
+                                    {(existingTransaction as any)?.payment_method && (
+                                      <div className="text-[11px] text-muted-foreground/70 ml-5">
+                                        {(existingTransaction as any).payment_method === "credit_card" ? "Cartão Crédito" :
+                                         (existingTransaction as any).payment_method === "bank_transfer" ? "Transferência Bancária" :
+                                         (existingTransaction as any).payment_method === "mbway" ? "MB WAY" :
+                                         (existingTransaction as any).payment_method === "multibanco" ? "Multibanco" :
+                                         (existingTransaction as any).payment_method === "debit_card" ? "Cartão Débito" :
+                                         (existingTransaction as any).payment_method === "cash" ? "Numerário" :
+                                         (existingTransaction as any).payment_method}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+                              <DropdownMenuItem onClick={() => setShowPaymentDialog(true)}>
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                {(existingTransaction as any)?.bank_account_id ? "Registar Pagamento" : "Pagamento Registado"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setShowBankPaymentDialog(true)}>
+                                <Landmark className="h-4 w-4 mr-2" />
+                                Pagar Banco
+                              </DropdownMenuItem>
+                              {previewFile?.receipt_url && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={handleMergeWiseReceipt}
+                                    disabled={isMergingReceipt}
+                                  >
+                                    {isMergingReceipt ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <Receipt className="h-4 w-4 mr-2" />
+                                    )}
+                                    {isMergingReceipt ? "A juntar..." : "Juntar Comprovativo Wise"}
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <Button
+                            variant={previewFile?.confirmation_sent_at ? "outline" : "default"}
+                            size="sm"
+                            className={previewFile?.confirmation_sent_at ? "text-green-600 border-green-600" : "bg-blue-600 hover:bg-blue-700"}
+                            onClick={() => {
+                              setConfirmationEmail('');
+                              setShowConfirmationDialog(true);
+                              if (previewFile) {
+                                const txVendorName = (existingTransaction as any)?.vendor_name;
+                                const fnParts = previewFile.file_name?.split('(');
+                                const fnVendor = fnParts && fnParts.length > 1 
+                                  ? fnParts[0].replace(/\.\w+$/, '').trim() 
+                                  : undefined;
+                                const bestVendorName = txVendorName || fnVendor || previewFile.vendor_name || '';
+                                if (bestVendorName) {
+                                  searchVendorEmail(bestVendorName, previewFile.total_amount ?? undefined, previewFile.invoice_date ?? undefined);
+                                }
+                                setSelectedEmailContext({ source: 'manual', contact_name: '' });
+                                // Lookup contact_person from suppliers table
+                                if (bestVendorName) {
+                                  supabase
+                                    .from('suppliers')
+                                    .select('contact_person, email')
+                                    .ilike('name', `%${bestVendorName.split(' ')[0]}%`)
+                                    .not('contact_person', 'is', null)
+                                    .limit(1)
+                                    .then(({ data }) => {
+                                      if (data?.[0]?.contact_person) {
+                                        setSelectedEmailContext(prev => prev.contact_name ? prev : { ...prev, contact_name: data[0].contact_person });
+                                      }
+                                    });
+                                }
+                              }
+                            }}
+                          >
+                            {previewFile?.confirmation_sent_at ? (
+                              <>
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                Email Enviado
+                              </>
+                            ) : (
+                              <>
+                                <Send className="h-4 w-4 mr-2" />
+                                Enviar Email
+                              </>
+                            )}
+                          </Button>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden flex">
+            {/* Document viewer */}
+            <div className={cn("flex-1 overflow-hidden p-4", (showExpensePanel || showAIPanel) && "border-r")}>
+              {previewFile && (
+                <DocumentPreview
+                  key={previewFile.server_path || previewFile.file_url || previewFile.receipt_url || previewFile.id}
+                  document={{
+                    // Igual ao handleDownload: ficheiro no servidor Work tem prioridade sobre file_url Supabase
+                    // (evita preview a falhar quando file_url ainda inválido ou upload incompleto).
+                    file_url: resolveWorkflowFileUrlForPreview(previewFile),
+                    name: previewFile.file_name,
+                    mime_type: previewFile.mime_type,
+                  }}
+                  onDownload={() => handleDownload(previewFile)}
+                  editable={!previewFile.server_path}
+                  onSave={(modifiedPdf) => handleSaveModifiedPdf(modifiedPdf, previewFile)}
+                  getBlob={getBlobForPreview}
+                />
+              )}
+            </div>
+            {/* AI Panel */}
+            {showAIPanel && previewFile && (
+              <div className="w-[350px] flex-shrink-0 border-r">
+                <DocumentAIPanel
+                  fileUrl={resolveWorkflowFileUrlForPreview(previewFile)}
+                  fileName={previewFile.file_name}
+                  mimeType={previewFile.mime_type}
+                  documentId={previewFile.id}
+                />
+              </div>
+            )}
+            {/* Expense panel */}
+            {showExpensePanel && previewFile && (
+              <div className="w-[400px] flex-shrink-0">
+                <WorkflowExpensePanel
+                  file={{
+                    id: previewFile.id,
+                    file_name: previewFile.file_name,
+                    file_url: previewFile.file_url,
+                    mime_type: previewFile.mime_type,
+                    // OCR data from n8n
+                    company_id: previewFile.company_id,
+                    category: previewFile.category,
+                    notes: previewFile.notes,
+                    invoice_date: previewFile.invoice_date,
+                    invoice_number: previewFile.invoice_number,
+                    vendor_name: previewFile.vendor_name,
+                    vendor_vat: previewFile.vendor_vat,
+                    total_amount: previewFile.total_amount,
+                    tax_amount: previewFile.tax_amount,
+                    subtotal: previewFile.subtotal,
+                    currency: previewFile.currency,
+                    payment_method: previewFile.payment_method,
+                    project_id: previewFile.project_id,
+                    // Inter-company loan fields from n8n workflow
+                    document_type: previewFile.document_type,
+                    lending_company_id: previewFile.lending_company_id,
+                    borrowing_company_id: previewFile.borrowing_company_id,
+                    description: previewFile.description,
+                  }}
+                  existingTransaction={
+                    // If there's pending loan data, convert it to existingTransaction format
+                    customData[previewFile.id]?._pendingLoan
+                      ? (() => {
+                          const pendingLoan = JSON.parse(customData[previewFile.id]._pendingLoan);
+                          return {
+                            id: "pending",
+                            date: pendingLoan.start_date || new Date().toISOString().split("T")[0],
+                            type: "loan",
+                            lending_company_id: pendingLoan.lending_company_id,
+                            borrowing_company_id: pendingLoan.borrowing_company_id,
+                            total_amount: pendingLoan.amount,
+                            interest_rate: pendingLoan.interest_rate,
+                            monthly_payment: pendingLoan.monthly_payment,
+                            end_date: pendingLoan.end_date,
+                            loan_status: pendingLoan.status,
+                            description: pendingLoan.description,
+                            notes: pendingLoan.notes,
+                            _isLoan: true,
+                          };
+                        })()
+                      : existingTransaction
+                  }
+                  onClose={() => setShowExpensePanel(false)}
+                  onSaved={(payload) => {
+                    setShowExpensePanel(false);
+                    if (payload?.fileName) {
+                      setPreviewFile((prev) => (prev ? { ...prev, file_name: payload.fileName } : prev));
+                    }
+                    // If it's a pending loan, save to customData - will be created when confirming file send
+                    if (payload?.pendingLoanData) {
+                      setCustomData(prev => ({
+                        ...prev,
+                        [previewFile.id]: {
+                          ...prev[previewFile.id],
+                          _pendingLoan: JSON.stringify(payload.pendingLoanData),
+                        }
+                      }));
+                      toast.success("Dados do empréstimo guardados! Será registado quando confirmar o envio.");
+                    } else {
+                      queryClient.invalidateQueries({ queryKey: ["file-transaction", previewFile.id, previewFile.file_url] });
+                      queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+                      // Only show toast for non-loan transactions (loans show their own toast in the panel)
+                      const isLoanTransaction = (existingTransaction as any)?._isLoan || customData[previewFile.id]?._pendingLoan;
+                      if (!isLoanTransaction) {
+                        toast.success(existingTransaction ? "Movimento atualizado!" : "Movimento criado!");
+                      }
+                    }
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
+      {/* Mark as Paid Warning Dialog */}
+      <AlertDialog open={markCompleteWarningOpen} onOpenChange={setMarkCompleteWarningOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Cannot Complete File
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                No file storage location is configured for company{" "}
+                <strong>{missingStorageCompanyName || "Unknown"}</strong> in{" "}
+                <strong>
+                  {fileToComplete && format(new Date(fileToComplete.created_at), "MMMM yyyy")}
+                </strong>.
+              </p>
+              <p>
+                Please go to <strong>Settings → Table Relations → File Storage Locations</strong> and add a storage location for this company and month/year before marking the file as paid.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setMarkCompleteWarningOpen(false);
+              setFileToComplete(null);
+              setMissingStorageCompanyName(null);
+            }}>
+              Close
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Skip Payment Confirmation Dialog */}
+      <AlertDialog open={showSkipPaymentConfirmation} onOpenChange={setShowSkipPaymentConfirmation}>
+        <AlertDialogContent className="max-w-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              {skipPaymentDestination?.isLoan ? "Confirmar Empréstimo Inter-Empresas" : "Sem Registo Financeiro"}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 pt-2">
+                <p className="text-muted-foreground">
+                  {skipPaymentDestination?.isLoan
+                    ? "Este documento será processado como um empréstimo inter-empresas e arquivado nas pastas de ambas as empresas."
+                    : "Este documento não tem registo financeiro associado. Deseja mover para a pasta destino sem criar registo financeiro?"
+                  }
+                </p>
+
+                {/* Loan-specific destination info with both companies */}
+                {skipPaymentDestination?.isLoan && skipPaymentDestination.loanInfo && (
+                  <>
+                    {/* Loan details */}
+                    <div className="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                      <p className="font-semibold text-amber-800 dark:text-amber-200 text-base mb-3 flex items-center gap-2">
+                        💰 Detalhes do Empréstimo
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <span className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wide">Data</span>
+                          <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">
+                            {format(new Date(skipPaymentDestination.loanInfo.loanDate), "dd/MM/yyyy")}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wide">Valor</span>
+                          <p className="text-sm text-amber-800 dark:text-amber-200 font-semibold">
+                            {skipPaymentDestination.loanInfo.amount.toLocaleString("pt-PT", {
+                              style: "currency",
+                              currency: "EUR"
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Lender destination */}
+                    <div className="bg-green-50 dark:bg-green-950/30 border-2 border-green-200 dark:border-green-800 rounded-xl p-4">
+                      <p className="font-semibold text-green-800 dark:text-green-200 text-sm mb-2 flex items-center gap-2">
+                        📁 Credor (quem empresta)
+                      </p>
+                      <div className="ml-4 space-y-1">
+                        <p className="text-green-800 dark:text-green-200 font-medium">
+                          {skipPaymentDestination.loanInfo.lendingCompanyName}
+                        </p>
+                        {skipPaymentDestination.loanInfo.lendingFolderPath ? (
+                          <p className="text-sm text-green-600 dark:text-green-400">
+                            📂 {skipPaymentDestination.loanInfo.lendingFolderPath}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-green-600 dark:text-green-400 italic">
+                            ⚠️ Pasta não configurada para este mês
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Borrower destination */}
+                    <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                      <p className="font-semibold text-blue-800 dark:text-blue-200 text-sm mb-2 flex items-center gap-2">
+                        📁 Devedor (quem recebe)
+                      </p>
+                      <div className="ml-4 space-y-1">
+                        <p className="text-blue-800 dark:text-blue-200 font-medium">
+                          {skipPaymentDestination.loanInfo.borrowingCompanyName}
+                        </p>
+                        {skipPaymentDestination.loanInfo.borrowingFolderPath ? (
+                          <p className="text-sm text-blue-600 dark:text-blue-400">
+                            📂 {skipPaymentDestination.loanInfo.borrowingFolderPath}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-blue-600 dark:text-blue-400 italic">
+                            ⚠️ Pasta não configurada para este mês
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Non-loan destination info */}
+                {skipPaymentDestination && !skipPaymentDestination.isLoan && (
+                  <div className="bg-muted/50 border-2 border-muted rounded-xl p-4">
+                    <p className="font-semibold text-foreground text-base mb-2 flex items-center gap-2">
+                      📁 Documento será gravado em:
+                    </p>
+                    <div className="ml-4 space-y-1">
+                      <p className="text-foreground font-medium">
+                        {skipPaymentDestination.companyName}
+                      </p>
+                      {skipPaymentDestination.folderPath ? (
+                        <p className="text-sm text-muted-foreground">
+                          📂 {skipPaymentDestination.folderPath}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">
+                          (Pasta de destino não definida)
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel onClick={() => {
+              setShowSkipPaymentConfirmation(false);
+              setFileToSkipPayment(null);
+              setSkipPaymentDestination(null);
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            {!skipPaymentDestination?.isLoan && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowSkipPaymentConfirmation(false);
+                  if (fileToSkipPayment) {
+                    setPreviewFile(fileToSkipPayment);
+                    setShowPaymentDialog(true);
+                    setFileToSkipPayment(null);
+                    setSkipPaymentDestination(null);
+                  }
+                }}
+              >
+                Registar Pagamento
+              </Button>
+            )}
+            <AlertDialogAction onClick={handleCompleteWithoutPayment}>
+              {skipPaymentDestination?.isLoan ? "Confirmar Empréstimo" : "Continuar sem registo"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Complete Confirmation Dialog */}
+      <AlertDialog open={showCompleteConfirmation} onOpenChange={setShowCompleteConfirmation}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              Confirmar Conclusão
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 pt-2">
+                {/* Destination companies */}
+                <div>
+                  <p className="font-medium text-foreground mb-2">
+                    📁 Documento será gravado em:
+                  </p>
+                  <ul className="space-y-2 ml-4">
+                    {completeConfirmationData?.destinationCompanies.map((company) => (
+                      <li key={company.id} className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <Checkbox checked disabled className="opacity-70" />
+                          <span className="text-foreground">{company.name}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {company.role}
+                          </Badge>
+                        </div>
+                        {company.folderPath ? (
+                          <p className="text-xs text-muted-foreground ml-6">
+                            📂 {company.folderPath}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 ml-6 italic">
+                            ⚠️ Pasta não configurada para este mês
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Automatic loan info */}
+                {completeConfirmationData?.loanInfo && (
+                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                    <p className="font-medium text-amber-800 dark:text-amber-200 mb-1">
+                      💰 Empréstimo será criado automaticamente:
+                    </p>
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      <strong>{completeConfirmationData.loanInfo.lendingCompany}</strong>
+                      {" → "}
+                      <strong>{completeConfirmationData.loanInfo.borrowingCompany}</strong>
+                    </p>
+                    <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+                      Valor: {completeConfirmationData.loanInfo.amount.toLocaleString("pt-PT", {
+                        style: "currency",
+                        currency: "EUR"
+                      })}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowCompleteConfirmation(false);
+              setCompleteConfirmationData(null);
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmComplete}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Document Payment Dialog */}
+      {previewFile && (
+        <DocumentPaymentDialog
+          open={showPaymentDialog}
+          onOpenChange={setShowPaymentDialog}
+          workflowFileId={previewFile.id}
+          fileName={previewFile.file_name}
+          documentFileUrl={resolveWorkflowFileUrlForPreview(previewFile)}
+          existingTransaction={existingTransaction}
+          vendorName={previewFile.vendor_name}
+          documentCompanyId={previewFile.company_id}
+          onDocumentUrlUpdated={(newUrl) => {
+            setPreviewFile((prev) => (prev ? { ...prev, file_url: newUrl } : prev));
+          }}
+        />
+      )}
+
+      {/* Bank Payment Dialog — use movement's supplier (entity_name) when set, so receipt shows correct supplier */}
+      {previewFile && (
+        <BankPaymentDialog
+          open={showBankPaymentDialog}
+          onOpenChange={setShowBankPaymentDialog}
+          documentId={previewFile.id}
+          documentUrl={resolveWorkflowFileUrlForPreview(previewFile)}
+          fileName={previewFile.file_name}
+          vendorName={(existingTransaction as any)?.entity_name ?? previewFile.vendor_name}
+          totalAmount={previewFile.total_amount}
+          description={previewFile.notes}
+          bankAccountId={(existingTransaction as any)?.bank_account_id}
+          onPaymentSuccess={() => {
+            updateFieldMutation.mutate({ id: previewFile.id, field: 'status', value: 'Paid' });
+          }}
+        />
+      )}
+
+      {/* Save Filter Dialog */}
+      <Dialog open={saveFilterDialogOpen} onOpenChange={setSaveFilterDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Guardar Filtro</DialogTitle>
+            <DialogDescription>
+              Dê um nome ao filtro para o poder reutilizar mais tarde.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="filterName">Nome do filtro</Label>
+              <Input
+                id="filterName"
+                placeholder="Ex: Documentos Pendentes"
+                value={newFilterName}
+                onChange={(e) => setNewFilterName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSaveFilter();
+                  }
+                }}
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <p>Filtros ativos:</p>
+              <div className="mt-1 space-y-1">
+                {activeFilters.map(filter => {
+                  const col = columns.find(c => c.id === filter.column);
+                  return (
+                    <div key={filter.column} className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="outline">{col?.label || filter.column}</Badge>
+                      <span className="text-xs">{filter.mode === 'include' ? 'Incluir' : 'Excluir'}:</span>
+                      {filter.values.map(v => (
+                        <Badge key={v} variant="secondary" className="text-xs">
+                          {v}
+                        </Badge>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveFilterDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveFilter} disabled={!newFilterName.trim()}>
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move File to Folder Dialog */}
+      <Dialog open={moveFileDialogOpen} onOpenChange={(open) => {
+        setMoveFileDialogOpen(open);
+        if (!open) {
+          setFileToMove(null);
+          setMoveForm({ company_id: "", folder_id: null, folder_path: "" });
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mover para Pasta</DialogTitle>
+            <DialogDescription>
+              Selecione a empresa e pasta de destino para o ficheiro.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* File being moved */}
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <Label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Ficheiro</Label>
+              <p className="text-sm text-foreground mt-1 font-medium truncate">
+                {fileToMove?.file_name}
+              </p>
+            </div>
+
+            {/* Company selection */}
+            <div className="space-y-2">
+              <Label>Empresa</Label>
+              <Select
+                value={moveForm.company_id}
+                onValueChange={(value) => setMoveForm(prev => ({ ...prev, company_id: value, folder_id: null, folder_path: "" }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a empresa..." />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  {allCompanies?.map(company => (
+                    <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Folder selection */}
+            <div className="space-y-2">
+              <Label>Pasta de Destino</Label>
+              <p className="text-xs text-slate-500">Selecione a pasta onde o ficheiro será guardado.</p>
+              <Select
+                value={moveForm.folder_path}
+                onValueChange={(value) => {
+                  const folder = moveFolderOptions.find(f => f.path === value);
+                  setMoveForm(prev => ({ ...prev, folder_path: value, folder_id: folder?.id || null }));
+                }}
+                disabled={!moveForm.company_id}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={moveForm.company_id ? "Selecione a pasta..." : "Selecione a empresa primeiro"} />
+                </SelectTrigger>
+                <SelectContent className="bg-white max-h-60 overflow-y-auto">
+                  <SelectItem value="__root__">📁 Raiz (sem pasta)</SelectItem>
+                  {moveFolderOptions.length === 0 ? (
+                    <SelectItem value="__none__" disabled>Sem pastas disponíveis</SelectItem>
+                  ) : (
+                    moveFolderOptions.map(folder => (
+                      <SelectItem key={folder.id} value={folder.path}>📂 {folder.path}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Preview */}
+            {moveForm.company_id && (
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <Label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Destino</Label>
+                <p className="text-sm text-slate-700 mt-1 font-mono">
+                  {allCompanies?.find(c => c.id === moveForm.company_id)?.name} → Documents → <span className="text-blue-600">{moveForm.folder_path === "__root__" ? "(Raiz)" : moveForm.folder_path || "..."}</span>
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMoveFileDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleMoveFile}
+              disabled={!moveForm.company_id || moveFileMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {moveFileMutation.isPending ? "A mover..." : "Mover Ficheiro"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename File Dialog */}
+      <Dialog open={renameDialogOpen} onOpenChange={(open) => {
+        setRenameDialogOpen(open);
+        if (!open) {
+          setFileToRename(null);
+          setNewFileName("");
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Renomear Ficheiro</DialogTitle>
+            <DialogDescription>
+              Introduza o novo nome para o ficheiro.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome do Ficheiro</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={newFileName}
+                  onChange={(e) => setNewFileName(e.target.value)}
+                  placeholder="Novo nome..."
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newFileName.trim() && fileToRename) {
+                      const ext = fileToRename.file_name.match(/\.[^/.]+$/)?.[0] || '';
+                      updateFieldMutation.mutate(
+                        { id: fileToRename.id, field: 'file_name', value: newFileName.trim() + ext },
+                        { onSuccess: () => {
+                          toast.success("Ficheiro renomeado");
+                          setRenameDialogOpen(false);
+                          setFileToRename(null);
+                          setNewFileName("");
+                        }}
+                      );
+                    }
+                  }}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {fileToRename?.file_name.match(/\.[^/.]+$/)?.[0] || ''}
+                </span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                if (fileToRename && newFileName.trim()) {
+                  const ext = fileToRename.file_name.match(/\.[^/.]+$/)?.[0] || '';
+                  updateFieldMutation.mutate(
+                    { id: fileToRename.id, field: 'file_name', value: newFileName.trim() + ext },
+                    { onSuccess: () => {
+                      toast.success("Ficheiro renomeado");
+                      setRenameDialogOpen(false);
+                      setFileToRename(null);
+                      setNewFileName("");
+                    }}
+                  );
+                }
+              }}
+              disabled={!newFileName.trim() || updateFieldMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {updateFieldMutation.isPending ? "A renomear..." : "Renomear"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Email Modal */}
+      {previewFile && (
+        <SendEmailModal
+          open={showSendEmailModal}
+          onOpenChange={setShowSendEmailModal}
+          document={{
+            id: previewFile.id,
+            fileName: previewFile.file_name,
+            fileUrl: resolveWorkflowFileUrlForPreview(previewFile),
+            vendorName: previewFile.vendor_name || undefined,
+            entityName: previewFile.companies?.name,
+            invoiceNumber: previewFile.invoice_number || undefined,
+            date: previewFile.invoice_date || undefined,
+            amount: previewFile.total_amount || undefined,
+          }}
+          onSuccess={() => {
+            toast.success("Email enviado com sucesso!");
+          }}
+        />
+      )}
+
+      {/* Send Payment Confirmation Dialog (AgentMail - johnccount@robsonway.com) */}
+      <AlertDialog open={showConfirmationDialog} onOpenChange={(open) => {
+        setShowConfirmationDialog(open);
+      }}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5" />
+              Enviar Comprovativo por Email
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 pt-2">
+                <p className="text-sm text-muted-foreground">
+                  Enviado de <span className="font-medium">johnccount@robsonway.com</span> (John Ccount).
+                </p>
+                {previewFile && (() => {
+                  const txVendor = (existingTransaction as any)?.vendor_name;
+                  const fnParts = previewFile.file_name?.split('(');
+                  const fnVendor = fnParts && fnParts.length > 1 ? fnParts[0].replace(/\.\w+$/, '').trim() : undefined;
+                  const displayVendor = txVendor || fnVendor || previewFile.vendor_name;
+                  return (
+                    <div className="rounded-md bg-muted/50 p-3 space-y-1 text-sm">
+                      {displayVendor && (
+                        <div><span className="font-medium">Fornecedor:</span> {displayVendor}</div>
+                      )}
+                      {previewFile.invoice_number && (
+                        <div><span className="font-medium">Fatura:</span> {previewFile.invoice_number}</div>
+                      )}
+                      {previewFile.total_amount != null && (
+                        <div><span className="font-medium">Valor:</span> {Number(previewFile.total_amount).toFixed(2)} {previewFile.currency || 'EUR'}</div>
+                      )}
+                      <div><span className="font-medium">Anexo:</span> {previewFile.file_name}</div>
+                    </div>
+                  );
+                })()}
+                <div className="space-y-2">
+                  <Label htmlFor="confirmation-email">Email do fornecedor</Label>
+                  {isSearching ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      A procurar emails no John, Gmail e historico...
+                    </div>
+                  ) : foundEmails.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                        {foundEmails.map((item, idx) => {
+                          const isSelected = confirmationEmail === item.email 
+                            && selectedEmailContext.source === item.source
+                            && (item.source !== 'agentmail' || selectedEmailContext.message_id === item.message_id)
+                            && (item.source !== 'gmail' || selectedEmailContext.gmail_id === item.gmail_id);
+                          return (
+                            <button
+                              key={`${item.source}-${idx}`}
+                              type="button"
+                              className={cn(
+                                "w-full text-left px-3 py-2 rounded-md text-sm border transition-colors",
+                                isSelected
+                                  ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
+                                  : "border-border hover:bg-muted/50"
+                              )}
+                              onClick={() => {
+                                setConfirmationEmail(item.email);
+                                let derivedName = item.name || '';
+                                if (!derivedName || derivedName.includes('@')) {
+                                  const prefix = item.email.split('@')[0] || '';
+                                  derivedName = prefix
+                                    .replace(/[._-]/g, ' ')
+                                    .replace(/\d+/g, '')
+                                    .trim()
+                                    .split(/\s+/)
+                                    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                                    .join(' ');
+                                }
+                                setSelectedEmailContext(prev => ({
+                                  source: item.source === 'supabase' ? 'manual' : item.source,
+                                  message_id: item.message_id,
+                                  thread_id: item.thread_id,
+                                  gmail_id: item.gmail_id,
+                                  contact_name: prev.contact_name || derivedName,
+                                }));
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium">{item.email}</span>
+                                <span className={cn(
+                                  "text-[10px] px-1.5 py-0.5 rounded font-medium",
+                                  item.source === 'agentmail' ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400" :
+                                  item.source === 'gmail' ? "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400" :
+                                  "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                                )}>
+                                  {item.source === 'agentmail' ? 'Reply' : item.source === 'gmail' ? 'Quote' : 'Novo'}
+                                </span>
+                              </div>
+                              {item.subject && (
+                                <div className="text-xs text-muted-foreground truncate mt-0.5">
+                                  {item.subject}
+                                </div>
+                              )}
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                {item.name && <span>{item.name}</span>}
+                                {item.date && <span> · {(() => {
+                                  const d = /^\d+$/.test(item.date) ? new Date(Number(item.date)) : new Date(item.date);
+                                  return isNaN(d.getTime()) ? '' : d.toLocaleDateString('pt-PT');
+                                })()}</span>}
+                                {!item.subject && !item.date && (
+                                  <span>{item.source === 'agentmail' ? 'Responder nesta thread' : item.source === 'gmail' ? 'Citar email e enviar do John' : 'Email novo do John'}</span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-muted-foreground">Ou digite manualmente:</p>
+                    </div>
+                  ) : !isSearching && (
+                    <p className="text-xs text-amber-600">Nenhum email encontrado. Insira manualmente.</p>
+                  )}
+                  <div className="relative" ref={emailSuggestionsRef}>
+                    <div className="relative">
+                      <Input
+                        id="confirmation-email"
+                        type="email"
+                        value={confirmationEmail}
+                        onChange={(e) => handleConfirmationEmailChange(e.target.value)}
+                        onFocus={() => { if (emailSuggestions.length > 0) setShowEmailSuggestions(true); }}
+                        placeholder="email@fornecedor.com"
+                        autoComplete="off"
+                      />
+                      {isSearchingAutocomplete && (
+                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                    </div>
+                    {showEmailSuggestions && emailSuggestions.length > 0 && (
+                      <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        {emailSuggestions.map((suggestion, idx) => (
+                          <button
+                            key={`${suggestion.email}-${idx}`}
+                            type="button"
+                            className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b last:border-b-0"
+                            onClick={() => handleSelectEmailSuggestion(suggestion)}
+                          >
+                            <div className="font-medium text-sm">{suggestion.name || suggestion.email}</div>
+                            <div className="text-xs text-muted-foreground">{suggestion.email}</div>
+                            {(suggestion.organization || suggestion.matchedOn) && (
+                              <div className="text-xs text-muted-foreground/70">
+                                {suggestion.organization && <span>{suggestion.organization}</span>}
+                                {suggestion.organization && suggestion.matchedOn && <span> · </span>}
+                                {suggestion.matchedOn && <span>via {suggestion.matchedOn}</span>}
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmation-contact-name">Nome do destinatário</Label>
+                  <Input
+                    id="confirmation-contact-name"
+                    type="text"
+                    value={selectedEmailContext.contact_name || ''}
+                    onChange={(e) => {
+                      setSelectedEmailContext(prev => ({ ...prev, contact_name: e.target.value }));
+                    }}
+                    placeholder="Ex: Miguel Ruão"
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-muted-foreground">O email será dirigido a este nome (ex: &quot;Exmo(a) Sr(a) Miguel Ruão,&quot;)</p>
+                </div>
+                {selectedEmailContext.source !== 'manual' && (
+                  <p className="text-xs text-blue-600 flex items-center gap-1">
+                    {selectedEmailContext.source === 'agentmail' ? (
+                      <><Mail className="h-3 w-3" /> Responder na thread existente do John</>
+                    ) : (
+                      <><Mail className="h-3 w-3" /> Citar email do Gmail e enviar do John</>
+                    )}
+                  </p>
+                )}
+                {previewFile?.confirmation_sent_at && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Comprovativo ja enviado a {format(new Date(previewFile.confirmation_sent_at), "dd/MM/yyyy HH:mm")}. Enviar novamente?
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSendingConfirmation}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isSendingConfirmation || !confirmationEmail.trim()}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!previewFile || !confirmationEmail.trim()) return;
+
+                // Use best vendor name for email
+                const sendTxVendor = (existingTransaction as any)?.vendor_name;
+                const sendFnParts = previewFile.file_name?.split('(');
+                const sendFnVendor = sendFnParts && sendFnParts.length > 1 ? sendFnParts[0].replace(/\.\w+$/, '').trim() : undefined;
+                const sendVendorName = sendTxVendor || sendFnVendor || previewFile.vendor_name;
+                
+                const result = await sendConfirmation({
+                  file_url: previewFile.file_url,
+                  file_name: previewFile.file_name,
+                  file_id: previewFile.id,
+                  vendor_name: sendVendorName || undefined,
+                  vendor_email: confirmationEmail.trim(),
+                  contact_name: selectedEmailContext.contact_name || undefined,
+                  invoice_number: previewFile.invoice_number || undefined,
+                  total_amount: previewFile.total_amount || undefined,
+                  source: selectedEmailContext.source,
+                  message_id: selectedEmailContext.message_id,
+                  thread_id: selectedEmailContext.thread_id,
+                  gmail_id: selectedEmailContext.gmail_id,
+                });
+
+                if (result.success) {
+                  toast.success(`Comprovativo enviado para ${confirmationEmail.trim()} (via John)`);
+                  setShowConfirmationDialog(false);
+                  queryClient.invalidateQueries({ queryKey: ['workflow-files'] });
+                } else {
+                  toast.error(result.error || 'Erro ao enviar comprovativo');
+                }
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isSendingConfirmation ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  A enviar email...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Enviar do John
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

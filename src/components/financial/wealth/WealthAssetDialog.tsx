@@ -1,0 +1,715 @@
+import { useEffect, useMemo, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
+import { differenceInDays } from "date-fns";
+import { cn } from "@/lib/utils";
+import SubcategoryCombobox from "./SubcategoryCombobox";
+
+type WealthAsset = {
+  id: string;
+  name: string;
+  category: string;
+  subcategory: string | null;
+  status: string | null;
+  current_value: number | null;
+  purchase_price: number | null;
+  purchase_date: string | null;
+  profit_loss_value: number | null;
+  yield_expected: number | null;
+  allocation_weight: number | null;
+  target_value_6m: number | null;
+  target_weight: number | null;
+  currency: string | null;
+  notes: string | null;
+  appreciation_type: string | null;
+  annual_rate_percent: number | null;
+  consider_appreciation: boolean | null;
+};
+
+type FormValues = {
+  name: string;
+  category: string;
+  subcategory: string;
+  status: string;
+  current_value: string;
+  purchase_price: string;
+  purchase_date: string;
+  allocation_weight: string;
+  target_value_6m: string;
+  target_weight: string;
+  currency: string;
+  notes: string;
+  appreciation_type: string;
+  annual_rate_percent: string;
+  consider_appreciation: boolean;
+};
+
+interface WealthAssetDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  asset: WealthAsset | null;
+  dynamicValue?: number; // Dynamic value from holdings for Markets category
+  dynamicPL?: number | null; // Dynamic P/L from holdings for Markets category
+}
+
+const CATEGORIES = [
+  "Real Estate Fund",
+  "Properties",
+  "Vehicles",
+  "Marine",
+  "Airplanes",
+  "Art",
+  "Watches",
+  "Crypto",
+  "Private Equity",
+  "Markets",
+  "Cash",
+  "Other",
+];
+
+const STATUSES = ["Active", "Sold", "In Recovery", "Liquidated"];
+const CURRENCIES = ["EUR", "USD", "CHF", "GBP"];
+
+// Format number for display with Portuguese convention (space as thousand separator, comma as decimal)
+const formatNumberForDisplay = (value: string | number | null): string => {
+  if (value === null || value === "") return "";
+  const num = typeof value === "string" ? parseFloat(value.replace(/\s/g, "").replace(",", ".")) : value;
+  if (isNaN(num)) return "";
+  return new Intl.NumberFormat("pt-PT", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num);
+};
+
+// Parse Portuguese formatted number to standard number
+const parsePortugueseNumber = (value: string): number | null => {
+  if (!value || value.trim() === "") return null;
+  // Remove spaces and replace comma with dot
+  const normalized = value.replace(/\s/g, "").replace(",", ".");
+  const num = parseFloat(normalized);
+  return isNaN(num) ? null : num;
+};
+
+const formatCurrency = (value: number | null, currency = "EUR") => {
+  if (value === null) return "—";
+  return new Intl.NumberFormat("pt-PT", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+  }).format(value);
+};
+
+// Custom number input component with Portuguese formatting
+function PortugueseNumberInput({
+  value,
+  onChange,
+  placeholder,
+  ...props
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  const [displayValue, setDisplayValue] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setDisplayValue(formatNumberForDisplay(value));
+    }
+  }, [value, isFocused]);
+
+  const handleFocus = () => {
+    setIsFocused(true);
+    // Show raw value on focus
+    const num = parsePortugueseNumber(displayValue);
+    setDisplayValue(num !== null ? num.toString().replace(".", ",") : "");
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    const num = parsePortugueseNumber(displayValue);
+    if (num !== null) {
+      onChange(num.toString());
+      setDisplayValue(formatNumberForDisplay(num));
+    } else {
+      onChange("");
+      setDisplayValue("");
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    // Allow numbers, comma, dot, and spaces
+    if (/^[\d\s,.-]*$/.test(val)) {
+      setDisplayValue(val);
+    }
+  };
+
+  return (
+    <Input
+      {...props}
+      value={displayValue}
+      onChange={handleChange}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      placeholder={placeholder}
+      inputMode="decimal"
+    />
+  );
+}
+
+export default function WealthAssetDialog({
+  open,
+  onOpenChange,
+  asset,
+  dynamicValue,
+  dynamicPL,
+}: WealthAssetDialogProps) {
+  const queryClient = useQueryClient();
+  const isEditing = !!asset;
+
+  const form = useForm<FormValues>({
+    defaultValues: {
+      name: "",
+      category: "Real Estate Fund",
+      subcategory: "",
+      status: "Active",
+      current_value: "",
+      purchase_price: "",
+      purchase_date: "",
+      allocation_weight: "",
+      target_value_6m: "",
+      target_weight: "",
+      currency: "EUR",
+      notes: "",
+      appreciation_type: "appreciates",
+      annual_rate_percent: "",
+      consider_appreciation: true,
+    },
+  });
+
+  // Watch values for auto-calculation
+  const currentValue = useWatch({ control: form.control, name: "current_value" });
+  const purchasePrice = useWatch({ control: form.control, name: "purchase_price" });
+  const purchaseDate = useWatch({ control: form.control, name: "purchase_date" });
+  const currency = useWatch({ control: form.control, name: "currency" });
+  const selectedCategory = useWatch({ control: form.control, name: "category" });
+
+  // Calculate P/L and Yield automatically
+  const calculations = useMemo(() => {
+    const cv = parseFloat(currentValue) || 0;
+    const pp = parseFloat(purchasePrice) || 0;
+    
+    // P/L = Current Value - Purchase Price
+    const pnl = cv && pp ? cv - pp : null;
+    
+    // Annualized Yield = ((Current Value / Purchase Price) ^ (365 / days)) - 1) * 100
+    let yieldPercent: number | null = null;
+    
+    if (cv && pp && pp > 0 && purchaseDate) {
+      const days = differenceInDays(new Date(), new Date(purchaseDate));
+      if (days > 0) {
+        const totalReturn = cv / pp;
+        const annualizedReturn = Math.pow(totalReturn, 365 / days) - 1;
+        yieldPercent = annualizedReturn * 100;
+      }
+    }
+    
+    return { pnl, yieldPercent };
+  }, [currentValue, purchasePrice, purchaseDate]);
+
+  useEffect(() => {
+    if (asset) {
+      // For Markets category, use dynamicValue if provided
+      const effectiveCurrentValue = asset.category === "Markets" && dynamicValue !== undefined
+        ? dynamicValue.toString()
+        : asset.current_value?.toString() || "";
+      
+      form.reset({
+        name: asset.name || "",
+        category: asset.category || "Real Estate Fund",
+        subcategory: asset.subcategory || "",
+        status: asset.status || "Active",
+        current_value: effectiveCurrentValue,
+        purchase_price: asset.purchase_price?.toString() || "",
+        purchase_date: asset.purchase_date || "",
+        allocation_weight: asset.allocation_weight?.toString() || "",
+        target_value_6m: asset.target_value_6m?.toString() || "",
+        target_weight: asset.target_weight?.toString() || "",
+        currency: asset.currency || "EUR",
+        notes: asset.notes || "",
+        appreciation_type: asset.appreciation_type || "appreciates",
+        annual_rate_percent: asset.annual_rate_percent?.toString() || "",
+        consider_appreciation: asset.consider_appreciation ?? true,
+      });
+    } else {
+      form.reset({
+        name: "",
+        category: "Real Estate Fund",
+        subcategory: "",
+        status: "Active",
+        current_value: "",
+        purchase_price: "",
+        purchase_date: "",
+        allocation_weight: "",
+        target_value_6m: "",
+        target_weight: "",
+        currency: "EUR",
+        notes: "",
+        appreciation_type: "appreciates",
+        annual_rate_percent: "",
+        consider_appreciation: true,
+      });
+    }
+  }, [asset, form, dynamicValue]);
+
+  const mutation = useMutation({
+    mutationFn: async (values: FormValues) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // For Markets category, use dynamicValue if provided
+      const cv = values.category === "Markets" && dynamicValue !== undefined
+        ? dynamicValue
+        : (parseFloat(values.current_value) || null);
+      const pp = parseFloat(values.purchase_price) || null;
+      
+      // Calculate P/L
+      const pnl = cv && pp ? cv - pp : null;
+      
+      // Calculate annualized yield
+      let yieldPercent: number | null = null;
+      if (cv && pp && pp > 0 && values.purchase_date) {
+        const days = differenceInDays(new Date(), new Date(values.purchase_date));
+        if (days > 0) {
+          const totalReturn = cv / pp;
+          const annualizedReturn = Math.pow(totalReturn, 365 / days) - 1;
+          yieldPercent = annualizedReturn * 100;
+        }
+      }
+
+      const payload = {
+        name: values.name,
+        category: values.category,
+        subcategory: values.subcategory || null,
+        status: values.status,
+        current_value: cv,
+        purchase_price: pp,
+        purchase_date: values.purchase_date || null,
+        profit_loss_value: pnl,
+        yield_expected: yieldPercent,
+        allocation_weight: values.allocation_weight ? parseFloat(values.allocation_weight) : null,
+        target_value_6m: values.target_value_6m ? parseFloat(values.target_value_6m) : null,
+        target_weight: values.target_weight ? parseFloat(values.target_weight) : null,
+        currency: values.currency,
+        notes: values.notes || null,
+        appreciation_type: values.appreciation_type || "appreciates",
+        annual_rate_percent: values.annual_rate_percent ? parseFloat(values.annual_rate_percent) : null,
+        consider_appreciation: values.consider_appreciation,
+        user_id: user.id,
+      };
+
+      if (isEditing && asset) {
+        const { error } = await supabase
+          .from("wealth_assets")
+          .update(payload)
+          .eq("id", asset.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("wealth_assets").insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wealth-assets"] });
+      toast.success(isEditing ? "Ativo atualizado" : "Ativo criado");
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      console.error("Save error:", error);
+      toast.error("Erro ao guardar ativo");
+    },
+  });
+
+  const onSubmit = (values: FormValues) => {
+    mutation.mutate(values);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isEditing ? "Editar Ativo" : "Novo Ativo"}</DialogTitle>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="name"
+                rules={{ required: "Nome é obrigatório" }}
+                render={({ field }) => (
+                  <FormItem className="col-span-2">
+                    <FormLabel>Nome / Posição</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Porsche GT3, Casa Marechal" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Categoria</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CATEGORIES.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="subcategory"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subcategoria</FormLabel>
+                    <FormControl>
+                      <SubcategoryCombobox
+                        value={field.value}
+                        onChange={field.onChange}
+                        category={selectedCategory}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estado</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {STATUSES.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="currency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Moeda</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CURRENCIES.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="purchase_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data de Compra</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="purchase_price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preço de Compra</FormLabel>
+                    <FormControl>
+                      <PortugueseNumberInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="0,00"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* For Markets category, show read-only calculated value */}
+              {selectedCategory === "Markets" && dynamicValue !== undefined ? (
+                <FormItem>
+                  <FormLabel>Valor Atual (Calculado)</FormLabel>
+                  <div className="h-10 px-3 py-2 rounded-md border bg-muted text-sm flex items-center font-medium">
+                    {formatCurrency(dynamicValue, "EUR")}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Calculado automaticamente a partir dos holdings da conta
+                  </p>
+                </FormItem>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="current_value"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor Atual</FormLabel>
+                      <FormControl>
+                        <PortugueseNumberInput
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="0,00"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Calculated fields - read only */}
+              <FormItem>
+                <FormLabel>P/L (Calculado)</FormLabel>
+                {selectedCategory === "Markets" && dynamicPL !== undefined ? (
+                  <div className={cn(
+                    "h-10 px-3 py-2 rounded-md border bg-muted text-sm flex items-center font-medium",
+                    dynamicPL !== null && dynamicPL >= 0 ? "text-green-600" : "text-red-600"
+                  )}>
+                    {dynamicPL !== null ? formatCurrency(dynamicPL, "EUR") : "—"}
+                  </div>
+                ) : (
+                  <div className={cn(
+                    "h-10 px-3 py-2 rounded-md border bg-muted text-sm flex items-center",
+                    calculations.pnl !== null && calculations.pnl >= 0 ? "text-green-600" : "text-red-600"
+                  )}>
+                    {calculations.pnl !== null ? formatCurrency(calculations.pnl, currency || "EUR") : "—"}
+                  </div>
+                )}
+                {selectedCategory === "Markets" && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Calculado a partir dos cost basis dos holdings
+                  </p>
+                )}
+              </FormItem>
+
+              <FormItem>
+                <FormLabel>Yield Anual (Calculado)</FormLabel>
+                <div className={cn(
+                  "h-10 px-3 py-2 rounded-md border bg-muted text-sm flex items-center",
+                  calculations.yieldPercent !== null && calculations.yieldPercent >= 0 ? "text-green-600" : "text-red-600"
+                )}>
+                  {calculations.yieldPercent !== null ? `${calculations.yieldPercent.toFixed(2)}%` : "—"}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Rendimento anualizado desde a data de compra
+                </p>
+              </FormItem>
+
+              <FormField
+                control={form.control}
+                name="allocation_weight"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Peso Atual (%)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="22" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="target_value_6m"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Target 6M</FormLabel>
+                    <FormControl>
+                      <PortugueseNumberInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="0,00"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="target_weight"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Peso Target (%)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="25" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="appreciation_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de Valorização</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="appreciates">Aprecia</SelectItem>
+                        <SelectItem value="depreciates">Deprecia</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="annual_rate_percent"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Taxa Anual (%)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.1" placeholder="5.0" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="consider_appreciation"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-sm font-normal">
+                        Considerar valorização no Forecast
+                      </FormLabel>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem className="col-span-2">
+                    <FormLabel>Notas</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Observações..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? "A guardar..." : isEditing ? "Atualizar" : "Criar"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}

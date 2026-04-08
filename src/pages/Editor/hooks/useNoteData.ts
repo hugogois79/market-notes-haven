@@ -1,0 +1,173 @@
+
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useParams, useLocation } from "react-router-dom";
+import { Note, Tag, Token } from "@/types";
+import { getTokensForNote } from "@/services/tokenService";
+import { fetchTags } from "@/services/tag";
+
+interface UseNoteDataProps {
+  notes: Note[];
+  onSaveNote: (note: Note) => Promise<Note | null>;
+}
+
+export const useNoteData = ({ notes, onSaveNote }: UseNoteDataProps) => {
+  const { id } = useParams();
+  const location = useLocation();
+  const isNewNote = id === 'new' || location.pathname === '/editor/new';
+  
+  const [currentNote, setCurrentNote] = useState<Note | null>(null);
+  const [linkedTokens, setLinkedTokens] = useState<Token[]>([]);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Create empty note template for new notes - but don't create it automatically
+  const createEmptyNote = useCallback(() => {
+    // Check for query parameters
+    const queryParams = new URLSearchParams(location.search);
+    const title = queryParams.get('title') || "Untitled Note";
+    const category = queryParams.get('category') || "General";
+    const tagString = queryParams.get('tags');
+    const tags = tagString ? tagString.split(',') : [];
+    
+    return {
+      id: `temp-${Date.now()}`,
+      title,
+      content: "",
+      tags,
+      category,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  }, [location.search]);
+
+  // Find the current note from the notes array - FIXED to preserve local state
+  useEffect(() => {
+    if (notes.length === 0) {
+      return;
+    }
+
+    setIsLoading(true);
+    
+    if (isNewNote) {
+      // For new notes, don't automatically create - let the parent component handle it
+      setCurrentNote(null);
+    } else if (id) {
+      const foundNote = notes.find(note => note.id === id);
+      
+      // Only update if we found a note and there's a real change
+      if (foundNote) {
+        setCurrentNote(prev => {
+          // If no previous note, use the found one
+          if (!prev) return foundNote;
+          
+          // Only update if the ID changed or if the database version is newer
+          // This prevents overwriting local changes during React Query refetches
+          if (prev.id !== foundNote.id) {
+            return foundNote;
+          }
+          
+          // Keep the previous state to preserve local changes
+          // The save operation will handle syncing to DB
+          return prev;
+        });
+      }
+      // Don't set null if not found - keep the previous state during transient states
+    }
+    
+    setIsLoading(false);
+  }, [notes, id, isNewNote]);
+
+  // Load tokens linked to the current note
+  useEffect(() => {
+    const loadTokens = async () => {
+      if (!currentNote || !currentNote.id || currentNote.id.toString().startsWith('temp-')) {
+        setLinkedTokens([]);
+        return;
+      }
+
+      try {
+        const tokens = await getTokensForNote(currentNote.id);
+        setLinkedTokens(tokens);
+      } catch (error) {
+        console.error("Error loading tokens:", error);
+        setLinkedTokens([]);
+      }
+    };
+
+    loadTokens();
+  }, [currentNote]);
+
+  // Load all available tags
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        const tags = await fetchTags();
+        setAllTags(tags);
+      } catch (error) {
+        console.error("Error loading tags:", error);
+        setAllTags([]);
+      }
+    };
+
+    loadTags();
+  }, []);
+
+  // Get tags filtered by the specified category
+  const getTagsFilteredByCategory = useCallback(
+    (category: string | null) => {
+      if (!category) return allTags;
+      
+      return allTags.filter(tag => {
+        if (!tag.category && !tag.categories) return false;
+        if (tag.category === category) return true;
+        if (tag.categories && tag.categories.includes(category)) return true;
+        return false;
+      });
+    },
+    [allTags]
+  );
+
+  // Save note changes - uses ref to always have latest currentNote
+  const currentNoteRef = useRef(currentNote);
+  useEffect(() => {
+    currentNoteRef.current = currentNote;
+  }, [currentNote]);
+
+  const handleSave = useCallback(
+    async (updatedFields: Partial<Note>) => {
+      const noteToUpdate = currentNoteRef.current;
+      if (!noteToUpdate) return;
+
+      console.log("==== useNoteData handleSave ====");
+      console.log("Current note title:", noteToUpdate.title);
+      console.log("Updated fields:", updatedFields);
+
+      const updatedNote = {
+        ...noteToUpdate,
+        ...updatedFields,
+        updatedAt: new Date()
+      };
+
+      try {
+        const savedNote = await onSaveNote(updatedNote);
+        if (savedNote) {
+          setCurrentNote(savedNote);
+          currentNoteRef.current = savedNote;
+        }
+      } catch (error) {
+        console.error("Error saving note:", error);
+      }
+    },
+    [onSaveNote]
+  );
+
+  return {
+    currentNote,
+    isNewNote,
+    isLoading,
+    linkedTokens,
+    allTags,
+    handleSave,
+    getTagsFilteredByCategory
+  };
+};

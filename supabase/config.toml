@@ -1,0 +1,40 @@
+project_id = "zyziolikudoczsthyoja"
+
+[functions.summarize-note]
+verify_jwt = false
+
+[functions.trading-assistant]
+verify_jwt = false
+
+[functions.embed-note]
+verify_jwt = false
+
+[functions.ask-ai]
+verify_jwt = false
+
+[functions.analyze-document]
+verify_jwt = false
+
+[functions.folder-insights]
+verify_jwt = false
+
+[functions.index-workflow-files]
+verify_jwt = false
+
+[functions.analyze-document-webhook]
+verify_jwt = false
+
+[functions.generate-tasks-from-text]
+verify_jwt = false
+
+[functions.generate-kanban-structure]
+verify_jwt = false
+
+[functions.analyze-kanban-attachment]
+verify_jwt = false
+
+[functions.analyze-legal-document]
+verify_jwt = false
+
+[functions.bank-payment-webhook]
+verify_jwt = false

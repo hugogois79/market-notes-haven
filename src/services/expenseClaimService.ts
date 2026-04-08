@@ -1,0 +1,331 @@
+import { supabase } from "@/integrations/supabase/client";
+
+export interface ExpenseClaim {
+  id: string;
+  employee_id: string;
+  claim_number: number;
+  claim_type: 'reembolso' | 'justificacao_cartao' | 'logbook' | 'deslocacoes';
+  status: 'rascunho' | 'submetido' | 'aprovado' | 'pago' | 'rejeitado';
+  total_amount: number;
+  description: string | null;
+  requester_id: string | null;
+  claim_date: string;
+  submission_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Expense {
+  id: string;
+  expense_claim_id: string;
+  expense_date: string;
+  description: string;
+  supplier: string;
+  amount: number;
+  project_id: string | null;
+  category_id: string | null;
+  receipt_image_url: string | null;
+  created_at: string;
+}
+
+export const expenseClaimService = {
+  // Get all expense claims for the current user
+  async getExpenseClaims(status?: string) {
+    let query = supabase
+      .from('expense_claims')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as ExpenseClaim[];
+  },
+
+  // Get a single expense claim with expenses
+  async getExpenseClaimById(id: string) {
+    const { data, error } = await supabase
+      .from('expense_claims')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data as ExpenseClaim;
+  },
+
+  // Get expenses for a claim
+  async getExpenses(claimId: string) {
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('expense_claim_id', claimId)
+      .order('expense_date', { ascending: false });
+
+    if (error) throw error;
+    return data as Expense[];
+  },
+
+  // Create a new expense claim
+  async createExpenseClaim(claim: {
+    claim_type: 'reembolso' | 'justificacao_cartao' | 'logbook' | 'deslocacoes';
+    description: string;
+    claim_date: string;
+    status?: 'rascunho' | 'submetido';
+    requester_id?: string | null;
+  }) {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('expense_claims')
+      .insert([
+        {
+          employee_id: userData.user.id,
+          claim_type: claim.claim_type,
+          description: claim.description,
+          claim_date: claim.claim_date,
+          status: claim.status || 'rascunho',
+          total_amount: 0,
+          requester_id: claim.requester_id || null,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as ExpenseClaim;
+  },
+
+  // Update expense claim
+  async updateExpenseClaim(id: string, updates: Partial<ExpenseClaim>) {
+    const { data, error } = await supabase
+      .from('expense_claims')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as ExpenseClaim;
+  },
+
+  // Submit expense claim
+  async submitExpenseClaim(id: string) {
+    const { data, error } = await supabase
+      .from('expense_claims')
+      .update({
+        status: 'submetido',
+        submission_date: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as ExpenseClaim;
+  },
+
+  // Cancel submission (revert to draft)
+  async cancelSubmission(id: string) {
+    const { data, error } = await supabase
+      .from('expense_claims')
+      .update({
+        status: 'rascunho',
+        submission_date: null,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as ExpenseClaim;
+  },
+
+  // Approve expense claim (admin only)
+  async approveExpenseClaim(id: string) {
+    const { data, error } = await supabase
+      .from('expense_claims')
+      .update({
+        status: 'aprovado',
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as ExpenseClaim;
+  },
+
+  // Reject expense claim (admin only)
+  async rejectExpenseClaim(id: string) {
+    const { data, error } = await supabase
+      .from('expense_claims')
+      .update({
+        status: 'rejeitado',
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as ExpenseClaim;
+  },
+
+  // Delete expense claim
+  async deleteExpenseClaim(id: string) {
+    const { error } = await supabase
+      .from('expense_claims')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  // Add expense to claim
+  async addExpense(expense: {
+    expense_claim_id: string;
+    expense_date: string;
+    description: string;
+    supplier: string;
+    amount: number;
+    project_id?: string | null;
+    category_id?: string | null;
+    receipt_image_url?: string | null;
+  }) {
+    const { data, error } = await supabase
+      .from('expenses')
+      .insert([expense])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Update total amount
+    await expenseClaimService.updateClaimTotal(expense.expense_claim_id);
+
+    return data as Expense;
+  },
+
+  // Update expense
+  async updateExpense(id: string, updates: Partial<Expense>) {
+    const { data, error } = await supabase
+      .from('expenses')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Update total amount
+    await expenseClaimService.updateClaimTotal(data.expense_claim_id);
+
+    return data as Expense;
+  },
+
+  // Delete expense
+  async deleteExpense(id: string, claimId: string) {
+    const { error } = await supabase
+      .from('expenses')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    // Update total amount
+    await expenseClaimService.updateClaimTotal(claimId);
+  },
+
+  // Update claim total amount
+  async updateClaimTotal(claimId: string) {
+    const expenses = await this.getExpenses(claimId);
+    const total = expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+
+    await this.updateExpenseClaim(claimId, { total_amount: total });
+  },
+
+  // Upload receipt
+  async uploadReceipt(file: File, claimId: string) {
+    // Get current user ID
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) throw new Error('User not authenticated');
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userData.user.id}/${claimId}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('expense-receipts')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) throw uploadError;
+
+    // Use signed URL instead of public URL to avoid browser extensions blocking
+    const { data, error: signedUrlError } = await supabase.storage
+      .from('expense-receipts')
+      .createSignedUrl(fileName, 31536000); // 1 year expiry
+
+    if (signedUrlError) throw signedUrlError;
+
+    return data.signedUrl;
+  },
+
+  // Download receipt file directly (bypasses ad blockers)
+  async downloadReceipt(filePath: string, fileName: string) {
+    const { data, error } = await supabase.storage
+      .from('expense-receipts')
+      .download(filePath);
+
+    if (error) throw error;
+    
+    // Create a blob URL and trigger download
+    const blobUrl = URL.createObjectURL(data);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+  },
+
+  // Get file path from full URL (handles both signed and public URLs)
+  getFilePathFromUrl(url: string): string | null {
+    try {
+      console.log("Parsing URL for file path:", url);
+      
+      // Handle relative URLs by prepending a dummy domain
+      const fullUrl = url.startsWith('http') ? url : `https://dummy.com${url}`;
+      const urlObj = new URL(fullUrl);
+      
+      // Remove query parameters (tokens, etc.)
+      const pathname = urlObj.pathname;
+      console.log("Pathname:", pathname);
+      
+      // Split the path and find the bucket name
+      const pathParts = pathname.split('/').filter(part => part.length > 0);
+      console.log("Path parts:", pathParts);
+      
+      const bucketIndex = pathParts.findIndex(part => part === 'expense-receipts');
+      console.log("Bucket index:", bucketIndex);
+      
+      if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
+        const filePath = pathParts.slice(bucketIndex + 1).join('/');
+        console.log("Extracted file path:", filePath);
+        return filePath;
+      }
+      
+      console.warn("Could not find bucket 'expense-receipts' in URL path");
+      return null;
+    } catch (error) {
+      console.error('Error parsing URL:', error);
+      return null;
+    }
+  },
+};

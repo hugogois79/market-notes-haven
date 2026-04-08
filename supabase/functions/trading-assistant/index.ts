@@ -1,0 +1,183 @@
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Input validation schemas
+const requestSchema = z.object({
+  message: z.string().min(1, "Message cannot be empty").max(5000, "Message too long"),
+  noteId: z.string().uuid("Invalid note ID format"),
+  action: z.enum(['remove_bullet_point']).optional(),
+  summaryText: z.string().max(10000, "Summary text too long").optional()
+});
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+  
+  try {
+    // Parse the request body
+    const requestData = await req.json();
+    
+    // Validate input
+    const validationResult = requestSchema.safeParse(requestData);
+    if (!validationResult.success) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid input', 
+          details: validationResult.error.issues 
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
+    const { message, noteId, action, summaryText } = validationResult.data;
+    
+    // Handle removal action if specified
+    if (action === 'remove_bullet_point') {
+      if (!summaryText) {
+        return new Response(
+          JSON.stringify({ error: 'Summary text is required for removal action' }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+      
+      console.log(`Processing removal request: "${message}" from summary: "${summaryText}"`);
+      
+      // Call OpenAI to process the removal request
+      const removalResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openAIApiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a helpful assistant that processes journal summaries. 
+              A user wants to remove a bullet point from their journal summary based on their natural language description.
+              
+              Current summary:
+              ${summaryText}
+              
+              The user's request to remove: "${message}"
+              
+              Find the most relevant bullet point to remove based on the user's request. If you find a match, return the updated summary without that bullet point.
+              If no bullet points match, return the original summary unchanged.
+              
+              Format your response as a clean set of bullet points, ONE per line, using the bullet character '•'. 
+              DO NOT include any explanations or additional text.
+              
+              Example format:
+              • First remaining bullet point
+              • Second remaining bullet point`
+            }
+          ],
+          temperature: 0.2,
+          max_tokens: 500,
+        }),
+      });
+      
+      const removalData = await removalResponse.json();
+      
+      if (removalData.error) {
+        throw new Error(removalData.error.message || 'Error calling OpenAI API');
+      }
+      
+      const updatedSummary = removalData.choices[0].message.content;
+      console.log(`Updated summary: "${updatedSummary}"`);
+      
+      return new Response(
+        JSON.stringify({ 
+          response: "Bullet point removed from summary", 
+          updatedSummary 
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
+    // Standard chat processing for normal messages
+    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openAIApiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a professional settlement analyst who specializes in concise trade documentation.
+            Extract the available trade details and provide a single, compact bullet point summary.
+            
+            Format your ENTIRE response as a SINGLE bullet point with this EXACT format:
+            • [Asset] [Transaction Type] [Quantity] @ $[Price] - [T+X settlement status]
+            
+            Examples:
+            • TAO Buy 403 units @ $239.65 - T+2 settlement pending
+            • BTC Sell 2.5 @ $35,000 - T+2 settlement complete
+            
+            Be extremely concise. Always provide a meaningful response with whatever information is available.
+            Do NOT mention "insufficient information" or "lack of information" in your response.
+            If information is missing, fill in with reasonable assumptions or use placeholder text:
+            • [Asset if known, otherwise "Unspecified Asset"] [Buy/Sell if known] [Quantity if known] @ $[Price if known] - [Settlement status if known]
+            
+            Examples with partial information:
+            • TAO Buy @ $239.65 - Settlement pending
+            • Unspecified Asset Trade - Profit recorded
+            
+            Don't add any additional text, explanations, or multiple bullet points.`
+          },
+          { role: 'user', content: message }
+        ],
+        temperature: 0.5,
+        max_tokens: 100,
+      }),
+    });
+    
+    const data = await openAIResponse.json();
+    
+    if (data.error) {
+      throw new Error(data.error.message || 'Error calling OpenAI API');
+    }
+    
+    const aiResponse = data.choices[0].message.content;
+    
+    // Return the AI-generated response
+    return new Response(
+      JSON.stringify({ response: aiResponse }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  } catch (error) {
+    console.error('Error processing trading information:', error);
+    return new Response(
+      JSON.stringify({ error: error.message || 'An unexpected error occurred' }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  }
+});

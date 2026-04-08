@@ -1,0 +1,160 @@
+
+
+import React, { createContext, useContext, ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchNotes, createNote, updateNote, deleteNote } from "@/services/supabaseService";
+import { Note, Tag } from "@/types";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface NotesContextType {
+  notes: Note[];
+  loading: boolean;
+  isLoading: boolean;
+  handleSaveNote: (note: Note) => Promise<Note | null>;
+  handleDeleteNote: (noteId: string) => Promise<boolean>;
+  refetch: () => void;
+}
+
+const NotesContext = createContext<NotesContextType | undefined>(undefined);
+
+interface NotesProviderProps {
+  children: ReactNode;
+}
+
+export const NotesProvider = ({ children }: NotesProviderProps) => {
+  const { user, loading: authLoading } = useAuth();
+  const queryClient = useQueryClient();
+  const notesQueryKey = ['notes', user?.id];
+  const { data: notesData, isLoading, refetch } = useQuery({
+    queryKey: notesQueryKey,
+    queryFn: fetchNotes,
+    staleTime: 30 * 1000,
+    enabled: !authLoading && !!user,
+  });
+
+  // Use notesData directly, fallback to empty array
+  const notes = notesData || [];
+  const loading = isLoading;
+
+  const handleSaveNote = async (note: Note): Promise<Note | null> => {
+    try {
+      // Find the existing note in state for merging if it's an update
+      const existingNote = note.id.toString().startsWith('temp-') 
+        ? null 
+        : notes.find(n => n.id === note.id);
+      
+      // Process tags to ensure consistent format
+      const processedTags = Array.isArray(note.tags) 
+        ? note.tags.map(tag => {
+            // Check if tag is string or Tag object
+            if (typeof tag === 'string') {
+              return tag;
+            } 
+            // Handle Tag objects properly
+            return (tag as Tag).name || (tag as Tag).id || String(tag);
+          })
+        : existingNote?.tags || [];
+      
+      // Preserve title: use note.title if explicitly provided (even empty string), else keep existing
+      const title = note.title !== undefined && note.title !== null
+        ? (note.title || existingNote?.title || "Untitled Note")
+        : (existingNote?.title || "Untitled Note");
+      
+      // Ensure attachments is always an array
+      const noteWithValidFields = {
+        ...existingNote, // Keep existing values
+        ...note, // Apply updates
+        title, // Ensure title is preserved
+        content: note.content !== undefined ? note.content : existingNote?.content || "",
+        category: note.category || existingNote?.category || "General",
+        tags: processedTags, // Ensure tags are preserved and processed
+        attachments: Array.isArray(note.attachments) ? note.attachments : existingNote?.attachments || [],
+        project_id: note.project_id !== undefined ? note.project_id : existingNote?.project_id // Preserve project_id
+      };
+      
+      if (note.id.toString().startsWith('temp-')) {
+        const result = await createNote({
+          title: noteWithValidFields.title,
+          content: noteWithValidFields.content,
+          tags: noteWithValidFields.tags,
+          category: noteWithValidFields.category,
+          attachments: noteWithValidFields.attachments,
+          hasConclusion: noteWithValidFields.hasConclusion
+        });
+        
+        if (result.embeddingFailed) {
+          toast.warning("Nota guardada, mas a indexação para pesquisa falhou. A pesquisa semântica pode não encontrar esta nota.");
+        }
+        
+        if (result.note) {
+          // Immediately update cache with new note to prevent "Note Not Found"
+          queryClient.setQueryData(notesQueryKey, (oldNotes: Note[] | undefined) => {
+            if (!oldNotes) return [result.note];
+            return [...oldNotes, result.note];
+          });
+          await refetch();
+          return result.note;
+        }
+      } else {
+        const result = await updateNote(noteWithValidFields);
+        
+        if (result.embeddingFailed) {
+          toast.warning("Nota guardada, mas a indexação para pesquisa falhou. A pesquisa semântica pode não encontrar esta nota.");
+        }
+        
+        if (result.note) {
+          // Optimistic update - update cache locally instead of refetching
+          queryClient.setQueryData(notesQueryKey, (oldNotes: Note[] | undefined) => {
+            if (!oldNotes) return [result.note];
+            return oldNotes.map(n => n.id === result.note.id ? result.note : n);
+          });
+          return result.note;
+        }
+      }
+    } catch (error) {
+      console.error("Error saving note:", error);
+      throw error;
+    }
+    return null;
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      const success = await deleteNote(noteId);
+      
+      if (success) {
+        await refetch();
+        return true;
+      }
+      
+      return success;
+    } catch (error) {
+      console.error("Error deleting note:", error);
+      return false;
+    }
+  };
+
+  return (
+    <NotesContext.Provider 
+      value={{ 
+        notes, 
+        loading, 
+        isLoading, 
+        handleSaveNote, 
+        handleDeleteNote,
+        refetch
+      }}
+    >
+      {children}
+    </NotesContext.Provider>
+  );
+};
+
+export const useNotes = () => {
+  const context = useContext(NotesContext);
+  if (context === undefined) {
+    throw new Error("useNotes must be used within a NotesProvider");
+  }
+  return context;
+};

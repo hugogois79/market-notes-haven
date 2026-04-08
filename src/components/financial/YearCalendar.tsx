@@ -1,0 +1,1588 @@
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, CalendarDays, MoreHorizontal, Sun, Moon, Printer, Pencil } from "lucide-react";
+import "@/styles/calendar-print.css";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
+import CalendarSettingsSheet, { CalendarCategory } from "./CalendarSettingsSheet";
+import MonthlyObjectivesFooter from "./MonthlyObjectivesFooter";
+import EventAutocomplete, { EventAutocompleteRef } from "./EventAutocomplete";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { useCalendarDayStatus } from "@/hooks/useCalendarDayStatus";
+import { useCalendarCategories } from "@/hooks/useCalendarCategories";
+
+const MONTHS = [
+  "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+  "Jul", "Ago", "Set", "Out", "Nov", "Dez"
+];
+
+const DAYS_OF_WEEK = ["D", "S", "T", "Q", "Q", "S", "S"];
+
+const PERIODS = [
+  { value: "morning", label: "Manhã", icon: Sun },
+  { value: "afternoon", label: "Tarde", icon: Moon },
+];
+
+interface CalendarEvent {
+  id: string;
+  date: string;
+  title: string | null;
+  category: string | null;
+  notes: string | null;
+  user_id: string | null;
+  period: string | null;
+  google_event_id?: string | null;
+  source?: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  all_day?: boolean;
+}
+
+interface ClipboardEvent {
+  title: string;
+  category: string | null;
+}
+
+interface DraggedEvent {
+  event: CalendarEvent;
+  sourceDay: number;
+  sourceMonth: number;
+  sourceYear: number;
+  sourcePeriod: string;
+}
+
+interface MonthInfo {
+  month: number;
+  year: number;
+  label: string;
+}
+
+interface EditingCell {
+  day: number;
+  month: number;
+  year: number;
+  period: string;
+}
+
+// Custody status type for B column (Beatriz)
+type CustodyStatus = 'comigo' | 'mae' | null;
+
+// Diana status type for D column
+type DianaStatus = 'comigo' | null;
+
+export default function YearCalendar() {
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [showFullYear, setShowFullYear] = useState(false);
+  const [monthOffset, setMonthOffset] = useState(0); // Offset for 6-month view navigation
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("morning");
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Partial<CalendarEvent>>({});
+  const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
+  const [inlineValue, setInlineValue] = useState("");
+  const [clipboard, setClipboard] = useState<ClipboardEvent | null>(null);
+  const [selectedCell, setSelectedCell] = useState<EditingCell | null>(null);
+  const [draggedEvent, setDraggedEvent] = useState<DraggedEvent | null>(null);
+  const inputRef = useRef<EventAutocompleteRef>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const draggingRef = useRef(false);
+  const queryClient = useQueryClient();
+
+  // Use categories from Supabase
+  const { categories, saveCategories, isSaving: isSavingCategories } = useCalendarCategories();
+  
+
+  // Focus input when editing cell changes
+  useEffect(() => {
+    if (editingCell && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editingCell]);
+
+  // Calculate visible months based on toggle
+  const visibleMonths = useMemo((): MonthInfo[] => {
+    if (showFullYear) {
+      return Array.from({ length: 12 }, (_, i) => ({
+        month: i + 1,
+        year: selectedYear,
+        label: MONTHS[i],
+      }));
+    } else {
+      const today = new Date();
+      const months: MonthInfo[] = [];
+      for (let i = 0; i < 6; i++) {
+        const date = new Date(today.getFullYear(), today.getMonth() + monthOffset + i, 1);
+        months.push({
+          month: date.getMonth() + 1,
+          year: date.getFullYear(),
+          label: `${MONTHS[date.getMonth()]} ${date.getFullYear()}`,
+        });
+      }
+      return months;
+    }
+  }, [showFullYear, selectedYear, monthOffset]);
+
+  // Calculate date range for query
+  const dateRange = useMemo(() => {
+    if (showFullYear) {
+      return {
+        start: `${selectedYear}-01-01`,
+        end: `${selectedYear}-12-31`,
+      };
+    } else {
+      const today = new Date();
+      const start = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + monthOffset + 6, 0);
+      return {
+        start: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01`,
+        end: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`,
+      };
+    }
+  }, [showFullYear, selectedYear, monthOffset]);
+
+  // Use day status hook for custody and holidays from Supabase
+  const {
+    getCustodyForDate: getCustodyForDateStr,
+    getDianaForDate: getDianaForDateStr,
+    isHolidayDate: isHolidayDateStr,
+    handleCustodyChange,
+    handleDianaChange,
+    handleHolidayToggle,
+  } = useCalendarDayStatus(dateRange);
+
+  const { data: events } = useQuery({
+    queryKey: ["calendar-events", dateRange.start, dateRange.end, categories],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      
+      // First get user's own events
+      const { data: ownEvents, error: ownError } = await supabase
+        .from("calendar_events")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("date", dateRange.start)
+        .lte("date", dateRange.end);
+      
+      if (ownError) throw ownError;
+
+      // Then get shared events from other users
+      // Find categories that are shared specifically with the current user
+      let sharedEvents: CalendarEvent[] = [];
+      
+      // Get all shared categories where current user is in shared_with_users array
+      const { data: sharedWithMeCategories } = await supabase
+        .from("calendar_categories")
+        .select("name, user_id, shared_with_users")
+        .contains("shared_with_users", [user.id])
+        .neq("user_id", user.id);
+      
+      if (sharedWithMeCategories && sharedWithMeCategories.length > 0) {
+        // Get events from other users that belong to categories shared with me
+        const sharedCatNames = sharedWithMeCategories.map(c => c.name.toLowerCase().replace(/\s+/g, '_'));
+        const otherUserIds = [...new Set(sharedWithMeCategories.map(c => c.user_id))];
+        
+        const { data: otherEvents } = await supabase
+          .from("calendar_events")
+          .select("*")
+          .in("user_id", otherUserIds)
+          .in("category", sharedCatNames)
+          .gte("date", dateRange.start)
+          .lte("date", dateRange.end);
+        
+        if (otherEvents) {
+          sharedEvents = otherEvents as CalendarEvent[];
+        }
+      }
+
+      // Merge and deduplicate events
+      const allEvents = [...(ownEvents || []), ...sharedEvents];
+      const uniqueEvents = allEvents.filter((event, index, self) => 
+        index === self.findIndex(e => e.id === event.id)
+      );
+      
+      return uniqueEvents as CalendarEvent[];
+    },
+  });
+
+  // Query for event templates with their categories
+  const { data: eventTemplates } = useQuery({
+    queryKey: ["calendar-event-templates"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("calendar_event_templates")
+        .select("*");
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Get unique suggestions from templates
+  const eventSuggestions = useMemo(() => {
+    return eventTemplates?.map(t => t.title).sort() || [];
+  }, [eventTemplates]);
+
+  // Get category for a title from templates
+  const getCategoryForTitle = (title: string): string | null => {
+    const template = eventTemplates?.find(t => t.title.toLowerCase() === title.toLowerCase());
+    return template?.category || null;
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: async (event: Partial<CalendarEvent>) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+      
+      // Determine category - use provided category, or get from template if title matches
+      let categoryToUse = event.category;
+      if (!categoryToUse && event.title) {
+        categoryToUse = getCategoryForTitle(event.title);
+      }
+      
+      if (event.id) {
+        const { error } = await supabase
+          .from("calendar_events")
+          .update({
+            title: event.title,
+            category: categoryToUse,
+            notes: event.notes,
+            period: event.period,
+          })
+          .eq("id", event.id);
+        if (error) throw error;
+      } else {
+        const { data: inserted, error } = await supabase
+          .from("calendar_events")
+          .insert({
+            date: event.date,
+            title: event.title,
+            category: categoryToUse,
+            notes: event.notes,
+            period: event.period || 'morning',
+            user_id: user?.id,
+          })
+          .select('id')
+          .single();
+        if (error) throw error;
+      }
+      
+      // Update template with title and category
+      if (event.title && categoryToUse) {
+        await supabase
+          .from("calendar_event_templates")
+          .upsert({
+            user_id: user.id,
+            title: event.title,
+            category: categoryToUse,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id,title' });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-event-templates"] });
+    },
+    onError: () => {
+      toast.error("Erro ao guardar evento");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("calendar_events")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      toast.success("Evento eliminado");
+      setIsSheetOpen(false);
+      setEditingEvent({});
+    },
+    onError: () => {
+      toast.error("Erro ao eliminar evento");
+    },
+  });
+
+  // Global keyboard handler for copy/paste and print
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Print: Ctrl+P or Cmd+P
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        window.print();
+        return;
+      }
+      
+      // Only handle if not editing a cell (not in input mode)
+      if (editingCell) return;
+      
+      // Copy: Ctrl+C or Cmd+C
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedCell) {
+        const event = getEventForDate(selectedCell.day, selectedCell.month, selectedCell.year, selectedCell.period);
+        if (event?.title) {
+          setClipboard({ title: event.title, category: event.category });
+          toast.success(`Copiado: ${event.title}`);
+        }
+        e.preventDefault();
+      }
+      
+      // Paste: Ctrl+V or Cmd+V
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v' && selectedCell && clipboard) {
+        const dateStr = `${selectedCell.year}-${String(selectedCell.month).padStart(2, '0')}-${String(selectedCell.day).padStart(2, '0')}`;
+        const existingEvent = getEventForDate(selectedCell.day, selectedCell.month, selectedCell.year, selectedCell.period);
+        
+        saveMutation.mutate({
+          id: existingEvent?.id,
+          date: dateStr,
+          title: clipboard.title,
+          category: clipboard.category,
+          notes: existingEvent?.notes,
+          period: selectedCell.period,
+        });
+        toast.success(`Colado: ${clipboard.title}`);
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editingCell, selectedCell, clipboard, saveMutation, events]);
+
+  const getDaysInMonth = (month: number, year: number) => {
+    return new Date(year, month, 0).getDate();
+  };
+
+  const getDayOfWeek = (day: number, month: number, year: number) => {
+    const date = new Date(year, month - 1, day);
+    return DAYS_OF_WEEK[date.getDay()];
+  };
+
+  const isWeekendDay = (day: number, month: number, year: number) => {
+    const date = new Date(year, month - 1, day);
+    const dayIndex = date.getDay();
+    return dayIndex === 0 || dayIndex === 6; // Sunday (0) or Saturday (6)
+  };
+
+  const isWednesday = (day: number, month: number, year: number) => {
+    const date = new Date(year, month - 1, day);
+    return date.getDay() === 3; // Wednesday
+  };
+
+  const isValidDateForMonth = (day: number, month: number, year: number) => {
+    return day <= getDaysInMonth(month, year);
+  };
+
+  const isPastDate = (day: number, month: number, year: number) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const cellDate = new Date(year, month - 1, day);
+    return cellDate < today;
+  };
+
+  const getEventForDate = (day: number, month: number, year: number, period?: string) => {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    if (period) {
+      return events?.find(e => e.date === dateStr && e.period === period);
+    }
+    return events?.find(e => e.date === dateStr);
+  };
+
+  // Get all events for a date (both morning and afternoon) - for full year view
+  const getAllEventsForDate = (day: number, month: number, year: number) => {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return events?.filter(e => e.date === dateStr) || [];
+  };
+
+  // Helper to determine if a color is dark (needs white text)
+  const isDarkColor = (color: string): boolean => {
+    const darkColors = ["#1e40af", "#1e3a8a", "#312e81", "#4c1d95", "#831843", "#7f1d1d", "#dc2626", "#b91c1c", "#991b1b", "#7c3aed", "#6d28d9", "#5b21b6", "#3b82f6", "#2563eb", "#ef4444"];
+    return darkColors.includes(color.toLowerCase());
+  };
+
+  const getCategoryStyle = (category: string | null): { bgColor: string; textColor: string } => {
+    const cat = categories.find(c => c.value === category);
+    if (!cat) return { bgColor: "", textColor: "" };
+    
+    // Dark colors need white text, light colors need black text
+    const textColor = isDarkColor(cat.color) ? "#ffffff" : "#000000";
+    
+    return { bgColor: cat.color, textColor };
+  };
+
+  // Background color for past dates without events - neutral light gray
+  const PAST_DATE_BG = "#f1f5f9";
+
+  // Lighten a hex color by mixing with white (0-1 where 1 = white)
+  const lightenColor = (hex: string, amount: number): string => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const nr = Math.round(r + (255 - r) * amount);
+    const ng = Math.round(g + (255 - g) * amount);
+    const nb = Math.round(b + (255 - b) * amount);
+    return `#${nr.toString(16).padStart(2, '0')}${ng.toString(16).padStart(2, '0')}${nb.toString(16).padStart(2, '0')}`;
+  };
+
+  // Check if date is a holiday
+  const isHolidayDate = (day: number, month: number, year: number): boolean => {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return isHolidayDateStr(dateStr);
+  };
+
+  // Get custody status for a date (Beatriz)
+  const getCustodyForDate = (day: number, month: number, year: number): CustodyStatus => {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return getCustodyForDateStr(dateStr);
+  };
+
+  // Get Diana status for a date
+  const getDianaForDate = (day: number, month: number, year: number): DianaStatus => {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return getDianaForDateStr(dateStr);
+  };
+
+  // Single click - start inline editing and set selected cell for copy/paste
+  const handleCellClick = (day: number, monthInfo: MonthInfo, period: string = 'morning') => {
+    if (!isValidDateForMonth(day, monthInfo.month, monthInfo.year)) return;
+    
+    const cellInfo = { day, month: monthInfo.month, year: monthInfo.year, period };
+    setSelectedCell(cellInfo);
+    
+    const existingEvent = getEventForDate(day, monthInfo.month, monthInfo.year, period);
+    setEditingCell(cellInfo);
+    setInlineValue(existingEvent?.title || "");
+  };
+
+  // Double click - open detailed sheet
+  const handleCellDoubleClick = (day: number, monthInfo: MonthInfo, period: string = 'morning') => {
+    if (!isValidDateForMonth(day, monthInfo.month, monthInfo.year)) return;
+    
+    setEditingCell(null);
+    const dateStr = `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const existingEvent = getEventForDate(day, monthInfo.month, monthInfo.year, period);
+    
+    setSelectedDate(dateStr);
+    setSelectedPeriod(period);
+    setEditingEvent(existingEvent || { date: dateStr, period });
+    setIsSheetOpen(true);
+  };
+
+  // Mouse handlers to separate click from drag
+  const handleCellMouseDown = (day: number, monthInfo: MonthInfo, period: string, hasEvent: boolean) => {
+    if (!isValidDateForMonth(day, monthInfo.month, monthInfo.year)) return;
+    
+    // Clear any existing timer
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    
+    // If no event, open edit immediately
+    if (!hasEvent) {
+      handleCellClick(day, monthInfo, period);
+      return;
+    }
+    
+    // If has event, delay to allow drag to start
+    clickTimerRef.current = setTimeout(() => {
+      if (!draggingRef.current) {
+        handleCellClick(day, monthInfo, period);
+      }
+      clickTimerRef.current = null;
+    }, 150);
+  };
+
+  const handleCellMouseUp = () => {
+    // Timer will handle click if drag didn't start
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, day: number, monthInfo: MonthInfo, period: string) => {
+    const event = getEventForDate(day, monthInfo.month, monthInfo.year, period);
+    if (!event?.title) {
+      e.preventDefault();
+      return;
+    }
+    
+    // Cancel click timer and mark as dragging
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    draggingRef.current = true;
+    
+    setDraggedEvent({
+      event,
+      sourceDay: day,
+      sourceMonth: monthInfo.month,
+      sourceYear: monthInfo.year,
+      sourcePeriod: period,
+    });
+    
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.dropEffect = 'move';
+    e.dataTransfer.setData('text/plain', event.title);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const isObjectiveDrag = e.dataTransfer.types?.includes("application/x-objective");
+    e.dataTransfer.dropEffect = isObjectiveDrag ? "copy" : "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, day: number, monthInfo: MonthInfo, period: string) => {
+    e.preventDefault();
+    
+    if (!isValidDateForMonth(day, monthInfo.month, monthInfo.year)) {
+      setDraggedEvent(null);
+      return;
+    }
+
+    const targetDateStr = `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const existingTargetEvent = getEventForDate(day, monthInfo.month, monthInfo.year, period);
+    
+    // Check if this is an objective being dropped from the footer
+    const isObjectiveDrop = e.dataTransfer.getData('application/x-objective') === 'true';
+    const droppedText = e.dataTransfer.getData('text/plain');
+    
+    if (isObjectiveDrop && droppedText) {
+      // Create new event from objective text with "Forecast" category
+      // The objective will be automatically underlined via scheduledTitles matching
+      saveMutation.mutate({
+        id: existingTargetEvent?.id,
+        date: targetDateStr,
+        title: droppedText,
+        category: 'Forecast',
+        notes: null,
+        period,
+      });
+      
+      toast.success(`Adicionado: ${droppedText}`);
+      return;
+    }
+    
+    // Handle internal calendar drag
+    if (!draggedEvent) {
+      setDraggedEvent(null);
+      return;
+    }
+    
+    // Don't do anything if dropping on the same cell
+    if (
+      draggedEvent.sourceDay === day &&
+      draggedEvent.sourceMonth === monthInfo.month &&
+      draggedEvent.sourceYear === monthInfo.year &&
+      draggedEvent.sourcePeriod === period
+    ) {
+      setDraggedEvent(null);
+      return;
+    }
+    
+    // Move the event to the new location
+    saveMutation.mutate({
+      id: existingTargetEvent?.id,
+      date: targetDateStr,
+      title: draggedEvent.event.title,
+      category: draggedEvent.event.category,
+      notes: draggedEvent.event.notes,
+      period,
+    });
+    
+    // Delete the original event if it had an ID
+    if (draggedEvent.event.id) {
+      deleteMutation.mutate(draggedEvent.event.id);
+    }
+    
+    toast.success(`Movido: ${draggedEvent.event.title}`);
+    setDraggedEvent(null);
+  };
+
+  const handleDragEnd = () => {
+    draggingRef.current = false;
+    setDraggedEvent(null);
+  };
+  const handleInlineSave = () => {
+    if (!editingCell) return;
+    
+    const { day, month, year, period } = editingCell;
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const existingEvent = getEventForDate(day, month, year, period);
+    
+    // If text is empty and event exists, delete it
+    if (!inlineValue.trim() && existingEvent?.id) {
+      deleteMutation.mutate(existingEvent.id);
+    } else if (inlineValue.trim()) {
+      // Only save if there's text
+      saveMutation.mutate({
+        id: existingEvent?.id,
+        date: dateStr,
+        title: inlineValue.trim(),
+        category: existingEvent?.category,
+        notes: existingEvent?.notes,
+        period,
+      });
+    }
+    
+    setEditingCell(null);
+    setInlineValue("");
+  };
+
+  // Handle keyboard events in inline edit
+  const handleInlineKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleInlineSave();
+    } else if (e.key === 'Escape') {
+      setEditingCell(null);
+      setInlineValue("");
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      // If there's an existing event, delete it completely
+      if (editingCell) {
+        const { day, month, year, period } = editingCell;
+        const existingEvent = getEventForDate(day, month, year, period);
+        if (existingEvent?.id) {
+          deleteMutation.mutate(existingEvent.id);
+          setEditingCell(null);
+          setInlineValue("");
+          e.preventDefault();
+        }
+      }
+    }
+  };
+
+  const handleSave = () => {
+    if (!editingEvent.date) return;
+    saveMutation.mutate(editingEvent);
+    toast.success("Evento guardado");
+    setIsSheetOpen(false);
+    setEditingEvent({});
+  };
+
+  // Print function that opens calendar in new window with full styling
+  const handlePrint = () => {
+    if (!calendarRef.current) return;
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error("Não foi possível abrir a janela de impressão. Verifique se os popups estão bloqueados.");
+      return;
+    }
+
+    // Clone the calendar content and remove input elements
+    const clone = calendarRef.current.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll('input, textarea').forEach(el => el.remove());
+    
+    const calendarContent = clone.innerHTML;
+    const title = showFullYear ? `Calendário Anual ${selectedYear}` : 'Próximos 6 Meses';
+    const gridTemplate = sixMonthGridTemplate;
+
+    // Generate category legend HTML using the actual category color
+    const legendHTML = categories.map(cat => {
+      return `<div style="display: flex; align-items: center; gap: 6px;">
+        <div style="width: 12px; height: 12px; border-radius: 50%; background-color: ${cat.color}; border: 1px solid rgba(0,0,0,0.1);"></div>
+        <span style="font-size: 9px; color: #374151;">${cat.label}</span>
+      </div>`;
+    }).join('');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${title}</title>
+          <style>
+            @page {
+              size: A4 landscape;
+              margin: 8mm;
+            }
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+              font-size: 7px;
+              line-height: 1.1;
+              padding: 0;
+            }
+            .print-header {
+              text-align: center;
+              margin-bottom: 8px;
+              padding-bottom: 6px;
+              border-bottom: 2px solid #1e293b;
+            }
+            .print-header h1 {
+              font-size: 16px;
+              font-weight: 700;
+              color: #1e293b;
+              margin: 0;
+            }
+            .print-header .subtitle {
+              font-size: 9px;
+              color: #64748b;
+              margin-top: 2px;
+            }
+            .calendar-container {
+              width: 100%;
+              border: 1px solid #cbd5e1;
+              border-radius: 4px;
+              overflow: hidden;
+            }
+            .calendar-grid {
+              width: 100%;
+            }
+            .calendar-grid > div {
+              display: grid !important;
+              grid-template-columns: ${gridTemplate};
+            }
+            .calendar-grid > div > div {
+              border-right: 1px solid #e2e8f0;
+              border-bottom: 1px solid #e2e8f0;
+              padding: 1px 2px;
+              min-height: 16px;
+              font-size: 7px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              text-align: center;
+              word-break: break-word;
+              overflow: hidden;
+            }
+            .legend {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 12px;
+              margin-top: 10px;
+              padding-top: 8px;
+              border-top: 1px solid #e2e8f0;
+              justify-content: center;
+            }
+            /* Force background colors */
+            [style*="background"] {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-header">
+            <h1>${title}</h1>
+            <div class="subtitle">Gerado em ${new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+          </div>
+          <div class="calendar-container">
+            <div class="calendar-grid">${calendarContent}</div>
+          </div>
+          <div class="legend">
+            ${legendHTML}
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.onafterprint = function() {
+                  window.close();
+                };
+              }, 100);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const columnCount = showFullYear ? visibleMonths.length : visibleMonths.length * 4;
+  
+  // Grid template for 6-month view: narrow columns for B/D, wider for events with minimum width
+  const sixMonthGridTemplate = showFullYear 
+    ? `40px repeat(${visibleMonths.length}, 1fr)`
+    : `40px ${visibleMonths.map(() => '20px minmax(60px, 1fr) minmax(60px, 1fr) 20px').join(' ')}`;
+
+  // Check if cell is being edited
+  const isEditing = (day: number, month: number, year: number, period: string) => {
+    return editingCell?.day === day && 
+           editingCell?.month === month && 
+           editingCell?.year === year && 
+           editingCell?.period === period;
+  };
+
+  // Render cell for full year view (single slot per day)
+  const renderFullYearCell = (day: number, monthInfo: MonthInfo) => {
+    const isValid = isValidDateForMonth(day, monthInfo.month, monthInfo.year);
+    const allEvents = isValid ? getAllEventsForDate(day, monthInfo.month, monthInfo.year) : [];
+    const hasEvents = allEvents.length > 0;
+    
+    // Use the first event's category for background color, or combine titles
+    const primaryEvent = allEvents[0];
+    const style = getCategoryStyle(primaryEvent?.category || null);
+    const combinedTitle = allEvents.map(e => e.title).filter(Boolean).join(' / ');
+    
+    const dayOfWeek = isValid ? getDayOfWeek(day, monthInfo.month, monthInfo.year) : "";
+    const isWeekend = isValid && isWeekendDay(day, monthInfo.month, monthInfo.year);
+    const editing = isEditing(day, monthInfo.month, monthInfo.year, 'morning');
+    
+    // Check if this day is a holiday
+    const isHoliday = isValid && isHolidayDate(day, monthInfo.month, monthInfo.year);
+
+    const dateStr = `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+    const cellContent = (
+      <div
+        className={`
+          p-0.5 text-[9px] border-r border-border last:border-r-0 min-h-[32px] cursor-pointer
+          transition-colors w-full h-full
+          ${!isValid ? 'bg-muted/50' : isWeekend ? 'bg-muted/20' : ''}
+          ${isValid && !hasEvents && !editing ? 'hover:bg-muted/40' : ''}
+        `}
+        style={hasEvents && !editing && style.bgColor ? { backgroundColor: style.bgColor } : undefined}
+        onClick={() => handleCellClick(day, monthInfo)}
+        onDoubleClick={() => handleCellDoubleClick(day, monthInfo)}
+      >
+        {isValid && (
+          <>
+            {editing ? (
+              <EventAutocomplete
+                ref={inputRef}
+                value={inlineValue}
+                onChange={setInlineValue}
+                onBlur={handleInlineSave}
+                onKeyDown={handleInlineKeyDown}
+                suggestions={eventSuggestions || []}
+                className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none"
+                placeholder="Evento..."
+              />
+            ) : (
+              <div className="flex items-center justify-center gap-0.5 h-full text-center">
+                <span 
+                  className={`inline-flex items-center justify-center w-4 h-4 rounded-full text-[7px] font-bold shrink-0 ${
+                    isHoliday 
+                      ? 'bg-slate-600 text-white border-0' 
+                      : 'border border-current'
+                  }`}
+                  style={!isHoliday && hasEvents && style.textColor ? { color: style.textColor, borderColor: style.textColor } : undefined}
+                >
+                  {dayOfWeek}
+                </span>
+                {combinedTitle && (
+                  <span 
+                    className="flex-1 break-words leading-tight"
+                    style={style.textColor ? { color: style.textColor } : undefined}
+                  >
+                    {combinedTitle}
+                  </span>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+
+    // If there are events, wrap in HoverCard
+    if (hasEvents && !editing) {
+      return (
+        <HoverCard key={`${day}-${monthInfo.month}-${monthInfo.year}`} openDelay={200} closeDelay={100}>
+          <HoverCardTrigger asChild>
+            {cellContent}
+          </HoverCardTrigger>
+          <HoverCardContent className="w-80 p-4" side="right" align="start">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-base">Detalhes do Evento</h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5"
+                  onClick={() => {
+                    const firstEvent = allEvents[0];
+                    if (firstEvent) {
+                      setSelectedDate(dateStr);
+                      setSelectedPeriod(firstEvent.period || 'morning');
+                      setEditingEvent({
+                        id: firstEvent.id,
+                        title: firstEvent.title,
+                        category: firstEvent.category,
+                        notes: firstEvent.notes,
+                        period: firstEvent.period
+                      });
+                      setIsSheetOpen(true);
+                    }
+                  }}
+                >
+                  <Pencil className="h-3 w-3" />
+                  <span className="text-xs">Editar</span>
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Data</Label>
+                  <div className="text-sm font-medium mt-1">{dateStr}</div>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Período</Label>
+                  <div className="text-sm font-medium mt-1">
+                    {allEvents.map(e => e.period === 'morning' ? 'Manhã' : 'Tarde').join(', ')}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs text-muted-foreground">Título</Label>
+                <div className="text-sm font-medium mt-1">{combinedTitle}</div>
+              </div>
+
+              <div>
+                <Label className="text-xs text-muted-foreground">Categoria</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {categories.map(cat => {
+                    const isActive = allEvents.some(e => e.category === cat.value);
+                    return (
+                      <span
+                        key={cat.value}
+                        className={`px-3 py-1 rounded-md text-xs font-medium ${
+                          isActive ? 'ring-2 ring-offset-1 ring-primary' : 'opacity-40'
+                        }`}
+                        style={{ 
+                          backgroundColor: cat.color,
+                          color: isDarkColor(cat.color) ? 'white' : 'black'
+                        }}
+                      >
+                        {cat.label}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {allEvents.some(e => e.notes) && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Notas</Label>
+                  <div className="text-sm mt-1 text-muted-foreground">
+                    {allEvents.map(e => e.notes).filter(Boolean).join(' | ')}
+                  </div>
+                </div>
+              )}
+            </div>
+          </HoverCardContent>
+        </HoverCard>
+      );
+    }
+
+    return <div key={`${day}-${monthInfo.month}-${monthInfo.year}`}>{cellContent}</div>;
+  };
+
+  // Render cell for 6-month view (two slots per day: morning/afternoon)
+  const renderSixMonthCell = (day: number, monthInfo: MonthInfo) => {
+    const isValid = isValidDateForMonth(day, monthInfo.month, monthInfo.year);
+    const morningEvent = isValid ? getEventForDate(day, monthInfo.month, monthInfo.year, 'morning') : null;
+    const afternoonEvent = isValid ? getEventForDate(day, monthInfo.month, monthInfo.year, 'afternoon') : null;
+    const morningStyle = getCategoryStyle(morningEvent?.category || null);
+    const afternoonStyle = getCategoryStyle(afternoonEvent?.category || null);
+    const dayOfWeek = isValid ? getDayOfWeek(day, monthInfo.month, monthInfo.year) : "";
+    const isWeekend = isValid && isWeekendDay(day, monthInfo.month, monthInfo.year);
+    const editingMorning = isEditing(day, monthInfo.month, monthInfo.year, 'morning');
+    const editingAfternoon = isEditing(day, monthInfo.month, monthInfo.year, 'afternoon');
+    const isPast = isValid && isPastDate(day, monthInfo.month, monthInfo.year);
+    const dateStr = `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const custody = isValid ? getCustodyForDate(day, monthInfo.month, monthInfo.year) : null;
+    const diana = isValid ? getDianaForDate(day, monthInfo.month, monthInfo.year) : null;
+    const isHoliday = isValid && isHolidayDate(day, monthInfo.month, monthInfo.year);
+
+    // Open settings sheet on right-click
+    const handleContextMenu = (e: React.MouseEvent, period: string) => {
+      e.preventDefault();
+      handleCellDoubleClick(day, monthInfo, period);
+    };
+
+    // Determine B column background color based on custody status
+    // Keep colors visible even for past dates to show historical custody
+    const getBColumnStyle = () => {
+      if (!isValid) return undefined;
+      
+      // If custody is set, use that (even for past dates)
+      if (custody === 'comigo') {
+        return { backgroundColor: '#16a34a', color: '#ffffff' }; // Bright green with white text
+      }
+      if (custody === 'mae') {
+        // With mom: weekends show light green, other days show yellow
+        if (isWeekend) {
+          return { backgroundColor: '#ecfdf5' }; // Light green for weekends
+        }
+        return { backgroundColor: '#fffbeb' }; // Light yellow for other days
+      }
+      
+      // Default: green for Wednesday/weekends, yellow otherwise
+      if (isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend) {
+        return { backgroundColor: '#ecfdf5' };
+      }
+      return { backgroundColor: '#fffbeb' };
+    };
+
+    // Determine D column background color based on Diana status
+    // Keep colors visible even for past dates to show historical presence
+    const getDColumnStyle = () => {
+      if (!isValid) return undefined;
+      
+      // If Diana is with me, show green with white text (even for past dates)
+      if (diana === 'comigo') {
+        return { backgroundColor: '#16a34a', color: '#ffffff' }; // Bright green with white text
+      }
+      
+      // Default: light blue for all dates
+      return { backgroundColor: '#dbeafe' };
+    };
+
+    return (
+      <>
+        {/* B column (Beatriz) with day letter - dropdown on hover */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div
+              key={`${day}-${monthInfo.month}-${monthInfo.year}-b`}
+              className={`
+            min-h-[22px] text-[8px] font-medium text-center flex items-center justify-center border-r border-border/30 cursor-pointer
+                ${!isValid ? 'bg-slate-300' : ''}
+              `}
+              style={getBColumnStyle()}
+            >
+              {isValid && (
+                <span 
+                  className={`
+                    ${custody === 'comigo' ? 'text-white' : (isWednesday(day, monthInfo.month, monthInfo.year) || isWeekend ? 'text-green-700' : 'text-muted-foreground')}
+                    ${isHoliday ? 'border border-slate-600 rounded-full w-4 h-4 flex items-center justify-center text-[7px]' : ''}
+                  `}
+                >
+                  {dayOfWeek}
+                </span>
+              )}
+            </div>
+          </DropdownMenuTrigger>
+          {isValid && !isPast && (
+            <DropdownMenuContent align="start" className="min-w-[120px]">
+              <DropdownMenuItem 
+                onClick={() => handleCustodyChange(dateStr, 'comigo')}
+                className="text-xs"
+              >
+                <span className="mr-2">🟢</span> Está comigo
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleCustodyChange(dateStr, 'mae')}
+                className="text-xs"
+              >
+                <span className="mr-2">🟡</span> Está com mãe
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleHolidayToggle(dateStr)}
+                className="text-xs"
+              >
+                <span className="mr-2">{isHoliday ? '✅' : '🔴'}</span> Feriado
+              </DropdownMenuItem>
+              {custody && (
+                <DropdownMenuItem 
+                  onClick={() => handleCustodyChange(dateStr, null)}
+                  className="text-xs text-muted-foreground"
+                >
+                  <span className="mr-2">❌</span> Limpar Custódia
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          )}
+        </DropdownMenu>
+        {/* Morning slot */}
+        <div
+          key={`${day}-${monthInfo.month}-${monthInfo.year}-morning`}
+          className={`
+            border-r border-border/50 min-h-[22px] p-0.5 cursor-pointer transition-colors flex items-center justify-center
+            ${!isValid ? 'bg-slate-300' : ''}
+            ${isValid && !morningEvent && !editingMorning ? 'hover:bg-muted/40' : ''}
+            ${isValid && morningEvent && !editingMorning ? 'cursor-grab active:cursor-grabbing' : ''}
+          `}
+          style={{
+            backgroundColor: isValid && morningEvent && !editingMorning && morningStyle.bgColor
+              ? (isPast ? lightenColor(morningStyle.bgColor, 0.4) : morningStyle.bgColor)
+              : (isPast && isValid ? PAST_DATE_BG : undefined)
+          }}
+          draggable={isValid && !!morningEvent && !editingMorning}
+          onDragStart={(e) => isValid && handleDragStart(e, day, monthInfo, 'morning')}
+          onDragOver={handleDragOver}
+          onDrop={(e) => isValid && handleDrop(e, day, monthInfo, 'morning')}
+          onDragEnd={handleDragEnd}
+          onMouseDown={() => isValid && handleCellMouseDown(day, monthInfo, 'morning', !!morningEvent)}
+          onMouseUp={handleCellMouseUp}
+          onContextMenu={(e) => isValid && handleContextMenu(e, 'morning')}
+          title="Manhã - Arraste para mover"
+        >
+          {isValid && (
+            editingMorning ? (
+              <EventAutocomplete
+                ref={inputRef}
+                value={inlineValue}
+                onChange={setInlineValue}
+                onBlur={handleInlineSave}
+                onKeyDown={handleInlineKeyDown}
+                suggestions={eventSuggestions || []}
+                className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none text-center"
+                placeholder="..."
+              />
+            ) : (
+              <span 
+                className={`break-words text-center leading-tight w-full text-[9px] ${!isPast && morningEvent ? 'font-bold' : ''}`}
+                style={morningEvent ? { color: isPast ? '#64748b' : (morningStyle.textColor || undefined) } : undefined}
+                title={morningEvent?.title || ''}
+              >
+                {morningEvent?.title || ''}
+              </span>
+            )
+          )}
+        </div>
+        {/* Afternoon slot */}
+        <div
+          key={`${day}-${monthInfo.month}-${monthInfo.year}-afternoon`}
+          className={`
+            border-r border-border/50 min-h-[22px] p-0.5 cursor-pointer transition-colors flex items-center justify-center
+            ${!isValid ? 'bg-slate-300' : ''}
+            ${isValid && !afternoonEvent && !editingAfternoon ? 'hover:bg-muted/40' : ''}
+            ${isValid && afternoonEvent && !editingAfternoon ? 'cursor-grab active:cursor-grabbing' : ''}
+          `}
+          style={{
+            backgroundColor: isValid && afternoonEvent && !editingAfternoon && afternoonStyle.bgColor
+              ? (isPast ? lightenColor(afternoonStyle.bgColor, 0.4) : afternoonStyle.bgColor)
+              : (isPast && isValid ? PAST_DATE_BG : undefined)
+          }}
+          draggable={isValid && !!afternoonEvent && !editingAfternoon}
+          onDragStart={(e) => isValid && handleDragStart(e, day, monthInfo, 'afternoon')}
+          onDragOver={handleDragOver}
+          onDrop={(e) => isValid && handleDrop(e, day, monthInfo, 'afternoon')}
+          onDragEnd={handleDragEnd}
+          onMouseDown={() => isValid && handleCellMouseDown(day, monthInfo, 'afternoon', !!afternoonEvent)}
+          onMouseUp={handleCellMouseUp}
+          onContextMenu={(e) => isValid && handleContextMenu(e, 'afternoon')}
+          title="Tarde - Arraste para mover"
+        >
+          {isValid && (
+            editingAfternoon ? (
+              <EventAutocomplete
+                ref={inputRef}
+                value={inlineValue}
+                onChange={setInlineValue}
+                onBlur={handleInlineSave}
+                onKeyDown={handleInlineKeyDown}
+                suggestions={eventSuggestions || []}
+                className="w-full h-full bg-background border border-primary text-[9px] px-0.5 outline-none text-center"
+                placeholder="..."
+              />
+            ) : (
+              <span 
+                className={`break-words text-center leading-tight w-full text-[9px] ${!isPast && afternoonEvent ? 'font-bold' : ''}`}
+                style={afternoonEvent ? { color: isPast ? '#64748b' : (afternoonStyle.textColor || undefined) } : undefined}
+                title={afternoonEvent?.title || ''}
+              >
+                {afternoonEvent?.title || ''}
+              </span>
+            )
+          )}
+        </div>
+        {/* D column (Diana) - dropdown with status options */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div
+              key={`${day}-${monthInfo.month}-${monthInfo.year}-d`}
+              className={`
+                min-h-[22px] text-[8px] font-medium text-center flex items-center justify-center cursor-pointer
+                ${!isValid ? 'bg-slate-300' : ''}
+              `}
+              style={{
+                ...getDColumnStyle(),
+                borderRight: '3px double #64748b' // double line separator between months
+              }}
+            >
+              {isValid && diana === 'comigo' && (
+                <span className="text-white">
+                  {dayOfWeek}
+                </span>
+              )}
+            </div>
+          </DropdownMenuTrigger>
+          {isValid && !isPast && (
+            <DropdownMenuContent align="end" className="min-w-[120px]">
+              <DropdownMenuItem 
+                onClick={() => handleDianaChange(dateStr, 'comigo')}
+                className="text-xs"
+              >
+                <span className="mr-2">🟢</span> Está comigo
+              </DropdownMenuItem>
+              {diana && (
+                <DropdownMenuItem 
+                  onClick={() => handleDianaChange(dateStr, null)}
+                  className="text-xs text-muted-foreground"
+                >
+                  <span className="mr-2">❌</span> Limpar
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          )}
+        </DropdownMenu>
+      </>
+    );
+  };
+
+  return (
+    <Card className="calendar-print-area">
+      <CardHeader className="py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <CardTitle className="text-lg">
+              {showFullYear ? "Calendário Anual" : "Próximos 6 Meses"}
+            </CardTitle>
+            <div className="flex items-center gap-2 no-print">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="show-full-year" className="text-xs text-muted-foreground cursor-pointer">
+                Mostrar Ano Completo
+              </Label>
+              <Switch
+                id="show-full-year"
+                checked={showFullYear}
+                onCheckedChange={setShowFullYear}
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1.5"
+              onClick={handlePrint}
+            >
+              <Printer className="h-3.5 w-3.5" />
+              <span className="text-xs">Imprimir</span>
+            </Button>
+            <CalendarSettingsSheet 
+              categories={categories}
+              onCategoriesChange={saveCategories}
+              isSaving={isSavingCategories}
+            />
+            {showFullYear ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 no-print"
+                  onClick={() => setSelectedYear(y => y - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-semibold min-w-[50px] text-center">
+                  {selectedYear}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 no-print"
+                  onClick={() => setSelectedYear(y => y + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 no-print"
+                  onClick={() => setMonthOffset(o => o - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs no-print"
+                  onClick={() => setMonthOffset(0)}
+                >
+                  Hoje
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 no-print"
+                  onClick={() => setMonthOffset(o => o + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-1 no-print">
+          Clique para editar • Clique direito para definições • Delete apaga evento
+        </p>
+      </CardHeader>
+      <CardContent className="p-2 overflow-x-auto">
+        <div ref={calendarRef} className={showFullYear ? "min-w-[900px]" : "min-w-[1100px]"}>
+          {/* Grid Header - Full Year View */}
+          {showFullYear && (
+            <div 
+              className="border-b border-border sticky top-0 bg-slate-300 z-10"
+              style={{ 
+                display: 'grid', 
+                gridTemplateColumns: sixMonthGridTemplate 
+              }}
+            >
+              <div className="p-1 text-[10px] font-bold text-foreground text-center border-r border-border">
+                Dia
+              </div>
+              {visibleMonths.map((monthInfo) => (
+                <div
+                  key={`${monthInfo.month}-${monthInfo.year}`}
+                  className="p-1 text-[10px] font-bold text-foreground text-center border-r border-border last:border-r-0"
+                >
+                  {monthInfo.label}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Grid Header - 6 Month View with Two Rows */}
+          {!showFullYear && (
+            <>
+              {/* Row 1: Month names spanning across all 4 columns */}
+              <div 
+                className="border-b border-border sticky top-0 bg-slate-300 z-10"
+                style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: `40px ${visibleMonths.map(() => '1fr').join(' ')}` 
+                }}
+              >
+                <div className="p-1 text-[10px] font-bold text-foreground text-center border-r border-border">
+                  Dia
+                </div>
+                {visibleMonths.map((monthInfo, idx) => (
+                  <div
+                    key={`month-${monthInfo.month}-${monthInfo.year}`}
+                    className="p-1 text-[10px] font-bold text-foreground text-center"
+                    style={{ borderRight: idx < visibleMonths.length - 1 ? '3px double #1e293b' : 'none' }}
+                  >
+                    {monthInfo.label}
+                  </div>
+                ))}
+              </div>
+              
+              {/* Row 2: B/Manhã/Tarde/D sub-headers */}
+              <div 
+                className="border-b border-border sticky top-[24px] bg-slate-200 z-10"
+                style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: sixMonthGridTemplate 
+                }}
+              >
+                <div className="border-r border-border" />
+                {visibleMonths.map((monthInfo, idx) => (
+                  <React.Fragment key={`subheader-${monthInfo.month}-${monthInfo.year}`}>
+                    <div className="p-0.5 text-[8px] font-medium text-muted-foreground text-center border-r border-border/30">B</div>
+                    <div className="p-0.5 text-[8px] font-medium text-muted-foreground text-center border-r border-border/30">Manhã</div>
+                    <div className="p-0.5 text-[8px] font-medium text-muted-foreground text-center border-r border-border/30">Tarde</div>
+                    <div className="p-0.5 text-[8px] font-medium text-muted-foreground text-center" style={{ borderRight: idx < visibleMonths.length - 1 ? '3px double #1e293b' : 'none' }}>D</div>
+                  </React.Fragment>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Grid Body */}
+          {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+            <div
+              key={day}
+              className="border-b border-border last:border-b-0"
+              style={{ 
+                display: 'grid', 
+                gridTemplateColumns: sixMonthGridTemplate 
+              }}
+            >
+              {/* Day Number */}
+              <div className={`p-1 text-[10px] font-medium text-muted-foreground text-center border-r border-border bg-muted/30 sticky left-0 ${showFullYear ? '' : 'flex items-center justify-center'}`}>
+                {day}
+              </div>
+
+              {/* Day Cells for each month */}
+              {visibleMonths.map((monthInfo) => (
+                <React.Fragment key={`row-${day}-${monthInfo.month}-${monthInfo.year}`}>
+                  {showFullYear 
+                    ? renderFullYearCell(day, monthInfo)
+                    : renderSixMonthCell(day, monthInfo)
+                  }
+                </React.Fragment>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Legend */}
+        <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-border">
+          {categories.map(cat => (
+            <div key={cat.value} className="flex items-center gap-1">
+              <div className={`w-3 h-3 rounded ${cat.bgClass}`} />
+              <span className="text-[10px] text-muted-foreground">{cat.label}</span>
+            </div>
+          ))}
+          {!showFullYear && (
+            <>
+              <div className="w-px h-4 bg-border mx-2" />
+              <div className="flex items-center gap-1">
+                <Sun className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground">Manhã</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Moon className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground">Tarde</span>
+              </div>
+            </>
+          )}
+        </div>
+      </CardContent>
+
+      {/* Event Detail Sheet */}
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>
+              {editingEvent.id ? "Detalhes do Evento" : "Novo Evento"}
+            </SheetTitle>
+          </SheetHeader>
+          
+          <div className="space-y-4 mt-4">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Label>Data</Label>
+                <Input
+                  value={selectedDate || ""}
+                  disabled
+                  className="mt-1"
+                />
+              </div>
+              {!showFullYear && (
+                <div className="w-32">
+                  <Label>Período</Label>
+                  <Select
+                    value={editingEvent.period || selectedPeriod}
+                    onValueChange={(value) => setEditingEvent(prev => ({ ...prev, period: value }))}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PERIODS.map(p => (
+                        <SelectItem key={p.value} value={p.value}>
+                          <div className="flex items-center gap-2">
+                            <p.icon className="h-3 w-3" />
+                            {p.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <Label>Título</Label>
+              <Input
+                value={editingEvent.title || ""}
+                onChange={(e) => setEditingEvent(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Título do evento"
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label>Categoria</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {categories.map(cat => (
+                  <button
+                    key={cat.value}
+                    type="button"
+                    onClick={() => setEditingEvent(prev => ({ ...prev, category: cat.value }))}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all border-2 ${
+                      editingEvent.category === cat.value
+                        ? 'ring-2 ring-offset-2 ring-primary border-primary'
+                        : 'border-transparent hover:opacity-80'
+                    }`}
+                    style={{ 
+                      backgroundColor: cat.color,
+                      color: isDarkColor(cat.color) ? 'white' : 'black'
+                    }}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label>Notas</Label>
+              <Textarea
+                value={editingEvent.notes || ""}
+                onChange={(e) => setEditingEvent(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Notas adicionais..."
+                className="mt-1"
+                rows={4}
+              />
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button onClick={handleSave} className="flex-1">
+                Guardar
+              </Button>
+              {editingEvent.id && (
+                <Button
+                  variant="destructive"
+                  onClick={() => deleteMutation.mutate(editingEvent.id!)}
+                >
+                  Eliminar
+                </Button>
+              )}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Monthly Objectives Footer - only show in 6-month view */}
+      {!showFullYear && (
+        <MonthlyObjectivesFooter 
+          year={new Date().getFullYear()} 
+          monthOffset={monthOffset} 
+          scheduledTitles={events?.map(e => e.title).filter(Boolean) as string[] || []}
+        />
+      )}
+    </Card>
+  );
+}
