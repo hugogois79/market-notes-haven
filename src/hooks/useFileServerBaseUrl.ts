@@ -21,9 +21,17 @@ export function getWorkFileDownloadUrl(serverPath: string, baseUrl: string): str
   return path;
 }
 
-/** Lista pastas na raiz do work-files (api-server). Usar com `useFileServerBaseUrl()`. */
-export function getWorkFilesListUrl(baseUrl: string): string {
-  const path = `/api/work-files/list?folder=`;
+/**
+ * Lista subpastas no disco (api-server), relativas a WORK_FILES_ROOT.
+ * `listFolder` vazio = raiz configurada no servidor; ex. "Work" ou "Splendidoption/Work" para só empresas.
+ */
+export function getWorkFilesListUrl(baseUrl: string, listFolder = ""): string {
+  const q = new URLSearchParams();
+  if (listFolder != null && listFolder !== "") {
+    q.set("folder", listFolder);
+  }
+  const qs = q.toString();
+  const path = `/api/work-files/list${qs ? `?${qs}` : ""}`;
   if (baseUrl?.trim()) {
     return `${baseUrl.replace(/\/$/, "")}${path}`;
   }

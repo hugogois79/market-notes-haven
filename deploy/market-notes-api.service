@@ -1,0 +1,25 @@
+# Instalação:
+#   sudo cp deploy/market-notes-api.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now market-notes-api
+#
+# Sem WorkingDirectory: evita CHDIR com espaços em "4. Code" (alguns systemd falham com \x20).
+# Libertar 3001 antes: ss -tlnp | grep 3001  →  kill <PID>
+
+[Unit]
+Description=Market Notes Haven API filesystem Work (api-server.mjs)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+Environment=WORK_FILES_ROOT=/data/nvme
+Environment=NODE_ENV=production
+ExecStart=/bin/sh -c 'exec "/home/admin/.nvm/versions/node/v22.22.1/bin/node" "/data/drive/Workspaces/4. Code/market-notes-haven/api-server.mjs"'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -33,6 +33,8 @@ export function DocumentPreview({ document, onDownload, editable, onSave, getBlo
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  /** Quando o URL é /api/work-files e o servidor devolve 404/403 (ficheiro em falta ou caminho bloqueado). */
+  const [workFilesHttpError, setWorkFilesHttpError] = useState<404 | 403 | null>(null);
   const objectUrlRef = useRef<string | null>(null);
 
   const setBlobFromData = (data: Blob) => {
@@ -49,6 +51,7 @@ export function DocumentPreview({ document, onDownload, editable, onSave, getBlo
     const fetchFile = async () => {
       setLoading(true);
       setError(false);
+      setWorkFilesHttpError(null);
       setBlobUrl(null);
 
       const isPdfDocument =
@@ -129,10 +132,12 @@ export function DocumentPreview({ document, onDownload, editable, onSave, getBlo
 
         // 3) Fetch directo (público, /api/work-files — último recurso)
         const fetchUrl = resolveFetchUrl(document.file_url);
+        let workFilesStatus: number | undefined;
         if (fetchUrl) {
           try {
             const credentials = fetchUrl.includes("/api/") ? "include" : "same-origin";
-            const directResponse = await fetch(fetchUrl, { credentials });
+            const directResponse = await fetch(fetchUrl, { credentials, cache: "no-store" });
+            workFilesStatus = directResponse.status;
             if (directResponse.ok) {
               const ct = (directResponse.headers.get("content-type") || "").toLowerCase();
               if (!isPdfDocument || (!ct.includes("text/html") && !ct.includes("application/json"))) {
@@ -143,6 +148,22 @@ export function DocumentPreview({ document, onDownload, editable, onSave, getBlo
             console.log("DocumentPreview direct fetch not ok or empty:", directResponse.status);
           } catch (fetchErr) {
             console.log("DocumentPreview direct fetch failed:", fetchErr);
+          }
+        }
+
+        if (
+          fetchUrl?.includes("/api/work-files") &&
+          (workFilesStatus === 404 || workFilesStatus === 403)
+        ) {
+          setWorkFilesHttpError(workFilesStatus);
+        } else if (fetchUrl?.includes("/api/work-files") && workFilesStatus === undefined) {
+          try {
+            const credentials = fetchUrl.includes("/api/") ? "include" : "same-origin";
+            const probe = await fetch(fetchUrl, { method: "GET", credentials, cache: "no-store" });
+            if (probe.status === 404) setWorkFilesHttpError(404);
+            else if (probe.status === 403) setWorkFilesHttpError(403);
+          } catch {
+            /* ignore */
           }
         }
 
@@ -176,11 +197,26 @@ export function DocumentPreview({ document, onDownload, editable, onSave, getBlo
 
   if (error || !blobUrl) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4">
+      <div className="flex flex-col items-center justify-center h-full gap-4 max-w-lg mx-auto px-4 text-center">
         <FileText className="h-16 w-16 text-muted-foreground" />
         <p className="text-muted-foreground">
           Erro ao carregar documento. Tente descarregar.
         </p>
+        {workFilesHttpError === 404 && (
+          <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            O servidor Work devolveu <strong>404</strong>: o PDF não existe no disco sob{" "}
+            <code className="text-[11px] bg-white/80 px-1 rounded">WORK_FILES_ROOT</code> (api-server).
+            Confirme a pasta <code className="text-[11px] bg-white/80 px-1 rounded">Migrated/…</code> no
+            servidor ou defina <code className="text-[11px] bg-white/80 px-1 rounded">WORK_FILES_ROOT</code>{" "}
+            para a raiz onde estão os ficheiros, e reinicie o api-server.
+          </p>
+        )}
+        {workFilesHttpError === 403 && (
+          <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            O servidor Work devolveu <strong>403</strong> (acesso negado ao caminho). Verifique segmentos
+            bloqueados ou a configuração de <code className="text-[11px] bg-white/80 px-1 rounded">WORK_FILES_ROOT</code>.
+          </p>
+        )}
         <Button onClick={onDownload}>
           <Download className="h-4 w-4 mr-2" />
           Descarregar

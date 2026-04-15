@@ -251,10 +251,30 @@ const WORKFLOW_SORT_KEY = "workflow-sort";
 const TABLE_RELATIONS_KEY = "work-table-relations";
 const WORKFLOW_SAVED_FILTERS_KEY = "workflow-saved-filters";
 
+/** Nomes dos meses (índice 1–12) para mensagens de erro de localização no servidor. */
+const MONTH_LABELS_PT = [
+  "",
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+
 interface TableRelationsConfig {
   defaultCompanyId: string | null;
   autoCreateTransaction: boolean;
   linkWorkflowToFinance: boolean;
+  storeFilesInCompanyDocs?: boolean;
+  /** "server" = uploads para VPS via workflow_storage_locations; "supabase" = legado attachments. */
+  workflowUploadTarget?: "server" | "supabase";
 }
 
 interface SortConfig {
@@ -1492,10 +1512,29 @@ export default function WorkFlowTab() {
     setIsUploading(true);
 
     const settings: TableRelationsConfig = (() => {
-      try { return JSON.parse(localStorage.getItem(TABLE_RELATIONS_KEY) || "{}"); }
-      catch { return { defaultCompanyId: null, autoCreateTransaction: true, linkWorkflowToFinance: true }; }
+      try {
+        const raw = JSON.parse(localStorage.getItem(TABLE_RELATIONS_KEY) || "{}");
+        return {
+          defaultCompanyId: null,
+          autoCreateTransaction: true,
+          linkWorkflowToFinance: true,
+          storeFilesInCompanyDocs: true,
+          workflowUploadTarget: "server",
+          ...raw,
+        } as TableRelationsConfig;
+      } catch {
+        return {
+          defaultCompanyId: null,
+          autoCreateTransaction: true,
+          linkWorkflowToFinance: true,
+          storeFilesInCompanyDocs: true,
+          workflowUploadTarget: "server",
+        };
+      }
     })();
     const companyId = settings.defaultCompanyId;
+    const allowSupabaseWorkflowUpload =
+      (settings.workflowUploadTarget ?? "server") === "supabase";
 
     let serverLocation: { server_root: string; folder_path: string } | null = null;
     if (companyId) {
@@ -1503,22 +1542,30 @@ export default function WorkFlowTab() {
       const y = now.getFullYear();
       const m = now.getMonth() + 1;
 
-      const { data: locExact } = await supabase
+      /** Linha do mês actual (mesmo com server_root vazio — evita fallback silencioso para outro mês). */
+      const { data: rowForMonth } = await supabase
         .from("workflow_storage_locations")
         .select("server_root, folder_path")
         .eq("company_id", companyId)
         .eq("year", y)
         .eq("month", m)
-        .not("server_root", "is", null)
-        .not("folder_path", "is", null)
         .maybeSingle();
 
-      if (locExact?.server_root && locExact.folder_path) {
-        serverLocation = { server_root: locExact.server_root, folder_path: locExact.folder_path };
+      if (rowForMonth) {
+        const root = rowForMonth.server_root?.trim() ?? "";
+        const fp = rowForMonth.folder_path?.trim() ?? "";
+        if (!root || !fp) {
+          const monthName = MONTH_LABELS_PT[m] || String(m);
+          toast.error(
+            `Para ${monthName} de ${y}, preenche «Pasta no servidor» e «Folder Location» nessa linha. Confirma também que a «Default Company for WorkFlow» (Table Relations) é a mesma empresa.`
+          );
+          throw new Error("Workflow: localização do mês incompleta");
+        }
+        serverLocation = { server_root: root, folder_path: fp };
       } else {
         const { data: locFallback } = await supabase
           .from("workflow_storage_locations")
-          .select("server_root, folder_path")
+          .select("server_root, folder_path, year, month")
           .eq("company_id", companyId)
           .not("server_root", "is", null)
           .not("folder_path", "is", null)
@@ -1529,9 +1576,13 @@ export default function WorkFlowTab() {
 
         if (locFallback?.server_root && locFallback.folder_path) {
           serverLocation = {
-            server_root: locFallback.server_root,
-            folder_path: locFallback.folder_path,
+            server_root: locFallback.server_root.trim(),
+            folder_path: locFallback.folder_path.trim(),
           };
+          const monthName = MONTH_LABELS_PT[m] || String(m);
+          toast.warning(
+            `Não há linha em File Storage Locations para ${monthName} de ${y}. A usar a última entrada com servidor (${MONTH_LABELS_PT[locFallback.month] || locFallback.month}/${locFallback.year}). Cria a linha do mês para o caminho correcto.`
+          );
         }
       }
     }
@@ -1564,7 +1615,7 @@ export default function WorkFlowTab() {
           const result = await resp.json();
           serverPath = result.server_path;
           fileUrl = getWorkFileDownloadUrl(result.server_path, fileServerBaseUrl);
-        } else {
+        } else if (allowSupabaseWorkflowUpload) {
           const sanitizedName = sanitizeFileName(file.name);
           const storagePath = `${user.id}/${Date.now()}-${sanitizedName}`;
           const { error: uploadError } = await supabase.storage
@@ -1575,6 +1626,12 @@ export default function WorkFlowTab() {
             .from("attachments")
             .getPublicUrl(storagePath);
           fileUrl = publicUrl;
+        } else {
+          const detail = !companyId
+            ? "Define «Default Company for WorkFlow» em Companies → Settings → Table Relations (tem de ser a mesma empresa que configuraste em File Storage Locations)."
+            : "Cria uma linha em File Storage Locations para o mês actual (ou completa Pasta no servidor + Folder Location na empresa predefinida).";
+          toast.error(`Armazenamento no servidor obrigatório: ${detail}`);
+          throw new Error("Workflow: localização no servidor não configurada");
         }
 
         setUploadProgress(prev => prev.map((p, idx) =>
@@ -1591,6 +1648,7 @@ export default function WorkFlowTab() {
           priority: "normal",
         };
         if (serverPath) insertData.server_path = serverPath;
+        if (companyId) insertData.company_id = companyId;
 
         const { error: insertError } = await supabase
           .from("workflow_files")
@@ -1614,7 +1672,11 @@ export default function WorkFlowTab() {
     queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
 
     if (uploadedFiles.length > 0) {
-      toast.success(`Uploaded ${uploadedFiles.length} file(s)${serverLocation ? ' to server' : ''}`);
+      toast.success(
+        serverLocation
+          ? `${uploadedFiles.length} ficheiro(s) gravados no servidor (VPS).`
+          : `${uploadedFiles.length} ficheiro(s) gravados no Supabase (modo de teste).`
+      );
     }
 
     setTimeout(() => {
@@ -2491,24 +2553,45 @@ export default function WorkFlowTab() {
   const getBlobForPreview = useCallback(async (): Promise<Blob | null> => {
     if (!previewFile) return null;
 
-    const fromWorkServer = async (): Promise<Blob | null> => {
-      if (!previewFile.server_path) return null;
-      const url = getWorkFileDownloadUrl(previewFile.server_path, fileServerBaseUrl);
-      const fullUrl = url.startsWith("http")
-        ? url
-        : typeof window !== "undefined"
-          ? window.location.origin + url
-          : url;
-      try {
-        const res = await fetch(fullUrl, { credentials: "include" });
-        if (!res.ok) return null;
-        const ct = (res.headers.get("content-type") || "").toLowerCase();
-        if (ct.includes("text/html") || ct.includes("application/json")) return null;
-        const blob = await res.blob();
-        return filterPdfBlob(blob);
-      } catch {
-        return null;
+    const toAbsoluteWorkUrl = (url: string): string => {
+      if (url.startsWith("http")) return url;
+      if (typeof window !== "undefined") {
+        return `${window.location.origin}${url.startsWith("/") ? url : `/${url}`}`;
       }
+      return url;
+    };
+
+    /** Várias URLs possíveis (server_path vs file_url na BD) + sem cache (PWA). */
+    const fromWorkServer = async (): Promise<Blob | null> => {
+      const candidates: string[] = [];
+      const add = (raw: string | null | undefined) => {
+        const u = raw?.trim();
+        if (!u || !u.includes("/api/work-files")) return;
+        const abs = toAbsoluteWorkUrl(resolvePublicFileFetchUrl(u));
+        if (!candidates.includes(abs)) candidates.push(abs);
+      };
+      if (previewFile.server_path) {
+        add(getWorkFileDownloadUrl(previewFile.server_path, fileServerBaseUrl));
+      }
+      add(previewFile.file_url);
+
+      for (const fullUrl of candidates) {
+        try {
+          const res = await fetch(fullUrl, {
+            credentials: "include",
+            cache: "no-store",
+          });
+          if (!res.ok) continue;
+          const ct = (res.headers.get("content-type") || "").toLowerCase();
+          if (ct.includes("text/html") || ct.includes("application/json")) continue;
+          const blob = await res.blob();
+          const pdf = await filterPdfBlob(blob);
+          if (pdf) return pdf;
+        } catch {
+          /* próximo URL */
+        }
+      }
+      return null;
     };
 
     const trySupabasePdfFromFileUrl = async (raw: string): Promise<Blob | null> => {
@@ -2562,6 +2645,7 @@ export default function WorkFlowTab() {
         try {
           const res = await fetch(resolved, {
             credentials: resolved.includes("/api/") ? "include" : "same-origin",
+            cache: "no-store",
           });
           if (res.ok) {
             const ct = (res.headers.get("content-type") || "").toLowerCase();
@@ -2588,6 +2672,7 @@ export default function WorkFlowTab() {
       try {
         const res = await fetch(resolved, {
           credentials: resolved.includes("/api/") ? "include" : "same-origin",
+          cache: "no-store",
         });
         if (!res.ok) return null;
         const ct = (res.headers.get("content-type") || "").toLowerCase();

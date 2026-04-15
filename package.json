@@ -10,7 +10,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "production": "vite build && vite preview",
-    "migrate-files-to-server": "node scripts/migrate-workflow-files-to-server.mjs"
+    "migrate-files-to-server": "node scripts/migrate-workflow-files-to-server.mjs",
+    "sync-splendidoption-supabase-to-nvme": "node scripts/sync-splendidoption-work-from-supabase.mjs",
+    "sync-company-documents-library-to-nvme": "node scripts/sync-company-documents-library-to-nvme.mjs",
+    "list-work25-companies": "node scripts/sync-company-documents-library-to-nvme.mjs --list-companies",
+    "list-work-companies": "node scripts/sync-company-documents-library-to-nvme.mjs --list-companies"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^17.0.0",

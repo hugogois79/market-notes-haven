@@ -20,7 +20,11 @@ const HOST = "127.0.0.1";
 const ALLOWED_ROOTS = ["/root/Robsonway-Research", "/root"];
 
 const LEGAL_BASE = "/root/Robsonway-Research/Legal";
-const WORK_BASE = "/root/Robsonway-Research";
+/** Uma ou várias raízes (separador `:` ou `;`) — ex.: disco de dados vs /root. Env: WORK_FILES_ROOT */
+const WORK_BASES = (process.env.WORK_FILES_ROOT || "/root/Robsonway-Research")
+  .split(/[:;]/)
+  .map((s) => s.trim())
+  .filter(Boolean);
 const WORK_BLOCKED_SEGMENTS = new Set([".cursor", ".git", ".venv", "node_modules", "__pycache__", "Workspaces"]);
 
 function jsonResponse(res, statusCode, data) {
@@ -252,21 +256,21 @@ function handleLegalFilesDownload(req, res) {
 
   const resolved = validateLegalPath(filePath);
   if (!resolved) {
-    res.writeHead(403, { "Content-Type": "text/plain" });
+    res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
     res.end("Acesso negado");
     return;
   }
 
   try {
     if (!fs.existsSync(resolved)) {
-      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
       res.end("Ficheiro não encontrado");
       return;
     }
 
     const stat = fs.statSync(resolved);
     if (!stat.isFile()) {
-      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
       res.end("Caminho não é um ficheiro");
       return;
     }
@@ -299,42 +303,102 @@ function handleLegalFilesDownload(req, res) {
     const stream = fs.createReadStream(resolved);
     stream.pipe(res);
     stream.on("error", () => {
-      res.writeHead(500, { "Content-Type": "text/plain" });
+      res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
       res.end("Erro ao ler ficheiro");
     });
   } catch (err) {
-    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
     res.end(err.message);
   }
 }
 
 // ── Work Files helpers ──────────────────────────────────────────────
 
+/** Evita path traversal; aceita `/` e `\` nos caminhos relativos (BD pode usar só `/`). */
 function validateWorkPath(relativePath) {
-  const resolved = path.resolve(WORK_BASE, relativePath);
-  if (!resolved.startsWith(WORK_BASE)) return null;
-  const segments = relativePath.split(path.sep);
+  if (relativePath == null || relativePath === "") return null;
+  const segments = relativePath.split(/[/\\]/);
   for (const seg of segments) {
-    if (WORK_BLOCKED_SEGMENTS.has(seg)) return null;
+    if (seg && WORK_BLOCKED_SEGMENTS.has(seg)) return null;
   }
-  return resolved;
+  for (const base of WORK_BASES) {
+    const normalizedBase = path.resolve(base);
+    const resolved = path.resolve(normalizedBase, relativePath);
+    const rel = path.relative(normalizedBase, resolved);
+    if (rel.startsWith("..") || path.isAbsolute(rel)) continue;
+    return resolved;
+  }
+  return null;
+}
+
+/** Download: procura o ficheiro na primeira raiz WORK_BASES onde existir (deploy com cópia noutro disco). */
+function findWorkFileForDownload(relativePath) {
+  if (relativePath == null || relativePath === "") return null;
+  const segments = relativePath.split(/[/\\]/);
+  for (const seg of segments) {
+    if (seg && WORK_BLOCKED_SEGMENTS.has(seg)) return null;
+  }
+  for (const base of WORK_BASES) {
+    const normalizedBase = path.resolve(base);
+    const resolved = path.resolve(normalizedBase, relativePath);
+    const rel = path.relative(normalizedBase, resolved);
+    if (rel.startsWith("..") || path.isAbsolute(rel)) continue;
+    try {
+      if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) return resolved;
+    } catch {
+      /* ignore */
+    }
+  }
+  return null;
+}
+
+/** Lista: pasta existe nalguma das raízes WORK_BASES. folder vazio = raiz da primeira WORK_BASE existente. */
+function findWorkDirForList(folder) {
+  if (folder == null || folder === "") {
+    for (const base of WORK_BASES) {
+      const normalizedBase = path.resolve(base);
+      try {
+        if (fs.existsSync(normalizedBase) && fs.statSync(normalizedBase).isDirectory()) {
+          return normalizedBase;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    return null;
+  }
+  const segments = folder.split(/[/\\]/);
+  for (const seg of segments) {
+    if (seg && WORK_BLOCKED_SEGMENTS.has(seg)) return null;
+  }
+  for (const base of WORK_BASES) {
+    const normalizedBase = path.resolve(base);
+    const resolved = path.resolve(normalizedBase, folder);
+    const rel = path.relative(normalizedBase, resolved);
+    if (rel.startsWith("..") || path.isAbsolute(rel)) continue;
+    try {
+      if (fs.existsSync(resolved) && fs.statSync(resolved).isDirectory()) return resolved;
+    } catch {
+      /* ignore */
+    }
+  }
+  return null;
 }
 
 function handleWorkFilesList(req, res) {
   const url = new URL(req.url, `http://${HOST}`);
   const folder = url.searchParams.get("folder") || "";
 
-  const resolved = validateWorkPath(folder);
+  const resolved = findWorkDirForList(folder);
   if (!resolved) {
-    jsonResponse(res, 403, { error: "Acesso negado" });
+    const allowed = validateWorkPath(folder);
+    jsonResponse(res, allowed ? 404 : 403, {
+      error: allowed ? "Pasta não encontrada" : "Acesso negado",
+    });
     return;
   }
 
   try {
-    if (!fs.existsSync(resolved)) {
-      jsonResponse(res, 404, { error: "Pasta não encontrada" });
-      return;
-    }
     const stat = fs.statSync(resolved);
     if (!stat.isDirectory()) {
       jsonResponse(res, 400, { error: "Caminho não é uma pasta" });
@@ -360,10 +424,18 @@ function handleWorkFilesList(req, res) {
         return a.name.localeCompare(b.name);
       });
 
-    const relativePath = path.relative(WORK_BASE, resolved);
+    let relativePath = ".";
+    for (const base of WORK_BASES) {
+      const nb = path.resolve(base);
+      const rel = path.relative(nb, resolved);
+      if (!rel.startsWith("..") && !path.isAbsolute(rel)) {
+        relativePath = rel || ".";
+        break;
+      }
+    }
     jsonResponse(res, 200, {
       folder: relativePath || ".",
-      parentFolder: relativePath ? path.dirname(relativePath) : null,
+      parentFolder: relativePath && relativePath !== "." ? path.dirname(relativePath) : null,
       items,
     });
   } catch (err) {
@@ -433,22 +505,18 @@ function handleWorkFilesDownload(req, res) {
   const url = new URL(req.url, `http://${HOST}`);
   const filePath = url.searchParams.get("file") || "";
 
-  const resolved = validateWorkPath(filePath);
+  const resolved = findWorkFileForDownload(filePath);
   if (!resolved) {
-    res.writeHead(403, { "Content-Type": "text/plain" });
-    res.end("Acesso negado");
+    const allowed = validateWorkPath(filePath);
+    res.writeHead(allowed ? 404 : 403, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end(allowed ? "Ficheiro não encontrado" : "Acesso negado");
     return;
   }
 
   try {
-    if (!fs.existsSync(resolved)) {
-      res.writeHead(404, { "Content-Type": "text/plain" });
-      res.end("Ficheiro não encontrado");
-      return;
-    }
     const stat = fs.statSync(resolved);
     if (!stat.isFile()) {
-      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
       res.end("Caminho não é um ficheiro");
       return;
     }
@@ -483,11 +551,11 @@ function handleWorkFilesDownload(req, res) {
     const stream = fs.createReadStream(resolved);
     stream.pipe(res);
     stream.on("error", () => {
-      res.writeHead(500, { "Content-Type": "text/plain" });
+      res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
       res.end("Erro ao ler ficheiro");
     });
   } catch (err) {
-    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
     res.end(err.message);
   }
 }
@@ -616,7 +684,12 @@ const server = http.createServer((req, res) => {
   } else if (url.pathname === "/api/work-files/migrate" && req.method === "POST") {
     handleWorkFilesMigrate(req, res);
   } else if (url.pathname === "/api/health") {
-    jsonResponse(res, 200, { status: "ok", uptime: process.uptime() });
+    jsonResponse(res, 200, {
+      status: "ok",
+      uptime: process.uptime(),
+      /** Raízes Linux onde vivem `Pasta no servidor` (relativo a cada uma). Não são caminhos Windows (Z:\\…). */
+      work_files_roots: WORK_BASES.map((p) => path.resolve(p)),
+    });
   } else {
     jsonResponse(res, 404, { error: "Endpoint não encontrado" });
   }
@@ -624,4 +697,5 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`[API Server] A escutar em http://${HOST}:${PORT}`);
+  console.log(`[API Server] WORK_FILES_ROOT(s): ${WORK_BASES.join(" | ")}`);
 });

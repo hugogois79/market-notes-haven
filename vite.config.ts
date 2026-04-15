@@ -138,6 +138,13 @@ export default defineConfig(({ mode }) => ({
         globIgnores: ['**/pdf.worker*.mjs'],
         runtimeCaching: [
           {
+            /** Evita que o SW sirva HTML/cache em pedidos de PDF/API locais (preview Work). */
+            urlPattern: ({ url }) =>
+              url.pathname.startsWith("/api/work-files") ||
+              url.pathname.startsWith("/api/legal-files"),
+            handler: "NetworkOnly",
+          },
+          {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
             options: {

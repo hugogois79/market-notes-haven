@@ -38,6 +38,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import CompanyDialog from "@/components/financial/CompanyDialog";
+import { ServerFolderPickerDialog } from "@/components/companies/ServerFolderPickerDialog";
 import { useFileServerBaseUrl, getWorkFilesListUrl, resolvePublicFileFetchUrl } from "@/hooks/useFileServerBaseUrl";
 
 interface ColumnOption {
@@ -111,6 +112,9 @@ const SERVER_ROOT_PRESETS: string[] = String(import.meta.env.VITE_WORKFLOW_SERVE
   .map((s) => s.trim())
   .filter(Boolean);
 
+/** Subpasta sob WORK_FILES_ROOT para o dropdown «Pasta no servidor» (ex. `Work` ou `Splendidoption`). Vazio = raiz. */
+const WORK_FILES_LIST_FOLDER: string = String(import.meta.env.VITE_WORK_FILES_LIST_FOLDER || "").trim();
+
 interface StorageLocation {
   id: string;
   company_id: string;
@@ -135,6 +139,8 @@ interface TableRelationsConfig {
   autoCreateTransaction: boolean;
   linkWorkflowToFinance: boolean;
   storeFilesInCompanyDocs: boolean;
+  /** Novos uploads no WorkFlow: servidor (workflow_storage_locations) ou legado Supabase attachments. */
+  workflowUploadTarget?: "server" | "supabase";
 }
 
 const MONTHS = [
@@ -155,7 +161,29 @@ const MONTHS = [
 export default function CompaniesPage() {
   const { user, loading: authLoading } = useAuth();
   const fileServerBaseUrl = useFileServerBaseUrl();
+
+  const { data: apiServerHealth } = useQuery({
+    queryKey: ["api-server-health", fileServerBaseUrl],
+    queryFn: async () => {
+      const base = fileServerBaseUrl?.trim() ? fileServerBaseUrl.replace(/\/$/, "") : "";
+      const url = base ? `${base}/api/health` : "/api/health";
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      return (await res.json()) as { work_files_roots?: string[]; status?: string };
+    },
+    staleTime: 60_000,
+    retry: 1,
+  });
+
   const [searchParams] = useSearchParams();
+
+  const [serverFolderPicker, setServerFolderPicker] = useState<{
+    open: boolean;
+    mode: "row" | "form";
+    locationId: string | null;
+    initialPath: string;
+  }>({ open: false, mode: "row", locationId: null, initialPath: "" });
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -260,7 +288,8 @@ export default function CompaniesPage() {
       defaultCompanyId: null, 
       autoCreateTransaction: true, 
       linkWorkflowToFinance: true,
-      storeFilesInCompanyDocs: true
+      storeFilesInCompanyDocs: true,
+      workflowUploadTarget: "server",
     };
     if (saved) {
       try {
@@ -627,16 +656,19 @@ export default function CompaniesPage() {
     path: getFolderPath(folder.id, companyFolders || [])
   })).sort((a, b) => a.path.localeCompare(b.path)) || [];
 
-  const { data: serverFolders = [] } = useQuery({
-    queryKey: ["work-server-folders", fileServerBaseUrl],
+  const { data: serverFolders = [], isError: serverFoldersQueryError } = useQuery({
+    queryKey: ["work-server-folders", fileServerBaseUrl, WORK_FILES_LIST_FOLDER],
     queryFn: async () => {
-      const res = await fetch(getWorkFilesListUrl(fileServerBaseUrl));
-      if (!res.ok) return [];
+      const res = await fetch(getWorkFilesListUrl(fileServerBaseUrl, WORK_FILES_LIST_FOLDER));
+      if (!res.ok) {
+        throw new Error(`API work-files/list: HTTP ${res.status}`);
+      }
       const data = await res.json();
       return (data.items || [])
         .filter((i: any) => i.type === "dir")
         .map((i: any) => i.name);
     },
+    retry: 1,
   });
 
   const mergedServerFolderOptions = useMemo(() => {
@@ -1209,6 +1241,34 @@ export default function CompaniesPage() {
                   </div>
                   <p className="text-sm text-slate-500 mb-4">Configure where workflow files are stored in the company's document library based on company and month.</p>
 
+                  <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50/80 p-3 text-xs text-slate-800">
+                    <p className="font-medium text-slate-900">Empresa usada nos uploads do WorkFlow</p>
+                    <p className="mt-1 text-slate-700">
+                      A tabela abaixo filtra por empresa, mas os ficheiros que carregas no separador <strong>WorkFlow</strong> usam a{" "}
+                      <strong>Default Company for WorkFlow</strong> (acima, em Table Relations). Essa empresa tem de ser a mesma para a qual
+                      configuraste «Pasta no servidor» + «Folder Location» para o <strong>mês civil actual</strong> — caso contrário os ficheiros
+                      vão para outra empresa ou o sistema usa a última linha completa (com aviso).
+                    </p>
+                  </div>
+
+                  {apiServerHealth?.work_files_roots && apiServerHealth.work_files_roots.length > 0 && (
+                    <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50/90 p-3 text-xs text-slate-800">
+                      <p className="font-medium text-emerald-950 flex items-center gap-2">
+                        <HardDrive className="h-4 w-4 shrink-0" />
+                        Raiz no servidor (VPS, Linux)
+                      </p>
+                      <p className="mt-2 font-mono text-[11px] break-all text-slate-900">
+                        {apiServerHealth.work_files_roots.join(" · ")}
+                      </p>
+                      <p className="mt-2 text-slate-700 leading-relaxed">
+                        No Windows podes ver <span className="font-mono">Z:\nvme\Splendidoption (PT)\Work</span> — no VPS o mesmo conteúdo está sob
+                        uma raiz como <span className="font-mono">/data/nvme</span> (variável <code className="rounded bg-white/80 px-1">WORK_FILES_ROOT</code> no processo do <code className="rounded bg-white/80 px-1">api-server</code>).
+                        A coluna «Pasta no servidor» guarda o caminho <strong>relativo a essa raiz</strong>, p.ex.{" "}
+                        <span className="font-mono">Splendidoption (PT)</span> (nome exacto da pasta), não o caminho <span className="font-mono">Z:\…</span>.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700 space-y-2">
                     <p>
                       <span className="font-medium text-slate-800">Servidor de ficheiros (API)</span>
@@ -1230,21 +1290,38 @@ export default function CompaniesPage() {
                     <p className="text-slate-600">
                       <span className="font-medium text-slate-800">Pasta no servidor</span>
                       {" — "}
-                      Nome da pasta na raiz do disco do servidor (relativa a{" "}
-                      <code className="rounded bg-white px-1 py-0.5 text-[11px]">/root/Robsonway-Research</code>
-                      ). A lista vem da API; podes acrescentar pastas fixas em{" "}
+                      Nome de uma pasta no disco do <strong>VPS onde corre o api-server</strong> (variável{" "}
+                      <code className="rounded bg-white px-1 py-0.5 text-[11px]">WORK_FILES_ROOT</code>
+                      , por defeito sob Robsonway-Research). <strong>Não é Supabase.</strong> O dropdown pede{" "}
+                      <code className="rounded bg-white px-1 py-0.5 text-[11px]">GET /api/work-files/list</code>
+                      : se essa chamada falhar (proxy, API parada), só vês valores já gravados na BD ou em{" "}
                       <code className="rounded bg-white px-1 py-0.5 text-[11px]">VITE_WORKFLOW_SERVER_ROOT_PRESETS</code>
-                      {" "}(separadas por vírgulas, ex.: <code className="rounded bg-white px-1 py-0.5 text-[11px]">Hetzner,Splendidoption Lda</code>).
+                      . Para listar só uma subárvore (ex. só <span className="font-mono">Work</span>), define{" "}
+                      <code className="rounded bg-white px-1 py-0.5 text-[11px]">VITE_WORK_FILES_LIST_FOLDER</code>
+                      no build da app. Para gravar sob uma pasta aninhada (ex.{" "}
+                      <span className="font-mono">Splendidoption/Work</span>), adiciona esse texto em{" "}
+                      <code className="rounded bg-white px-1 py-0.5 text-[11px]">VITE_WORKFLOW_SERVER_ROOT_PRESETS</code> ou escolhe um valor
+                      já gravado na BD — o dropdown só lista um nível de cada vez.
                     </p>
                   </div>
+
+                  {serverFoldersQueryError && (
+                    <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+                      <strong>Listagem do servidor indisponível.</strong> O pedido a{" "}
+                      <code className="rounded bg-white/80 px-1">/api/work-files/list</code> falhou — confirma o{" "}
+                      <code className="rounded bg-white/80 px-1">api-server</code> na porta 3001 e o proxy (
+                      <code className="rounded bg-white/80 px-1">VITE_WORK_FILES_API_BASE</code>
+                      ). Enquanto isso, as opções podem ser só valores da BD ou texto livre; não são pastas do disco em tempo real.
+                    </div>
+                  )}
                   
                   {/* Store Files Toggle */}
                   <div className="flex items-center justify-between mb-4 p-3 bg-slate-50 rounded-lg">
                     <div className="space-y-1">
                       <Label className="text-sm font-medium text-slate-700">Copy Files to Company Documents</Label>
                       <p className="text-xs text-slate-500">
-                        When a transaction is created, copy the workflow file to the company&apos;s document library.
-                        Turning this off only disables that copy — the storage location table below stays visible; locations are still required to mark files as paid.
+                        Quando uma transacção é criada, copiar o ficheiro do WorkFlow para a biblioteca de documentos da empresa.
+                        Desligar só desactiva essa cópia; a tabela de localizações abaixo mantém-se visível.
                       </p>
                     </div>
                     <Switch
@@ -1256,7 +1333,25 @@ export default function CompaniesPage() {
                     />
                   </div>
 
-                  {/* Always show locations table (do not gate on storeFilesInCompanyDocs — that toggle is copy-on-transaction only). */}
+                  <div className="flex items-center justify-between mb-4 p-3 bg-emerald-50/80 rounded-lg border border-emerald-100">
+                    <div className="space-y-1 pr-4">
+                      <Label className="text-sm font-medium text-slate-800">Novos ficheiros no WorkFlow → servidor (VPS)</Label>
+                      <p className="text-xs text-slate-600">
+                        Quando activo, os uploads no separador WorkFlow gravam em disco via API (
+                        <code className="text-[11px]">workflow_storage_locations</code>
+                        : empresa predefinida + pasta no servidor). Desactiva apenas para testes com Supabase Storage.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={(tableRelations.workflowUploadTarget ?? "server") === "server"}
+                      onCheckedChange={(checked) =>
+                        setTableRelations((prev) => ({
+                          ...prev,
+                          workflowUploadTarget: checked ? "server" : "supabase",
+                        }))
+                      }
+                    />
+                  </div>
                   {/* Company Filter */}
                   <div className="flex items-center gap-2 mb-3">
                         <Label className="text-xs text-slate-500">Filter by company:</Label>
@@ -1318,19 +1413,35 @@ export default function CompaniesPage() {
                                   <TableCell className="text-sm text-slate-600">{monthLabel}</TableCell>
                                   <TableCell className="text-sm text-slate-600 font-mono">{location.folder_path || "-"}</TableCell>
                                   <TableCell>
-                                    <SearchableSelect
-                                      value={location.server_root || ""}
-                                      onValueChange={(value) => {
-                                        updateServerRootMutation.mutate({
-                                          id: location.id,
-                                          server_root: value || null,
-                                        });
-                                      }}
-                                      options={mergedServerFolderOptions.map((f: string) => ({ value: f, label: f }))}
-                                      placeholder="Seleccionar ou ver valor gravado..."
-                                      searchPlaceholder="Pesquisar pastas..."
-                                      emptyMessage="Sem pastas — usa presets ou introduz um valor existente na BD"
-                                    />
+                                    <div className="flex flex-col gap-1 min-w-[180px] max-w-[280px]">
+                                      <div className="flex gap-1 items-center">
+                                        <span
+                                          className="text-xs font-mono truncate flex-1 text-slate-800"
+                                          title={location.server_root || ""}
+                                        >
+                                          {location.server_root || "—"}
+                                        </span>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-8 shrink-0 text-xs px-2"
+                                          onClick={() =>
+                                            setServerFolderPicker({
+                                              open: true,
+                                              mode: "row",
+                                              locationId: location.id,
+                                              initialPath: location.server_root || "",
+                                            })
+                                          }
+                                        >
+                                          Navegar…
+                                        </Button>
+                                      </div>
+                                      <p className="text-[10px] text-slate-500 leading-tight">
+                                        Ou edita na BD / presets; clica em Navegar para subpastas.
+                                      </p>
+                                    </div>
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex gap-1">
@@ -1711,17 +1822,34 @@ export default function CompaniesPage() {
             <div className="space-y-2">
               <Label>Pasta no servidor <span className="text-xs text-slate-400">(opcional)</span></Label>
               <p className="text-xs text-slate-500">
-                Nome da pasta na raiz do disco (VPS/Hetzner, sob Robsonway-Research). Podes escrever à mão (ex.{" "}
-                <span className="font-mono">Hetzner</span>) ou escolher uma sugestão.
+                Caminho relativo a <code className="text-[11px]">WORK_FILES_ROOT</code> no VPS (ex.{" "}
+                <span className="font-mono">Splendidoption (PT)</span>). Usa «Navegar…» para abrir subpastas; ou escreve à mão.
               </p>
-              <Input
-                list="workflow-server-root-datalist"
-                value={storageLocationForm.server_root}
-                onChange={(e) => setStorageLocationForm((prev) => ({ ...prev, server_root: e.target.value }))}
-                placeholder="ex.: Splendidoption Lda ou Hetzner"
-                className="font-mono text-sm"
-                autoComplete="off"
-              />
+              <div className="flex gap-2">
+                <Input
+                  list="workflow-server-root-datalist"
+                  value={storageLocationForm.server_root}
+                  onChange={(e) => setStorageLocationForm((prev) => ({ ...prev, server_root: e.target.value }))}
+                  placeholder="ex.: Splendidoption (PT)/Work"
+                  className="font-mono text-sm flex-1"
+                  autoComplete="off"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="shrink-0"
+                  onClick={() =>
+                    setServerFolderPicker({
+                      open: true,
+                      mode: "form",
+                      locationId: null,
+                      initialPath: storageLocationForm.server_root || "",
+                    })
+                  }
+                >
+                  Navegar…
+                </Button>
+              </div>
               <datalist id="workflow-server-root-datalist">
                 {mergedServerFolderOptions.map((f) => (
                   <option key={f} value={f} />
@@ -1886,6 +2014,24 @@ export default function CompaniesPage() {
           if (!open) setEditingCompany(null);
         }}
         company={editingCompany}
+      />
+
+      <ServerFolderPickerDialog
+        open={serverFolderPicker.open}
+        onOpenChange={(open) => setServerFolderPicker((s) => ({ ...s, open }))}
+        baseUrl={fileServerBaseUrl}
+        initialRelativePath={serverFolderPicker.initialPath}
+        startInsideFolder={WORK_FILES_LIST_FOLDER}
+        onConfirm={(path) => {
+          if (serverFolderPicker.mode === "row" && serverFolderPicker.locationId) {
+            updateServerRootMutation.mutate({
+              id: serverFolderPicker.locationId,
+              server_root: path,
+            });
+          } else if (serverFolderPicker.mode === "form") {
+            setStorageLocationForm((prev) => ({ ...prev, server_root: path || "" }));
+          }
+        }}
       />
     </div>
   );
