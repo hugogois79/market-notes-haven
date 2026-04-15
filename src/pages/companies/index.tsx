@@ -287,11 +287,12 @@ export default function CompaniesPage() {
     queryFn: async () => {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (!currentUser) return [];
-      const { data: userCompanies } = await supabase
+      // Mesmas empresas que o utilizador vê na lista (RLS: owner_id ou company_users). Não usar user_id — não existe em companies.
+      const { data: visibleCompanies, error: companiesError } = await supabase
         .from("companies")
-        .select("id")
-        .eq("user_id", currentUser.id);
-      const companyIds = (userCompanies || []).map(c => c.id);
+        .select("id");
+      if (companiesError) throw companiesError;
+      const companyIds = (visibleCompanies || []).map((c) => c.id);
       if (companyIds.length === 0) return [];
       const { data, error } = await supabase
         .from("workflow_storage_locations")
@@ -1241,7 +1242,10 @@ export default function CompaniesPage() {
                   <div className="flex items-center justify-between mb-4 p-3 bg-slate-50 rounded-lg">
                     <div className="space-y-1">
                       <Label className="text-sm font-medium text-slate-700">Copy Files to Company Documents</Label>
-                      <p className="text-xs text-slate-500">When a transaction is created, copy the workflow file to the company's document library.</p>
+                      <p className="text-xs text-slate-500">
+                        When a transaction is created, copy the workflow file to the company&apos;s document library.
+                        Turning this off only disables that copy — the storage location table below stays visible; locations are still required to mark files as paid.
+                      </p>
                     </div>
                     <Switch
                       checked={tableRelations.storeFilesInCompanyDocs}
@@ -1251,11 +1255,10 @@ export default function CompaniesPage() {
                       }))}
                     />
                   </div>
-                  
-                  {tableRelations.storeFilesInCompanyDocs && (
-                    <>
-                      {/* Company Filter */}
-                      <div className="flex items-center gap-2 mb-3">
+
+                  {/* Always show locations table (do not gate on storeFilesInCompanyDocs — that toggle is copy-on-transaction only). */}
+                  {/* Company Filter */}
+                  <div className="flex items-center gap-2 mb-3">
                         <Label className="text-xs text-slate-500">Filter by company:</Label>
                         <Select value={storageLocationCompanyFilter} onValueChange={setStorageLocationCompanyFilter}>
                           <SelectTrigger className="w-64 h-8 text-sm">
@@ -1268,9 +1271,9 @@ export default function CompaniesPage() {
                             ))}
                           </SelectContent>
                         </Select>
-                      </div>
-                      
-                      <div className="border border-slate-200 rounded-lg overflow-hidden">
+                  </div>
+
+                  <div className="border border-slate-200 rounded-lg overflow-hidden">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-slate-50">
@@ -1384,10 +1387,8 @@ export default function CompaniesPage() {
                             })
                           )}
                         </TableBody>
-                      </Table>
-                    </div>
-                  </>
-                  )}
+                  </Table>
+                  </div>
                 </div>
 
                 {/* Project File Storage Section */}
