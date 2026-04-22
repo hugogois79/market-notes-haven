@@ -60,10 +60,38 @@ function folderBrowserPlugin(): Plugin {
 }
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+  /**
+   * code-server / Simple Browser: `http://127.0.0.1:8081` no *teu* browser aponta para o teu PC
+   * (ecrã branco). Usa o URL Tailscale do nó onde corre o Vite (100.x ou MagicDNS), p.ex.:
+   * `VITE_DEV_SERVER_ORIGIN=http://100.107.249.99:8081 npm run dev` ou `npm run dev:tailscale`
+   */
+  const devPub = process.env.VITE_DEV_SERVER_ORIGIN?.trim();
+  let devPubUrl: URL | null = null;
+  if (devPub && mode === "development") {
+    try {
+      devPubUrl = new URL(devPub);
+    } catch {
+      console.warn("[vite] VITE_DEV_SERVER_ORIGIN inválido:", devPub);
+    }
+  }
+  const serverPublic =
+    devPubUrl != null
+      ? {
+          origin: devPubUrl.origin,
+          hmr: {
+            protocol: devPubUrl.protocol === "https:" ? ("wss" as const) : ("ws" as const),
+            host: devPubUrl.hostname,
+            clientPort: devPubUrl.port ? parseInt(devPubUrl.port, 10) : 8081,
+          },
+        }
+      : {};
+
+  return {
   server: {
     host: true,
     port: 8081,
+    ...serverPublic,
     proxy: {
       "/api/legal-files": {
         target: "http://127.0.0.1:3001",
@@ -87,8 +115,9 @@ export default defineConfig(({ mode }) => ({
     mode === 'development' && componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
+      /** Em dev, SW desligado — evita ecrã em branco no Simple Browser / WebViews (intercepta HTML/JS). */
       devOptions: {
-        enabled: true
+        enabled: false,
       },
       includeAssets: ['favicon.ico', 'icons/*.png'],
       manifest: {
@@ -185,4 +214,5 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     include: ['react', 'react-dom'],
   },
-}));
+};
+});

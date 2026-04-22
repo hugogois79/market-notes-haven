@@ -34,6 +34,57 @@ import {
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFileServerBaseUrl, getWorkFilesListUrl } from "@/hooks/useFileServerBaseUrl";
+import { copyWorkflowFileToServerMonthFolder } from "@/lib/syncWorkflowFileToServerMonth";
+
+const TABLE_RELATIONS_KEY = "work-table-relations";
+
+/**
+ * Pastas no VPS sob WORK_FILES_ROOT/{companyDiskRoot} via GET /api/work-files/list.
+ * `shallow`: só filhos directos (ex. Work, Bancos) — evita listar toda a árvore tipo Work/2025/… no dropdown.
+ */
+async function listServerDocumentSubfolders(
+  baseUrl: string,
+  companyDiskRoot: string,
+  options: { maxDepth: number; maxItems: number; shallow?: boolean }
+): Promise<{ value: string; label: string }[]> {
+  const root = companyDiskRoot.trim().replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+  if (!root) return [];
+  const cred = baseUrl.trim() ? "include" : "same-origin";
+  const out: { value: string; label: string }[] = [];
+  let count = 0;
+
+  async function walk(rel: string, depth: number, labelPrefix: string): Promise<void> {
+    if (depth > options.maxDepth || count >= options.maxItems) return;
+    const url = getWorkFilesListUrl(baseUrl, rel);
+    let res: Response;
+    try {
+      res = await fetch(url, { credentials: cred, cache: "no-store" });
+    } catch {
+      return;
+    }
+    if (!res.ok) return;
+    const json = (await res.json().catch(() => null)) as {
+      items?: { name: string; type: string }[];
+    } | null;
+    const items = json?.items ?? [];
+    const dirs = items.filter((i) => i.type === "dir").sort((a, b) => a.name.localeCompare(b.name));
+    for (const it of dirs) {
+      if (count >= options.maxItems) return;
+      const childRel = `${rel}/${it.name}`;
+      const value = childRel.startsWith(root + "/") ? childRel.slice(root.length + 1) : it.name;
+      const label = labelPrefix ? `${labelPrefix} / ${it.name}` : it.name;
+      out.push({ value, label });
+      count++;
+      if (!options.shallow) {
+        await walk(childRel, depth + 1, label);
+      }
+    }
+  }
+
+  await walk(root, 0, "");
+  return out.sort((a, b) => a.label.localeCompare(b.label));
+}
 
 const normalizePaymentMethod = (pm?: string | null): "bank_transfer" | "credit_card" => {
   const v = (pm || "").toLowerCase().trim();
@@ -76,6 +127,8 @@ interface WorkflowExpensePanelProps {
     id: string;
     file_name: string;
     file_url: string;
+    /** Quando o PDF está no VPS (upload WorkFlow em modo servidor). */
+    server_path?: string | null;
     mime_type: string | null;
     // OCR data from n8n workflow
     company_id?: string | null;
@@ -125,13 +178,27 @@ interface WorkflowExpensePanelProps {
     folder_id?: string | null;
   } | null;
   onClose: () => void;
-  onSaved?: (payload?: { fileName?: string; fileUrl?: string | null; pendingLoanData?: any }) => void;
+  onSaved?: (payload?: {
+    fileName?: string;
+    fileUrl?: string | null;
+    pendingLoanData?: any;
+    savedAsDocument?: boolean;
+  }) => void;
 }
 
 export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSaved }: WorkflowExpensePanelProps) {
   const queryClient = useQueryClient();
   const { user, loading: authLoading } = useAuth();
+  const fileServerBaseUrl = useFileServerBaseUrl();
   const isEditMode = !!existingTransaction;
+
+  /** Quando se grava Table Relations nas Settings, voltar a listar pastas do VPS sem fechar o modal. */
+  const [tableRelationsTick, setTableRelationsTick] = useState(0);
+  useEffect(() => {
+    const h = () => setTableRelationsTick((t) => t + 1);
+    window.addEventListener("work-table-relations-changed", h as EventListener);
+    return () => window.removeEventListener("work-table-relations-changed", h as EventListener);
+  }, []);
   
   // Determine if this is an existing registered loan (real UUID vs "pending")
   const isExistingRegisteredLoan = existingTransaction?._isLoan && existingTransaction.id !== "pending";
@@ -141,6 +208,12 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   const [attachmentUrl, setAttachmentUrl] = useState<string | null>(file.file_url);
   const [attachmentName, setAttachmentName] = useState<string>(file.file_name);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+
+  // Painel pode permanecer montado ao mudar de ficheiro na lista — repor anexo pelo novo registo.
+  useEffect(() => {
+    setAttachmentName(file.file_name);
+    setAttachmentUrl(file.file_url ?? null);
+  }, [file.id]);
   
   const { register, handleSubmit, reset, watch, setValue, getValues } = useForm({
     defaultValues: {
@@ -166,6 +239,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
       loan_status: "active",
       // Document-specific fields
       target_folder_id: "",
+      document_server_destination: "",
     },
   });
 
@@ -200,7 +274,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
 
   // Fetch bank accounts (moved here so useEffect can depend on it)
   const { data: allBankAccounts } = useQuery({
-    queryKey: ["bank-accounts-all"],
+    /** Mesmo prefixo que `invalidateQueries({ queryKey: ["bank-accounts"] })` em BankAccountDialog. */
+    queryKey: ["bank-accounts", "all"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bank_accounts")
@@ -295,6 +370,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           end_date: existingTransaction.end_date || "",
           loan_status: existingTransaction.loan_status || "active",
           target_folder_id: "",
+          document_server_destination: "",
         });
         setLocalBankAccountId("");
       } else if (isDocumentTransaction) {
@@ -320,6 +396,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           end_date: "",
           loan_status: "active",
           target_folder_id: existingTransaction.target_folder_id || existingTransaction.folder_id || "",
+          document_server_destination: "",
         });
         setLocalBankAccountId("");
       } else {
@@ -345,6 +422,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           end_date: "",
           loan_status: "active",
           target_folder_id: "",
+          document_server_destination: "",
         });
         // Set local state synchronously so React batches this with the reset() update.
         // This ensures the Radix Select receives the correct value on the very next render.
@@ -423,6 +501,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           end_date: "",
           loan_status: "active",
           target_folder_id: "",
+          document_server_destination: "",
         });
         // Sync local state for the Radix Select (same batched render)
         setLocalBankAccountId(defaultBankAccountId);
@@ -440,21 +519,29 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
   const isLoan = transactionType === "loan";
   const isDocument = transactionType === "document";
 
-  // Fetch folders for the selected company (for document type)
-  const { data: companyFolders } = useQuery({
-    queryKey: ["company-folders", selectedCompanyId],
-    queryFn: async () => {
-      if (!selectedCompanyId) return [];
-      const { data, error } = await supabase
-        .from("company_folders")
-        .select("id, name, parent_folder_id")
-        .eq("company_id", selectedCompanyId)
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes cache
-    enabled: !!selectedCompanyId && isDocument,
+  const companyDiskRootName = useMemo(() => {
+    const c = companies?.find((x) => x.id === selectedCompanyId);
+    return (c?.name as string | undefined)?.trim() ?? "";
+  }, [companies, selectedCompanyId]);
+
+  /** Filhos directos da pasta da empresa no VPS (nunca company_folders / Supabase neste dropdown). */
+  const { data: serverDocumentSubfolders = [], isFetching: serverDocFoldersLoading } = useQuery({
+    queryKey: [
+      "workflow-document-server-subfolders",
+      fileServerBaseUrl,
+      selectedCompanyId,
+      companyDiskRootName,
+      tableRelationsTick,
+    ],
+    queryFn: () =>
+      listServerDocumentSubfolders(fileServerBaseUrl, companyDiskRootName, {
+        maxDepth: 2,
+        maxItems: 80,
+        shallow: true,
+      }),
+    enabled: !!selectedCompanyId && isDocument && !!companyDiskRootName,
+    staleTime: 30_000,
+    refetchOnMount: "always",
   });
 
   // Note: We no longer clear bank_account_id when company changes
@@ -472,7 +559,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expense_projects")
-        .select("id, name")
+        .select("id, name, associated_companies")
         .order("name");
       if (error) throw error;
       return data ?? [];
@@ -509,8 +596,33 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
-  // Filter categories by selected project and transaction type
+  /** Projectos visíveis para a empresa seleccionada (NULL / [] em associated_companies = todas). */
+  const projectsVisibleForCompany = useMemo(() => {
+    const list = expenseProjects ?? [];
+    if (!selectedCompanyId) return list;
+    return list.filter((p) => {
+      const ac = (p as { associated_companies?: string[] | null }).associated_companies;
+      if (ac == null || ac.length === 0) return true;
+      return ac.includes(selectedCompanyId);
+    });
+  }, [expenseProjects, selectedCompanyId]);
+
   const selectedProjectId = watch("project_id");
+
+  useEffect(() => {
+    if (!selectedCompanyId || !selectedProjectId || !expenseProjects?.length) return;
+    const p = expenseProjects.find((x) => x.id === selectedProjectId) as
+      | { id: string; associated_companies?: string[] | null }
+      | undefined;
+    if (!p) return;
+    const ac = p.associated_companies;
+    if (ac && ac.length > 0 && !ac.includes(selectedCompanyId)) {
+      setValue("project_id", "");
+      setValue("category_id", "");
+    }
+  }, [selectedCompanyId, selectedProjectId, expenseProjects, setValue]);
+
+  // Filter categories by selected project and transaction type
   
   const filteredCategories = useMemo(() => {
     if (!expenseCategories) return [];
@@ -634,27 +746,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
     return companies.filter((c) => c.id !== borrowingCompanyId);
   }, [companies, borrowingCompanyId]);
 
-  // Build folder path for hierarchical display
-  const getFolderPath = (folderId: string, folders: typeof companyFolders): string => {
-    const folder = folders?.find(f => f.id === folderId);
-    if (!folder) return "";
-    if (!folder.parent_folder_id) return folder.name;
-    const parentPath = getFolderPath(folder.parent_folder_id, folders);
-    return parentPath ? `${parentPath} / ${folder.name}` : folder.name;
-  };
-
-  // Create folder options with full hierarchical path
-  const folderOptions = useMemo(() => {
-    if (!companyFolders) return [];
-    return companyFolders.map(folder => ({
-      id: folder.id,
-      name: folder.name,
-      path: getFolderPath(folder.id, companyFolders)
-    })).sort((a, b) => a.path.localeCompare(b.path));
-  }, [companyFolders]);
-
   const saveMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: any): Promise<{ syncHint?: string; isDocument?: boolean } | void> => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Utilizador não autenticado");
 
@@ -664,7 +757,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         return uuidRegex.test(value) ? value : null;
       };
 
-      // Keep workflow_files in sync so the table shows Empresa/Project after saving.
+      // Keep workflow_files in sync so the table shows Empresa/Project/filename after saving.
       const updateWorkflowFile = async (patch: Record<string, any> = {}) => {
         const workflowUpdateData: Record<string, any> = { ...patch };
 
@@ -672,12 +765,9 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
         if (data.company_id) workflowUpdateData.company_id = data.company_id;
         if (data.project_id) workflowUpdateData.project_id = data.project_id;
 
-        // Always keep filename consistent if it was auto-renamed
-        if (attachmentName !== file.file_name) {
-          workflowUpdateData.file_name = attachmentName;
-        }
-
-        if (Object.keys(workflowUpdateData).length === 0) return;
+        // Always persist the display filename from state (avoids stale comparisons with
+        // file.file_name and ensures renames from the wand survive the save).
+        workflowUpdateData.file_name = attachmentName;
 
         const { error: fileUpdateError } = await supabase
           .from("workflow_files")
@@ -686,6 +776,10 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
 
         if (fileUpdateError) {
           console.error("Erro ao atualizar workflow_files:", fileUpdateError);
+          throw new Error(
+            fileUpdateError.message ||
+              "Não foi possível atualizar o registo do ficheiro no workflow (nome/pasta)."
+          );
         }
       };
 
@@ -735,7 +829,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
           queryClient.invalidateQueries({ queryKey: ["file-transaction"] });
           toast.success("Empréstimo atualizado com sucesso");
           onSaved?.({ fileName: attachmentName, fileUrl: attachmentUrl });
-          return;
+          return undefined;
         }
         
         // Otherwise, save as pending loan (not yet registered in DB)
@@ -758,13 +852,29 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
 
         // Pass pending loan data via callback - will be created when confirming file send
         onSaved?.({ fileName: attachmentName, fileUrl: attachmentUrl, pendingLoanData });
-        return; // Exit without creating DB records
+        return undefined; // Exit without creating DB records
       }
 
-      // Handle document type - upsert file to company_documents
+      // Handle document type — cópia VPS e/ou `company_documents` conforme Table Relations (WorkFlow + overrides de documento).
       if (data.type === "document") {
         const fileUrlToMatch = attachmentUrl || file.file_url;
-        
+
+        let workflowUploadTarget = "server";
+        let documentDraftForceServerCopy = false;
+        let documentDraftForceCompanyLibrary = false;
+        try {
+          const raw = JSON.parse(localStorage.getItem(TABLE_RELATIONS_KEY) || "{}");
+          workflowUploadTarget = raw.workflowUploadTarget ?? "server";
+          documentDraftForceServerCopy = raw.documentDraftForceServerCopy === true;
+          documentDraftForceCompanyLibrary = raw.documentDraftForceCompanyLibrary === true;
+        } catch {
+          workflowUploadTarget = "server";
+        }
+        const useSupabaseCompanyDocs =
+          (workflowUploadTarget ?? "server") === "supabase" || documentDraftForceCompanyLibrary;
+        const useVpsCopyForDocument =
+          (workflowUploadTarget ?? "server") === "server" || documentDraftForceServerCopy;
+
         // If we were editing a financial transaction and now changing to document type,
         // we need to delete the old transaction first
         if (isEditMode && existingTransaction && existingTransaction.id && !existingTransaction._isLoan) {
@@ -772,56 +882,77 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
             .from("financial_transactions")
             .delete()
             .eq("id", existingTransaction.id);
-          
+
           if (deleteError) {
             console.error("Error deleting old transaction when changing to document type:", deleteError);
           }
         }
-        
-        // Check if document already exists by file_url (regardless of company - allows company changes)
-        const { data: existingDoc } = await supabase
-          .from("company_documents")
-          .select("id")
-          .eq("file_url", fileUrlToMatch)
-          .maybeSingle();
 
-        const documentData = {
-          company_id: data.company_id,
-          folder_id: data.target_folder_id || null,
-          name: attachmentName || file.file_name,
-          file_url: fileUrlToMatch,
-          document_type: "arquivo",
-          notes: data.notes || null,
-          uploaded_by: userData.user.id,
-          updated_at: new Date().toISOString(),
-        };
+        if (useSupabaseCompanyDocs) {
+          const { data: existingDoc } = await supabase
+            .from("company_documents")
+            .select("id")
+            .eq("file_url", fileUrlToMatch)
+            .maybeSingle();
 
-        if (existingDoc) {
-          // Update existing document (including company change)
-          const { error: docError } = await supabase
-            .from("company_documents")
-            .update(documentData)
-            .eq("id", existingDoc.id);
-          
-          if (docError) throw docError;
-        } else {
-          // Insert new document
-          const { error: docError } = await supabase
-            .from("company_documents")
-            .insert(documentData);
-          
-          if (docError) throw docError;
+          const documentData = {
+            company_id: data.company_id,
+            folder_id: data.target_folder_id || null,
+            name: attachmentName || file.file_name,
+            file_url: fileUrlToMatch,
+            document_type: "arquivo",
+            notes: data.notes || null,
+            uploaded_by: userData.user.id,
+            updated_at: new Date().toISOString(),
+          };
+
+          if (existingDoc) {
+            const { error: docError } = await supabase
+              .from("company_documents")
+              .update(documentData)
+              .eq("id", existingDoc.id);
+
+            if (docError) throw docError;
+          } else {
+            const { error: docError } = await supabase.from("company_documents").insert(documentData);
+
+            if (docError) throw docError;
+          }
         }
 
-        // Update workflow_files so the table reflects filename/company/project
         await updateWorkflowFile();
+
+        let syncHint: string | undefined;
+        if (data.company_id) {
+          const companyName = companies?.find((c) => c.id === data.company_id)?.name?.trim() ?? "";
+          const sub = (data.document_server_destination || "").trim();
+          const serverDestinationOverride =
+            useVpsCopyForDocument && companyName && sub
+              ? `${companyName.replace(/\/+$/g, "")}/${sub.replace(/^\/+/, "")}`
+              : null;
+          const syncRes = await copyWorkflowFileToServerMonthFolder({
+            fileServerBaseUrl,
+            companyId: data.company_id,
+            movementDate: data.date,
+            fileNameOnDisk: attachmentName,
+            mimeType: file.mime_type,
+            serverPath: file.server_path ?? null,
+            fileUrl: attachmentUrl || file.file_url,
+            workflowFileId: file.id,
+            serverDestinationOverride,
+            forceServerCopy: documentDraftForceServerCopy,
+          });
+          if (syncRes.ok) syncHint = syncRes.targetFolder;
+          else if (!syncRes.skipped && "error" in syncRes) {
+            toast.warning(`Arquivo no servidor: ${syncRes.error}`);
+          }
+        }
 
         queryClient.invalidateQueries({ queryKey: ["company-documents"] });
         queryClient.invalidateQueries({ queryKey: ["transactions"] });
         queryClient.invalidateQueries({ queryKey: ["file-transaction"] });
-        toast.success("Documento guardado com sucesso");
-        onSaved?.({ fileName: attachmentName, fileUrl: attachmentUrl });
-        return;
+        queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+        return { syncHint, isDocument: true as const };
       }
 
       const isNotification = data.type === "notification";
@@ -862,8 +993,28 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
 
       // Update workflow_files so the table reflects filename/company/project
       await updateWorkflowFile();
+
+      /** Cópia no VPS na pasta do mês (mesma regra que «Concluir»), ao guardar movimento/despesa. */
+      let syncHint: string | undefined;
+      if (data.company_id && data.type !== "document" && data.type !== "loan") {
+        const syncRes = await copyWorkflowFileToServerMonthFolder({
+          fileServerBaseUrl,
+          companyId: data.company_id,
+          movementDate: data.date,
+          fileNameOnDisk: attachmentName,
+          mimeType: file.mime_type,
+          serverPath: file.server_path ?? null,
+          fileUrl: attachmentUrl || file.file_url,
+          workflowFileId: file.id,
+        });
+        if (syncRes.ok) syncHint = syncRes.targetFolder;
+        else if (!syncRes.skipped && "error" in syncRes) {
+          toast.warning(`Arquivo no servidor: ${syncRes.error}`);
+        }
+      }
+      return { syncHint };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["transactions-dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["workflow-linked-transactions"] });
@@ -871,9 +1022,29 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
       queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
       queryClient.invalidateQueries({ queryKey: ["company-loans"] });
       queryClient.invalidateQueries({ queryKey: ["company-documents"] });
-      toast.success(isLoan ? "Empréstimo criado com sucesso" : (isEditMode ? "Movimento atualizado com sucesso" : "Movimento criado com sucesso"));
+      const isDocumentSave =
+        result && typeof result === "object" && "isDocument" in result && (result as { isDocument?: boolean }).isDocument;
+      const baseMsg = isDocumentSave
+        ? isEditMode
+          ? "Documento atualizado com sucesso"
+          : "Documento guardado com sucesso"
+        : isLoan
+          ? "Empréstimo criado com sucesso"
+          : isEditMode
+            ? "Movimento atualizado com sucesso"
+            : "Movimento criado com sucesso";
+      if (result && typeof result === "object" && result.syncHint) {
+        toast.success(`${baseMsg} — cópia no servidor: ${result.syncHint}`, { duration: 6500 });
+      } else {
+        toast.success(baseMsg);
+      }
       if (!isEditMode) reset();
-      onSaved?.({ fileName: attachmentName, fileUrl: attachmentUrl });
+      onSaved?.({
+        fileName: attachmentName,
+        fileUrl: attachmentUrl,
+        savedAsDocument:
+          result && typeof result === "object" && (result as { isDocument?: boolean }).isDocument === true,
+      });
     },
     onError: (error: any) => {
       toast.error("Erro: " + error.message);
@@ -929,8 +1100,11 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
               toast.error("Selecione a empresa");
               return;
             }
-            if (!data.target_folder_id) {
-              toast.error("Selecione a pasta de destino");
+            if (
+              serverDocumentSubfolders.length > 0 &&
+              !(data.document_server_destination || "").trim()
+            ) {
+              toast.error("Selecione a pasta de destino no servidor");
               return;
             }
           }
@@ -1054,7 +1228,8 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                 <Label className="text-xs">Empresa *</Label>
                 <Select onValueChange={(value) => {
                   setValue("company_id", value);
-                  setValue("target_folder_id", ""); // Reset folder when company changes
+                  setValue("target_folder_id", "");
+                  setValue("document_server_destination", "");
                 }} value={watch("company_id")}>
                   <SelectTrigger className="h-9 text-sm">
                     <SelectValue placeholder="Selecione..." />
@@ -1069,22 +1244,47 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                 </Select>
               </div>
 
-              {/* Target Folder */}
+              {/* Pastas no VPS: filhos directos de WORK_FILES_ROOT / nome da empresa (API list). */}
               {selectedCompanyId && (
                 <div>
                   <Label className="text-xs">Pasta de Destino *</Label>
-                  <Select onValueChange={(value) => setValue("target_folder_id", value)} value={watch("target_folder_id")}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Selecione uma pasta..." />
-                    </SelectTrigger>
-                  <SelectContent>
-                      {folderOptions.map((folder) => (
-                        <SelectItem key={folder.id} value={folder.id}>
-                          📂 {folder.path}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <p className="text-[10px] text-muted-foreground mb-1">
+                    Servidor (GET /api/work-files/list) — não é a biblioteca Supabase.
+                  </p>
+                  <input type="hidden" {...register("document_server_destination")} />
+                  <div className="space-y-1">
+                    {serverDocFoldersLoading && (
+                      <p className="text-xs text-muted-foreground">A carregar pastas do servidor…</p>
+                    )}
+                    <Select
+                      onValueChange={(value) => setValue("document_server_destination", value)}
+                      value={watch("document_server_destination") || ""}
+                    >
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue
+                          placeholder={
+                            serverDocumentSubfolders.length === 0
+                              ? "Opcional — pasta do mês (Settings) se vazio"
+                              : "Selecione pasta no servidor…"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {serverDocumentSubfolders.map((row) => (
+                          <SelectItem key={row.value} value={row.value}>
+                            {row.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {!serverDocFoldersLoading && serverDocumentSubfolders.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Sem subpastas directas em «{companyDiskRootName}» no VPS (nome da empresa = pasta sob
+                        WORK_FILES_ROOT), ou API indisponível. Sem escolha, o ficheiro segue para a pasta do mês em File
+                        Storage Locations.
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -1340,7 +1540,7 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                                 />
                                 Sem projeto
                               </button>
-                              {(expenseProjects ?? [])
+                              {(projectsVisibleForCompany ?? [])
                                 .filter((p) =>
                                   (p.name ?? "")
                                     .toLowerCase()
@@ -1372,9 +1572,13 @@ export function WorkflowExpensePanel({ file, existingTransaction, onClose, onSav
                             </div>
                           </ScrollArea>
                         )}
-                        {!projectsLoading && !projectsQueryError && (expenseProjects?.length ?? 0) === 0 && (
+                        {!projectsLoading &&
+                          !projectsQueryError &&
+                          (projectsVisibleForCompany?.length ?? 0) === 0 && (
                           <p className="text-xs text-muted-foreground px-1 py-2">
-                            Nenhum projeto encontrado. Crie projectos em Gestão financeira → Projectos de despesas.
+                            {selectedCompanyId && (expenseProjects?.length ?? 0) > 0
+                              ? "Nenhum projecto disponível para esta empresa. Em Projetos, activa «Limitar a empresas» e inclui a empresa, ou desactiva o limite."
+                              : "Nenhum projeto encontrado. Crie projectos em Projetos (menu lateral)."}
                           </p>
                         )}
                       </div>

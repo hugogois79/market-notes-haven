@@ -98,10 +98,11 @@ export default function BankAccountDialog({
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: ["bank-accounts"],
-        refetchType: 'all'
+        refetchType: "all",
       });
+      queryClient.invalidateQueries({ queryKey: ["all-bank-accounts"] });
       toast.success(account ? "Conta atualizada" : "Conta criada");
       onOpenChange(false);
       reset();

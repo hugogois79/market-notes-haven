@@ -1,5 +1,9 @@
 import { PDFDocument } from 'pdf-lib';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  parseSupabaseStorageLooseRef,
+  resolvePublicFileFetchUrl,
+} from '@/hooks/useFileServerBaseUrl';
 
 // Custom error class for encrypted PDFs
 export class EncryptedPdfError extends Error {
@@ -9,42 +13,99 @@ export class EncryptedPdfError extends Error {
   }
 }
 
+function assertPdfMagicBytes(buf: ArrayBuffer, context: string): ArrayBuffer {
+  const head = new Uint8Array(buf.byteLength >= 5 ? buf.slice(0, 5) : buf);
+  const sig = String.fromCharCode(...head);
+  if (sig.startsWith('%PDF')) return buf;
+  const sniff = new TextDecoder('utf-8', { fatal: false }).decode(
+    new Uint8Array(buf.byteLength > 256 ? buf.slice(0, 256) : buf)
+  );
+  if (sniff.includes('<!DOCTYPE') || sniff.includes('<html') || sniff.includes('<HTML')) {
+    throw new Error(
+      `${context}: a URL devolveu HTML em vez de PDF (sessão expirada ou URL inválida).`
+    );
+  }
+  throw new Error(`${context}: os bytes recebidos não são um PDF válido.`);
+}
+
 /**
- * Fetches a PDF from Supabase storage URL and returns its ArrayBuffer
+ * Fetches a PDF from Supabase storage URL, loose ref, work-files API, or external URL.
+ * Signed Storage URLs must use fetch() with the full URL (token in query); .download() omits auth.
+ * /api/work-files needs credentials (same origin or cookie session).
  */
 async function fetchPdfAsArrayBuffer(url: string): Promise<ArrayBuffer> {
-  console.log('Fetching PDF from URL:', url);
-
-  // Handle Supabase storage URLs (public and signed)
-  // Examples:
-  // - /storage/v1/object/public/<bucket>/<path>
-  // - /storage/v1/object/sign/<bucket>/<path>?token=...
-  const supabaseStorageMatch = url.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)/);
-
-  if (supabaseStorageMatch) {
-    const bucketName = supabaseStorageMatch[1];
-    const rawPath = supabaseStorageMatch[2];
-    const filePath = decodeURIComponent(rawPath.split('?')[0]);
-
-    console.log(`Downloading from Supabase bucket: ${bucketName}, path: ${filePath}`);
-
-    const { data, error } = await supabase.storage.from(bucketName).download(filePath);
-
-    if (error) {
-      console.error('Supabase download error:', error);
-      throw new Error(`Failed to download PDF: ${error.message}`);
+  const raw = url.trim();
+  if (!raw) throw new Error('URL do PDF vazia');
+  const absUrl = resolvePublicFileFetchUrl(raw);
+  const tryFetch = async (href: string, label: string): Promise<ArrayBuffer> => {
+    const isApi = href.includes('/api/');
+    const res = await fetch(href, {
+      mode: 'cors',
+      credentials: isApi ? 'include' : 'omit',
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      throw new Error(`${label}: HTTP ${res.status} ${res.statusText}`);
     }
+    return assertPdfMagicBytes(await res.arrayBuffer(), label);
+  };
 
-    return data.arrayBuffer();
+  console.log('Fetching PDF from URL:', raw);
+
+  const storagePathMatch = (s: string) =>
+    s.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)/);
+
+  for (const candidate of [absUrl, raw]) {
+    if (!candidate) continue;
+    const supabaseStorageMatch = storagePathMatch(candidate);
+    if (supabaseStorageMatch) {
+      const bucketName = supabaseStorageMatch[1];
+      const rawPath = supabaseStorageMatch[2];
+      const filePath = decodeURIComponent(rawPath.split('?')[0]);
+      const isSign = candidate.includes('/object/sign/');
+
+      console.log(
+        `Storage ${isSign ? 'signed' : 'public'} URL bucket=${bucketName} path=${filePath}`
+      );
+
+      if (isSign) {
+        return tryFetch(candidate, 'PDF assinado (Storage)');
+      }
+
+      const { data, error } = await supabase.storage.from(bucketName).download(filePath);
+      if (!error && data) {
+        return assertPdfMagicBytes(await data.arrayBuffer(), 'Storage download');
+      }
+      console.warn('Supabase .download failed, trying HTTP GET:', error?.message);
+      return tryFetch(candidate, 'Storage público (GET)');
+    }
   }
 
-  // Fallback to regular fetch for external URLs
-  console.log('Using regular fetch for URL');
-  const response = await fetch(url, { mode: 'cors' });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch PDF from ${url}: ${response.status} ${response.statusText}`);
+  const parsed = parseSupabaseStorageLooseRef(raw) || parseSupabaseStorageLooseRef(absUrl);
+  if (parsed) {
+    const pathsToTry = [parsed.filePath];
+    if (parsed.filePath.includes('%')) {
+      pathsToTry.push(decodeURIComponent(parsed.filePath));
+    }
+    for (const pathToTry of pathsToTry) {
+      const { data, error } = await supabase.storage.from(parsed.bucket).download(pathToTry);
+      if (!error && data) {
+        return assertPdfMagicBytes(await data.arrayBuffer(), 'Storage (ref)');
+      }
+    }
+    for (const pathToTry of pathsToTry) {
+      const { data: signed, error: signErr } = await supabase.storage
+        .from(parsed.bucket)
+        .createSignedUrl(pathToTry, 3600);
+      if (signErr || !signed?.signedUrl) continue;
+      return tryFetch(signed.signedUrl, 'Storage (URL assinada)');
+    }
+    throw new Error(`Não foi possível obter o PDF em ${parsed.bucket}/${parsed.filePath}`);
   }
-  return response.arrayBuffer();
+
+  const fetchHref = absUrl || raw;
+  console.log('Using fetch for URL:', fetchHref);
+  return tryFetch(fetchHref, 'PDF (fetch)');
 }
 
 /**
@@ -151,7 +212,10 @@ export async function mergePdfs(
   } catch (loadError) {
     const errorMessage = loadError instanceof Error ? loadError.message : String(loadError);
 
-    if (errorMessage.toLowerCase().includes('encrypt')) {
+    if (
+      errorMessage.toLowerCase().includes('encrypt') ||
+      errorMessage.toLowerCase().includes('password')
+    ) {
       // Attempt 2: Convert protected PDF via rendering
       console.log('Original PDF is protected, converting via rendering...');
       onProgress?.('A converter documento protegido...');
@@ -178,8 +242,17 @@ export async function mergePdfs(
   console.log('Loading payment PDF...');
   const paymentPdfBytes = await paymentPdfFile.arrayBuffer();
   console.log('Payment PDF loaded, size:', paymentPdfBytes.byteLength, 'bytes');
-  
-  const paymentPdf = await loadPdfWithEncryptionHandling(paymentPdfBytes, 'comprovativo');
+
+  let paymentPdf: PDFDocument;
+  try {
+    paymentPdf = await loadPdfWithEncryptionHandling(paymentPdfBytes, 'comprovativo');
+  } catch (payErr) {
+    // Comprovativos Wise/banco: por vezes pdf-lib falha mas pdfjs + rasterização funciona.
+    console.warn('Payment PDF direct load failed, trying render conversion:', payErr);
+    onProgress?.('A preparar comprovativo para combinar...');
+    const cleanPay = await convertProtectedPdfToClean(paymentPdfBytes, onProgress);
+    paymentPdf = await PDFDocument.load(cleanPay);
+  }
   console.log('Payment PDF parsed, pages:', paymentPdf.getPageCount());
   
   // Copy all pages from the payment PDF

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Building2, Search, Edit, Trash2, Eye, Settings, ChevronDown, X, ListTodo, Link2, Bookmark, FolderKanban, HardDrive, ArrowUpFromLine, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SearchableSelect } from "@/components/ui/searchable-select";
 import WorkFlowTab from "./WorkFlowTab";
 import WorkFilesTab from "./WorkFilesTab";
 import { toast } from "sonner";
@@ -40,6 +39,7 @@ import {
 import CompanyDialog from "@/components/financial/CompanyDialog";
 import { ServerFolderPickerDialog } from "@/components/companies/ServerFolderPickerDialog";
 import { useFileServerBaseUrl, getWorkFilesListUrl, resolvePublicFileFetchUrl } from "@/hooks/useFileServerBaseUrl";
+import { resolveWorkflowDiskRelativePath } from "@/lib/workflowServerPath";
 
 interface ColumnOption {
   label: string;
@@ -106,11 +106,14 @@ const CUSTOM_COLUMNS_KEY = "companies-custom-columns";
 const COMPANY_CUSTOM_DATA_KEY = "companies-custom-data";
 const TABLE_RELATIONS_KEY = "work-table-relations";
 
-/** Pastas na raiz do servidor (relativas a Robsonway-Research), ex. empresas no Hetzner — ver .env `VITE_WORKFLOW_SERVER_ROOT_PRESETS`. */
+/** Pastas na raiz do servidor — ver também `.env` `VITE_WORKFLOW_SERVER_ROOT_PRESETS`. */
 const SERVER_ROOT_PRESETS: string[] = String(import.meta.env.VITE_WORKFLOW_SERVER_ROOT_PRESETS || "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+
+/** Presets por omissão (disco real em /data/nvme); funde-se com env e BD. */
+const DEFAULT_WORK_SERVER_ROOT_PRESETS = ["Splendidoption (PT)", "Splendidoption (PT)/Work"];
 
 /** Subpasta sob WORK_FILES_ROOT para o dropdown «Pasta no servidor» (ex. `Work` ou `Splendidoption`). Vazio = raiz. */
 const WORK_FILES_LIST_FOLDER: string = String(import.meta.env.VITE_WORK_FILES_LIST_FOLDER || "").trim();
@@ -141,6 +144,16 @@ interface TableRelationsConfig {
   storeFilesInCompanyDocs: boolean;
   /** Novos uploads no WorkFlow: servidor (workflow_storage_locations) ou legado Supabase attachments. */
   workflowUploadTarget?: "server" | "supabase";
+  /**
+   * Movimento Draft com tipo «Documento»: forçar cópia do PDF para o VPS (Pasta de destino / mês)
+   * mesmo quando «Novos ficheiros WorkFlow» está em Supabase.
+   */
+  documentDraftForceServerCopy?: boolean;
+  /**
+   * Movimento Draft com tipo «Documento»: gravar/atualizar entrada em `company_documents`
+   * mesmo quando o WorkFlow está em modo servidor (VPS).
+   */
+  documentDraftForceCompanyLibrary?: boolean;
 }
 
 const MONTHS = [
@@ -157,6 +170,14 @@ const MONTHS = [
   { value: 11, label: "Novembro" },
   { value: 12, label: "Dezembro" },
 ];
+
+/** Caminho inicial no picker do VPS (sem duplicar prefixo/pasta). */
+function workflowServerListInitialPath(
+  serverRoot: string | null | undefined,
+  folderPath: string | null | undefined
+): string {
+  return resolveWorkflowDiskRelativePath(serverRoot?.trim() ?? "", folderPath?.trim() ?? "");
+}
 
 export default function CompaniesPage() {
   const { user, loading: authLoading } = useAuth();
@@ -290,6 +311,8 @@ export default function CompaniesPage() {
       linkWorkflowToFinance: true,
       storeFilesInCompanyDocs: true,
       workflowUploadTarget: "server",
+      documentDraftForceServerCopy: false,
+      documentDraftForceCompanyLibrary: false,
     };
     if (saved) {
       try {
@@ -531,6 +554,11 @@ export default function CompaniesPage() {
   // Persist table relations
   useEffect(() => {
     localStorage.setItem(TABLE_RELATIONS_KEY, JSON.stringify(tableRelations));
+    try {
+      window.dispatchEvent(new CustomEvent("work-table-relations-changed"));
+    } catch {
+      /* ignore */
+    }
   }, [tableRelations]);
 
   const openEditColumnDialog = (columnId: string) => {
@@ -624,38 +652,6 @@ export default function CompaniesPage() {
     },
   });
 
-  // Fetch folders for selected company in storage location dialog
-  const { data: companyFolders } = useQuery({
-    queryKey: ["company-folders-for-storage", storageLocationForm.company_id],
-    queryFn: async () => {
-      if (!storageLocationForm.company_id) return [];
-      const { data, error } = await supabase
-        .from("company_folders")
-        .select("*")
-        .eq("company_id", storageLocationForm.company_id)
-        .order("name");
-      
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!storageLocationForm.company_id,
-  });
-
-  // Build folder paths recursively
-  const getFolderPath = (folderId: string, folders: any[]): string => {
-    const folder = folders.find(f => f.id === folderId);
-    if (!folder) return "";
-    if (!folder.parent_folder_id) return folder.name;
-    const parentPath = getFolderPath(folder.parent_folder_id, folders);
-    return parentPath ? `${parentPath}/${folder.name}` : folder.name;
-  };
-
-  const folderOptions = companyFolders?.map(folder => ({
-    id: folder.id,
-    name: folder.name,
-    path: getFolderPath(folder.id, companyFolders || [])
-  })).sort((a, b) => a.path.localeCompare(b.path)) || [];
-
   const { data: serverFolders = [], isError: serverFoldersQueryError } = useQuery({
     queryKey: ["work-server-folders", fileServerBaseUrl, WORK_FILES_LIST_FOLDER],
     queryFn: async () => {
@@ -675,7 +671,12 @@ export default function CompaniesPage() {
     const fromDb = (storageLocations ?? [])
       .map((l) => l.server_root)
       .filter((s): s is string => !!s && s.trim().length > 0);
-    const set = new Set<string>([...SERVER_ROOT_PRESETS, ...fromDb, ...serverFolders]);
+    const set = new Set<string>([
+      ...DEFAULT_WORK_SERVER_ROOT_PRESETS,
+      ...SERVER_ROOT_PRESETS,
+      ...fromDb,
+      ...serverFolders,
+    ]);
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [storageLocations, serverFolders]);
 
@@ -697,8 +698,9 @@ export default function CompaniesPage() {
   });
 
   const handleMigrateFiles = async (location: StorageLocation) => {
-    if (!location.server_root || !location.folder_path) {
-      toast.error("Define pasta no servidor e localização de pasta (Folder Location)");
+    const root = (location.server_root || "").trim();
+    if (!root) {
+      toast.error("Defina a pasta no servidor para esta linha.");
       return;
     }
     setMigratingLocationId(location.id);
@@ -716,7 +718,8 @@ export default function CompaniesPage() {
         return;
       }
 
-      const targetFolder = `${location.server_root}/${location.folder_path}`;
+      const sub = (location.folder_path || "").trim().replace(/^\/+/, "");
+      const targetFolder = sub ? `${root.replace(/\/+$/, "")}/${sub}` : root;
       const migrateUrl = fileServerBaseUrl
         ? `${fileServerBaseUrl.replace(/\/$/, "")}/api/work-files/migrate`
         : "/api/work-files/migrate";
@@ -1156,7 +1159,7 @@ export default function CompaniesPage() {
             </TabsContent>
             
             <TabsContent value="relations" className="mt-6">
-              <div className="border border-slate-200 rounded-lg bg-white p-6 max-w-2xl">
+              <div className="border border-slate-200 rounded-lg bg-white p-6 w-full max-w-7xl">
                 <div className="flex items-center gap-2 mb-1">
                   <Link2 className="h-5 w-5 text-slate-600" />
                   <h2 className="text-lg font-semibold text-slate-800">Table Relations</h2>
@@ -1217,6 +1220,55 @@ export default function CompaniesPage() {
                         autoCreateTransaction: checked
                       }))}
                     />
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 space-y-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-800">Tipo Documento (Movimento Draft)</h3>
+                      <p className="text-xs text-slate-600 mt-1">
+                        Quando escolhe <strong>Documento</strong> no painel lateral e carrega em <strong>Guardar</strong>, por
+                        omissão segue o modo «Novos ficheiros WorkFlow → servidor (VPS)» na secção abaixo. Active as opções
+                        seguintes apenas se quiser <strong>desacoplar</strong> documentos desse interruptor.
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between gap-4 py-2 border-t border-slate-200/80">
+                      <div className="space-y-1 pr-2">
+                        <Label className="text-sm font-medium text-slate-700">Documento → sempre copiar para o servidor</Label>
+                        <p className="text-xs text-slate-500">
+                          Envia o PDF para o VPS (<code className="text-[11px]">/api/work-files/upload</code>), usando a
+                          «Pasta de destino» ou a pasta do mês em File Storage Locations, <strong>mesmo</strong> com o
+                          WorkFlow em modo Supabase.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={tableRelations.documentDraftForceServerCopy === true}
+                        onCheckedChange={(checked) =>
+                          setTableRelations((prev) => ({
+                            ...prev,
+                            documentDraftForceServerCopy: checked,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-4 py-2 border-t border-slate-200/80">
+                      <div className="space-y-1 pr-2">
+                        <Label className="text-sm font-medium text-slate-700">Documento → registar na biblioteca (Supabase)</Label>
+                        <p className="text-xs text-slate-500">
+                          Cria ou actualiza <code className="text-[11px]">company_documents</code> com o URL do ficheiro,
+                          <strong>mesmo</strong> com o WorkFlow a gravar só no VPS. Útil para o documento aparecer na
+                          biblioteca da empresa sem mudar o fluxo geral de uploads.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={tableRelations.documentDraftForceCompanyLibrary === true}
+                        onCheckedChange={(checked) =>
+                          setTableRelations((prev) => ({
+                            ...prev,
+                            documentDraftForceCompanyLibrary: checked,
+                          }))
+                        }
+                      />
+                    </div>
                   </div>
                 </div>
                 
@@ -1290,18 +1342,14 @@ export default function CompaniesPage() {
                     <p className="text-slate-600">
                       <span className="font-medium text-slate-800">Pasta no servidor</span>
                       {" — "}
-                      Nome de uma pasta no disco do <strong>VPS onde corre o api-server</strong> (variável{" "}
+                      Caminho completo relativo ao disco do <strong>VPS</strong> (variável{" "}
                       <code className="rounded bg-white px-1 py-0.5 text-[11px]">WORK_FILES_ROOT</code>
-                      , por defeito sob Robsonway-Research). <strong>Não é Supabase.</strong> O dropdown pede{" "}
-                      <code className="rounded bg-white px-1 py-0.5 text-[11px]">GET /api/work-files/list</code>
-                      : se essa chamada falhar (proxy, API parada), só vês valores já gravados na BD ou em{" "}
+                      ), p.ex. <span className="font-mono">Harwick Partners/Work/04 April 2026</span>.{" "}
+                      <strong>Não é Supabase.</strong> A listagem <code className="rounded bg-white px-1 py-0.5 text-[11px]">GET /api/work-files/list</code>{" "}
+                      alimenta sugestões; se falhar, usa texto livre ou{" "}
                       <code className="rounded bg-white px-1 py-0.5 text-[11px]">VITE_WORKFLOW_SERVER_ROOT_PRESETS</code>
-                      . Para listar só uma subárvore (ex. só <span className="font-mono">Work</span>), define{" "}
-                      <code className="rounded bg-white px-1 py-0.5 text-[11px]">VITE_WORK_FILES_LIST_FOLDER</code>
-                      no build da app. Para gravar sob uma pasta aninhada (ex.{" "}
-                      <span className="font-mono">Splendidoption/Work</span>), adiciona esse texto em{" "}
-                      <code className="rounded bg-white px-1 py-0.5 text-[11px]">VITE_WORKFLOW_SERVER_ROOT_PRESETS</code> ou escolhe um valor
-                      já gravado na BD — o dropdown só lista um nível de cada vez.
+                      . Para listar só uma subárvore, define{" "}
+                      <code className="rounded bg-white px-1 py-0.5 text-[11px]">VITE_WORK_FILES_LIST_FOLDER</code>.
                     </p>
                   </div>
 
@@ -1320,8 +1368,8 @@ export default function CompaniesPage() {
                     <div className="space-y-1">
                       <Label className="text-sm font-medium text-slate-700">Copy Files to Company Documents</Label>
                       <p className="text-xs text-slate-500">
-                        Quando uma transacção é criada, copiar o ficheiro do WorkFlow para a biblioteca de documentos da empresa.
-                        Desligar só desactiva essa cópia; a tabela de localizações abaixo mantém-se visível.
+                        Só usada quando o WorkFlow grava em <strong>Supabase</strong> (modo teste): ao concluir, copia também para a biblioteca «company-documents».
+                        Com <strong>Novos ficheiros… → servidor (VPS)</strong> activo, ao concluir o ficheiro vai <strong>só para o VPS</strong> (caminhos desta página), não para esse bucket.
                       </p>
                     </div>
                     <Switch
@@ -1368,34 +1416,33 @@ export default function CompaniesPage() {
                         </Select>
                   </div>
 
-                  <div className="border border-slate-200 rounded-lg overflow-hidden">
-                        <Table>
+                  <div className="border border-slate-200 rounded-lg overflow-x-auto max-w-full">
+                        <Table className="min-w-[640px] w-full table-fixed">
                           <TableHeader>
                             <TableRow className="bg-slate-50">
-                              <TableHead className="text-xs font-medium text-slate-600">Company</TableHead>
-                            <TableHead className="text-xs font-medium text-slate-600">Year</TableHead>
-                            <TableHead className="text-xs font-medium text-slate-600">Month</TableHead>
-                            <TableHead className="text-xs font-medium text-slate-600">Folder Location</TableHead>
-                            <TableHead className="text-xs font-medium text-slate-600">Pasta no servidor</TableHead>
-                            <TableHead className="text-xs font-medium text-slate-600 w-28">Actions</TableHead>
+                              <TableHead className="text-xs font-medium text-slate-600 w-[18%]">Company</TableHead>
+                            <TableHead className="text-xs font-medium text-slate-600 w-[8%]">Year</TableHead>
+                            <TableHead className="text-xs font-medium text-slate-600 w-[12%]">Month</TableHead>
+                            <TableHead className="text-xs font-medium text-slate-600 w-[47%] min-w-[14rem]">Pasta no servidor</TableHead>
+                            <TableHead className="text-xs font-medium text-slate-600 w-[15%] whitespace-nowrap">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {storageLocationsLoading ? (
                             <TableRow>
-                              <TableCell colSpan={6} className="text-center text-sm text-slate-500 py-8">
+                              <TableCell colSpan={5} className="text-center text-sm text-slate-500 py-8">
                                 Loading storage locations...
                               </TableCell>
                             </TableRow>
                           ) : storageLocationsError ? (
                             <TableRow>
-                              <TableCell colSpan={6} className="text-center text-sm text-destructive py-8">
+                              <TableCell colSpan={5} className="text-center text-sm text-destructive py-8">
                                 Could not load storage locations. Please refresh.
                               </TableCell>
                             </TableRow>
                           ) : storageLocations.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={6} className="text-center text-sm text-slate-500 py-8">
+                              <TableCell colSpan={5} className="text-center text-sm text-slate-500 py-8">
                                 No storage locations configured. Click "Add Location" to create one.
                               </TableCell>
                             </TableRow>
@@ -1411,12 +1458,11 @@ export default function CompaniesPage() {
                                   <TableCell className="text-sm font-medium text-slate-800">{company?.name || "Unknown"}</TableCell>
                                   <TableCell className="text-sm text-slate-600">{location.year || "-"}</TableCell>
                                   <TableCell className="text-sm text-slate-600">{monthLabel}</TableCell>
-                                  <TableCell className="text-sm text-slate-600 font-mono">{location.folder_path || "-"}</TableCell>
-                                  <TableCell>
-                                    <div className="flex flex-col gap-1 min-w-[180px] max-w-[280px]">
-                                      <div className="flex gap-1 items-center">
+                                  <TableCell className="align-top min-w-0">
+                                    <div className="flex flex-col gap-1.5 min-w-0 pr-1">
+                                      <div className="flex flex-wrap items-start gap-2">
                                         <span
-                                          className="text-xs font-mono truncate flex-1 text-slate-800"
+                                          className="text-xs font-mono text-slate-800 break-all min-w-0 flex-1 basis-[min(100%,12rem)]"
                                           title={location.server_root || ""}
                                         >
                                           {location.server_root || "—"}
@@ -1425,20 +1471,23 @@ export default function CompaniesPage() {
                                           type="button"
                                           variant="outline"
                                           size="sm"
-                                          className="h-8 shrink-0 text-xs px-2"
+                                          className="h-8 shrink-0 text-xs px-2.5 whitespace-nowrap"
                                           onClick={() =>
                                             setServerFolderPicker({
                                               open: true,
                                               mode: "row",
                                               locationId: location.id,
-                                              initialPath: location.server_root || "",
+                                              initialPath: workflowServerListInitialPath(
+                                                location.server_root,
+                                                location.folder_path
+                                              ),
                                             })
                                           }
                                         >
                                           Navegar…
                                         </Button>
                                       </div>
-                                      <p className="text-[10px] text-slate-500 leading-tight">
+                                      <p className="text-[10px] text-slate-500 leading-snug">
                                         Ou edita na BD / presets; clica em Navegar para subpastas.
                                       </p>
                                     </div>
@@ -1803,27 +1852,10 @@ export default function CompaniesPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Folder Location</Label>
-              <p className="text-xs text-slate-500">Select the folder where files will be stored.</p>
-              <SearchableSelect
-                value={storageLocationForm.folder_path}
-                onValueChange={(value) => {
-                  const folder = folderOptions.find(f => f.path === value);
-                  setStorageLocationForm(prev => ({ ...prev, folder_path: value, folder_id: folder?.id || null }));
-                }}
-                options={folderOptions.map(folder => ({ value: folder.path, label: folder.path }))}
-                placeholder={storageLocationForm.company_id ? "Select folder..." : "Select company first"}
-                searchPlaceholder="Search folders..."
-                emptyMessage="No folders found"
-                disabled={!storageLocationForm.company_id}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Pasta no servidor <span className="text-xs text-slate-400">(opcional)</span></Label>
+              <Label>Pasta no servidor <span className="text-red-600">*</span></Label>
               <p className="text-xs text-slate-500">
                 Caminho relativo a <code className="text-[11px]">WORK_FILES_ROOT</code> no VPS (ex.{" "}
-                <span className="font-mono">Splendidoption (PT)</span>). Usa «Navegar…» para abrir subpastas; ou escreve à mão.
+                <span className="font-mono">Harwick Partners/Work/04 April 2026</span>). Usa «Navegar…» para subpastas ou escreve o caminho completo.
               </p>
               <div className="flex gap-2">
                 <Input
@@ -1843,7 +1875,10 @@ export default function CompaniesPage() {
                       open: true,
                       mode: "form",
                       locationId: null,
-                      initialPath: storageLocationForm.server_root || "",
+                      initialPath: workflowServerListInitialPath(
+                        storageLocationForm.server_root,
+                        storageLocationForm.folder_path
+                      ),
                     })
                   }
                 >
@@ -1859,17 +1894,15 @@ export default function CompaniesPage() {
             
             {/* Preview */}
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-              <Label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Path Preview</Label>
-              <p className="text-xs text-slate-700 mt-1 font-mono">
-                {storageLocationForm.server_root ? (
+              <Label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Pré-visualização</Label>
+              <p className="text-xs text-slate-700 mt-1 font-mono break-all">
+                {storageLocationForm.server_root?.trim() ? (
                   <>
                     <HardDrive className="inline h-3 w-3 mr-1 text-emerald-600" />
-                    <span className="text-emerald-600">{storageLocationForm.server_root}</span>/{storageLocationForm.folder_path || "..."}
+                    <span className="text-emerald-600">{storageLocationForm.server_root.trim()}</span>
                   </>
                 ) : (
-                  <>
-                    {companies?.find(c => c.id === storageLocationForm.company_id)?.name || "[Company]"} → Documents → <span className="text-blue-600">{storageLocationForm.folder_path || "..."}</span>
-                  </>
+                  <span className="text-slate-500">Preencha o caminho no campo acima.</span>
                 )}
               </p>
             </div>
@@ -1880,18 +1913,25 @@ export default function CompaniesPage() {
             </Button>
             <Button 
               onClick={() => {
-                if (!storageLocationForm.company_id || !storageLocationForm.folder_path) {
-                  toast.error("Please fill in all fields");
+                if (!storageLocationForm.company_id) {
+                  toast.error("Seleccione a empresa.");
+                  return;
+                }
+                const root = (storageLocationForm.server_root || "").trim();
+                const legacyFolder = (storageLocationForm.folder_path || "").trim();
+                if (!root && !legacyFolder) {
+                  toast.error("Indique a pasta no servidor (caminho sob WORK_FILES_ROOT no VPS).");
                   return;
                 }
                 
                 const locationData = {
                   company_id: storageLocationForm.company_id,
-                  folder_id: storageLocationForm.folder_id,
+                  /** Com caminho no VPS, não duplicar pasta da biblioteca Supabase. */
+                  folder_id: root ? null : storageLocationForm.folder_id || null,
                   year: storageLocationForm.year,
                   month: storageLocationForm.month,
-                  folder_path: storageLocationForm.folder_path,
-                  server_root: storageLocationForm.server_root || null,
+                  folder_path: root ? null : legacyFolder || null,
+                  server_root: root || null,
                 };
                 
                 if (storageLocationDialog.editingId) {

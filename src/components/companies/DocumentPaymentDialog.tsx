@@ -143,10 +143,20 @@ export default function DocumentPaymentDialog({
           } catch (mergeError) {
             console.error("PDF merge failed, uploading payment file only:", mergeError);
             // If merge fails, just upload the payment file - DO NOT update workflow_files
+            const mergeFailFooter =
+              "O pagamento foi gravado com o comprovativo; o ficheiro da fatura na lista não foi substituído pelo PDF combinado.";
             if (mergeError instanceof EncryptedPdfError) {
-              toast.warning("O PDF do documento base está protegido. Não foi possível combinar; foi carregado apenas o comprovativo.");
+              toast.warning(
+                "O PDF da fatura está protegido — não foi possível combinar com o comprovativo.",
+                { description: mergeFailFooter, duration: 8000 }
+              );
             } else {
-              toast.warning("Não foi possível combinar os PDFs, a carregar apenas o comprovativo");
+              const msg =
+                mergeError instanceof Error ? mergeError.message : String(mergeError);
+              toast.warning("Não foi possível combinar os PDFs — a carregar só o comprovativo.", {
+                description: `${mergeFailFooter}${msg ? ` (${msg})` : ""}`,
+                duration: 10000,
+              });
             }
             mergeSucceeded = false;
           }

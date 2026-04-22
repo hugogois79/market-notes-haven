@@ -41,6 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import ProjectCashflowDialog from "./ProjectCashflowDialog";
 import FolderBrowser from "@/components/ui/FolderBrowser";
 
@@ -57,6 +58,8 @@ interface ExpenseProject {
   folder_path: string | null;
   created_at: string;
   updated_at: string;
+  /** NULL ou [] = todas as empresas; caso contrário só os UUID listados. */
+  associated_companies?: string[] | null;
 }
 
 interface ProjectStorageLocation {
@@ -83,6 +86,9 @@ export default function ExpenseProjectManagement() {
     end_date: "",
     total_cost: "",
   });
+  /** false = todas as empresas (NULL na BD); true = só as seleccionadas */
+  const [limitProjectToCompanies, setLimitProjectToCompanies] = useState(false);
+  const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]);
 
   // Storage locations state
   const [storageDialogOpen, setStorageDialogOpen] = useState(false);
@@ -106,6 +112,18 @@ export default function ExpenseProjectManagement() {
       
       if (error) throw error;
       return data as ExpenseProject[];
+    },
+  });
+
+  const { data: companiesForProjects } = useQuery({
+    queryKey: ["companies-for-expense-projects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
     },
   });
 
@@ -267,24 +285,32 @@ export default function ExpenseProjectManagement() {
   }, [projects, storageLocations, editingStorageId]);
 
   const createMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
+    mutationFn: async (data: {
+      form: typeof formData;
+      limitCompanies: boolean;
+      companyIds: string[];
+    }) => {
+      const associated =
+        data.limitCompanies && data.companyIds.length > 0 ? data.companyIds : null;
       const { error } = await supabase
         .from("expense_projects")
         .insert({
-          name: data.name,
-          description: data.description || null,
-          color: data.color,
-          is_active: data.is_active,
-          has_revenue: data.has_revenue,
-          start_date: data.start_date || null,
-          end_date: data.end_date || null,
-          total_cost: data.total_cost ? parseFloat(data.total_cost) : null,
+          name: data.form.name,
+          description: data.form.description || null,
+          color: data.form.color,
+          is_active: data.form.is_active,
+          has_revenue: data.form.has_revenue,
+          start_date: data.form.start_date || null,
+          end_date: data.form.end_date || null,
+          total_cost: data.form.total_cost ? parseFloat(data.form.total_cost) : null,
+          associated_companies: associated,
         });
       
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expense-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["expense-projects-active"] });
       toast.success("Projeto criado com sucesso");
       handleCloseDialog();
     },
@@ -294,7 +320,19 @@ export default function ExpenseProjectManagement() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
+    mutationFn: async ({
+      id,
+      data,
+      limitCompanies,
+      companyIds,
+    }: {
+      id: string;
+      data: typeof formData;
+      limitCompanies: boolean;
+      companyIds: string[];
+    }) => {
+      const associated =
+        limitCompanies && companyIds.length > 0 ? companyIds : null;
       const { error } = await supabase
         .from("expense_projects")
         .update({
@@ -306,6 +344,7 @@ export default function ExpenseProjectManagement() {
           start_date: data.start_date || null,
           end_date: data.end_date || null,
           total_cost: data.total_cost ? parseFloat(data.total_cost) : null,
+          associated_companies: associated,
         })
         .eq("id", id);
       
@@ -313,6 +352,7 @@ export default function ExpenseProjectManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expense-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["expense-projects-active"] });
       toast.success("Projeto atualizado com sucesso");
       handleCloseDialog();
     },
@@ -332,6 +372,7 @@ export default function ExpenseProjectManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expense-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["expense-projects-active"] });
       toast.success("Projeto eliminado");
     },
     onError: (error) => {
@@ -342,6 +383,8 @@ export default function ExpenseProjectManagement() {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingProject(null);
+    setLimitProjectToCompanies(false);
+    setSelectedCompanyIds([]);
     setFormData({
       name: "",
       description: "",
@@ -365,6 +408,8 @@ export default function ExpenseProjectManagement() {
       end_date: "",
       total_cost: "",
     });
+    setLimitProjectToCompanies(false);
+    setSelectedCompanyIds([]);
     setEditingProject(null);
     setDialogOpen(true);
   };
@@ -380,6 +425,10 @@ export default function ExpenseProjectManagement() {
       end_date: project.end_date || "",
       total_cost: project.total_cost?.toString() || "",
     });
+    const ac = project.associated_companies;
+    const hasRestriction = !!(ac && ac.length > 0);
+    setLimitProjectToCompanies(hasRestriction);
+    setSelectedCompanyIds(hasRestriction && ac ? [...ac] : []);
     setEditingProject(project);
     setDialogOpen(true);
   };
@@ -390,11 +439,24 @@ export default function ExpenseProjectManagement() {
       toast.error("Nome é obrigatório");
       return;
     }
+    if (limitProjectToCompanies && selectedCompanyIds.length === 0) {
+      toast.error("Selecciona pelo menos uma empresa ou desactiva «Limitar a empresas».");
+      return;
+    }
 
     if (editingProject) {
-      updateMutation.mutate({ id: editingProject.id, data: formData });
+      updateMutation.mutate({
+        id: editingProject.id,
+        data: formData,
+        limitCompanies: limitProjectToCompanies,
+        companyIds: selectedCompanyIds,
+      });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate({
+        form: formData,
+        limitCompanies: limitProjectToCompanies,
+        companyIds: selectedCompanyIds,
+      });
     }
   };
 
@@ -509,7 +571,12 @@ export default function ExpenseProjectManagement() {
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {project.description || `Gerir despesas do projeto ${project.name}`}
                     </p>
-                    <div className="flex items-center gap-4 mt-2">
+                    <div className="flex items-center gap-4 mt-2 flex-wrap">
+                      <p className="text-xs text-muted-foreground">
+                        {project.associated_companies && project.associated_companies.length > 0
+                          ? `${project.associated_companies.length} empresa(s)`
+                          : "Todas as empresas"}
+                      </p>
                       {project.start_date && (
                         <p className="text-xs text-muted-foreground">
                           Início: {formatDate(project.start_date)}
@@ -718,6 +785,57 @@ export default function ExpenseProjectManagement() {
                 onChange={(e) => setFormData({ ...formData, total_cost: e.target.value })}
                 placeholder="0.00"
               />
+            </div>
+            <div className="space-y-3 rounded-md border border-slate-200 p-3">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="limit_companies"
+                  checked={limitProjectToCompanies}
+                  onCheckedChange={(checked) => {
+                    setLimitProjectToCompanies(!!checked);
+                    if (!checked) setSelectedCompanyIds([]);
+                  }}
+                />
+                <Label htmlFor="limit_companies" className="cursor-pointer">
+                  Limitar a empresas específicas (Work / despesas)
+                </Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Se desligado, o projecto aparece para <strong>todas</strong> as empresas. Se ligado, só nas empresas que marcares
+                (ex.: Representação também na Evensolid).
+              </p>
+              {limitProjectToCompanies && (
+                <div className="border rounded-md p-3 space-y-2 max-h-44 overflow-y-auto">
+                  {companiesForProjects?.map((company) => (
+                    <div key={company.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`ep-company-${company.id}`}
+                        checked={selectedCompanyIds.includes(company.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedCompanyIds((prev) =>
+                              prev.includes(company.id) ? prev : [...prev, company.id]
+                            );
+                          } else {
+                            setSelectedCompanyIds((prev) =>
+                              prev.filter((id) => id !== company.id)
+                            );
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor={`ep-company-${company.id}`}
+                        className="text-sm font-medium leading-none cursor-pointer"
+                      >
+                        {company.name}
+                      </label>
+                    </div>
+                  ))}
+                  {(!companiesForProjects || companiesForProjects.length === 0) && (
+                    <p className="text-sm text-muted-foreground">Nenhuma empresa na base de dados.</p>
+                  )}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="color">Cor</Label>

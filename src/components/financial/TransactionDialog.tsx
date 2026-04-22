@@ -94,7 +94,7 @@ export default function TransactionDialog({
 
   // Fetch all bank accounts from all companies
   const { data: allBankAccounts } = useQuery({
-    queryKey: ["bank-accounts-all"],
+    queryKey: ["bank-accounts", "all"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bank_accounts")

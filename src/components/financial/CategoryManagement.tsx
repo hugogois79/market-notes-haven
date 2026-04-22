@@ -60,19 +60,56 @@ export default function CategoryManagement() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const countByCategory = async (table: string): Promise<number> => {
+        const { count, error } = await supabase
+          .from(table)
+          .select("*", { count: "exact", head: true })
+          .eq("category_id", id);
+        if (error) throw new Error(`${table}: ${error.message}`);
+        return count ?? 0;
+      };
+
+      const txCount = await countByCategory("financial_transactions");
+      if (txCount > 0) {
+        throw new Error(
+          `Esta categoria está ligada a ${txCount} movimento(s) financeiro(s). ` +
+            `Altera a categoria nesses registos (Financeiro / WorkFlow) e volta a apagar.`
+        );
+      }
+
+      const legacyExpenses = await countByCategory("expenses");
+      if (legacyExpenses > 0) {
+        throw new Error(
+          `Esta categoria está ligada a ${legacyExpenses} despesa(s) antiga(s). Corrige ou remove essas despesas primeiro.`
+        );
+      }
+
+      const pendingTelegram = await countByCategory("telegram_pending_expenses");
+      if (pendingTelegram > 0) {
+        throw new Error(
+          `Existem ${pendingTelegram} despesa(s) pendente(s) no Telegram com esta categoria. Confirma ou cancela no bot antes de apagar.`
+        );
+      }
+
+      const { data: deleted, error } = await supabase
         .from("expense_categories")
         .delete()
-        .eq("id", id);
-      
+        .eq("id", id)
+        .select("id");
+
       if (error) throw error;
+      if (!deleted?.length) {
+        throw new Error(
+          "A categoria não foi removida (pode já não existir ou não tens permissão). Recarrega a página."
+        );
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expense_categories"] });
-      toast.success("Category deleted");
+      toast.success("Categoria apagada");
     },
     onError: (error) => {
-      toast.error("Error: " + error.message);
+      toast.error(error instanceof Error ? error.message : "Não foi possível apagar a categoria");
     },
   });
 
@@ -139,7 +176,12 @@ export default function CategoryManagement() {
                     variant="ghost"
                     size="icon"
                     onClick={() => {
-                      if (confirm("Delete category?")) {
+                      if (
+                        confirm(
+                          `Apagar a categoria «${category.name}»?\n\n` +
+                            `Se estiver a ser usada em movimentos financeiros, a operação será bloqueada com uma mensagem a explicar o que fazer.`
+                        )
+                      ) {
                         deleteMutation.mutate(category.id);
                       }
                     }}

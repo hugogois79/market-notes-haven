@@ -60,6 +60,16 @@ import { useFileServerBaseUrl, getWorkFileDownloadUrl, getWorkFilesUploadUrl, pa
 import { mergeMultiplePdfs } from "@/utils/pdfMerger";
 import { filterPdfBlob } from "@/utils/pdfBlob";
 import { cn } from "@/lib/utils";
+import {
+  resolveWorkflowDiskRelativePath,
+  sanitizeWorkflowFileName,
+  safeWorkFilesUploadFileName,
+} from "@/lib/workflowServerPath";
+import { resolveArchiveFolderOnDisk } from "@/lib/syncWorkflowFileToServerMonth";
+import {
+  recordSuccessfulWorkFilePost,
+  shouldSkipDuplicateWorkFilePost,
+} from "@/lib/workFilesUploadDedupe";
 
 interface WorkflowFile {
   id: string;
@@ -268,6 +278,26 @@ const MONTH_LABELS_PT = [
   "Dezembro",
 ];
 
+/**
+ * Mês/ano civis a partir de `date` tipo Postgres DATE (`YYYY-MM-DD`) sem desvio de fuso por `new Date(iso)`.
+ * Se não for parseável, usa o calendário local de `fallback`.
+ */
+function monthYearFromDbDate(
+  iso: string | null | undefined,
+  fallback: Date
+): { month: number; year: number } {
+  const s = (iso ?? "").trim();
+  const m = s.match(/^(\d{4})-(\d{2})-\d{2}/);
+  if (m) {
+    const year = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10);
+    if (year >= 1990 && year <= 2120 && month >= 1 && month <= 12) {
+      return { month, year };
+    }
+  }
+  return { month: fallback.getMonth() + 1, year: fallback.getFullYear() };
+}
+
 interface TableRelationsConfig {
   defaultCompanyId: string | null;
   autoCreateTransaction: boolean;
@@ -275,6 +305,8 @@ interface TableRelationsConfig {
   storeFilesInCompanyDocs?: boolean;
   /** "server" = uploads para VPS via workflow_storage_locations; "supabase" = legado attachments. */
   workflowUploadTarget?: "server" | "supabase";
+  documentDraftForceServerCopy?: boolean;
+  documentDraftForceCompanyLibrary?: boolean;
 }
 
 interface SortConfig {
@@ -303,21 +335,18 @@ const DEFAULT_PRESET_FILTERS: SavedFilter[] = [
   { id: "preset-work", name: "Work", conditions: [{ column: "category", values: ["Work"], mode: "include" }], isPreset: true },
 ];
 
-// Sanitize filename to remove special characters
-const sanitizeFileName = (fileName: string): string => {
-  const lastDot = fileName.lastIndexOf('.');
-  const ext = lastDot !== -1 ? fileName.substring(lastDot) : '';
-  const nameWithoutExt = lastDot !== -1 ? fileName.substring(0, lastDot) : fileName;
+/** Caminho para mostrar em diálogos (igual ao usado no POST de upload). */
+function formatWorkflowArchiveDisplayPath(serverRoot?: string | null, folderPath?: string | null): string | undefined {
+  const out = resolveWorkflowDiskRelativePath(serverRoot?.trim() ?? "", folderPath?.trim() ?? "");
+  return out || undefined;
+}
 
-  const sanitized = nameWithoutExt
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9-_]/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_|_$/g, '');
-
-  return sanitized + ext;
-};
+/** Linha do mês em workflow_storage_locations com destino em disco (fechamento → VPS). */
+function workflowStorageLocationHasServerDiskPath(loc: unknown): boolean {
+  if (!loc || typeof loc !== "object") return false;
+  const o = loc as { server_root?: string | null; folder_path?: string | null };
+  return Boolean((o.server_root ?? "").trim() || (o.folder_path ?? "").trim());
+}
 
 export default function WorkFlowTab() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -402,23 +431,26 @@ export default function WorkFlowTab() {
   const [newFilterName, setNewFilterName] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  /** Evita dois uploads em paralelo (double-click / dois drops). */
+  const workflowUploadBusyRef = useRef(false);
   const queryClient = useQueryClient();
   const fileServerBaseUrl = useFileServerBaseUrl();
 
   /**
-   * URL mostrada / fallback no DocumentPreview: disco primeiro (mais fiável),
-   * depois Supabase (`file_url`, `receipt_url`), por último URLs brutas (ex. links externos).
+   * URL no DocumentPreview: se o anexo está no Supabase Storage, usar esse URL primeiro
+   * (provisório no WorkFlow). Só depois disco — evita `server_path` legado a bloquear o fetch
+   * quando o ficheiro real já só existe no Storage.
    */
   const resolveWorkflowFileUrlForPreview = useCallback(
     (file: WorkflowFile | null | undefined): string => {
       if (!file) return "";
-      if (file.server_path) {
-        return getWorkFileDownloadUrl(file.server_path, fileServerBaseUrl);
-      }
       const fu = file.file_url?.trim() || "";
       if (shouldPreferWorkflowFileUrlOverServer(fu)) return fu;
       const ru = file.receipt_url?.trim() || "";
       if (shouldPreferWorkflowFileUrlOverServer(ru)) return ru;
+      if (file.server_path) {
+        return getWorkFileDownloadUrl(file.server_path, fileServerBaseUrl);
+      }
       if (fu) return fu;
       if (ru) return ru;
       return "";
@@ -538,6 +570,8 @@ export default function WorkFlowTab() {
   const [markCompleteWarningOpen, setMarkCompleteWarningOpen] = useState(false);
   const [fileToComplete, setFileToComplete] = useState<WorkflowFile | null>(null);
   const [missingStorageCompanyName, setMissingStorageCompanyName] = useState<string | null>(null);
+  /** Mesmo mês/ano usados na query a `workflow_storage_locations` (evita mostrar `created_at` por engano). */
+  const [missingStoragePeriodLabel, setMissingStoragePeriodLabel] = useState<string | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
 
   // Move file to folder state
@@ -1406,62 +1440,84 @@ export default function WorkFlowTab() {
   // Move file to company folder mutation
   const moveFileMutation = useMutation({
     mutationFn: async ({ file, companyId, folderId }: { file: WorkflowFile; companyId: string; folderId: string | null }) => {
+      let fileBlob: Blob;
+      let supabaseSource: { bucket: string; filePath: string } | null = null;
+
       if (file.server_path) {
-        throw new Error("Ficheiros apenas no servidor Work: use «Concluir» ou transferir antes de mover para documentos.");
+        const rel = getWorkFileDownloadUrl(file.server_path, fileServerBaseUrl);
+        const href =
+          rel.startsWith("http") ? rel : `${window.location.origin}${rel.startsWith("/") ? rel : `/${rel}`}`;
+        const resp = await fetch(href, {
+          credentials: fileServerBaseUrl?.trim() ? "include" : "same-origin",
+          cache: "no-store",
+        });
+        if (!resp.ok) {
+          throw new Error(
+            `Não foi possível ler o ficheiro no servidor Work (HTTP ${resp.status}). Confirma sessão e caminho.`
+          );
+        }
+        fileBlob = await resp.blob();
+      } else {
+        const parsed = parseSupabaseStorageLooseRef(file.file_url);
+        if (!parsed) {
+          throw new Error(
+            "URL do ficheiro inválida ou em falta (esperado Supabase ou ficheiro no servidor Work)."
+          );
+        }
+        supabaseSource = parsed;
+        const { data, error: downloadError } = await supabase.storage
+          .from(parsed.bucket)
+          .download(parsed.filePath);
+        if (downloadError) throw downloadError;
+        fileBlob = data;
       }
-      const parsed = parseSupabaseStorageLooseRef(file.file_url);
-      if (!parsed) {
-        throw new Error("URL do ficheiro inválida ou em falta (esperado armazenamento Supabase público).");
-      }
-      const { bucket, filePath } = parsed;
 
-      const { data: fileData, error: downloadError } = await supabase.storage
-        .from(bucket)
-        .download(filePath);
-
-      if (downloadError) throw downloadError;
-
-      // 2. Upload to company-documents bucket
-      const newPath = `${companyId}/${folderId || 'root'}/${Date.now()}-${sanitizeFileName(file.file_name)}`;
+      const newPath = `${companyId}/${folderId || "root"}/${Date.now()}-${sanitizeWorkflowFileName(file.file_name)}`;
       const { error: uploadError } = await supabase.storage
         .from("company-documents")
-        .upload(newPath, fileData);
+        .upload(newPath, fileBlob);
 
       if (uploadError) throw uploadError;
 
-      // 3. Get the public URL of the new file
-      const { data: { publicUrl } } = supabase.storage
-        .from("company-documents")
-        .getPublicUrl(newPath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("company-documents").getPublicUrl(newPath);
 
-      // 4. Create document record in company_documents
-      const { error: insertError } = await supabase
-        .from("company_documents")
-        .insert({
-          company_id: companyId,
-          folder_id: folderId,
-          name: file.file_name,
-          file_url: publicUrl,
-          file_size: file.file_size,
-          mime_type: file.mime_type,
-          status: "Final",
-        });
+      const { error: insertError } = await supabase.from("company_documents").insert({
+        company_id: companyId,
+        folder_id: folderId,
+        name: file.file_name,
+        file_url: publicUrl,
+        file_size: fileBlob.size ?? file.file_size,
+        mime_type: file.mime_type || fileBlob.type || "application/pdf",
+        status: "Final",
+      });
 
       if (insertError) throw insertError;
 
-      // 5. Delete the workflow file record
-      const { error: deleteError } = await supabase
-        .from("workflow_files")
-        .delete()
-        .eq("id", file.id);
+      const { error: deleteError } = await supabase.from("workflow_files").delete().eq("id", file.id);
 
       if (deleteError) throw deleteError;
 
-      // 6. Optionally delete the old file from storage
-      await supabase.storage.from(bucket).remove([filePath]);
+      if (file.server_path) {
+        const base = fileServerBaseUrl?.trim()
+          ? fileServerBaseUrl.replace(/\/$/, "")
+          : window.location.origin;
+        const delUrl = `${base}/api/work-files/delete?file=${encodeURIComponent(file.server_path)}`;
+        const delRes = await fetch(delUrl, { method: "DELETE", credentials: "include" });
+        if (!delRes.ok) {
+          console.warn("Mover: não foi possível remover o original do servidor:", delRes.status);
+        }
+      } else if (supabaseSource) {
+        await supabase.storage.from(supabaseSource.bucket).remove([supabaseSource.filePath]);
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      queryClient.setQueryData(["workflow-files"], (old: WorkflowFile[] | undefined) =>
+        old ? old.filter((f) => f.id !== variables.file.id) : old
+      );
       queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
+      queryClient.invalidateQueries({ queryKey: ["company-documents"] });
       setMoveFileDialogOpen(false);
       setFileToMove(null);
       setMoveForm({ company_id: "", folder_id: null, folder_path: "" });
@@ -1485,6 +1541,10 @@ export default function WorkFlowTab() {
       toast.error("Selecione uma empresa");
       return;
     }
+    if (!moveForm.folder_path || moveForm.folder_path === "__none__") {
+      toast.error('Selecione a pasta de destino ou «Raiz (sem pasta)».');
+      return;
+    }
 
     // If user selected __root__, pass null as folder_id
     const folderId = moveForm.folder_path === "__root__" ? null : moveForm.folder_id;
@@ -1498,10 +1558,29 @@ export default function WorkFlowTab() {
 
 
   const uploadFiles = async (files: FileList | File[]) => {
+    if (workflowUploadBusyRef.current) {
+      toast.warning("Já existe um upload em curso — aguarda que termine.");
+      return;
+    }
+    workflowUploadBusyRef.current = true;
+    try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
-    const fileArray = Array.from(files);
+    const rawList = Array.from(files);
+    const seen = new Set<string>();
+    const fileArray = rawList.filter((f) => {
+      const k = `${f.name}\0${f.size}\0${f.lastModified}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+    if (fileArray.length === 0) {
+      if (rawList.length > 0) {
+        toast.warning("Ficheiros repetidos na lista — só um exemplar de cada foi considerado.");
+      }
+      return;
+    }
     const initialProgress: UploadProgress[] = fileArray.map(f => ({
       fileName: f.name,
       progress: 0,
@@ -1554,10 +1633,10 @@ export default function WorkFlowTab() {
       if (rowForMonth) {
         const root = rowForMonth.server_root?.trim() ?? "";
         const fp = rowForMonth.folder_path?.trim() ?? "";
-        if (!root || !fp) {
+        if (!resolveWorkflowDiskRelativePath(root, fp)) {
           const monthName = MONTH_LABELS_PT[m] || String(m);
           toast.error(
-            `Para ${monthName} de ${y}, preenche «Pasta no servidor» e «Folder Location» nessa linha. Confirma também que a «Default Company for WorkFlow» (Table Relations) é a mesma empresa.`
+            `Para ${monthName} de ${y}, preenche «Pasta no servidor» e/ou «Folder Location» nessa linha (pelo menos um caminho completo sob WORK_FILES_ROOT). Confirma a «Default Company for WorkFlow».`
           );
           throw new Error("Workflow: localização do mês incompleta");
         }
@@ -1600,9 +1679,26 @@ export default function WorkFlowTab() {
         let fileUrl = "";
         let serverPath: string | null = null;
 
-        if (serverLocation) {
-          const targetFolder = `${serverLocation.server_root}/${serverLocation.folder_path}`;
-          const params = new URLSearchParams({ folder: targetFolder, filename: file.name });
+        if (serverLocation && companyId) {
+          const targetFolder = await resolveArchiveFolderOnDisk(
+            { ...serverLocation, company_id: companyId },
+            companyId
+          );
+          const safeFn = safeWorkFilesUploadFileName(file.name);
+          const dedupeKey = `bulk:${targetFolder}:${safeFn}:${file.size}:${file.lastModified}`;
+          if (shouldSkipDuplicateWorkFilePost(dedupeKey)) {
+            setUploadProgress((prev) =>
+              prev.map((p, idx) =>
+                idx === i ? { ...p, progress: 100, status: "completed" as const } : p
+              )
+            );
+            toast.info(`Ignorado (repetido há instantes): ${file.name}`);
+            continue;
+          }
+          const params = new URLSearchParams({
+            folder: targetFolder,
+            filename: safeFn,
+          });
           const arrayBuf = await file.arrayBuffer();
           const uploadUrl = getWorkFilesUploadUrl(fileServerBaseUrl, params);
           const resp = await fetch(uploadUrl, {
@@ -1612,11 +1708,12 @@ export default function WorkFlowTab() {
             credentials: fileServerBaseUrl ? "include" : "same-origin",
           });
           if (!resp.ok) throw new Error("Server upload failed");
+          recordSuccessfulWorkFilePost(dedupeKey);
           const result = await resp.json();
           serverPath = result.server_path;
           fileUrl = getWorkFileDownloadUrl(result.server_path, fileServerBaseUrl);
         } else if (allowSupabaseWorkflowUpload) {
-          const sanitizedName = sanitizeFileName(file.name);
+          const sanitizedName = sanitizeWorkflowFileName(file.name);
           const storagePath = `${user.id}/${Date.now()}-${sanitizedName}`;
           const { error: uploadError } = await supabase.storage
             .from("attachments")
@@ -1683,6 +1780,9 @@ export default function WorkFlowTab() {
       setUploadProgress([]);
       setIsUploading(false);
     }, 3000);
+    } finally {
+      workflowUploadBusyRef.current = false;
+    }
   };
 
   // Update field mutation
@@ -1871,13 +1971,12 @@ export default function WorkFlowTab() {
       return;
     }
 
-    // Use transaction date if available, otherwise fall back to file upload date
-    const dateToUse = existingTransaction?.date
-      ? new Date(existingTransaction.date)
-      : new Date(file.created_at);
-
-    const fileMonth = dateToUse.getMonth() + 1; // 1-indexed
-    const fileYear = dateToUse.getFullYear();
+    // Data do movimento (civil) — não usar só `new Date("YYYY-MM-DD")` (pode mudar o mês com fuso).
+    const fallbackCal = new Date(file.created_at);
+    const { month: fileMonth, year: fileYear } = monthYearFromDbDate(
+      existingTransaction?.date,
+      fallbackCal
+    );
 
     // Read table relations settings
     const settingsStr = localStorage.getItem(TABLE_RELATIONS_KEY);
@@ -1923,6 +2022,9 @@ export default function WorkFlowTab() {
         }
       }
       setMissingStorageCompanyName(companyName);
+      setMissingStoragePeriodLabel(
+        `${MONTH_LABELS_PT[fileMonth] || String(fileMonth)} de ${fileYear}`
+      );
       setFileToComplete(file);
       setMarkCompleteWarningOpen(true);
       return;
@@ -1985,21 +2087,38 @@ export default function WorkFlowTab() {
 
     // 1. Main company (invoice recipient)
     if (targetCompanyId) {
+      const mainResolved = matchingLocation
+        ? await resolveArchiveFolderOnDisk(matchingLocation, targetCompanyId)
+        : "";
       destinationCompanies.push({
         id: targetCompanyId,
         name: mainCompanyName,
         role: "Empresa da fatura",
-        folderPath: matchingLocation?.folder_path || undefined
+        folderPath:
+          mainResolved.trim() ||
+          formatWorkflowArchiveDisplayPath(
+            matchingLocation?.server_root,
+            matchingLocation?.folder_path
+          ),
       });
     }
 
     // 2. Payer company (if different)
     if (paymentAccountStorageLocation && payerCompanyName) {
+      const payerResolved = await resolveArchiveFolderOnDisk(
+        paymentAccountStorageLocation,
+        paymentAccountStorageLocation.company_id
+      );
       destinationCompanies.push({
         id: paymentAccountStorageLocation.company_id,
         name: payerCompanyName,
         role: "Pagou a fatura",
-        folderPath: paymentAccountStorageLocation?.folder_path || undefined
+        folderPath:
+          (payerResolved && payerResolved.trim()) ||
+          formatWorkflowArchiveDisplayPath(
+            paymentAccountStorageLocation?.server_root,
+            paymentAccountStorageLocation?.folder_path
+          ),
       });
     }
 
@@ -2201,6 +2320,95 @@ export default function WorkFlowTab() {
         toast.success("Empréstimo registado com sucesso!");
       }
 
+      const effSettings: TableRelationsConfig = {
+        defaultCompanyId: null,
+        autoCreateTransaction: true,
+        linkWorkflowToFinance: true,
+        storeFilesInCompanyDocs: true,
+        workflowUploadTarget: "server",
+        ...settings,
+      };
+      const uploadTarget = effSettings.workflowUploadTarget ?? "server";
+      /** Fechamento: VPS se o mês tiver pasta no servidor, mesmo com upload provisório em Supabase. */
+      const canArchiveToServerDisk =
+        workflowStorageLocationHasServerDiskPath(storageLocation) ||
+        (supplierStorageLocation != null &&
+          workflowStorageLocationHasServerDiskPath(supplierStorageLocation));
+      const useServerArchive = uploadTarget !== "supabase" || canArchiveToServerDisk;
+      /**
+       * Vault `company_documents` só quando o provisório é Supabase e este mês não tem arquivo em disco
+       * (senão o fechamento fica só no servidor, sem duplicar no Supabase).
+       */
+      const useCompanyDocsArchive =
+        effSettings.storeFilesInCompanyDocs !== false &&
+        uploadTarget === "supabase" &&
+        !canArchiveToServerDisk;
+
+      /** Grava cópia no VPS (nvme / WORK_FILES_ROOT), como no upload inicial do WorkFlow. */
+      if (useServerArchive) {
+        let blob: Blob | null = null;
+        try {
+          const parsed = parseSupabaseStorageLooseRef(file.file_url);
+          if (parsed) {
+            const { data, error: downloadError } = await supabase.storage
+              .from(parsed.bucket)
+              .download(parsed.filePath);
+            if (!downloadError && data) blob = data;
+          }
+        } catch (e) {
+          console.warn("archiveToServer: download Supabase", e);
+        }
+        if (!blob) {
+          const resp = await fetch(resolveWorkflowFileFetchUrl(file), { credentials: "include" });
+          if (!resp.ok) {
+            throw new Error(`Não foi possível ler o ficheiro para gravar no servidor (HTTP ${resp.status}).`);
+          }
+          blob = await resp.blob();
+        }
+
+        const locationsToArchive = [storageLocation];
+        if (supplierStorageLocation && supplierStorageLocation.company_id !== storageLocation.company_id) {
+          locationsToArchive.push(supplierStorageLocation);
+        }
+
+        for (const loc of locationsToArchive) {
+          const root = loc?.server_root?.trim() ?? "";
+          const fp = loc?.folder_path?.trim() ?? "";
+          if (!root && !fp) {
+            throw new Error(
+              "Para arquivar no servidor, cada empresa de destino precisa de «Pasta no servidor» e/ou «Folder Location» na linha do mês em File Storage Locations (caminho completo sob WORK_FILES_ROOT)."
+            );
+          }
+          const targetFolder = await resolveArchiveFolderOnDisk(loc, loc.company_id);
+          if (!targetFolder) {
+            throw new Error("Caminho de destino no servidor vazio — verifica Pasta no servidor e Folder Location.");
+          }
+          const archiveName = safeWorkFilesUploadFileName(file.file_name);
+          const dedupeKey = `wf:${file.id}:${targetFolder}:${archiveName}`;
+          if (shouldSkipDuplicateWorkFilePost(dedupeKey)) {
+            continue;
+          }
+          const params = new URLSearchParams({
+            folder: targetFolder,
+            filename: archiveName,
+          });
+          const uploadUrl = getWorkFilesUploadUrl(fileServerBaseUrl, params);
+          const resp = await fetch(uploadUrl, {
+            method: "POST",
+            headers: { "Content-Type": file.mime_type || "application/octet-stream" },
+            body: blob,
+            credentials: fileServerBaseUrl?.trim() ? "include" : "same-origin",
+          });
+          if (!resp.ok) {
+            const detail = await resp.text().catch(() => "");
+            throw new Error(
+              `Falha ao gravar no servidor (${resp.status}). Confirma que a pasta existe no VPS (ex.: ${targetFolder}). ${detail}`
+            );
+          }
+          recordSuccessfulWorkFilePost(dedupeKey);
+        }
+      }
+
       // Helper: copia para company-documents (Supabase) a partir de Supabase Storage ou de ficheiro no servidor
       const copyToCompanyFolder = async (targetStorageLocation: any) => {
         if (!targetStorageLocation?.folder_id) return false;
@@ -2241,7 +2449,7 @@ export default function WorkFlowTab() {
 
         if (!fileData) return false;
 
-        const sanitizedName = sanitizeFileName(file.file_name);
+        const sanitizedName = sanitizeWorkflowFileName(file.file_name);
         const newPath = `${targetCompanyId}/${targetStorageLocation.folder_id}/${Date.now()}-${sanitizedName}`;
 
         const { error: uploadError } = await supabase.storage
@@ -2281,15 +2489,19 @@ export default function WorkFlowTab() {
         return true;
       };
 
-      // 2. Copy file to primary company documents
+      // 2. Copy file to primary company documents (Supabase), se activo nas definições
       let copiedCount = 0;
-      if (storageLocation.folder_id) {
+      if (useCompanyDocsArchive && storageLocation.folder_id) {
         const copied = await copyToCompanyFolder(storageLocation);
         if (copied) copiedCount++;
       }
 
       // 3. Copy file to supplier company documents (if available and different)
-      if (supplierStorageLocation && supplierStorageLocation.company_id !== storageLocation.company_id) {
+      if (
+        useCompanyDocsArchive &&
+        supplierStorageLocation &&
+        supplierStorageLocation.company_id !== storageLocation.company_id
+      ) {
         const copied = await copyToCompanyFolder(supplierStorageLocation);
         if (copied) copiedCount++;
       }
@@ -2331,7 +2543,13 @@ export default function WorkFlowTab() {
       queryClient.invalidateQueries({ queryKey: ["workflow-linked-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["company-documents"] });
 
-      if (copiedCount > 1) {
+      if (useServerArchive && copiedCount > 1) {
+        toast.success("Ficheiro gravado no servidor (VPS) e copiado para documentos em 2 empresas.");
+      } else if (useServerArchive && copiedCount === 1) {
+        toast.success("Ficheiro gravado no servidor (VPS) e na biblioteca de documentos.");
+      } else if (useServerArchive && copiedCount === 0) {
+        toast.success("Ficheiro gravado no servidor (VPS).");
+      } else if (copiedCount > 1) {
         toast.success(`Ficheiro copiado para ${copiedCount} empresas!`);
       } else {
         toast.success("Ficheiro movido para documentos da empresa!");
@@ -2343,6 +2561,7 @@ export default function WorkFlowTab() {
       setIsCompleting(false);
       setFileToComplete(null);
       setMissingStorageCompanyName(null);
+      setMissingStoragePeriodLabel(null);
       setMarkCompleteWarningOpen(false);
     }
   };
@@ -2355,10 +2574,11 @@ export default function WorkFlowTab() {
     setShowSkipPaymentConfirmation(false);
     setFileToSkipPayment(null);
 
-    // Use file date for storage location lookup
-    const dateToUse = new Date(file.created_at);
-    const fileMonth = dateToUse.getMonth() + 1;
-    const fileYear = dateToUse.getFullYear();
+    const fallbackCal = new Date(file.created_at);
+    const { month: fileMonth, year: fileYear } = monthYearFromDbDate(
+      file.invoice_date ?? undefined,
+      fallbackCal
+    );
 
     // Read table relations settings
     const settingsStr = localStorage.getItem(TABLE_RELATIONS_KEY);
@@ -2403,6 +2623,9 @@ export default function WorkFlowTab() {
         }
       }
       setMissingStorageCompanyName(companyName);
+      setMissingStoragePeriodLabel(
+        `${MONTH_LABELS_PT[fileMonth] || String(fileMonth)} de ${fileYear}`
+      );
       setFileToComplete(file);
       setMarkCompleteWarningOpen(true);
       return;
@@ -2532,13 +2755,13 @@ export default function WorkFlowTab() {
       }
     };
 
+    if (await trySupabaseDownloadFrom(file.file_url)) return;
+    if (await trySupabaseDownloadFrom(file.receipt_url)) return;
+
     if (file.server_path) {
       window.open(getWorkFileDownloadUrl(file.server_path, fileServerBaseUrl), "_blank");
       return;
     }
-
-    if (await trySupabaseDownloadFrom(file.file_url)) return;
-    if (await trySupabaseDownloadFrom(file.receipt_url)) return;
 
     const fu = resolvePublicFileFetchUrl(file.file_url);
     if (fu) {
@@ -2549,7 +2772,7 @@ export default function WorkFlowTab() {
     if (ru) window.open(ru, "_blank");
   };
 
-  // Ordem: disco → Supabase file_url → paths relativos → receipt_url (comprovativo Wise, etc.).
+  // Ordem: Supabase (quando file_url é Storage) → disco → restantes (alinha com resolveWorkflowFileUrlForPreview).
   const getBlobForPreview = useCallback(async (): Promise<Blob | null> => {
     if (!previewFile) return null;
 
@@ -2683,6 +2906,20 @@ export default function WorkFlowTab() {
         return null;
       }
     };
+
+    /** Mesma prioridade que resolveWorkflowFileUrlForPreview: Storage antes de /api/work-files. */
+    if (shouldPreferWorkflowFileUrlOverServer(previewFile.file_url)) {
+      let b = await blobFromSupabaseOrResolved(previewFile.file_url);
+      if (b) return b;
+      b = await blobFromRelative(previewFile.file_url);
+      if (b) return b;
+    }
+    if (shouldPreferWorkflowFileUrlOverServer(previewFile.receipt_url)) {
+      let b = await blobFromSupabaseOrResolved(previewFile.receipt_url);
+      if (b) return b;
+      b = await blobFromRelative(previewFile.receipt_url);
+      if (b) return b;
+    }
 
     const ws = await fromWorkServer();
     if (ws) return ws;
@@ -4919,6 +5156,7 @@ export default function WorkFlowTab() {
                     id: previewFile.id,
                     file_name: previewFile.file_name,
                     file_url: previewFile.file_url,
+                    server_path: previewFile.server_path ?? null,
                     mime_type: previewFile.mime_type,
                     // OCR data from n8n
                     company_id: previewFile.company_id,
@@ -4984,7 +5222,8 @@ export default function WorkFlowTab() {
                       queryClient.invalidateQueries({ queryKey: ["workflow-files"] });
                       // Only show toast for non-loan transactions (loans show their own toast in the panel)
                       const isLoanTransaction = (existingTransaction as any)?._isLoan || customData[previewFile.id]?._pendingLoan;
-                      if (!isLoanTransaction) {
+                      const savedAsDocument = (payload as { savedAsDocument?: boolean })?.savedAsDocument;
+                      if (!isLoanTransaction && !savedAsDocument) {
                         toast.success(existingTransaction ? "Movimento atualizado!" : "Movimento criado!");
                       }
                     }
@@ -5008,10 +5247,9 @@ export default function WorkFlowTab() {
             <AlertDialogDescription className="space-y-3">
               <p>
                 No file storage location is configured for company{" "}
-                <strong>{missingStorageCompanyName || "Unknown"}</strong> in{" "}
-                <strong>
-                  {fileToComplete && format(new Date(fileToComplete.created_at), "MMMM yyyy")}
-                </strong>.
+                <strong>{missingStorageCompanyName || "Unknown"}</strong> em{" "}
+                <strong>{missingStoragePeriodLabel || "—"}</strong> (mês/ano usados na pesquisa de File Storage
+                Locations: data do movimento ou do documento, não a data de carregamento do ficheiro).
               </p>
               <p>
                 Please go to <strong>Settings → Table Relations → File Storage Locations</strong> and add a storage location for this company and month/year before marking the file as paid.
@@ -5023,6 +5261,7 @@ export default function WorkFlowTab() {
               setMarkCompleteWarningOpen(false);
               setFileToComplete(null);
               setMissingStorageCompanyName(null);
+              setMissingStoragePeriodLabel(null);
             }}>
               Close
             </AlertDialogCancel>
@@ -5353,6 +5592,12 @@ export default function WorkFlowTab() {
             <DialogDescription>
               Selecione a empresa e pasta de destino para o ficheiro.
             </DialogDescription>
+            {fileToMove?.server_path && (
+              <p className="text-sm text-muted-foreground -mt-1">
+                Este ficheiro está no servidor Work (VPS): será copiado para Documentos no Supabase e removido do
+                fluxo; o original no servidor é apagado após mover.
+              </p>
+            )}
           </DialogHeader>
           <div className="space-y-4 py-4">
             {/* File being moved */}
@@ -5425,7 +5670,12 @@ export default function WorkFlowTab() {
             </Button>
             <Button
               onClick={handleMoveFile}
-              disabled={!moveForm.company_id || moveFileMutation.isPending}
+              disabled={
+                !moveForm.company_id ||
+                !moveForm.folder_path ||
+                moveForm.folder_path === "__none__" ||
+                moveFileMutation.isPending
+              }
               className="bg-blue-600 hover:bg-blue-700"
             >
               {moveFileMutation.isPending ? "A mover..." : "Mover Ficheiro"}

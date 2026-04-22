@@ -314,16 +314,33 @@ function handleLegalFilesDownload(req, res) {
 
 // ── Work Files helpers ──────────────────────────────────────────────
 
+/**
+ * Corrige rótulos de pastas no disco (Linux é case-sensitive).
+ * Ex.: «Splendidoption/Work» → «Splendidoption (PT)/Work» (nome real em /data/nvme).
+ */
+function normalizeCommonCompanyFolderPath(input) {
+  if (input == null || input === "") return input;
+  let f = String(input).trim().replace(/\\/g, "/");
+  if (!/Splendidoption \(\s*PT\s*\)/i.test(f) && /^Splendidoption(\/|$)/i.test(f)) {
+    f = f.replace(/^Splendidoption(\/|$)/i, "Splendidoption (PT)$1");
+  }
+  if (/Splendidoption \(\s*PT\s*\)/i.test(f)) {
+    f = f.replace(/(^|\/)work(\/|$)/i, "$1Work$2");
+  }
+  return f;
+}
+
 /** Evita path traversal; aceita `/` e `\` nos caminhos relativos (BD pode usar só `/`). */
 function validateWorkPath(relativePath) {
   if (relativePath == null || relativePath === "") return null;
-  const segments = relativePath.split(/[/\\]/);
+  const relativePathNorm = normalizeCommonCompanyFolderPath(String(relativePath).trim());
+  const segments = relativePathNorm.split(/[/\\]/);
   for (const seg of segments) {
     if (seg && WORK_BLOCKED_SEGMENTS.has(seg)) return null;
   }
   for (const base of WORK_BASES) {
     const normalizedBase = path.resolve(base);
-    const resolved = path.resolve(normalizedBase, relativePath);
+    const resolved = path.resolve(normalizedBase, relativePathNorm);
     const rel = path.relative(normalizedBase, resolved);
     if (rel.startsWith("..") || path.isAbsolute(rel)) continue;
     return resolved;
@@ -334,13 +351,14 @@ function validateWorkPath(relativePath) {
 /** Download: procura o ficheiro na primeira raiz WORK_BASES onde existir (deploy com cópia noutro disco). */
 function findWorkFileForDownload(relativePath) {
   if (relativePath == null || relativePath === "") return null;
-  const segments = relativePath.split(/[/\\]/);
+  const relativePathNorm = normalizeCommonCompanyFolderPath(String(relativePath).trim());
+  const segments = relativePathNorm.split(/[/\\]/);
   for (const seg of segments) {
     if (seg && WORK_BLOCKED_SEGMENTS.has(seg)) return null;
   }
   for (const base of WORK_BASES) {
     const normalizedBase = path.resolve(base);
-    const resolved = path.resolve(normalizedBase, relativePath);
+    const resolved = path.resolve(normalizedBase, relativePathNorm);
     const rel = path.relative(normalizedBase, resolved);
     if (rel.startsWith("..") || path.isAbsolute(rel)) continue;
     try {
@@ -367,13 +385,14 @@ function findWorkDirForList(folder) {
     }
     return null;
   }
-  const segments = folder.split(/[/\\]/);
+  const folderNorm = normalizeCommonCompanyFolderPath(folder.trim());
+  const segments = folderNorm.split(/[/\\]/);
   for (const seg of segments) {
     if (seg && WORK_BLOCKED_SEGMENTS.has(seg)) return null;
   }
   for (const base of WORK_BASES) {
     const normalizedBase = path.resolve(base);
-    const resolved = path.resolve(normalizedBase, folder);
+    const resolved = path.resolve(normalizedBase, folderNorm);
     const rel = path.relative(normalizedBase, resolved);
     if (rel.startsWith("..") || path.isAbsolute(rel)) continue;
     try {
@@ -391,9 +410,18 @@ function handleWorkFilesList(req, res) {
 
   const resolved = findWorkDirForList(folder);
   if (!resolved) {
+    if (folder === "") {
+      const rootsHint = WORK_BASES.map((b) => path.resolve(b)).join(" | ");
+      jsonResponse(res, 503, {
+        error: `Nenhuma raiz WORK_FILES_ROOT existe no disco. Configurado: ${rootsHint}. Cria a pasta ou monta o volume (ex. /data/nvme).`,
+      });
+      return;
+    }
     const allowed = validateWorkPath(folder);
     jsonResponse(res, allowed ? 404 : 403, {
-      error: allowed ? "Pasta não encontrada" : "Acesso negado",
+      error: allowed
+        ? `Pasta não encontrada: «${folder}» (relativa a WORK_FILES_ROOT). Cria-a no VPS ou corrige o prefixo na app (ex. Splendidoption (PT)/Work — não uses só Work/ano/mês; isso é «Folder» na tabela, não o prefixo do servidor).`
+        : "Acesso negado",
     });
     return;
   }
@@ -474,22 +502,17 @@ function handleWorkFilesUpload(req, res) {
       }
 
       const safeName = filename.replace(/[\/\\]/g, "_");
-      let destPath = path.join(resolved, safeName);
+      const destPath = path.join(resolved, safeName);
 
-      if (fs.existsSync(destPath)) {
-        const ext = path.extname(safeName);
-        const base = path.basename(safeName, ext);
-        destPath = path.join(resolved, `${base}_${Date.now()}${ext}`);
-      }
-
+      // Sobrescrever se já existir — evita duplicados quando a app grava duas vezes
+      // (ex.: «Guardar» movimento + «Concluir») com o mesmo nome na mesma pasta.
       fs.writeFileSync(destPath, fileData);
 
-      const finalName = path.basename(destPath);
-      const serverPath = `${folder}/${finalName}`;
+      const serverPath = `${folder}/${safeName}`;
 
       jsonResponse(res, 200, {
         server_path: serverPath,
-        filename: finalName,
+        filename: safeName,
         size: fileData.length,
       });
     } catch (err) {
