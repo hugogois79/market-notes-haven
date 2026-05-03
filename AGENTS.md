@@ -26,6 +26,8 @@ See `package.json` scripts:
 The test account has MFA enabled. To log in programmatically:
 
 1. Secrets needed: `TEST_LOGIN_EMAIL`, `TEST_LOGIN_PASSWORD`, `TEST_LOGIN_OTP_SEED`
+   - The test email uses the `@robsonway.com` domain (not `@gvvcapital.com`).
+   - `TEST_LOGIN_OTP_SEED` must be a valid **base32-encoded TOTP secret** (16+ characters, A-Z/2-7). A bare 6-digit number will not work.
 2. Generate a TOTP code (requires `pyotp`: `pip install pyotp`):
    ```bash
    python3 << 'PYEOF'
