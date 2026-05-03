@@ -41,6 +41,7 @@ The test account has MFA enabled. To log in programmatically:
    PYEOF
    ```
 3. Enter email + password at `/auth`, then the 6-digit TOTP code at `/auth/mfa-verify`. Codes expire every 30 seconds — generate right before use.
+4. **Fallback**: If the OTP seed is not a valid base32 secret, ask the user to log in via the Desktop pane. Browser sessions persist across agent interactions in the same VM.
 
 ### Production deployment
 
